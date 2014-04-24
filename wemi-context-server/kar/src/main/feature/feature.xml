@@ -3,6 +3,8 @@
     <feature description="wemi-context-server-kar" version="1.0-SNAPSHOT" name="wemi-context-server-kar">
         <feature>war</feature>
         <feature version="[2.7.11,3)">cxf</feature>
+        <feature>openwebbeans</feature>
+        <feature>pax-cdi-web-openwebbeans</feature>
         <bundle>mvn:org.oasis-open.wemi/wemi-context-server-wab/1.0-SNAPSHOT</bundle>
         <bundle>mvn:commons-io/commons-io/2.4</bundle>
         <bundle>mvn:org.oasis-open.wemi/wemi-context-server-api/1.0-SNAPSHOT</bundle>

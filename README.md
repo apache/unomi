@@ -23,12 +23,13 @@ Deploying
 1. Before deploying, make sure that you have Apache Karaf properly installed.
 2. If you haven't done it yet, install the WAR support into Karaf by doing the following in the Karaf command line:
 ```
-   features:install -v war
+   feature:install -v war
 ```
-3. You will also need to install CXF for the REST service support
+3. You will also need to install CXF and CDI (OpenWebBeans) for the REST service support
 ```
-   features:repo-add cxf 2.7.11
-   features:install cxf/2.7.11
+   feature:repo-add cxf 2.7.11
+   feature:install cxf/2.7.11
+   feature:install openwebbeans
 ```
 4. Copy the following KAR to the Karaf deploy directory, as in this example line:
 ```
