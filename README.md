@@ -25,11 +25,16 @@ Deploying
 ```
    features:install -v war
 ```
-3. Copy the following JAR to the Karaf deploy directory, as in this example line:
+3. You will also need to install CXF for the REST service support
 ```
-  cp wemi-context-server/wab/target/wemi-context-server-wab-1.0-SNAPSHOT.jar ~/java/deployments/wemi-sandbox/apache-karaf-3.0.1/deploy/
+   features:repo-add cxf 2.7.11
+   features:install cxf/2.7.11
 ```
-4. If all went smoothly, you should be able to access the WEMI context script here : http://localhost:8181/context.js
+4. Copy the following KAR to the Karaf deploy directory, as in this example line:
+```
+  cp wemi-context-server/kar/target/wemi-context-server-kar-1.0-SNAPSHOT.kar ~/java/deployments/wemi-sandbox/apache-karaf-3.0.1/deploy/
+```
+5. If all went smoothly, you should be able to access the WEMI context script here : http://localhost:8181/context.js
  You should see a digitalData object populated with some values. If not something went wrong during the install.
 
  Integrating onto a page

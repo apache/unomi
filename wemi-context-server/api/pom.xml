@@ -8,27 +8,8 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>wemi-context-server-wab</artifactId>
+    <artifactId>wemi-context-server-api</artifactId>
     <packaging>bundle</packaging>
-
-    <dependencies>
-        <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>javax.servlet-api</artifactId>
-            <version>3.0.1</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.4</version>
-        </dependency>
-        <dependency>
-            <groupId>org.oasis-open.wemi</groupId>
-            <artifactId>wemi-context-server-api</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
-    </dependencies>
 
     <build>
         <plugins>
@@ -39,10 +20,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <_wab>src/main/webapp</_wab>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
-                        <Embed-Directory>WEB-INF/lib</Embed-Directory>
-                        <Web-ContextPath>/</Web-ContextPath>
                     </instructions>
                 </configuration>
             </plugin>

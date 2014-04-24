@@ -12,7 +12,10 @@
   <packaging>pom</packaging>
   
   <modules>
+    <module>api</module>
+    <module>services</module>
     <module>wab</module>
+    <module>kar</module>
     <module>package</module>
   </modules>
 
