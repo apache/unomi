@@ -16,6 +16,7 @@
             <groupId>org.oasis-open.wemi</groupId>
             <artifactId>wemi-context-server-api</artifactId>
             <version>1.0-SNAPSHOT</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>

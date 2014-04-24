@@ -28,8 +28,9 @@ Deploying
 3. You will also need to install CXF and CDI (OpenWebBeans) for the REST service support
 ```
    feature:repo-add cxf 2.7.11
-   feature:install cxf/2.7.11
-   feature:install openwebbeans
+   feature:install -v cxf/2.7.11
+   feature:install -v openwebbeans
+   feature:install -v pax-cdi-web-openwebbeans
 ```
 4. Copy the following KAR to the Karaf deploy directory, as in this example line:
 ```
