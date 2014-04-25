@@ -72,6 +72,10 @@
                         <_wab>src/main/webapp</_wab>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Embed-Directory>WEB-INF/lib</Embed-Directory>
+                        <Import-Package>
+                            org.oasis_open.wemi.context.server.api,
+                            *
+                        </Import-Package>
                         <Web-ContextPath>/</Web-ContextPath>
                         <Require-Capability>
                             org.ops4j.pax.cdi.extension; filter:="(extension=pax-cdi-extension)",
