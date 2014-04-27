@@ -1,4 +1,4 @@
-package org.oasis_open.wemi.context.server.impl.services.cxf.cdi;
+package org.oasis_open.wemi.context.server.rest;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;

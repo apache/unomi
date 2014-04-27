@@ -1,4 +1,4 @@
-package org.oasis_open.wemi.context.server.impl.services.cxf.cdi;
+package org.oasis_open.wemi.context.server.rest;
 
 import org.oasis_open.wemi.context.server.api.*;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
@@ -16,8 +16,12 @@ import java.util.Set;
 @CXFEndPoint(url="segments")
 public class SegmentServiceEndPoint implements SegmentService {
 
-    @Inject
+    @Inject @OsgiService
     SegmentService segmentService;
+
+    public SegmentServiceEndPoint() {
+        System.out.println("Initializing segment service endpoint...");
+    }
 
     public Set<User> getMatchingIndividuals(List<SegmentID> segmentIDs) {
         return segmentService.getMatchingIndividuals(segmentIDs);

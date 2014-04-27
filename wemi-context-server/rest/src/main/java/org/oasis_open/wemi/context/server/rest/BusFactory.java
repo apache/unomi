@@ -1,4 +1,4 @@
-package org.oasis_open.wemi.context.server.impl.services.cxf.cdi;
+package org.oasis_open.wemi.context.server.rest;
 
 import javax.enterprise.inject.Produces;
 

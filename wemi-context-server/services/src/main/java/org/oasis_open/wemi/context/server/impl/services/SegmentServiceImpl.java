@@ -16,6 +16,11 @@ import java.util.Set;
 @Default
 @OsgiServiceProvider
 public class SegmentServiceImpl implements SegmentService {
+
+    public SegmentServiceImpl() {
+        System.out.println("Initializing segment service...");
+    }
+
     public Set<User> getMatchingIndividuals(List<SegmentID> segmentIDs) {
         return null;
     }

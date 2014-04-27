@@ -8,6 +8,7 @@
         <bundle start-level="75">mvn:commons-io/commons-io/2.4</bundle>
         <bundle start-level="75">mvn:org.oasis-open.wemi/wemi-context-server-api/1.0-SNAPSHOT</bundle>
         <bundle start-level="75">mvn:org.oasis-open.wemi/wemi-context-server-services/1.0-SNAPSHOT</bundle>
+        <bundle start-level="76">mvn:org.oasis-open.wemi/wemi-context-server-rest/1.0-SNAPSHOT</bundle>
         <bundle start-level="80">mvn:org.oasis-open.wemi/wemi-context-server-wab/1.0-SNAPSHOT</bundle>
     </feature>
 </features>
