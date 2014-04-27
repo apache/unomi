@@ -5,6 +5,7 @@ import org.oasis_open.wemi.context.server.api.services.SegmentService;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Default;
 import java.util.List;
 import java.util.Set;
 
@@ -12,6 +13,7 @@ import java.util.Set;
  * Created by loom on 26.04.14.
  */
 @ApplicationScoped
+@Default
 @OsgiServiceProvider
 public class SegmentServiceImpl implements SegmentService {
     public Set<User> getMatchingIndividuals(List<SegmentID> segmentIDs) {

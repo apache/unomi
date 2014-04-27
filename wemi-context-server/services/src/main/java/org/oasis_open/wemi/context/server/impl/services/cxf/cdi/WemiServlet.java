@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.impl.services.cxf.cdi;
 
 import org.apache.cxf.Bus;
+import org.apache.cxf.jaxrs.servlet.CXFNonSpringJaxrsServlet;
 import org.apache.cxf.transport.servlet.CXFNonSpringServlet;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
 import org.ops4j.pax.cdi.api.Properties;
@@ -14,7 +15,7 @@ import javax.inject.Inject;
 //@WebServlet(urlPatterns="/wemi")
 @OsgiServiceProvider
 @Properties({@Property(name="alias", value="/wemi")})
-public class WemiServlet extends CXFNonSpringServlet {
+public class WemiServlet extends CXFNonSpringJaxrsServlet {
 
     /**
      *

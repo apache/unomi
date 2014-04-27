@@ -17,7 +17,6 @@ import java.util.Set;
 public class SegmentServiceEndPoint implements SegmentService {
 
     @Inject
-    @OsgiService
     SegmentService segmentService;
 
     public Set<User> getMatchingIndividuals(List<SegmentID> segmentIDs) {

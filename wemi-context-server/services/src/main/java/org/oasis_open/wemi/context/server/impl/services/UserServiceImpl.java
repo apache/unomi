@@ -15,6 +15,10 @@ import java.util.List;
 @OsgiServiceProvider
 public class UserServiceImpl implements UserService {
 
+    public UserServiceImpl() {
+        System.out.println("Initializing user service...");
+    }
+
     public List<User> findUsersByPropertyValue(String propertyName, String propertyValue) {
         return new ArrayList<User>();
     }
