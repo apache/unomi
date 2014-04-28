@@ -11,8 +11,11 @@ import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.apache.cxf.Bus;
+import org.apache.cxf.binding.BindingFactoryManager;
 import org.apache.cxf.endpoint.Server;
+import org.apache.cxf.jaxrs.JAXRSBindingFactory;
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
+import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 
 public class EndPointPublisher {
 
@@ -24,13 +27,12 @@ public class EndPointPublisher {
     List<Server> servers = new ArrayList<Server>();
 
     public EndPointPublisher() {
-        System.out.println("Creating end point publisher");
+        System.out.println("Initializing end point publisher");
     }
 
     @PostConstruct
     public void initService() {
         Iterator<Object> it = services.iterator();
-        System.out.println("Creating CXF Endpoints for " + services.isUnsatisfied() );
         while (it.hasNext()) {
             Object service = it.next();
             System.out.println("Creating CXF Endpoint for " + service.getClass().getName());
@@ -46,6 +48,12 @@ public class EndPointPublisher {
             */
             JAXRSServerFactoryBean jaxrsServerFactoryBean = new JAXRSServerFactoryBean();
             jaxrsServerFactoryBean.setBus(bus);
+            jaxrsServerFactoryBean.setResourceClasses(iface);
+            jaxrsServerFactoryBean.setResourceProvider(iface, new SingletonResourceProvider(service));
+            BindingFactoryManager manager = jaxrsServerFactoryBean.getBus().getExtension(BindingFactoryManager.class);
+            JAXRSBindingFactory factory = new JAXRSBindingFactory();
+            factory.setBus(jaxrsServerFactoryBean.getBus());
+            manager.registerBindingFactory(JAXRSBindingFactory.JAXRS_BINDING_ID, factory);
             jaxrsServerFactoryBean.setServiceClass(iface);
             jaxrsServerFactoryBean.setAddress(cxfEndpoint.url());
             jaxrsServerFactoryBean.setServiceBean(service);

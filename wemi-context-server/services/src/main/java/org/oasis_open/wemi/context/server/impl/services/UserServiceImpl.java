@@ -5,6 +5,7 @@ import org.oasis_open.wemi.context.server.api.services.UserService;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Default;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,6 +13,7 @@ import java.util.List;
  * Created by loom on 24.04.14.
  */
 @ApplicationScoped
+@Default
 @OsgiServiceProvider
 public class UserServiceImpl implements UserService {
 
