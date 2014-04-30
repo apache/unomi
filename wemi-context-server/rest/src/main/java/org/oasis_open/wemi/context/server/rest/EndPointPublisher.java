@@ -63,6 +63,7 @@ public class EndPointPublisher {
 
     @PreDestroy
     public void destroy() {
+        System.out.println("Shutting down CXF endpoints...");
         for (Server server : servers) {
             server.destroy();
         }
