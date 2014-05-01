@@ -7,6 +7,9 @@ public class Item {
 
     String itemId;
 
+    public Item() {
+    }
+
     public Item(String itemId) {
         this.itemId = itemId;
     }

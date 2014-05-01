@@ -2,9 +2,8 @@ package org.oasis_open.wemi.context.server.rest;
 
 import org.oasis_open.wemi.context.server.api.*;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
-import org.ops4j.pax.cdi.api.OsgiService;
 
-import javax.inject.Inject;
+import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -15,14 +14,17 @@ import java.util.Set;
  * Created by loom on 26.04.14.
  */
 @WebService
-@CXFEndPoint(url="segments")
 public class SegmentServiceEndPoint implements SegmentService {
 
-    @Inject @OsgiService
     SegmentService segmentService;
 
     public SegmentServiceEndPoint() {
         System.out.println("Initializing segment service endpoint...");
+    }
+
+    @WebMethod(exclude=true)
+    public void setSegmentService(SegmentService segmentService) {
+        this.segmentService = segmentService;
     }
 
     @Path("{segmentIDs}")

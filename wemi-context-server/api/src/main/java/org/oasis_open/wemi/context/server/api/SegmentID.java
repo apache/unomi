@@ -7,6 +7,10 @@ public class SegmentID {
 
     private String id;
 
+    public SegmentID() {
+
+    }
+
     public SegmentID(String id) {
         this.id = id;
     }
