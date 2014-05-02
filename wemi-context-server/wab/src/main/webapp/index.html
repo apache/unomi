@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="/context.js"></script>
 <title>Facebook Login JavaScript Example</title>
 <meta charset="UTF-8">
 </head>
@@ -65,6 +64,15 @@
   });
 
   };
+
+  // Load the SDK asynchronously
+  (function(d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) return;
+    js = d.createElement(s); js.id = id;
+    js.src = "/context.js";
+    fjs.parentNode.insertBefore(js, fjs);
+  }(document, 'script', 'wemi-context'));
 
   // Load the SDK asynchronously
   (function(d, s, id) {
