@@ -91,6 +91,15 @@
       console.log('Good to see you, ' + response.name + '.');
       document.getElementById('status').innerHTML = 'Good to see you, ' +
         response.name;
+
+      // update digitalData W3 Customer Experience Digital Data structure
+      digitalData.user[0].profiles[0].profileInfo.userName = response.name;
+      digitalData.user[0].profiles[0].profileInfo.email = response.email;
+      digitalData.user[0].profiles[0].profileInfo.gender = response.gender;
+      digitalData.user[0].profiles[0].profileInfo.firstName = response.first_name;
+      digitalData.user[0].profiles[0].profileInfo.lastName = response.last_name;
+
+      // @todo we should save this information back to the WEMI context server
     });
   }
 </script>
