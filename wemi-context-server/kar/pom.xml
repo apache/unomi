@@ -27,6 +27,11 @@
             <artifactId>wemi-context-server-services</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>org.oasis-open.wemi</groupId>
+            <artifactId>wemi-context-server-persistence-elasticsearch</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -37,6 +42,9 @@
                     <artifactId>karaf-maven-plugin</artifactId>
                     <version>3.0.1</version>
                     <extensions>true</extensions>
+                    <configuration>
+                        <includeTransitiveDependency>false</includeTransitiveDependency>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>

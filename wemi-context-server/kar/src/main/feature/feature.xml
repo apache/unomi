@@ -7,8 +7,27 @@
         <feature>pax-cdi-web-openwebbeans</feature>
         <bundle start-level="75">mvn:commons-io/commons-io/2.4</bundle>
         <bundle start-level="75">mvn:org.oasis-open.wemi/wemi-context-server-api/1.0-SNAPSHOT</bundle>
+        <bundle start-level="75">mvn:org.oasis-open.wemi/wemi-context-server-persistence-spi/1.0-SNAPSHOT</bundle>
+        <bundle start-level="75">mvn:org.oasis-open.wemi/wemi-context-server-persistence-elasticsearch/1.0-SNAPSHOT</bundle>
         <bundle start-level="75">mvn:org.oasis-open.wemi/wemi-context-server-services/1.0-SNAPSHOT</bundle>
         <bundle start-level="76">mvn:org.oasis-open.wemi/wemi-context-server-rest/1.0-SNAPSHOT</bundle>
         <bundle start-level="80">mvn:org.oasis-open.wemi/wemi-context-server-wab/1.0-SNAPSHOT</bundle>
+<!--
+        <bundle>wrap:mvn:org.elasticsearch/elasticsearch/1.1.1</bundle>
+        <bundle>wrap:mvn:org.apache.lucene/lucene-core/4.7.2</bundle>
+        <bundle>wrap:mvn:org.apache.lucene/lucene-analyzers-common/4.7.2</bundle>
+        <bundle>wrap:mvn:org.apache.lucene/lucene-codecs/4.7.2</bundle>
+        <bundle>wrap:mvn:org.apache.lucene/lucene-queries/4.7.2</bundle>
+        <bundle>wrap:mvn:org.apache.lucene/lucene-memory/4.7.2</bundle>
+        <bundle>wrap:mvn:org.apache.lucene/lucene-highlighter/4.7.2</bundle>
+        <bundle>wrap:mvn:org.apache.lucene/lucene-queryparser/4.7.2</bundle>
+        <bundle>wrap:mvn:org.apache.lucene/lucene-sandbox/4.7.2</bundle>
+        <bundle>wrap:mvn:org.apache.lucene/lucene-suggest/4.7.2</bundle>
+        <bundle>wrap:mvn:org.apache.lucene/lucene-misc/4.7.2</bundle>
+        <bundle>wrap:mvn:org.apache.lucene/lucene-join/4.7.2</bundle>
+        <bundle>wrap:mvn:org.apache.lucene/lucene-grouping/4.7.2</bundle>
+        <bundle>wrap:mvn:org.apache.lucene/lucene-spatial/4.7.2</bundle>
+        <bundle>mvn:com.spatial4j/spatial4j/0.4.1</bundle>
+-->
     </feature>
 </features>

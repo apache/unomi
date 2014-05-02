@@ -10,10 +10,12 @@ import javax.servlet.*;
 import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
@@ -22,6 +24,7 @@ import java.util.List;
 public class ScriptFilter implements Filter {
 
     public static final String BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/base.js";
+    private static final int MAX_COOKIE_AGE_IN_SECONDS = 60*60*24*365*10; // 10-years
 
     FilterConfig filterConfig;
 
@@ -34,11 +37,7 @@ public class ScriptFilter implements Filter {
     }
 
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        // first we copy the base script source code
-        InputStream baseScriptStream = filterConfig.getServletContext().getResourceAsStream(BASE_SCRIPT_LOCATION);
-        Writer responseWriter = response.getWriter();
-        IOUtils.copy(baseScriptStream, responseWriter);
-        // now we must retrieve the context for the current visitor, and build a Javascript object to attach to the
+        // first we must retrieve the context for the current visitor, and build a Javascript object to attach to the
         // script output.
         // @todo implement back-end call to load or create new visitor context
         String visitorID = null;
@@ -51,23 +50,53 @@ public class ScriptFilter implements Filter {
                 }
             }
         }
-        List<User> users = userService.findUsersByPropertyValue("visitorID", visitorID);
+
+        User user = null;
+        if (visitorID == null) {
+            // no visitorID cookie was found, we generate a new one and create the user in the user service
+            user = new User(UUID.randomUUID().toString());
+            userService.save(user);
+            if (response instanceof HttpServletResponse) {
+                HttpServletResponse httpServletResponse = (HttpServletResponse) response;
+                Cookie visitorIdCookie = new Cookie("visitorID", user.getItemId());
+                visitorIdCookie.setPath("/");
+                visitorIdCookie.setMaxAge(MAX_COOKIE_AGE_IN_SECONDS);
+                httpServletResponse.addCookie(visitorIdCookie);
+            }
+        } else {
+            List<User> users = userService.findUsersByPropertyValue("visitorID", visitorID);
+            if (users == null || users.size() == 0) {
+                // we didn't find a corresponding user for the cookie, we will create one
+                user = new User(visitorID);
+                userService.save(user);
+            } else if (users.size() > 1) {
+                // this should never happen ! Probably some kind of data integrity error !
+            } else {
+                user = users.get(0);
+            }
+        }
 
         // we re-use the object naming convention from http://www.w3.org/community/custexpdata/, specifically in
         // http://www.w3.org/2013/12/ceddl-201312.pdf
-        responseWriter.append("digitalData = {");
+        Writer responseWriter = response.getWriter();
+        responseWriter.append("var digitalData = {");
         responseWriter.append("  user: [ { ");
         responseWriter.append("    profiles: [ { ");
         responseWriter.append("      profileInfo: {");
-        responseWriter.append("        profileId: \"visitor-550e8400-e29b-41d4-a716-446655440000\", ");
-        responseWriter.append("        userName: \"johndoe\", ");
-        responseWriter.append("        email: \"a@b.c\",");
+        responseWriter.append("        profileId: \""+user.getItemId()+"\", ");
+        responseWriter.append("        userName: \""+user.getProperty("userName")+"\", ");
+        responseWriter.append("        email: \""+user.getProperty("email")+"\",");
         responseWriter.append("        returningStatus: \"\", ");
         responseWriter.append("        type: \"main\", ");
         responseWriter.append("                   }");
         responseWriter.append("              } ]");
         responseWriter.append("        } ]");
         responseWriter.append("};");
+
+        // now we copy the base script source code
+        InputStream baseScriptStream = filterConfig.getServletContext().getResourceAsStream(BASE_SCRIPT_LOCATION);
+        IOUtils.copy(baseScriptStream, responseWriter);
+
         responseWriter.flush();
     }
 

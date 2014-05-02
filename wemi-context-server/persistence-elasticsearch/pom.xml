@@ -1,0 +1,86 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.oasis-open.wemi</groupId>
+        <artifactId>wemi-context-server</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>wemi-context-server-persistence-elasticsearch</artifactId>
+    <packaging>bundle</packaging>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.oasis-open.wemi</groupId>
+            <artifactId>wemi-context-server-api</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.oasis-open.wemi</groupId>
+            <artifactId>wemi-context-server-persistence-spi</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.elasticsearch</groupId>
+            <artifactId>elasticsearch</artifactId>
+            <version>1.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>3.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.vividsolutions</groupId>
+            <artifactId>jts</artifactId>
+            <version>1.13</version>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
+        </dependency>
+        <dependency>
+            <groupId>org.fusesource</groupId>
+            <artifactId>sigar</artifactId>
+            <version>1.6.4</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <version>2.3.7</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Import-Package>
+                            com.sun.jdmk.comm;resolution:=optional,
+                            com.ibm.uvm.tools;resolution:=optional,
+                            javax.jmdns;resolution:=optional,
+                            javax.jms;resolution:=optional,
+                            javax.mail;resolution:=optional,
+                            javax.mail.internet;resolution:=optional,
+                            org.apache.regexp;resolution:=optional,
+                            junit.framework;resolution:=optional,
+                            junit.textui;resolution:=optional,
+                            org.apache.tools.ant;resolution:=optional,
+                            org.apache.tools.ant.taskdefs;resolution:=optional,
+                            sun.misc;resolution:=optional,
+                            *
+                        </Import-Package>
+                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
+                        <Embed-Transitive>true</Embed-Transitive>
+                    </instructions>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
