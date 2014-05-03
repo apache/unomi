@@ -36,4 +36,8 @@ public class Item {
     public String removeProperty(String name) {
         return (String) properties.remove(name);
     }
+
+    public Properties getProperties() {
+        return properties;
+    }
 }
