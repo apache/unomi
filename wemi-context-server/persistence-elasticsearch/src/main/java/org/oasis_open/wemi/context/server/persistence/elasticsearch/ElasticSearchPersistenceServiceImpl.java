@@ -4,6 +4,7 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.node.Node;
 import org.oasis_open.wemi.context.server.api.Item;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
+
 import static org.elasticsearch.node.NodeBuilder.*;
 
 import java.util.List;
@@ -19,12 +20,25 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
     public void start() {
         // on startup
 
-        node = nodeBuilder().clusterName("clusterName").node();
-        client = node.client();
+        ClassLoader tccl = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+            node = nodeBuilder().clusterName("wemiElasticSearch").node();
+            client = node.client();
+        } finally {
+            Thread.currentThread().setContextClassLoader(tccl);
+        }
+
     }
 
     public void stop() {
-        node.close();
+        ClassLoader tccl = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+            node.close();
+        } finally {
+            Thread.currentThread().setContextClassLoader(tccl);
+        }
     }
 
     public boolean save(Item item) {
