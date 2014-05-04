@@ -8,6 +8,8 @@ import java.util.Properties;
 public class Item {
 
     String itemId;
+    protected String type = "item";
+
     Properties properties = new Properties();
 
     public Item() {
@@ -15,6 +17,12 @@ public class Item {
 
     public Item(String itemId) {
         this.itemId = itemId;
+    }
+
+    public Item(String itemId, String type, Properties properties) {
+        this.itemId = itemId;
+        this.type = type;
+        this.properties = properties;
     }
 
     public String getItemId() {
@@ -39,5 +47,9 @@ public class Item {
 
     public Properties getProperties() {
         return properties;
+    }
+
+    public String getType() {
+        return type;
     }
 }

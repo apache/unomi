@@ -11,6 +11,8 @@ public interface UserService {
 
     List<User> findUsersByPropertyValue(String propertyName, String propertyValue);
 
+    User load(String userId);
+
     boolean save(User user);
 
 }

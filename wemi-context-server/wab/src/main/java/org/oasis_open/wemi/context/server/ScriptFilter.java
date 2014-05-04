@@ -64,34 +64,30 @@ public class ScriptFilter implements Filter {
                 httpServletResponse.addCookie(visitorIdCookie);
             }
         } else {
-            List<User> users = userService.findUsersByPropertyValue("visitorID", visitorID);
-            if (users == null || users.size() == 0) {
-                // we didn't find a corresponding user for the cookie, we will create one
-                user = new User(visitorID);
-                userService.save(user);
-            } else if (users.size() > 1) {
-                // this should never happen ! Probably some kind of data integrity error !
-            } else {
-                user = users.get(0);
+            user = userService.load(visitorID);
+            if (user == null) {
+                // this should not happen.
             }
         }
 
-        // we re-use the object naming convention from http://www.w3.org/community/custexpdata/, specifically in
-        // http://www.w3.org/2013/12/ceddl-201312.pdf
         Writer responseWriter = response.getWriter();
-        responseWriter.append("var digitalData = {");
-        responseWriter.append("  user: [ { ");
-        responseWriter.append("    profiles: [ { ");
-        responseWriter.append("      profileInfo: {");
-        responseWriter.append("        profileId: \""+user.getItemId()+"\", ");
-        responseWriter.append("        userName: \""+user.getProperty("userName")+"\", ");
-        responseWriter.append("        email: \""+user.getProperty("email")+"\",");
-        responseWriter.append("        returningStatus: \"\", ");
-        responseWriter.append("        type: \"main\", ");
-        responseWriter.append("                   }");
-        responseWriter.append("              } ]");
-        responseWriter.append("        } ]");
-        responseWriter.append("};");
+        if (user != null) {
+            // we re-use the object naming convention from http://www.w3.org/community/custexpdata/, specifically in
+            // http://www.w3.org/2013/12/ceddl-201312.pdf
+            responseWriter.append("var digitalData = {");
+            responseWriter.append("  user: [ { ");
+            responseWriter.append("    profiles: [ { ");
+            responseWriter.append("      profileInfo: {");
+            responseWriter.append("        profileId: \"" + user.getItemId() + "\", ");
+            responseWriter.append("        userName: \"" + user.getProperty("userName") + "\", ");
+            responseWriter.append("        email: \"" + user.getProperty("email") + "\",");
+            responseWriter.append("        returningStatus: \"\", ");
+            responseWriter.append("        type: \"main\", ");
+            responseWriter.append("                   }");
+            responseWriter.append("              } ]");
+            responseWriter.append("        } ]");
+            responseWriter.append("};");
+        }
 
         // now we copy the base script source code
         InputStream baseScriptStream = filterConfig.getServletContext().getResourceAsStream(BASE_SCRIPT_LOCATION);
