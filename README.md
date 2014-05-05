@@ -23,11 +23,11 @@ Deploying
 1. Before deploying, make sure that you have Apache Karaf properly installed. You will also have to increase the
 default maximum memory size and perm gen size by adjusting the following environment values in the bin/setenv(.bat)
 files (at the end of the file):
-    ```
-       export KARAF_OPTS="-XX:+CMSClassUnloadingEnabled"
-       export JAVA_MAX_MEM=1G
-       export JAVA_JAVA_MAX_PERM_MEM=384M
-    ```
+
+    export KARAF_OPTS="-XX:+CMSClassUnloadingEnabled"
+    export JAVA_MAX_MEM=1G
+    export JAVA_JAVA_MAX_PERM_MEM=384M
+
 2. If you haven't done it yet, install the WAR support into Karaf by doing the following in the Karaf command line:
     ```
        feature:install -v war
@@ -64,7 +64,7 @@ Integrating onto a page
 
  Simply reference the WEMI script in your HTML as in the following example:
 
-```
+```javascript
 <script type="text/javascript">
     (function(){ var u=(("https:" == document.location.protocol) ? "https://localhost:8181/" : "http://localhost:8181/");
     var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0]; g.type='text/javascript'; g.defer=true; g.async=true; g.src=u+'context.js';
