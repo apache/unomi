@@ -23,31 +23,44 @@ Deploying
 1. Before deploying, make sure that you have Apache Karaf properly installed. You will also have to increase the
 default maximum memory size and perm gen size by adjusting the following environment values in the bin/setenv(.bat)
 files (at the end of the file):
-```
-   export KARAF_OPTS="-XX:+CMSClassUnloadingEnabled"
-   export JAVA_MAX_MEM=1G
-   export JAVA_JAVA_MAX_PERM_MEM=384M
-```
+    ```
+       export KARAF_OPTS="-XX:+CMSClassUnloadingEnabled"
+       export JAVA_MAX_MEM=1G
+       export JAVA_JAVA_MAX_PERM_MEM=384M
+    ```
 2. If you haven't done it yet, install the WAR support into Karaf by doing the following in the Karaf command line:
-```
-   feature:install -v war
-```
+    ```
+       feature:install -v war
+    ```
 3. You will also need to install CXF and CDI (OpenWebBeans) for the REST service support
-```
-   feature:repo-add cxf 2.7.11
-   feature:install -v cxf/2.7.11
-   feature:install -v openwebbeans
-   feature:install -v pax-cdi-web-openwebbeans
-```
+    ```
+       feature:repo-add cxf 2.7.11
+       feature:install -v cxf/2.7.11
+       feature:install -v openwebbeans
+       feature:install -v pax-cdi-web-openwebbeans
+    ```
 4. Copy the following KAR to the Karaf deploy directory, as in this example line:
-```
-  cp wemi-context-server/kar/target/wemi-context-server-kar-1.0-SNAPSHOT.kar ~/java/deployments/wemi-sandbox/apache-karaf-3.0.1/deploy/
-```
+    ```
+      cp wemi-context-server/kar/target/wemi-context-server-kar-1.0-SNAPSHOT.kar ~/java/deployments/wemi-sandbox/apache-karaf-3.0.1/deploy/
+    ```
 5. If all went smoothly, you should be able to access the WEMI context script here : http://localhost:8181/context.js
  You should see a digitalData object populated with some values. If not something went wrong during the install.
 
- Integrating onto a page
- -----------------------
+Testing with an example page
+----------------------------
+
+A default test page is provided at the following URL:
+
+```
+   http://localhost:8181/index.html
+```
+
+This test page will trigger the loading of the WEMI /context.js script, which will try to retrieving the user context
+or create a new one if it doesn't exist yet. It also contains an experimental integration with Facebook Login, but it
+doesn't yet save the context pack to the WEMI server.
+
+Integrating onto a page
+-----------------------
 
  Simply reference the WEMI script in your HTML as in the following example:
 
