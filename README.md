@@ -27,7 +27,7 @@ files (at the end of the file):
    export KARAF_OPTS="-XX:+CMSClassUnloadingEnabled"
    export JAVA_MAX_MEM=1G
    export JAVA_JAVA_MAX_PERM_MEM=384M
-``
+```
 2. If you haven't done it yet, install the WAR support into Karaf by doing the following in the Karaf command line:
 ```
    feature:install -v war
