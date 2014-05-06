@@ -76,6 +76,10 @@ public class ScriptFilter implements Filter {
             if (request instanceof HttpServletRequest) {
                 HttpServletRequest httpServletRequest = (HttpServletRequest) request;
                 String contentType = httpServletRequest.getContentType();
+                if (contentType != null && contentType.contains("application/json")) {
+                    InputStream jsonInputStream = httpServletRequest.getInputStream();
+
+                }
             }
         }
 
