@@ -39,10 +39,11 @@ public class ScriptFilter implements Filter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         // first we must retrieve the context for the current visitor, and build a Javascript object to attach to the
         // script output.
-        // @todo implement back-end call to load or create new visitor context
         String visitorID = null;
+        String httpMethod = null;
         if (request instanceof HttpServletRequest) {
             HttpServletRequest httpServletRequest = (HttpServletRequest) request;
+            httpMethod = httpServletRequest.getMethod();
             Cookie[] cookies = httpServletRequest.getCookies();
             for (Cookie cookie : cookies) {
                 if ("visitorID".equals(cookie.getName())) {
@@ -67,6 +68,14 @@ public class ScriptFilter implements Filter {
             user = userService.load(visitorID);
             if (user == null) {
                 // this should not happen.
+            }
+        }
+
+        if (httpMethod != null && "post".equals(httpMethod.toLowerCase())) {
+            // we have received an update on the digitalData structure, we must store it.
+            if (request instanceof HttpServletRequest) {
+                HttpServletRequest httpServletRequest = (HttpServletRequest) request;
+                String contentType = httpServletRequest.getContentType();
             }
         }
 
