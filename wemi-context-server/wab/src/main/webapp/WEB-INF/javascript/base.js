@@ -18,7 +18,7 @@ var wemi = {
         xhr.send();
     },
 
-    saveContext: function (url, data, successCallback) {
+    saveContext: function (url, data, successCallBack) {
         var xhr;
         if (window.XMLHttpRequest) {// code for IE7+, Firefox, Chrome, Opera, Safari
             xhr = new XMLHttpRequest();

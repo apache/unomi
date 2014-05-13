@@ -1,5 +1,9 @@
 package org.oasis_open.wemi.context.server;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.UserService;
@@ -78,7 +82,11 @@ public class ScriptFilter implements Filter {
                 String contentType = httpServletRequest.getContentType();
                 if (contentType != null && contentType.contains("application/json")) {
                     InputStream jsonInputStream = httpServletRequest.getInputStream();
-
+                    ObjectMapper mapper = new ObjectMapper(); // create once, reuse
+                    JsonNode rootNode = mapper.readTree(jsonInputStream);
+                    if (rootNode != null) {
+                        rootNode.toString();
+                    }
                 }
             }
         }

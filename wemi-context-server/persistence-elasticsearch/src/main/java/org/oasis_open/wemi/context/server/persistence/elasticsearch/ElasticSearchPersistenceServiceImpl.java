@@ -29,11 +29,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 /**
  * Created by loom on 02.05.14.
  */
 public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
+
+    private static final Logger logger = Logger.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
 
     Node node;
     Client client;
@@ -44,6 +47,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         ClassLoader tccl = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+            logger.info("Starting ElasticSearch persistence backend...");
             node = nodeBuilder().clusterName("wemiElasticSearch").node();
             client = node.client();
         } finally {
@@ -56,6 +60,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         ClassLoader tccl = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+            logger.info("Closing ElasticSearch persistence backend...");
             node.close();
         } finally {
             Thread.currentThread().setContextClassLoader(tccl);
