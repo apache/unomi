@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
 </head>
 <body>
-<script>
+<script type="text/javascript">
     // This is called with the results from from FB.getLoginStatus().
     function statusChangeCallback(response) {
         console.log('statusChangeCallback');
@@ -72,6 +72,7 @@
         js = d.createElement(s);
         js.id = id;
         js.src = "/context.js";
+        js.type = "text/javascript";
         fjs.parentNode.insertBefore(js, fjs);
     }(document, 'script', 'wemi-context'));
 
@@ -82,6 +83,7 @@
         js = d.createElement(s);
         js.id = id;
         js.src = "//connect.facebook.net/en_US/sdk.js";
+        js.type = "text/javascript";
         fjs.parentNode.insertBefore(js, fjs);
     }(document, 'script', 'facebook-jssdk'));
 

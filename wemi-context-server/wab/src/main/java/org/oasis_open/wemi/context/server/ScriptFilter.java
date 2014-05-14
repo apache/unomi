@@ -4,6 +4,9 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.io.IOUtils;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.UserService;
@@ -18,6 +21,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
@@ -85,7 +89,22 @@ public class ScriptFilter implements Filter {
                     ObjectMapper mapper = new ObjectMapper(); // create once, reuse
                     JsonNode rootNode = mapper.readTree(jsonInputStream);
                     if (rootNode != null) {
-                        rootNode.toString();
+                        ObjectNode profileInfo = (ObjectNode) rootNode.get("user").get(0).get("profiles").get(0).get("profileInfo");
+                        Iterator<String> fieldNameIter = profileInfo.fieldNames();
+                        boolean modifiedProperties = false;
+                        while (fieldNameIter.hasNext()) {
+                            String fieldName = fieldNameIter.next();
+                            JsonNode field = profileInfo.get(fieldName);
+                            if (user.hasProperty(fieldName) && user.getProperty(fieldName).equals(field.asText())) {
+
+                            } else {
+                                user.setProperty(fieldName, field.asText());
+                                modifiedProperties = true;
+                            }
+                        }
+                        if (modifiedProperties) {
+                            userService.save(user);
+                        }
                     }
                 }
             }
@@ -100,8 +119,9 @@ public class ScriptFilter implements Filter {
             responseWriter.append("    profiles: [ { ");
             responseWriter.append("      profileInfo: {");
             responseWriter.append("        profileId: \"" + user.getItemId() + "\", ");
-            responseWriter.append("        userName: \"" + user.getProperty("userName") + "\", ");
-            responseWriter.append("        email: \"" + user.getProperty("email") + "\",");
+            for (String userPropertyName : user.getProperties().stringPropertyNames()) {
+                responseWriter.append("        "+userPropertyName+": \"" + user.getProperty(userPropertyName) + "\", ");
+            }
             responseWriter.append("        returningStatus: \"\", ");
             responseWriter.append("        type: \"main\", ");
             responseWriter.append("                   }");
