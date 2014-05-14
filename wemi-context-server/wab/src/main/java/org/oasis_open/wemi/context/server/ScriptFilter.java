@@ -54,7 +54,7 @@ public class ScriptFilter implements Filter {
             httpMethod = httpServletRequest.getMethod();
             Cookie[] cookies = httpServletRequest.getCookies();
             for (Cookie cookie : cookies) {
-                if ("visitorID".equals(cookie.getName())) {
+                if ("wemi-profileID".equals(cookie.getName())) {
                     visitorID = cookie.getValue();
                 }
             }
@@ -67,7 +67,7 @@ public class ScriptFilter implements Filter {
             userService.save(user);
             if (response instanceof HttpServletResponse) {
                 HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-                Cookie visitorIdCookie = new Cookie("visitorID", user.getItemId());
+                Cookie visitorIdCookie = new Cookie("wemi-profileID", user.getItemId());
                 visitorIdCookie.setPath("/");
                 visitorIdCookie.setMaxAge(MAX_COOKIE_AGE_IN_SECONDS);
                 httpServletResponse.addCookie(visitorIdCookie);
