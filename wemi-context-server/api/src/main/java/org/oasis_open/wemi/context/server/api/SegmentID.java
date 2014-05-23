@@ -15,6 +15,10 @@ public class SegmentID implements Comparable<SegmentID> {
         this.id = id;
     }
 
+    public String getId() {
+        return id;
+    }
+
     public int compareTo(SegmentID o) {
         if (id != null) {
             return id.compareTo(o.id);

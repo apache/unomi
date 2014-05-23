@@ -8,7 +8,9 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.io.IOUtils;
+import org.oasis_open.wemi.context.server.api.SegmentID;
 import org.oasis_open.wemi.context.server.api.User;
+import org.oasis_open.wemi.context.server.api.services.SegmentService;
 import org.oasis_open.wemi.context.server.api.services.UserService;
 import org.ops4j.pax.cdi.api.OsgiService;
 
@@ -23,6 +25,7 @@ import java.io.InputStream;
 import java.io.Writer;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -39,6 +42,10 @@ public class ScriptFilter implements Filter {
     @Inject
     @OsgiService
     UserService userService;
+
+    @Inject
+    @OsgiService
+    SegmentService segmentService;
 
     public void init(FilterConfig filterConfig) throws ServletException {
         this.filterConfig = filterConfig;
@@ -63,19 +70,12 @@ public class ScriptFilter implements Filter {
         User user = null;
         if (visitorID == null) {
             // no visitorID cookie was found, we generate a new one and create the user in the user service
-            user = new User(UUID.randomUUID().toString());
-            userService.save(user);
-            if (response instanceof HttpServletResponse) {
-                HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-                Cookie visitorIdCookie = new Cookie("wemi-profileID", user.getItemId());
-                visitorIdCookie.setPath("/");
-                visitorIdCookie.setMaxAge(MAX_COOKIE_AGE_IN_SECONDS);
-                httpServletResponse.addCookie(visitorIdCookie);
-            }
+            user = createNewUser(response);
         } else {
             user = userService.load(visitorID);
             if (user == null) {
-                // this should not happen.
+                // this can happen if we have an old cookie but have reset the server.
+                user = createNewUser(response);
             }
         }
 
@@ -112,6 +112,8 @@ public class ScriptFilter implements Filter {
 
         Writer responseWriter = response.getWriter();
         if (user != null) {
+            Set<SegmentID> userSegments = segmentService.getSegmentsForUser(user);
+
             // we re-use the object naming convention from http://www.w3.org/community/custexpdata/, specifically in
             // http://www.w3.org/2013/12/ceddl-201312.pdf
             responseWriter.append("var digitalData = {");
@@ -124,6 +126,20 @@ public class ScriptFilter implements Filter {
             }
             responseWriter.append("        returningStatus: \"\", ");
             responseWriter.append("        type: \"main\", ");
+            if (userSegments != null && userSegments.size() > 0) {
+                responseWriter.append("        segments: [");
+                int i=0;
+                for (SegmentID segmentID : userSegments) {
+                    responseWriter.append("\"");
+                    responseWriter.append(segmentID.getId());
+                    responseWriter.append("\"");
+                    if (i < userSegments.size() -1) {
+                        responseWriter.append(", ");
+                    }
+                    i++;
+                }
+                responseWriter.append("]");
+            }
             responseWriter.append("                   }");
             responseWriter.append("              } ]");
             responseWriter.append("        } ]");
@@ -135,6 +151,20 @@ public class ScriptFilter implements Filter {
         IOUtils.copy(baseScriptStream, responseWriter);
 
         responseWriter.flush();
+    }
+
+    private User createNewUser(ServletResponse response) {
+        User user;
+        user = new User(UUID.randomUUID().toString());
+        userService.save(user);
+        if (response instanceof HttpServletResponse) {
+            HttpServletResponse httpServletResponse = (HttpServletResponse) response;
+            Cookie visitorIdCookie = new Cookie("wemi-profileID", user.getItemId());
+            visitorIdCookie.setPath("/");
+            visitorIdCookie.setMaxAge(MAX_COOKIE_AGE_IN_SECONDS);
+            httpServletResponse.addCookie(visitorIdCookie);
+        }
+        return user;
     }
 
     public void destroy() {

@@ -102,6 +102,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                     .actionGet();
             Constructor constructor = clazz.getConstructor(String.class, String.class, Properties.class);
             Map<String,Object> sourceMap = response.getSource();
+            if (sourceMap == null) {
+                return null;
+            }
             Properties properties = new Properties();
             for (Map.Entry<String,Object> sourceEntry : sourceMap.entrySet()) {
                 properties.setProperty(sourceEntry.getKey(), sourceEntry.getValue().toString());
