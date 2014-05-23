@@ -70,12 +70,12 @@ public class ScriptFilter implements Filter {
         User user = null;
         if (visitorID == null) {
             // no visitorID cookie was found, we generate a new one and create the user in the user service
-            user = createNewUser(response);
+            user = createNewUser(visitorID, response);
         } else {
             user = userService.load(visitorID);
             if (user == null) {
                 // this can happen if we have an old cookie but have reset the server.
-                user = createNewUser(response);
+                user = createNewUser(visitorID, response);
             }
         }
 
@@ -153,9 +153,13 @@ public class ScriptFilter implements Filter {
         responseWriter.flush();
     }
 
-    private User createNewUser(ServletResponse response) {
+    private User createNewUser(String existingVisitorID, ServletResponse response) {
         User user;
-        user = new User(UUID.randomUUID().toString());
+        String visitorID = existingVisitorID;
+        if (visitorID == null) {
+           visitorID = UUID.randomUUID().toString();
+        }
+        user = new User();
         userService.save(user);
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
