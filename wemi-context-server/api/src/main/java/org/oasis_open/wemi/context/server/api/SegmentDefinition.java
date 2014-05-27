@@ -6,6 +6,7 @@ package org.oasis_open.wemi.context.server.api;
 public class SegmentDefinition {
 
     String expression;
+    ConditionNode rootConditionNode;
 
     public SegmentDefinition() {
     }

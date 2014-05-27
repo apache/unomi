@@ -110,6 +110,8 @@ public class ScriptFilter implements Filter {
             }
         }
 
+        // @Todo we should here call all plugins to "augment" the user profile. For example we could have LDAP, CRM or Analytics plugins that could add information to the user profile
+
         Writer responseWriter = response.getWriter();
         if (user != null) {
             Set<SegmentID> userSegments = segmentService.getSegmentsForUser(user);

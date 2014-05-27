@@ -79,3 +79,8 @@ Integrating onto a page
     s.parentNode.insertBefore(g,s); })();
 </script>
 ```
+
+Todo
+----
+
+- Look at possible integration with newsletter management systems such as MailChimp, for example to synchronize user data with collected info.
