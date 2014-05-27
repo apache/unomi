@@ -1,0 +1,10 @@
+<jcr = 'http://www.jcp.org/jcr/1.0'>
+<nt = 'http://www.jcp.org/jcr/nt/1.0'>
+<jnt = 'http://www.jahia.org/jahia/nt/1.0'>
+<jmix = 'http://www.jahia.org/jahia/mix/1.0'>
+<j = 'http://www.jahia.org/jahia/1.0'>
+<mix = 'http://www.jcp.org/jcr/mix/1.0'>
+
+[jnt:serverSettingsManageSegments] > jnt:content, jmix:siteComponent, mix:title, jmix:studioOnly
+- j:wemiContextServerAdminURL (string) nofulltext
+
