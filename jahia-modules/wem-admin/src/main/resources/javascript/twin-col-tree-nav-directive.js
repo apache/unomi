@@ -19,14 +19,14 @@ angular.module('twinColTreeNav', [])
       '    <div class="col-md-4"><div class="left-column list-group">' +
       '        <a class="list-group-item" ng-repeat="root in currentRoots" ng-class="{active: isSelected(root)}" href="" ng-click="selectRoot(root)">' +
       '          {{root.name}}' +
-      '          <span class="child-pointer" ng-if="hasChildren(root)"> &#9658;</span>' +
+      '          <span class="badge" ng-if="hasChildren(root)"> &#9658;</span>' +
       '        </a>' +
       '    </div></div>' +
       '    <!-- Right -->' +
       '    <div class="col-md-4"><div class="right-column list-group">' +
       '        <a ng-repeat="child in childrenOfSelectedRoot" class="list-group-item" ui-draggable="true" drag="child" href="" ng-click="selectChild(child, childrenOfSelectedRoot)" ng-class="{active: isSelected(child)}">' +
       '          {{child.name}}' +
-      '          <span class="child-pointer" ng-if="hasChildren(child)"> &#9658;</span>' +
+      '          <span class="badge" ng-if="hasChildren(child)"> &#9658;</span>' +
       '        </a>' +
       '    </div></div>' +
       '    <div class="col-md-4" ui-draggable="true" drag="selectedTreeRoot">' +
