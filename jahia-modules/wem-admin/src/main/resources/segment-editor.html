@@ -109,27 +109,61 @@
                     <h3 class="panel-title">Editing "Young rich" segment</h3>
                 </div>
                 <div class="panel-body">
-                    <div class="perso">
-                        <div class="block">
-                            <div class="perso perso-alternate">
-                                <div class="block">
-                                    <div class="perso">
-                                        <div class="block">User "age" is less than 25</div>
-                                        <div class="operator">AND</div>
-                                        <div class="block">User "income" is more than 100000</div>
-                                        <div class="operator">AND</div>
-                                        <div class="block" ui-on-drop="onDrop($event,$data,women)">Drag and drop new condition here</div>
+                    <form name="segment" class="form-inline">
+                        <div class="perso">
+                            <div class="block">
+                                <div class="perso perso-alternate">
+                                    <div class="block">
+                                        <div class="perso">
+                                            <div class="block">User
+                                                &nbsp;
+                                                <select name="property" class="form-control">
+                                                    <option>age</option>
+                                                    <option>income</option>
+                                                </select>
+                                                &nbsp;
+                                                <select name="operator" class="form-control">
+                                                    <option>is less than</option>
+                                                    <option>is more than</option>
+                                                    <option>equals</option>
+                                                </select>
+                                                &nbsp;
+                                                <input type="text" value="25"/>
+                                            </div>
+                                            <div class="operator">AND</div>
+                                            <div class="block">User
+                                                &nbsp;
+                                                <select name="property" class="form-control">
+                                                    <option>income</option>
+                                                    <option>age</option>
+                                                </select>
+                                                &nbsp;
+                                                <select name="operator" class="form-control">
+                                                    <option>is more than</option>
+                                                    <option>is less than</option>
+                                                    <option>equals</option>
+                                                </select>
+                                                &nbsp;
+                                                <input type="text" value="100000"/>
+                                            </div>
+                                            <div class="operator">AND</div>
+                                            <div class="block" ui-on-drop="onDrop($event,$data,women)">Drag and drop new
+                                                condition here
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="operator">OR</div>
+                                    <div class="block" ui-on-drop="onDrop($event,$data,women)">Drag and drop new
+                                        condition here
                                     </div>
                                 </div>
-                                <div class="operator">OR</div>
-                                <div class="block" ui-on-drop="onDrop($event,$data,women)">Drag and drop new condition here</div>
+                            </div>
+                            <div class="operator">AND
+                            </div>
+                            <div class="block" ui-on-drop="onDrop($event,$data,women)">Drag and drop new condition here
                             </div>
                         </div>
-                        <div class="operator">AND
-                        </div>
-                        <div class="block" ui-on-drop="onDrop($event,$data,women)">Drag and drop new condition here
-                        </div>
-                    </div>
+                    </form>
                 </div>
             </div>
 

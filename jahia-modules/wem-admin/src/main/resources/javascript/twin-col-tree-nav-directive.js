@@ -30,7 +30,7 @@ angular.module('twinColTreeNav', [])
       '        </a>' +
       '    </div></div>' +
       '    <div class="col-md-4" ui-draggable="true" drag="selectedTreeRoot">' +
-      '      {{selectedTreeRoot}}' +
+      '      {{selected}}' +
       '    </div>' +
       '  </div>' +
       '</div>';
