@@ -1,0 +1,50 @@
+/*
+.twin-col-tree-nav {
+    float: left;
+    padding-left: 2px;
+    height: 100%;
+    width: 100%;
+}
+
+.bread-crumb {
+    padding-left: 2px;
+    float: left;
+    width: 100%;
+}
+
+.bread-crumb-elem {
+    margin-right: 2px;
+}
+
+.twin-cols {
+    padding-left: 2px;
+    float: left;
+    height: 100%;
+    width: 100%;
+}
+
+.left-column {
+    padding-left: 2px;
+    float: left;
+    width: 49%;
+    height: 100%;
+}
+
+.right-column {
+    padding-left: 2px;
+    float: left;
+    width: 49%;
+    height: 100%;
+}
+
+.list-item {
+    padding-left: 2px;
+    float: left;
+    width: 100%;
+}
+*/
+
+.child-pointer {
+    padding-right: 2px;
+    float: right;
+}
