@@ -87,7 +87,7 @@ angular.module('manageSegments', ['ui.bootstrap', 'twinColTreeNav', 'ngDragDrop'
                     // this means "get all root nodes"
                     return conditionTree.children;
                 } else {
-                    parent.children;
+                    return parent.children;
                 }
             },
             hasChildren: function (treeNode) {

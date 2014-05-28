@@ -113,6 +113,13 @@ angular.module('twinColTreeNav', [])
         $scope.breadCrumb = [];
 
         $scope.isSelected = function(treeNode) {
+            if ($scope.selectedTreeRoot === undefined) {
+                if (treeNode === undefined) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
           return $scope.selectedTreeRoot.name === treeNode.name;
         };
 
