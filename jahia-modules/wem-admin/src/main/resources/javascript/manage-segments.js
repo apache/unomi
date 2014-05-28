@@ -51,4 +51,52 @@ angular.module('manageSegments', ['ui.bootstrap', 'twinColTreeNav', 'ngDragDrop'
                 }
             }
         };
+
+        var conditionTree = {
+            name : 'root',
+            children: [
+                {
+                    name: 'Demographic'
+                },
+                {
+                    name: 'Geographic'
+                },
+                {
+                    name: 'Logical',
+                    children: [
+                        {
+                            name: 'AND'
+                        },
+                        {
+                            name: 'OR'
+                        }
+                    ]
+                },
+                {
+                    name: 'Algorithmic'
+                }
+            ]
+        };
+
+        $scope.conditionTreeHandle = {
+            atSelectTreeNode: function (treeNode) {
+                $scope.selected = treeNode;
+            },
+            getChildren: function (parent) {
+                if (parent === undefined) {
+                    // this means "get all root nodes"
+                    return conditionTree.children;
+                } else {
+                    parent.children;
+                }
+            },
+            hasChildren: function (treeNode) {
+                if (treeNode === undefined) {
+                    return true;
+                } else {
+                    return treeNode.children !== undefined;
+                }
+            }
+        };
+
     });
