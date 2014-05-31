@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+    <bean class="org.jahia.modules.wemi.WemiScriptFilter">
+        <property name="applyOnConfigurations" value="page" />
+        <property name="skipOnConfiguration" value="include,wrapper" />
+        <property name="applyOnModes" value="live" />
+        <property name="priority" value="3" />
+        <property name="scriptEngineUtils" ref="scriptEngineUtils"/>
+        <property name="template" value="${googleAnalyticsTemplate:/modules/wem-components/META-INF/scripts/wemi-context-script.groovy}"/>
+    </bean>
+</beans>
