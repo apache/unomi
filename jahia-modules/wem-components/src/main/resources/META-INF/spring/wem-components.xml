@@ -8,6 +8,6 @@
         <property name="applyOnModes" value="live" />
         <property name="priority" value="3" />
         <property name="scriptEngineUtils" ref="scriptEngineUtils"/>
-        <property name="template" value="${googleAnalyticsTemplate:/modules/wem-components/META-INF/scripts/wemi-context-script.groovy}"/>
+        <property name="renderingScriptLocation" value="${wemiRenderingScriptLocation:/modules/wem-components/META-INF/scripts/wemi-context-script.groovy}"/>
     </bean>
 </beans>

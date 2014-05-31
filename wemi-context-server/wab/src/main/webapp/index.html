@@ -65,11 +65,11 @@
 
     };
 
-    // Load the SDK asynchronously
-    (function (d, s, id) {
-        var js, fjs = d.getElementsByTagName(s)[0];
-        if (d.getElementById(id)) return;
-        js = d.createElement(s);
+    // Load the WEMI context script asynchronously
+    (function (document, elementToCreate, id) {
+        var js, fjs = document.getElementsByTagName(elementToCreate)[0];
+        if (document.getElementById(id)) return;
+        js = document.createElement(elementToCreate);
         js.id = id;
         js.src = "/context.js";
         js.type = "text/javascript";

@@ -7,6 +7,7 @@ import org.jahia.services.render.Resource;
 import org.jahia.services.render.filter.AbstractFilter;
 import org.jahia.services.render.filter.RenderChain;
 import org.jahia.services.render.filter.cache.AggregateCacheFilter;
+import org.jahia.services.templates.JahiaTemplateManagerService;
 import org.jahia.utils.ScriptEngineUtils;
 import org.jahia.utils.WebUtils;
 import org.slf4j.Logger;
@@ -33,27 +34,27 @@ public class WemiScriptFilter extends AbstractFilter implements ApplicationListe
 
     private ScriptEngineUtils scriptEngineUtils;
 
-    private String template;
+    private String renderingScriptLocation;
 
-    private String resolvedTemplate;
+    private String renderingScriptCode;
 
     @Override
     public String execute(String previousOut, RenderContext renderContext, Resource resource, RenderChain chain) throws Exception {
         String out = previousOut;
-        String webPropertyID = renderContext.getSite().hasProperty("wemiContextServerURL") ? renderContext.getSite().getProperty("webPropertyID").getString() : null;
-        if (StringUtils.isNotEmpty(webPropertyID)) {
-            String script = getResolvedTemplate();
+        String wemiContextServerURL = renderContext.getSite().hasProperty("wemiContextServerURL") ? renderContext.getSite().getProperty("webPropertyID").getString() : null;
+        if (StringUtils.isNotEmpty(wemiContextServerURL)) {
+            String script = getRenderingScriptCode();
             if (script != null) {
                 Source source = new Source(previousOut);
                 OutputDocument outputDocument = new OutputDocument(source);
                 List<Element> headElementList = source.getAllElements(HTMLElementName.HEAD);
                 for (Element element : headElementList) {
                     final EndTag headEndTag = element.getEndTag();
-                    String extension = StringUtils.substringAfterLast(template, ".");
+                    String extension = StringUtils.substringAfterLast(renderingScriptLocation, ".");
                     ScriptEngine scriptEngine = scriptEngineUtils.scriptEngine(extension);
-                    ScriptContext scriptContext = new GoogleScriptContext();
+                    ScriptContext scriptContext = new WemiScriptContext();
                     final Bindings bindings = scriptEngine.createBindings();
-                    bindings.put("wemiContextServerURL", webPropertyID);
+                    bindings.put("wemiContextServerURL", wemiContextServerURL);
                     String url = resource.getNode().getUrl();
                     if (renderContext.getRequest().getAttribute("analytics-path") != null) {
                         url = (String) renderContext.getRequest().getAttribute("analytics-path");
@@ -80,30 +81,30 @@ public class WemiScriptFilter extends AbstractFilter implements ApplicationListe
         return out;
     }
 
-    protected String getResolvedTemplate() throws IOException {
-        if (resolvedTemplate == null) {
-            resolvedTemplate = WebUtils.getResourceAsString(template);
-            if (resolvedTemplate == null) {
-                logger.warn("Unable to lookup template at {}", template);
+    protected String getRenderingScriptCode() throws IOException {
+        if (renderingScriptCode == null) {
+            renderingScriptCode = WebUtils.getResourceAsString(renderingScriptLocation);
+            if (renderingScriptCode == null) {
+                logger.warn("Unable to lookup template at {}", renderingScriptLocation);
             }
         }
-        return resolvedTemplate;
+        return renderingScriptCode;
     }
 
     public void onApplicationEvent(ApplicationEvent event) {
-        if (event instanceof TemplatePackageRedeployedEvent) {
-            resolvedTemplate = null;
+        if (event instanceof JahiaTemplateManagerService.TemplatePackageRedeployedEvent) {
+            renderingScriptCode = null;
         }
     }
 
     public void setScriptEngineUtils(ScriptEngineUtils scriptEngineUtils) {
         this.scriptEngineUtils = scriptEngineUtils;
     }
-    public void setTemplate(String template) {
-        this.template = template;
+    public void setRenderingScriptLocation(String renderingScriptLocation) {
+        this.renderingScriptLocation = renderingScriptLocation;
     }
 
-    class GoogleScriptContext extends SimpleScriptContext {
+    class WemiScriptContext extends SimpleScriptContext {
         private Writer writer = null;
 
         /**

@@ -1,16 +1,15 @@
-println("<script type=\"text/javascript\">\n" +
-                    "\n" +
-                    "  var _gaq = _gaq || [];\n");
 
-println(" _gaq.push(['_setAccount', '${wemiContextServerURL}']);\n" +
-                    "  _gaq.push(['_trackPageview', '${resourceUrl}']);\n")
-gaMap.each {
-  entry-> println("  _gaq.push(['_trackPageview', '${entry.value}']);\n")
-}
-println("  (function() {\n" +
-                    "    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;\n" +
-                    "    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';\n" +
-                    "    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);\n" +
-                    "  })();\n" +
-                    "\n" +
-                    "</script>")
+println("<script type=\"text/javascript\">\n");
+
+println("    // Load the WEMI context script asynchronously\n" +
+        "    (function (document, elementToCreate, id) {\n" +
+        "        var js, fjs = document.getElementsByTagName(elementToCreate)[0];\n" +
+        "        if (document.getElementById(id)) return;\n" +
+        "        js = document.createElement(elementToCreate);\n" +
+        "        js.id = id;\n" +
+        "        js.src = \"/${wemiContextServerURL}\";\n" +
+        "        js.type = \"text/javascript\";\n" +
+        "        fjs.parentNode.insertBefore(js, fjs);\n" +
+        "    }(document, 'script', 'wemi-context'));")
+
+println("</script>");
