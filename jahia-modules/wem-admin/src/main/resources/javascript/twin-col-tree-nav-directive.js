@@ -29,7 +29,7 @@ angular.module('twinColTreeNav', [])
       '          <span class="badge" ng-if="hasChildren(child)"> &#9658;</span>' +
       '        </a>' +
       '    </div></div>' +
-      '    <div class="col-md-4" ui-draggable="true" drag="selectedTreeRoot">' +
+      '    <div class="col-md-4" ui-draggable="true" drag="selectedTreeRoot" >' +
       '      {{selected}}' +
       '    </div>' +
       '  </div>' +

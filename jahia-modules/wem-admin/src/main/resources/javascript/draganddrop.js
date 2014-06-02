@@ -23,6 +23,7 @@ angular.module("ngDragDrop",[])
                     dragData = newValue;
                 });
                 element.bind("dragstart", function (e) {
+                    console.log("Drag start event on element " + element.id);
                     var sendData = angular.toJson(dragData);
                     var sendChannel = attrs.dragChannel || "defaultchannel";
                     var dragImage = attrs.dragImage || null;
@@ -44,6 +45,7 @@ angular.module("ngDragDrop",[])
                 });
 
                 element.bind("dragend", function (e) {
+                    console.log("Drag end event on element " + element.id);
                     var sendChannel = attrs.dragChannel || "defaultchannel";
                     $rootScope.$broadcast("ANGULAR_DRAG_END", sendChannel);
                     if (e.dataTransfer && e.dataTransfer.dropEffect !== "none") {

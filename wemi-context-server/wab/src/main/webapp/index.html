@@ -103,8 +103,6 @@
             digitalData.user[0].profiles[0].profileInfo.firstName = response.first_name;
             digitalData.user[0].profiles[0].profileInfo.lastName = response.last_name;
 
-            // @todo we should save this information back to the WEMI context server
-
             wemi.saveContext("/context.js", digitalData, function (xhr) {
                 console.log("User context updated successfully.")
             });

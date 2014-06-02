@@ -1,3 +1,4 @@
+
 .perso > .block {
 	background-color:#FFFFFF;
     border:1px solid #DDDDDD;
@@ -33,3 +34,12 @@
 .perso-alternate > .operator {
 	background-color:#EFEFEB;
 }
+
+.perso > .on-drag-enter {
+    border:1px dotted blue;
+}
+
+.perso > .on-drag-hover {
+    border:1px dashed red;
+}
+
