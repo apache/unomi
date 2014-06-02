@@ -9,3 +9,13 @@
  extends=jnt:virtualsite
  itemtype=options
  - wemiContextServerURL (string) nofulltext
+
+[jmix:wemLocationTracker] mixin
+ extends=jnt:virtualsite
+ itemtype=options
+
+[jmix:wemComponents] > jmix:droppableContent mixin
+
+[jnt:ifInSegmentsDisplay] > jnt:contentList, jmix:wemComponents
+- j:segments (string, choicelist[wemSegments]) multiple
+

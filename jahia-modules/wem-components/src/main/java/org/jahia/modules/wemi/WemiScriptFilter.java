@@ -41,7 +41,7 @@ public class WemiScriptFilter extends AbstractFilter implements ApplicationListe
     @Override
     public String execute(String previousOut, RenderContext renderContext, Resource resource, RenderChain chain) throws Exception {
         String out = previousOut;
-        String wemiContextServerURL = renderContext.getSite().hasProperty("wemiContextServerURL") ? renderContext.getSite().getProperty("webPropertyID").getString() : null;
+        String wemiContextServerURL = renderContext.getSite().hasProperty("wemiContextServerURL") ? renderContext.getSite().getProperty("wemiContextServerURL").getString() : null;
         if (StringUtils.isNotEmpty(wemiContextServerURL)) {
             String script = getRenderingScriptCode();
             if (script != null) {
