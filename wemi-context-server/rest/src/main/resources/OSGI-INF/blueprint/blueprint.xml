@@ -19,6 +19,10 @@
     </cxf:bus>
 
     <jaxrs:server address="/wemi" id="restSegmentService">
+        <jaxrs:providers>
+           <bean class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider"/>
+        </jaxrs:providers>
+
         <jaxrs:serviceBeans>
             <ref component-id="segmentServiceEndPoint" />
         </jaxrs:serviceBeans>

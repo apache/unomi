@@ -12,6 +12,9 @@ public class ConditionTag implements Comparable<ConditionTag> {
 
     Set<ConditionTag> subTags = new TreeSet<ConditionTag>();
 
+    public ConditionTag() {
+    }
+
     public ConditionTag(String tagKey, Set<ConditionTag> subTags) {
         this.tagKey = tagKey;
         this.subTags = subTags;
@@ -23,6 +26,14 @@ public class ConditionTag implements Comparable<ConditionTag> {
 
     public Set<ConditionTag> getSubTags() {
         return subTags;
+    }
+
+    public void setTagKey(String tagKey) {
+        this.tagKey = tagKey;
+    }
+
+    public void setSubTags(Set<ConditionTag> subTags) {
+        this.subTags = subTags;
     }
 
     @Override

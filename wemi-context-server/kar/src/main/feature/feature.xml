@@ -6,6 +6,12 @@
         <feature>openwebbeans</feature>
         <feature>pax-cdi-web-openwebbeans</feature>
         <bundle start-level="75">mvn:commons-io/commons-io/2.4</bundle>
+        <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-core/2.4.0</bundle>
+        <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-databind/2.4.0</bundle>
+        <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-annotations/2.4.0</bundle>
+        <bundle start-level="75">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-base/2.4.0</bundle>
+        <bundle start-level="75">mvn:com.fasterxml.jackson.module/jackson-module-jaxb-annotations/2.4.0</bundle>
+        <bundle start-level="75">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider/2.4.0</bundle>
         <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jakarta-regexp/1.4_1</bundle>
         <bundle start-level="75">mvn:org.oasis-open.wemi/wemi-context-server-api/1.0-SNAPSHOT</bundle>
         <bundle start-level="75">mvn:org.oasis-open.wemi/wemi-context-server-persistence-spi/1.0-SNAPSHOT</bundle>
