@@ -4,9 +4,6 @@ import org.jahia.services.content.JCRNodeWrapper;
 import org.jahia.services.content.nodetypes.ExtendedPropertyDefinition;
 import org.jahia.services.content.nodetypes.initializers.ChoiceListValue;
 import org.jahia.services.content.nodetypes.initializers.ModuleChoiceListInitializer;
-import org.jahia.services.usermanager.JahiaUser;
-import org.jahia.services.usermanager.UserProperties;
-import org.oasis_open.wemi.context.server.api.SegmentID;
 import org.slf4j.Logger;
 
 import javax.jcr.RepositoryException;
