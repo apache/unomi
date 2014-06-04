@@ -14,6 +14,7 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.*;
 
@@ -23,13 +24,14 @@ import java.util.*;
 public class WemSegmentChoiceListInitializer implements ModuleChoiceListInitializer {
 
     private transient static Logger logger = org.slf4j.LoggerFactory.getLogger(WemSegmentChoiceListInitializer.class);
+    private String key;
 
     public void setKey(String key) {
-
+        this.key = key;
     }
 
     public String getKey() {
-        return null;
+        return key;
     }
 
     public List<ChoiceListValue> getChoiceListValues(ExtendedPropertyDefinition epd, String param, List<ChoiceListValue> values, Locale locale, Map<String, Object> context) {
@@ -43,21 +45,19 @@ public class WemSegmentChoiceListInitializer implements ModuleChoiceListInitiali
 
                 String wemiContextServerURL = node.getResolveSite().hasProperty("wemiContextServerURL") ? node.getResolveSite().getProperty("wemiContextServerURL").getString() : null;
 
-                Client client = ClientBuilder.newBuilder().newClient();
-                WebTarget target = client.target(wemiContextServerURL + "cxf/");
-                target = target.path("service").queryParam("a", "avalue");
+                Client client = ClientBuilder.newClient();
+                WebTarget target = client.target(wemiContextServerURL).path("cxf/wemi");
 
-                Invocation.Builder builder = target.request();
-                Response response = builder.get();
-                Set<SegmentID> segments = (Set<SegmentID>) builder.get(Set.class);
+                Invocation.Builder invocationBuilder =
+                        target.request(MediaType.APPLICATION_JSON_TYPE);
 
-                JahiaUser jahiaUser = node.getSession().getUser();
-                UserProperties userProperties = jahiaUser.getUserProperties();
-                Set<String> userPropertyNames = new TreeSet<String>();
+                Response response = invocationBuilder.get();
+                Set<Map<String,String>> segments = (Set<Map<String,String>>) response.readEntity(Set.class);
+
                 List<ChoiceListValue> listValues = new ArrayList<ChoiceListValue>();
-                for (String userPropertyName : userPropertyNames) {
-                    listValues.add(new ChoiceListValue(userPropertyName, null,
-                            node.getSession().getValueFactory().createValue(userPropertyName)));
+                for (Map<String,String> segmentID : segments) {
+                    listValues.add(new ChoiceListValue(segmentID.get("id"), null,
+                            node.getSession().getValueFactory().createValue(segmentID.get("id"))));
                 }
                 return listValues;
             } catch (RepositoryException e) {

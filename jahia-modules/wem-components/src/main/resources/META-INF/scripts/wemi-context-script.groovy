@@ -7,7 +7,7 @@ println("    // Load the WEMI context script asynchronously\n" +
         "        if (document.getElementById(id)) return;\n" +
         "        js = document.createElement(elementToCreate);\n" +
         "        js.id = id;\n" +
-        "        js.src = \"/${wemiContextServerURL}\";\n" +
+        "        js.src = \"${wemiContextServerURL}/context.js\";\n" +
         "        js.type = \"text/javascript\";\n" +
         "        fjs.parentNode.insertBefore(js, fjs);\n" +
         "    }(document, 'script', 'wemi-context'));")

@@ -34,14 +34,10 @@
         </dependency>
 
         <dependency>
-          <groupId>org.apache.cxf</groupId>
-          <artifactId>cxf-rt-rs-client</artifactId>
-          <version>${cxf.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.cxf</groupId>
-          <artifactId>cxf-rt-transports-http-hc</artifactId>
-          <version>${cxf.version}</version>
+            <groupId>org.glassfish.jersey.bundles</groupId>
+            <artifactId>jaxrs-ri</artifactId>
+            <version>2.6</version>
+            <scope>provided</scope>
         </dependency>
 
     </dependencies>
@@ -55,6 +51,17 @@
                 <configuration>
                     <instructions>
                         <Jahia-Depends>default</Jahia-Depends>
+                        <Import-Package>
+                            ${jahia.plugin.projectPackageImport},
+                            com.sun.jdi;resolution:=optional,
+                            com.sun.jdi.connect;resolution:=optional,
+                            com.sun.jdi.event;resolution:=optional,
+                            com.sun.jdi.request;resolution:=optional,
+                            sun.misc;resolution:=optional,
+                            *
+                        </Import-Package>
+                        <Embed-Dependency>*; scope=compile; type=!pom; inline=false</Embed-Dependency>
+                        <Embed-Transitive>true</Embed-Transitive>
                     </instructions>
                 </configuration>
             </plugin>
