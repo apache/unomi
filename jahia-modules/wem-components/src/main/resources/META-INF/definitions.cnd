@@ -22,3 +22,7 @@ extends = jnt:content, jnt:area, jnt:template
  - j:segments (string, choicelist[wemSegments]) multiple
  - j:segmentsIncludeOrExclude (string,choicelist[resourceBundle]) = include autocreated < 'include','exclude'
 
+[jmix:wemFacebookLogin] mixin
+ extends=jnt:virtualsite
+ itemtype=options
+ - facebookAppId (string) nofulltext

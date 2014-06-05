@@ -5,6 +5,14 @@
 <%@ taglib prefix="template" uri="http://www.jahia.org/tags/templateLib" %>
 <template:addResources type="css" resources="wem.css" />
 <jcr:nodeProperty node="${currentNode}" name="j:segments" var="segmentList"/>
+<c:set var="elementID" value="segment-${currentNode.identifier}" />
+
+<div class="segmentContainer" id="${elementID}" style="display:none">
+    <div class="segmentContent">
+      ${wrappedContent}
+    </div>
+    <div class="segmentOverlay"> <fmt:message key="label.segments.selected.overlay"/> </div>
+</div>
 
 <script type="text/javascript">
 
@@ -12,8 +20,13 @@
 
         var editMode = ${renderContext.editMode ? 'true' : 'false'};
 
+        var divElement = document.getElementById("${elementID}");
+
+        console.log("divElement=" + divElement);
+
         if (editMode) {
-            document.writeln('<div class="segmentContainerEdit">');
+            divElement.classList.add("segmentContainerEdit");
+            divElement.setAttribute("style","display:block");
             return;
         }
 
@@ -55,14 +68,13 @@
                         for (var i=0; i < segmentList.length; i++) {
                             if (contains(userSegments, segmentList[i])) {
                                 console.log(segmentList[i] + " is part of user segments " + userSegments);
-                                document.writeln('<div class="segmentContainer">');
+                                divElement.setAttribute("style","display:block");
                                 found = true;
                                 break;
                             }
                         }
                         if (!found) {
                             console.log("No matching segment found !");
-                            document.writeln('<div class="segmentContainer" style="display:none">');
                         }
                     }
                 }
@@ -74,8 +86,3 @@
     })();
 
 </script>
-    <div class="segmentContent">
-      ${wrappedContent}
-    </div>
-    <div class="segmentOverlay"> <fmt:message key="label.segments.selected.overlay"/> </div>
-</div>
