@@ -7,6 +7,13 @@
 
     (function () {
 
+        var editMode = false;
+
+        if (editMode) {
+            document.writeln('<div class="segmentContainer">');
+            return;
+        }
+
         var segmentList = [
             <c:forEach items="${segmentList}" var="segment" varStatus="segmentStatus">
             '${segment.string}' <c:if test="${!segmentStatus.last}">, </c:if>
