@@ -26,3 +26,6 @@ extends = jnt:content, jnt:area, jnt:template
  extends=jnt:virtualsite
  itemtype=options
  - facebookAppId (string) nofulltext
+
+ [jnt:wemFacebookLoginButton] > jnt:content, jmix:wemComponents
+

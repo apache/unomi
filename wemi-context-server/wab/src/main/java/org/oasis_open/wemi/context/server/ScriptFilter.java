@@ -112,6 +112,11 @@ public class ScriptFilter implements Filter {
 
         // @Todo we should here call all plugins to "augment" the user profile. For example we could have LDAP, CRM or Analytics plugins that could add information to the user profile
 
+        if (response instanceof HttpServletResponse) {
+            HttpServletResponse httpServletResponse = (HttpServletResponse) response;
+            httpServletResponse.setHeader("Access-Control-Allow-Origin","*");
+            httpServletResponse.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+        }
         Writer responseWriter = response.getWriter();
         if (user != null) {
             Set<SegmentID> userSegments = segmentService.getSegmentsForUser(user);

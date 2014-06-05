@@ -86,7 +86,7 @@ println("    // This is called with the results from from FB.getLoginStatus().\n
         "            digitalData.user[0].profiles[0].profileInfo.firstName = response.first_name;\n" +
         "            digitalData.user[0].profiles[0].profileInfo.lastName = response.last_name;\n" +
         "\n" +
-        "            wemi.saveContext(\"/context.js\", digitalData, function (xhr) {\n" +
+        "            wemi.saveContext(\"${wemiContextServerURL}/context.js\", digitalData, function (xhr) {\n" +
         "                console.log(\"User context updated successfully.\")\n" +
         "            });\n" +
         "        });\n" +
