@@ -104,7 +104,7 @@ public class WemiScriptFilter extends AbstractFilter implements ApplicationListe
 
     protected Set<String> getRenderingScriptCodes(Set<String> mixinLocaleNames) throws IOException {
         if (renderingScriptSourceCodes == null) {
-            Set<String> renderingScriptSourceCodes = new TreeSet<String>();
+            renderingScriptSourceCodes = new TreeSet<String>();
             for (String mixinLocaleName : mixinLocaleNames) {
                 String renderingScriptSourceCode = WebUtils.getResourceAsString(renderingScriptsLocation + "/" + mixinLocaleName + ".groovy");
                 if (renderingScriptSourceCode != null) {

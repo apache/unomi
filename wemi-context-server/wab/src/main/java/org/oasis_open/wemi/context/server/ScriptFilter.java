@@ -118,6 +118,7 @@ public class ScriptFilter implements Filter {
 
             // we re-use the object naming convention from http://www.w3.org/community/custexpdata/, specifically in
             // http://www.w3.org/2013/12/ceddl-201312.pdf
+            responseWriter.append("var digitalData = {} || digitalData;");
             responseWriter.append("var digitalData = {");
             responseWriter.append("  user: [ { ");
             responseWriter.append("    profiles: [ { ");

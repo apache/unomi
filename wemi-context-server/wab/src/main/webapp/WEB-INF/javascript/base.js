@@ -43,3 +43,5 @@ var wemi = {
     }
 
 };
+
+console.log("WEMI context script successfully initialized");

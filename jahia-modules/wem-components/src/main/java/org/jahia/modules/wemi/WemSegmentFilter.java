@@ -52,7 +52,6 @@ public class WemSegmentFilter extends AbstractFilter {
         if (!resource.hasWrapper("segmentWrapper")) {
             resource.pushWrapper("segmentWrapper");
         }
-        resource.getModuleParams().put("segmentList", segmentList);
         return null;
     }
 

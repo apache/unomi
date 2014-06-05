@@ -5,7 +5,7 @@
     <bean class="org.jahia.modules.wemi.WemiScriptFilter">
         <property name="applyOnConfigurations" value="page" />
         <property name="skipOnConfiguration" value="include,wrapper" />
-        <property name="applyOnModes" value="live" />
+        <property name="applyOnModes" value="live,preview" />
         <property name="priority" value="3" />
         <property name="scriptEngineUtils" ref="scriptEngineUtils"/>
         <property name="renderingScriptsLocation" value="${wemiRenderingScriptsLocation:/modules/wem-components/META-INF/scripts}"/>
