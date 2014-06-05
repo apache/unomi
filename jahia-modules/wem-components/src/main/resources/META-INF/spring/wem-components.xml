@@ -8,11 +8,61 @@
         <property name="applyOnModes" value="live" />
         <property name="priority" value="3" />
         <property name="scriptEngineUtils" ref="scriptEngineUtils"/>
-        <property name="renderingScriptLocation" value="${wemiRenderingScriptLocation:/modules/wem-components/META-INF/scripts/wemi-context-script.groovy}"/>
+        <property name="renderingScriptsLocation" value="${wemiRenderingScriptsLocation:/modules/wem-components/META-INF/scripts}"/>
+        <property name="scriptExtension" value="groovy" />
+    </bean>
+
+    <bean id="SegmentFilter" class="org.jahia.modules.wemi.WemSegmentFilter">
+        <property name="priority" value="7" />
+        <property name="description" value="Control display of a node based on the WEM segments a user is part of "/>
+        <property name="applyOnConfigurations" value="module,wrappedcontent" />
     </bean>
 
     <bean class="org.jahia.modules.wemi.WemSegmentChoiceListInitializer">
         <property name="key" value="wemSegments"/>
     </bean>
+
+    <bean id="Engine.Tab.Marketing" class="org.jahia.services.uicomponents.bean.editmode.EngineTab">
+        <property name="id" value="marketing"/>
+        <property name="titleKey" value="label.engineTab.marketing"/>
+        <property name="tabItem">
+            <bean class="org.jahia.ajax.gwt.client.widget.contentengine.PropertiesTabItem">
+                <property name="showForTypes">
+                    <list>
+                        <value>jnt:content</value>
+                        <value>jnt:area</value>
+                        <value>jnt:page</value>
+                        <value>jnt:nodeLink</value>
+                        <value>jnt:externalLink</value>
+                    </list>
+                </property>
+
+                <property name="dataType">
+                    <list>
+                        <value>marketing</value>
+                    </list>
+                </property>
+            </bean>
+        </property>
+        <property name="parentEditConfiguration" ref="editmode" />
+        <property name="requiredPermission" value="viewChannelsTab"/>
+    </bean>
+
+    <bean id="Engine.Tab.Marketing.Studio" class="org.jahia.services.uicomponents.bean.editmode.EngineTab">
+        <property name="id" value="channels"/>
+        <property name="titleKey" value="label.engineTab.marketing"/>
+        <property name="tabItem">
+            <bean class="org.jahia.ajax.gwt.client.widget.contentengine.PropertiesTabItem">
+                <property name="dataType">
+                    <list>
+                        <value>marketing</value>
+                    </list>
+                </property>
+            </bean>
+        </property>
+
+        <property name="parentEditConfiguration" ref="studiomode" />
+    </bean>
+
 
 </beans>

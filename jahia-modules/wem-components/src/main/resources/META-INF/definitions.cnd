@@ -16,6 +16,9 @@
 
 [jmix:wemComponents] > jmix:droppableContent mixin
 
-[jnt:ifInSegmentsDisplay] > jnt:contentList, jmix:wemComponents
-- j:segments (string, choicelist[wemSegments]) multiple
+[jmix:wemSegmentFilter] mixin
+extends = jnt:content, jnt:area, jnt:template
+ itemtype = marketing
+ - j:segments (string, choicelist[wemSegments]) multiple
+ - j:segmentsIncludeOrExclude (string,choicelist[resourceBundle]) = include autocreated < 'include','exclude'
 

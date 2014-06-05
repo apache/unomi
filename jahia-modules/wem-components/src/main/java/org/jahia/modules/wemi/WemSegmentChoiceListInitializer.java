@@ -53,12 +53,20 @@ public class WemSegmentChoiceListInitializer implements ModuleChoiceListInitiali
 
                 List<ChoiceListValue> listValues = new ArrayList<ChoiceListValue>();
                 for (Map<String,String> segmentID : segments) {
-                    listValues.add(new ChoiceListValue(segmentID.get("id"), null,
+                    String displayName = segmentID.get("name");
+                    if (displayName == null) {
+                        segmentID.get("id");
+                    } else {
+                        if (segmentID.get("description") != null) {
+                            displayName += " (" + segmentID.get("description") + ")";
+                        }
+                    }
+                    listValues.add(new ChoiceListValue(displayName, null,
                             node.getSession().getValueFactory().createValue(segmentID.get("id"))));
                 }
                 return listValues;
             } catch (RepositoryException e) {
-                logger.error("Error while building list of user property names", e);
+                logger.error("Error while building list of WEM segments", e);
             }
         }
         return new ArrayList<ChoiceListValue>();

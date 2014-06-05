@@ -2,6 +2,8 @@ package org.jahia.modules.wemi;
 
 import net.htmlparser.jericho.*;
 import org.apache.commons.lang.StringUtils;
+import org.jahia.services.content.decorator.JCRSiteNode;
+import org.jahia.services.content.nodetypes.ExtendedNodeType;
 import org.jahia.services.render.RenderContext;
 import org.jahia.services.render.Resource;
 import org.jahia.services.render.filter.AbstractFilter;
@@ -24,9 +26,13 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
- * Created by loom on 31.05.14.
+ * This filter will execute all the rendering scripts that correspond to the mixin types set on the current site node if the
+ * WEMI context server URL is setup. For example if the site node has a jmix:wemiContextServer mixin type it will
+ * execute a wemiContextServer.groovy script
  */
 public class WemiScriptFilter extends AbstractFilter implements ApplicationListener<ApplicationEvent> {
 
@@ -34,43 +40,58 @@ public class WemiScriptFilter extends AbstractFilter implements ApplicationListe
 
     private ScriptEngineUtils scriptEngineUtils;
 
-    private String renderingScriptLocation;
+    private String renderingScriptsLocation;
 
-    private String renderingScriptCode;
+    Set<String> renderingScriptSourceCodes;
+
+    String scriptExtension = "groovy";
 
     @Override
     public String execute(String previousOut, RenderContext renderContext, Resource resource, RenderChain chain) throws Exception {
         String out = previousOut;
-        String wemiContextServerURL = renderContext.getSite().hasProperty("wemiContextServerURL") ? renderContext.getSite().getProperty("wemiContextServerURL").getString() : null;
+        JCRSiteNode siteNode = renderContext.getSite();
+        String wemiContextServerURL = siteNode.hasProperty("wemiContextServerURL") ? siteNode.getProperty("wemiContextServerURL").getString() : null;
         if (StringUtils.isNotEmpty(wemiContextServerURL)) {
-            String script = getRenderingScriptCode();
-            if (script != null) {
+            ExtendedNodeType[] mixins = siteNode.getMixinNodeTypes();
+            Set<String> mixinLocalNames = new TreeSet<String>();
+            if (mixins != null) {
+                for (ExtendedNodeType mixinType : mixins) {
+                    mixinLocalNames.add(mixinType.getLocalName());
+                }
+            }
+            Set<String> scripts = getRenderingScriptCodes(mixinLocalNames);
+            if (scripts != null && scripts.size() > 0) {
                 Source source = new Source(previousOut);
                 OutputDocument outputDocument = new OutputDocument(source);
                 List<Element> headElementList = source.getAllElements(HTMLElementName.HEAD);
                 for (Element element : headElementList) {
                     final EndTag headEndTag = element.getEndTag();
-                    String extension = StringUtils.substringAfterLast(renderingScriptLocation, ".");
-                    ScriptEngine scriptEngine = scriptEngineUtils.scriptEngine(extension);
-                    ScriptContext scriptContext = new WemiScriptContext();
-                    final Bindings bindings = scriptEngine.createBindings();
-                    bindings.put("wemiContextServerURL", wemiContextServerURL);
-                    String url = resource.getNode().getUrl();
-                    if (renderContext.getRequest().getAttribute("analytics-path") != null) {
-                        url = (String) renderContext.getRequest().getAttribute("analytics-path");
+                    StringBuilder scriptOutputs = new StringBuilder();
+                    for (String script : scripts) {
+                        ScriptEngine scriptEngine = scriptEngineUtils.scriptEngine(scriptExtension);
+                        ScriptContext scriptContext = new WemiScriptContext();
+                        final Bindings bindings = scriptEngine.createBindings();
+                        bindings.put("wemiContextServerURL", wemiContextServerURL);
+                        String url = resource.getNode().getUrl();
+                        if (renderContext.getRequest().getAttribute("analytics-path") != null) {
+                            url = (String) renderContext.getRequest().getAttribute("analytics-path");
+                        }
+                        bindings.put("resourceUrl", url);
+                        bindings.put("resource", resource);
+                        bindings.put("renderContext", resource);
+                        bindings.put("gaMap", renderContext.getRequest().getAttribute("gaMap"));
+                        scriptContext.setBindings(bindings, ScriptContext.GLOBAL_SCOPE);
+                        // The following binding is necessary for Javascript, which doesn't offer a console by default.
+                        bindings.put("out", new PrintWriter(scriptContext.getWriter()));
+                        scriptEngine.eval(script, scriptContext);
+                        StringWriter writer = (StringWriter) scriptContext.getWriter();
+                        final String scriptOutput = writer.toString();
+                        scriptOutputs.append(scriptOutput);
                     }
-                    bindings.put("resourceUrl", url);
-                    bindings.put("resource", resource);
-                    bindings.put("gaMap",renderContext.getRequest().getAttribute("gaMap"));
-                    scriptContext.setBindings(bindings, ScriptContext.GLOBAL_SCOPE);
-                    // The following binding is necessary for Javascript, which doesn't offer a console by default.
-                    bindings.put("out", new PrintWriter(scriptContext.getWriter()));
-                    scriptEngine.eval(script, scriptContext);
-                    StringWriter writer = (StringWriter) scriptContext.getWriter();
-                    final String googleAnalyticsScript = writer.toString();
-                    if (StringUtils.isNotBlank(googleAnalyticsScript)) {
+                    final String allScriptOutputs = scriptOutputs.toString();
+                    if (StringUtils.isNotBlank(allScriptOutputs)) {
                         outputDocument.replace(headEndTag.getBegin(), headEndTag.getBegin() + 1,
-                                "\n" + AggregateCacheFilter.removeEsiTags(googleAnalyticsScript) + "\n<");
+                                "\n" + AggregateCacheFilter.removeEsiTags(allScriptOutputs) + "\n<");
                     }
                     break; // avoid to loop if for any reasons multiple body in the page
                 }
@@ -81,27 +102,35 @@ public class WemiScriptFilter extends AbstractFilter implements ApplicationListe
         return out;
     }
 
-    protected String getRenderingScriptCode() throws IOException {
-        if (renderingScriptCode == null) {
-            renderingScriptCode = WebUtils.getResourceAsString(renderingScriptLocation);
-            if (renderingScriptCode == null) {
-                logger.warn("Unable to lookup template at {}", renderingScriptLocation);
+    protected Set<String> getRenderingScriptCodes(Set<String> mixinLocaleNames) throws IOException {
+        if (renderingScriptSourceCodes == null) {
+            Set<String> renderingScriptSourceCodes = new TreeSet<String>();
+            for (String mixinLocaleName : mixinLocaleNames) {
+                String renderingScriptSourceCode = WebUtils.getResourceAsString(renderingScriptsLocation + "/" + mixinLocaleName + ".groovy");
+                if (renderingScriptSourceCode != null) {
+                    renderingScriptSourceCodes.add(renderingScriptSourceCode);
+                }
             }
         }
-        return renderingScriptCode;
+        return renderingScriptSourceCodes;
     }
 
     public void onApplicationEvent(ApplicationEvent event) {
         if (event instanceof JahiaTemplateManagerService.TemplatePackageRedeployedEvent) {
-            renderingScriptCode = null;
+            renderingScriptSourceCodes = null;
         }
     }
 
     public void setScriptEngineUtils(ScriptEngineUtils scriptEngineUtils) {
         this.scriptEngineUtils = scriptEngineUtils;
     }
-    public void setRenderingScriptLocation(String renderingScriptLocation) {
-        this.renderingScriptLocation = renderingScriptLocation;
+
+    public void setRenderingScriptsLocation(String renderingScriptsLocation) {
+        this.renderingScriptsLocation = renderingScriptsLocation;
+    }
+
+    public void setScriptExtension(String scriptExtension) {
+        this.scriptExtension = scriptExtension;
     }
 
     class WemiScriptContext extends SimpleScriptContext {

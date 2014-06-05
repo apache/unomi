@@ -21,6 +21,12 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.jahia.server</groupId>
+            <artifactId>jahia-taglib</artifactId>
+            <version>7.0.1.0-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
             <version>3.0.1</version>
@@ -51,6 +57,7 @@
                 <configuration>
                     <instructions>
                         <Jahia-Depends>default</Jahia-Depends>
+                        <Jahia-Resource-Bundle>resources.WemComponents</Jahia-Resource-Bundle>
                         <Import-Package>
                             ${jahia.plugin.projectPackageImport},
                             com.sun.jdi;resolution:=optional,
