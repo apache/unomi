@@ -22,6 +22,8 @@
 
         var divElement = document.getElementById("${elementID}");
 
+        var waitingCount = 0;
+
         console.log("divElement=" + divElement);
 
         if (editMode) {
@@ -54,7 +56,12 @@
                 return;
             }
             console.log("Waiting for digitalData object...");
-            setTimeout(waitForDigitalData, 200);
+            if (waitingCount < 200) {
+                setTimeout(waitForDigitalData, 200);
+                waitingCount++;
+            } else {
+                console.log("Waiting count has reached maximum (" + waitingCount + "), stopped waiting.");
+            }
         }
 
         function digitalDataFound() {
@@ -81,6 +88,7 @@
             }
         }
 
+        waitingCount = 0;
         waitForDigitalData();
 
     })();

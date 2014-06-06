@@ -23,10 +23,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
@@ -56,11 +53,42 @@ public class ScriptFilter implements Filter {
         // script output.
         String visitorID = null;
         String httpMethod = null;
+        HttpServletRequest httpServletRequest = null;
         if (request instanceof HttpServletRequest) {
-            HttpServletRequest httpServletRequest = (HttpServletRequest) request;
+            httpServletRequest = (HttpServletRequest) request;
             httpMethod = httpServletRequest.getMethod();
+            System.out.println("===================================================================================");
+            String sessionId = null;
+            if (httpServletRequest.getSession(false) != null) {
+                sessionId = httpServletRequest.getSession(false).getId();
+            }
+            System.out.println(httpMethod + " " + httpServletRequest.getRequestURI() +
+                    "?" + httpServletRequest.getQueryString() +
+                    " sessionId=" + sessionId +
+                    " serverName=" + httpServletRequest.getServerName() +
+                    " serverPort=" + httpServletRequest.getServerPort() +
+                    " remoteAddr=" + httpServletRequest.getRemoteAddr() +
+                    " remotePort=" + httpServletRequest.getRemotePort());
+            System.out.println("Headers:");
+            System.out.println("--------");
+            Enumeration<String> headerNameEnum = httpServletRequest.getHeaderNames();
+            while (headerNameEnum.hasMoreElements()) {
+                String headerName = headerNameEnum.nextElement();
+                System.out.println(headerName + ": " + httpServletRequest.getHeader(headerName));
+            }
             Cookie[] cookies = httpServletRequest.getCookies();
+            System.out.println("Cookies:");
+            System.out.println("--------");
             for (Cookie cookie : cookies) {
+                System.out.println("  name=" + cookie.getName() +
+                        " value=" + cookie.getValue() +
+                        " domain=" + cookie.getDomain() +
+                        " path=" + cookie.getPath() +
+                        " maxAge=" + cookie.getMaxAge() +
+                        " httpOnly=" + cookie.isHttpOnly() +
+                        " secure=" + cookie.getSecure() +
+                        " version=" + cookie.getVersion() +
+                        " comment=" + cookie.getComment());
                 if ("wemi-profileID".equals(cookie.getName())) {
                     visitorID = cookie.getValue();
                 }
@@ -84,7 +112,7 @@ public class ScriptFilter implements Filter {
         if (httpMethod != null && "post".equals(httpMethod.toLowerCase())) {
             // we have received an update on the digitalData structure, we must store it.
             if (request instanceof HttpServletRequest) {
-                HttpServletRequest httpServletRequest = (HttpServletRequest) request;
+                httpServletRequest = (HttpServletRequest) request;
                 String contentType = httpServletRequest.getContentType();
                 if (contentType != null && contentType.contains("application/json")) {
                     InputStream jsonInputStream = httpServletRequest.getInputStream();
@@ -95,20 +123,24 @@ public class ScriptFilter implements Filter {
                         if (profileInfo != null && user == null && profileInfo.get("profileId") != null) {
                             user = userService.load(profileInfo.get("profileId").asText());
                         }
-                        Iterator<String> fieldNameIter = profileInfo.fieldNames();
-                        boolean modifiedProperties = false;
-                        while (fieldNameIter.hasNext()) {
-                            String fieldName = fieldNameIter.next();
-                            JsonNode field = profileInfo.get(fieldName);
-                            if (user.hasProperty(fieldName) && user.getProperty(fieldName).equals(field.asText())) {
+                        if (user != null) {
+                            Iterator<String> fieldNameIter = profileInfo.fieldNames();
+                            boolean modifiedProperties = false;
+                            while (fieldNameIter.hasNext()) {
+                                String fieldName = fieldNameIter.next();
+                                JsonNode field = profileInfo.get(fieldName);
+                                if (user.hasProperty(fieldName) && user.getProperty(fieldName).equals(field.asText())) {
 
-                            } else {
-                                user.setProperty(fieldName, field.asText());
-                                modifiedProperties = true;
+                                } else {
+                                    user.setProperty(fieldName, field.asText());
+                                    modifiedProperties = true;
+                                }
                             }
-                        }
-                        if (modifiedProperties) {
-                            userService.save(user);
+                            if (modifiedProperties) {
+                                userService.save(user);
+                            }
+                        } else {
+                            // couldn't resolve user !
                         }
                     }
                 }
@@ -119,18 +151,20 @@ public class ScriptFilter implements Filter {
 
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-            httpServletResponse.setHeader("Access-Control-Allow-Origin","*");
+            if (httpServletRequest != null) {
+                httpServletResponse.setHeader("Access-Control-Allow-Origin", httpServletRequest.getHeader("Origin"));
+            } else {
+                httpServletResponse.setHeader("Access-Control-Allow-Origin", "*");
+            }
             httpServletResponse.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
             httpServletResponse.setHeader("Access-Control-Allow-Credentials", "true");
             httpServletResponse.setHeader("Access-Control-Allow-Methods", "OPTIONS, POST, GET");
-            httpServletResponse.setHeader("Access-Control-Max-Age", "600");
-            httpServletResponse.setHeader("Access-Control-Expose-Headers","Access-Control-Allow-Origin");
+            // httpServletResponse.setHeader("Access-Control-Max-Age", "600");
+            // httpServletResponse.setHeader("Access-Control-Expose-Headers","Access-Control-Allow-Origin");
             httpServletResponse.flushBuffer();
         }
         Writer responseWriter = response.getWriter();
         if ("post".equals(httpMethod.toLowerCase()) || "get".equals(httpMethod.toLowerCase())) {
-
-            Set<SegmentID> userSegments = segmentService.getSegmentsForUser(user);
 
             // we re-use the object naming convention from http://www.w3.org/community/custexpdata/, specifically in
             // http://www.w3.org/2013/12/ceddl-201312.pdf
@@ -146,6 +180,7 @@ public class ScriptFilter implements Filter {
                 }
                 responseWriter.append("        returningStatus: \"\", ");
                 responseWriter.append("        type: \"main\", ");
+                Set<SegmentID> userSegments = segmentService.getSegmentsForUser(user);
                 if (userSegments != null && userSegments.size() > 0) {
                     responseWriter.append("        segments: [");
                     int i = 0;
@@ -170,6 +205,8 @@ public class ScriptFilter implements Filter {
             InputStream baseScriptStream = filterConfig.getServletContext().getResourceAsStream(BASE_SCRIPT_LOCATION);
             IOUtils.copy(baseScriptStream, responseWriter);
 
+        } else {
+            responseWriter.append("OK");
         }
         responseWriter.flush();
 
