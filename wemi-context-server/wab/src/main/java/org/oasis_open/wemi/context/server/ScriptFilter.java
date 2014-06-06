@@ -68,14 +68,16 @@ public class ScriptFilter implements Filter {
         }
 
         User user = null;
-        if (visitorID == null) {
-            // no visitorID cookie was found, we generate a new one and create the user in the user service
-            user = createNewUser(visitorID, response);
-        } else {
-            user = userService.load(visitorID);
-            if (user == null) {
-                // this can happen if we have an old cookie but have reset the server.
+        if ("get".equals(httpMethod.toLowerCase())) {
+            if (visitorID == null) {
+                // no visitorID cookie was found, we generate a new one and create the user in the user service
                 user = createNewUser(visitorID, response);
+            } else {
+                user = userService.load(visitorID);
+                if (user == null) {
+                    // this can happen if we have an old cookie but have reset the server.
+                    user = createNewUser(visitorID, response);
+                }
             }
         }
 
@@ -90,6 +92,9 @@ public class ScriptFilter implements Filter {
                     JsonNode rootNode = mapper.readTree(jsonInputStream);
                     if (rootNode != null) {
                         ObjectNode profileInfo = (ObjectNode) rootNode.get("user").get(0).get("profiles").get(0).get("profileInfo");
+                        if (profileInfo != null && user == null && profileInfo.get("profileId") != null) {
+                            user = userService.load(profileInfo.get("profileId").asText());
+                        }
                         Iterator<String> fieldNameIter = profileInfo.fieldNames();
                         boolean modifiedProperties = false;
                         while (fieldNameIter.hasNext()) {
@@ -116,49 +121,58 @@ public class ScriptFilter implements Filter {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
             httpServletResponse.setHeader("Access-Control-Allow-Origin","*");
             httpServletResponse.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+            httpServletResponse.setHeader("Access-Control-Allow-Credentials", "true");
+            httpServletResponse.setHeader("Access-Control-Allow-Methods", "OPTIONS, POST, GET");
+            httpServletResponse.setHeader("Access-Control-Max-Age", "600");
+            httpServletResponse.setHeader("Access-Control-Expose-Headers","Access-Control-Allow-Origin");
+            httpServletResponse.flushBuffer();
         }
         Writer responseWriter = response.getWriter();
-        if (user != null) {
+        if ("post".equals(httpMethod.toLowerCase()) || "get".equals(httpMethod.toLowerCase())) {
+
             Set<SegmentID> userSegments = segmentService.getSegmentsForUser(user);
 
             // we re-use the object naming convention from http://www.w3.org/community/custexpdata/, specifically in
             // http://www.w3.org/2013/12/ceddl-201312.pdf
             responseWriter.append("var digitalData = {} || digitalData;");
-            responseWriter.append("var digitalData = {");
-            responseWriter.append("  user: [ { ");
-            responseWriter.append("    profiles: [ { ");
-            responseWriter.append("      profileInfo: {");
-            responseWriter.append("        profileId: \"" + user.getItemId() + "\", ");
-            for (String userPropertyName : user.getProperties().stringPropertyNames()) {
-                responseWriter.append("        "+userPropertyName+": \"" + user.getProperty(userPropertyName) + "\", ");
-            }
-            responseWriter.append("        returningStatus: \"\", ");
-            responseWriter.append("        type: \"main\", ");
-            if (userSegments != null && userSegments.size() > 0) {
-                responseWriter.append("        segments: [");
-                int i=0;
-                for (SegmentID segmentID : userSegments) {
-                    responseWriter.append("\"");
-                    responseWriter.append(segmentID.getId());
-                    responseWriter.append("\"");
-                    if (i < userSegments.size() -1) {
-                        responseWriter.append(", ");
-                    }
-                    i++;
+            if (user != null) {
+                responseWriter.append("var digitalData = {");
+                responseWriter.append("  user: [ { ");
+                responseWriter.append("    profiles: [ { ");
+                responseWriter.append("      profileInfo: {");
+                responseWriter.append("        profileId: \"" + user.getItemId() + "\", ");
+                for (String userPropertyName : user.getProperties().stringPropertyNames()) {
+                    responseWriter.append("        " + userPropertyName + ": \"" + user.getProperty(userPropertyName) + "\", ");
                 }
-                responseWriter.append("]");
+                responseWriter.append("        returningStatus: \"\", ");
+                responseWriter.append("        type: \"main\", ");
+                if (userSegments != null && userSegments.size() > 0) {
+                    responseWriter.append("        segments: [");
+                    int i = 0;
+                    for (SegmentID segmentID : userSegments) {
+                        responseWriter.append("\"");
+                        responseWriter.append(segmentID.getId());
+                        responseWriter.append("\"");
+                        if (i < userSegments.size() - 1) {
+                            responseWriter.append(", ");
+                        }
+                        i++;
+                    }
+                    responseWriter.append("]");
+                }
+                responseWriter.append("                   }");
+                responseWriter.append("              } ]");
+                responseWriter.append("        } ]");
+                responseWriter.append("};");
             }
-            responseWriter.append("                   }");
-            responseWriter.append("              } ]");
-            responseWriter.append("        } ]");
-            responseWriter.append("};");
+
+            // now we copy the base script source code
+            InputStream baseScriptStream = filterConfig.getServletContext().getResourceAsStream(BASE_SCRIPT_LOCATION);
+            IOUtils.copy(baseScriptStream, responseWriter);
+
         }
-
-        // now we copy the base script source code
-        InputStream baseScriptStream = filterConfig.getServletContext().getResourceAsStream(BASE_SCRIPT_LOCATION);
-        IOUtils.copy(baseScriptStream, responseWriter);
-
         responseWriter.flush();
+
     }
 
     private User createNewUser(String existingVisitorID, ServletResponse response) {
@@ -167,7 +181,7 @@ public class ScriptFilter implements Filter {
         if (visitorID == null) {
            visitorID = UUID.randomUUID().toString();
         }
-        user = new User();
+        user = new User(visitorID);
         userService.save(user);
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
