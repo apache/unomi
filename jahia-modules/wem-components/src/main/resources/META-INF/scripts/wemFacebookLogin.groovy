@@ -10,7 +10,18 @@ println("    // This is called with the results from from FB.getLoginStatus().\n
         "        // for FB.getLoginStatus().\n" +
         "        if (response.status === 'connected') {\n" +
         "            // Logged into your app and Facebook.\n" +
-        "            testAPI();\n" +
+        "            if (window.digitalData) {\n" +
+        "               if (window.digitalData.loaded) {\n" +
+        "                   digitalDataLoadCallback(window.digitalData);\n" +
+        "               } else {\n" +
+        "                   window.digitalData.loadCallbacks = window.digitalData.loadCallbacks || []; \n" +
+        "                   window.digitalData.loadCallbacks.push(digitalDataLoadCallback);\n" +
+        "               }\n" +
+        "            } else { \n" +
+        "               window.digitalData = {};\n" +
+        "               window.digitalData.loadCallbacks = window.digitalData.loadCallbacks || []; \n" +
+        "               window.digitalData.loadCallbacks.push(digitalDataLoadCallback);\n" +
+        "            }\n" +
         "        } else if (response.status === 'not_authorized') {\n" +
         "            // The person is logged into Facebook, but not your app.\n" +
         "            document.getElementById('status').innerHTML = 'Please log ' +\n" +
@@ -72,7 +83,7 @@ println("    // This is called with the results from from FB.getLoginStatus().\n
         "\n" +
         "    // Here we run a very simple test of the Graph API after login is\n" +
         "    // successful.  See statusChangeCallback() for when this call is made.\n" +
-        "    function testAPI() {\n" +
+        "    function digitalDataLoadCallback(digitalData) {\n" +
         "        console.log('Welcome!  Fetching your information.... ');\n" +
         "        FB.api('/me', function (response) {\n" +
         "            console.log('Good to see you, ' + response.name + '.');\n" +

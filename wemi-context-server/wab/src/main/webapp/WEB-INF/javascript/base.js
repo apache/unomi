@@ -5,7 +5,7 @@ var wemi = {
     /*
      * Recursively merge properties of two objects
      */
-    mergeObjects: function (obj1, obj2) {
+    merge: function (obj1, obj2) {
 
         for (var obj2Property in obj2) {
             try {
@@ -87,5 +87,14 @@ var wemi = {
     }
 
 };
+
+wemi.merge(window.digitalData, wemiDigitalData);
+
+if (window.digitalData.loadCallbacks) {
+    console.log("Found WEMI context load callbacks, calling now...");
+    for (var i=0; i < window.digitalData.loadCallbacks.length; i++) {
+        window.digitalData.loadCallbacks[i](digitalData);
+    }
+}
 
 console.log("WEMI context script successfully initialized");

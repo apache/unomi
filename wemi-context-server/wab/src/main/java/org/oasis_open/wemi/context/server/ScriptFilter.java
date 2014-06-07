@@ -69,26 +69,10 @@ public class ScriptFilter implements Filter {
                     " serverPort=" + httpServletRequest.getServerPort() +
                     " remoteAddr=" + httpServletRequest.getRemoteAddr() +
                     " remotePort=" + httpServletRequest.getRemotePort());
-            System.out.println("Headers:");
-            System.out.println("--------");
-            Enumeration<String> headerNameEnum = httpServletRequest.getHeaderNames();
-            while (headerNameEnum.hasMoreElements()) {
-                String headerName = headerNameEnum.nextElement();
-                System.out.println(headerName + ": " + httpServletRequest.getHeader(headerName));
-            }
+            // dumpRequestHeaders(httpServletRequest);
             Cookie[] cookies = httpServletRequest.getCookies();
-            System.out.println("Cookies:");
-            System.out.println("--------");
+            // dumpRequestCookies(cookies);
             for (Cookie cookie : cookies) {
-                System.out.println("  name=" + cookie.getName() +
-                        " value=" + cookie.getValue() +
-                        " domain=" + cookie.getDomain() +
-                        " path=" + cookie.getPath() +
-                        " maxAge=" + cookie.getMaxAge() +
-                        " httpOnly=" + cookie.isHttpOnly() +
-                        " secure=" + cookie.getSecure() +
-                        " version=" + cookie.getVersion() +
-                        " comment=" + cookie.getComment());
                 if ("wemi-profileID".equals(cookie.getName())) {
                     visitorID = cookie.getValue();
                 }
@@ -168,37 +152,38 @@ public class ScriptFilter implements Filter {
 
             // we re-use the object naming convention from http://www.w3.org/community/custexpdata/, specifically in
             // http://www.w3.org/2013/12/ceddl-201312.pdf
-            responseWriter.append("var digitalData = {} || digitalData;");
+            responseWriter.append("window.digitalData = window.digitalData || {};\n");
             if (user != null) {
-                responseWriter.append("var digitalData = {");
-                responseWriter.append("  user: [ { ");
-                responseWriter.append("    profiles: [ { ");
-                responseWriter.append("      profileInfo: {");
-                responseWriter.append("        profileId: \"" + user.getItemId() + "\", ");
+                responseWriter.append("var wemiDigitalData = {\n");
+                responseWriter.append("  loaded : true, \n");
+                responseWriter.append("  user: [ {  \n");
+                responseWriter.append("    profiles: [ {  \n");
+                responseWriter.append("      profileInfo: { \n");
+                responseWriter.append("        profileId: \"" + user.getItemId() + "\",  \n");
                 for (String userPropertyName : user.getProperties().stringPropertyNames()) {
-                    responseWriter.append("        " + userPropertyName + ": \"" + user.getProperty(userPropertyName) + "\", ");
+                    responseWriter.append("        " + userPropertyName + ": \"" + user.getProperty(userPropertyName) + "\",  \n");
                 }
-                responseWriter.append("        returningStatus: \"\", ");
-                responseWriter.append("        type: \"main\", ");
+                responseWriter.append("        returningStatus: \"\",  \n");
+                responseWriter.append("        type: \"main\",  \n");
                 Set<SegmentID> userSegments = segmentService.getSegmentsForUser(user);
                 if (userSegments != null && userSegments.size() > 0) {
-                    responseWriter.append("        segments: [");
+                    responseWriter.append("        segments: [ \n");
                     int i = 0;
                     for (SegmentID segmentID : userSegments) {
                         responseWriter.append("\"");
                         responseWriter.append(segmentID.getId());
                         responseWriter.append("\"");
                         if (i < userSegments.size() - 1) {
-                            responseWriter.append(", ");
+                            responseWriter.append(",  \n");
                         }
                         i++;
                     }
-                    responseWriter.append("]");
+                    responseWriter.append("] \n");
                 }
-                responseWriter.append("                   }");
-                responseWriter.append("              } ]");
-                responseWriter.append("        } ]");
-                responseWriter.append("};");
+                responseWriter.append("                   } \n");
+                responseWriter.append("              } ] \n");
+                responseWriter.append("        } ] \n");
+                responseWriter.append("}; \n");
             }
 
             // now we copy the base script source code
@@ -210,6 +195,32 @@ public class ScriptFilter implements Filter {
         }
         responseWriter.flush();
 
+    }
+
+    private void dumpRequestCookies(Cookie[] cookies) {
+        System.out.println("Cookies:");
+        System.out.println("--------");
+        for (Cookie cookie : cookies) {
+            System.out.println("  name=" + cookie.getName() +
+                    " value=" + cookie.getValue() +
+                    " domain=" + cookie.getDomain() +
+                    " path=" + cookie.getPath() +
+                    " maxAge=" + cookie.getMaxAge() +
+                    " httpOnly=" + cookie.isHttpOnly() +
+                    " secure=" + cookie.getSecure() +
+                    " version=" + cookie.getVersion() +
+                    " comment=" + cookie.getComment());
+        }
+    }
+
+    private void dumpRequestHeaders(HttpServletRequest httpServletRequest) {
+        System.out.println("Headers:");
+        System.out.println("--------");
+        Enumeration<String> headerNameEnum = httpServletRequest.getHeaderNames();
+        while (headerNameEnum.hasMoreElements()) {
+            String headerName = headerNameEnum.nextElement();
+            System.out.println(headerName + ": " + httpServletRequest.getHeader(headerName));
+        }
     }
 
     private User createNewUser(String existingVisitorID, ServletResponse response) {

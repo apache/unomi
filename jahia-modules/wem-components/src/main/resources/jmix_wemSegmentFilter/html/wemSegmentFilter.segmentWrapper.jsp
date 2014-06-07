@@ -51,20 +51,24 @@
 
         function waitForDigitalData() {
             if (window.digitalData) {
-                console.log("Found digitalData object !");
-                digitalDataFound();
-                return;
-            }
-            console.log("Waiting for digitalData object...");
-            if (waitingCount < 200) {
-                setTimeout(waitForDigitalData, 200);
-                waitingCount++;
+                if (window.digitalData.loaded) {
+                    console.log("digitalData object loaded, calling evaluating segment immediately...");
+                    digitalDataFound(window.digitalData);
+                } else {
+                    console.log("digitalData object present but not loaded, registering callback...");
+                    window.digitalData.loadCallbacks = window.digitalData.loadCallbacks || [];
+                    window.digitalData.loadCallbacks.push(digitalDataFound);
+                }
             } else {
-                console.log("Waiting count has reached maximum (" + waitingCount + "), stopped waiting.");
+                console.log("No digital data object found, creating and registering callback...");
+                window.digitalData = {};
+                window.digitalData.loadCallbacks = [];
+                window.digitalData.loadCallbacks.push(digitalDataFound);
             }
+
         }
 
-        function digitalDataFound() {
+        function digitalDataFound(digitalData) {
             if (window.digitalData) {
                 console.log("Digital data object is present");
                 if (digitalData.user && digitalData.user[0]) {
@@ -88,7 +92,6 @@
             }
         }
 
-        waitingCount = 0;
         waitForDigitalData();
 
     })();
