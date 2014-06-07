@@ -2,29 +2,55 @@
 
 var wemi = {
 
-    createCORSRequest : function (method, url) {
-      var xhr = new XMLHttpRequest();
-      if ("withCredentials" in xhr) {
+    /*
+     * Recursively merge properties of two objects
+     */
+    mergeObjects: function (obj1, obj2) {
 
-        // Check if the XMLHttpRequest object has a "withCredentials" property.
-        // "withCredentials" only exists on XMLHTTPRequest2 objects.
-        xhr.withCredentials = true;
-        xhr.open(method, url, true);
+        for (var obj2Property in obj2) {
+            try {
+                // Property in destination object set; update its value.
+                if (obj2[obj2Property].constructor == Object) {
+                    obj1[obj2Property] = this.mergeObjects(obj1[obj2Property], obj2[obj2Property]);
 
-      } else if (typeof XDomainRequest != "undefined") {
+                } else {
+                    obj1[obj2Property] = obj2[obj2Property];
 
-        // Otherwise, check if XDomainRequest.
-        // XDomainRequest only exists in IE, and is IE's way of making CORS requests.
-        xhr = new XDomainRequest();
-        xhr.open(method, url);
+                }
 
-      } else {
+            } catch (e) {
+                // Property in destination object not set; create it and set its value.
+                obj1[obj2Property] = obj2[obj2Property];
 
-        // Otherwise, CORS is not supported by the browser.
-        xhr = null;
+            }
+        }
 
-      }
-      return xhr;
+        return obj1;
+    },
+
+    createCORSRequest: function (method, url) {
+        var xhr = new XMLHttpRequest();
+        if ("withCredentials" in xhr) {
+
+            // Check if the XMLHttpRequest object has a "withCredentials" property.
+            // "withCredentials" only exists on XMLHTTPRequest2 objects.
+            xhr.withCredentials = true;
+            xhr.open(method, url, true);
+
+        } else if (typeof XDomainRequest != "undefined") {
+
+            // Otherwise, check if XDomainRequest.
+            // XDomainRequest only exists in IE, and is IE's way of making CORS requests.
+            xhr = new XDomainRequest();
+            xhr.open(method, url);
+
+        } else {
+
+            // Otherwise, CORS is not supported by the browser.
+            xhr = null;
+
+        }
+        return xhr;
     },
 
     loadXMLDoc: function (url, successCallBack) {
