@@ -18,6 +18,10 @@
         <property name="applyOnConfigurations" value="module,wrappedcontent" />
     </bean>
 
+    <bean id="WemiApplicationListener" class="org.jahia.modules.wemi.WemiApplicationListener">
+
+    </bean>
+
     <bean class="org.jahia.modules.wemi.WemSegmentChoiceListInitializer">
         <property name="key" value="wemSegments"/>
     </bean>
