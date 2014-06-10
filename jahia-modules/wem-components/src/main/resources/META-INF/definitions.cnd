@@ -47,8 +47,8 @@ extends = jnt:content, jnt:area, jnt:template
 [jmix:wemSetProperty] mixin
 extends = jnt:content, jnt:area, jnt:template
  itemtype = marketing
-- j:propertyName (string)
-- j:propertyValue (string)
+- j:wemiPropertyName (string)
+- j:wemiPropertyValue (string)
 
 [jmix:wemIncrementProperty] mixin
 extends = jnt:content, jnt:area, jnt:template

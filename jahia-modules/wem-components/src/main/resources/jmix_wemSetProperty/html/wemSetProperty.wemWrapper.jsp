@@ -5,12 +5,10 @@
 <%@ taglib prefix="template" uri="http://www.jahia.org/tags/templateLib" %>
 <template:addResources type="css" resources="wem.css" />
 <template:addResources type="javascript" resources="wem.js" />
-<jcr:nodeProperty node="${currentNode}" name="j:propertyName" var="propertyName"/>
-<jcr:nodeProperty node="${currentNode}" name="j:propertyValue" var="propertyValue"/>
+<jcr:nodeProperty node="${currentNode}" name="j:wemiPropertyName" var="wemiPropertyName"/>
+<jcr:nodeProperty node="${currentNode}" name="j:wemiPropertyValue" var="wemiPropertyValue"/>
 
 ${wrappedContent}
-
-${propertyName} = ${propertyValue}
 
 <script type="text/javascript">
 
@@ -22,10 +20,11 @@ ${propertyName} = ${propertyValue}
             console.log("Digital data object is loaded");
             if (digitalData.user && digitalData.user[0]) {
                 if (digitalData.user[0].profiles && digitalData.user[0].profiles[0]) {
-                    digitalData.user[0].profiles[0].profileInfo.${propertyName} = ${propertyValue};
-                    wemi.saveContext("${wemiContextServerURL}/context.js", digitalData, function (xhr) {
+                    digitalData.user[0].profiles[0].profileInfo['${wemiPropertyName.string}'] = '${wemiPropertyValue.string}';
+                    wemi.saveContext("${currentNode.resolveSite.properties.wemiContextServerURL.string}/context.js", digitalData, function (xhr) {
                         console.log("User context updated successfully.");
                     });
+                }
             }
         }
 
