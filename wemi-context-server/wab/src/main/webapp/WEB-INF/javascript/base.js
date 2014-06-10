@@ -90,6 +90,20 @@ var wemi = {
         // see http://stackoverflow.com/questions/3326893/is-json-stringify-supported-by-ie-8
         xhr.send(JSON.stringify(data));
 
+    },
+
+    collectEvent: function(baseURL, eventType, parameters, successCallBack) {
+        // @todo we should pass the parameters as an array or a map instead of a string
+        var xhr = this.createCORSRequest("GET", url + "/" + eventType + "?" + parameters);
+        if (!xhr) {
+            alert("CORS not supported by browser!");
+        }
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                successCallBack(xhr);
+            }
+        }
+        xhr.send();
     }
 
 };

@@ -1,11 +1,7 @@
 package org.oasis_open.wemi.context.server;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.io.IOUtils;
 import org.oasis_open.wemi.context.server.api.SegmentID;
@@ -57,21 +53,10 @@ public class ScriptFilter implements Filter {
         if (request instanceof HttpServletRequest) {
             httpServletRequest = (HttpServletRequest) request;
             httpMethod = httpServletRequest.getMethod();
-            System.out.println("===================================================================================");
-            String sessionId = null;
-            if (httpServletRequest.getSession(false) != null) {
-                sessionId = httpServletRequest.getSession(false).getId();
-            }
-            System.out.println(httpMethod + " " + httpServletRequest.getRequestURI() +
-                    "?" + httpServletRequest.getQueryString() +
-                    " sessionId=" + sessionId +
-                    " serverName=" + httpServletRequest.getServerName() +
-                    " serverPort=" + httpServletRequest.getServerPort() +
-                    " remoteAddr=" + httpServletRequest.getRemoteAddr() +
-                    " remotePort=" + httpServletRequest.getRemotePort());
-            // dumpRequestHeaders(httpServletRequest);
+            HttpUtils.dumpBasicRequestInfo(httpServletRequest);
+            // HttpUtils.dumpRequestHeaders(httpServletRequest);
             Cookie[] cookies = httpServletRequest.getCookies();
-            // dumpRequestCookies(cookies);
+            // HttpUtils.dumpRequestCookies(cookies);
             for (Cookie cookie : cookies) {
                 if ("wemi-profileID".equals(cookie.getName())) {
                     visitorID = cookie.getValue();
@@ -133,20 +118,8 @@ public class ScriptFilter implements Filter {
 
         // @Todo we should here call all plugins to "augment" the user profile. For example we could have LDAP, CRM or Analytics plugins that could add information to the user profile
 
-        if (response instanceof HttpServletResponse) {
-            HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-            if (httpServletRequest != null) {
-                httpServletResponse.setHeader("Access-Control-Allow-Origin", httpServletRequest.getHeader("Origin"));
-            } else {
-                httpServletResponse.setHeader("Access-Control-Allow-Origin", "*");
-            }
-            httpServletResponse.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-            httpServletResponse.setHeader("Access-Control-Allow-Credentials", "true");
-            httpServletResponse.setHeader("Access-Control-Allow-Methods", "OPTIONS, POST, GET");
-            // httpServletResponse.setHeader("Access-Control-Max-Age", "600");
-            // httpServletResponse.setHeader("Access-Control-Expose-Headers","Access-Control-Allow-Origin");
-            httpServletResponse.flushBuffer();
-        }
+        HttpUtils.setupCORSHeaders(httpServletRequest, response);
+
         Writer responseWriter = response.getWriter();
         if ("post".equals(httpMethod.toLowerCase()) || "get".equals(httpMethod.toLowerCase())) {
 
@@ -197,31 +170,6 @@ public class ScriptFilter implements Filter {
 
     }
 
-    private void dumpRequestCookies(Cookie[] cookies) {
-        System.out.println("Cookies:");
-        System.out.println("--------");
-        for (Cookie cookie : cookies) {
-            System.out.println("  name=" + cookie.getName() +
-                    " value=" + cookie.getValue() +
-                    " domain=" + cookie.getDomain() +
-                    " path=" + cookie.getPath() +
-                    " maxAge=" + cookie.getMaxAge() +
-                    " httpOnly=" + cookie.isHttpOnly() +
-                    " secure=" + cookie.getSecure() +
-                    " version=" + cookie.getVersion() +
-                    " comment=" + cookie.getComment());
-        }
-    }
-
-    private void dumpRequestHeaders(HttpServletRequest httpServletRequest) {
-        System.out.println("Headers:");
-        System.out.println("--------");
-        Enumeration<String> headerNameEnum = httpServletRequest.getHeaderNames();
-        while (headerNameEnum.hasMoreElements()) {
-            String headerName = headerNameEnum.nextElement();
-            System.out.println(headerName + ": " + httpServletRequest.getHeader(headerName));
-        }
-    }
 
     private User createNewUser(String existingVisitorID, ServletResponse response) {
         User user;

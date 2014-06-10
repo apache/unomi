@@ -4,10 +4,11 @@
 <%@ taglib prefix="functions" uri="http://www.jahia.org/tags/functions" %>
 <%@ taglib prefix="template" uri="http://www.jahia.org/tags/templateLib" %>
 <template:addResources type="css" resources="wem.css" />
+<template:addResources type="javascript" resources="wem.js" />
 <jcr:nodeProperty node="${currentNode}" name="j:segments" var="segmentList"/>
 <c:set var="elementID" value="segment-${currentNode.identifier}" />
 
-<div class="segmentContainer" id="segment-${elementID}" style="display:none">
+<div class="segmentContainer" id="${elementID}" style="display:none">
     <div class="segmentContent">
       ${wrappedContent}
     </div>
@@ -20,7 +21,7 @@
 
         var editMode = ${renderContext.editMode ? 'true' : 'false'};
 
-        var divElement = document.getElementById("segment-${elementID}");
+        var divElement = document.getElementById("${elementID}");
 
         var waitingCount = 0;
 
@@ -47,39 +48,6 @@
                 }
             }
             return false;
-        }
-
-        function registerCallbacks(onLoadCallback, onUpdateCallback) {
-            if (window.digitalData) {
-                if (window.digitalData.loaded) {
-                    console.log("digitalData object loaded, calling on load callback immediately...");
-                    if (onLoadCallback) {
-                        onLoadCallback(window.digitalData);
-                    }
-                } else {
-                    console.log("digitalData object present but not loaded, registering callback...");
-                    if (onLoadCallback) {
-                        window.digitalData.loadCallbacks = window.digitalData.loadCallbacks || [];
-                        window.digitalData.loadCallbacks.push(onLoadCallback);
-                    }
-                    if (onUpdateCallback) {
-                        window.digitalData.updateCallbacks = window.digitalData.updateCallbacks || [];
-                        window.digitalData.updateCallbacks.push(onUpdateCallback);
-                    }
-                }
-            } else {
-                console.log("No digital data object found, creating and registering callbacks...");
-                window.digitalData = {};
-                if (onLoadCallback) {
-                    window.digitalData.loadCallbacks = [];
-                    window.digitalData.loadCallbacks.push(onLoadCallback);
-                }
-                if (onUpdateCallback) {
-                    window.digitalData.updateCallbacks = [];
-                    window.digitalData.updateCallbacks.push(onUpdateCallback);
-                }
-            }
-
         }
 
         function digitalDataLoaded(digitalData) {
@@ -126,7 +94,7 @@
             }
         }
 
-        registerCallbacks(digitalDataLoaded, digitalDataUpdated);
+        wem.registerCallbacks(digitalDataLoaded, digitalDataUpdated);
 
     })();
 

@@ -2,6 +2,7 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
     <bean class="org.jahia.modules.wemi.WemiScriptFilter">
         <property name="applyOnConfigurations" value="page" />
         <property name="skipOnConfiguration" value="include,wrapper" />
@@ -16,6 +17,14 @@
         <property name="priority" value="7" />
         <property name="description" value="Control display of a node based on the WEM segments a user is part of "/>
         <property name="applyOnConfigurations" value="module,wrappedcontent" />
+    </bean>
+
+    <bean id="WemiWrapperFilter" class="org.jahia.modules.wemi.WemiWrapperFilter">
+        <property name="priority" value="7" />
+        <property name="description" value="Set a wrapper around a node rendering based on a node type"/>
+        <property name="applyOnConfigurations" value="module,wrappedcontent" />
+        <property name="applyOnNodeTypes" value="jmix:wemContentView,jmix:wemContentHovered,jmix:wemContentClicked,jmix:wemSetProperty,jmix:wemIncrementProperty"/>
+        <property name="wrapperName" value="wemWrapper" />
     </bean>
 
     <bean id="WemiApplicationListener" class="org.jahia.modules.wemi.WemiApplicationListener">

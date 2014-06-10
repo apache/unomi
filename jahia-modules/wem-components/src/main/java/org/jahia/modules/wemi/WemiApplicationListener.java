@@ -57,6 +57,9 @@ public class WemiApplicationListener implements ApplicationListener {
 
                     Response response = invocationBuilder.get();
                     Set<Map<String,String>> segments = (Set<Map<String,String>>) response.readEntity(Set.class);
+
+                    // @todo complete steps to augment WEMI profile with Jahia user properties
+
                 } catch (RepositoryException e) {
                     e.printStackTrace();
                 }

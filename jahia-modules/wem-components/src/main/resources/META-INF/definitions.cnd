@@ -29,18 +29,28 @@ extends = jnt:content, jnt:area, jnt:template
 
 [jnt:wemFacebookLoginButton] > jnt:content, jmix:wemComponents
 
-[jmix:contentViewed] mixin
+[jmix:wemContentViewed] mixin
 extends = jnt:content, jnt:area, jnt:template
  itemtype = marketing
 - j:propertyName (string)
 
-[jmix:contentClicked] mixin
+[jmix:wemContentClicked] mixin
 extends = jnt:content, jnt:area, jnt:template
  itemtype = marketing
 - j:propertyName (string)
 
-[jmix:contentHovered] mixin
+[jmix:wemContentHovered] mixin
 extends = jnt:content, jnt:area, jnt:template
  itemtype = marketing
 - j:propertyName (string)
 
+[jmix:wemSetProperty] mixin
+extends = jnt:content, jnt:area, jnt:template
+ itemtype = marketing
+- j:propertyName (string)
+- j:propertyValue (string)
+
+[jmix:wemIncrementProperty] mixin
+extends = jnt:content, jnt:area, jnt:template
+ itemtype = marketing
+- j:propertyName (string)
