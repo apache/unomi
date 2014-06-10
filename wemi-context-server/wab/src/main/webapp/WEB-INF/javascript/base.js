@@ -74,6 +74,12 @@ var wemi = {
         xhr.onreadystatechange = function () {
             if (xhr.readyState == 4 && xhr.status == 200) {
                 successCallBack(xhr);
+                if (window.digitalData.updateCallbacks && window.digitalData.updateCallbacks.length > 0) {
+                    console.log("Found WEMI context update callbacks, calling now...");
+                    for (var i=0; i < window.digitalData.updateCallbacks.length; i++) {
+                        window.digitalData.updateCallbacks[i](digitalData);
+                    }
+                }
             }
         }
 
@@ -90,7 +96,7 @@ var wemi = {
 
 wemi.merge(window.digitalData, wemiDigitalData);
 
-if (window.digitalData.loadCallbacks) {
+if (window.digitalData.loadCallbacks && window.digitalData.loadCallbacks.length > 0) {
     console.log("Found WEMI context load callbacks, calling now...");
     for (var i=0; i < window.digitalData.loadCallbacks.length; i++) {
         window.digitalData.loadCallbacks[i](digitalData);

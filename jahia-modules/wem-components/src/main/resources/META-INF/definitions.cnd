@@ -27,5 +27,20 @@ extends = jnt:content, jnt:area, jnt:template
  itemtype=options
  - facebookAppId (string) nofulltext
 
- [jnt:wemFacebookLoginButton] > jnt:content, jmix:wemComponents
+[jnt:wemFacebookLoginButton] > jnt:content, jmix:wemComponents
+
+[jmix:contentViewed] mixin
+extends = jnt:content, jnt:area, jnt:template
+ itemtype = marketing
+- j:propertyName (string)
+
+[jmix:contentClicked] mixin
+extends = jnt:content, jnt:area, jnt:template
+ itemtype = marketing
+- j:propertyName (string)
+
+[jmix:contentHovered] mixin
+extends = jnt:content, jnt:area, jnt:template
+ itemtype = marketing
+- j:propertyName (string)
 

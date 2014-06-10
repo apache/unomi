@@ -29,6 +29,7 @@
             <plugin>
                 <groupId>org.jahia.server</groupId>
                 <artifactId>jahia-maven-plugin</artifactId>
+                <version>4.1-SNAPSHOT</version>
                 <executions>
                     <execution>
                         <id>jahia-version</id>
