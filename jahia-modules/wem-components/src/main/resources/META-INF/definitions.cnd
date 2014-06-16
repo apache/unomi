@@ -32,25 +32,25 @@ extends = jnt:content, jnt:area, jnt:template
 [jmix:wemContentViewed] mixin
 extends = jnt:content, jnt:area, jnt:template
  itemtype = marketing
-- j:propertyName (string)
+- j:wemContentViewedPropertyName (string)
 
 [jmix:wemContentClicked] mixin
 extends = jnt:content, jnt:area, jnt:template
  itemtype = marketing
-- j:propertyName (string)
+- j:wemContentClickedPropertyName (string)
 
 [jmix:wemContentHovered] mixin
 extends = jnt:content, jnt:area, jnt:template
  itemtype = marketing
-- j:propertyName (string)
+- j:wemContentHoveredPropertyName (string)
 
 [jmix:wemSetProperty] mixin
 extends = jnt:content, jnt:area, jnt:template
  itemtype = marketing
-- j:wemiPropertyName (string)
-- j:wemiPropertyValue (string)
+- j:wemiSetPropertyName (string)
+- j:wemiSetPropertyValue (string)
 
 [jmix:wemIncrementProperty] mixin
 extends = jnt:content, jnt:area, jnt:template
  itemtype = marketing
-- j:propertyName (string)
+- j:wemIncrementPropertyName (string)
