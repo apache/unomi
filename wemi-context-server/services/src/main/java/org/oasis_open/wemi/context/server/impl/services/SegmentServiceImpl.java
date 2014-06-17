@@ -26,6 +26,7 @@ public class SegmentServiceImpl implements SegmentService {
         // @Todo remove hardcoded segments, make them configurable.
         segmentExpressions.put(new SegmentID("alwaysTrue", "All users", "This segment includes all users"), MVEL.compileExpression("true"));
         segmentExpressions.put(new SegmentID("maleGender", "Men", "This segment includes all men"), MVEL.compileExpression("user.properties.?gender == 'male'"));
+        segmentExpressions.put(new SegmentID("goal1Reached", "Goal 1 Reached", "This segment includes all users that have reached goal 1"), MVEL.compileExpression("user.properties.?goal1 == 'reached'"));
 
     }
 

@@ -129,38 +129,15 @@ public class ScriptFilter implements Filter {
 
             // we re-use the object naming convention from http://www.w3.org/community/custexpdata/, specifically in
             // http://www.w3.org/2013/12/ceddl-201312.pdf
-            responseWriter.append("window.digitalData = window.digitalData || {};\n");
             if (user != null) {
-                responseWriter.append("var wemiDigitalData = {\n");
-                responseWriter.append("  loaded : true, \n");
-                responseWriter.append("  user: [ {  \n");
-                responseWriter.append("    profiles: [ {  \n");
-                responseWriter.append("      profileInfo: { \n");
-                responseWriter.append("        profileId: \"" + user.getItemId() + "\",  \n");
-                for (String userPropertyName : user.getProperties().stringPropertyNames()) {
-                    if (!"profileId".equals(userPropertyName)) {
-                        responseWriter.append("        " + userPropertyName + ": \"" + user.getProperty(userPropertyName) + "\",  \n");
-                    }
+                if ("get".equals(httpMethod.toLowerCase())) {
+                    responseWriter.append("window.digitalData = window.digitalData || {};\n");
+                    responseWriter.append("var wemiDigitalData = \n");
+                    responseWriter.append(getJSONDigitalData(user));
+                    responseWriter.append("; \n");
+                } else {
+                    responseWriter.append(getJSONDigitalData(user));
                 }
-                Set<SegmentID> userSegments = segmentService.getSegmentsForUser(user);
-                if (userSegments != null && userSegments.size() > 0) {
-                    responseWriter.append("        segments: [ \n");
-                    int i = 0;
-                    for (SegmentID segmentID : userSegments) {
-                        responseWriter.append("\"");
-                        responseWriter.append(segmentID.getId());
-                        responseWriter.append("\"");
-                        if (i < userSegments.size() - 1) {
-                            responseWriter.append(",  \n");
-                        }
-                        i++;
-                    }
-                    responseWriter.append("] \n");
-                }
-                responseWriter.append("                   } \n");
-                responseWriter.append("              } ] \n");
-                responseWriter.append("        } ] \n");
-                responseWriter.append("}; \n");
             }
 
             if ("get".equals(httpMethod.toLowerCase())) {
@@ -193,6 +170,41 @@ public class ScriptFilter implements Filter {
             httpServletResponse.addCookie(visitorIdCookie);
         }
         return user;
+    }
+
+    private String getJSONDigitalData(User user) {
+        StringBuilder responseWriter = new StringBuilder();
+        responseWriter.append("{");
+        responseWriter.append("  \"loaded\" : true, ");
+        responseWriter.append("  \"user\": [ {  ");
+        responseWriter.append("    \"profiles\": [ {  ");
+        responseWriter.append("      \"profileInfo\": { ");
+        responseWriter.append("        \"profileId\": \"" + user.getItemId() + "\",  ");
+        for (String userPropertyName : user.getProperties().stringPropertyNames()) {
+            if (!"profileId".equals(userPropertyName)) {
+                responseWriter.append("        \"" + userPropertyName + "\": \"" + user.getProperty(userPropertyName) + "\",  ");
+            }
+        }
+        Set<SegmentID> userSegments = segmentService.getSegmentsForUser(user);
+        if (userSegments != null && userSegments.size() > 0) {
+            responseWriter.append("        \"segments\": [ ");
+            int i = 0;
+            for (SegmentID segmentID : userSegments) {
+                responseWriter.append("\"");
+                responseWriter.append(segmentID.getId());
+                responseWriter.append("\"");
+                if (i < userSegments.size() - 1) {
+                    responseWriter.append(",");
+                }
+                i++;
+            }
+            responseWriter.append("] ");
+        }
+        responseWriter.append("                   } ");
+        responseWriter.append("              } ] ");
+        responseWriter.append("        } ] ");
+        responseWriter.append("}");
+        return responseWriter.toString();
     }
 
     public void destroy() {

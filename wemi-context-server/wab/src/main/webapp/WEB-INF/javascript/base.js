@@ -73,6 +73,11 @@ var wemi = {
         }
         xhr.onreadystatechange = function () {
             if (xhr.readyState == 4 && xhr.status == 200) {
+                var newDigitalData = JSON.parse(xhr.responseText);
+                newDigitalData.loaded = window.digitalData.loaded;
+                newDigitalData.loadCallbacks = window.digitalData.loadCallbacks;
+                newDigitalData.updateCallbacks = window.digitalData.updateCallbacks;
+                window.digitalData = newDigitalData;
                 successCallBack(xhr);
                 if (window.digitalData.updateCallbacks && window.digitalData.updateCallbacks.length > 0) {
                     console.log("wemi: Found WEMI context update callbacks, calling now...");
