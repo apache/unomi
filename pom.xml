@@ -47,19 +47,6 @@
   
   <modules>
     <module>wemi-context-server</module>
-    <module>jahia-modules</module>
   </modules>
-
-  <build>
-      <pluginManagement>
-          <plugins>
-              <plugin>
-                  <groupId>org.jahia.server</groupId>
-                  <artifactId>jahia-maven-plugin</artifactId>
-                  <version>4.0</version>
-              </plugin>
-          </plugins>
-      </pluginManagement>
-  </build>
 
 </project>
