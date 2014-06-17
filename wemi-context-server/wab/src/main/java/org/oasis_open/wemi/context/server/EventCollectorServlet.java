@@ -19,7 +19,7 @@ import java.util.UUID;
 /**
  * Created by loom on 10.06.14.
  */
-@WebServlet(urlPatterns={"/eventcollector"})
+@WebServlet(urlPatterns={"/eventcollector/*"})
 public class EventCollectorServlet extends HttpServlet {
 
     @Inject
@@ -32,14 +32,12 @@ public class EventCollectorServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        super.doGet(req, resp);
 
         doEvent(req, resp);
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        super.doPost(req, resp);
 
         doEvent(req, resp);
     }
@@ -47,8 +45,6 @@ public class EventCollectorServlet extends HttpServlet {
     @Override
     protected void doOptions(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         HttpUtils.dumpBasicRequestInfo(req);
-        super.doOptions(req, resp);
-
         HttpUtils.setupCORSHeaders(req, resp);
     }
 
@@ -57,7 +53,7 @@ public class EventCollectorServlet extends HttpServlet {
         HttpUtils.dumpBasicRequestInfo(req);
         HttpUtils.setupCORSHeaders(req, resp);
 
-        String eventType = req.getServletPath();
+        String eventType = req.getPathInfo();
         if (eventType.startsWith("/")) {
             eventType = eventType.substring(1);
         }

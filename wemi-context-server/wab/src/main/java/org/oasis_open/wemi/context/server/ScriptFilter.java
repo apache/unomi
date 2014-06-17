@@ -163,9 +163,11 @@ public class ScriptFilter implements Filter {
                 responseWriter.append("}; \n");
             }
 
-            // now we copy the base script source code
-            InputStream baseScriptStream = filterConfig.getServletContext().getResourceAsStream(BASE_SCRIPT_LOCATION);
-            IOUtils.copy(baseScriptStream, responseWriter);
+            if ("get".equals(httpMethod.toLowerCase())) {
+                // now we copy the base script source code
+                InputStream baseScriptStream = filterConfig.getServletContext().getResourceAsStream(BASE_SCRIPT_LOCATION);
+                IOUtils.copy(baseScriptStream, responseWriter);
+            }
 
         } else {
             responseWriter.append("OK");
