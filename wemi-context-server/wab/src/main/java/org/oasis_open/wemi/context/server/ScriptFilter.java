@@ -101,8 +101,12 @@ public class ScriptFilter implements Filter {
                                 if (user.hasProperty(fieldName) && user.getProperty(fieldName).equals(field.asText())) {
 
                                 } else {
-                                    user.setProperty(fieldName, field.asText());
-                                    modifiedProperties = true;
+                                    if (fieldName != null && fieldName.length() > 0) {
+                                        user.setProperty(fieldName, field.asText());
+                                        modifiedProperties = true;
+                                    } else {
+                                        // empty field name, won't set the property.
+                                    }
                                 }
                             }
                             if (modifiedProperties) {
@@ -134,10 +138,10 @@ public class ScriptFilter implements Filter {
                 responseWriter.append("      profileInfo: { \n");
                 responseWriter.append("        profileId: \"" + user.getItemId() + "\",  \n");
                 for (String userPropertyName : user.getProperties().stringPropertyNames()) {
-                    responseWriter.append("        " + userPropertyName + ": \"" + user.getProperty(userPropertyName) + "\",  \n");
+                    if (!"profileId".equals(userPropertyName)) {
+                        responseWriter.append("        " + userPropertyName + ": \"" + user.getProperty(userPropertyName) + "\",  \n");
+                    }
                 }
-                responseWriter.append("        returningStatus: \"\",  \n");
-                responseWriter.append("        type: \"main\",  \n");
                 Set<SegmentID> userSegments = segmentService.getSegmentsForUser(user);
                 if (userSegments != null && userSegments.size() > 0) {
                     responseWriter.append("        segments: [ \n");

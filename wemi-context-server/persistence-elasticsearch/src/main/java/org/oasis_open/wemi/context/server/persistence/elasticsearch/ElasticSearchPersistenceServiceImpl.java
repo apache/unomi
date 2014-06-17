@@ -25,6 +25,7 @@ import java.beans.Beans;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -119,6 +120,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
             e.printStackTrace();
         } catch (InvocationTargetException e) {
             e.printStackTrace();
+        } catch (Throwable t) {
+            t.printStackTrace();
         } finally {
             Thread.currentThread().setContextClassLoader(tccl);
         }
