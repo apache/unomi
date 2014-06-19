@@ -7,6 +7,7 @@ import org.ops4j.pax.cdi.api.ContainerInitialized;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
 import org.osgi.framework.BundleContext;
 
+import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Default;
@@ -43,11 +44,9 @@ public class SegmentServiceImpl implements SegmentService {
 
     }
 
-/**
-     * Register OSGi services when the bean is initialized
-     */
-    public void onInitialized(@Observes ContainerInitialized event) {
-        System.out.println("onInitialized {" + bundleContext.getBundle() + "}");
+    @PostConstruct
+    public void postConstruct() {
+        System.out.println("postConstruct {" + bundleContext.getBundle() + "}");
         Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/segments", "*.json", true);
         while (predefinedSegmentEntries.hasMoreElements()) {
             URL predefinedSegmentURL = predefinedSegmentEntries.nextElement();
