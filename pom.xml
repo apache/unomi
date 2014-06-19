@@ -1,19 +1,31 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.oasis-open.wemi</groupId>
-  <artifactId>wemi-sandbox</artifactId>
-  <version>1.0-SNAPSHOT</version>
-  <packaging>pom</packaging>
+    <groupId>org.oasis-open.wemi</groupId>
+    <artifactId>wemi-sandbox</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
 
-  <name>WEMI Sandbox Root project</name>
-  <url>https://www.oasis-open.org/wemi</url>
+    <name>WEMI Sandbox Root project</name>
+    <url>https://www.oasis-open.org/wemi</url>
 
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <cxf.version>3.0.0</cxf.version>
-  </properties>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <cxf.version>3.0.0</cxf.version>
+    </properties>
+
+    <distributionManagement>
+        <repository>
+            <id>jahia-releases</id>
+            <url>https://devtools.jahia.com/nexus/content/repositories/jahia-releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>jahia-snapshots</id>
+            <url>https://devtools.jahia.com/nexus/content/repositories/jahia-snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
+
 
     <repositories>
         <repository>
@@ -31,7 +43,7 @@
     </repositories>
 
     <pluginRepositories>
-    	<pluginRepository>
+        <pluginRepository>
             <id>jahia-public</id>
             <name>Jahia Public Repository</name>
             <url>https://devtools.jahia.com/nexus/content/groups/public</url>
@@ -44,9 +56,9 @@
             </snapshots>
         </pluginRepository>
     </pluginRepositories>
-  
-  <modules>
-    <module>wemi-context-server</module>
-  </modules>
+
+    <modules>
+        <module>wemi-context-server</module>
+    </modules>
 
 </project>

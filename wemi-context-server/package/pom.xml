@@ -29,6 +29,22 @@
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
+        <dependency>
+            <!-- scope is runtime so the feature repo is listed in the features service config file, and features may be installed using the karaf-maven-plugin configuration -->
+            <groupId>org.apache.cxf.karaf</groupId>
+            <artifactId>apache-cxf</artifactId>
+            <version>2.7.11</version>
+            <classifier>features</classifier>
+            <type>xml</type>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.oasis-open.wemi</groupId>
+            <artifactId>wemi-context-server-kar</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <type>kar</type>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -36,9 +52,17 @@
             <plugin>
                 <groupId>org.apache.karaf.tooling</groupId>
                 <artifactId>karaf-maven-plugin</artifactId>
+                <version>3.0.1</version>
                 <extensions>true</extensions>
                 <configuration>
                     <!-- no startupFeatures -->
+                    <startupFeatures>
+                        <feature>war</feature>
+                        <feature>cxf/2.7.11</feature>
+                        <feature>openwebbeans</feature>
+                        <feature>pax-cdi-web-openwebbeans</feature>
+                        <feature>wemi-context-server-kar</feature>
+                    </startupFeatures>
                     <bootFeatures>
                         <feature>standard</feature>
                         <feature>management</feature>
