@@ -1,0 +1,9 @@
+{
+    "id" : "alwaysTrue",
+    "name" :  "All users",
+    "description" : "This segment includes all users",
+    "type" : "query",
+    "definition" : {
+        "match_all" : { }
+    }
+}

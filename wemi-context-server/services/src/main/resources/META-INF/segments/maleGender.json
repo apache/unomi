@@ -1,0 +1,13 @@
+{
+    "id" : "maleGender",
+    "name" :  "Men",
+    "description" : "This segment includes all men",
+    "type" : "query",
+    "definition" : {
+        "query": {
+            "match" : {
+                "user.properties.?gender" : "male"
+            }
+        }
+    }
+}
