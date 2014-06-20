@@ -30,13 +30,16 @@ public class HttpUtils {
     }
 
     public static void dumpBasicRequestInfo(HttpServletRequest httpServletRequest) {
-        System.out.println("===================================================================================");
+        System.out.println("=== ");
         String sessionId = null;
         if (httpServletRequest.getSession(false) != null) {
             sessionId = httpServletRequest.getSession(false).getId();
         }
-        System.out.println(httpServletRequest.getMethod() + " " + httpServletRequest.getRequestURI() +
-                "?" + httpServletRequest.getQueryString() +
+        System.out.print(httpServletRequest.getMethod() + " " + httpServletRequest.getRequestURI());
+        if (httpServletRequest.getQueryString() != null) {
+            System.out.print("?" + httpServletRequest.getQueryString());
+        }
+        System.out.println(
                 " sessionId=" + sessionId +
                 " serverName=" + httpServletRequest.getServerName() +
                 " serverPort=" + httpServletRequest.getServerPort() +
