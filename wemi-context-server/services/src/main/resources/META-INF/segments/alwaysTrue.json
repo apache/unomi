@@ -2,7 +2,7 @@
     "id" : "alwaysTrue",
     "name" :  "All users",
     "description" : "This segment includes all users",
-    "type" : "query",
+    "type" : "es-query",
     "definition" : {
         "match_all" : { }
     }

@@ -60,12 +60,18 @@ public class SegmentServiceImpl implements SegmentService {
                 // dumpJSON(jsonst, null, "");
                 JsonObject segmentObject = (JsonObject) jsonst;
                 SegmentID segmentID = new SegmentID(segmentObject.getString("id"), segmentObject.getString("name"), segmentObject.getString("description"));
-                JsonObject queryObject = segmentObject.getJsonObject("definition");
-                StringWriter queryStringWriter = new StringWriter();
-                JsonWriter jsonWriter = Json.createWriter(queryStringWriter);
-                jsonWriter.writeObject(queryObject);
-                jsonWriter.close();
-                segmentQueries.put(segmentID, queryStringWriter.toString());
+                String segmentType = segmentObject.getString("type");
+                if ("es-query".equals(segmentType)) {
+                    JsonObject queryObject = segmentObject.getJsonObject("definition");
+                    StringWriter queryStringWriter = new StringWriter();
+                    JsonWriter jsonWriter = Json.createWriter(queryStringWriter);
+                    jsonWriter.writeObject(queryObject);
+                    jsonWriter.close();
+                    segmentQueries.put(segmentID, queryStringWriter.toString());
+                } else if ("mvel".equals(segmentType)) {
+                    String segmentMvelExpression = segmentObject.getString("definition");
+                    segmentExpressions.put(segmentID, MVEL.compileExpression(segmentMvelExpression));
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
@@ -74,7 +80,6 @@ public class SegmentServiceImpl implements SegmentService {
                 }
             }
 
-            // @todo implement the actual loading...
         }
     }
 
@@ -106,6 +111,8 @@ public class SegmentServiceImpl implements SegmentService {
             }
 
         }
+
+        // @todo implement user segment matching using ElasticSearch's Percolate API and using the query definitions
 
         return matchedSegments;
     }

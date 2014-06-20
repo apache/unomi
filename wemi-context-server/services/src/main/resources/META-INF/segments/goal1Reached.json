@@ -1,0 +1,7 @@
+{
+    "id": "goal1Reached",
+    "name" : "Goal 1 Reached",
+    "description" : "This segment includes all users that have reached goal 1",
+    "type" : "mvel",
+    "definition" : "user.properties.?goal1 == 'reached'"
+}

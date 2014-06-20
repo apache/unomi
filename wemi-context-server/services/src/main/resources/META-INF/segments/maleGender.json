@@ -2,7 +2,7 @@
     "id" : "maleGender",
     "name" :  "Men",
     "description" : "This segment includes all men",
-    "type" : "query",
+    "type" : "es-query",
     "definition" : {
         "query": {
             "match" : {
