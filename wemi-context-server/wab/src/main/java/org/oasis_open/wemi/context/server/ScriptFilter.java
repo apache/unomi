@@ -133,7 +133,7 @@ public class ScriptFilter implements Filter {
         }
 
         // we generate an event so that plugins can interact
-        Event event = new Event(UUID.randomUUID().toString(), "contextload", visitorID, -1);
+        Event event = new Event(UUID.randomUUID().toString(), "contextloaded", visitorID, -1);
         event.setUser(user);
         event.getAttributes().put("http_request", request);
         event.getAttributes().put("http_response", response);

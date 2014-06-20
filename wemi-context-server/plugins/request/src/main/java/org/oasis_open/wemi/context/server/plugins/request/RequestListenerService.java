@@ -22,6 +22,10 @@ public class RequestListenerService implements EventListenerService {
     @OsgiService
     private UserService userService;
 
+    public RequestListenerService() {
+        System.out.println("Creating request listener...");
+    }
+
     public boolean canHandle(Event event) {
         return "contextloaded".equals(event.getEventType());
     }

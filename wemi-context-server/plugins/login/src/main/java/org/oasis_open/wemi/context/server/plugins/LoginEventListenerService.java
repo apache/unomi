@@ -21,6 +21,10 @@ public class LoginEventListenerService implements EventListenerService {
     @OsgiService
     private UserService userService;
 
+    public LoginEventListenerService() {
+        System.out.println("Creating login event listener...");
+    }
+
     public boolean canHandle(Event event) {
         return "login".equals(event.getEventType());
     }

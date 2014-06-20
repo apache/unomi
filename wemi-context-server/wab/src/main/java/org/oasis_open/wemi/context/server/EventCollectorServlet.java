@@ -83,7 +83,7 @@ public class EventCollectorServlet extends HttpServlet {
         while (parameterNames.hasMoreElements()) {
             String parameterName = parameterNames.nextElement();
             event.setProperty(parameterName, req.getParameter(parameterName));
-            if (visitorID == null && "wemiVisitorID".equals(parameterName)) {
+            if (visitorID == null && "wemi-profileID".equals(parameterName)) {
                 visitorID = req.getParameter(parameterName);
                 event.setVisitorID(visitorID);
             }
