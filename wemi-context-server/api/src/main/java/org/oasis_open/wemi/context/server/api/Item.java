@@ -1,11 +1,12 @@
 package org.oasis_open.wemi.context.server.api;
 
+import java.io.Serializable;
 import java.util.Properties;
 
 /**
  * Created by loom on 24.04.14.
  */
-public class Item {
+public class Item implements Serializable {
 
     String itemId;
     protected String type = "item";

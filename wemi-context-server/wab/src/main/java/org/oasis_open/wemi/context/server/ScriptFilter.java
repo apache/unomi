@@ -4,12 +4,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.io.IOUtils;
+import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.SegmentID;
 import org.oasis_open.wemi.context.server.api.User;
+import org.oasis_open.wemi.context.server.api.services.EventListenerService;
+import org.oasis_open.wemi.context.server.api.services.EventService;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 import org.oasis_open.wemi.context.server.api.services.UserService;
 import org.ops4j.pax.cdi.api.OsgiService;
 
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.servlet.*;
 import javax.servlet.annotation.WebFilter;
@@ -39,6 +43,14 @@ public class ScriptFilter implements Filter {
     @Inject
     @OsgiService
     SegmentService segmentService;
+
+    @Inject
+    @OsgiService
+    private EventService eventService;
+
+    @Inject
+    @OsgiService(dynamic = true)
+    private Instance<EventListenerService> eventListeners;
 
     public void init(FilterConfig filterConfig) throws ServletException {
         this.filterConfig = filterConfig;
@@ -120,7 +132,19 @@ public class ScriptFilter implements Filter {
             }
         }
 
-        // @Todo we should here call all plugins to "augment" the user profile. For example we could have LDAP, CRM or Analytics plugins that could add information to the user profile
+        // we generate an event so that plugins can interact
+        Event event = new Event(UUID.randomUUID().toString(), "contextload", visitorID, -1);
+        event.setUser(user);
+        event.getAttributes().put("http_request", request);
+        event.getAttributes().put("http_response", response);
+
+        eventService.save(event);
+
+        for (EventListenerService eventListenerService : eventListeners) {
+            if (eventListenerService.canHandle(event)) {
+                eventListenerService.onEvent(event);
+            }
+        }
 
         HttpUtils.setupCORSHeaders(httpServletRequest, response);
 

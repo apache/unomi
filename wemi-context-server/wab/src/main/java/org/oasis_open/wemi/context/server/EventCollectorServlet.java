@@ -9,11 +9,14 @@ import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Enumeration;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -51,6 +54,16 @@ public class EventCollectorServlet extends HttpServlet {
     private void doEvent(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         long eventTimeStamp = System.currentTimeMillis();
         HttpUtils.dumpBasicRequestInfo(req);
+
+        String visitorID = null;
+        Cookie[] cookies = req.getCookies();
+        // HttpUtils.dumpRequestCookies(cookies);
+        for (Cookie cookie : cookies) {
+            if ("wemi-profileID".equals(cookie.getName())) {
+                visitorID = cookie.getValue();
+            }
+        }
+
         HttpUtils.setupCORSHeaders(req, resp);
 
         String eventType = req.getPathInfo();
@@ -64,20 +77,26 @@ public class EventCollectorServlet extends HttpServlet {
             eventType = eventType.substring(eventType.lastIndexOf("/"));
         }
 
-        Event event = new Event(UUID.randomUUID().toString());
-
-        event.setProperty("eventTimeStamp", Long.toString(eventTimeStamp));
-        event.setProperty("eventType", eventType);
+        Event event = new Event(UUID.randomUUID().toString(), eventType, visitorID, eventTimeStamp);
 
         Enumeration<String> parameterNames = req.getParameterNames();
         while (parameterNames.hasMoreElements()) {
             String parameterName = parameterNames.nextElement();
             event.setProperty(parameterName, req.getParameter(parameterName));
+            if (visitorID == null && "wemiVisitorID".equals(parameterName)) {
+                visitorID = req.getParameter(parameterName);
+                event.setVisitorID(visitorID);
+            }
         }
+
+        event.getAttributes().put("http_request", req);
+        event.getAttributes().put("http_response", resp);
 
         eventService.save(event);
         for (EventListenerService eventListenerService : eventListeners) {
-            eventListenerService.onEvent(event);
+            if (eventListenerService.canHandle(event)) {
+                eventListenerService.onEvent(event);
+            }
         }
     }
 
