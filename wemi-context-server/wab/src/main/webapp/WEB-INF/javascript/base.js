@@ -99,7 +99,7 @@ var wemi = {
 
     collectEvent: function(baseURL, eventType, parameters, successCallBack) {
         // @todo we should pass the parameters as an array or a map instead of a string
-        var xhr = this.createCORSRequest("GET", url + "/" + eventType + "?" + parameters);
+        var xhr = this.createCORSRequest("GET", baseURL + "/" + eventType + "?" + parameters);
         if (!xhr) {
             alert("CORS not supported by browser!");
         }
@@ -147,9 +147,19 @@ if (window.digitalData.loadCallbacks && window.digitalData.loadCallbacks.length 
     }
 }
 
+// set the cookie on the current page since it is not set by the server serving the page content
 if (!wemi.readCookie("wemi-profileID")) {
     wemi.createCookie("wemi-profileID", window.digitalData.user[0].profiles[0].profileInfo.profileId);
 }
+
+// send the page view event to the WEMI context server
+console.log("wemi: wemiContextServerURL=" + window.digitalData.wemiContextServerURL);
+wemi.collectEvent(window.digitalData.wemiContextServerURL + "/eventcollector",
+    "view",
+    "url="+ document.location+
+    "&referrer=" + document.referrer, function (xhr) {
+        console.log("wemi: Page view event successfully submitted.");
+    });
 
 console.log("wemi: wemi-profileID=" + wemi.readCookie("wemi-profileID"));
 

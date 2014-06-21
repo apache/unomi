@@ -61,12 +61,13 @@ public class ScriptFilter implements Filter {
         // script output.
         String visitorID = null;
         String httpMethod = null;
+        String baseRequestURL = null;
         HttpServletRequest httpServletRequest = null;
         if (request instanceof HttpServletRequest) {
             httpServletRequest = (HttpServletRequest) request;
             httpMethod = httpServletRequest.getMethod();
             HttpUtils.dumpBasicRequestInfo(httpServletRequest);
-            // HttpUtils.dumpRequestHeaders(httpServletRequest);
+            HttpUtils.dumpRequestHeaders(httpServletRequest);
             Cookie[] cookies = httpServletRequest.getCookies();
             // HttpUtils.dumpRequestCookies(cookies);
             for (Cookie cookie : cookies) {
@@ -74,6 +75,7 @@ public class ScriptFilter implements Filter {
                     visitorID = cookie.getValue();
                 }
             }
+            baseRequestURL = HttpUtils.getBaseRequestURL(httpServletRequest);
         }
 
         User user = null;
@@ -157,10 +159,10 @@ public class ScriptFilter implements Filter {
                 if ("get".equals(httpMethod.toLowerCase())) {
                     responseWriter.append("window.digitalData = window.digitalData || {};\n");
                     responseWriter.append("var wemiDigitalData = \n");
-                    responseWriter.append(getJSONDigitalData(user));
+                    responseWriter.append(getJSONDigitalData(user, baseRequestURL));
                     responseWriter.append("; \n");
                 } else {
-                    responseWriter.append(getJSONDigitalData(user));
+                    responseWriter.append(getJSONDigitalData(user, baseRequestURL));
                 }
             }
 
@@ -176,7 +178,6 @@ public class ScriptFilter implements Filter {
         responseWriter.flush();
 
     }
-
 
     private User createNewUser(String existingVisitorID, ServletResponse response) {
         User user;
@@ -196,10 +197,12 @@ public class ScriptFilter implements Filter {
         return user;
     }
 
-    private String getJSONDigitalData(User user) {
+    private String getJSONDigitalData(User user, String wemiContextServerURL) {
+        // @todo find a better to generate this JSON using either a template or a JSON databinding
         StringBuilder responseWriter = new StringBuilder();
         responseWriter.append("{");
         responseWriter.append("  \"loaded\" : true, ");
+        responseWriter.append("  \"wemiContextServerURL\" : \"" + wemiContextServerURL + "\",");
         responseWriter.append("  \"user\": [ {  ");
         responseWriter.append("    \"profiles\": [ {  ");
         responseWriter.append("      \"profileInfo\": { ");

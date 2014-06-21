@@ -15,7 +15,7 @@ public class HttpUtils {
     public static void setupCORSHeaders(HttpServletRequest httpServletRequest, ServletResponse response) throws IOException {
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-            if (httpServletRequest != null) {
+            if (httpServletRequest != null && httpServletRequest.getHeader("Origin") != null) {
                 httpServletResponse.setHeader("Access-Control-Allow-Origin", httpServletRequest.getHeader("Origin"));
             } else {
                 httpServletResponse.setHeader("Access-Control-Allow-Origin", "*");
@@ -72,6 +72,18 @@ public class HttpUtils {
             String headerName = headerNameEnum.nextElement();
             System.out.println(headerName + ": " + httpServletRequest.getHeader(headerName));
         }
+    }
+
+    public static String getBaseRequestURL(HttpServletRequest httpServletRequest) {
+        String baseRequestURL;
+        baseRequestURL = httpServletRequest.getScheme() + "://" + httpServletRequest.getServerName();
+        if (("http".equals(httpServletRequest.getScheme()) && (httpServletRequest.getServerPort() == 80)) ||
+                ("https".equals(httpServletRequest.getScheme()) && (httpServletRequest.getServerPort() == 443)) ) {
+            // normal case, don't add the port
+        } else {
+            baseRequestURL += ":" + httpServletRequest.getServerPort();
+        }
+        return baseRequestURL;
     }
 
 }
