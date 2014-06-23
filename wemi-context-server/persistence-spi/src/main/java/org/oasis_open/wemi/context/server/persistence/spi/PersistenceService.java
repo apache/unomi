@@ -14,6 +14,10 @@ public interface PersistenceService {
 
     public Item load(String itemId, String itemType, Class clazz);
 
+    public boolean saveQuery(String queryName, String query);
+
+    public List<String> getMatchingSavedQueries(String document, String documentType);
+
     public List<Item> query(String itemType, String fieldName, String fieldValue, Class clazz);
 
 }

@@ -3,7 +3,9 @@ package org.oasis_open.wemi.context.server.impl.services;
 import org.mvel2.MVEL;
 import org.oasis_open.wemi.context.server.api.*;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
+import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.ops4j.pax.cdi.api.ContainerInitialized;
+import org.ops4j.pax.cdi.api.OsgiService;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
 import org.osgi.framework.BundleContext;
 
@@ -33,6 +35,10 @@ public class SegmentServiceImpl implements SegmentService {
 
     @Inject
     private BundleContext bundleContext;
+
+    @Inject
+    @OsgiService
+    private PersistenceService persistenceService;
 
     public SegmentServiceImpl() {
         System.out.println("Initializing segment service...");
@@ -68,6 +74,7 @@ public class SegmentServiceImpl implements SegmentService {
                     jsonWriter.writeObject(queryObject);
                     jsonWriter.close();
                     segmentQueries.put(segmentID, queryStringWriter.toString());
+                    persistenceService.saveQuery(segmentID.getId(), queryStringWriter.toString());
                 } else if ("mvel".equals(segmentType)) {
                     String segmentMvelExpression = segmentObject.getString("definition");
                     segmentExpressions.put(segmentID, MVEL.compileExpression(segmentMvelExpression));

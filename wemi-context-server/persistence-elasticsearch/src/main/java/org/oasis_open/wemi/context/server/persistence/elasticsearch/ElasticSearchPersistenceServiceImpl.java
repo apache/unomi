@@ -2,10 +2,12 @@ package org.oasis_open.wemi.context.server.persistence.elasticsearch;
 
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.percolate.PercolateResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.get.GetField;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.index.query.QueryBuilder;
@@ -128,6 +130,49 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
 
         return null;
     }
+
+    public boolean saveQuery(String queryName, String query) {
+        ClassLoader tccl = Thread.currentThread().getContextClassLoader();
+        boolean successfull = false;
+        try {
+            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+
+            //Index the query = register it in the percolator
+            client.prepareIndex("wemi", ".percolator", queryName)
+                .setSource(query)
+                .setRefresh(true) // Needed when the query shall be available immediately
+                .execute().actionGet();
+            successfull = true;
+        } finally {
+            Thread.currentThread().setContextClassLoader(tccl);
+        }
+        return successfull;
+    }
+
+    public List<String> getMatchingSavedQueries(String document, String documentType) {
+        ClassLoader tccl = Thread.currentThread().getContextClassLoader();
+        List<String> matchingQueries = new ArrayList<String>();
+        try {
+            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+
+            //Percolate
+            PercolateResponse response = client.preparePercolate()
+                                    .setIndices("wemi")
+                                    .setDocumentType(documentType)
+                                    .setSource(document).execute().actionGet();
+            //Iterate over the results
+            for(PercolateResponse.Match match : response) {
+                //Handle the result which is the name of
+                //the query in the percolator
+                matchingQueries.add(match.getId().string());
+            }
+        } finally {
+            Thread.currentThread().setContextClassLoader(tccl);
+        }
+        return matchingQueries;
+
+    }
+
 
     public List<Item> query(String itemType, String fieldName, String fieldValue, Class clazz) {
         List<Item> results = new ArrayList<Item>();

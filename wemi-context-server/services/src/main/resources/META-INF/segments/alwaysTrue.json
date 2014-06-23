@@ -4,6 +4,8 @@
     "description" : "This segment includes all users",
     "type" : "es-query",
     "definition" : {
-        "match_all" : { }
+        "query": {
+            "match_all": { }
+        }
     }
 }
