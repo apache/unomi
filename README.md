@@ -51,7 +51,13 @@ files (at the end of the file):
       cp wemi-context-server/kar/target/wemi-context-server-kar-1.0-SNAPSHOT.kar ~/java/deployments/wemi-sandbox/apache-karaf-3.0.1/deploy/
     ```
 
-5. If all went smoothly, you should be able to access the WEMI context script here : http://localhost:8181/context.js
+
+5. (optional) If you prefer a clean startup without an non-blocking error on the native libraries needed for ElasticSearch,
+you will need to specify the following command line parameter : 
+  -Djava.library.path=/usr/local/elasticsearch-1.1.1/lib/sigar
+   If this is not specified this will however not impact functionality of the server.
+   
+6. If all went smoothly, you should be able to access the WEMI context script here : http://localhost:8181/context.js
  You should see a digitalData object populated with some values. If not something went wrong during the install.
 
 Testing with an example page
