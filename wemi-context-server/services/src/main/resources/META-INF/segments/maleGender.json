@@ -6,7 +6,7 @@
     "definition" : {
         "query": {
             "match" : {
-                "user.properties.?gender" : "male"
+                "user.properties.gender" : "male"
             }
         }
     }
