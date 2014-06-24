@@ -17,10 +17,6 @@ import javax.inject.Singleton;
 @OsgiServiceProvider
 public class LoginEventListenerService implements EventListenerService {
 
-    @Inject
-    @OsgiService
-    private UserService userService;
-
     public LoginEventListenerService() {
         System.out.println("Creating login event listener...");
     }
@@ -30,20 +26,14 @@ public class LoginEventListenerService implements EventListenerService {
     }
 
     public boolean onEvent(Event event) {
-        User user = event.getUser();
-        if (user == null && event.getVisitorID() != null) {
-            user = userService.load(event.getVisitorID());
-            if (user != null) {
-                event.setUser(user);
+        boolean changed = false;
+        final User user = event.getUser();
+        for (String eventPropertyName : event.getProperties().stringPropertyNames()) {
+            if (user.getProperty(eventPropertyName) == null || !user.getProperty(eventPropertyName).equals(event.getProperty(eventPropertyName))) {
+                user.setProperty(eventPropertyName, event.getProperty(eventPropertyName));
+                changed = true;
             }
         }
-        if (user == null) {
-            return false;
-        }
-        for (String eventPropertyName : event.getProperties().stringPropertyNames()) {
-            user.setProperty(eventPropertyName, event.getProperty(eventPropertyName));
-        }
-        userService.save(user);
-        return true;
+        return changed;
     }
 }

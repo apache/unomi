@@ -14,7 +14,7 @@ public interface SegmentService {
     Boolean isUserInSegment (User user, SegmentID segmentID);
     Set<SegmentID> getSegmentsForUser(User user);
     Set<SegmentID> getSegmentIDs();
-    Set<SegmentDefinition> getSegmentDefinition (SegmentID segmentID);
+    SegmentDefinition getSegmentDefinition (SegmentID segmentID);
     Set<ConditionTag> getConditionTags ();
     Set<Condition> getConditions(ConditionTag conditionTag);
     Set<ConditionParameter> getConditionParameters(Condition condition);

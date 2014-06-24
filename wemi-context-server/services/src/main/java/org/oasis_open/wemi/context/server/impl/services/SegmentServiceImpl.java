@@ -30,7 +30,6 @@ import java.util.*;
 @OsgiServiceProvider
 public class SegmentServiceImpl implements SegmentService {
 
-    Map<SegmentID, Serializable> segmentExpressions = new LinkedHashMap<SegmentID, Serializable>();
     Map<SegmentID, Serializable> segmentQueries = new LinkedHashMap<SegmentID, Serializable>();
 
     @Inject
@@ -42,12 +41,6 @@ public class SegmentServiceImpl implements SegmentService {
 
     public SegmentServiceImpl() {
         System.out.println("Initializing segment service...");
-
-        // @Todo remove hardcoded segments, make them configurable, maybe storing them as ElasticSearch Queries and then using the Percolate API to match with users ?
-        segmentExpressions.put(new SegmentID("alwaysTrue", "All users", "This segment includes all users"), MVEL.compileExpression("true"));
-        segmentExpressions.put(new SegmentID("maleGender", "Men", "This segment includes all men"), MVEL.compileExpression("user.properties.?gender == 'male'"));
-        segmentExpressions.put(new SegmentID("goal1Reached", "Goal 1 Reached", "This segment includes all users that have reached goal 1"), MVEL.compileExpression("user.properties.?goal1 == 'reached'"));
-
     }
 
     @PostConstruct
@@ -75,9 +68,6 @@ public class SegmentServiceImpl implements SegmentService {
                     jsonWriter.close();
                     segmentQueries.put(segmentID, queryStringWriter.toString());
                     persistenceService.saveQuery(segmentID.getId(), queryStringWriter.toString());
-                } else if ("mvel".equals(segmentType)) {
-                    String segmentMvelExpression = segmentObject.getString("definition");
-                    segmentExpressions.put(segmentID, MVEL.compileExpression(segmentMvelExpression));
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -108,7 +98,7 @@ public class SegmentServiceImpl implements SegmentService {
         Map vars = new HashMap();
         vars.put("user", user);
 
-        for (Map.Entry<SegmentID, Serializable> segmentExpressionEntry : segmentExpressions.entrySet()) {
+        for (Map.Entry<SegmentID, Serializable> segmentExpressionEntry : segmentQueries.entrySet()) {
 
             // Now we execute it.
             Boolean result = (Boolean) MVEL.executeExpression(segmentExpressionEntry.getValue(), vars);
@@ -134,11 +124,13 @@ public class SegmentServiceImpl implements SegmentService {
     }
 
     public Set<SegmentID> getSegmentIDs() {
-        return segmentExpressions.keySet();
+        return segmentQueries.keySet();
     }
 
-    public Set<SegmentDefinition> getSegmentDefinition(SegmentID segmentID) {
-        return null;
+    public SegmentDefinition getSegmentDefinition(SegmentID segmentID) {
+        String s = segmentQueries.get(segmentID).toString();
+
+        return new SegmentDefinition(s);
     }
 
     public Set<ConditionTag> getConditionTags() {

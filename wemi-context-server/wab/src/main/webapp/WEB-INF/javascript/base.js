@@ -105,7 +105,23 @@ var wemi = {
         }
         xhr.onreadystatechange = function () {
             if (xhr.readyState == 4 && xhr.status == 200) {
-                successCallBack(xhr);
+                var jsonResponse = JSON.parse(xhr.responseText);
+                if (jsonResponse['updated']) {
+                    var newDigitalData = jsonResponse['digitalData'];
+                    newDigitalData.loaded = window.digitalData.loaded;
+                    newDigitalData.loadCallbacks = window.digitalData.loadCallbacks;
+                    newDigitalData.updateCallbacks = window.digitalData.updateCallbacks;
+                    window.digitalData = newDigitalData;
+                    successCallBack(xhr);
+                    if (window.digitalData.updateCallbacks && window.digitalData.updateCallbacks.length > 0) {
+                        console.log("wemi: Found WEMI context update callbacks, calling now...");
+                        for (var i=0; i < window.digitalData.updateCallbacks.length; i++) {
+                            window.digitalData.updateCallbacks[i](digitalData);
+                        }
+                    }
+                } else {
+                    successCallBack(xhr);
+                }
             }
         }
         xhr.send();

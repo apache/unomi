@@ -1,8 +1,11 @@
 package org.oasis_open.wemi.context.server;
 
 import org.oasis_open.wemi.context.server.api.Event;
+import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.EventListenerService;
 import org.oasis_open.wemi.context.server.api.services.EventService;
+import org.oasis_open.wemi.context.server.api.services.SegmentService;
+import org.oasis_open.wemi.context.server.api.services.UserService;
 import org.ops4j.pax.cdi.api.OsgiService;
 
 import javax.enterprise.inject.Instance;
@@ -14,6 +17,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -32,6 +36,14 @@ public class EventCollectorServlet extends HttpServlet {
     @Inject
     @OsgiService(dynamic = true)
     private Instance<EventListenerService> eventListeners;
+
+    @Inject
+    @OsgiService
+    private UserService userService;
+
+    @Inject
+    @OsgiService
+    private SegmentService segmentService;
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -93,11 +105,36 @@ public class EventCollectorServlet extends HttpServlet {
         event.getAttributes().put("http_response", resp);
 
         eventService.save(event);
-        for (EventListenerService eventListenerService : eventListeners) {
-            if (eventListenerService.canHandle(event)) {
-                eventListenerService.onEvent(event);
+
+        User user = event.getUser();
+        if (user == null && event.getVisitorID() != null) {
+            user = userService.load(event.getVisitorID());
+            if (user != null) {
+                event.setUser(user);
             }
         }
+        boolean changed = false;
+        if (user != null) {
+            for (EventListenerService eventListenerService : eventListeners) {
+                if (eventListenerService.canHandle(event)) {
+                    changed |= eventListenerService.onEvent(event);
+                }
+            }
+
+            if (changed) {
+                userService.save(user);
+            }
+        }
+        PrintWriter responseWriter = resp.getWriter();
+
+        if (changed) {
+            responseWriter.append("{\"updated\":true, \"digitalData\":");
+            responseWriter.append(HttpUtils.getJSONDigitalData(user, segmentService, HttpUtils.getBaseRequestURL(req)));
+            responseWriter.append("}");
+        } else {
+            responseWriter.append("{\"updated\":false}");
+        }
+        responseWriter.flush();
     }
 
 

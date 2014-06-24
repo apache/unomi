@@ -27,26 +27,16 @@ public class RequestListenerService implements EventListenerService {
     }
 
     public boolean canHandle(Event event) {
-        return "contextloaded".equals(event.getEventType());
+        return "view".equals(event.getEventType());
     }
 
     public boolean onEvent(Event event) {
-        User user = event.getUser();
-        if (user == null && event.getVisitorID() != null) {
-            user = userService.load(event.getVisitorID());
-            if (user != null) {
-                event.setUser(user);
-            }
-        }
-        if (user == null) {
-            return false;
-        }
         HttpServletRequest httpServletRequest = (HttpServletRequest) event.getAttributes().get("http_request");
         if (httpServletRequest == null) {
             return false;
         }
         // we can now copy interesting request attributes to the user profile
         // @todo implement the copying
-        return true;
+        return false;
     }
 }

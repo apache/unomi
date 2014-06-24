@@ -1,11 +1,16 @@
 package org.oasis_open.wemi.context.server;
 
+import org.oasis_open.wemi.context.server.api.SegmentID;
+import org.oasis_open.wemi.context.server.api.User;
+import org.oasis_open.wemi.context.server.api.services.SegmentService;
+
 import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Enumeration;
+import java.util.Set;
 
 /**
  * Created by loom on 10.06.14.
@@ -85,5 +90,43 @@ public class HttpUtils {
         }
         return baseRequestURL;
     }
+
+    public static String getJSONDigitalData(User user, SegmentService segmentService, String wemiContextServerURL) {
+        // @todo find a better to generate this JSON using either a template or a JSON databinding
+        StringBuilder responseWriter = new StringBuilder();
+        responseWriter.append("{");
+        responseWriter.append("  \"loaded\" : true, ");
+        responseWriter.append("  \"wemiContextServerURL\" : \"" + wemiContextServerURL + "\",");
+        responseWriter.append("  \"user\": [ {  ");
+        responseWriter.append("    \"profiles\": [ {  ");
+        responseWriter.append("      \"profileInfo\": { ");
+        responseWriter.append("        \"profileId\": \"" + user.getItemId() + "\",  ");
+        for (String userPropertyName : user.getProperties().stringPropertyNames()) {
+            if (!"profileId".equals(userPropertyName)) {
+                responseWriter.append("        \"" + userPropertyName + "\": \"" + user.getProperty(userPropertyName) + "\",  ");
+            }
+        }
+        Set<SegmentID> userSegments = segmentService.getSegmentsForUser(user);
+        if (userSegments != null && userSegments.size() > 0) {
+            responseWriter.append("        \"segments\": [ ");
+            int i = 0;
+            for (SegmentID segmentID : userSegments) {
+                responseWriter.append("\"");
+                responseWriter.append(segmentID.getId());
+                responseWriter.append("\"");
+                if (i < userSegments.size() - 1) {
+                    responseWriter.append(",");
+                }
+                i++;
+            }
+            responseWriter.append("] ");
+        }
+        responseWriter.append("                   } ");
+        responseWriter.append("              } ] ");
+        responseWriter.append("        } ] ");
+        responseWriter.append("}");
+        return responseWriter.toString();
+    }
+
 
 }

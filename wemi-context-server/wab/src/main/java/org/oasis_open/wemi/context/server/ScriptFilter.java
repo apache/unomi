@@ -134,20 +134,6 @@ public class ScriptFilter implements Filter {
             }
         }
 
-        // we generate an event so that plugins can interact
-        Event event = new Event(UUID.randomUUID().toString(), "contextloaded", visitorID, -1);
-        event.setUser(user);
-        event.getAttributes().put("http_request", request);
-        event.getAttributes().put("http_response", response);
-
-        eventService.save(event);
-
-        for (EventListenerService eventListenerService : eventListeners) {
-            if (eventListenerService.canHandle(event)) {
-                eventListenerService.onEvent(event);
-            }
-        }
-
         HttpUtils.setupCORSHeaders(httpServletRequest, response);
 
         Writer responseWriter = response.getWriter();
@@ -159,10 +145,10 @@ public class ScriptFilter implements Filter {
                 if ("get".equals(httpMethod.toLowerCase())) {
                     responseWriter.append("window.digitalData = window.digitalData || {};\n");
                     responseWriter.append("var wemiDigitalData = \n");
-                    responseWriter.append(getJSONDigitalData(user, baseRequestURL));
+                    responseWriter.append(HttpUtils.getJSONDigitalData(user, segmentService,baseRequestURL));
                     responseWriter.append("; \n");
                 } else {
-                    responseWriter.append(getJSONDigitalData(user, baseRequestURL));
+                    responseWriter.append(HttpUtils.getJSONDigitalData(user, segmentService, baseRequestURL));
                 }
             }
 
@@ -195,43 +181,6 @@ public class ScriptFilter implements Filter {
             httpServletResponse.addCookie(visitorIdCookie);
         }
         return user;
-    }
-
-    private String getJSONDigitalData(User user, String wemiContextServerURL) {
-        // @todo find a better to generate this JSON using either a template or a JSON databinding
-        StringBuilder responseWriter = new StringBuilder();
-        responseWriter.append("{");
-        responseWriter.append("  \"loaded\" : true, ");
-        responseWriter.append("  \"wemiContextServerURL\" : \"" + wemiContextServerURL + "\",");
-        responseWriter.append("  \"user\": [ {  ");
-        responseWriter.append("    \"profiles\": [ {  ");
-        responseWriter.append("      \"profileInfo\": { ");
-        responseWriter.append("        \"profileId\": \"" + user.getItemId() + "\",  ");
-        for (String userPropertyName : user.getProperties().stringPropertyNames()) {
-            if (!"profileId".equals(userPropertyName)) {
-                responseWriter.append("        \"" + userPropertyName + "\": \"" + user.getProperty(userPropertyName) + "\",  ");
-            }
-        }
-        Set<SegmentID> userSegments = segmentService.getSegmentsForUser(user);
-        if (userSegments != null && userSegments.size() > 0) {
-            responseWriter.append("        \"segments\": [ ");
-            int i = 0;
-            for (SegmentID segmentID : userSegments) {
-                responseWriter.append("\"");
-                responseWriter.append(segmentID.getId());
-                responseWriter.append("\"");
-                if (i < userSegments.size() - 1) {
-                    responseWriter.append(",");
-                }
-                i++;
-            }
-            responseWriter.append("] ");
-        }
-        responseWriter.append("                   } ");
-        responseWriter.append("              } ] ");
-        responseWriter.append("        } ] ");
-        responseWriter.append("}");
-        return responseWriter.toString();
     }
 
     public void destroy() {
