@@ -96,6 +96,7 @@ to generate the nodes quickly on the same machine. Here are the steps to do this
 
 ```
     ./instance list
+    
     SSH Port | RMI Registry | RMI Server | State   | PID  | Name 
     -------------------------------------------------------------
         8101 |         1099 |      44444 | Stopped | 0    | root 
@@ -110,7 +111,9 @@ to generate the nodes quickly on the same machine. Here are the steps to do this
 3. You should change the default Java options of the instance, you can do so with a command like this one : 
     
 ```
+
     ./instance opts-change root "-server -Xmx3G -XX:MaxPermSize=384M -Dcom.sun.management.jmxremote -XX:+UnlockDiagnosticVMOptions -XX:+UnsyncloadClass"
+
 ```
         
    It is recommmended to do this even for the root node, otherwise if you use the instance command to start it it will
@@ -125,10 +128,12 @@ to generate the nodes quickly on the same machine. Here are the steps to do this
 5. Use "instance list" to get the SSH port of the new node : 
 
 ```
+
     SSH Port | RMI Registry | RMI Server | State   | PID  | Name 
     -------------------------------------------------------------
         8101 |         1099 |      44444 | Started | 3853 | root 
         8103 |         1101 |      44446 | Started | 4180 | node2
+
 ```
 
 6. You can then connect to it using : 
