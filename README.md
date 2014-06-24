@@ -86,6 +86,97 @@ Integrating onto a page
 </script>
 ```
 
+Setting up multiple instances of Karaf (cluster setup)
+------------------------------------------------------
+
+If you want to use a cluster of Karaf instances instead of a single instance, you can use Karaf's instance administration
+to generate the nodes quickly on the same machine. Here are the steps to do this : 
+
+1. With all Karaf instances shut down, in KARAF_HOME/bin launch the ./instance list script, you should get something like this : 
+
+```
+    ./instance list
+    SSH Port | RMI Registry | RMI Server | State   | PID  | Name 
+    -------------------------------------------------------------
+        8101 |         1099 |      44444 | Stopped | 0    | root 
+```
+
+2. Create a new instance with the following command:
+
+```
+    ./instance create node2
+```
+    
+3. You should change the default Java options of the instance, you can do so with a command like this one : 
+    
+```
+    ./instance opts-change root "-server -Xmx3G -XX:MaxPermSize=384M -Dcom.sun.management.jmxremote -XX:+UnlockDiagnosticVMOptions -XX:+UnsyncloadClass"
+```
+        
+   It is recommmended to do this even for the root node, otherwise if you use the instance command to start it it will
+   use default values that are too small.
+   
+4. You can then start the node by using the command :  
+ 
+```
+    ./instance start node2
+```
+
+5. Use "instance list" to get the SSH port of the new node : 
+
+    SSH Port | RMI Registry | RMI Server | State   | PID  | Name 
+    -------------------------------------------------------------
+        8101 |         1099 |      44444 | Started | 3853 | root 
+        8103 |         1101 |      44446 | Started | 4180 | node2
+
+6. You can then connect to it using : 
+
+    ssh karaf@localhost -p 8103 
+    
+   The default password is "karaf". BE SURE TO CHANGE THIS WHEN YOU GO TO PRODUCTION !
+   
+7. You can then install all the required features by using the following commands : 
+
+       feature:install -v war
+       feature:repo-add cxf 2.7.11
+       feature:install -v cxf/2.7.11
+       feature:install -v openwebbeans
+       feature:install -v pax-cdi-web-openwebbeans
+       
+8. You can then disconnect from the node by using:
+
+    logout
+    
+   and shutdown the node instance because we will need to perform a configuration change for the HTTP port if you 
+   are running the instances on the same machine. To shut it down use : 
+   
+```
+    ./instance stop node2
+```
+
+9. You should then change the default HTTP port by changing the value in the KARAF_HOME/instances/node2/etc/jetty.xml 
+file from 8181 to something else. In this example we have changed to port to 8182 : 
+ 
+     <Call name="addConnector">
+         <Arg>
+             <New class="org.eclipse.jetty.server.nio.SelectChannelConnector">
+                 <Set name="host">
+                     <Property name="jetty.host" />
+                 </Set>
+                 <Set name="port">
+                     <Property name="jetty.port" default="8182" />
+                 </Set>
+
+ 
+6. You can then start your instance by using the following command : 
+
+```
+    ./instance start node2
+```
+    
+7. You can then finally copy the WEMI Context Server KAR into the KARAF_HOME/instances/node2/deploy directory and 
+everything should be up and running.
+
 Todo
 ----
 
