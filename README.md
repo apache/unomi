@@ -124,28 +124,36 @@ to generate the nodes quickly on the same machine. Here are the steps to do this
 
 5. Use "instance list" to get the SSH port of the new node : 
 
+```
     SSH Port | RMI Registry | RMI Server | State   | PID  | Name 
     -------------------------------------------------------------
         8101 |         1099 |      44444 | Started | 3853 | root 
         8103 |         1101 |      44446 | Started | 4180 | node2
+```
 
 6. You can then connect to it using : 
 
+```
     ssh karaf@localhost -p 8103 
+```
     
    The default password is "karaf". BE SURE TO CHANGE THIS WHEN YOU GO TO PRODUCTION !
    
 7. You can then install all the required features by using the following commands : 
 
+```
        feature:install -v war
        feature:repo-add cxf 2.7.11
        feature:install -v cxf/2.7.11
        feature:install -v openwebbeans
        feature:install -v pax-cdi-web-openwebbeans
+```
        
 8. You can then disconnect from the node by using:
 
+```
     logout
+```
     
    and shutdown the node instance because we will need to perform a configuration change for the HTTP port if you 
    are running the instances on the same machine. To shut it down use : 
@@ -157,6 +165,7 @@ to generate the nodes quickly on the same machine. Here are the steps to do this
 9. You should then change the default HTTP port by changing the value in the KARAF_HOME/instances/node2/etc/jetty.xml 
 file from 8181 to something else. In this example we have changed to port to 8182 : 
  
+```
      <Call name="addConnector">
          <Arg>
              <New class="org.eclipse.jetty.server.nio.SelectChannelConnector">
@@ -166,6 +175,7 @@ file from 8181 to something else. In this example we have changed to port to 818
                  <Set name="port">
                      <Property name="jetty.port" default="8182" />
                  </Set>
+```
 
  
 6. You can then start your instance by using the following command : 
