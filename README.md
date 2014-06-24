@@ -191,3 +191,4 @@ Todo
 ----
 
 - Look at possible integration with newsletter management systems such as MailChimp, for example to synchronize user data with collected info.
+- Figure out how to load balance on the different cluster nodes: DNS round-robin, JavaScript timeouts, custom technology ?
