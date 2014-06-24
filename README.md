@@ -86,8 +86,8 @@ Integrating onto a page
 </script>
 ```
 
-Setting up multiple instances of Karaf (cluster setup)
-------------------------------------------------------
+Cluster setup
+-------------
 
 If you want to use a cluster of Karaf instances instead of a single instance, you can use Karaf's instance administration
 to generate the nodes quickly on the same machine. Here are the steps to do this : 
