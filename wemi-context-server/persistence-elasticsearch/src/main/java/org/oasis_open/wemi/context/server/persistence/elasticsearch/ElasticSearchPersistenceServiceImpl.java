@@ -149,30 +149,41 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         return successfull;
     }
 
-    public List<String> getMatchingSavedQueries(String document, String documentType) {
+    public List<String> getMatchingSavedQueries(Item item) {
         ClassLoader tccl = Thread.currentThread().getContextClassLoader();
         List<String> matchingQueries = new ArrayList<String>();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
+            XContentBuilder documentJsonObject = jsonBuilder().startObject();
+            documentJsonObject.startObject("doc");
+            for (String propertyName : item.getProperties().stringPropertyNames()) {
+                String propertyValue = item.getProperty(propertyName);
+                documentJsonObject.field(propertyName, propertyValue);
+            }
+            documentJsonObject.field("itemClass", item.getClass().getName());
+            documentJsonObject.endObject();
+            documentJsonObject.endObject();
+
             //Percolate
             PercolateResponse response = client.preparePercolate()
                                     .setIndices("wemi")
-                                    .setDocumentType(documentType)
-                                    .setSource(document).execute().actionGet();
+                                    .setDocumentType(item.getType())
+                                    .setSource(documentJsonObject).execute().actionGet();
             //Iterate over the results
             for(PercolateResponse.Match match : response) {
                 //Handle the result which is the name of
                 //the query in the percolator
                 matchingQueries.add(match.getId().string());
             }
+        } catch (IOException e) {
+            e.printStackTrace();
         } finally {
             Thread.currentThread().setContextClassLoader(tccl);
         }
         return matchingQueries;
 
     }
-
 
     public List<Item> query(String itemType, String fieldName, String fieldValue, Class clazz) {
         List<Item> results = new ArrayList<Item>();

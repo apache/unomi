@@ -119,7 +119,16 @@ public class SegmentServiceImpl implements SegmentService {
 
         }
 
-        // @todo implement user segment matching using ElasticSearch's Percolate API and using the query definitions
+        List<String> matchingQueries = persistenceService.getMatchingSavedQueries(user);
+        if (matchingQueries.size() > 0) {
+            for (String matchingQuery : matchingQueries) {
+                for (SegmentID segmentID : segmentQueries.keySet()) {
+                    if (matchingQuery.equals(segmentID.getId())) {
+                        matchedSegments.add(segmentID);
+                    }
+                }
+            }
+        }
 
         return matchedSegments;
     }
