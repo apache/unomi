@@ -10,12 +10,11 @@ import javax.inject.Singleton;
 @Singleton
 @OsgiServiceProvider
 public class SetPropertyService implements EventListenerService {
-    @Override
+
     public boolean canHandle(Event event) {
         return event.getEventType().equals("setproperty");
     }
 
-    @Override
     public boolean onEvent(Event event) {
         if (event.getUser().getProperty(event.getProperty("name")) == null || !event.getUser().getProperty(event.getProperty("name")).equals(event.getProperty("value"))) {
             event.getUser().setProperty(event.getProperty("name"), event.getProperty("value"));
