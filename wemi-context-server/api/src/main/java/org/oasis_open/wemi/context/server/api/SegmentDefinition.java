@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.api;
 
+import org.oasis_open.wemi.context.server.api.conditions.ConditionNode;
 /**
  * Created by loom on 24.04.14.
  */

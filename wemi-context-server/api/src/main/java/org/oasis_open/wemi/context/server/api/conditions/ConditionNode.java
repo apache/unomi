@@ -1,6 +1,5 @@
-package org.oasis_open.wemi.context.server.api;
+package org.oasis_open.wemi.context.server.api.conditions;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -22,6 +21,8 @@ public abstract class ConditionNode {
         this.description = description;
     }
 
-    public abstract Object eval(Object context);
+    public abstract List<ConditionParameter> getParameters();
+
+    public abstract Object eval(Object context, List<ConditionParameterValue> conditionParameterValues);
 
 }

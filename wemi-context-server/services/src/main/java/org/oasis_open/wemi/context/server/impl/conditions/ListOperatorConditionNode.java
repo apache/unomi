@@ -1,4 +1,6 @@
-package org.oasis_open.wemi.context.server.api;
+package org.oasis_open.wemi.context.server.impl.conditions;
+
+import org.oasis_open.wemi.context.server.api.conditions.ConditionNode;
 
 import java.util.ArrayList;
 import java.util.List;

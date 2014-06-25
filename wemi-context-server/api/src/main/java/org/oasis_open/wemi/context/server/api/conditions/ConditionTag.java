@@ -1,4 +1,4 @@
-package org.oasis_open.wemi.context.server.api;
+package org.oasis_open.wemi.context.server.api.conditions;
 
 import java.util.Set;
 import java.util.TreeSet;

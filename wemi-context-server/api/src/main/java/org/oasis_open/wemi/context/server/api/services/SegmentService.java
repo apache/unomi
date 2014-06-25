@@ -1,6 +1,9 @@
 package org.oasis_open.wemi.context.server.api.services;
 
 import org.oasis_open.wemi.context.server.api.*;
+import org.oasis_open.wemi.context.server.api.conditions.Condition;
+import org.oasis_open.wemi.context.server.api.conditions.ConditionParameter;
+import org.oasis_open.wemi.context.server.api.conditions.ConditionTag;
 
 import java.util.List;
 import java.util.Set;

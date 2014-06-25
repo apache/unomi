@@ -91,6 +91,7 @@
                         <Embed-Directory>WEB-INF/lib</Embed-Directory>
                         <Import-Package>
                             org.oasis_open.wemi.context.server.api,
+                            org.oasis_open.wemi.context.server.api.conditions,
                             *
                         </Import-Package>
                         <Web-ContextPath>/</Web-ContextPath>

@@ -1,0 +1,23 @@
+{
+    "id" : "andConditionNode",
+    "name" : "AND",
+    "description" : "Logical AND operator",
+    "tags" : [ "logical" ],
+    "class" : "org.oasis_open.wemi.context.server.impl.conditions.AndConditionNode",
+    "parameters" : [
+        {
+            "id" : "leftCondition",
+            "name" : "Left condition",
+            "description" : "The condition to the left of the AND operator",
+            "type" : "ConditionNode",
+            "choicelistInitializerClass" : "org.oasis_open.wemi.context.server.conditions.initializers.ConditionNodeChoiceListInitializer"
+        },
+        {
+            "id" : "rightCondition",
+            "name" : "Right condition",
+            "description" : "The condition to the right of the AND operator",
+            "type" : "ConditionNode",
+            "choicelistInitializerClass" : "org.oasis_open.wemi.context.server.conditions.initializers.ConditionNodeChoiceListInitializer"
+        }
+    ]
+}
