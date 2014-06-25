@@ -145,7 +145,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
             protected Boolean execute(Object... args) {
                 client.admin().indices()
                         .preparePutMapping("wemi")
-                        .setType("event")
+                        .setType(type)
                         .setSource(source)
                         .execute().actionGet();
                 return true;
