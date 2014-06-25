@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
+import org.apache.cxf.helpers.IOUtils;
 import org.oasis_open.wemi.context.server.api.SegmentDefinition;
 import org.oasis_open.wemi.context.server.api.SegmentID;
 import org.oasis_open.wemi.context.server.api.User;
@@ -49,6 +50,21 @@ public class SegmentServiceImpl implements SegmentService {
     @PostConstruct
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
+
+        Enumeration<URL> predefinedMappings = bundleContext.getBundle().findEntries("META-INF/mappings", "*.json", true);
+        while (predefinedMappings.hasMoreElements()) {
+            URL predefinedMappingURL = predefinedMappings.nextElement();
+            logger.debug("Found mapping at " + predefinedMappingURL + ", loading... ");
+             try {
+                 final String path = predefinedMappingURL.getPath();
+                 String name = path.substring(path.lastIndexOf('/')+1, path.lastIndexOf('.'));
+                 String content = IOUtils.readStringFromStream(predefinedMappingURL.openStream());
+                persistenceService.createMapping(name, content);
+            } catch (IOException e) {
+                logger.error("Error while loading segment definition " + predefinedMappingURL, e);
+            }
+        }
+
         Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/segments", "*.json", true);
         while (predefinedSegmentEntries.hasMoreElements()) {
             URL predefinedSegmentURL = predefinedSegmentEntries.nextElement();
