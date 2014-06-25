@@ -8,6 +8,8 @@ import org.ops4j.pax.cdi.api.ContainerInitialized;
 import org.ops4j.pax.cdi.api.OsgiService;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
 import org.osgi.framework.BundleContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -30,6 +32,8 @@ import java.util.*;
 @OsgiServiceProvider
 public class SegmentServiceImpl implements SegmentService {
 
+    private static final Logger logger = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
+
     Map<SegmentID, Serializable> segmentQueries = new LinkedHashMap<SegmentID, Serializable>();
 
     @Inject
@@ -40,16 +44,16 @@ public class SegmentServiceImpl implements SegmentService {
     private PersistenceService persistenceService;
 
     public SegmentServiceImpl() {
-        System.out.println("Initializing segment service...");
+        logger.info("Initializing segment service...");
     }
 
     @PostConstruct
     public void postConstruct() {
-        System.out.println("postConstruct {" + bundleContext.getBundle() + "}");
+        logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
         Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/segments", "*.json", true);
         while (predefinedSegmentEntries.hasMoreElements()) {
             URL predefinedSegmentURL = predefinedSegmentEntries.nextElement();
-            System.out.println("Found predefined segment at " + predefinedSegmentURL + ", loading... ");
+            logger.debug("Found predefined segment at " + predefinedSegmentURL + ", loading... ");
 
             JsonReader reader = null;
             try {
@@ -70,7 +74,7 @@ public class SegmentServiceImpl implements SegmentService {
                     persistenceService.saveQuery(segmentID.getId(), queryStringWriter.toString());
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
             } finally {
                 if (reader != null) {
                     reader.close();
@@ -97,17 +101,6 @@ public class SegmentServiceImpl implements SegmentService {
 
         Map vars = new HashMap();
         vars.put("user", user);
-
-        for (Map.Entry<SegmentID, Serializable> segmentExpressionEntry : segmentQueries.entrySet()) {
-
-            // Now we execute it.
-            Boolean result = (Boolean) MVEL.executeExpression(segmentExpressionEntry.getValue(), vars);
-
-            if (result.booleanValue()) {
-                matchedSegments.add(segmentExpressionEntry.getKey());
-            }
-
-        }
 
         List<String> matchingQueries = persistenceService.getMatchingSavedQueries(user);
         if (matchingQueries.size() > 0) {
@@ -146,35 +139,35 @@ public class SegmentServiceImpl implements SegmentService {
     }
 
     public static void dumpJSON(JsonValue tree, String key, String depthPrefix) {
-       if (key != null)
-          System.out.print(depthPrefix + "Key " + key + ": ");
-       switch(tree.getValueType()) {
-          case OBJECT:
-             System.out.println(depthPrefix + "OBJECT");
-             JsonObject object = (JsonObject) tree;
-             for (String name : object.keySet())
-                 dumpJSON(object.get(name), name, depthPrefix + "  ");
-             break;
-          case ARRAY:
-             System.out.println(depthPrefix + "ARRAY");
-             JsonArray array = (JsonArray) tree;
-             for (JsonValue val : array)
-                 dumpJSON(val, null, depthPrefix + "  ");
-             break;
-          case STRING:
-             JsonString st = (JsonString) tree;
-             System.out.println(depthPrefix + "STRING " + st.getString());
-             break;
-          case NUMBER:
-             JsonNumber num = (JsonNumber) tree;
-             System.out.println(depthPrefix + "NUMBER " + num.toString());
-             break;
-          case TRUE:
-          case FALSE:
-          case NULL:
-             System.out.println(depthPrefix + tree.getValueType().toString());
-             break;
-       }
+        if (key != null)
+            logger.info(depthPrefix + "Key " + key + ": ");
+        switch (tree.getValueType()) {
+            case OBJECT:
+                logger.info(depthPrefix + "OBJECT");
+                JsonObject object = (JsonObject) tree;
+                for (String name : object.keySet())
+                    dumpJSON(object.get(name), name, depthPrefix + "  ");
+                break;
+            case ARRAY:
+                logger.info(depthPrefix + "ARRAY");
+                JsonArray array = (JsonArray) tree;
+                for (JsonValue val : array)
+                    dumpJSON(val, null, depthPrefix + "  ");
+                break;
+            case STRING:
+                JsonString st = (JsonString) tree;
+                logger.info(depthPrefix + "STRING " + st.getString());
+                break;
+            case NUMBER:
+                JsonNumber num = (JsonNumber) tree;
+                logger.info(depthPrefix + "NUMBER " + num.toString());
+                break;
+            case TRUE:
+            case FALSE:
+            case NULL:
+                logger.info(depthPrefix + tree.getValueType().toString());
+                break;
+        }
     }
 
 }
