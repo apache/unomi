@@ -140,6 +140,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
 
     }
 
+    public boolean createMapping(final String type, final String source) {
+        return new InClassLoaderExecute<Boolean>() {
+            protected Boolean execute(Object... args) {
+                client.admin().indices()
+                        .preparePutMapping("wemi")
+                        .setType("event")
+                        .setSource(source)
+                        .execute().actionGet();
+                return true;
+            }
+        }.executeInClassLoader();
+    }
+
     public boolean saveQuery(final String queryName, final String query) {
         return new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {

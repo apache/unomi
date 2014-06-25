@@ -1,11 +1,10 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
+import org.mvel2.MVEL;
 import org.oasis_open.wemi.context.server.api.*;
-import org.oasis_open.wemi.context.server.api.conditions.Condition;
-import org.oasis_open.wemi.context.server.api.conditions.ConditionParameter;
-import org.oasis_open.wemi.context.server.api.conditions.ConditionTag;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
+import org.ops4j.pax.cdi.api.ContainerInitialized;
 import org.ops4j.pax.cdi.api.OsgiService;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
 import org.osgi.framework.BundleContext;
@@ -13,9 +12,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.event.Observes;
+import javax.enterprise.inject.Default;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.json.*;
+import javax.print.DocFlavor;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.StringWriter;
@@ -95,9 +98,6 @@ public class SegmentServiceImpl implements SegmentService {
     public Set<SegmentID> getSegmentsForUser(User user) {
 
         Set<SegmentID> matchedSegments = new LinkedHashSet<SegmentID>();
-
-        Map vars = new HashMap();
-        vars.put("user", user);
 
         List<String> matchingQueries = persistenceService.getMatchingSavedQueries(user);
         if (matchingQueries.size() > 0) {

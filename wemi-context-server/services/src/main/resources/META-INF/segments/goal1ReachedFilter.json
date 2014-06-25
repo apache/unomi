@@ -1,0 +1,20 @@
+{
+    "id": "goal1ReachedFilter",
+    "name": "Goal 1 Reached Filter",
+    "description": "This segment includes all users that have reached goal 1 with a filter",
+    "type": "es-query",
+    "definition": {
+        "query": {
+            "filtered": {
+                "query": {
+                    "match_all": {}
+                },
+                "filter": {
+                    "term": {
+                        "goal1": "reached"
+                    }
+                }
+            }
+        }
+    }
+}
