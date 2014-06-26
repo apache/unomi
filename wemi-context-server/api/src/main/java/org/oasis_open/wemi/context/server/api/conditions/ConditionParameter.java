@@ -6,16 +6,46 @@ package org.oasis_open.wemi.context.server.api.conditions;
  */
 public class ConditionParameter {
 
-    String parameterType;
-    String parameterName;
+    String id;
+    String name;
+    String description;
+    String type;
+    boolean multivalued = false;
     String choiceListInitializerClass;
 
     public ConditionParameter() {
     }
 
-    public ConditionParameter(String parameterType, String parameterName, String choiceListInitializerClass) {
-        this.parameterType = parameterType;
-        this.parameterName = parameterName;
+    public ConditionParameter(String id, String name, String description, String type, boolean multivalued, String choiceListInitializerClass) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.type = type;
+        this.multivalued = multivalued;
         this.choiceListInitializerClass = choiceListInitializerClass;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public boolean isMultivalued() {
+        return multivalued;
+    }
+
+    public String getChoiceListInitializerClass() {
+        return choiceListInitializerClass;
     }
 }

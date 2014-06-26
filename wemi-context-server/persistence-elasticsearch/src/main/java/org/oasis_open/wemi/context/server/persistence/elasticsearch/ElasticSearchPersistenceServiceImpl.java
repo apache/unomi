@@ -1,5 +1,7 @@
 package org.oasis_open.wemi.context.server.persistence.elasticsearch;
 
+import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
@@ -62,6 +64,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                 logger.info("Starting ElasticSearch persistence backend...");
                 node = nodeBuilder().clusterName("wemiElasticSearch").node();
                 client = node.client();
+                IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists("wemi").execute().actionGet();
+                if (!indicesExistsResponse.isExists()) {
+                    logger.info("WEMI index doesn't exist yet, creating it...");
+                    CreateIndexResponse createIndexResponse = client.admin().indices().prepareCreate("wemi").execute().actionGet();
+                }
                 return null;
             }
         }.executeInClassLoader();
