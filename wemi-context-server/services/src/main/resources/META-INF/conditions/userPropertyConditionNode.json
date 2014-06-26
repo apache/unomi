@@ -3,14 +3,14 @@
     "name" : "User property",
     "description" : "A condition on a user property",
     "tags" : [ "demographic" ],
-    "class" : "org.oasis_open.wemi.context.server.impl.conditions.UserPropertyConditionNode",
+    "class" : "org.oasis_open.wemi.context.server.api.conditions.ConditionNode",
     "parameters" : [
         {
             "id" : "propertyName",
             "name" : "Property name",
             "description" : "The name of the user property to match",
             "type" : "string",
-            "multivalued" : "false",
+            "multivalued" : false,
             "choicelistInitializerClass" : "org.oasis_open.wemi.context.server.conditions.initializers.UserPropertyChoiceListInitializer"
         },
         {
@@ -18,7 +18,7 @@
             "name" : "Comparison operator",
             "description" : "The operator to use for the user property comparison",
             "type" : "comparisonOperator",
-            "multivalued" : "false",
+            "multivalued" : false,
             "choicelistInitializerClass" : "org.oasis_open.wemi.context.server.conditions.initializers.UserPropertyChoiceListInitializer"
         },
         {
@@ -26,7 +26,7 @@
             "name" : "Property value",
             "description" : "The value of the user property to match",
             "type" : "string",
-            "multivalued" : "false",
+            "multivalued" : false,
             "choicelistInitializerClass" : ""
         }
     ]

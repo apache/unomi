@@ -3,14 +3,14 @@
     "name" : "AND",
     "description" : "Logical AND operator",
     "tags" : [ "logical" ],
-    "class" : "org.oasis_open.wemi.context.server.impl.conditions.AndConditionNode",
+    "class" : "org.oasis_open.wemi.context.server.api.conditions.ConditionNode",
     "parameters" : [
         {
             "id" : "subConditionNodes",
             "name" : "Sub conditions",
             "description" : "Sub conditions that will be evaluated using the AND operator",
             "type" : "ConditionNode",
-            "multivalued" : "true",
+            "multivalued" : true,
             "choicelistInitializerClass" : "org.oasis_open.wemi.context.server.conditions.initializers.ConditionNodeChoiceListInitializer"
         }
     ]

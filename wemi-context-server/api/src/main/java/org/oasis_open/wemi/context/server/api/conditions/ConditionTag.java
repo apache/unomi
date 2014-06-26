@@ -25,6 +25,10 @@ public class ConditionTag implements Comparable<ConditionTag> {
         this.parentId = parentId;
     }
 
+    public ConditionTag(String id) {
+        this.id = id;
+    }
+
     public String getId() {
         return id;
     }
@@ -56,10 +60,7 @@ public class ConditionTag implements Comparable<ConditionTag> {
 
         ConditionTag that = (ConditionTag) o;
 
-        if (description != null ? !description.equals(that.description) : that.description != null) return false;
         if (id != null ? !id.equals(that.id) : that.id != null) return false;
-        if (name != null ? !name.equals(that.name) : that.name != null) return false;
-        if (parentId != null ? !parentId.equals(that.parentId) : that.parentId != null) return false;
 
         return true;
     }
@@ -67,9 +68,6 @@ public class ConditionTag implements Comparable<ConditionTag> {
     @Override
     public int hashCode() {
         int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (name != null ? name.hashCode() : 0);
-        result = 31 * result + (description != null ? description.hashCode() : 0);
-        result = 31 * result + (parentId != null ? parentId.hashCode() : 0);
         return result;
     }
 

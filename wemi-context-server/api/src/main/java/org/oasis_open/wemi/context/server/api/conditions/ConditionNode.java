@@ -16,6 +16,9 @@ public abstract class ConditionNode {
     List<ConditionParameter> conditionParameters = new ArrayList<ConditionParameter>();
     List<ConditionParameterValue> conditionParameterValues = new ArrayList<ConditionParameterValue>();
 
+    public ConditionNode() {
+    }
+
     public ConditionNode(String id, String name) {
         this.id = id;
         this.name = name;
