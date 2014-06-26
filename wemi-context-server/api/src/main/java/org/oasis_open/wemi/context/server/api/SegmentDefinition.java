@@ -12,8 +12,12 @@ public class SegmentDefinition {
     public SegmentDefinition() {
     }
 
-    public SegmentDefinition(String expression) {
-        this.expression = expression;
+    public ConditionNode getRootConditionNode() {
+        return rootConditionNode;
+    }
+
+    public void setRootConditionNode(ConditionNode rootConditionNode) {
+        this.rootConditionNode = rootConditionNode;
     }
 
     public String getExpression() {

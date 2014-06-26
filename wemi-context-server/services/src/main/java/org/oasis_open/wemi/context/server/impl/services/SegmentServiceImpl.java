@@ -6,6 +6,7 @@ import org.oasis_open.wemi.context.server.api.SegmentID;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.conditions.*;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
+import org.oasis_open.wemi.context.server.impl.conditions.ConditionNodeESQueryGeneratorVisitor;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.ops4j.pax.cdi.api.OsgiService;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
@@ -17,7 +18,6 @@ import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.json.*;
-import javax.lang.model.type.ArrayType;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.StringWriter;
@@ -33,7 +33,7 @@ public class SegmentServiceImpl implements SegmentService {
 
     private static final Logger logger = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
 
-    Map<SegmentID, Serializable> segmentQueries = new LinkedHashMap<SegmentID, Serializable>();
+    Map<SegmentID, SegmentDefinition> segmentQueries = new LinkedHashMap<SegmentID, SegmentDefinition>();
     Map<String, ConditionTag> conditionTags = new HashMap<String, ConditionTag>();
     Set<ConditionTag> rootConditionTags = new LinkedHashSet<ConditionTag>();
     Map<String, ConditionTypeNode> conditionTypeNodesByName = new HashMap<String, ConditionTypeNode>();
@@ -203,21 +203,27 @@ public class SegmentServiceImpl implements SegmentService {
                 JsonObject segmentObject = (JsonObject) jsonst;
                 SegmentID segmentID = new SegmentID(segmentObject.getString("id"), segmentObject.getString("name"), segmentObject.getString("description"));
 
+                SegmentDefinition segment = new SegmentDefinition();
+
                 JsonObject conditionObject = segmentObject.getJsonObject("condition");
                 if (conditionObject != null) {
-//                    getConditionNode(conditionObject);
-                }
+                    ConditionNode node = getConditionNode(conditionObject);
+                    segment.setRootConditionNode(node);
 
-                String segmentType = segmentObject.getString("type");
-                if ("es-query".equals(segmentType)) {
-                    JsonObject queryObject = segmentObject.getJsonObject("definition");
-                    StringWriter queryStringWriter = new StringWriter();
-                    JsonWriter jsonWriter = Json.createWriter(queryStringWriter);
-                    jsonWriter.writeObject(queryObject);
-                    jsonWriter.close();
-                    segmentQueries.put(segmentID, queryStringWriter.toString());
-                    persistenceService.saveQuery(segmentID.getId(), queryStringWriter.toString());
+                    new ConditionNodeESQueryGeneratorVisitor().visit(node);
+                } else {
+                    String segmentType = segmentObject.getString("type");
+                    if ("es-query".equals(segmentType)) {
+                        JsonObject queryObject = segmentObject.getJsonObject("definition");
+                        StringWriter queryStringWriter = new StringWriter();
+                        JsonWriter jsonWriter = Json.createWriter(queryStringWriter);
+                        jsonWriter.writeObject(queryObject);
+                        jsonWriter.close();
+                        segment.setExpression(queryStringWriter.toString());
+                        persistenceService.saveQuery(segmentID.getId(), queryStringWriter.toString());
+                    }
                 }
+                segmentQueries.put(segmentID, segment);
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
             } finally {
@@ -246,19 +252,24 @@ public class SegmentServiceImpl implements SegmentService {
             if (parameter.isMultivalued()) {
                 JsonArray array = parameterValues.getJsonArray(parameter.getId());
                 for (JsonValue value : array) {
-                    if (parameter.getType().equals("ConditionNode")) {
-                        objects.add(getConditionNode((JsonObject) value));
-                    }
+                    objects.add(getParameterValue(parameter, value));
                 }
             } else {
-                if (parameter.getType().equals("comparisonOperator")) {
-                    objects.add(parameterValues.getString(parameter.getId()));
-                } else if (parameter.getType().equals("string")) {
-                    objects.add(parameterValues.getString(parameter.getId()));
-                }
+                objects.add(getParameterValue(parameter, parameterValues.get(parameter.getId())));
             }
         }
         return node;
+    }
+
+    private Object getParameterValue(ConditionParameter parameter, JsonValue value) {
+        if (parameter.getType().equals("ConditionNode")) {
+            return getConditionNode((JsonObject) value);
+        } else if (parameter.getType().equals("comparisonOperator")) {
+            return ((JsonString)value).getString();
+        } else if (parameter.getType().equals("string")) {
+            return ((JsonString)value).getString();
+        }
+        return null;
     }
 
     public Set<User> getMatchingIndividuals(List<SegmentID> segmentIDs) {
@@ -295,9 +306,7 @@ public class SegmentServiceImpl implements SegmentService {
     }
 
     public SegmentDefinition getSegmentDefinition(SegmentID segmentID) {
-        String s = segmentQueries.get(segmentID).toString();
-
-        return new SegmentDefinition(s);
+        return segmentQueries.get(segmentID);
     }
 
     public Set<ConditionTag> getConditionTags() {

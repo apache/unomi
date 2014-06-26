@@ -1,0 +1,29 @@
+{
+    "id": "youngRich",
+    "name" : "Young rich",
+    "description" : "This segment includes all young rich",
+    "condition" : {
+        "type": "andConditionNode",
+        "parameterValues": {
+            "subConditionNodes": [
+                {
+                    "type": "userPropertyConditionNode",
+                    "parameterValues": {
+                        "comparisonOperator": "lesserThan",
+                        "propertyName": "age",
+                        "propertyValue": "25"
+                    }
+                },
+                {
+                    "type": "userPropertyConditionNode",
+                    "parameterValues": {
+                        "comparisonOperator": "greaterThan",
+                        "propertyName": "income",
+                        "propertyValue": "10000000"
+                    }
+                }
+            ]
+        }
+    }
+
+}
