@@ -1,6 +1,8 @@
 package org.oasis_open.wemi.context.server.persistence.elasticsearch;
 
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.percolate.PercolateResponse;
 import org.elasticsearch.action.search.SearchResponse;
@@ -90,8 +92,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                     }
                     jsonObject.field("itemClass", item.getClass().getName());
                     jsonObject.endObject();
-                    IndexResponse response = client.prepareIndex("wemi", item.getType(), item.getItemId())
-                            .setSource(jsonObject)
+                    IndexRequestBuilder indexBuilder = client.prepareIndex("wemi", item.getType(), item.getItemId())
+                            .setSource(jsonObject);
+                    if (item.getParentId() != null) {
+                        indexBuilder = indexBuilder.setParent(item.getParentId());
+                    }
+                    IndexResponse response = indexBuilder
                             .execute()
                             .actionGet();
                     return true;
@@ -157,11 +163,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         return new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {
             //Index the query = register it in the percolator
-            client.prepareIndex("wemi", ".percolator", queryName)
-                .setSource(query)
-                .setRefresh(true) // Needed when the query shall be available immediately
-                .execute().actionGet();
-                return true;
+                try {
+                    client.prepareIndex("wemi", ".percolator", queryName)
+                        .setSource(query)
+                        .setRefresh(true) // Needed when the query shall be available immediately
+                        .execute().actionGet();
+                    return true;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return false;
             }
         }.executeInClassLoader(queryName, query);
     }

@@ -1,0 +1,10 @@
+/.settings
+/target
+/.classpath
+/.project
+
+/src/main/webapp/META-INF/MANIFEST.MF
+/.idea
+*.iml
+target
+.DS_Store

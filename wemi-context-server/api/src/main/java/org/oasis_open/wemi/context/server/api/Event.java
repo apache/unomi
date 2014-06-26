@@ -9,7 +9,7 @@ import java.util.Properties;
  */
 public class Event extends Item {
 
-    public static final String EVENT_ITEM_TYPE="event";
+    public static final String EVENT_ITEM_TYPE = "event";
     private String eventType;
     private String visitorID = null;
     private long timeStamp;
@@ -18,33 +18,19 @@ public class Event extends Item {
 
     // attributes are not serializable, and can be used to pass additional contextual object such as HTTP request
     // response objects, etc...
-    private transient Map<String,Object> attributes = new LinkedHashMap<String,Object>();
+    private transient Map<String, Object> attributes = new LinkedHashMap<String, Object>();
 
     public Event() {
-        this.type=EVENT_ITEM_TYPE;
+        this.type = EVENT_ITEM_TYPE;
         this.timeStamp = System.currentTimeMillis();
     }
 
-    public Event(String itemId, String eventType, String visitorID, long timeStamp) {
-        super(itemId);
-        this.type=EVENT_ITEM_TYPE;
-        this.eventType = eventType;
-        setProperty("eventType", eventType);
-        this.visitorID = visitorID;
-        if (visitorID != null) {
-            setProperty("visitorID", visitorID);
-        }
-        if (timeStamp != -1) {
-            this.timeStamp = timeStamp;
-        } else {
-            this.timeStamp = System.currentTimeMillis();
-        }
-        setProperty("eventTimeStamp", Long.toString(this.timeStamp));
+    public Event(String itemId, String type, Properties properties) {
+        super(itemId, type, properties);
     }
 
-    public Event(String itemId, String type, String eventType, String visitorID, long timeStamp, Properties properties) {
-        super(itemId, type, properties);
-        this.type=EVENT_ITEM_TYPE;
+    public Event(String itemId, String eventType, String visitorID, long timeStamp) {
+        super(itemId, EVENT_ITEM_TYPE, null, new Properties());
         this.eventType = eventType;
         setProperty("eventType", eventType);
         this.visitorID = visitorID;

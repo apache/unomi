@@ -8,26 +8,32 @@ import java.util.Properties;
  */
 public class Item implements Serializable {
 
-    String itemId;
+    protected String itemId;
     protected String type = "item";
+    protected String parentId;
 
-    Properties properties = new Properties();
+    Properties properties;
 
     public Item() {
     }
 
-    public Item(String itemId) {
-        this.itemId = itemId;
+    public Item(String itemId, String type, Properties properties) {
+        this(itemId, type, null, properties);
     }
 
-    public Item(String itemId, String type, Properties properties) {
+    public Item(String itemId, String type, String parentId, Properties properties) {
         this.itemId = itemId;
         this.type = type;
+        this.parentId = parentId;
         this.properties = properties;
     }
 
     public String getItemId() {
         return itemId;
+    }
+
+    public String getParentId() {
+        return parentId;
     }
 
     public void setProperty(String name, String value) {

@@ -1,0 +1,43 @@
+{
+    "id": "goal1onHover",
+    "description" : "Set a property when an event is reached",
+
+    "eventCondition": {
+        "type": "eventConditionNode",
+        "parameters": {
+            "eventType": "hover",
+            "name": "testHover"
+        }
+    },
+
+    "definition": {
+        "query": {
+            "filtered": {
+                "query": {
+                    "match": {
+                        "hoverContentName": "testHover"
+                    }
+                },
+                "filter": {
+                    "term": {
+                        "eventType": "hover"
+                    }
+                }
+            }
+        }
+    },
+
+    "additionalRootCondition": {
+    },
+
+    "consequences" : [
+        {
+            "type": "setPropertyConsequence",
+            "parameters": {
+                "propertyName": "goal1",
+                "propertyValue": "reached"
+            }
+        }
+    ]
+
+}

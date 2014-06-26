@@ -14,12 +14,10 @@ public class User extends Item {
     }
 
     public User(String itemId) {
-        super(itemId);
-        type=USER_ITEM_TYPE;
+        super(itemId, USER_ITEM_TYPE, new Properties());
     }
 
     public User(String itemId, String type, Properties properties) {
         super(itemId, type, properties);
-        type=USER_ITEM_TYPE;
     }
 }

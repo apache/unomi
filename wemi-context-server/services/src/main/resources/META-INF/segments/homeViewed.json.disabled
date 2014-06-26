@@ -1,0 +1,26 @@
+{
+    "id": "activitiesPageViewed",
+    "name": "Page activities has been viewed",
+    "description": "This segment includes all users that have seem page activities",
+    "type": "es-query",
+    "definition": {
+        "query": {
+            "filtered": {
+                "query": {
+                    "match_all": {}
+                },
+                "filter": {
+                    "has_child" : {
+                        "type" : "event",
+                        "filter" : {
+                            "term" : {
+                                "eventType" : "view",
+                                "url" : "http://localhost:8080/sites/ACMESPACE/home/activities.html"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
