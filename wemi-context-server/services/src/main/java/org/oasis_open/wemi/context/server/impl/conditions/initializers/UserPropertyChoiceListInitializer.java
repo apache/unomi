@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.impl.conditions.initializers;
 
 import org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer;
+import org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListValue;
 
 import java.util.List;
 
@@ -9,7 +10,7 @@ import java.util.List;
  */
 public class UserPropertyChoiceListInitializer extends ChoiceListInitializer {
     @Override
-    public List<Object> getValues(Object context) {
+    public List<ChoiceListValue> getValues(Object context) {
         return null;
     }
 }

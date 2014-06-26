@@ -10,8 +10,8 @@ import java.util.List;
  * Created by loom on 26.05.14.
  */
 public class OrConditionNode extends ListOperatorConditionNode {
-    protected OrConditionNode(String id, String name, String operator, List<ConditionNode> subConditionNodes) {
-        super(id, name, operator, subConditionNodes);
+    protected OrConditionNode(List<ConditionNode> subConditionNodes) {
+        super("orOperator", "OR", "OR", subConditionNodes);
     }
 
 }

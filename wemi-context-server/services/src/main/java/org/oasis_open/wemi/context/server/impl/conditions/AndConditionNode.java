@@ -12,7 +12,7 @@ import java.util.List;
  */
 public class AndConditionNode extends ListOperatorConditionNode {
     protected AndConditionNode(List<ConditionNode> subConditionNodes) {
-        super("AND", "AND", subConditionNodes);
+        super("andOperator", "AND", "AND", subConditionNodes);
     }
 
 }

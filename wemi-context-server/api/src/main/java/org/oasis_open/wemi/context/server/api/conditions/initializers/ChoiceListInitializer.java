@@ -7,5 +7,5 @@ import java.util.List;
  */
 public abstract class ChoiceListInitializer {
 
-    public abstract List<Object> getValues(Object context);
+    public abstract List<ChoiceListValue> getValues(Object context);
 }
