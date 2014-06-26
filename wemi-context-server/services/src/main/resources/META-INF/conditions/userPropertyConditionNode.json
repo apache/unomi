@@ -19,7 +19,7 @@
             "description" : "The operator to use for the user property comparison",
             "type" : "comparisonOperator",
             "multivalued" : "false",
-            "choicelistInitializerClass" : "org.oasis_open.wemi.context.server.conditions.initializers.UserPropertyChoiceListInitializer",
+            "choicelistInitializerClass" : "org.oasis_open.wemi.context.server.conditions.initializers.UserPropertyChoiceListInitializer"
         },
         {
             "id" : "propertyValue",
