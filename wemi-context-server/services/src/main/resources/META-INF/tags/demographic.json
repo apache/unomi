@@ -1,0 +1,6 @@
+{
+    "id" : "demographic",
+    "name" : "Demographic conditions",
+    "description" : "Regroups all demographic conditions",
+    "parent" : "root"
+}

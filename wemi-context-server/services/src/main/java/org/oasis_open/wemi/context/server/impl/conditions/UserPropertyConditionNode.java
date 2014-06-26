@@ -12,21 +12,8 @@ import java.util.List;
  */
 public class UserPropertyConditionNode extends ConditionNode {
 
-    public UserPropertyConditionNode(String name) {
-        super(name);
+    public UserPropertyConditionNode(String id, String name) {
+        super(id, name);
     }
 
-    @Override
-    public List<ConditionParameter> getParameters() {
-        List<ConditionParameter> parameters = new ArrayList<ConditionParameter>();
-        parameters.add(new ConditionParameter("string", "propertyName", "org.oasis_open.wemi.context.server.impl.conditions.initializers.UserPropertyChoiceListInitializer"));
-        parameters.add(new ConditionParameter("string", "comparisonOperation", "org.oasis_open.wemi.context.server.impl.conditions.initializers.ComparisonOperatorChoiceListInitializer"));
-        parameters.add(new ConditionParameter("string", "propertyValue", ""));
-        return null;
-    }
-
-    @Override
-    public Object eval(Object context, List<ConditionParameterValue> conditionParameterValues) {
-        return null;
-    }
 }

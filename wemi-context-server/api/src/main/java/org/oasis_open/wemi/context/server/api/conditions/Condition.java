@@ -10,8 +10,7 @@ import java.util.TreeSet;
  */
 public class Condition {
 
-    Set<ConditionTag> conditionTags = new TreeSet<ConditionTag>();
 
-    List<ConditionParameter> conditionParameters = new ArrayList<ConditionParameter>();
+
 
 }

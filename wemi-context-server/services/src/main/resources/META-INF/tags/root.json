@@ -1,0 +1,6 @@
+{
+    "id" : "root",
+    "name" : "Root tag",
+    "description" : "The root tag of all tags",
+    "parent" : null
+}

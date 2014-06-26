@@ -1,0 +1,6 @@
+{
+    "id" : "logical",
+    "name" : "Logical conditions",
+    "description" : "Regroups all logical conditions",
+    "parent" : "root"
+}

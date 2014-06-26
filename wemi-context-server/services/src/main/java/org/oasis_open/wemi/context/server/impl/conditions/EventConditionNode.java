@@ -11,17 +11,8 @@ import java.util.List;
  * rules for listening to events and performing actions when an event is received
  */
 public class EventConditionNode extends ConditionNode {
-    public EventConditionNode(String name) {
-        super(name);
+    public EventConditionNode(String id, String name) {
+        super(id, name);
     }
 
-    @Override
-    public List<ConditionParameter> getParameters() {
-        return null;
-    }
-
-    @Override
-    public Object eval(Object context, List<ConditionParameterValue> conditionParameterValues) {
-        return null;
-    }
 }

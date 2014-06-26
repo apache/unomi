@@ -6,17 +6,11 @@
     "class" : "org.oasis_open.wemi.context.server.impl.conditions.AndConditionNode",
     "parameters" : [
         {
-            "id" : "leftCondition",
-            "name" : "Left condition",
-            "description" : "The condition to the left of the AND operator",
+            "id" : "subConditionNodes",
+            "name" : "Sub conditions",
+            "description" : "Sub conditions that will be evaluated using the AND operator",
             "type" : "ConditionNode",
-            "choicelistInitializerClass" : "org.oasis_open.wemi.context.server.conditions.initializers.ConditionNodeChoiceListInitializer"
-        },
-        {
-            "id" : "rightCondition",
-            "name" : "Right condition",
-            "description" : "The condition to the right of the AND operator",
-            "type" : "ConditionNode",
+            "multivalued" : "true",
             "choicelistInitializerClass" : "org.oasis_open.wemi.context.server.conditions.initializers.ConditionNodeChoiceListInitializer"
         }
     ]

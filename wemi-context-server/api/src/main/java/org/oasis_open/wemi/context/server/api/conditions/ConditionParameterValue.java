@@ -1,20 +1,20 @@
 package org.oasis_open.wemi.context.server.api.conditions;
 
+import java.util.List;
+
 /**
  * Created by loom on 25.06.14.
  */
 public class ConditionParameterValue {
 
-    String parameterType;
     String parameterName;
-    String parameterValue;
+    List<String> parameterValues;
 
     public ConditionParameterValue() {
     }
 
-    public ConditionParameterValue(String parameterType, String parameterName, String parameterValue) {
-        this.parameterType = parameterType;
+    public ConditionParameterValue(String parameterName, List<String> parameterValues) {
         this.parameterName = parameterName;
-        this.parameterValue = parameterValue;
+        this.parameterValues = parameterValues;
     }
 }
