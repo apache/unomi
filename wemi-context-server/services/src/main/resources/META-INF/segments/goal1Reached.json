@@ -9,5 +9,29 @@
                 "goal1" : "reached"
             }
         }
+    },
+    "condition" : {
+        "type": "andConditionNode",
+        "parameterValues": {
+            "conditions": [
+                {
+                    "type": "userPropertyConditionNode",
+                    "parameterValues": {
+                        "comparisonOperator": "range",
+                        "propertyName": "age",
+                        "propertyValue": "25"
+                    }
+                },
+                {
+                    "type": "userPropertyConditionNode",
+                    "parameterValues": {
+                        "comparisonOperator": "range",
+                        "propertyName": "income",
+                        "propertyValue": "10000000"
+                    }
+                }
+            ]
+        }
     }
+
 }

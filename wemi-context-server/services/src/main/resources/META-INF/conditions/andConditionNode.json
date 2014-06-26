@@ -3,7 +3,7 @@
     "name" : "AND",
     "description" : "Logical AND operator",
     "tags" : [ "logical" ],
-    "class" : "org.oasis_open.wemi.context.server.api.conditions.ConditionNode",
+    "class" : "org.oasis_open.wemi.context.server.api.conditions.ConditionTypeNode",
     "parameters" : [
         {
             "id" : "subConditionNodes",

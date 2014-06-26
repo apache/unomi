@@ -8,12 +8,12 @@ import java.util.List;
 public class ConditionParameterValue {
 
     String parameterName;
-    List<String> parameterValues;
+    List<Object> parameterValues;
 
     public ConditionParameterValue() {
     }
 
-    public ConditionParameterValue(String parameterName, List<String> parameterValues) {
+    public ConditionParameterValue(String parameterName, List<Object> parameterValues) {
         this.parameterName = parameterName;
         this.parameterValues = parameterValues;
     }

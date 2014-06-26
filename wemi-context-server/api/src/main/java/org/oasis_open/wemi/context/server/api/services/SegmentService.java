@@ -1,10 +1,7 @@
 package org.oasis_open.wemi.context.server.api.services;
 
 import org.oasis_open.wemi.context.server.api.*;
-import org.oasis_open.wemi.context.server.api.conditions.Condition;
-import org.oasis_open.wemi.context.server.api.conditions.ConditionNode;
-import org.oasis_open.wemi.context.server.api.conditions.ConditionParameter;
-import org.oasis_open.wemi.context.server.api.conditions.ConditionTag;
+import org.oasis_open.wemi.context.server.api.conditions.*;
 
 import java.util.List;
 import java.util.Set;
@@ -20,7 +17,7 @@ public interface SegmentService {
     Set<SegmentID> getSegmentIDs();
     SegmentDefinition getSegmentDefinition (SegmentID segmentID);
     Set<ConditionTag> getConditionTags ();
-    Set<ConditionNode> getConditions(ConditionTag conditionTag);
-    List<ConditionParameter> getConditionParameters(ConditionNode condition);
+    Set<ConditionTypeNode> getConditions(ConditionTag conditionTag);
+    List<ConditionParameter> getConditionParameters(ConditionTypeNode condition);
 
 }

@@ -1,10 +1,7 @@
 package org.oasis_open.wemi.context.server.rest;
 
 import org.oasis_open.wemi.context.server.api.*;
-import org.oasis_open.wemi.context.server.api.conditions.Condition;
-import org.oasis_open.wemi.context.server.api.conditions.ConditionNode;
-import org.oasis_open.wemi.context.server.api.conditions.ConditionParameter;
-import org.oasis_open.wemi.context.server.api.conditions.ConditionTag;
+import org.oasis_open.wemi.context.server.api.conditions.*;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 
 import javax.jws.WebMethod;
@@ -73,13 +70,13 @@ public class SegmentServiceEndPoint implements SegmentService {
 
     @GET
     @Path("/definitions/conditions/tags/{tagId}")
-    public Set<ConditionNode> getConditions(@PathParam("tagId") ConditionTag conditionTag) {
+    public Set<ConditionTypeNode> getConditions(@PathParam("tagId") ConditionTag conditionTag) {
         return segmentService.getConditions(conditionTag);
     }
 
     @GET
     @Path("/definitions/conditions/{conditionId}")
-    public List<ConditionParameter> getConditionParameters(@PathParam("conditionId") ConditionNode condition) {
+    public List<ConditionParameter> getConditionParameters(@PathParam("conditionId") ConditionTypeNode condition) {
         return segmentService.getConditionParameters(condition);
     }
 }

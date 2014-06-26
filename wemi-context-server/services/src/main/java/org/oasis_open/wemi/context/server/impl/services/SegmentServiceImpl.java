@@ -4,9 +4,7 @@ import org.apache.cxf.helpers.IOUtils;
 import org.oasis_open.wemi.context.server.api.SegmentDefinition;
 import org.oasis_open.wemi.context.server.api.SegmentID;
 import org.oasis_open.wemi.context.server.api.User;
-import org.oasis_open.wemi.context.server.api.conditions.ConditionNode;
-import org.oasis_open.wemi.context.server.api.conditions.ConditionParameter;
-import org.oasis_open.wemi.context.server.api.conditions.ConditionTag;
+import org.oasis_open.wemi.context.server.api.conditions.*;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.ops4j.pax.cdi.api.OsgiService;
@@ -19,11 +17,10 @@ import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.json.*;
+import javax.lang.model.type.ArrayType;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.StringWriter;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.*;
 
@@ -39,8 +36,8 @@ public class SegmentServiceImpl implements SegmentService {
     Map<SegmentID, Serializable> segmentQueries = new LinkedHashMap<SegmentID, Serializable>();
     Map<String, ConditionTag> conditionTags = new HashMap<String, ConditionTag>();
     Set<ConditionTag> rootConditionTags = new LinkedHashSet<ConditionTag>();
-    Map<String, ConditionNode> conditionNodesByName = new HashMap<String, ConditionNode>();
-    Map<ConditionTag, Set<ConditionNode>> conditionNodesByTag = new HashMap<ConditionTag, Set<ConditionNode>>();
+    Map<String, ConditionTypeNode> conditionTypeNodesByName = new HashMap<String, ConditionTypeNode>();
+    Map<ConditionTag, Set<ConditionTypeNode>> conditionTypeNodesByTag = new HashMap<ConditionTag, Set<ConditionTypeNode>>();
 
     @Inject
     private BundleContext bundleContext;
@@ -148,11 +145,7 @@ public class SegmentServiceImpl implements SegmentService {
                 }
                 String clazz = conditionObject.getString("class");
 
-                Class conditionNodeClass = bundleContext.getBundle().loadClass(clazz);
-
-                Constructor conditionNodeConstructor = conditionNodeClass.getConstructor(String.class, String.class);
-
-                ConditionNode conditionNode = (ConditionNode) conditionNodeConstructor.newInstance(id, name);
+                ConditionTypeNode conditionNode = new ConditionTypeNode(id, name);
 
                 conditionNode.setDescription(description);
                 JsonArray parameterArray = conditionObject.getJsonArray("parameters");
@@ -168,32 +161,22 @@ public class SegmentServiceImpl implements SegmentService {
                     conditionNode.getConditionParameters().add(conditionParameter);
                 }
 
-                conditionNodesByName.put(conditionNode.getId(), conditionNode);
+                conditionTypeNodesByName.put(conditionNode.getId(), conditionNode);
                 for (String tagId : tagIds) {
                     ConditionTag conditionTag = conditionTags.get(tagId);
                     if (conditionTag != null) {
-                        Set<ConditionNode> conditionNodes = conditionNodesByTag.get(conditionTag);
+                        Set<ConditionTypeNode> conditionNodes = conditionTypeNodesByTag.get(conditionTag);
                         if (conditionNodes == null) {
-                            conditionNodes = new LinkedHashSet<ConditionNode>();
+                            conditionNodes = new LinkedHashSet<ConditionTypeNode>();
                         }
                         conditionNodes.add(conditionNode);
-                        conditionNodesByTag.put(conditionTag, conditionNodes);
+                        conditionTypeNodesByTag.put(conditionTag, conditionNodes);
                     } else {
                         // we found a tag that is not defined, we will define it automatically
                         logger.warn("Unknown tag " + tagId + " used in condition definition " + predefinedConditionNodeURL);
                     }
                 }
             } catch (IOException e) {
-                logger.error("Error while loading condition definition " + predefinedConditionNodeURL, e);
-            } catch (ClassNotFoundException e) {
-                logger.error("Error while loading condition definition " + predefinedConditionNodeURL, e);
-            } catch (InstantiationException e) {
-                logger.error("Error while loading condition definition " + predefinedConditionNodeURL, e);
-            } catch (IllegalAccessException e) {
-                logger.error("Error while loading condition definition " + predefinedConditionNodeURL, e);
-            } catch (NoSuchMethodException e) {
-                logger.error("Error while loading condition definition " + predefinedConditionNodeURL, e);
-            } catch (InvocationTargetException e) {
                 logger.error("Error while loading condition definition " + predefinedConditionNodeURL, e);
             } finally {
                 if (reader != null) {
@@ -219,6 +202,12 @@ public class SegmentServiceImpl implements SegmentService {
                 // dumpJSON(jsonst, null, "");
                 JsonObject segmentObject = (JsonObject) jsonst;
                 SegmentID segmentID = new SegmentID(segmentObject.getString("id"), segmentObject.getString("name"), segmentObject.getString("description"));
+
+                JsonObject conditionObject = segmentObject.getJsonObject("condition");
+                if (conditionObject != null) {
+//                    getConditionNode(conditionObject);
+                }
+
                 String segmentType = segmentObject.getString("type");
                 if ("es-query".equals(segmentType)) {
                     JsonObject queryObject = segmentObject.getJsonObject("definition");
@@ -238,6 +227,38 @@ public class SegmentServiceImpl implements SegmentService {
             }
 
         }
+    }
+
+    private ConditionNode getConditionNode(JsonObject object) {
+        String conditionType = object.getString("type");
+        ConditionTypeNode typeNode = conditionTypeNodesByName.get(conditionType);
+        JsonObject parameterValues = object.getJsonObject("parameterValues");
+
+        ConditionNode node = new ConditionNode();
+        node.setConditionTypeNode(typeNode);
+        List<ConditionParameterValue> values = new ArrayList<ConditionParameterValue>();
+        node.setConditionParameterValues(values);
+
+        for (ConditionParameter parameter : typeNode.getConditionParameters()) {
+            final ArrayList<Object> objects = new ArrayList<Object>();
+            values.add(new ConditionParameterValue(parameter.getName(), objects));
+
+            if (parameter.isMultivalued()) {
+                JsonArray array = parameterValues.getJsonArray(parameter.getId());
+                for (JsonValue value : array) {
+                    if (parameter.getType().equals("ConditionNode")) {
+                        objects.add(getConditionNode((JsonObject) value));
+                    }
+                }
+            } else {
+                if (parameter.getType().equals("comparisonOperator")) {
+                    objects.add(parameterValues.getString(parameter.getId()));
+                } else if (parameter.getType().equals("string")) {
+                    objects.add(parameterValues.getString(parameter.getId()));
+                }
+            }
+        }
+        return node;
     }
 
     public Set<User> getMatchingIndividuals(List<SegmentID> segmentIDs) {
@@ -283,11 +304,11 @@ public class SegmentServiceImpl implements SegmentService {
         return new HashSet<ConditionTag>(conditionTags.values());
     }
 
-    public Set<ConditionNode> getConditions(ConditionTag conditionTag) {
-        return conditionNodesByTag.get(conditionTag);
+    public Set<ConditionTypeNode> getConditions(ConditionTag conditionTag) {
+        return conditionTypeNodesByTag.get(conditionTag);
     }
 
-    public List<ConditionParameter> getConditionParameters(ConditionNode condition) {
+    public List<ConditionParameter> getConditionParameters(ConditionTypeNode condition) {
         return condition.getConditionParameters();
     }
 
