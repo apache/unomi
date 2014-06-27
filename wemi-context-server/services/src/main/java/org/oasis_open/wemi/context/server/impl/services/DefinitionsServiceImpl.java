@@ -1,9 +1,8 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.apache.cxf.helpers.IOUtils;
-import org.oasis_open.wemi.context.server.api.conditions.ConditionTag;
+import org.oasis_open.wemi.context.server.api.conditions.Tag;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
-import org.oasis_open.wemi.context.server.api.conditions.Parameter;
 import org.oasis_open.wemi.context.server.api.consequences.ConsequenceType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
@@ -28,11 +27,11 @@ public class DefinitionsServiceImpl implements DefinitionsService {
 
     private static final Logger logger = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
 
-    Map<String, ConditionTag> conditionTags = new HashMap<String, ConditionTag>();
-    Set<ConditionTag> rootConditionTags = new LinkedHashSet<ConditionTag>();
+    Map<String, Tag> conditionTags = new HashMap<String, Tag>();
+    Set<Tag> rootTags = new LinkedHashSet<Tag>();
     Map<String, ConditionType> conditionTypeByName = new HashMap<String, ConditionType>();
     Map<String, ConsequenceType> consequencesTypeByName = new HashMap<String, ConsequenceType>();
-    Map<ConditionTag, Set<ConditionType>> conditionTypeByTag = new HashMap<ConditionTag, Set<ConditionType>>();
+    Map<Tag, Set<ConditionType>> conditionTypeByTag = new HashMap<Tag, Set<ConditionType>>();
 
     public DefinitionsServiceImpl() {
         System.out.println("Instantiating definitions service...");
@@ -87,12 +86,12 @@ public class DefinitionsServiceImpl implements DefinitionsService {
 
                 // dumpJSON(jsonst, null, "");
                 JsonObject tagObject = (JsonObject) jsonst;
-                ConditionTag conditionTag = new ConditionTag(tagObject.getString("id"),
+                Tag tag = new Tag(tagObject.getString("id"),
                         tagObject.getString("name"),
                         tagObject.getString("description"),
                         tagObject.getString("parent"));
 
-                conditionTags.put(conditionTag.getId(), conditionTag);
+                conditionTags.put(tag.getId(), tag);
             } catch (Exception e) {
                 logger.error("Error while loading tag definition " + predefinedSegmentURL, e);
             } finally {
@@ -104,14 +103,14 @@ public class DefinitionsServiceImpl implements DefinitionsService {
         }
 
         // now let's resolve all the children.
-        for (ConditionTag conditionTag : conditionTags.values()) {
-            if (conditionTag.getParentId() != null && conditionTag.getParentId().length() > 0) {
-                ConditionTag parentTag = conditionTags.get(conditionTag.getParentId());
+        for (Tag tag : conditionTags.values()) {
+            if (tag.getParentId() != null && tag.getParentId().length() > 0) {
+                Tag parentTag = conditionTags.get(tag.getParentId());
                 if (parentTag != null) {
-                    parentTag.getSubTags().add(conditionTag);
+                    parentTag.getSubTags().add(tag);
                 }
             } else {
-                rootConditionTags.add(conditionTag);
+                rootTags.add(tag);
             }
         }
     }
@@ -145,14 +144,14 @@ public class DefinitionsServiceImpl implements DefinitionsService {
 
                 conditionTypeByName.put(condition.getId(), condition);
                 for (String tagId : tagIds) {
-                    ConditionTag conditionTag = conditionTags.get(tagId);
-                    if (conditionTag != null) {
-                        Set<ConditionType> conditionNodes = conditionTypeByTag.get(conditionTag);
+                    Tag tag = conditionTags.get(tagId);
+                    if (tag != null) {
+                        Set<ConditionType> conditionNodes = conditionTypeByTag.get(tag);
                         if (conditionNodes == null) {
                             conditionNodes = new LinkedHashSet<ConditionType>();
                         }
                         conditionNodes.add(condition);
-                        conditionTypeByTag.put(conditionTag, conditionNodes);
+                        conditionTypeByTag.put(tag, conditionNodes);
                     } else {
                         // we found a tag that is not defined, we will define it automatically
                         logger.warn("Unknown tag " + tagId + " used in condition definition " + predefinedConditionURL);
@@ -220,12 +219,12 @@ public class DefinitionsServiceImpl implements DefinitionsService {
         return consequencesTypeByName.get(name);
     }
 
-    public Set<ConditionTag> getConditionTags() {
-        return new HashSet<ConditionTag>(conditionTags.values());
+    public Set<Tag> getConditionTags() {
+        return new HashSet<Tag>(conditionTags.values());
     }
 
-    public Set<ConditionType> getConditions(ConditionTag conditionTag) {
-        return conditionTypeByTag.get(conditionTag);
+    public Set<ConditionType> getConditions(Tag tag) {
+        return conditionTypeByTag.get(tag);
     }
 
 }

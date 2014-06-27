@@ -1,12 +1,9 @@
 package org.oasis_open.wemi.context.server.rest;
 
-import org.oasis_open.wemi.context.server.api.conditions.Condition;
-import org.oasis_open.wemi.context.server.api.conditions.ConditionTag;
+import org.oasis_open.wemi.context.server.api.conditions.Tag;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
-import org.oasis_open.wemi.context.server.api.conditions.Parameter;
 import org.oasis_open.wemi.context.server.api.consequences.ConsequenceType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
-import org.oasis_open.wemi.context.server.api.services.SegmentService;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -15,7 +12,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
-import java.util.List;
 import java.util.Set;
 
 @WebService
@@ -30,15 +26,15 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
     }
 
     @GET
-    @Path("/conditions/tags")
-    public Set<ConditionTag> getConditionTags() {
+    @Path("/tags")
+    public Set<Tag> getConditionTags() {
         return definitionsService.getConditionTags();
     }
 
     @GET
     @Path("/conditions/tags/{tagId}")
-    public Set<ConditionType> getConditions(@PathParam("tagId") ConditionTag conditionTag) {
-        return definitionsService.getConditions(conditionTag);
+    public Set<ConditionType> getConditions(@PathParam("tagId") Tag tag) {
+        return definitionsService.getConditions(tag);
     }
 
     @GET

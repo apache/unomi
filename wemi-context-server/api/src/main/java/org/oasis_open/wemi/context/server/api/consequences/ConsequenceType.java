@@ -1,7 +1,7 @@
 package org.oasis_open.wemi.context.server.api.consequences;
 
 import org.oasis_open.wemi.context.server.api.conditions.Parameter;
-import org.oasis_open.wemi.context.server.api.conditions.ConditionTag;
+import org.oasis_open.wemi.context.server.api.conditions.Tag;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +12,7 @@ public class ConsequenceType {
     String id;
     String name;
     String description;
-    Set<ConditionTag> conditionTags = new TreeSet<ConditionTag>();
+    Set<Tag> tags = new TreeSet<Tag>();
     List<Parameter> consequenceParameters = new ArrayList<Parameter>();
 
     public ConsequenceType() {
@@ -43,12 +43,12 @@ public class ConsequenceType {
         this.description = description;
     }
 
-    public Set<ConditionTag> getConditionTags() {
-        return conditionTags;
+    public Set<Tag> getTags() {
+        return tags;
     }
 
-    public void setConditionTags(Set<ConditionTag> conditionTags) {
-        this.conditionTags = conditionTags;
+    public void setTags(Set<Tag> tags) {
+        this.tags = tags;
     }
 
     public List<Parameter> getConsequenceParameters() {

@@ -6,26 +6,26 @@ import java.util.TreeSet;
 /**
  * Represents a tag on a condition
  */
-public class ConditionTag implements Comparable<ConditionTag> {
+public class Tag implements Comparable<Tag> {
 
     String id;
     String name;
     String description;
     String parentId;
 
-    Set<ConditionTag> subTags = new TreeSet<ConditionTag>();
+    Set<Tag> subTags = new TreeSet<Tag>();
 
-    public ConditionTag() {
+    public Tag() {
     }
 
-    public ConditionTag(String id, String name, String description, String parentId) {
+    public Tag(String id, String name, String description, String parentId) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.parentId = parentId;
     }
 
-    public ConditionTag(String id) {
+    public Tag(String id) {
         this.id = id;
     }
 
@@ -45,11 +45,11 @@ public class ConditionTag implements Comparable<ConditionTag> {
         return parentId;
     }
 
-    public Set<ConditionTag> getSubTags() {
+    public Set<Tag> getSubTags() {
         return subTags;
     }
 
-    public void setSubTags(Set<ConditionTag> subTags) {
+    public void setSubTags(Set<Tag> subTags) {
         this.subTags = subTags;
     }
 
@@ -58,7 +58,7 @@ public class ConditionTag implements Comparable<ConditionTag> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        ConditionTag that = (ConditionTag) o;
+        Tag that = (Tag) o;
 
         if (id != null ? !id.equals(that.id) : that.id != null) return false;
 
@@ -71,7 +71,7 @@ public class ConditionTag implements Comparable<ConditionTag> {
         return result;
     }
 
-    public int compareTo(ConditionTag o) {
+    public int compareTo(Tag o) {
         return id.compareTo(o.id);
     }
 }

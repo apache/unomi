@@ -12,7 +12,7 @@ public class ConditionType {
     String id;
     String name;
     String description;
-    Set<ConditionTag> conditionTags = new TreeSet<ConditionTag>();
+    Set<Tag> tags = new TreeSet<Tag>();
     List<Parameter> conditionParameters = new ArrayList<Parameter>();
 
     public ConditionType() {
@@ -43,12 +43,12 @@ public class ConditionType {
         this.description = description;
     }
 
-    public Set<ConditionTag> getConditionTags() {
-        return conditionTags;
+    public Set<Tag> getTags() {
+        return tags;
     }
 
-    public void setConditionTags(Set<ConditionTag> conditionTags) {
-        this.conditionTags = conditionTags;
+    public void setTags(Set<Tag> tags) {
+        this.tags = tags;
     }
 
     public List<Parameter> getConditionParameters() {
