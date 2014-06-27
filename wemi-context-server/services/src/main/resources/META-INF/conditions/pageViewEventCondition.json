@@ -3,7 +3,6 @@
     "name" : "Hover event",
     "description" : "A content has been hovered",
     "tags" : [ "event" ],
-    "class" : "org.oasis_open.wemi.context.server.api.conditions.ConditionNode",
     "parameters" : [
         {
             "id" : "url",

@@ -1,14 +1,16 @@
 package org.oasis_open.wemi.context.server.api.conditions;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Represents a node in the segment definition expression tree
  */
 public class Condition {
     ConditionType conditionType;
-    List<ParameterValue> conditionParameterValues = new ArrayList<ParameterValue>();
+    Map<String, ParameterValue> conditionParameterValues = new HashMap<String, ParameterValue>();
 
     public Condition() {
     }
@@ -21,15 +23,22 @@ public class Condition {
         this.conditionType = conditionType;
     }
 
-    public List<ParameterValue> getConditionParameterValues() {
+    public Map<String, ParameterValue> getConditionParameterValues() {
         return conditionParameterValues;
     }
 
-    public void setConditionParameterValues(List<ParameterValue> conditionParameterValues) {
+    public void setConditionParameterValues(Map<String, ParameterValue> conditionParameterValues) {
         this.conditionParameterValues = conditionParameterValues;
     }
 
     public void accept(ConditionVisitor visitor) {
+        for (Parameter parameter : conditionType.getConditionParameters()) {
+            if ("Condition".equals(parameter.getType())) {
+                for (Object o : conditionParameterValues.get(parameter.getId()).getParameterValues()) {
+                    visitor.visit((Condition)o);
+                }
+            }
+        }
         visitor.visit(this);
     }
 

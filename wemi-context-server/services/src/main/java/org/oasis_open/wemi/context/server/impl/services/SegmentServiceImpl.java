@@ -6,7 +6,6 @@ import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.conditions.*;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
-import org.oasis_open.wemi.context.server.impl.conditions.ConditionESQueryGeneratorVisitor;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.ops4j.pax.cdi.api.OsgiService;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
@@ -73,10 +72,9 @@ public class SegmentServiceImpl implements SegmentService {
 
                 JsonObject conditionObject = segmentObject.getJsonObject("condition");
                 if (conditionObject != null) {
-                    Condition node = ParserHelper.parseCondition(definitionsService, conditionObject);
-                    segment.setRootCondition(node);
-
-                    new ConditionESQueryGeneratorVisitor().visit(node);
+                    Condition condition = ParserHelper.parseCondition(definitionsService, conditionObject);
+                    segment.setRootCondition(condition);
+                    persistenceService.saveQuery(segmentID.getId(), condition);
                 } else {
                     String segmentType = segmentObject.getString("type");
                     if ("es-query".equals(segmentType)) {

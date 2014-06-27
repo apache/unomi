@@ -5,7 +5,7 @@
     "condition" : {
         "type": "andCondition",
         "parameterValues": {
-            "subConditionNodes": [
+            "subConditions": [
                 {
                     "type": "userPropertyCondition",
                     "parameterValues": {

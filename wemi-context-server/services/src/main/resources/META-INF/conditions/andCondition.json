@@ -5,12 +5,12 @@
     "tags" : [ "logical" ],
     "parameters" : [
         {
-            "id" : "subConditionNodes",
+            "id" : "subConditions",
             "name" : "Sub conditions",
             "description" : "Sub conditions that will be evaluated using the AND operator",
-            "type" : "ConditionNode",
+            "type" : "Condition",
             "multivalued" : true,
-            "choicelistInitializerClass" : "org.oasis_open.wemi.context.server.conditions.initializers.ConditionNodeChoiceListInitializer"
+            "choicelistInitializerClass" : "org.oasis_open.wemi.context.server.conditions.initializers.ConditionChoiceListInitializer"
         }
     ]
 }

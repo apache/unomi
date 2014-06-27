@@ -7,19 +7,19 @@ import java.util.List;
  */
 public class ParameterValue {
 
-    private String parameterName;
+    private String parameterId;
     private List<Object> parameterValues;
 
     public ParameterValue() {
     }
 
-    public ParameterValue(String parameterName, List<Object> parameterValues) {
-        this.parameterName = parameterName;
+    public ParameterValue(String parameterId, List<Object> parameterValues) {
+        this.parameterId = parameterId;
         this.parameterValues = parameterValues;
     }
 
-    public String getParameterName() {
-        return parameterName;
+    public String getParameterId() {
+        return parameterId;
     }
 
     public Object getParameterValue() {

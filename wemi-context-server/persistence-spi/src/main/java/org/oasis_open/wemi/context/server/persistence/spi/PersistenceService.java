@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.persistence.spi;
 
 import org.oasis_open.wemi.context.server.api.Item;
+import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
 import java.util.List;
 import java.util.Properties;
@@ -15,6 +16,8 @@ public interface PersistenceService {
     public Item load(String itemId, String itemType, Class clazz);
 
     public boolean saveQuery(String queryName, String query);
+
+    public boolean saveQuery(String queryName, Condition query);
 
     public boolean createMapping(String queryName, String query);
 

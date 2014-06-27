@@ -24,12 +24,12 @@ public class ParserHelper {
 
         Condition node = new Condition();
         node.setConditionType(typeNode);
-        List<ParameterValue> values = new ArrayList<ParameterValue>();
+        Map<String, ParameterValue> values = new HashMap<String, ParameterValue>();
         node.setConditionParameterValues(values);
 
         for (Parameter parameter : typeNode.getConditionParameters()) {
             final ArrayList<Object> objects = new ArrayList<Object>();
-            values.add(new ParameterValue(parameter.getName(), objects));
+            values.put(parameter.getId(), new ParameterValue(parameter.getId(), objects));
 
             if (parameter.isMultivalued()) {
                 JsonArray array = parameterValues.getJsonArray(parameter.getId());
@@ -55,7 +55,7 @@ public class ParserHelper {
 
         for (Parameter parameter : typeNode.getConsequenceParameters()) {
             final ArrayList<Object> objects = new ArrayList<Object>();
-            values.put(parameter.getName(), new ParameterValue(parameter.getName(), objects));
+            values.put(parameter.getId(), new ParameterValue(parameter.getId(), objects));
 
             if (parameter.isMultivalued()) {
                 JsonArray array = parameterValues.getJsonArray(parameter.getId());
@@ -70,7 +70,7 @@ public class ParserHelper {
     }
 
     private static Object getParameterValue(DefinitionsService service, Parameter parameter, JsonValue value) {
-        if (parameter.getType().equals("ConditionNode")) {
+        if (parameter.getType().equals("Condition")) {
             return parseCondition(service, (JsonObject) value);
         } else if (parameter.getType().equals("comparisonOperator")) {
             return ((JsonString)value).getString();

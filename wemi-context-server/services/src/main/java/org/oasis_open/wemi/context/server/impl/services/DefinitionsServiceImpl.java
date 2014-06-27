@@ -119,12 +119,12 @@ public class DefinitionsServiceImpl implements DefinitionsService {
     private void loadPredefinedCondition() {
         Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/conditions", "*.json", true);
         while (predefinedSegmentEntries.hasMoreElements()) {
-            URL predefinedConditionNodeURL = predefinedSegmentEntries.nextElement();
-            logger.debug("Found predefined conditions at " + predefinedConditionNodeURL + ", loading... ");
+            URL predefinedConditionURL = predefinedSegmentEntries.nextElement();
+            logger.debug("Found predefined conditions at " + predefinedConditionURL + ", loading... ");
 
             JsonReader reader = null;
             try {
-                reader = Json.createReader(predefinedConditionNodeURL.openStream());
+                reader = Json.createReader(predefinedConditionURL.openStream());
                 JsonStructure jsonst = reader.read();
 
                 // dumpJSON(jsonst, null, "");
@@ -172,11 +172,11 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                         conditionTypeByTag.put(conditionTag, conditionNodes);
                     } else {
                         // we found a tag that is not defined, we will define it automatically
-                        logger.warn("Unknown tag " + tagId + " used in condition definition " + predefinedConditionNodeURL);
+                        logger.warn("Unknown tag " + tagId + " used in condition definition " + predefinedConditionURL);
                     }
                 }
             } catch (IOException e) {
-                logger.error("Error while loading condition definition " + predefinedConditionNodeURL, e);
+                logger.error("Error while loading condition definition " + predefinedConditionURL, e);
             } finally {
                 if (reader != null) {
                     reader.close();
@@ -190,12 +190,12 @@ public class DefinitionsServiceImpl implements DefinitionsService {
     private void loadPredefinedConsequences() {
         Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/consequences", "*.json", true);
         while (predefinedSegmentEntries.hasMoreElements()) {
-            URL predefinedConditionNodeURL = predefinedSegmentEntries.nextElement();
-            logger.debug("Found predefined consequence at " + predefinedConditionNodeURL + ", loading... ");
+            URL predefinedConditionURL = predefinedSegmentEntries.nextElement();
+            logger.debug("Found predefined consequence at " + predefinedConditionURL + ", loading... ");
 
             JsonReader reader = null;
             try {
-                reader = Json.createReader(predefinedConditionNodeURL.openStream());
+                reader = Json.createReader(predefinedConditionURL.openStream());
                 JsonStructure jsonst = reader.read();
 
                 // dumpJSON(jsonst, null, "");
@@ -231,7 +231,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
 
                 consequencesTypeByName.put(consequence.getId(), consequence);
             } catch (IOException e) {
-                logger.error("Error while loading condition definition " + predefinedConditionNodeURL, e);
+                logger.error("Error while loading condition definition " + predefinedConditionURL, e);
             } finally {
                 if (reader != null) {
                     reader.close();

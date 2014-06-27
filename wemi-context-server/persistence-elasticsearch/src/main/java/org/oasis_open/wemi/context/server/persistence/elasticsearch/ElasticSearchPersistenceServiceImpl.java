@@ -17,6 +17,7 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.SearchHits;
 import org.oasis_open.wemi.context.server.api.Item;
+import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -182,6 +183,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                 return false;
             }
         }.executeInClassLoader(queryName, query);
+    }
+
+    @Override
+    public boolean saveQuery(String queryName, Condition query) {
+        query.accept(new ConditionESQueryGeneratorVisitor());
+        return true;
     }
 
     public List<String> getMatchingSavedQueries(final Item item) {
