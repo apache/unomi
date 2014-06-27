@@ -21,6 +21,7 @@ public class ConditionESQueryGeneratorVisitorDispatcher extends ConditionVisitor
         addVisitor(new AndConditionESQueryGeneratorVisitor());
         addVisitor(new HoverEventConditionESQueryGeneratorVisitor());
         addVisitor(new PageViewEventConditionESQueryGeneratorVisitor());
+        addVisitor(new MatchAllConditionESQueryGeneratorVisitor());
     }
 
     public String getQuery() {

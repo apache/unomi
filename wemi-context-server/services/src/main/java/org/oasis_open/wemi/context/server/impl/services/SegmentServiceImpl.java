@@ -70,23 +70,10 @@ public class SegmentServiceImpl implements SegmentService {
 
                 SegmentDefinition segment = new SegmentDefinition();
 
-                JsonObject conditionObject = segmentObject.getJsonObject("condition");
-                if (conditionObject != null) {
-                    Condition condition = ParserHelper.parseCondition(definitionsService, conditionObject);
-                    segment.setRootCondition(condition);
-                    persistenceService.saveQuery(segmentID.getId(), condition);
-                } else {
-                    String segmentType = segmentObject.getString("type");
-                    if ("es-query".equals(segmentType)) {
-                        JsonObject queryObject = segmentObject.getJsonObject("definition");
-                        StringWriter queryStringWriter = new StringWriter();
-                        JsonWriter jsonWriter = Json.createWriter(queryStringWriter);
-                        jsonWriter.writeObject(queryObject);
-                        jsonWriter.close();
-                        segment.setExpression(queryStringWriter.toString());
-                        persistenceService.saveQuery(segmentID.getId(), queryStringWriter.toString());
-                    }
-                }
+                Condition condition = ParserHelper.parseCondition(definitionsService, segmentObject.getJsonObject("condition"));
+                segment.setRootCondition(condition);
+                persistenceService.saveQuery(segmentID.getId(), condition);
+
                 segmentQueries.put(segmentID, segment);
             } catch (Exception e) {
                 logger.error("Error while loading segment definition " + predefinedSegmentURL, e);

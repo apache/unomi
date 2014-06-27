@@ -43,7 +43,7 @@ public class ParserHelper {
         return node;
     }
 
-    public static Consequence parseConsequence(DefinitionsService service, JsonObject object) throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+    public static Consequence parseConsequence(DefinitionsService service, JsonObject object) {
         ConsequenceType typeNode = service.getConsequenceType(object.getString("type"));
         JsonObject parameterValues = object.getJsonObject("parameterValues");
 

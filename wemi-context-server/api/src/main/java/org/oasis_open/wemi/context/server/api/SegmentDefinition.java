@@ -6,7 +6,6 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
  */
 public class SegmentDefinition {
 
-    String expression;
     Condition rootCondition;
 
     public SegmentDefinition() {
@@ -20,11 +19,4 @@ public class SegmentDefinition {
         this.rootCondition = rootCondition;
     }
 
-    public String getExpression() {
-        return expression;
-    }
-
-    public void setExpression(String expression) {
-        this.expression = expression;
-    }
 }

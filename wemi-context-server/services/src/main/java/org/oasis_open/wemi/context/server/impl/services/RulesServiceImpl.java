@@ -58,11 +58,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService  {
                 JsonObject ruleObject = (JsonObject) jsonst;
 
                 String ruleID = ruleObject.getString("id");
-                JsonObject queryObject = ruleObject.getJsonObject("definition");
-                StringWriter queryStringWriter = new StringWriter();
-                JsonWriter jsonWriter = Json.createWriter(queryStringWriter);
-                jsonWriter.writeObject(queryObject);
-                jsonWriter.close();
                 Rule rule = new Rule();
 
                 Condition condition = ParserHelper.parseCondition(definitionsService, ruleObject.getJsonObject("condition"));
@@ -71,22 +66,12 @@ public class RulesServiceImpl implements RulesService, EventListenerService  {
                 JsonArray array = ruleObject.getJsonArray("consequences");
                 Set<Consequence> consequences = new HashSet<Consequence>();
                 for (JsonValue value : array) {
-                    try {
-                        Consequence consequence = ParserHelper.parseConsequence(definitionsService, (JsonObject) value);
-                        consequences.add(consequence);
-                    } catch (ClassNotFoundException e) {
-                        e.printStackTrace();
-                    } catch (IllegalAccessException e) {
-                        e.printStackTrace();
-                    } catch (InstantiationException e) {
-                        e.printStackTrace();
-                    }
+                    consequences.add(ParserHelper.parseConsequence(definitionsService, (JsonObject) value));
                 }
                 rule.setConsequences(consequences);
+                persistenceService.saveQuery(ruleID, rule.getRootCondition());
 
                 rules.put(ruleID, rule);
-
-                persistenceService.saveQuery(ruleID, queryStringWriter.toString());
             } catch (Exception e) {
                 logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
             } finally {

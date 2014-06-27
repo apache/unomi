@@ -9,23 +9,6 @@
         }
     },
 
-    "definition": {
-        "query": {
-            "filtered": {
-                "query": {
-                    "match": {
-                        "hoverContentName": "testHover"
-                    }
-                },
-                "filter": {
-                    "term": {
-                        "eventType": "hover"
-                    }
-                }
-            }
-        }
-    },
-
     "consequences" : [
         {
             "type": "setPropertyConsequence",

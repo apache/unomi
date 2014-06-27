@@ -1,0 +1,8 @@
+{
+    "id" : "matchAll",
+    "name" : "Match all",
+    "description" : "Match all",
+    "tags" : [ "logical" ],
+    "parameters" : [
+    ]
+}
