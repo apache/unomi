@@ -6,7 +6,7 @@ import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.EventListenerService;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
 import org.oasis_open.wemi.context.server.api.services.RulesService;
-import org.oasis_open.wemi.context.server.impl.consequences.ConsequenceExecutorVisitorDispatcher;
+import org.oasis_open.wemi.context.server.impl.consequences.ConsequenceExecutorDispatcher;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.ops4j.pax.cdi.api.OsgiService;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
@@ -18,7 +18,6 @@ import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.json.*;
-import java.io.StringWriter;
 import java.net.URL;
 import java.util.*;
 
@@ -106,12 +105,12 @@ public class RulesServiceImpl implements RulesService, EventListenerService  {
     public boolean onEvent(Event event) {
         Set<Rule> rules = getMatchingRules(event);
 
-        ConsequenceExecutorVisitorDispatcher visitor = new ConsequenceExecutorVisitorDispatcher(event.getUser());
+        ConsequenceExecutorDispatcher consequenceExecutor = new ConsequenceExecutorDispatcher(event.getUser());
         for (Rule rule: rules) {
             for (Consequence consequence : rule.getConsequences()) {
-                consequence.accept(visitor);
+                consequenceExecutor.execute(consequence);
             }
         }
-        return visitor.isChanged();
+        return consequenceExecutor.isChanged();
     }
 }

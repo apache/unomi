@@ -6,10 +6,10 @@ import org.oasis_open.wemi.context.server.api.consequences.Consequence;
 /**
  * Created by toto on 27/06/14.
  */
-public abstract class AbstractConsequenceExecutorVisitor {
+public abstract class AbstractConsequenceExecutor {
 
     public abstract String getConsequenceId();
 
-    public abstract boolean visit(Consequence condition, User user);
+    public abstract boolean execute(Consequence condition, User user);
 
 }

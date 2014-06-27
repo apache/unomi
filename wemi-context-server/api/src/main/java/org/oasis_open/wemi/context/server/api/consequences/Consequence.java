@@ -1,7 +1,5 @@
 package org.oasis_open.wemi.context.server.api.consequences;
 
-import org.oasis_open.wemi.context.server.api.conditions.ConditionVisitor;
-import org.oasis_open.wemi.context.server.api.conditions.Parameter;
 import org.oasis_open.wemi.context.server.api.conditions.ParameterValue;
 
 import java.util.HashMap;
@@ -30,10 +28,5 @@ public class Consequence {
     public void setConsequencesParameterValues(Map<String, ParameterValue> consequencesParameterValues) {
         this.consequencesParameterValues = consequencesParameterValues;
     }
-
-    public void accept(ConsequenceVisitor visitor) {
-        visitor.visit(this);
-    }
-
 
 }

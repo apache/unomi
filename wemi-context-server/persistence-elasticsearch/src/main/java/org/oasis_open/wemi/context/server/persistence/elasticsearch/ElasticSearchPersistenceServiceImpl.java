@@ -10,7 +10,6 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.search.SearchHit;
@@ -18,7 +17,7 @@ import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.SearchHits;
 import org.oasis_open.wemi.context.server.api.Item;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
-import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryGeneratorVisitorDispatcher;
+import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -185,9 +184,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public boolean saveQuery(String queryName, Condition query) {
-        final ConditionESQueryGeneratorVisitorDispatcher visitor = new ConditionESQueryGeneratorVisitorDispatcher();
-        query.accept(visitor);
-        saveQuery(queryName, visitor.getQuery());
+        final ConditionESQueryBuilderDispatcher builder = new ConditionESQueryBuilderDispatcher();
+        saveQuery(queryName, builder.getQuery(query));
         return true;
     }
 

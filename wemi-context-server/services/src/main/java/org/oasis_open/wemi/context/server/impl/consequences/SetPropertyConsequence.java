@@ -6,8 +6,8 @@ import org.oasis_open.wemi.context.server.api.consequences.Consequence;
 /**
  * Created by toto on 26/06/14.
  */
-public class SetPropertyConsequenceVisitor extends AbstractConsequenceExecutorVisitor {
-    public SetPropertyConsequenceVisitor() {
+public class SetPropertyConsequence extends AbstractConsequenceExecutor {
+    public SetPropertyConsequence() {
     }
 
     @Override
@@ -16,7 +16,7 @@ public class SetPropertyConsequenceVisitor extends AbstractConsequenceExecutorVi
     }
 
     @Override
-    public boolean visit(Consequence consequence, User user) {
+    public boolean execute(Consequence consequence, User user) {
         user.setProperty(
                 (String) consequence.getConsequencesParameterValues().get("propertyName").getParameterValue(),
                 (String) consequence.getConsequencesParameterValues().get("propertyValue").getParameterValue());

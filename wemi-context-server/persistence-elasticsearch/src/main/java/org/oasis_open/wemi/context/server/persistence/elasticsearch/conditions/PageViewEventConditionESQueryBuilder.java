@@ -3,14 +3,11 @@ package org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions;
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
-import org.oasis_open.wemi.context.server.api.conditions.ConditionVisitor;
-
-import java.util.Stack;
 
 /**
 * Created by toto on 27/06/14.
 */
-class PageViewEventConditionESQueryGeneratorVisitor extends AbstractESQueryGeneratorVisitor  {
+class PageViewEventConditionESQueryBuilder extends AbstractESQueryBuilder {
 
     @Override
     public String getConditionId() {
@@ -18,11 +15,10 @@ class PageViewEventConditionESQueryGeneratorVisitor extends AbstractESQueryGener
     }
 
     @Override
-    public void visit(Condition condition, Stack<FilterBuilder> stack) {
-        stack.push(FilterBuilders.andFilter(
+    public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
+        return FilterBuilders.andFilter(
                 FilterBuilders.termFilter("eventType", "view"),
-                FilterBuilders.termFilter("url", (String) condition.getConditionParameterValues().get("url").getParameterValue())
-        ));
+                FilterBuilders.termFilter("url", (String) condition.getConditionParameterValues().get("url").getParameterValue()));
 
     }
 }

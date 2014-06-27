@@ -1,8 +1,6 @@
 package org.oasis_open.wemi.context.server.api.conditions;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -29,17 +27,6 @@ public class Condition {
 
     public void setConditionParameterValues(Map<String, ParameterValue> conditionParameterValues) {
         this.conditionParameterValues = conditionParameterValues;
-    }
-
-    public void accept(ConditionVisitor visitor) {
-        for (Parameter parameter : conditionType.getConditionParameters()) {
-            if ("Condition".equals(parameter.getType())) {
-                for (Object o : conditionParameterValues.get(parameter.getId()).getParameterValues()) {
-                    visitor.visit((Condition)o);
-                }
-            }
-        }
-        visitor.visit(this);
     }
 
 }
