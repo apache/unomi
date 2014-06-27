@@ -12,7 +12,6 @@ public class ConsequenceType {
     String id;
     String name;
     String description;
-    String clazz;
     Set<ConditionTag> conditionTags = new TreeSet<ConditionTag>();
     List<Parameter> consequenceParameters = new ArrayList<Parameter>();
 
@@ -42,14 +41,6 @@ public class ConsequenceType {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public String getClazz() {
-        return clazz;
-    }
-
-    public void setClazz(String clazz) {
-        this.clazz = clazz;
     }
 
     public Set<ConditionTag> getConditionTags() {

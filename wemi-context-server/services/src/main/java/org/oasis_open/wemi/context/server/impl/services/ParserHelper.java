@@ -47,9 +47,8 @@ public class ParserHelper {
         ConsequenceType typeNode = service.getConsequenceType(object.getString("type"));
         JsonObject parameterValues = object.getJsonObject("parameterValues");
 
-        Consequence node = (Consequence) Class.forName(typeNode.getClazz()).newInstance();
-
-        node.setType(typeNode);
+        Consequence node = new Consequence();
+        node.setConsequenceType(typeNode);
         Map<String, ParameterValue> values = new HashMap<String, ParameterValue>();
         node.setConsequencesParameterValues(values);
 
@@ -81,4 +80,25 @@ public class ParserHelper {
     }
 
 
+    public static List<Parameter> parseParameters(JsonObject conditionObject) {
+        List<Parameter> parameters = new ArrayList<Parameter>();
+        JsonArray parameterArray = conditionObject.getJsonArray("parameters");
+        for (int i = 0; i < parameterArray.size(); i++) {
+            JsonObject parameterObject = parameterArray.getJsonObject(i);
+            String paramId = parameterObject.getString("id");
+            String paramName = parameterObject.getString("name");
+            String paramDescription = parameterObject.getString("description");
+            String paramType = parameterObject.getString("type");
+            boolean multivalued = parameterObject.getBoolean("multivalued");
+            String paramChoiceListInitializerClass = null;
+            try {
+                paramChoiceListInitializerClass = parameterObject.getString("choicelistInitializerClass");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            Parameter conditionParameter = new Parameter(paramId, paramName, paramDescription, paramType, multivalued, paramChoiceListInitializerClass);
+            parameters.add(conditionParameter);
+        }
+        return parameters;
+    }
 }

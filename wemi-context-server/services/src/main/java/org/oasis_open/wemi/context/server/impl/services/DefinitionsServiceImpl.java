@@ -1,8 +1,9 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.apache.cxf.helpers.IOUtils;
-import org.oasis_open.wemi.context.server.api.conditions.*;
-import org.oasis_open.wemi.context.server.api.consequences.Consequence;
+import org.oasis_open.wemi.context.server.api.conditions.ConditionTag;
+import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
+import org.oasis_open.wemi.context.server.api.conditions.Parameter;
 import org.oasis_open.wemi.context.server.api.consequences.ConsequenceType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
@@ -17,7 +18,6 @@ import javax.enterprise.inject.Default;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.json.*;
-import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 
@@ -68,7 +68,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                 String name = path.substring(path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
                 String content = IOUtils.readStringFromStream(predefinedMappingURL.openStream());
                 persistenceService.createMapping(name, content);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("Error while loading segment definition " + predefinedMappingURL, e);
             }
         }
@@ -93,7 +93,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                         tagObject.getString("parent"));
 
                 conditionTags.put(conditionTag.getId(), conditionTag);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("Error while loading tag definition " + predefinedSegmentURL, e);
             } finally {
                 if (reader != null) {
@@ -139,28 +139,11 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                     tagIds.add(tagArray.getString(i));
                 }
 
-                ConditionType conditionNode = new ConditionType(id, name);
+                ConditionType condition = new ConditionType(id, name);
+                condition.setDescription(description);
+                condition.setConditionParameters(ParserHelper.parseParameters(conditionObject));
 
-                conditionNode.setDescription(description);
-                JsonArray parameterArray = conditionObject.getJsonArray("parameters");
-                for (int i = 0; i < parameterArray.size(); i++) {
-                    JsonObject parameterObject = parameterArray.getJsonObject(i);
-                    String paramId = parameterObject.getString("id");
-                    String paramName = parameterObject.getString("name");
-                    String paramDescription = parameterObject.getString("description");
-                    String paramType = parameterObject.getString("type");
-                    boolean multivalued = parameterObject.getBoolean("multivalued");
-                    String paramChoiceListInitializerClass = null;
-                    try {
-                        paramChoiceListInitializerClass = parameterObject.getString("choicelistInitializerClass");
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    Parameter conditionParameter = new Parameter(paramId, paramName, paramDescription, paramType, multivalued, paramChoiceListInitializerClass);
-                    conditionNode.getConditionParameters().add(conditionParameter);
-                }
-
-                conditionTypeByName.put(conditionNode.getId(), conditionNode);
+                conditionTypeByName.put(condition.getId(), condition);
                 for (String tagId : tagIds) {
                     ConditionTag conditionTag = conditionTags.get(tagId);
                     if (conditionTag != null) {
@@ -168,14 +151,14 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                         if (conditionNodes == null) {
                             conditionNodes = new LinkedHashSet<ConditionType>();
                         }
-                        conditionNodes.add(conditionNode);
+                        conditionNodes.add(condition);
                         conditionTypeByTag.put(conditionTag, conditionNodes);
                     } else {
                         // we found a tag that is not defined, we will define it automatically
                         logger.warn("Unknown tag " + tagId + " used in condition definition " + predefinedConditionURL);
                     }
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("Error while loading condition definition " + predefinedConditionURL, e);
             } finally {
                 if (reader != null) {
@@ -214,23 +197,10 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                 ConsequenceType consequence = new ConsequenceType(id, name);
 
                 consequence.setDescription(description);
-                consequence.setClazz(clazz);
-
-                JsonArray parameterArray = conditionObject.getJsonArray("parameters");
-                for (int i = 0; i < parameterArray.size(); i++) {
-                    JsonObject parameterObject = parameterArray.getJsonObject(i);
-                    String paramId = parameterObject.getString("id");
-                    String paramName = parameterObject.getString("name");
-                    String paramDescription = parameterObject.getString("description");
-                    String paramType = parameterObject.getString("type");
-                    boolean multivalued = parameterObject.getBoolean("multivalued");
-                    String paramChoiceListInitializerClass = parameterObject.getString("choicelistInitializerClass");
-                    Parameter conditionParameter = new Parameter(paramId, paramName, paramDescription, paramType, multivalued, paramChoiceListInitializerClass);
-                    consequence.getConsequenceParameters().add(conditionParameter);
-                }
+                consequence.setConsequenceParameters(ParserHelper.parseParameters(conditionObject));
 
                 consequencesTypeByName.put(consequence.getId(), consequence);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("Error while loading condition definition " + predefinedConditionURL, e);
             } finally {
                 if (reader != null) {

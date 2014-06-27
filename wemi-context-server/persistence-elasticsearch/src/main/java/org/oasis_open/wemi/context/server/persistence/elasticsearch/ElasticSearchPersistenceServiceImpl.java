@@ -2,7 +2,6 @@ package org.oasis_open.wemi.context.server.persistence.elasticsearch;
 
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
-import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
@@ -11,6 +10,7 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.search.SearchHit;
@@ -18,6 +18,7 @@ import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.SearchHits;
 import org.oasis_open.wemi.context.server.api.Item;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
+import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryGeneratorVisitorDispatcher;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,10 +29,7 @@ import static org.elasticsearch.common.xcontent.XContentFactory.*;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * Created by loom on 02.05.14.
@@ -187,7 +185,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public boolean saveQuery(String queryName, Condition query) {
-        query.accept(new ConditionESQueryGeneratorVisitor());
+        final ConditionESQueryGeneratorVisitorDispatcher visitor = new ConditionESQueryGeneratorVisitorDispatcher();
+        query.accept(visitor);
+        saveQuery(queryName, visitor.getQuery());
         return true;
     }
 

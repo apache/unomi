@@ -1,28 +1,39 @@
 package org.oasis_open.wemi.context.server.api.consequences;
 
-import org.oasis_open.wemi.context.server.api.User;
+import org.oasis_open.wemi.context.server.api.conditions.ConditionVisitor;
+import org.oasis_open.wemi.context.server.api.conditions.Parameter;
 import org.oasis_open.wemi.context.server.api.conditions.ParameterValue;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
  * Created by toto on 26/06/14.
  */
-public abstract class Consequence {
-    protected ConsequenceType type;
+public class Consequence {
+    protected ConsequenceType consequenceType;
 
     protected Map<String,ParameterValue> consequencesParameterValues = new HashMap<String, ParameterValue>();
 
-    public void setType(ConsequenceType type) {
-        this.type = type;
+    public ConsequenceType getConsequenceType() {
+        return consequenceType;
+    }
+
+    public void setConsequenceType(ConsequenceType consequenceType) {
+        this.consequenceType = consequenceType;
+    }
+
+    public Map<String, ParameterValue> getConsequencesParameterValues() {
+        return consequencesParameterValues;
     }
 
     public void setConsequencesParameterValues(Map<String, ParameterValue> consequencesParameterValues) {
         this.consequencesParameterValues = consequencesParameterValues;
     }
 
-    public abstract boolean apply(User user);
+    public void accept(ConsequenceVisitor visitor) {
+        visitor.visit(this);
+    }
+
+
 }
