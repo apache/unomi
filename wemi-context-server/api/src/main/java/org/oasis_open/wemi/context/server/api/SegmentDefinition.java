@@ -1,23 +1,23 @@
 package org.oasis_open.wemi.context.server.api;
 
-import org.oasis_open.wemi.context.server.api.conditions.ConditionNode;
+import org.oasis_open.wemi.context.server.api.conditions.Condition;
 /**
  * Created by loom on 24.04.14.
  */
 public class SegmentDefinition {
 
     String expression;
-    ConditionNode rootConditionNode;
+    Condition rootCondition;
 
     public SegmentDefinition() {
     }
 
-    public ConditionNode getRootConditionNode() {
-        return rootConditionNode;
+    public Condition getRootCondition() {
+        return rootCondition;
     }
 
-    public void setRootConditionNode(ConditionNode rootConditionNode) {
-        this.rootConditionNode = rootConditionNode;
+    public void setRootCondition(Condition rootCondition) {
+        this.rootCondition = rootCondition;
     }
 
     public String getExpression() {

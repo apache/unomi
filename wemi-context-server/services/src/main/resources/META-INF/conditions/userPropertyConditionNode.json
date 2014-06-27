@@ -3,7 +3,6 @@
     "name" : "User property",
     "description" : "A condition on a user property",
     "tags" : [ "demographic" ],
-    "class" : "org.oasis_open.wemi.context.server.api.conditions.ConditionNode",
     "parameters" : [
         {
             "id" : "propertyName",

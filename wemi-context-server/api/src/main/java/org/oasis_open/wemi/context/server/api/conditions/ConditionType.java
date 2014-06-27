@@ -8,17 +8,17 @@ import java.util.TreeSet;
 /**
  * Represents a node in the segment definition expression tree
  */
-public class ConditionTypeNode {
+public class ConditionType {
     String id;
     String name;
     String description;
     Set<ConditionTag> conditionTags = new TreeSet<ConditionTag>();
     List<ConditionParameter> conditionParameters = new ArrayList<ConditionParameter>();
 
-    public ConditionTypeNode() {
+    public ConditionType() {
     }
 
-    public ConditionTypeNode(String id, String name) {
+    public ConditionType(String id, String name) {
         this.id = id;
         this.name = name;
     }
@@ -58,9 +58,5 @@ public class ConditionTypeNode {
     public void setConditionParameters(List<ConditionParameter> conditionParameters) {
         this.conditionParameters = conditionParameters;
     }
-
-//    public void accept(ConditionNodeVisitor visitor) {
-//        visitor.visit(this);
-//    }
 
 }

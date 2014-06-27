@@ -6,7 +6,7 @@ import org.oasis_open.wemi.context.server.api.SegmentID;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.conditions.*;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
-import org.oasis_open.wemi.context.server.impl.conditions.ConditionNodeESQueryGeneratorVisitor;
+import org.oasis_open.wemi.context.server.impl.conditions.ConditionESQueryGeneratorVisitor;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.ops4j.pax.cdi.api.OsgiService;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
@@ -19,7 +19,6 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.json.*;
 import java.io.IOException;
-import java.io.Serializable;
 import java.io.StringWriter;
 import java.net.URL;
 import java.util.*;
@@ -36,8 +35,8 @@ public class SegmentServiceImpl implements SegmentService {
     Map<SegmentID, SegmentDefinition> segmentQueries = new LinkedHashMap<SegmentID, SegmentDefinition>();
     Map<String, ConditionTag> conditionTags = new HashMap<String, ConditionTag>();
     Set<ConditionTag> rootConditionTags = new LinkedHashSet<ConditionTag>();
-    Map<String, ConditionTypeNode> conditionTypeNodesByName = new HashMap<String, ConditionTypeNode>();
-    Map<ConditionTag, Set<ConditionTypeNode>> conditionTypeNodesByTag = new HashMap<ConditionTag, Set<ConditionTypeNode>>();
+    Map<String, ConditionType> conditionTypeNodesByName = new HashMap<String, ConditionType>();
+    Map<ConditionTag, Set<ConditionType>> conditionTypeNodesByTag = new HashMap<ConditionTag, Set<ConditionType>>();
 
     @Inject
     private BundleContext bundleContext;
@@ -143,9 +142,8 @@ public class SegmentServiceImpl implements SegmentService {
                 for (int i=0; i < tagArray.size(); i++) {
                     tagIds.add(tagArray.getString(i));
                 }
-                String clazz = conditionObject.getString("class");
 
-                ConditionTypeNode conditionNode = new ConditionTypeNode(id, name);
+                ConditionType conditionNode = new ConditionType(id, name);
 
                 conditionNode.setDescription(description);
                 JsonArray parameterArray = conditionObject.getJsonArray("parameters");
@@ -165,9 +163,9 @@ public class SegmentServiceImpl implements SegmentService {
                 for (String tagId : tagIds) {
                     ConditionTag conditionTag = conditionTags.get(tagId);
                     if (conditionTag != null) {
-                        Set<ConditionTypeNode> conditionNodes = conditionTypeNodesByTag.get(conditionTag);
+                        Set<ConditionType> conditionNodes = conditionTypeNodesByTag.get(conditionTag);
                         if (conditionNodes == null) {
-                            conditionNodes = new LinkedHashSet<ConditionTypeNode>();
+                            conditionNodes = new LinkedHashSet<ConditionType>();
                         }
                         conditionNodes.add(conditionNode);
                         conditionTypeNodesByTag.put(conditionTag, conditionNodes);
@@ -207,10 +205,10 @@ public class SegmentServiceImpl implements SegmentService {
 
                 JsonObject conditionObject = segmentObject.getJsonObject("condition");
                 if (conditionObject != null) {
-                    ConditionNode node = getConditionNode(conditionObject);
-                    segment.setRootConditionNode(node);
+                    Condition node = getConditionNode(conditionObject);
+                    segment.setRootCondition(node);
 
-                    new ConditionNodeESQueryGeneratorVisitor().visit(node);
+                    new ConditionESQueryGeneratorVisitor().visit(node);
                 } else {
                     String segmentType = segmentObject.getString("type");
                     if ("es-query".equals(segmentType)) {
@@ -235,13 +233,13 @@ public class SegmentServiceImpl implements SegmentService {
         }
     }
 
-    private ConditionNode getConditionNode(JsonObject object) {
+    private Condition getConditionNode(JsonObject object) {
         String conditionType = object.getString("type");
-        ConditionTypeNode typeNode = conditionTypeNodesByName.get(conditionType);
+        ConditionType typeNode = conditionTypeNodesByName.get(conditionType);
         JsonObject parameterValues = object.getJsonObject("parameterValues");
 
-        ConditionNode node = new ConditionNode();
-        node.setConditionTypeNode(typeNode);
+        Condition node = new Condition();
+        node.setConditionType(typeNode);
         List<ConditionParameterValue> values = new ArrayList<ConditionParameterValue>();
         node.setConditionParameterValues(values);
 
@@ -313,11 +311,11 @@ public class SegmentServiceImpl implements SegmentService {
         return new HashSet<ConditionTag>(conditionTags.values());
     }
 
-    public Set<ConditionTypeNode> getConditions(ConditionTag conditionTag) {
+    public Set<ConditionType> getConditions(ConditionTag conditionTag) {
         return conditionTypeNodesByTag.get(conditionTag);
     }
 
-    public List<ConditionParameter> getConditionParameters(ConditionTypeNode condition) {
+    public List<ConditionParameter> getConditionParameters(ConditionType condition) {
         return condition.getConditionParameters();
     }
 

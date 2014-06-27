@@ -70,13 +70,13 @@ public class SegmentServiceEndPoint implements SegmentService {
 
     @GET
     @Path("/definitions/conditions/tags/{tagId}")
-    public Set<ConditionTypeNode> getConditions(@PathParam("tagId") ConditionTag conditionTag) {
+    public Set<ConditionType> getConditions(@PathParam("tagId") ConditionTag conditionTag) {
         return segmentService.getConditions(conditionTag);
     }
 
     @GET
     @Path("/definitions/conditions/{conditionId}")
-    public List<ConditionParameter> getConditionParameters(@PathParam("conditionId") ConditionTypeNode condition) {
+    public List<ConditionParameter> getConditionParameters(@PathParam("conditionId") ConditionType condition) {
         return segmentService.getConditionParameters(condition);
     }
 }
