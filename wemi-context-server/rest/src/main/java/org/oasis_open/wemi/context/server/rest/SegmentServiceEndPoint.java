@@ -33,13 +33,13 @@ public class SegmentServiceEndPoint implements SegmentService {
     }
 
     @GET
-    @Path("/segments/{segmentIDs}")
-    public Set<User> getMatchingIndividuals(List<SegmentID> segmentIDs) {
-        return segmentService.getMatchingIndividuals(segmentIDs);
+    @Path("/{segmentID}")
+    public Set<User> getMatchingIndividuals(@PathParam("segmentID") SegmentID segmentID) {
+        return segmentService.getMatchingIndividuals(segmentID);
     }
 
     @GET
-    @Path("/segments/{segmentID}/{user}")
+    @Path("/{segmentID}/{user}")
     public Boolean isUserInSegment(@PathParam("user") User user, @PathParam("segmentID") SegmentID segmentID) {
         return segmentService.isUserInSegment(user, segmentID);
     }
@@ -51,7 +51,7 @@ public class SegmentServiceEndPoint implements SegmentService {
     }
 
     @GET
-    @Path("/segments")
+    @Path("/")
     public Set<SegmentID> getSegmentIDs() {
         return segmentService.getSegmentIDs();
     }

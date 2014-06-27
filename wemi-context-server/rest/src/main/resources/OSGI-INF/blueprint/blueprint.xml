@@ -16,9 +16,12 @@
     </cm:property-placeholder>
 
     <cxf:bus id="wemiServiceBus">
+        <cxf:features>
+            <cxf:logging/>
+        </cxf:features>
     </cxf:bus>
 
-    <jaxrs:server address="/wemi" id="restSegmentService">
+    <jaxrs:server address="/wemi/segments" id="restSegmentService">
         <jaxrs:providers>
            <bean class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider"/>
         </jaxrs:providers>
@@ -28,12 +31,28 @@
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
+    <jaxrs:server address="/wemi/definitions" id="restDefinitionsService">
+        <jaxrs:providers>
+           <bean class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider"/>
+        </jaxrs:providers>
+
+        <jaxrs:serviceBeans>
+            <ref component-id="definitionsServiceEndPoint" />
+        </jaxrs:serviceBeans>
+    </jaxrs:server>
+
     <jaxws:endpoint implementor="#segmentServiceEndPoint" address="/segmentService"/>
+    <jaxws:endpoint implementor="#definitionsServiceEndPoint" address="/definitionsService"/>
 
     <reference id="segmentService" interface="org.oasis_open.wemi.context.server.api.services.SegmentService" />
+    <reference id="definitionsService" interface="org.oasis_open.wemi.context.server.api.services.DefinitionsService" />
 
     <bean id="segmentServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.SegmentServiceEndPoint">
         <property name="segmentService" ref="segmentService" />
+    </bean>
+
+    <bean id="definitionsServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.DefinitionsServiceEndPoint">
+        <property name="definitionsService" ref="definitionsService" />
     </bean>
 
 </blueprint>

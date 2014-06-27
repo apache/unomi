@@ -99,7 +99,7 @@ public class SegmentServiceImpl implements SegmentService {
         }
     }
 
-    public Set<User> getMatchingIndividuals(List<SegmentID> segmentIDs) {
+    public Set<User> getMatchingIndividuals(SegmentID segmentID) {
         return null;
     }
 

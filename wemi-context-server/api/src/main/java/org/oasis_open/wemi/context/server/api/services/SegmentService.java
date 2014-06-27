@@ -11,7 +11,7 @@ import java.util.Set;
  */
 public interface SegmentService {
 
-    Set<User> getMatchingIndividuals (List<SegmentID> segmentIDs);
+    Set<User> getMatchingIndividuals (SegmentID segmentIDs);
     Boolean isUserInSegment (User user, SegmentID segmentID);
     Set<SegmentID> getSegmentsForUser(User user);
     Set<SegmentID> getSegmentIDs();

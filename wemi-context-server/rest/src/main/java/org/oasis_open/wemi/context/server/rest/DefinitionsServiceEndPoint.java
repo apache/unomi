@@ -30,26 +30,26 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
     }
 
     @GET
-    @Path("/definitions/conditions/tags")
+    @Path("/conditions/tags")
     public Set<ConditionTag> getConditionTags() {
         return definitionsService.getConditionTags();
     }
 
     @GET
-    @Path("/definitions/conditions/tags/{tagId}")
+    @Path("/conditions/tags/{tagId}")
     public Set<ConditionType> getConditions(@PathParam("tagId") ConditionTag conditionTag) {
         return definitionsService.getConditions(conditionTag);
     }
 
     @GET
-    @Path("/definitions/conditions/{conditionId}")
+    @Path("/conditions/{conditionId}")
     public ConditionType getConditionType(@PathParam("conditionId") String conditionId) {
         return definitionsService.getConditionType(conditionId);
     }
 
     @GET
-    @Path("/definitions/conditions/{consequenceId}")
-    public ConsequenceType getConsequenceType(@PathParam("conditionId") String consequenceId) {
+    @Path("/consequences/{consequenceId}")
+    public ConsequenceType getConsequenceType(@PathParam("consequenceId") String consequenceId) {
         return definitionsService.getConsequenceType(consequenceId);
     }
 
