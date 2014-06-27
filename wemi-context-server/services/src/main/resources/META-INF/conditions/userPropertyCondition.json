@@ -1,5 +1,5 @@
 {
-    "id" : "userPropertyConditionNode",
+    "id" : "userPropertyCondition",
     "name" : "User property",
     "description" : "A condition on a user property",
     "tags" : [ "demographic" ],

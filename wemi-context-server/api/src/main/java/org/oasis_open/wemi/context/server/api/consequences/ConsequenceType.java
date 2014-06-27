@@ -1,24 +1,25 @@
-package org.oasis_open.wemi.context.server.api.conditions;
+package org.oasis_open.wemi.context.server.api.consequences;
+
+import org.oasis_open.wemi.context.server.api.conditions.Parameter;
+import org.oasis_open.wemi.context.server.api.conditions.ConditionTag;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-/**
- * Represents a node in the segment definition expression tree
- */
-public class ConditionType {
+public class ConsequenceType {
     String id;
     String name;
     String description;
+    String clazz;
     Set<ConditionTag> conditionTags = new TreeSet<ConditionTag>();
-    List<Parameter> conditionParameters = new ArrayList<Parameter>();
+    List<Parameter> consequenceParameters = new ArrayList<Parameter>();
 
-    public ConditionType() {
+    public ConsequenceType() {
     }
 
-    public ConditionType(String id, String name) {
+    public ConsequenceType(String id, String name) {
         this.id = id;
         this.name = name;
     }
@@ -43,6 +44,14 @@ public class ConditionType {
         this.description = description;
     }
 
+    public String getClazz() {
+        return clazz;
+    }
+
+    public void setClazz(String clazz) {
+        this.clazz = clazz;
+    }
+
     public Set<ConditionTag> getConditionTags() {
         return conditionTags;
     }
@@ -51,12 +60,12 @@ public class ConditionType {
         this.conditionTags = conditionTags;
     }
 
-    public List<Parameter> getConditionParameters() {
-        return conditionParameters;
+    public List<Parameter> getConsequenceParameters() {
+        return consequenceParameters;
     }
 
-    public void setConditionParameters(List<Parameter> conditionParameters) {
-        this.conditionParameters = conditionParameters;
+    public void setConsequenceParameters(List<Parameter> consequenceParameters) {
+        this.consequenceParameters = consequenceParameters;
     }
 
 }

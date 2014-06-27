@@ -1,8 +1,11 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.oasis_open.wemi.context.server.api.Event;
+import org.oasis_open.wemi.context.server.api.conditions.Condition;
+import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.EventListenerService;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
+import org.oasis_open.wemi.context.server.api.services.RulesService;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.ops4j.pax.cdi.api.OsgiService;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
@@ -32,6 +35,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService  {
     @OsgiService
     private PersistenceService persistenceService;
 
+    @Inject
+    private DefinitionsService definitionsService;
+
     Map<String, Rule> rules = new LinkedHashMap<String, Rule>();
 
     @PostConstruct
@@ -57,7 +63,27 @@ public class RulesServiceImpl implements RulesService, EventListenerService  {
                 JsonWriter jsonWriter = Json.createWriter(queryStringWriter);
                 jsonWriter.writeObject(queryObject);
                 jsonWriter.close();
-                Rule rule = new Rule(ruleObject);
+                Rule rule = new Rule();
+
+                Condition condition = ParserHelper.parseCondition(definitionsService, ruleObject.getJsonObject("condition"));
+                rule.setRootCondition(condition);
+
+                JsonArray array = ruleObject.getJsonArray("consequences");
+                Set<Consequence> consequences = new HashSet<Consequence>();
+                for (JsonValue value : array) {
+                    try {
+                        Consequence consequence = ParserHelper.parseConsequence(definitionsService, (JsonObject) value);
+                        consequences.add(consequence);
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                    } catch (InstantiationException e) {
+                        e.printStackTrace();
+                    }
+                }
+                rule.setConsequences(consequences);
+
                 rules.put(ruleID, rule);
 
                 persistenceService.saveQuery(ruleID, queryStringWriter.toString());

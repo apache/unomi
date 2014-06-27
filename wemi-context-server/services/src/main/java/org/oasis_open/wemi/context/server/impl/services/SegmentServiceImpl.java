@@ -1,10 +1,10 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
-import org.apache.cxf.helpers.IOUtils;
 import org.oasis_open.wemi.context.server.api.SegmentDefinition;
 import org.oasis_open.wemi.context.server.api.SegmentID;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.conditions.*;
+import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 import org.oasis_open.wemi.context.server.impl.conditions.ConditionESQueryGeneratorVisitor;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
@@ -33,10 +33,6 @@ public class SegmentServiceImpl implements SegmentService {
     private static final Logger logger = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
 
     Map<SegmentID, SegmentDefinition> segmentQueries = new LinkedHashMap<SegmentID, SegmentDefinition>();
-    Map<String, ConditionTag> conditionTags = new HashMap<String, ConditionTag>();
-    Set<ConditionTag> rootConditionTags = new LinkedHashSet<ConditionTag>();
-    Map<String, ConditionType> conditionTypeNodesByName = new HashMap<String, ConditionType>();
-    Map<ConditionTag, Set<ConditionType>> conditionTypeNodesByTag = new HashMap<ConditionTag, Set<ConditionType>>();
 
     @Inject
     private BundleContext bundleContext;
@@ -45,6 +41,9 @@ public class SegmentServiceImpl implements SegmentService {
     @OsgiService
     private PersistenceService persistenceService;
 
+    @Inject
+    private DefinitionsService definitionsService;
+
     public SegmentServiceImpl() {
         logger.info("Initializing segment service...");
     }
@@ -52,138 +51,7 @@ public class SegmentServiceImpl implements SegmentService {
     @PostConstruct
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
-
-        loadPredefinedMappings();
-
-        loadPredefinedTags();
-
-        loadPredefinedConditionNodes();
-
         loadPredefinedSegments();
-    }
-
-    private void loadPredefinedMappings() {
-        Enumeration<URL> predefinedMappings = bundleContext.getBundle().findEntries("META-INF/mappings", "*.json", true);
-        while (predefinedMappings.hasMoreElements()) {
-            URL predefinedMappingURL = predefinedMappings.nextElement();
-            logger.debug("Found mapping at " + predefinedMappingURL + ", loading... ");
-             try {
-                 final String path = predefinedMappingURL.getPath();
-                 String name = path.substring(path.lastIndexOf('/')+1, path.lastIndexOf('.'));
-                 String content = IOUtils.readStringFromStream(predefinedMappingURL.openStream());
-                persistenceService.createMapping(name, content);
-            } catch (IOException e) {
-                logger.error("Error while loading segment definition " + predefinedMappingURL, e);
-            }
-        }
-    }
-
-    private void loadPredefinedTags() {
-        Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/tags", "*.json", true);
-        while (predefinedSegmentEntries.hasMoreElements()) {
-            URL predefinedSegmentURL = predefinedSegmentEntries.nextElement();
-            logger.debug("Found predefined tags at " + predefinedSegmentURL + ", loading... ");
-
-            JsonReader reader = null;
-            try {
-                reader = Json.createReader(predefinedSegmentURL.openStream());
-                JsonStructure jsonst = reader.read();
-
-                // dumpJSON(jsonst, null, "");
-                JsonObject tagObject = (JsonObject) jsonst;
-                ConditionTag conditionTag = new ConditionTag(tagObject.getString("id"),
-                    tagObject.getString("name"),
-                    tagObject.getString("description"),
-                    tagObject.getString("parent"));
-
-                conditionTags.put(conditionTag.getId(), conditionTag);
-            } catch (IOException e) {
-                logger.error("Error while loading tag definition " + predefinedSegmentURL, e);
-            } finally {
-                if (reader != null) {
-                    reader.close();
-                }
-            }
-
-        }
-
-        // now let's resolve all the children.
-        for (ConditionTag conditionTag : conditionTags.values()) {
-            if (conditionTag.getParentId() != null && conditionTag.getParentId().length() > 0) {
-                ConditionTag parentTag = conditionTags.get(conditionTag.getParentId());
-                if (parentTag != null) {
-                    parentTag.getSubTags().add(conditionTag);
-                }
-            } else {
-                rootConditionTags.add(conditionTag);
-            }
-        }
-    }
-
-    private void loadPredefinedConditionNodes() {
-        Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/conditions", "*.json", true);
-        while (predefinedSegmentEntries.hasMoreElements()) {
-            URL predefinedConditionNodeURL = predefinedSegmentEntries.nextElement();
-            logger.debug("Found predefined conditions at " + predefinedConditionNodeURL + ", loading... ");
-
-            JsonReader reader = null;
-            try {
-                reader = Json.createReader(predefinedConditionNodeURL.openStream());
-                JsonStructure jsonst = reader.read();
-
-                // dumpJSON(jsonst, null, "");
-                JsonObject conditionObject = (JsonObject) jsonst;
-
-                String id = conditionObject.getString("id");
-                String name = conditionObject.getString("name");
-                String description = conditionObject.getString("description");
-                JsonArray tagArray = conditionObject.getJsonArray("tags");
-                Set<String> tagIds = new LinkedHashSet<String>();
-                for (int i=0; i < tagArray.size(); i++) {
-                    tagIds.add(tagArray.getString(i));
-                }
-
-                ConditionType conditionNode = new ConditionType(id, name);
-
-                conditionNode.setDescription(description);
-                JsonArray parameterArray = conditionObject.getJsonArray("parameters");
-                for (int i=0; i < parameterArray.size(); i++) {
-                    JsonObject parameterObject = parameterArray.getJsonObject(i);
-                    String paramId = parameterObject.getString("id");
-                    String paramName = parameterObject.getString("name");
-                    String paramDescription = parameterObject.getString("description");
-                    String paramType = parameterObject.getString("type");
-                    boolean multivalued = parameterObject.getBoolean("multivalued");
-                    String paramChoiceListInitializerClass = parameterObject.getString("choicelistInitializerClass");
-                    ConditionParameter conditionParameter = new ConditionParameter(paramId, paramName, paramDescription, paramType, multivalued, paramChoiceListInitializerClass);
-                    conditionNode.getConditionParameters().add(conditionParameter);
-                }
-
-                conditionTypeNodesByName.put(conditionNode.getId(), conditionNode);
-                for (String tagId : tagIds) {
-                    ConditionTag conditionTag = conditionTags.get(tagId);
-                    if (conditionTag != null) {
-                        Set<ConditionType> conditionNodes = conditionTypeNodesByTag.get(conditionTag);
-                        if (conditionNodes == null) {
-                            conditionNodes = new LinkedHashSet<ConditionType>();
-                        }
-                        conditionNodes.add(conditionNode);
-                        conditionTypeNodesByTag.put(conditionTag, conditionNodes);
-                    } else {
-                        // we found a tag that is not defined, we will define it automatically
-                        logger.warn("Unknown tag " + tagId + " used in condition definition " + predefinedConditionNodeURL);
-                    }
-                }
-            } catch (IOException e) {
-                logger.error("Error while loading condition definition " + predefinedConditionNodeURL, e);
-            } finally {
-                if (reader != null) {
-                    reader.close();
-                }
-            }
-
-        }
-
     }
 
     private void loadPredefinedSegments() {
@@ -205,7 +73,7 @@ public class SegmentServiceImpl implements SegmentService {
 
                 JsonObject conditionObject = segmentObject.getJsonObject("condition");
                 if (conditionObject != null) {
-                    Condition node = getConditionNode(conditionObject);
+                    Condition node = ParserHelper.parseCondition(definitionsService, conditionObject);
                     segment.setRootCondition(node);
 
                     new ConditionESQueryGeneratorVisitor().visit(node);
@@ -231,43 +99,6 @@ public class SegmentServiceImpl implements SegmentService {
             }
 
         }
-    }
-
-    private Condition getConditionNode(JsonObject object) {
-        String conditionType = object.getString("type");
-        ConditionType typeNode = conditionTypeNodesByName.get(conditionType);
-        JsonObject parameterValues = object.getJsonObject("parameterValues");
-
-        Condition node = new Condition();
-        node.setConditionType(typeNode);
-        List<ConditionParameterValue> values = new ArrayList<ConditionParameterValue>();
-        node.setConditionParameterValues(values);
-
-        for (ConditionParameter parameter : typeNode.getConditionParameters()) {
-            final ArrayList<Object> objects = new ArrayList<Object>();
-            values.add(new ConditionParameterValue(parameter.getName(), objects));
-
-            if (parameter.isMultivalued()) {
-                JsonArray array = parameterValues.getJsonArray(parameter.getId());
-                for (JsonValue value : array) {
-                    objects.add(getParameterValue(parameter, value));
-                }
-            } else {
-                objects.add(getParameterValue(parameter, parameterValues.get(parameter.getId())));
-            }
-        }
-        return node;
-    }
-
-    private Object getParameterValue(ConditionParameter parameter, JsonValue value) {
-        if (parameter.getType().equals("ConditionNode")) {
-            return getConditionNode((JsonObject) value);
-        } else if (parameter.getType().equals("comparisonOperator")) {
-            return ((JsonString)value).getString();
-        } else if (parameter.getType().equals("string")) {
-            return ((JsonString)value).getString();
-        }
-        return null;
     }
 
     public Set<User> getMatchingIndividuals(List<SegmentID> segmentIDs) {
@@ -305,18 +136,6 @@ public class SegmentServiceImpl implements SegmentService {
 
     public SegmentDefinition getSegmentDefinition(SegmentID segmentID) {
         return segmentQueries.get(segmentID);
-    }
-
-    public Set<ConditionTag> getConditionTags() {
-        return new HashSet<ConditionTag>(conditionTags.values());
-    }
-
-    public Set<ConditionType> getConditions(ConditionTag conditionTag) {
-        return conditionTypeNodesByTag.get(conditionTag);
-    }
-
-    public List<ConditionParameter> getConditionParameters(ConditionType condition) {
-        return condition.getConditionParameters();
     }
 
     public static void dumpJSON(JsonValue tree, String key, String depthPrefix) {

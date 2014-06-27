@@ -1,5 +1,5 @@
 {
-    "id" : "andConditionNode",
+    "id" : "andCondition",
     "name" : "AND",
     "description" : "Logical AND operator",
     "tags" : [ "logical" ],

@@ -62,21 +62,4 @@ public class SegmentServiceEndPoint implements SegmentService {
         return segmentService.getSegmentDefinition(segmentID);
     }
 
-    @GET
-    @Path("/definitions/conditions/tags")
-    public Set<ConditionTag> getConditionTags() {
-        return segmentService.getConditionTags();
-    }
-
-    @GET
-    @Path("/definitions/conditions/tags/{tagId}")
-    public Set<ConditionType> getConditions(@PathParam("tagId") ConditionTag conditionTag) {
-        return segmentService.getConditions(conditionTag);
-    }
-
-    @GET
-    @Path("/definitions/conditions/{conditionId}")
-    public List<ConditionParameter> getConditionParameters(@PathParam("conditionId") ConditionType condition) {
-        return segmentService.getConditionParameters(condition);
-    }
 }

@@ -1,4 +1,4 @@
-package org.oasis_open.wemi.context.server.impl.services;
+package org.oasis_open.wemi.context.server.api.services;
 
 /**
  * Created by toto on 26/06/14.

@@ -8,7 +8,7 @@ import java.util.List;
  */
 public class Condition {
     ConditionType conditionType;
-    List<ConditionParameterValue> conditionParameterValues = new ArrayList<ConditionParameterValue>();
+    List<ParameterValue> conditionParameterValues = new ArrayList<ParameterValue>();
 
     public Condition() {
     }
@@ -21,11 +21,11 @@ public class Condition {
         this.conditionType = conditionType;
     }
 
-    public List<ConditionParameterValue> getConditionParameterValues() {
+    public List<ParameterValue> getConditionParameterValues() {
         return conditionParameterValues;
     }
 
-    public void setConditionParameterValues(List<ConditionParameterValue> conditionParameterValues) {
+    public void setConditionParameterValues(List<ParameterValue> conditionParameterValues) {
         this.conditionParameterValues = conditionParameterValues;
     }
 

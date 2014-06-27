@@ -1,0 +1,17 @@
+{
+    "id" : "pageViewEventCondition",
+    "name" : "Hover event",
+    "description" : "A content has been hovered",
+    "tags" : [ "event" ],
+    "class" : "org.oasis_open.wemi.context.server.api.conditions.ConditionNode",
+    "parameters" : [
+        {
+            "id" : "url",
+            "name" : "Page URL",
+            "description" : "Page URL",
+            "type" : "string",
+            "multivalued" : false,
+            "choicelistInitializerClass": ""
+        }
+    ]
+}

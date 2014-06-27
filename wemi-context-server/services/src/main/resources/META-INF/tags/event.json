@@ -1,0 +1,6 @@
+{
+    "id" : "event",
+    "name" : "Conditions on events",
+    "description" : "Conditions on events",
+    "parent" : "root"
+}

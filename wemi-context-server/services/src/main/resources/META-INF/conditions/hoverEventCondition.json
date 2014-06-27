@@ -1,0 +1,17 @@
+{
+    "id" : "hoverEventCondition",
+    "name" : "Hover event",
+    "description" : "A content has been hovered",
+    "tags" : [ "event" ],
+    "class" : "org.oasis_open.wemi.context.server.api.conditions.ConditionNode",
+    "parameters" : [
+        {
+            "id" : "contentName",
+            "name" : "Content name",
+            "description" : "The name of the content",
+            "type" : "string",
+            "multivalued" : false,
+            "choicelistInitializerClass": ""
+        }
+    ]
+}

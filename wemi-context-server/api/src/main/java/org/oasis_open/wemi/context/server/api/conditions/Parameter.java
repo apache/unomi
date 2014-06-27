@@ -4,7 +4,7 @@ package org.oasis_open.wemi.context.server.api.conditions;
  * Represents a condition parameter, that will be used in the segment building UI to either select parameters from a
  * choicelist or to enter a specific value.
  */
-public class ConditionParameter {
+public class Parameter {
 
     String id;
     String name;
@@ -13,10 +13,10 @@ public class ConditionParameter {
     boolean multivalued = false;
     String choiceListInitializerClass;
 
-    public ConditionParameter() {
+    public Parameter() {
     }
 
-    public ConditionParameter(String id, String name, String description, String type, boolean multivalued, String choiceListInitializerClass) {
+    public Parameter(String id, String name, String description, String type, boolean multivalued, String choiceListInitializerClass) {
         this.id = id;
         this.name = name;
         this.description = description;

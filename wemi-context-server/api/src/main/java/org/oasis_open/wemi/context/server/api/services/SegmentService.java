@@ -16,8 +16,5 @@ public interface SegmentService {
     Set<SegmentID> getSegmentsForUser(User user);
     Set<SegmentID> getSegmentIDs();
     SegmentDefinition getSegmentDefinition (SegmentID segmentID);
-    Set<ConditionTag> getConditionTags ();
-    Set<ConditionType> getConditions(ConditionTag conditionTag);
-    List<ConditionParameter> getConditionParameters(ConditionType condition);
 
 }

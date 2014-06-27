@@ -1,37 +1,21 @@
 package org.oasis_open.wemi.context.server.impl.consequences;
 
 import org.oasis_open.wemi.context.server.api.User;
+import org.oasis_open.wemi.context.server.api.conditions.ParameterValue;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
 
 /**
  * Created by toto on 26/06/14.
  */
-public class SetPropertyConsequence implements Consequence {
-    private String propertyName;
-    private String propertyValue;
-
+public class SetPropertyConsequence extends Consequence {
     public SetPropertyConsequence() {
-    }
-
-    public String getPropertyName() {
-        return propertyName;
-    }
-
-    public void setPropertyName(String propertyName) {
-        this.propertyName = propertyName;
-    }
-
-    public String getPropertyValue() {
-        return propertyValue;
-    }
-
-    public void setPropertyValue(String propertyValue) {
-        this.propertyValue = propertyValue;
     }
 
     @Override
     public boolean apply(User user) {
-        user.setProperty(propertyName, propertyValue);
+        user.setProperty(
+                (String) this.consequencesParameterValues.get("propertyName").getParameterValue(),
+                (String) this.consequencesParameterValues.get("propertyValue").getParameterValue());
         return true;
     }
 }
