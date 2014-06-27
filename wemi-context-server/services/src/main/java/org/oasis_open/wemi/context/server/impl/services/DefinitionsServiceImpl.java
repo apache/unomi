@@ -139,28 +139,11 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                     tagIds.add(tagArray.getString(i));
                 }
 
-                ConditionType conditionNode = new ConditionType(id, name);
+                ConditionType condition = new ConditionType(id, name);
+                condition.setDescription(description);
+                condition.setConditionParameters(ParserHelper.parseParameters(conditionObject));
 
-                conditionNode.setDescription(description);
-                JsonArray parameterArray = conditionObject.getJsonArray("parameters");
-                for (int i = 0; i < parameterArray.size(); i++) {
-                    JsonObject parameterObject = parameterArray.getJsonObject(i);
-                    String paramId = parameterObject.getString("id");
-                    String paramName = parameterObject.getString("name");
-                    String paramDescription = parameterObject.getString("description");
-                    String paramType = parameterObject.getString("type");
-                    boolean multivalued = parameterObject.getBoolean("multivalued");
-                    String paramChoiceListInitializerClass = null;
-                    try {
-                        paramChoiceListInitializerClass = parameterObject.getString("choicelistInitializerClass");
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    Parameter conditionParameter = new Parameter(paramId, paramName, paramDescription, paramType, multivalued, paramChoiceListInitializerClass);
-                    conditionNode.getConditionParameters().add(conditionParameter);
-                }
-
-                conditionTypeByName.put(conditionNode.getId(), conditionNode);
+                conditionTypeByName.put(condition.getId(), condition);
                 for (String tagId : tagIds) {
                     ConditionTag conditionTag = conditionTags.get(tagId);
                     if (conditionTag != null) {
@@ -168,7 +151,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                         if (conditionNodes == null) {
                             conditionNodes = new LinkedHashSet<ConditionType>();
                         }
-                        conditionNodes.add(conditionNode);
+                        conditionNodes.add(condition);
                         conditionTypeByTag.put(conditionTag, conditionNodes);
                     } else {
                         // we found a tag that is not defined, we will define it automatically
@@ -214,20 +197,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                 ConsequenceType consequence = new ConsequenceType(id, name);
 
                 consequence.setDescription(description);
-                consequence.setClazz(clazz);
-
-                JsonArray parameterArray = conditionObject.getJsonArray("parameters");
-                for (int i = 0; i < parameterArray.size(); i++) {
-                    JsonObject parameterObject = parameterArray.getJsonObject(i);
-                    String paramId = parameterObject.getString("id");
-                    String paramName = parameterObject.getString("name");
-                    String paramDescription = parameterObject.getString("description");
-                    String paramType = parameterObject.getString("type");
-                    boolean multivalued = parameterObject.getBoolean("multivalued");
-                    String paramChoiceListInitializerClass = parameterObject.getString("choicelistInitializerClass");
-                    Parameter conditionParameter = new Parameter(paramId, paramName, paramDescription, paramType, multivalued, paramChoiceListInitializerClass);
-                    consequence.getConsequenceParameters().add(conditionParameter);
-                }
+                consequence.setConsequenceParameters(ParserHelper.parseParameters(conditionObject));
 
                 consequencesTypeByName.put(consequence.getId(), consequence);
             } catch (Exception e) {
