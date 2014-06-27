@@ -88,7 +88,7 @@ public class SegmentServiceImpl implements SegmentService {
                     }
                 }
                 segmentQueries.put(segmentID, segment);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
             } finally {
                 if (reader != null) {

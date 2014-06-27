@@ -1,13 +1,14 @@
 {
     "id": "goal1Reached",
-    "name" : "Goal 1 Reached",
-    "description" : "This segment includes all users that have reached goal 1",
-    "type" : "es-query",
-    "definition" : {
-        "query": {
-            "match" : {
-                "goal1" : "reached"
-            }
+    "name": "Goal 1 Reached",
+    "description": "This segment includes all users that have reached goal 1",
+    "condition" : {
+        "type": "userPropertyCondition",
+        "parameterValues": {
+            "comparisonOperator": "equals",
+            "propertyName": "goal1",
+            "propertyValue": "reached"
         }
     }
+
 }

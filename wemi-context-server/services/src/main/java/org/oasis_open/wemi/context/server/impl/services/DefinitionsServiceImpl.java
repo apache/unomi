@@ -1,8 +1,9 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.apache.cxf.helpers.IOUtils;
-import org.oasis_open.wemi.context.server.api.conditions.*;
-import org.oasis_open.wemi.context.server.api.consequences.Consequence;
+import org.oasis_open.wemi.context.server.api.conditions.ConditionTag;
+import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
+import org.oasis_open.wemi.context.server.api.conditions.Parameter;
 import org.oasis_open.wemi.context.server.api.consequences.ConsequenceType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
@@ -17,7 +18,6 @@ import javax.enterprise.inject.Default;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.json.*;
-import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 
@@ -68,7 +68,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                 String name = path.substring(path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
                 String content = IOUtils.readStringFromStream(predefinedMappingURL.openStream());
                 persistenceService.createMapping(name, content);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("Error while loading segment definition " + predefinedMappingURL, e);
             }
         }
@@ -93,7 +93,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                         tagObject.getString("parent"));
 
                 conditionTags.put(conditionTag.getId(), conditionTag);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("Error while loading tag definition " + predefinedSegmentURL, e);
             } finally {
                 if (reader != null) {
@@ -175,7 +175,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                         logger.warn("Unknown tag " + tagId + " used in condition definition " + predefinedConditionURL);
                     }
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("Error while loading condition definition " + predefinedConditionURL, e);
             } finally {
                 if (reader != null) {
@@ -230,7 +230,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                 }
 
                 consequencesTypeByName.put(consequence.getId(), consequence);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("Error while loading condition definition " + predefinedConditionURL, e);
             } finally {
                 if (reader != null) {

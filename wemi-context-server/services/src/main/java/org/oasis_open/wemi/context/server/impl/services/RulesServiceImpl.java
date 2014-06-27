@@ -87,7 +87,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService  {
                 rules.put(ruleID, rule);
 
                 persistenceService.saveQuery(ruleID, queryStringWriter.toString());
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
             } finally {
                 if (reader != null) {

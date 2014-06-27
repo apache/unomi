@@ -9,7 +9,7 @@
                 {
                     "type": "userPropertyCondition",
                     "parameterValues": {
-                        "comparisonOperator": "lesserThan",
+                        "comparisonOperator": "lessThan",
                         "propertyName": "age",
                         "propertyValue": "25"
                     }
