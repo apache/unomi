@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
+import javax.enterprise.inject.Default;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.json.*;
@@ -21,6 +22,7 @@ import java.net.URL;
 import java.util.*;
 
 @Singleton
+@Default
 @OsgiServiceProvider
 public class DefinitionsServiceImpl implements DefinitionsService {
 
@@ -31,6 +33,10 @@ public class DefinitionsServiceImpl implements DefinitionsService {
     Map<String, ConditionType> conditionTypeByName = new HashMap<String, ConditionType>();
     Map<String, ConsequenceType> consequencesTypeByName = new HashMap<String, ConsequenceType>();
     Map<ConditionTag, Set<ConditionType>> conditionTypeByTag = new HashMap<ConditionTag, Set<ConditionType>>();
+
+    public DefinitionsServiceImpl() {
+        System.out.println("Instantiating definitions service...");
+    }
 
     @Inject
     private BundleContext bundleContext;

@@ -114,12 +114,10 @@ public class RulesServiceImpl implements RulesService, EventListenerService  {
      }
 
 
-    @Override
     public boolean canHandle(Event event) {
         return true;
     }
 
-    @Override
     public boolean onEvent(Event event) {
         boolean changed = false;
         Set<Rule> rules = getMatchingRules(event);
