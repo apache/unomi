@@ -7,7 +7,7 @@
         "parameterValues": {
             "subConditionNodes": [
                 {
-                    "type": "userPropertyConditio",
+                    "type": "userPropertyCondition",
                     "parameterValues": {
                         "comparisonOperator": "lesserThan",
                         "propertyName": "age",
