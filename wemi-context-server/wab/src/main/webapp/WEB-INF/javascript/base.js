@@ -168,15 +168,6 @@ if (!wemi.readCookie("wemi-profileID")) {
     wemi.createCookie("wemi-profileID", window.digitalData.user[0].profiles[0].profileInfo.profileId);
 }
 
-// send the page view event to the WEMI context server
-console.log("wemi: wemiContextServerURL=" + window.digitalData.wemiContextServerURL);
-wemi.collectEvent(window.digitalData.wemiContextServerURL + "/eventcollector",
-    "view",
-    "url="+ document.location+
-    "&referrer=" + document.referrer, function (xhr) {
-        console.log("wemi: Page view event successfully submitted.");
-    });
-
 console.log("wemi: wemi-profileID=" + wemi.readCookie("wemi-profileID"));
 
 console.log("wemi: WEMI context script successfully initialized");
