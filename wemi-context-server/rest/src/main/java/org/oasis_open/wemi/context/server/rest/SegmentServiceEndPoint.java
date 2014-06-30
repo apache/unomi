@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.rest;
 
+import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.wemi.context.server.api.*;
 import org.oasis_open.wemi.context.server.api.conditions.*;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
@@ -19,6 +20,10 @@ import java.util.Set;
  */
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
+@CrossOriginResourceSharing(
+        allowAllOrigins = true,
+        allowCredentials = true
+)
 public class SegmentServiceEndPoint implements SegmentService {
 
     SegmentService segmentService;

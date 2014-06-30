@@ -21,9 +21,12 @@
         </cxf:features>
     </cxf:bus>
 
+    <bean id="cors-filter" class="org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter"/>
+
     <jaxrs:server address="/wemi/segments" id="restSegmentService">
         <jaxrs:providers>
            <bean class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider"/>
+            <ref component-id="cors-filter"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -34,6 +37,7 @@
     <jaxrs:server address="/wemi/definitions" id="restDefinitionsService">
         <jaxrs:providers>
            <bean class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider"/>
+            <ref component-id="cors-filter" />
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
