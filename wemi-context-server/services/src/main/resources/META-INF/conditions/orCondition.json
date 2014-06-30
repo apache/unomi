@@ -1,0 +1,16 @@
+{
+    "id" : "orCondition",
+    "name" : "OR",
+    "description" : "Logical OR operator",
+    "tags" : [ "logical" ],
+    "parameters" : [
+        {
+            "id" : "subConditions",
+            "name" : "Sub conditions",
+            "description" : "Sub conditions that will be evaluated using the OR operator",
+            "type" : "Condition",
+            "multivalued" : true,
+            "choicelistInitializerClass" : "org.oasis_open.wemi.context.server.conditions.initializers.ConditionChoiceListInitializer"
+        }
+    ]
+}
