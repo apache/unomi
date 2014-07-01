@@ -1,5 +1,7 @@
 package org.oasis_open.wemi.context.server.api;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -12,7 +14,7 @@ public class Event extends Item {
     public static final String EVENT_ITEM_TYPE = "event";
     private String eventType;
     private String visitorID = null;
-    private long timeStamp;
+    private Date timeStamp;
 
     private transient User user;
 
@@ -22,14 +24,10 @@ public class Event extends Item {
 
     public Event() {
         this.type = EVENT_ITEM_TYPE;
-        this.timeStamp = System.currentTimeMillis();
+        this.timeStamp = new Date();
     }
 
-    public Event(String itemId, String type, Properties properties) {
-        super(itemId, type, properties);
-    }
-
-    public Event(String itemId, String eventType, String visitorID, long timeStamp) {
+    public Event(String itemId, String eventType, String visitorID, Date timeStamp) {
         super(itemId, EVENT_ITEM_TYPE, null, new Properties());
         this.eventType = eventType;
         setProperty("eventType", eventType);
@@ -37,12 +35,14 @@ public class Event extends Item {
         if (visitorID != null) {
             setProperty("visitorID", visitorID);
         }
-        if (timeStamp != -1) {
+        if (timeStamp != null) {
             this.timeStamp = timeStamp;
         } else {
-            this.timeStamp = System.currentTimeMillis();
+            this.timeStamp = new Date();
         }
-        setProperty("eventTimeStamp", Long.toString(this.timeStamp));
+
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        setProperty("eventTimeStamp", format.format(this.timeStamp));
     }
 
     public void setVisitorID(String visitorID) {
@@ -60,7 +60,7 @@ public class Event extends Item {
         return eventType;
     }
 
-    public long getTimeStamp() {
+    public Date getTimeStamp() {
         return timeStamp;
     }
 

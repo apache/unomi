@@ -18,10 +18,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Enumeration;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Created by loom on 10.06.14.
@@ -64,7 +61,7 @@ public class EventCollectorServlet extends HttpServlet {
     }
 
     private void doEvent(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        long eventTimeStamp = System.currentTimeMillis();
+        Date eventTimeStamp = new Date();
         HttpUtils.dumpBasicRequestInfo(req);
 
         String visitorID = null;

@@ -164,9 +164,7 @@ if (window.digitalData.loadCallbacks && window.digitalData.loadCallbacks.length 
 }
 
 // set the cookie on the current page since it is not set by the server serving the page content
-if (!wemi.readCookie("wemi-profileID")) {
-    wemi.createCookie("wemi-profileID", window.digitalData.user[0].profiles[0].profileInfo.profileId);
-}
+wemi.createCookie("wemi-profileID", window.digitalData.user[0].profiles[0].profileInfo.profileId);
 
 console.log("wemi: wemi-profileID=" + wemi.readCookie("wemi-profileID"));
 
