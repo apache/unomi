@@ -1,5 +1,7 @@
 package org.oasis_open.wemi.context.server.api.conditions;
 
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -8,6 +10,7 @@ import java.util.TreeSet;
 /**
  * Represents a node in the segment definition expression tree
  */
+@XmlRootElement
 public class ConditionType {
     String id;
     String name;
@@ -51,6 +54,7 @@ public class ConditionType {
         this.tags = tags;
     }
 
+    @XmlElement(name="parameters")
     public List<Parameter> getConditionParameters() {
         return conditionParameters;
     }

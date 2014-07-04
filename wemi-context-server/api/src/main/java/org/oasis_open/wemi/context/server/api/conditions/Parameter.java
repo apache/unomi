@@ -1,9 +1,12 @@
 package org.oasis_open.wemi.context.server.api.conditions;
 
+import javax.xml.bind.annotation.XmlRootElement;
+
 /**
  * Represents a condition parameter, that will be used in the segment building UI to either select parameters from a
  * choicelist or to enter a specific value.
  */
+@XmlRootElement
 public class Parameter {
 
     String id;

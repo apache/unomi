@@ -18,7 +18,7 @@ class AndConditionESQueryBuilder extends AbstractESQueryBuilder {
 
     @Override
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
-        List<Object> conditions = condition.getConditionParameterValues().get("subConditions").getParameterValues();
+        List<Object> conditions = condition.getParameterValues().get("subConditions").getParameterValues();
 
         List<FilterBuilder> l = new ArrayList<FilterBuilder>();
         for (Object sub : conditions) {

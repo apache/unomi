@@ -1,5 +1,7 @@
 package org.oasis_open.wemi.context.server.api.conditions;
 
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.util.HashMap;
@@ -13,7 +15,7 @@ public class Condition {
 
     ConditionType conditionType;
     String conditionTypeId;
-    Map<String, ParameterValue> conditionParameterValues = new HashMap<String, ParameterValue>();
+    Map<String, ParameterValue> parameterValues = new HashMap<String, ParameterValue>();
 
     public Condition() {
     }
@@ -28,6 +30,7 @@ public class Condition {
         this.conditionTypeId = conditionType.id;
     }
 
+    @XmlElement(name="type")
     public String getConditionTypeId() {
         return conditionTypeId;
     }
@@ -36,12 +39,12 @@ public class Condition {
         this.conditionTypeId = conditionTypeId;
     }
 
-    public Map<String, ParameterValue> getConditionParameterValues() {
-        return conditionParameterValues;
+    public Map<String, ParameterValue> getParameterValues() {
+        return parameterValues;
     }
 
-    public void setConditionParameterValues(Map<String, ParameterValue> conditionParameterValues) {
-        this.conditionParameterValues = conditionParameterValues;
+    public void setParameterValues(Map<String, ParameterValue> parameterValues) {
+        this.parameterValues = parameterValues;
     }
 
 }

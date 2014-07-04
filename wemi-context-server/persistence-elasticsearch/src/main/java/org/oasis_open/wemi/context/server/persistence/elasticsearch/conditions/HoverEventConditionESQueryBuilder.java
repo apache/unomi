@@ -19,6 +19,6 @@ class HoverEventConditionESQueryBuilder extends AbstractESQueryBuilder {
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
         return FilterBuilders.andFilter(
                 FilterBuilders.termFilter("eventType", "hover"),
-                FilterBuilders.termFilter("hoverContentName", ((String) condition.getConditionParameterValues().get("contentName").getParameterValue()).toLowerCase()));
+                FilterBuilders.termFilter("hoverContentName", ((String) condition.getParameterValues().get("contentName").getParameterValue()).toLowerCase()));
     }
 }

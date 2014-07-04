@@ -25,7 +25,7 @@ public class ParserHelper {
         Condition node = new Condition();
         node.setConditionType(typeNode);
         Map<String, ParameterValue> values = new HashMap<String, ParameterValue>();
-        node.setConditionParameterValues(values);
+        node.setParameterValues(values);
 
         for (Parameter parameter : typeNode.getConditionParameters()) {
             final ArrayList<Object> objects = new ArrayList<Object>();
