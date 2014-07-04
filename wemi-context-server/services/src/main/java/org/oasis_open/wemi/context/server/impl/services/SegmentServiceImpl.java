@@ -68,7 +68,7 @@ public class SegmentServiceImpl implements SegmentService {
                 JsonObject segmentObject = (JsonObject) jsonst;
                 SegmentID segmentID = new SegmentID(segmentObject.getString("id"), segmentObject.getString("name"), segmentObject.getString("description"));
 
-                SegmentDefinition segment = new SegmentDefinition();
+                SegmentDefinition segment = new SegmentDefinition(segmentID);
 
                 Condition condition = ParserHelper.parseCondition(definitionsService, segmentObject.getJsonObject("condition"));
                 segment.setRootCondition(condition);

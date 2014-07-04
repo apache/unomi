@@ -10,7 +10,6 @@ public class SegmentID implements Comparable<SegmentID> {
     private String description;
 
     public SegmentID() {
-
     }
 
     public SegmentID(String id) {
