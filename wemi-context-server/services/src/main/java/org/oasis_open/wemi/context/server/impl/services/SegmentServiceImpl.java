@@ -123,6 +123,11 @@ public class SegmentServiceImpl implements SegmentService {
         return segmentQueries.get(segmentID);
     }
 
+    public void setSegmentDefinition(SegmentID segmentID, SegmentDefinition segmentDefinition) {
+        persistenceService.saveQuery(segmentID.getId(), segmentDefinition.getRootCondition());
+        segmentQueries.put(segmentID, segmentDefinition);
+    }
+
     public static void dumpJSON(JsonValue tree, String key, String depthPrefix) {
         if (key != null)
             logger.info(depthPrefix + "Key " + key + ": ");

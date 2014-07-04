@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.rest;
 
+import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.wemi.context.server.api.conditions.Tag;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 import org.oasis_open.wemi.context.server.api.consequences.ConsequenceType;
@@ -16,6 +17,10 @@ import java.util.Set;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
+@CrossOriginResourceSharing(
+        allowAllOrigins = true,
+        allowCredentials = true
+)
 public class DefinitionsServiceEndPoint implements DefinitionsService {
 
     DefinitionsService definitionsService;

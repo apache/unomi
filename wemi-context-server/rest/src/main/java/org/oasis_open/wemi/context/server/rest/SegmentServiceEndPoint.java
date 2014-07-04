@@ -7,10 +7,7 @@ import org.oasis_open.wemi.context.server.api.services.SegmentService;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.List;
 import java.util.Set;
@@ -65,6 +62,12 @@ public class SegmentServiceEndPoint implements SegmentService {
     @Path("/definitions/{segmentID}")
     public SegmentDefinition getSegmentDefinition(@PathParam("segmentID") SegmentID segmentID) {
         return segmentService.getSegmentDefinition(segmentID);
+    }
+
+    @POST
+    @Path("/definitions/{segmentID}")
+    public void setSegmentDefinition(@PathParam("segmentID") SegmentID segmentID, @FormParam("segmentDefinition") SegmentDefinition segmentDefinition) {
+        segmentService.setSegmentDefinition(segmentID, segmentDefinition);
     }
 
 }
