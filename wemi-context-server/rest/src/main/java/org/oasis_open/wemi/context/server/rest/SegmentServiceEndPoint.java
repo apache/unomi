@@ -2,14 +2,12 @@ package org.oasis_open.wemi.context.server.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.wemi.context.server.api.*;
-import org.oasis_open.wemi.context.server.api.conditions.*;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -66,8 +64,8 @@ public class SegmentServiceEndPoint implements SegmentService {
 
     @POST
     @Path("/definitions/{segmentID}")
-    public void setSegmentDefinition(@PathParam("segmentID") SegmentID segmentID, @FormParam("segmentDefinition") SegmentDefinition segmentDefinition) {
-        segmentService.setSegmentDefinition(segmentID, segmentDefinition);
+    public void setSegmentDefinition(@PathParam("segmentID") SegmentID segmentID, SegmentDefinition segmentDefinition) {
+        segmentService.setSegmentDefinition(segmentDefinition.getSegmentID(), segmentDefinition);
     }
 
 }

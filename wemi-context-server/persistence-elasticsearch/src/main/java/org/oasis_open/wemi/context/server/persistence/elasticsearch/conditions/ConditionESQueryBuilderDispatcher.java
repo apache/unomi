@@ -30,7 +30,7 @@ public class ConditionESQueryBuilderDispatcher {
     }
 
     public FilterBuilder buildFilter(Condition condition) {
-        return visitors.get(condition.getConditionType().getId()).buildFilter(condition, this);
+        return visitors.get(condition.getConditionTypeId()).buildFilter(condition, this);
     }
 
 
