@@ -11,20 +11,13 @@ import java.util.List;
 @XmlRootElement
 public class ParameterValue {
 
-    private String parameterId;
     private List<Object> parameterValues;
 
     public ParameterValue() {
     }
 
     public ParameterValue(String parameterId, List<Object> parameterValues) {
-        this.parameterId = parameterId;
         this.parameterValues = parameterValues;
-    }
-
-    @XmlTransient
-    public String getParameterId() {
-        return parameterId;
     }
 
     @XmlElement(name="value")
