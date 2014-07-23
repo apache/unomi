@@ -10,6 +10,12 @@
 
   <artifactId>wemi-context-server</artifactId>
   <packaging>pom</packaging>
+
+   <properties>
+      <version.jackson.core>2.4.0</version.jackson.core> <!-- version used by CXF -->
+      <version.jackson.jaxb>2.4.0</version.jackson.jaxb> <!-- version used by CXF -->
+   </properties>
+
   
   <modules>
     <module>api</module>

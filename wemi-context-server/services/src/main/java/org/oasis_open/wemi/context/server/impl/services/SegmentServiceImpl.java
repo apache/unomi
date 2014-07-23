@@ -82,7 +82,17 @@ public class SegmentServiceImpl implements SegmentService {
                     reader.close();
                 }
             }
-
+        }
+        predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/segments", "*.json.jackson", true);
+        while (predefinedSegmentEntries.hasMoreElements()) {
+            URL predefinedSegmentURL = predefinedSegmentEntries.nextElement();
+            try {
+                SegmentDefinition segment = ParserHelper.getObjectMapper().readValue(predefinedSegmentURL, SegmentDefinition.class);
+                persistenceService.saveQuery(segment.getSegmentID().getId(), segment.getRootCondition());
+                segmentQueries.put(segment.getSegmentID(), segment);
+            } catch (IOException e) {
+                logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
+            }
         }
     }
 

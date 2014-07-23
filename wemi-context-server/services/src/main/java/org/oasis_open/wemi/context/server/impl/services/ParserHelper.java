@@ -1,5 +1,11 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
+import com.fasterxml.jackson.databind.AnnotationIntrospector;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
+import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
+import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
+import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 import org.oasis_open.wemi.context.server.api.conditions.Parameter;
@@ -18,6 +24,9 @@ import java.util.List;
 import java.util.Map;
 
 public class ParserHelper {
+
+    private static ObjectMapper objectMapper = null;
+
     public static Condition parseCondition(DefinitionsService service, JsonObject object) {
         ConditionType typeNode = service.getConditionType(object.getString("type"));
         JsonObject parameterValues = object.getJsonObject("parameterValues");
@@ -101,4 +110,14 @@ public class ParserHelper {
         }
         return parameters;
     }
+
+    public synchronized static ObjectMapper getObjectMapper() {
+        if (objectMapper == null) {
+            objectMapper = new ObjectMapper();
+            objectMapper.registerModule(new JaxbAnnotationModule());
+            objectMapper.enableDefaultTypingAsProperty(ObjectMapper.DefaultTyping.JAVA_LANG_OBJECT, "@class");
+        }
+        return objectMapper;
+    }
+
 }

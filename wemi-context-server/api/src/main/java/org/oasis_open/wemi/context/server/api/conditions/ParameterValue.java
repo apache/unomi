@@ -1,5 +1,9 @@
 package org.oasis_open.wemi.context.server.api.conditions;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
+import com.fasterxml.jackson.databind.annotation.JsonTypeResolver;
+
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
@@ -11,6 +15,7 @@ import java.util.List;
 @XmlRootElement
 public class ParameterValue {
 
+    @JsonTypeIdResolver(ParameterValueTypeIdResolver.class)
     private List<Object> parameterValues;
 
     public ParameterValue() {

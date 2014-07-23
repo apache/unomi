@@ -22,10 +22,20 @@
     </cxf:bus>
 
     <bean id="cors-filter" class="org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter"/>
+    <bean id="jacksonMapper" class="org.oasis_open.wemi.context.server.rest.CustomObjectMapper" />
+    <bean id="jaxb-provider" class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider">
+        <argument index="0" ref="jacksonMapper" type="com.fasterxml.jackson.databind.ObjectMapper "/>
+        <argument index="1" type="com.fasterxml.jackson.jaxrs.cfg.Annotations[]">
+            <array>
+                <value>JACKSON</value>
+                <value>JAXB</value>
+            </array>
+        </argument>
+    </bean>
 
     <jaxrs:server address="/wemi/segments" id="restSegmentService">
         <jaxrs:providers>
-           <bean class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider"/>
+            <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter"/>
         </jaxrs:providers>
 
@@ -36,7 +46,7 @@
 
     <jaxrs:server address="/wemi/definitions" id="restDefinitionsService">
         <jaxrs:providers>
-           <bean class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider"/>
+            <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter" />
         </jaxrs:providers>
 
