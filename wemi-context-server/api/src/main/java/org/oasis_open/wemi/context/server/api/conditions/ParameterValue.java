@@ -7,15 +7,16 @@ import com.fasterxml.jackson.databind.annotation.JsonTypeResolver;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by loom on 25.06.14.
  */
 @XmlRootElement
+@JsonTypeIdResolver(ParameterValueTypeIdResolver.class)
 public class ParameterValue {
 
-    @JsonTypeIdResolver(ParameterValueTypeIdResolver.class)
     private List<Object> parameterValues;
 
     public ParameterValue() {
@@ -34,8 +35,20 @@ public class ParameterValue {
         }
     }
 
+    public void setParameterValue(Object value) {
+        if (parameterValues == null) {
+            parameterValues = new ArrayList<Object>();
+            parameterValues.add(value);
+        }
+        // we do nothing if parameterValues already exists.
+    }
+
     @XmlElement(name="values")
     public List<Object> getParameterValues() {
         return parameterValues;
+    }
+
+    public void setParameterValues(List<Object> parameterValues) {
+        this.parameterValues = parameterValues;
     }
 }
