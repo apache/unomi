@@ -28,7 +28,7 @@ public class ParameterValue {
 
     @XmlElement(name="value")
     public Object getParameterValue() {
-        if (parameterValues != null && parameterValues.size() > 1) {
+        if (parameterValues != null && parameterValues.size() < 1) {
             return null;
         } else {
             return parameterValues.get(0);

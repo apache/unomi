@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.fasterxml.jackson.databind.deser.std.UntypedObjectDeserializer;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
@@ -13,10 +14,10 @@ import java.util.regex.Pattern;
 /**
  * Created by loom on 23.07.14.
  */
-public class ParameterValueDeserializer extends StdDeserializer<Object> {
+public class ParameterValueDeserializer extends UntypedObjectDeserializer {
 
     public ParameterValueDeserializer() {
-        super(Object.class);
+        super();
     }
 
     private Map<String, Class<? extends Object>> registry =
@@ -40,30 +41,38 @@ public class ParameterValueDeserializer extends StdDeserializer<Object> {
     public Object deserialize(
             JsonParser jp, DeserializationContext ctxt)
             throws IOException, JsonProcessingException {
+        if (jp.getCurrentTokenId() != JsonTokenId.ID_START_OBJECT) {
+            return super.deserialize(jp, ctxt);
+        }
         ObjectCodec codec = jp.getCodec();
-        TreeNode root = codec.readTree(jp);
+        TreeNode treeNode = codec.readTree(jp);
         Class<? extends Object> objectClass = null;
-        Iterator<Map.Entry<String, JsonNode>> elementsIterator =
-                root.fields();
-        while (elementsIterator.hasNext()) {
-            Map.Entry<String, JsonNode> element = elementsIterator.next();
-            String name = element.getKey();
-            if (fieldValuesToMatch.containsKey(name)) {
-                Set<String> valuesToMatch = fieldValuesToMatch.get(name);
-                for (String valueToMatch : valuesToMatch) {
-                    if (element.getValue().asText().matches(valueToMatch)) {
-                        objectClass = registry.get(name + "=" + valueToMatch);
+        if (treeNode instanceof ObjectNode) {
+            ObjectNode root = (ObjectNode) treeNode;
+            Iterator<Map.Entry<String, JsonNode>> elementsIterator =
+                    root.fields();
+            while (elementsIterator.hasNext()) {
+                Map.Entry<String, JsonNode> element = elementsIterator.next();
+                String name = element.getKey();
+                if (fieldValuesToMatch.containsKey(name)) {
+                    Set<String> valuesToMatch = fieldValuesToMatch.get(name);
+                    for (String valueToMatch : valuesToMatch) {
+                        if (element.getValue().asText().matches(valueToMatch)) {
+                            objectClass = registry.get(name + "=" + valueToMatch);
+                            break;
+                        }
+                    }
+                    if (objectClass != null) {
                         break;
                     }
                 }
-                if (objectClass != null) {
-                    break;
-                }
             }
+        } else {
+
         }
         if (objectClass == null) {
-            return null;
+            return super.deserialize(codec.treeAsTokens(treeNode), ctxt);
         }
-        return codec.treeToValue(root, objectClass);
+        return codec.treeToValue(treeNode, objectClass);
     }
 }
