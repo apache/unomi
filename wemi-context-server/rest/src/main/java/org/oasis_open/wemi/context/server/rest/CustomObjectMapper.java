@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.rest;
 
 import com.fasterxml.jackson.core.Version;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
@@ -22,6 +23,11 @@ public class CustomObjectMapper extends ObjectMapper {
                   new Version(1, 0, 0, null, "org.oasis_open.wemi.context.server.rest", "deserializer"));
         ParameterValueDeserializer parameterValueDeserializer = new ParameterValueDeserializer();
         parameterValueDeserializer.registerClass("type=.*Condition", Condition.class);
+        try {
+            parameterValueDeserializer.resolve(super.getDeserializationContext());
+        } catch (JsonMappingException e) {
+            e.printStackTrace();
+        }
         deserializerModule.addDeserializer(Object.class, parameterValueDeserializer);
         super.registerModule(deserializerModule);
     }
