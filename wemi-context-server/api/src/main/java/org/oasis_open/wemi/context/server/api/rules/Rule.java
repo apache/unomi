@@ -1,4 +1,4 @@
-package org.oasis_open.wemi.context.server.impl.services;
+package org.oasis_open.wemi.context.server.api.rules;
 
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
@@ -8,13 +8,13 @@ import java.util.Set;
 /**
 * Created by toto on 26/06/14.
 */
-class Rule {
-
-    Rule() {
-    }
+public class Rule {
 
     private Condition rootCondition;
     private Set<Consequence> consequences;
+
+    public Rule() {
+    }
 
     public Condition getRootCondition() {
         return rootCondition;
