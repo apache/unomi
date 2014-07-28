@@ -16,9 +16,9 @@ class UserPropertyConditionESQueryBuilder extends AbstractESQueryBuilder {
 
     @Override
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
-        String op = (String) condition.getParameterValues().get("comparisonOperator").getValue();
-        String name = (String) condition.getParameterValues().get("propertyName").getValue();
-        String value = (String) condition.getParameterValues().get("propertyValue").getValue();
+        String op = (String) condition.getParameterValues().get("comparisonOperator");
+        String name = (String) condition.getParameterValues().get("propertyName");
+        String value = (String) condition.getParameterValues().get("propertyValue");
         if (op.equals("equals")) {
             return FilterBuilders.termFilter(name, value);
         } else if (op.equals("greaterThan")) {

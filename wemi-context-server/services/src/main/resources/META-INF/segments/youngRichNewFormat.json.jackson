@@ -6,38 +6,24 @@
    },
    "condition":{
       "parameterValues":{
-         "subConditions":{
-            "value":[
+         "subConditions":[
                {
                   "parameterValues":{
-                     "propertyName":{
-                        "value":"age"
-                     },
-                     "propertyValue":{
-                        "value":"25"
-                     },
-                     "comparisonOperator":{
-                        "value":"lessThan"
-                     }
+                     "propertyName": "age",
+                     "propertyValue": "25",
+                     "comparisonOperator": "lessThan"
                   },
                   "type":"userPropertyCondition"
                },
                {
                   "parameterValues":{
-                     "propertyName":{
-                        "value":"income"
-                     },
-                     "propertyValue":{
-                        "value":"10000000"
-                     },
-                     "comparisonOperator":{
-                        "value":"greaterThan"
-                     }
+                     "propertyName": "income",
+                     "propertyValue":"10000000",
+                     "comparisonOperator": "greaterThan"
                   },
                   "type":"userPropertyCondition"
                }
-            ]
-         }
+         ]
       },
       "type":"andCondition"
    }

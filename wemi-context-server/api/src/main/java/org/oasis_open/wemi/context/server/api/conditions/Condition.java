@@ -15,7 +15,7 @@ public class Condition {
 
     ConditionType conditionType;
     String conditionTypeId;
-    Map<String, ParameterValue> parameterValues = new HashMap<String, ParameterValue>();
+    Map<String, Object> parameterValues = new HashMap<String, Object>();
 
     public Condition() {
     }
@@ -39,11 +39,11 @@ public class Condition {
         this.conditionTypeId = conditionTypeId;
     }
 
-    public Map<String, ParameterValue> getParameterValues() {
+    public Map<String, Object> getParameterValues() {
         return parameterValues;
     }
 
-    public void setParameterValues(Map<String, ParameterValue> parameterValues) {
+    public void setParameterValues(Map<String, Object> parameterValues) {
         this.parameterValues = parameterValues;
     }
 

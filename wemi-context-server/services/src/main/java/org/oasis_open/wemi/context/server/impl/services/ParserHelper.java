@@ -32,20 +32,20 @@ public class ParserHelper {
 
         Condition node = new Condition();
         node.setConditionType(typeNode);
-        Map<String, ParameterValue> values = new HashMap<String, ParameterValue>();
+        Map<String, Object> values = new HashMap<String, Object>();
         node.setParameterValues(values);
 
         for (Parameter parameter : typeNode.getConditionParameters()) {
-            ParameterValue parameterValue = new ParameterValue();
+            Object parameterValue = null;
             if (parameter.isMultivalued()) {
                 final ArrayList<Object> objects = new ArrayList<Object>();
                 JsonArray array = parameterValues.getJsonArray(parameter.getId());
                 for (JsonValue value : array) {
                     objects.add(getParameterValue(service, parameter, value));
                 }
-                parameterValue.setValue(objects);
+                parameterValue = objects;
             } else {
-                parameterValue.setValue(getParameterValue(service, parameter, parameterValues.get(parameter.getId())));
+                parameterValue = getParameterValue(service, parameter, parameterValues.get(parameter.getId()));
             }
             values.put(parameter.getId(), parameterValue);
         }
@@ -58,20 +58,20 @@ public class ParserHelper {
 
         Consequence node = new Consequence();
         node.setConsequenceType(typeNode);
-        Map<String, ParameterValue> values = new HashMap<String, ParameterValue>();
+        Map<String, Object> values = new HashMap<String, Object>();
         node.setConsequencesParameterValues(values);
 
         for (Parameter parameter : typeNode.getConsequenceParameters()) {
-            ParameterValue parameterValue = new ParameterValue();
+            Object parameterValue = null;
             if (parameter.isMultivalued()) {
                 final ArrayList<Object> objects = new ArrayList<Object>();
                 JsonArray array = parameterValues.getJsonArray(parameter.getId());
                 for (JsonValue value : array) {
                     objects.add(getParameterValue(service, parameter, value));
                 }
-                parameterValue.setValue(objects);
+                parameterValue = objects;
             } else {
-                parameterValue.setValue(getParameterValue(service, parameter, parameterValues.get(parameter.getId())));
+                parameterValue = getParameterValue(service, parameter, parameterValues.get(parameter.getId()));
             }
             values.put(parameter.getId(), parameterValue);
         }
