@@ -1,12 +1,8 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import com.fasterxml.jackson.core.Version;
-import com.fasterxml.jackson.databind.AnnotationIntrospector;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
-import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import org.oasis_open.wemi.context.server.api.conditions.*;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
@@ -116,13 +112,12 @@ public class ParserHelper {
         if (objectMapper == null) {
             objectMapper = new ObjectMapper();
             objectMapper.registerModule(new JaxbAnnotationModule());
-            // objectMapper.enableDefaultTypingAsProperty(ObjectMapper.DefaultTyping.JAVA_LANG_OBJECT, "@class");
             SimpleModule deserializerModule =
-                  new SimpleModule("PolymorphicParameterValueDeserializerModule",
+                  new SimpleModule("PropertyTypedObjectDeserializerModule",
                       new Version(1, 0, 0, null, "org.oasis_open.wemi.context.server.rest", "deserializer"));
-            ParameterValueDeserializer parameterValueDeserializer = new ParameterValueDeserializer();
-            parameterValueDeserializer.registerClass("type=.*Condition", Condition.class);
-            deserializerModule.addDeserializer(Object.class, parameterValueDeserializer);
+            PropertyTypedObjectDeserializer propertyTypedObjectDeserializer = new PropertyTypedObjectDeserializer();
+            propertyTypedObjectDeserializer.registerMapping("type=.*Condition", Condition.class);
+            deserializerModule.addDeserializer(Object.class, propertyTypedObjectDeserializer);
             objectMapper.registerModule(deserializerModule);
         }
         return objectMapper;

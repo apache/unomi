@@ -12,11 +12,28 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 /**
- * Created by loom on 23.07.14.
+ * This Jackson deserializer makes it possible to register field matching
+ * regular expressions that can be matched to class names, as in the following
+ * example:
+ *
+ *            SimpleModule deserializerModule =
+ *                  new SimpleModule("PropertyTypedObjectDeserializerModule",
+ *                      new Version(1, 0, 0, null, "org.oasis_open.wemi.context.server.rest", "deserializer"));
+ *            PropertyTypedObjectDeserializer propertyTypedObjectDeserializer = new PropertyTypedObjectDeserializer();
+ *            propertyTypedObjectDeserializer.registerMapping("type=.*Condition", Condition.class);
+ *            deserializerModule.addDeserializer(Object.class, propertyTypedObjectDeserializer);
+ *            objectMapper.registerModule(deserializerModule);
+ *
+ * In this example any JSON object that has a "type" property that matches the
+ * ".*Condition" regular expression will be parsed and mapped to a Condition class
+ *
+ * Note that there exists a way to map properties as type identifiers in Jackson,
+ * but this feature is very limited and requires hardcoding possible values.
+ * This deserializer is much more flexible and powerful.
  */
-public class ParameterValueDeserializer extends UntypedObjectDeserializer {
+public class PropertyTypedObjectDeserializer extends UntypedObjectDeserializer {
 
-    public ParameterValueDeserializer() {
+    public PropertyTypedObjectDeserializer() {
         super();
     }
 
@@ -25,9 +42,9 @@ public class ParameterValueDeserializer extends UntypedObjectDeserializer {
 
     private Map<String,Set<String>> fieldValuesToMatch = new HashMap<String,Set<String>>();
 
-    public void registerClass(String matchExpression,
-                        Class<? extends Object> animalClass) {
-        registry.put(matchExpression, animalClass);
+    public void registerMapping(String matchExpression,
+                                Class<? extends Object> mappedClass) {
+        registry.put(matchExpression, mappedClass);
         String[] fieldParts = matchExpression.split("=");
         Set<String> valuesToMatch = fieldValuesToMatch.get(fieldParts[0]);
         if (valuesToMatch == null) {
