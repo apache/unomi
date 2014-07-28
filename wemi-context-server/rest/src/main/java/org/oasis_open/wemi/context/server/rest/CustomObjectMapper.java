@@ -23,11 +23,6 @@ public class CustomObjectMapper extends ObjectMapper {
                   new Version(1, 0, 0, null, "org.oasis_open.wemi.context.server.rest", "deserializer"));
         ParameterValueDeserializer parameterValueDeserializer = new ParameterValueDeserializer();
         parameterValueDeserializer.registerClass("type=.*Condition", Condition.class);
-        try {
-            parameterValueDeserializer.resolve(super.getDeserializationContext());
-        } catch (JsonMappingException e) {
-            e.printStackTrace();
-        }
         deserializerModule.addDeserializer(Object.class, parameterValueDeserializer);
         super.registerModule(deserializerModule);
     }
