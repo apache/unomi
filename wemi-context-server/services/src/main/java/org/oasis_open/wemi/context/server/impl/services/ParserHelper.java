@@ -36,17 +36,18 @@ public class ParserHelper {
         node.setParameterValues(values);
 
         for (Parameter parameter : typeNode.getConditionParameters()) {
-            final ArrayList<Object> objects = new ArrayList<Object>();
-            values.put(parameter.getId(), new ParameterValue(parameter.getId(), objects));
-
+            ParameterValue parameterValue = new ParameterValue();
             if (parameter.isMultivalued()) {
+                final ArrayList<Object> objects = new ArrayList<Object>();
                 JsonArray array = parameterValues.getJsonArray(parameter.getId());
                 for (JsonValue value : array) {
                     objects.add(getParameterValue(service, parameter, value));
                 }
+                parameterValue.setValue(objects);
             } else {
-                objects.add(getParameterValue(service, parameter, parameterValues.get(parameter.getId())));
+                parameterValue.setValue(getParameterValue(service, parameter, parameterValues.get(parameter.getId())));
             }
+            values.put(parameter.getId(), parameterValue);
         }
         return node;
     }
@@ -61,17 +62,18 @@ public class ParserHelper {
         node.setConsequencesParameterValues(values);
 
         for (Parameter parameter : typeNode.getConsequenceParameters()) {
-            final ArrayList<Object> objects = new ArrayList<Object>();
-            values.put(parameter.getId(), new ParameterValue(parameter.getId(), objects));
-
+            ParameterValue parameterValue = new ParameterValue();
             if (parameter.isMultivalued()) {
+                final ArrayList<Object> objects = new ArrayList<Object>();
                 JsonArray array = parameterValues.getJsonArray(parameter.getId());
                 for (JsonValue value : array) {
                     objects.add(getParameterValue(service, parameter, value));
                 }
+                parameterValue.setValue(objects);
             } else {
-                objects.add(getParameterValue(service, parameter, parameterValues.get(parameter.getId())));
+                parameterValue.setValue(getParameterValue(service, parameter, parameterValues.get(parameter.getId())));
             }
+            values.put(parameter.getId(), parameterValue);
         }
         return node;
     }

@@ -18,7 +18,7 @@ class PageViewEventConditionESQueryBuilder extends AbstractESQueryBuilder {
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
         return FilterBuilders.andFilter(
                 FilterBuilders.termFilter("eventType", "view"),
-                FilterBuilders.termFilter("url", (String) condition.getParameterValues().get("url").getParameterValue()));
+                FilterBuilders.termFilter("url", (String) condition.getParameterValues().get("url").getValue()));
 
     }
 }
