@@ -1,8 +1,8 @@
 {
     "id": "youngRich",
-    "name" : "Young rich",
-    "description" : "This segment includes all young rich",
-    "condition" : {
+    "name": "Young rich",
+    "description": "This segment includes all young rich",
+    "condition": {
         "type": "andCondition",
         "parameterValues": {
             "subConditions": [
