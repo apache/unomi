@@ -13,6 +13,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import java.util.Collection;
 import java.util.Set;
 
 @WebService
@@ -32,14 +33,32 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
 
     @GET
     @Path("/tags")
-    public Set<Tag> getConditionTags() {
-        return definitionsService.getConditionTags();
+    public Set<Tag> getAllTags() {
+        return definitionsService.getAllTags();
+    }
+
+    @GET
+    @Path("/rootTags")
+    public Set<Tag> getRootTags() {
+        return definitionsService.getRootTags();
+    }
+
+    @GET
+    @Path("/tags/{tagId}")
+    public Set<Tag> getChildTags(@PathParam("tagId") Tag tag) {
+        return definitionsService.getChildTags(tag);
+    }
+
+    @GET
+    @Path("/conditions")
+    public Collection<ConditionType> getAllConditions() {
+        return definitionsService.getAllConditions();
     }
 
     @GET
     @Path("/conditions/tags/{tagId}")
-    public Set<ConditionType> getConditions(@PathParam("tagId") Tag tag) {
-        return definitionsService.getConditions(tag);
+    public Set<ConditionType> getConditionTypesByTag(@PathParam("tagId") Tag tag) {
+        return definitionsService.getConditionTypesByTag(tag);
     }
 
     @GET
@@ -53,7 +72,5 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
     public ConsequenceType getConsequenceType(@PathParam("consequenceId") String consequenceId) {
         return definitionsService.getConsequenceType(consequenceId);
     }
-
-
 
 }

@@ -55,9 +55,6 @@
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
-    <jaxws:endpoint implementor="#segmentServiceEndPoint" address="/segmentService"/>
-    <jaxws:endpoint implementor="#definitionsServiceEndPoint" address="/definitionsService"/>
-
     <reference id="segmentService" interface="org.oasis_open.wemi.context.server.api.services.SegmentService" />
     <reference id="definitionsService" interface="org.oasis_open.wemi.context.server.api.services.DefinitionsService" />
 

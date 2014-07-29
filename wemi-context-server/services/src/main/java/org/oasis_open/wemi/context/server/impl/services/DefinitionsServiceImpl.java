@@ -27,7 +27,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
 
     private static final Logger logger = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
 
-    Map<String, Tag> conditionTags = new HashMap<String, Tag>();
+    Map<String, Tag> tags = new HashMap<String, Tag>();
     Set<Tag> rootTags = new LinkedHashSet<Tag>();
     Map<String, ConditionType> conditionTypeByName = new HashMap<String, ConditionType>();
     Map<String, ConsequenceType> consequencesTypeByName = new HashMap<String, ConsequenceType>();
@@ -91,7 +91,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                         tagObject.getString("description"),
                         tagObject.getString("parent"));
 
-                conditionTags.put(tag.getId(), tag);
+                tags.put(tag.getId(), tag);
             } catch (Exception e) {
                 logger.error("Error while loading tag definition " + predefinedSegmentURL, e);
             } finally {
@@ -103,9 +103,9 @@ public class DefinitionsServiceImpl implements DefinitionsService {
         }
 
         // now let's resolve all the children.
-        for (Tag tag : conditionTags.values()) {
+        for (Tag tag : tags.values()) {
             if (tag.getParentId() != null && tag.getParentId().length() > 0) {
-                Tag parentTag = conditionTags.get(tag.getParentId());
+                Tag parentTag = tags.get(tag.getParentId());
                 if (parentTag != null) {
                     parentTag.getSubTags().add(tag);
                 }
@@ -144,7 +144,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
 
                 conditionTypeByName.put(condition.getId(), condition);
                 for (String tagId : tagIds) {
-                    Tag tag = conditionTags.get(tagId);
+                    Tag tag = tags.get(tagId);
                     if (tag != null) {
                         Set<ConditionType> conditionNodes = conditionTypeByTag.get(tag);
                         if (conditionNodes == null) {
@@ -219,11 +219,27 @@ public class DefinitionsServiceImpl implements DefinitionsService {
         return consequencesTypeByName.get(name);
     }
 
-    public Set<Tag> getConditionTags() {
-        return new HashSet<Tag>(conditionTags.values());
+    public Set<Tag> getAllTags() {
+        return new HashSet<Tag>(tags.values());
     }
 
-    public Set<ConditionType> getConditions(Tag tag) {
+    public Set<Tag> getRootTags() {
+        return rootTags;
+    }
+
+    public Set<Tag> getChildTags(Tag tag) {
+        Tag parentTag = tags.get(tag.getId());
+        if (parentTag == null) {
+            return new HashSet<Tag>();
+        }
+        return parentTag.getSubTags();
+    }
+
+    public Collection<ConditionType> getAllConditions() {
+        return conditionTypeByName.values();
+    }
+
+    public Set<ConditionType> getConditionTypesByTag(Tag tag) {
         return conditionTypeByTag.get(tag);
     }
 
