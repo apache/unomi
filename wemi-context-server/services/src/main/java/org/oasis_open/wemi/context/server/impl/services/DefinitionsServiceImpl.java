@@ -139,20 +139,21 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                     tagIds.add(tagArray.getString(i));
                 }
 
-                ConditionType condition = new ConditionType(id, name);
-                condition.setDescription(description);
-                condition.setParameters(ParserHelper.parseParameters(conditionObject));
+                ConditionType conditionType = new ConditionType(id, name);
+                conditionType.setDescription(description);
+                conditionType.setParameters(ParserHelper.parseParameters(conditionObject));
 
-                conditionTypeByName.put(condition.getId(), condition);
+                conditionTypeByName.put(conditionType.getId(), conditionType);
                 for (String tagId : tagIds) {
                     Tag tag = tags.get(tagId);
                     if (tag != null) {
-                        Set<ConditionType> conditionNodes = conditionTypeByTag.get(tag);
-                        if (conditionNodes == null) {
-                            conditionNodes = new LinkedHashSet<ConditionType>();
+                        conditionType.getTags().add(tag);
+                        Set<ConditionType> conditionTypes = conditionTypeByTag.get(tag);
+                        if (conditionTypes == null) {
+                            conditionTypes = new LinkedHashSet<ConditionType>();
                         }
-                        conditionNodes.add(condition);
-                        conditionTypeByTag.put(tag, conditionNodes);
+                        conditionTypes.add(conditionType);
+                        conditionTypeByTag.put(tag, conditionTypes);
                     } else {
                         // we found a tag that is not defined, we will define it automatically
                         logger.warn("Unknown tag " + tagId + " used in condition definition " + predefinedConditionURL);
@@ -194,20 +195,21 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                     tagIds.add(tagArray.getString(i));
                 }
 
-                ConsequenceType consequence = new ConsequenceType(id, name);
+                ConsequenceType consequenceType = new ConsequenceType(id, name);
 
-                consequence.setDescription(description);
-                consequence.setParameters(ParserHelper.parseParameters(conditionObject));
+                consequenceType.setDescription(description);
+                consequenceType.setParameters(ParserHelper.parseParameters(conditionObject));
 
-                consequencesTypeByName.put(consequence.getId(), consequence);
+                consequencesTypeByName.put(consequenceType.getId(), consequenceType);
                 for (String tagId : tagIds) {
                     Tag tag = tags.get(tagId);
                     if (tag != null) {
+                        consequenceType.getTags().add(tag);
                         Set<ConsequenceType> consequenceTypes = consequenceTypeByTag.get(tag);
                         if (consequenceTypes == null) {
                             consequenceTypes = new LinkedHashSet<ConsequenceType>();
                         }
-                        consequenceTypes.add(consequence);
+                        consequenceTypes.add(consequenceType);
                         consequenceTypeByTag.put(tag, consequenceTypes);
                     } else {
                         // we found a tag that is not defined, we will define it automatically
