@@ -10,7 +10,7 @@
             "description" : "The name of the user property to match",
             "type" : "string",
             "multivalued" : false,
-            "choicelistInitializerClass" : "org.oasis_open.wemi.context.server.conditions.initializers.UserPropertyChoiceListInitializer"
+            "choicelistInitializerFilter" : "(initializerId=userProperty)"
         },
         {
             "id" : "comparisonOperator",
@@ -18,7 +18,7 @@
             "description" : "The operator to use for the user property comparison",
             "type" : "comparisonOperator",
             "multivalued" : false,
-            "choicelistInitializerClass" : "org.oasis_open.wemi.context.server.conditions.initializers.UserPropertyChoiceListInitializer"
+            "choicelistInitializerFilter" : "(initializerId=comparisonOperator)"
         },
         {
             "id" : "propertyValue",
@@ -26,7 +26,7 @@
             "description" : "The value of the user property to match",
             "type" : "string",
             "multivalued" : false,
-            "choicelistInitializerClass" : ""
+            "choicelistInitializerFilter" : ""
         }
     ]
 }

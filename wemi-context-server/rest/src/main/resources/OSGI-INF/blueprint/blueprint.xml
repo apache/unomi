@@ -64,6 +64,7 @@
 
     <bean id="definitionsServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.DefinitionsServiceEndPoint">
         <property name="definitionsService" ref="definitionsService" />
+        <property name="bundleContext" ref="blueprintBundleContext" />
     </bean>
 
 </blueprint>

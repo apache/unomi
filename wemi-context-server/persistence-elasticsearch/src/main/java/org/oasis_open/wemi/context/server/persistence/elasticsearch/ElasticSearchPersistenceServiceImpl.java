@@ -2,6 +2,8 @@ package org.oasis_open.wemi.context.server.persistence.elasticsearch;
 
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
+import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
+import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
@@ -9,6 +11,10 @@ import org.elasticsearch.action.percolate.PercolateResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.cluster.ClusterState;
+import org.elasticsearch.cluster.metadata.IndexMetaData;
+import org.elasticsearch.cluster.metadata.MappingMetaData;
+import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.node.Node;
@@ -160,6 +166,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                         .setSource(source)
                         .execute().actionGet();
                 return true;
+            }
+        }.executeInClassLoader();
+    }
+
+    public Map<String, Map<String,String>> getMapping(final String itemType) {
+        return new InClassLoaderExecute<Map<String, Map<String,String>>>() {
+            protected Map<String, Map<String,String>> execute(Object... args) {
+                GetMappingsResponse getMappingsResponse = client.admin().indices().prepareGetMappings("wemi").setTypes(itemType).execute().actionGet();
+                ImmutableOpenMap<String, ImmutableOpenMap<String,MappingMetaData>> mappings = getMappingsResponse.getMappings();
+                Map<String,Map<String,String>> propertyMap = null;
+                try {
+                    propertyMap = (Map<String,Map<String,String>>) mappings.get("wemi").get("user").getSourceAsMap().get("properties");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                return new HashMap<String,Map<String,String>>(propertyMap);
             }
         }.executeInClassLoader();
     }

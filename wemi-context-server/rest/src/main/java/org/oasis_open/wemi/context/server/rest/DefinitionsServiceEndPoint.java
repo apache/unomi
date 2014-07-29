@@ -1,10 +1,16 @@
 package org.oasis_open.wemi.context.server.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
+import org.oasis_open.wemi.context.server.api.conditions.Parameter;
 import org.oasis_open.wemi.context.server.api.conditions.Tag;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
+import org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.wemi.context.server.api.consequences.ConsequenceType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceReference;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -14,6 +20,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 @WebService
@@ -25,10 +32,15 @@ import java.util.Set;
 public class DefinitionsServiceEndPoint implements DefinitionsService {
 
     DefinitionsService definitionsService;
+    BundleContext bundleContext;
 
     @WebMethod(exclude=true)
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
+    }
+
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
     }
 
     @GET
@@ -52,7 +64,26 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
     @GET
     @Path("/conditions")
     public Collection<ConditionType> getAllConditions() {
+        for (ConditionType conditionType : definitionsService.getAllConditions()) {
+            generateChoiceListValues(conditionType, null);
+        }
         return definitionsService.getAllConditions();
+    }
+
+    private void generateChoiceListValues(ConditionType conditionType, Object context) {
+        for (Parameter parameter : conditionType.getConditionParameters()) {
+            if (parameter.getChoiceListInitializerFilter() != null && parameter.getChoiceListInitializerFilter().length() > 0) {
+                try {
+                    Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, parameter.getChoiceListInitializerFilter());
+                    for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
+                        ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
+                        parameter.setChoiceListValues(choiceListInitializer.getValues(context));
+                    }
+                } catch (InvalidSyntaxException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     @GET

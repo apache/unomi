@@ -15,4 +15,6 @@ public interface UserService {
 
     boolean save(User user);
 
+    public List<String> getUserProperties();
+
 }

@@ -10,7 +10,7 @@
             "description" : "The name of the content",
             "type" : "string",
             "multivalued" : false,
-            "choicelistInitializerClass": ""
+            "choicelistInitializerFilter": ""
         }
     ]
 }

@@ -1,6 +1,10 @@
 package org.oasis_open.wemi.context.server.api.conditions;
 
+import org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListValue;
+
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Represents a condition parameter, that will be used in the segment building UI to either select parameters from a
@@ -14,18 +18,19 @@ public class Parameter {
     String description;
     String type;
     boolean multivalued = false;
-    String choiceListInitializerClass;
+    String choiceListInitializerFilter;
+    List<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
 
     public Parameter() {
     }
 
-    public Parameter(String id, String name, String description, String type, boolean multivalued, String choiceListInitializerClass) {
+    public Parameter(String id, String name, String description, String type, boolean multivalued, String choiceListInitializerFilter) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.type = type;
         this.multivalued = multivalued;
-        this.choiceListInitializerClass = choiceListInitializerClass;
+        this.choiceListInitializerFilter = choiceListInitializerFilter;
     }
 
     public String getId() {
@@ -48,7 +53,15 @@ public class Parameter {
         return multivalued;
     }
 
-    public String getChoiceListInitializerClass() {
-        return choiceListInitializerClass;
+    public String getChoiceListInitializerFilter() {
+        return choiceListInitializerFilter;
+    }
+
+    public List<ChoiceListValue> getChoiceListValues() {
+        return choiceListValues;
+    }
+
+    public void setChoiceListValues(List<ChoiceListValue> choiceListValues) {
+        this.choiceListValues = choiceListValues;
     }
 }

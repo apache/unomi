@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Created by loom on 25.06.14.
  */
-public abstract class ChoiceListInitializer {
+public interface ChoiceListInitializer {
 
-    public abstract List<ChoiceListValue> getValues(Object context);
+    public List<ChoiceListValue> getValues(Object context);
 }

@@ -11,6 +11,7 @@ import javax.enterprise.inject.Default;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by loom on 24.04.14.
@@ -39,5 +40,10 @@ public class UserServiceImpl implements UserService {
     public boolean save(User user) {
         persistenceService.save(user);
         return false;
+    }
+
+    public List<String> getUserProperties() {
+        Map<String,Map<String,String>> mappings = persistenceService.getMapping(User.USER_ITEM_TYPE);
+        return new ArrayList<String>(mappings.keySet());
     }
 }

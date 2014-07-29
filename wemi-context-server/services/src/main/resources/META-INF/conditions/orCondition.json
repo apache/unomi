@@ -10,7 +10,7 @@
             "description" : "Sub conditions that will be evaluated using the OR operator",
             "type" : "Condition",
             "multivalued" : true,
-            "choicelistInitializerClass" : "org.oasis_open.wemi.context.server.conditions.initializers.ConditionChoiceListInitializer"
+            "choicelistInitializerFilter" : "(initializerId=condition)"
         }
     ]
 }

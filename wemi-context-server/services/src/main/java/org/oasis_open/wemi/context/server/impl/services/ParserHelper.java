@@ -96,13 +96,13 @@ public class ParserHelper {
             String paramDescription = parameterObject.getString("description");
             String paramType = parameterObject.getString("type");
             boolean multivalued = parameterObject.getBoolean("multivalued");
-            String paramChoiceListInitializerClass = null;
+            String paramChoiceListInitializerFilter = null;
             try {
-                paramChoiceListInitializerClass = parameterObject.getString("choicelistInitializerClass");
+                paramChoiceListInitializerFilter = parameterObject.getString("choicelistInitializerFilter");
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            Parameter conditionParameter = new Parameter(paramId, paramName, paramDescription, paramType, multivalued, paramChoiceListInitializerClass);
+            Parameter conditionParameter = new Parameter(paramId, paramName, paramDescription, paramType, multivalued, paramChoiceListInitializerFilter);
             parameters.add(conditionParameter);
         }
         return parameters;

@@ -10,7 +10,7 @@
             "description" : "Page URL",
             "type" : "string",
             "multivalued" : false,
-            "choicelistInitializerClass": ""
+            "choicelistInitializerFilter": ""
         }
     ]
 }

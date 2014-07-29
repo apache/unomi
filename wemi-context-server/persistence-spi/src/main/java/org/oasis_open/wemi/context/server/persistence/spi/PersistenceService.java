@@ -4,6 +4,7 @@ import org.oasis_open.wemi.context.server.api.Item;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -20,6 +21,8 @@ public interface PersistenceService {
     public boolean saveQuery(String queryName, Condition query);
 
     public boolean createMapping(String queryName, String query);
+
+    public Map<String, Map<String,String>> getMapping(String itemType);
 
     public List<String> getMatchingSavedQueries(Item item);
 

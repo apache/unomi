@@ -10,7 +10,7 @@
             "description" : "The name of the user property to set",
             "type" : "string",
             "multivalued" : false,
-            "choicelistInitializerClass" : "org.oasis_open.wemi.context.server.conditions.initializers.UserPropertyChoiceListInitializer"
+            "choicelistInitializerFilter" : "org.oasis_open.wemi.context.server.conditions.initializers.UserPropertyChoiceListInitializer"
         },
         {
             "id" : "propertyValue",
@@ -18,7 +18,7 @@
             "description" : "The value of the user property to set",
             "type" : "string",
             "multivalued" : false,
-            "choicelistInitializerClass" : ""
+            "choicelistInitializerFilter" : ""
 
         }
     ]
