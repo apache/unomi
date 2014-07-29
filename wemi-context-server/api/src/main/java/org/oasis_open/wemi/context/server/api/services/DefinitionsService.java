@@ -8,11 +8,15 @@ import java.util.Collection;
 import java.util.Set;
 
 public interface DefinitionsService {
-    ConditionType getConditionType(String name);
-    ConsequenceType getConsequenceType(String name);
     Set<Tag> getAllTags();
     Set<Tag> getRootTags();
     Set<Tag> getChildTags(Tag tag);
-    Collection<ConditionType> getAllConditions();
+
+    Collection<ConditionType> getAllConditionTypes();
     Set<ConditionType> getConditionTypesByTag(Tag tag);
+    ConditionType getConditionType(String name);
+
+    Collection<ConsequenceType> getAllConsequenceTypes();
+    Set<ConsequenceType> getConsequenceTypeByTag(Tag tag);
+    ConsequenceType getConsequenceType(String name);
 }

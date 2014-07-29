@@ -3,6 +3,7 @@
     "name" : "set property",
     "description" : "Set a property",
     "class" : "org.oasis_open.wemi.context.server.impl.consequences.SetPropertyConsequence",
+    "tags" : [ "demographic" ],
     "parameters" : [
         {
             "id" : "propertyName",
@@ -10,7 +11,7 @@
             "description" : "The name of the user property to set",
             "type" : "string",
             "multivalued" : false,
-            "choicelistInitializerFilter" : "org.oasis_open.wemi.context.server.conditions.initializers.UserPropertyChoiceListInitializer"
+            "choicelistInitializerFilter" : "(initializerId=userProperty)"
         },
         {
             "id" : "propertyValue",
@@ -19,7 +20,6 @@
             "type" : "string",
             "multivalued" : false,
             "choicelistInitializerFilter" : ""
-
         }
     ]
 }

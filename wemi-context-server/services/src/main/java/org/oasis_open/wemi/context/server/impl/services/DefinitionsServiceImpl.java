@@ -32,6 +32,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
     Map<String, ConditionType> conditionTypeByName = new HashMap<String, ConditionType>();
     Map<String, ConsequenceType> consequencesTypeByName = new HashMap<String, ConsequenceType>();
     Map<Tag, Set<ConditionType>> conditionTypeByTag = new HashMap<Tag, Set<ConditionType>>();
+    Map<Tag, Set<ConsequenceType>> consequenceTypeByTag = new HashMap<Tag, Set<ConsequenceType>>();
 
     public DefinitionsServiceImpl() {
         System.out.println("Instantiating definitions service...");
@@ -172,12 +173,12 @@ public class DefinitionsServiceImpl implements DefinitionsService {
     private void loadPredefinedConsequences() {
         Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/consequences", "*.json", true);
         while (predefinedSegmentEntries.hasMoreElements()) {
-            URL predefinedConditionURL = predefinedSegmentEntries.nextElement();
-            logger.debug("Found predefined consequence at " + predefinedConditionURL + ", loading... ");
+            URL predefinedConsequenceURL = predefinedSegmentEntries.nextElement();
+            logger.debug("Found predefined consequence at " + predefinedConsequenceURL + ", loading... ");
 
             JsonReader reader = null;
             try {
-                reader = Json.createReader(predefinedConditionURL.openStream());
+                reader = Json.createReader(predefinedConsequenceURL.openStream());
                 JsonStructure jsonst = reader.read();
 
                 // dumpJSON(jsonst, null, "");
@@ -187,20 +188,35 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                 String name = conditionObject.getString("name");
                 String description = conditionObject.getString("description");
                 String clazz = conditionObject.getString("class");
-//                JsonArray tagArray = conditionObject.getJsonArray("tags");
-//                Set<String> tagIds = new LinkedHashSet<String>();
-//                for (int i = 0; i < tagArray.size(); i++) {
-//                    tagIds.add(tagArray.getString(i));
-//                }
-//
+                JsonArray tagArray = conditionObject.getJsonArray("tags");
+                Set<String> tagIds = new LinkedHashSet<String>();
+                for (int i = 0; i < tagArray.size(); i++) {
+                    tagIds.add(tagArray.getString(i));
+                }
+
                 ConsequenceType consequence = new ConsequenceType(id, name);
 
                 consequence.setDescription(description);
                 consequence.setConsequenceParameters(ParserHelper.parseParameters(conditionObject));
 
                 consequencesTypeByName.put(consequence.getId(), consequence);
+                for (String tagId : tagIds) {
+                    Tag tag = tags.get(tagId);
+                    if (tag != null) {
+                        Set<ConsequenceType> consequenceTypes = consequenceTypeByTag.get(tag);
+                        if (consequenceTypes == null) {
+                            consequenceTypes = new LinkedHashSet<ConsequenceType>();
+                        }
+                        consequenceTypes.add(consequence);
+                        consequenceTypeByTag.put(tag, consequenceTypes);
+                    } else {
+                        // we found a tag that is not defined, we will define it automatically
+                        logger.warn("Unknown tag " + tagId + " used in consequence definition " + predefinedConsequenceURL);
+                    }
+                }
+
             } catch (Exception e) {
-                logger.error("Error while loading condition definition " + predefinedConditionURL, e);
+                logger.error("Error while loading consequence definition " + predefinedConsequenceURL, e);
             } finally {
                 if (reader != null) {
                     reader.close();
@@ -208,15 +224,6 @@ public class DefinitionsServiceImpl implements DefinitionsService {
             }
         }
 
-    }
-
-
-    public ConditionType getConditionType(String name) {
-        return conditionTypeByName.get(name);
-    }
-
-    public ConsequenceType getConsequenceType(String name) {
-        return consequencesTypeByName.get(name);
     }
 
     public Set<Tag> getAllTags() {
@@ -235,12 +242,28 @@ public class DefinitionsServiceImpl implements DefinitionsService {
         return parentTag.getSubTags();
     }
 
-    public Collection<ConditionType> getAllConditions() {
+    public Collection<ConditionType> getAllConditionTypes() {
         return conditionTypeByName.values();
     }
 
     public Set<ConditionType> getConditionTypesByTag(Tag tag) {
         return conditionTypeByTag.get(tag);
+    }
+
+    public ConditionType getConditionType(String name) {
+        return conditionTypeByName.get(name);
+    }
+
+    public Collection<ConsequenceType> getAllConsequenceTypes() {
+        return consequencesTypeByName.values();
+    }
+
+    public Set<ConsequenceType> getConsequenceTypeByTag(Tag tag) {
+        return null;
+    }
+
+    public ConsequenceType getConsequenceType(String name) {
+        return consequencesTypeByName.get(name);
     }
 
 }

@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by loom on 25.06.14.
+ * @todo we should integrate resource bundles for property names (and possibly add descriptions to choice list values)
  */
 @ApplicationScoped
 @OsgiServiceProvider

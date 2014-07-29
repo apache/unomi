@@ -7,7 +7,6 @@ import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 import org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.wemi.context.server.api.consequences.ConsequenceType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
@@ -20,7 +19,6 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import java.util.Collection;
-import java.util.List;
 import java.util.Set;
 
 @WebService
@@ -63,45 +61,89 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
 
     @GET
     @Path("/conditions")
-    public Collection<ConditionType> getAllConditions() {
-        for (ConditionType conditionType : definitionsService.getAllConditions()) {
-            generateChoiceListValues(conditionType, null);
-        }
-        return definitionsService.getAllConditions();
+    public Collection<ConditionType> getAllConditionTypes() {
+        Collection<ConditionType> conditionTypes = definitionsService.getAllConditionTypes();
+        generateConditionChoiceListValues(conditionTypes, null);
+        return conditionTypes;
     }
 
-    private void generateChoiceListValues(ConditionType conditionType, Object context) {
-        for (Parameter parameter : conditionType.getConditionParameters()) {
-            if (parameter.getChoiceListInitializerFilter() != null && parameter.getChoiceListInitializerFilter().length() > 0) {
-                try {
-                    Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, parameter.getChoiceListInitializerFilter());
-                    for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
-                        ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
-                        parameter.setChoiceListValues(choiceListInitializer.getValues(context));
-                    }
-                } catch (InvalidSyntaxException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
 
     @GET
     @Path("/conditions/tags/{tagId}")
     public Set<ConditionType> getConditionTypesByTag(@PathParam("tagId") Tag tag) {
-        return definitionsService.getConditionTypesByTag(tag);
+        Set<ConditionType> conditionTypes = definitionsService.getConditionTypesByTag(tag);
+        generateConditionChoiceListValues(conditionTypes, null);
+        return conditionTypes;
     }
 
     @GET
     @Path("/conditions/{conditionId}")
     public ConditionType getConditionType(@PathParam("conditionId") String conditionId) {
-        return definitionsService.getConditionType(conditionId);
+        ConditionType conditionType = definitionsService.getConditionType(conditionId);
+        generateChoiceListValues(conditionType, null);
+        return conditionType;
+    }
+
+    @GET
+    @Path("/consequences")
+    public Collection<ConsequenceType> getAllConsequenceTypes() {
+        Collection<ConsequenceType> consequenceTypes = definitionsService.getAllConsequenceTypes();
+        generateConsequenceChoiceListValues(consequenceTypes, null);
+        return consequenceTypes;
+    }
+
+    @GET
+    @Path("/consequences/tags/{tagId}")
+    public Set<ConsequenceType> getConsequenceTypeByTag(@PathParam("tagId") Tag tag) {
+        Set<ConsequenceType> consequenceTypes = definitionsService.getConsequenceTypeByTag(tag);
+        generateConsequenceChoiceListValues(consequenceTypes, null);
+        return consequenceTypes;
     }
 
     @GET
     @Path("/consequences/{consequenceId}")
     public ConsequenceType getConsequenceType(@PathParam("consequenceId") String consequenceId) {
-        return definitionsService.getConsequenceType(consequenceId);
+        ConsequenceType consequenceType = definitionsService.getConsequenceType(consequenceId);
+        generateChoiceListValues(consequenceType, null);
+        return consequenceType;
+    }
+
+    private void generateConditionChoiceListValues(Collection<ConditionType> conditionTypes, Object context) {
+        for (ConditionType conditionType : conditionTypes) {
+            generateChoiceListValues(conditionType, null);
+        }
+    }
+
+    private void generateConsequenceChoiceListValues(Collection<ConsequenceType> consequenceTypes, Object context) {
+        for (ConsequenceType consequenceType : consequenceTypes) {
+            generateChoiceListValues(consequenceType, null);
+        }
+    }
+
+    private void generateChoiceListValues(ConditionType conditionType, Object context) {
+        for (Parameter parameter : conditionType.getConditionParameters()) {
+            generateChoiceListValues(parameter, context);
+        }
+    }
+
+    private void generateChoiceListValues(ConsequenceType consequenceType, Object context) {
+        for (Parameter parameter : consequenceType.getConsequenceParameters()) {
+            generateChoiceListValues(parameter, context);
+        }
+    }
+
+    private void generateChoiceListValues(Parameter parameter, Object context) {
+        if (parameter.getChoiceListInitializerFilter() != null && parameter.getChoiceListInitializerFilter().length() > 0) {
+            try {
+                Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, parameter.getChoiceListInitializerFilter());
+                for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
+                    ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
+                    parameter.setChoiceListValues(choiceListInitializer.getValues(context));
+                }
+            } catch (InvalidSyntaxException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
 }
