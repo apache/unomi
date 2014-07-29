@@ -13,7 +13,7 @@ public class ConsequenceType {
     String name;
     String description;
     Set<Tag> tags = new TreeSet<Tag>();
-    List<Parameter> consequenceParameters = new ArrayList<Parameter>();
+    List<Parameter> parameters = new ArrayList<Parameter>();
 
     public ConsequenceType() {
     }
@@ -51,12 +51,12 @@ public class ConsequenceType {
         this.tags = tags;
     }
 
-    public List<Parameter> getConsequenceParameters() {
-        return consequenceParameters;
+    public List<Parameter> getParameters() {
+        return parameters;
     }
 
-    public void setConsequenceParameters(List<Parameter> consequenceParameters) {
-        this.consequenceParameters = consequenceParameters;
+    public void setParameters(List<Parameter> parameters) {
+        this.parameters = parameters;
     }
 
 }

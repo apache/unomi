@@ -18,8 +18,8 @@ public class SetPropertyConsequence extends AbstractConsequenceExecutor {
     @Override
     public boolean execute(Consequence consequence, User user) {
         user.setProperty(
-                (String) consequence.getConsequencesParameterValues().get("propertyName"),
-                (String) consequence.getConsequencesParameterValues().get("propertyValue"));
+                (String) consequence.getParameterValues().get("propertyName"),
+                (String) consequence.getParameterValues().get("propertyValue"));
         return true;
     }
 

@@ -121,13 +121,13 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
     }
 
     private void generateChoiceListValues(ConditionType conditionType, Object context) {
-        for (Parameter parameter : conditionType.getConditionParameters()) {
+        for (Parameter parameter : conditionType.getParameters()) {
             generateChoiceListValues(parameter, context);
         }
     }
 
     private void generateChoiceListValues(ConsequenceType consequenceType, Object context) {
-        for (Parameter parameter : consequenceType.getConsequenceParameters()) {
+        for (Parameter parameter : consequenceType.getParameters()) {
             generateChoiceListValues(parameter, context);
         }
     }

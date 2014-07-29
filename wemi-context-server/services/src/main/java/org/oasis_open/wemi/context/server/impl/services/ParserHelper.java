@@ -31,7 +31,7 @@ public class ParserHelper {
         Map<String, Object> values = new HashMap<String, Object>();
         node.setParameterValues(values);
 
-        for (Parameter parameter : typeNode.getConditionParameters()) {
+        for (Parameter parameter : typeNode.getParameters()) {
             Object parameterValue = null;
             if (parameter.isMultivalued()) {
                 final ArrayList<Object> objects = new ArrayList<Object>();
@@ -55,9 +55,9 @@ public class ParserHelper {
         Consequence node = new Consequence();
         node.setConsequenceType(typeNode);
         Map<String, Object> values = new HashMap<String, Object>();
-        node.setConsequencesParameterValues(values);
+        node.setParameterValues(values);
 
-        for (Parameter parameter : typeNode.getConsequenceParameters()) {
+        for (Parameter parameter : typeNode.getParameters()) {
             Object parameterValue = null;
             if (parameter.isMultivalued()) {
                 final ArrayList<Object> objects = new ArrayList<Object>();

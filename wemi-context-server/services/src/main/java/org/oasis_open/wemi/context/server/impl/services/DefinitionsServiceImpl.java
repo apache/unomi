@@ -141,7 +141,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
 
                 ConditionType condition = new ConditionType(id, name);
                 condition.setDescription(description);
-                condition.setConditionParameters(ParserHelper.parseParameters(conditionObject));
+                condition.setParameters(ParserHelper.parseParameters(conditionObject));
 
                 conditionTypeByName.put(condition.getId(), condition);
                 for (String tagId : tagIds) {
@@ -197,7 +197,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                 ConsequenceType consequence = new ConsequenceType(id, name);
 
                 consequence.setDescription(description);
-                consequence.setConsequenceParameters(ParserHelper.parseParameters(conditionObject));
+                consequence.setParameters(ParserHelper.parseParameters(conditionObject));
 
                 consequencesTypeByName.put(consequence.getId(), consequence);
                 for (String tagId : tagIds) {

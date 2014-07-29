@@ -16,7 +16,7 @@ public class ConditionType {
     String name;
     String description;
     Set<Tag> tags = new TreeSet<Tag>();
-    List<Parameter> conditionParameters = new ArrayList<Parameter>();
+    List<Parameter> parameters = new ArrayList<Parameter>();
 
     public ConditionType() {
     }
@@ -55,12 +55,12 @@ public class ConditionType {
     }
 
     @XmlElement(name="parameters")
-    public List<Parameter> getConditionParameters() {
-        return conditionParameters;
+    public List<Parameter> getParameters() {
+        return parameters;
     }
 
-    public void setConditionParameters(List<Parameter> conditionParameters) {
-        this.conditionParameters = conditionParameters;
+    public void setParameters(List<Parameter> parameters) {
+        this.parameters = parameters;
     }
 
 }

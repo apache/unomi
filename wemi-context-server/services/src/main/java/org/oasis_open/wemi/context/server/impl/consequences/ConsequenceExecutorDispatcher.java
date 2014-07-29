@@ -19,6 +19,7 @@ public class ConsequenceExecutorDispatcher {
     public ConsequenceExecutorDispatcher(User user) {
         this.user = user;
 
+        // @todo remove this hardcoding and replace it with a proper list of consequences coming from the rule
         addVisitor(new SetPropertyConsequence());
     }
 
