@@ -57,15 +57,15 @@
                 <configuration>
                     <!-- no startupFeatures -->
                     <startupFeatures>
-                        <feature>war</feature>
-                        <feature>cxf/2.7.11</feature>
-                        <feature>openwebbeans</feature>
-                        <feature>pax-cdi-web-openwebbeans</feature>
-                        <feature>wemi-context-server-kar</feature>
                     </startupFeatures>
                     <bootFeatures>
                         <feature>standard</feature>
                         <feature>management</feature>
+                        <feature>war</feature>
+                        <feature>cxf</feature>
+                        <feature>openwebbeans</feature>
+                        <feature>pax-cdi-web-openwebbeans</feature>
+                        <feature>wemi-context-server-kar</feature>
                     </bootFeatures>
                     <!-- no installedFeatures -->
                 </configuration>
