@@ -3,16 +3,16 @@ package org.oasis_open.wemi.context.server.api.consequences;
 import org.oasis_open.wemi.context.server.api.conditions.Parameter;
 import org.oasis_open.wemi.context.server.api.conditions.Tag;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlTransient;
+import java.util.*;
 
 public class ConsequenceType {
     String id;
     String name;
     String description;
     Set<Tag> tags = new TreeSet<Tag>();
+    Set<String> tagIds = new LinkedHashSet<String>();
     List<Parameter> parameters = new ArrayList<Parameter>();
 
     public ConsequenceType() {
@@ -43,6 +43,16 @@ public class ConsequenceType {
         this.description = description;
     }
 
+    @XmlElement(name="tags")
+    public Set<String> getTagIds() {
+        return tagIds;
+    }
+
+    public void setTagIds(Set<String> tagIds) {
+        this.tagIds = tagIds;
+    }
+
+    @XmlTransient
     public Set<Tag> getTags() {
         return tags;
     }

@@ -2,10 +2,8 @@ package org.oasis_open.wemi.context.server.api.conditions;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import javax.xml.bind.annotation.XmlTransient;
+import java.util.*;
 
 /**
  * Represents a node in the segment definition expression tree
@@ -16,6 +14,7 @@ public class ConditionType {
     String name;
     String description;
     Set<Tag> tags = new TreeSet<Tag>();
+    Set<String> tagIDs = new LinkedHashSet<String>();
     List<Parameter> parameters = new ArrayList<Parameter>();
 
     public ConditionType() {
@@ -46,6 +45,16 @@ public class ConditionType {
         this.description = description;
     }
 
+    @XmlElement(name="tags")
+    public Set<String> getTagIDs() {
+        return tagIDs;
+    }
+
+    public void setTagIDs(Set<String> tagIDs) {
+        this.tagIDs = tagIDs;
+    }
+
+    @XmlTransient
     public Set<Tag> getTags() {
         return tags;
     }
