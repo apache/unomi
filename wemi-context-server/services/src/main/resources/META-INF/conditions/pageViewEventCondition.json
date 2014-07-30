@@ -1,7 +1,7 @@
 {
     "id" : "pageViewEventCondition",
-    "name" : "Hover event",
-    "description" : "A content has been hovered",
+    "name" : "Page view event",
+    "description" : "A page has been viewed",
     "tags" : [ "event" ],
     "parameters" : [
         {

@@ -1,6 +1,6 @@
 {
     "id" : "event",
-    "name" : "Conditions on events",
-    "description" : "Conditions on events",
+    "name" : "Events",
+    "description" : "All event-related objects",
     "parent" : "root"
 }

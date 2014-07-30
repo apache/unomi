@@ -1,6 +1,6 @@
 {
     "id" : "geographic",
-    "name" : "Geographic conditions",
-    "description" : "Regroups all geographic conditions",
+    "name" : "Geographic",
+    "description" : "Regroups all geographic objects",
     "parent" : "root"
 }
