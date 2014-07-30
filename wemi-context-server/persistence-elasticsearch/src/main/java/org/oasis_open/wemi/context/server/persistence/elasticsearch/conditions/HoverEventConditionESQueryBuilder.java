@@ -7,15 +7,12 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 /**
 * Created by toto on 27/06/14.
 */
-class HoverEventConditionESQueryBuilder extends AbstractESQueryBuilder {
+class HoverEventConditionESQueryBuilder implements ESQueryBuilder {
 
-
-    @Override
     public String getConditionId() {
         return "hoverEventCondition";
     }
 
-    @Override
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
         return FilterBuilders.andFilter(
                 FilterBuilders.termFilter("eventType", "hover"),

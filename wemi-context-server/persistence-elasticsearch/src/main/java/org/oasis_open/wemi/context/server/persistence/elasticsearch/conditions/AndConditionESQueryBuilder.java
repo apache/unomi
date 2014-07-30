@@ -10,13 +10,12 @@ import java.util.List;
 /**
 * Created by toto on 27/06/14.
 */
-class AndConditionESQueryBuilder extends AbstractESQueryBuilder {
-    @Override
+class AndConditionESQueryBuilder implements ESQueryBuilder {
+
     public String getConditionId() {
         return "andCondition";
     }
 
-    @Override
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
         List<Condition> conditions = (List<Condition>) condition.getParameterValues().get("subConditions");
 

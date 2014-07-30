@@ -6,10 +6,10 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 /**
  * Created by toto on 27/06/14.
  */
-public abstract class AbstractESQueryBuilder {
+public interface ESQueryBuilder {
 
-    public abstract String getConditionId();
+    public String getConditionId();
 
-    public abstract FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher);
+    public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher);
 
 }

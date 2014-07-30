@@ -11,7 +11,7 @@ import java.util.*;
  */
 public class ConditionESQueryBuilderDispatcher {
 
-    private Map<String, AbstractESQueryBuilder> visitors = new HashMap<String, AbstractESQueryBuilder>();
+    private Map<String, ESQueryBuilder> visitors = new HashMap<String, ESQueryBuilder>();
 
     public ConditionESQueryBuilderDispatcher() {
         addVisitor(new UserPropertyConditionESQueryBuilder());
@@ -25,7 +25,7 @@ public class ConditionESQueryBuilderDispatcher {
         return "{\"query\": " + QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), buildFilter(condition)).toString() + "}";
     }
 
-    public void addVisitor(AbstractESQueryBuilder visitor) {
+    public void addVisitor(ESQueryBuilder visitor) {
         visitors.put(visitor.getConditionId(), visitor);
     }
 
