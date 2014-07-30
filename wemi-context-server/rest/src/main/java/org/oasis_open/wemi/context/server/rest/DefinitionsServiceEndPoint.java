@@ -37,6 +37,7 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
         this.definitionsService = definitionsService;
     }
 
+    @WebMethod(exclude=true)
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
@@ -55,8 +56,8 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
 
     @GET
     @Path("/tags/{tagId}")
-    public Set<Tag> getChildTags(@PathParam("tagId") Tag tag) {
-        return definitionsService.getChildTags(tag);
+    public Tag getTag(@PathParam("tagId") Tag tag) {
+        return definitionsService.getTag(tag);
     }
 
     @GET

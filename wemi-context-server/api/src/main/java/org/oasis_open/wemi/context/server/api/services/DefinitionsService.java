@@ -10,7 +10,7 @@ import java.util.Set;
 public interface DefinitionsService {
     Set<Tag> getAllTags();
     Set<Tag> getRootTags();
-    Set<Tag> getChildTags(Tag tag);
+    Tag getTag(Tag tag);
 
     Collection<ConditionType> getAllConditionTypes();
     Set<ConditionType> getConditionTypesByTag(Tag tag);

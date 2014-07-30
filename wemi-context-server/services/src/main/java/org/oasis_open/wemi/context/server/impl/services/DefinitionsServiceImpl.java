@@ -238,12 +238,12 @@ public class DefinitionsServiceImpl implements DefinitionsService {
         return rootTags;
     }
 
-    public Set<Tag> getChildTags(Tag tag) {
-        Tag parentTag = tags.get(tag.getId());
-        if (parentTag == null) {
-            return new HashSet<Tag>();
+    public Tag getTag(Tag tag) {
+        Tag completeTag = tags.get(tag.getId());
+        if (completeTag == null) {
+            return null;
         }
-        return parentTag.getSubTags();
+        return completeTag;
     }
 
     public Collection<ConditionType> getAllConditionTypes() {
