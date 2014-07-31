@@ -68,4 +68,11 @@ public class SegmentServiceEndPoint implements SegmentService {
         segmentService.setSegmentDefinition(segmentDefinition.getSegmentID(), segmentDefinition);
     }
 
+    @PUT
+    @Path("/definitions/{segmentID}")
+    public void createSegmentDefinition(@PathParam("segmentID") SegmentID segmentID) {
+        SegmentDefinition segmentDefinition = new SegmentDefinition(segmentID);
+        segmentService.setSegmentDefinition(segmentDefinition.getSegmentID(), segmentDefinition);
+    }
+
 }

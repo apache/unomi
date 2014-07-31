@@ -206,6 +206,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public boolean saveQuery(String queryName, Condition query) {
+        if (query == null) {
+            return false;
+        }
         final ConditionESQueryBuilderDispatcher builder = new ConditionESQueryBuilderDispatcher();
         saveQuery(queryName, builder.getQuery(query));
         return true;

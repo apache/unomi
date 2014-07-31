@@ -135,6 +135,8 @@ public class SegmentServiceImpl implements SegmentService {
 
     public void setSegmentDefinition(SegmentID segmentID, SegmentDefinition segmentDefinition) {
         persistenceService.saveQuery(segmentID.getId(), segmentDefinition.getRootCondition());
+        // make sure we update the name and description metadata that might not match, so first we remove the entry from the map
+        segmentQueries.remove(segmentID);
         segmentQueries.put(segmentID, segmentDefinition);
     }
 
