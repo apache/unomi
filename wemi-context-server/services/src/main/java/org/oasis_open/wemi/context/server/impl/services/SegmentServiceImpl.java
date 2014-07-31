@@ -140,6 +140,11 @@ public class SegmentServiceImpl implements SegmentService {
         segmentQueries.put(segmentID, segmentDefinition);
     }
 
+    public void removeSegmentDefinition(SegmentID segmentID) {
+        persistenceService.removeQuery(segmentID.getId());
+        segmentQueries.remove(segmentID);
+    }
+
     public static void dumpJSON(JsonValue tree, String key, String depthPrefix) {
         if (key != null)
             logger.info(depthPrefix + "Key " + key + ": ");

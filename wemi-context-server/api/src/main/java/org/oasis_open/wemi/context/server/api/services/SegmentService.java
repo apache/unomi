@@ -17,5 +17,6 @@ public interface SegmentService {
     Set<SegmentID> getSegmentIDs();
     SegmentDefinition getSegmentDefinition (SegmentID segmentID);
     void setSegmentDefinition (SegmentID segmentID, SegmentDefinition segmentDefinition);
+    void removeSegmentDefinition(SegmentID segmentID);
 
 }

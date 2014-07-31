@@ -204,7 +204,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         }.executeInClassLoader(queryName, query);
     }
 
-    @Override
     public boolean saveQuery(String queryName, Condition query) {
         if (query == null) {
             return false;
@@ -212,6 +211,23 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         final ConditionESQueryBuilderDispatcher builder = new ConditionESQueryBuilderDispatcher();
         saveQuery(queryName, builder.getQuery(query));
         return true;
+    }
+
+    public boolean removeQuery(final String queryName) {
+        return new InClassLoaderExecute<Boolean>() {
+            protected Boolean execute(Object... args) {
+            //Index the query = register it in the percolator
+                try {
+                    client.prepareDelete("wemi", ".percolator", queryName)
+                        .setRefresh(true) // Needed when the query shall be available immediately
+                        .execute().actionGet();
+                    return true;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return false;
+            }
+        }.executeInClassLoader(queryName);
     }
 
     public List<String> getMatchingSavedQueries(final Item item) {

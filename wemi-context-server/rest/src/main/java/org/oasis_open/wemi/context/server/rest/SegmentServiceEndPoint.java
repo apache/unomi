@@ -70,9 +70,17 @@ public class SegmentServiceEndPoint implements SegmentService {
 
     @PUT
     @Path("/definitions/{segmentID}")
-    public void createSegmentDefinition(@PathParam("segmentID") SegmentID segmentID) {
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public void createSegmentDefinition(@PathParam("segmentID") SegmentID segmentID, @FormParam("segmentName") String segmentName) {
+        segmentID.setName(segmentName);
         SegmentDefinition segmentDefinition = new SegmentDefinition(segmentID);
         segmentService.setSegmentDefinition(segmentDefinition.getSegmentID(), segmentDefinition);
+    }
+
+    @DELETE
+    @Path("/definitions/{segmentID}")
+    public void removeSegmentDefinition(@PathParam("segmentID") SegmentID segmentID) {
+        segmentService.removeSegmentDefinition(segmentID);
     }
 
 }

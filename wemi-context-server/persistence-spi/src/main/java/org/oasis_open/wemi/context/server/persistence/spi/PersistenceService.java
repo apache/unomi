@@ -16,9 +16,9 @@ public interface PersistenceService {
 
     public Item load(String itemId, String itemType, Class clazz);
 
-    public boolean saveQuery(String queryName, String query);
-
     public boolean saveQuery(String queryName, Condition query);
+
+    public boolean removeQuery(String queryName);
 
     public boolean createMapping(String queryName, String query);
 
