@@ -9,26 +9,48 @@
     </parent>
 
     <artifactId>wemi-context-server-package</artifactId>
-    <packaging>karaf-assembly</packaging>
+    <packaging>pom</packaging>
     <name>Apache Karaf WEMI Context Server Distribution</name>
 
+    <properties>
+        <appendedResourcesDirectory>${basedir}/../etc/appended-resources</appendedResourcesDirectory>
+    </properties>
+
     <dependencies>
+
         <dependency>
             <!-- scope is compile so all features (there is only one) are installed into startup.properties and the feature repo itself is not installed -->
             <groupId>org.apache.karaf.features</groupId>
             <artifactId>framework</artifactId>
-            <version>3.0.1</version>
+            <version>${version.karaf}</version>
             <type>kar</type>
         </dependency>
         <dependency>
             <!-- scope is runtime so the feature repo is listed in the features service config file, and features may be installed using the karaf-maven-plugin configuration -->
             <groupId>org.apache.karaf.features</groupId>
             <artifactId>standard</artifactId>
-            <version>3.0.1</version>
             <classifier>features</classifier>
+            <version>${version.karaf}</version>
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.karaf.features</groupId>
+            <artifactId>spring</artifactId>
+            <classifier>features</classifier>
+            <version>${version.karaf}</version>
+            <type>xml</type>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.karaf.features</groupId>
+            <artifactId>enterprise</artifactId>
+            <classifier>features</classifier>
+            <version>${version.karaf}</version>
+            <type>xml</type>
+            <scope>runtime</scope>
+        </dependency>
+
         <dependency>
             <!-- scope is runtime so the feature repo is listed in the features service config file, and features may be installed using the karaf-maven-plugin configuration -->
             <groupId>org.apache.cxf.karaf</groupId>
@@ -48,29 +70,110 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>${project.basedir}/../..</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>README*</include>
+                    <include>RELEASE*</include>
+                    <include>LICENSE</include>
+                    <include>NOTICE</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/src/main/resources</directory>
+            </resource>
+        </resources>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>process-resources</id>
+                        <goals>
+                            <goal>resources</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-remote-resources-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.karaf.tooling</groupId>
                 <artifactId>karaf-maven-plugin</artifactId>
-                <version>3.0.1</version>
-                <extensions>true</extensions>
+                <version>${version.karaf}</version>
+                <executions>
+                    <execution>
+                        <id>install-kar</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>install-kars</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>package</id>
+                        <goals>
+                            <goal>instance-create-archive</goal>
+                        </goals>
+                    </execution>
+                </executions>
                 <configuration>
-                    <!-- no startupFeatures -->
-                    <startupFeatures>
-                    </startupFeatures>
+                    <installedFeatures>
+                        <feature>wrapper</feature>
+                    </installedFeatures>
                     <bootFeatures>
                         <feature>standard</feature>
                         <feature>management</feature>
+                        <feature>ssh</feature>
+                        <feature>config</feature>
+                        <feature>deployers</feature>
+                        <feature>region</feature>
+                        <feature>package</feature>
+                        <feature>kar</feature>
                         <feature>war</feature>
                         <feature>cxf</feature>
                         <feature>openwebbeans</feature>
                         <feature>pax-cdi-web-openwebbeans</feature>
                         <feature>wemi-context-server-kar</feature>
                     </bootFeatures>
-                    <!-- no installedFeatures -->
                 </configuration>
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>src</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>src</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                                <configuration>
+                                    <descriptors>
+                                        <descriptor>src/main/descriptors/src.xml</descriptor>
+                                    </descriptors>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
