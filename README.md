@@ -17,6 +17,10 @@ Simply type at the root of the project:
   mvn clean install
 ```
 
+If you want to build and run the integration tests, you should instead use : 
+
+    mvn -P itests clean install
+
 Deploying
 ---------
 

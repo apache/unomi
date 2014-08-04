@@ -18,6 +18,14 @@
        <version.pax.exam>4.1.0</version.pax.exam>
    </properties>
 
+  <profiles>
+      <profile>
+          <id>integration-tests</id>
+          <modules>
+              <module>itests</module>
+          </modules>
+      </profile>
+  </profiles>
   
   <modules>
     <module>api</module>
@@ -29,7 +37,6 @@
     <module>plugins</module>
     <module>kar</module>
     <module>package</module>
-    <module>itests</module>
   </modules>
 
   <dependencies>
