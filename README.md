@@ -5,7 +5,7 @@ A public sandbox project to test ideas for the WEMI specification
 
 Requirements
 ------------
-* JDK 6 or later, http://www.oracle.com/technetwork/java/javase/downloads/index.html
+* JDK 6 or later, http://www.oracle.com/technetwork/java/javase/downloads/index.html (JDK 7+ needed for tests execution)
 * Apache Karaf 3.0+, http://karaf.apache.org
 * Maven 3.0+, http://maven.apache.org
 
@@ -186,6 +186,40 @@ file from 8181 to something else. In this example we have changed to port to 818
     
 11. You can then finally copy the WEMI Context Server KAR into the KARAF_HOME/instances/node2/deploy directory and 
 everything should be up and running.
+
+JDK Selection on Mac OS X
+-------------------------
+
+You might need to select the JDK to run the tests in the itests subproject. In order to do so you can list the 
+installed JDKs with the following command : 
+
+    /usr/libexec/java_home -V
+    
+which will output something like this : 
+
+    Matching Java Virtual Machines (7):
+        1.7.0_51, x86_64:	"Java SE 7"	/Library/Java/JavaVirtualMachines/jdk1.7.0_51.jdk/Contents/Home
+        1.7.0_45, x86_64:	"Java SE 7"	/Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home
+        1.7.0_25, x86_64:	"Java SE 7"	/Library/Java/JavaVirtualMachines/jdk1.7.0_25.jdk/Contents/Home
+        1.6.0_65-b14-462, x86_64:	"Java SE 6"	/Library/Java/JavaVirtualMachines/1.6.0_65-b14-462.jdk/Contents/Home
+        1.6.0_65-b14-462, i386:	"Java SE 6"	/Library/Java/JavaVirtualMachines/1.6.0_65-b14-462.jdk/Contents/Home
+        1.6.0_65-b14-462, x86_64:	"Java SE 6"	/System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home
+        1.6.0_65-b14-462, i386:	"Java SE 6"	/System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home
+
+
+You can then select the one you want using : 
+
+    export JAVA_HOME=`/usr/libexec/java_home -v 1.7.0_51`
+    
+and then check that it was correctly referenced using: 
+
+    java -version
+    
+which should give you a result such as this: 
+
+    java version "1.7.0_51"
+    Java(TM) SE Runtime Environment (build 1.7.0_51-b13)
+    Java HotSpot(TM) 64-Bit Server VM (build 24.51-b03, mixed mode)
 
 Todo
 ----

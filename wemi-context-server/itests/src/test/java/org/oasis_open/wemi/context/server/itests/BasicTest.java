@@ -6,23 +6,21 @@ import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.karafDist
 import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.keepRuntimeFolder;
 
 import java.io.File;
+import java.util.Set;
 
 import javax.inject.Inject;
 
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.oasis_open.wemi.context.server.api.SegmentID;
+import org.oasis_open.wemi.context.server.api.services.SegmentService;
 import org.ops4j.pax.exam.Configuration;
-import org.ops4j.pax.exam.CoreOptions;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
-import org.ops4j.pax.exam.karaf.options.ConfigurationPointer;
-import org.ops4j.pax.exam.karaf.options.KarafDistributionKitConfigurationOption;
 import org.ops4j.pax.exam.karaf.options.KarafDistributionOption;
-import org.ops4j.pax.exam.karaf.options.configs.FeaturesCfg;
 import org.ops4j.pax.exam.options.MavenArtifactUrlReference;
 import org.ops4j.pax.exam.options.MavenUrlReference;
-import org.ops4j.pax.exam.options.ProvisionOption;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,14 +28,12 @@ import org.slf4j.LoggerFactory;
  * Created by loom on 04.08.14.
  */
 @RunWith(PaxExam.class)
-public class BasicTests {
+public class BasicTest {
 
-    private static Logger LOG = LoggerFactory.getLogger(BasicTests.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(BasicTest.class);
 
-    /*
     @Inject
-    protected Calculator calculator;
-    */
+    protected SegmentService segmentService;
 
     @Configuration
     public Option[] config() {
@@ -90,26 +86,26 @@ public class BasicTests {
                 .unpackDirectory(new File("target/exam"))
                 .useDeployFolder(false),
             keepRuntimeFolder(),
-            KarafDistributionOption.features(karafPaxWebRepo , "war"),
-            KarafDistributionOption.features(karafCxfRepo , "cxf"),
-            KarafDistributionOption.features(karafStandardRepo , "openwebbeans"),
+            KarafDistributionOption.features(karafPaxWebRepo, "war"),
+            KarafDistributionOption.features(karafCxfRepo, "cxf"),
+            KarafDistributionOption.features(karafStandardRepo, "openwebbeans"),
             KarafDistributionOption.features(karafStandardRepo , "pax-cdi-web-openwebbeans"),
             KarafDistributionOption.features(wemiServerRepo , "wemi-context-server-kar"),
+                /*
             mavenBundle()
                 .groupId("org.oasis-open.wemi")
                 .artifactId("wemi-context-server-wab")
                 .versionAsInProject().start(),
+                */
        };
     }
 
     @Test
-    public void testAdd() {
-        LOG.info("testAdd test executed");
-        /*
-        int result = calculator.add(1, 2);
-        LOG.info("Result of add was {}", result);
-        Assert.assertEquals(3, result);
-        */
+    public void testSegments() {
+        Assert.assertNotNull("Segment service should be available", segmentService);
+        Set<SegmentID> segmentIDs = segmentService.getSegmentIDs();
+        Assert.assertNotEquals("Segment ID list should not be empty", 0, segmentIDs.size());
+        LOGGER.info("Retrieved " + segmentIDs.size() + " segment IDs");
     }
 
 }

@@ -9,14 +9,6 @@
     <name>WEMI Server Integration Tests</name>
 
     <dependencies>
-        <!--
-        <dependency>
-            <groupId>org.ops4j.pax.exam.samples</groupId>
-            <artifactId>pax-exam-sample8-ds</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-        -->
         <dependency>
             <groupId>org.oasis-open.wemi</groupId>
             <artifactId>wemi-context-server-wab</artifactId>
