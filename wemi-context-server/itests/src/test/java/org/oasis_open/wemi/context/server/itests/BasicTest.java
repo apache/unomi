@@ -80,7 +80,7 @@ public class BasicTest {
             .type("xml")
             .versionAsInProject();
         return new Option[] {
-            // KarafDistributionOption.debugConfiguration("5005", true),
+            KarafDistributionOption.debugConfiguration("5005", false),
             karafDistributionConfiguration()
                 .frameworkUrl(karafUrl)
                 .unpackDirectory(new File("target/exam"))
