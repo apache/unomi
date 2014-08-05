@@ -63,6 +63,18 @@
             <version>1.6.6</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+          <groupId>org.apache.httpcomponents</groupId>
+          <artifactId>httpclient-osgi</artifactId>
+          <version>4.3.5</version>
+          <type>bundle</type>
+        </dependency>
+        <dependency>
+        	<groupId>org.apache.httpcomponents</groupId>
+        	<artifactId>httpcore-osgi</artifactId>
+        	<version>4.3.2</version>
+        </dependency>
+
         <!-- Dependencies for pax exam karaf container -->
         <dependency>
             <groupId>org.ops4j.pax.exam</groupId>

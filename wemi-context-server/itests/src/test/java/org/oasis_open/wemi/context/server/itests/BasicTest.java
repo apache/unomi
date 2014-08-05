@@ -6,10 +6,17 @@ import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.karafDist
 import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.keepRuntimeFolder;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Set;
 
 import javax.inject.Inject;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -21,6 +28,8 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.karaf.options.KarafDistributionOption;
 import org.ops4j.pax.exam.options.MavenArtifactUrlReference;
 import org.ops4j.pax.exam.options.MavenUrlReference;
+import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
+import org.ops4j.pax.exam.spi.reactors.PerClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +37,7 @@ import org.slf4j.LoggerFactory;
  * Created by loom on 04.08.14.
  */
 @RunWith(PaxExam.class)
+@ExamReactorStrategy(PerClass.class)
 public class BasicTest {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(BasicTest.class);
@@ -91,12 +101,14 @@ public class BasicTest {
             KarafDistributionOption.features(karafStandardRepo, "openwebbeans"),
             KarafDistributionOption.features(karafStandardRepo , "pax-cdi-web-openwebbeans"),
             KarafDistributionOption.features(wemiServerRepo , "wemi-context-server-kar"),
-                /*
             mavenBundle()
-                .groupId("org.oasis-open.wemi")
-                .artifactId("wemi-context-server-wab")
+                .groupId("org.apache.httpcomponents")
+                .artifactId("httpcore-osgi")
                 .versionAsInProject().start(),
-                */
+            mavenBundle()
+                .groupId("org.apache.httpcomponents")
+                .artifactId("httpclient-osgi")
+                .versionAsInProject().start(),
        };
     }
 
@@ -106,6 +118,30 @@ public class BasicTest {
         Set<SegmentID> segmentIDs = segmentService.getSegmentIDs();
         Assert.assertNotEquals("Segment ID list should not be empty", 0, segmentIDs.size());
         LOGGER.info("Retrieved " + segmentIDs.size() + " segment IDs");
+    }
+
+    @Test
+    public void testContext() throws IOException {
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        HttpGet httpGet = new HttpGet("http://localhost:8181/context.js");
+        CloseableHttpResponse response = httpclient.execute(httpGet);
+        // The underlying HTTP connection is still held by the response object
+        // to allow the response content to be streamed directly from the network socket.
+        // In order to ensure correct deallocation of system resources
+        // the user MUST call CloseableHttpResponse#close() from a finally clause.
+        // Please note that if response content is not fully consumed the underlying
+        // connection cannot be safely re-used and will be shut down and discarded
+        // by the connection manager.
+        try {
+            System.out.println(response.getStatusLine());
+            HttpEntity entity1 = response.getEntity();
+            // do something useful with the response body
+            // and ensure it is fully consumed
+            EntityUtils.consume(entity1);
+        } finally {
+            response.close();
+        }
+
     }
 
 }
