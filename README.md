@@ -21,8 +21,19 @@ If you want to build and run the integration tests, you should instead use :
 
     mvn -P itests clean install
 
-Deploying
----------
+Deploying the generated package
+-------------------------------
+
+The "package" sub-project generates a pre-configured Apache Karaf installation that is the simplest way to get started.
+Simply uncompress the package/target/wemi-context-server-package-VERSION.tar.gz (for Linux or Mac OS X) or 
+ package/target/wemi-context-server-package-VERSION.tar.gz (for Windows) archive into the directory of your choice.
+ 
+You can then start the server simply by using the command : 
+
+    bin/karaf start    
+
+Deploying manually
+------------------
 
 1. Before deploying, make sure that you have Apache Karaf properly installed. You will also have to increase the
 default maximum memory size and perm gen size by adjusting the following environment values in the bin/setenv(.bat)
@@ -65,6 +76,20 @@ you will need to specify the following command line parameter :
    
 6. If all went smoothly, you should be able to access the WEMI context script here : http://localhost:8181/context.js
  You should see a digitalData object populated with some values. If not something went wrong during the install.
+ 
+Running the integration tests
+-----------------------------
+
+The integration tests are not executed by default to make build time minimal, but it is recommended to run the 
+integration tests at least once before using the server to make sure that everything is ok in the build. Another way
+to use these tests is to run them from a continuous integration server such as Jenkins, Apache Gump, Atlassian Bamboo or
+ others. 
+ 
+Note : the integration tests require a JDK 7 or more recent !
+
+To run the tests simply activate the following profile : 
+ 
+    mvn -P integration-tests clean install
 
 Testing with an example page
 ----------------------------
