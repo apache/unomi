@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.api.services;
 
+import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 
 import java.util.List;
@@ -16,5 +17,9 @@ public interface UserService {
     boolean save(User user);
 
     public List<String> getUserProperties();
+
+    Session loadSession(String eventId);
+
+    boolean saveSession(Session event);
 
 }

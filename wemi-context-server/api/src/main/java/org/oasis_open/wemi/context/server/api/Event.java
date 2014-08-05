@@ -13,10 +13,12 @@ public class Event extends Item {
 
     public static final String EVENT_ITEM_TYPE = "event";
     private String eventType;
+    private String userSession = null;
     private String visitorID = null;
     private Date timeStamp;
 
     private transient User user;
+    private transient Session session;
 
     // attributes are not serializable, and can be used to pass additional contextual object such as HTTP request
     // response objects, etc...
@@ -27,10 +29,12 @@ public class Event extends Item {
         this.timeStamp = new Date();
     }
 
-    public Event(String itemId, String eventType, String visitorID, Date timeStamp) {
+    public Event(String itemId, String eventType, String userSession, String visitorID, Date timeStamp) {
         super(itemId, EVENT_ITEM_TYPE, null, new Properties());
         this.eventType = eventType;
         setProperty("eventType", eventType);
+        this.userSession = userSession;
+        setProperty("userSession", userSession);
         this.visitorID = visitorID;
         if (visitorID != null) {
             setProperty("visitorID", visitorID);
@@ -52,6 +56,10 @@ public class Event extends Item {
         }
     }
 
+    public String getUserSession() {
+        return userSession;
+    }
+
     public String getVisitorID() {
         return visitorID;
     }
@@ -70,6 +78,14 @@ public class Event extends Item {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public Session getSession() {
+        return session;
+    }
+
+    public void setSession(Session session) {
+        this.session = session;
     }
 
     public Map<String, Object> getAttributes() {

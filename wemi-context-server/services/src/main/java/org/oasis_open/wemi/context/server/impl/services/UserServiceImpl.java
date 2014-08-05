@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
+import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.UserService;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
@@ -46,4 +47,15 @@ public class UserServiceImpl implements UserService {
         Map<String,Map<String,String>> mappings = persistenceService.getMapping(User.USER_ITEM_TYPE);
         return new ArrayList<String>(mappings.keySet());
     }
+
+    public Session loadSession(String sessionId) {
+        return (Session) persistenceService.load(sessionId, Session.SESSION_ITEM_TYPE, Session.class);
+    }
+
+    public boolean saveSession(Session event) {
+        persistenceService.save(event);
+        return false;
+    }
+
+
 }

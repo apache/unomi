@@ -1,6 +1,7 @@
 // base Javascript tag container
 
 var wemi = {
+    userSession: "",
 
     /*
      * Recursively merge properties of two objects
@@ -99,7 +100,7 @@ var wemi = {
 
     collectEvent: function(baseURL, eventType, parameters, successCallBack) {
         // @todo we should pass the parameters as an array or a map instead of a string
-        var xhr = this.createCORSRequest("GET", baseURL + "/" + eventType + "?" + parameters);
+        var xhr = this.createCORSRequest("GET", baseURL + "/" + eventType + "?userSession=" + wemiUserSession + "&" + parameters);
         if (!xhr) {
             alert("CORS not supported by browser!");
         }
@@ -164,8 +165,8 @@ if (window.digitalData.loadCallbacks && window.digitalData.loadCallbacks.length 
 }
 
 // set the cookie on the current page since it is not set by the server serving the page content
-wemi.createCookie("wemi-profileID", window.digitalData.user[0].profiles[0].profileInfo.profileId);
+//wemi.createCookie("wemi-profileID", window.digitalData.user[0].profiles[0].profileInfo.profileId);
 
-console.log("wemi: wemi-profileID=" + wemi.readCookie("wemi-profileID"));
+//console.log("wemi: wemi-profileID=" + wemi.readCookie("wemi-profileID"));
 
 console.log("wemi: WEMI context script successfully initialized");

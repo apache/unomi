@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server;
 
 import org.oasis_open.wemi.context.server.api.Event;
+import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.EventListenerService;
 import org.oasis_open.wemi.context.server.api.services.EventService;
@@ -65,15 +66,22 @@ public class EventCollectorServlet extends HttpServlet {
         HttpUtils.dumpBasicRequestInfo(req);
 
         String visitorID = null;
-        Cookie[] cookies = req.getCookies();
-        // HttpUtils.dumpRequestCookies(cookies);
-        for (Cookie cookie : cookies) {
-            if ("wemi-profileID".equals(cookie.getName())) {
-                visitorID = cookie.getValue();
-            }
-        }
+        Session userSession;
 
         HttpUtils.setupCORSHeaders(req, resp);
+
+        final String userSessionId = req.getParameter("userSession");
+        if (userSessionId == null) {
+            return;
+        }
+        userSession = userService.loadSession(userSessionId);
+        if (userSession != null) {
+            visitorID = userSession.getUserId();
+        }
+
+        if (visitorID == null) {
+            return;
+        }
 
         String eventType = req.getPathInfo();
         if (eventType.startsWith("/")) {
@@ -86,29 +94,17 @@ public class EventCollectorServlet extends HttpServlet {
             eventType = eventType.substring(eventType.lastIndexOf("/"));
         }
 
-        Event event = new Event(UUID.randomUUID().toString(), eventType, visitorID, eventTimeStamp);
-
-        Enumeration<String> parameterNames = req.getParameterNames();
-        while (parameterNames.hasMoreElements()) {
-            String parameterName = parameterNames.nextElement();
-            event.setProperty(parameterName, req.getParameter(parameterName));
-            if (visitorID == null && "wemi-profileID".equals(parameterName)) {
-                visitorID = req.getParameter(parameterName);
-                event.setVisitorID(visitorID);
-            }
-        }
+        Event event = new Event(UUID.randomUUID().toString(), eventType, userSessionId, visitorID, eventTimeStamp);
 
         event.getAttributes().put("http_request", req);
         event.getAttributes().put("http_response", resp);
 
         eventService.save(event);
 
-        User user = event.getUser();
-        if (user == null && event.getVisitorID() != null) {
-            user = userService.load(event.getVisitorID());
-            if (user != null) {
-                event.setUser(user);
-            }
+        event.setSession(userSession);
+        User user = userService.load(event.getVisitorID());
+        if (user != null) {
+            event.setUser(user);
         }
         boolean changed = false;
         if (user != null) {
@@ -120,6 +116,7 @@ public class EventCollectorServlet extends HttpServlet {
 
             if (changed) {
                 userService.save(user);
+                userService.saveSession(userSession);
             }
         }
         PrintWriter responseWriter = resp.getWriter();
