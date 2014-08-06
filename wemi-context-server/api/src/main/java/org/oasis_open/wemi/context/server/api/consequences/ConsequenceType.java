@@ -8,9 +8,11 @@ import javax.xml.bind.annotation.XmlTransient;
 import java.util.*;
 
 public class ConsequenceType {
+
     String id;
     String name;
     String description;
+    String serviceFilter;
     Set<Tag> tags = new TreeSet<Tag>();
     Set<String> tagIds = new LinkedHashSet<String>();
     List<Parameter> parameters = new ArrayList<Parameter>();
@@ -41,6 +43,14 @@ public class ConsequenceType {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getServiceFilter() {
+        return serviceFilter;
+    }
+
+    public void setServiceFilter(String serviceFilter) {
+        this.serviceFilter = serviceFilter;
     }
 
     @XmlElement(name="tags")

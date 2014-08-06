@@ -1,0 +1,25 @@
+{
+    "id" : "eventToUserPropertyConsequence",
+    "name" : "copy event property to user property",
+    "description" : "Copies an event property to a user property",
+    "serviceFilter" : "(consequenceExecutorId=eventToUserProperty)",
+    "tags" : [ "event" ],
+    "parameters" : [
+        {
+            "id" : "eventPropertyName",
+            "name" : "Event property name",
+            "description" : "The name of the event property to read",
+            "type" : "string",
+            "multivalued" : false,
+            "choicelistInitializerFilter" : ""
+        },
+        {
+            "id" : "userPropertyName",
+            "name" : "User property name",
+            "description" : "The name of the user property to write",
+            "type" : "string",
+            "multivalued" : false,
+            "choicelistInitializerFilter" : "(initializerId=userProperty)"
+        }
+    ]
+}

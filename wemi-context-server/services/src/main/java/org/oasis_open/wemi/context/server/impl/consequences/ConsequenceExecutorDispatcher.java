@@ -1,8 +1,14 @@
 package org.oasis_open.wemi.context.server.impl.consequences;
 
 import org.oasis_open.wemi.context.server.api.User;
+import org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceReference;
 
+import javax.inject.Inject;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -11,27 +17,26 @@ import java.util.Map;
  */
 public class ConsequenceExecutorDispatcher {
 
-    private Map<String, AbstractConsequenceExecutor> visitors = new HashMap<String, AbstractConsequenceExecutor>();
+    @Inject
+    private BundleContext bundleContext;
 
-    private User user;
-    private boolean changed = false;
+    public ConsequenceExecutorDispatcher() {
 
-    public ConsequenceExecutorDispatcher(User user) {
-        this.user = user;
-
-        // @todo remove this hardcoding and replace it with a proper list of consequences coming from the rule
-        addVisitor(new SetPropertyConsequence());
     }
 
-    public void addVisitor(AbstractConsequenceExecutor visitor) {
-        visitors.put(visitor.getConsequenceId(), visitor);
-    }
-
-    public void execute(Consequence consequence) {
-        changed |= visitors.get(consequence.getConsequenceType().getId()).execute(consequence, user);
-    }
-
-    public boolean isChanged() {
+    public boolean execute(Consequence consequence, User user, Object context) {
+        Collection<ServiceReference<ConsequenceExecutor>> matchingConsequenceExecutorReferences = null;
+        try {
+            matchingConsequenceExecutorReferences = bundleContext.getServiceReferences(ConsequenceExecutor.class, consequence.getConsequenceType().getServiceFilter());
+        } catch (InvalidSyntaxException e) {
+            e.printStackTrace();
+        }
+        boolean changed = false;
+        for (ServiceReference<ConsequenceExecutor> consequenceExecutorReference : matchingConsequenceExecutorReferences) {
+            ConsequenceExecutor consequenceExecutor = bundleContext.getService(consequenceExecutorReference);
+            changed |= consequenceExecutor.execute(consequence, user, context);
+        }
         return changed;
     }
+
 }

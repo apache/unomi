@@ -38,6 +38,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService  {
     @Inject
     private DefinitionsService definitionsService;
 
+    @Inject
+    private ConsequenceExecutorDispatcher consequenceExecutorDispatcher;
+
     Map<String, Rule> rules = new LinkedHashMap<String, Rule>();
 
     @PostConstruct
@@ -106,12 +109,12 @@ public class RulesServiceImpl implements RulesService, EventListenerService  {
     public boolean onEvent(Event event) {
         Set<Rule> rules = getMatchingRules(event);
 
-        ConsequenceExecutorDispatcher consequenceExecutor = new ConsequenceExecutorDispatcher(event.getUser());
+        boolean changed = false;
         for (Rule rule: rules) {
             for (Consequence consequence : rule.getConsequences()) {
-                consequenceExecutor.execute(consequence);
+                changed |= consequenceExecutorDispatcher.execute(consequence, event.getUser(), event);
             }
         }
-        return consequenceExecutor.isChanged();
+        return changed;
     }
 }

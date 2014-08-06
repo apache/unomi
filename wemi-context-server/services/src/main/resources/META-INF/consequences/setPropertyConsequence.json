@@ -2,7 +2,7 @@
     "id" : "setPropertyConsequence",
     "name" : "set property",
     "description" : "Set a property",
-    "class" : "org.oasis_open.wemi.context.server.impl.consequences.SetPropertyConsequence",
+    "serviceFilter" : "(consequenceExecutorId=setProperty)",
     "tags" : [ "demographic" ],
     "parameters" : [
         {

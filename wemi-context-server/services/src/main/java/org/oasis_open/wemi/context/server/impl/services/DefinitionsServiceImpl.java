@@ -189,7 +189,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                 String id = conditionObject.getString("id");
                 String name = conditionObject.getString("name");
                 String description = conditionObject.getString("description");
-                String clazz = conditionObject.getString("class");
+                String serviceFilter = conditionObject.getString("serviceFilter");
                 JsonArray tagArray = conditionObject.getJsonArray("tags");
                 Set<String> tagIds = new LinkedHashSet<String>();
                 for (int i = 0; i < tagArray.size(); i++) {
@@ -201,6 +201,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
                 consequenceType.setDescription(description);
                 consequenceType.setParameters(ParserHelper.parseParameters(conditionObject));
                 consequenceType.setTagIds(tagIds);
+                consequenceType.setServiceFilter(serviceFilter);
 
                 consequencesTypeByName.put(consequenceType.getId(), consequenceType);
                 for (String tagId : tagIds) {

@@ -96,6 +96,12 @@ public class EventCollectorServlet extends HttpServlet {
 
         Event event = new Event(UUID.randomUUID().toString(), eventType, userSessionId, visitorID, eventTimeStamp);
 
+        Enumeration<String> parameterNames = req.getParameterNames();
+        while (parameterNames.hasMoreElements()) {
+            String parameterName = parameterNames.nextElement();
+            event.setProperty(parameterName, req.getParameter(parameterName));
+        }
+
         event.getAttributes().put("http_request", req);
         event.getAttributes().put("http_response", resp);
 
