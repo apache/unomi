@@ -129,16 +129,19 @@ public class BasicTest {
         // Please note that if response content is not fully consumed the underlying
         // connection cannot be safely re-used and will be shut down and discarded
         // by the connection manager.
+        String responseContent = null;
         try {
             System.out.println(response.getStatusLine());
-            HttpEntity entity1 = response.getEntity();
+            HttpEntity entity = response.getEntity();
             // do something useful with the response body
             // and ensure it is fully consumed
-            EntityUtils.consume(entity1);
+            responseContent = EntityUtils.toString(entity);
         } finally {
             response.close();
         }
-
+        Assert.assertTrue("Response should contain context object", responseContent.contains("wemiDigitalData"));
+        // @todo we should check the validity of the context object, but this is rather complex since it would
+        // potentially require parsing the Javascript !
     }
 
 }
