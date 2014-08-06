@@ -13,6 +13,13 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.core</artifactId>
+            <version>4.3.1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.oasis-open.wemi</groupId>
             <artifactId>wemi-context-server-api</artifactId>
             <version>1.0-SNAPSHOT</version>

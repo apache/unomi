@@ -2,6 +2,7 @@
     "id" : "andCondition",
     "name" : "AND",
     "description" : "Logical AND operator",
+    "queryBuilderFilter" : "(queryBuilderId=andConditionESQueryBuilder)",
     "tags" : [ "logical" ],
     "parameters" : [
         {

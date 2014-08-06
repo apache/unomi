@@ -7,10 +7,9 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 /**
 * Created by toto on 27/06/14.
 */
-class PageViewEventConditionESQueryBuilder implements ESQueryBuilder {
+public class PageViewEventConditionESQueryBuilder implements ESQueryBuilder {
 
-    public String getConditionId() {
-        return "pageViewEventCondition";
+    public PageViewEventConditionESQueryBuilder() {
     }
 
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {

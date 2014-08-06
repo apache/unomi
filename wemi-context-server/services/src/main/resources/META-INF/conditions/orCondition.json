@@ -2,6 +2,7 @@
     "id" : "orCondition",
     "name" : "OR",
     "description" : "Logical OR operator",
+    "queryBuilderFilter" : "(queryBuilderId=orConditionESQueryBuilder)",
     "tags" : [ "logical" ],
     "parameters" : [
         {

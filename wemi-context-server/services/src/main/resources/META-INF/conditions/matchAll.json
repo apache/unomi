@@ -2,6 +2,7 @@
     "id" : "matchAll",
     "name" : "Match all",
     "description" : "Match all",
+    "queryBuilderFilter" : "(queryBuilderId=matchAllConditionESQueryBuilder)",
     "tags" : [ "logical" ],
     "parameters" : [
     ]

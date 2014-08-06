@@ -2,6 +2,7 @@
     "id" : "hoverEventCondition",
     "name" : "Hover event",
     "description" : "A content has been hovered",
+    "queryBuilderFilter" : "(queryBuilderId=hoverEventConditionESQueryBuilder)",
     "tags" : [ "event" ],
     "parameters" : [
         {

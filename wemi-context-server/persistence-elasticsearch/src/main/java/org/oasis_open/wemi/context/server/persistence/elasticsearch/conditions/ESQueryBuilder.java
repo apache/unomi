@@ -8,8 +8,6 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
  */
 public interface ESQueryBuilder {
 
-    public String getConditionId();
-
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher);
 
 }

@@ -8,11 +8,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
-* Created by toto on 27/06/14.
-*/
-public class AndConditionESQueryBuilder implements ESQueryBuilder {
+ * Created by loom on 06.08.14.
+ */
+public class OrConditionESQueryBuilder implements ESQueryBuilder {
 
-    public AndConditionESQueryBuilder() {
+    public OrConditionESQueryBuilder() {
     }
 
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
@@ -22,6 +22,6 @@ public class AndConditionESQueryBuilder implements ESQueryBuilder {
         for (Object sub : conditions) {
             l.add(dispatcher.buildFilter((Condition) sub));
         }
-        return FilterBuilders.andFilter(l.toArray(new FilterBuilder[l.size()]));
+        return FilterBuilders.orFilter(l.toArray(new FilterBuilder[l.size()]));
     }
 }

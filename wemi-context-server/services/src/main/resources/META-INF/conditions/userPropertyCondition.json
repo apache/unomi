@@ -2,6 +2,7 @@
     "id" : "userPropertyCondition",
     "name" : "User property",
     "description" : "A condition on a user property",
+    "queryBuilderFilter" : "(queryBuilderId=userPropertyConditionESQueryBuilder)",
     "tags" : [ "demographic" ],
     "parameters" : [
         {

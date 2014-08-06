@@ -83,17 +83,21 @@ public class SegmentServiceImpl implements SegmentService {
                 }
             }
         }
+
+        /* Deactivated temporarily because the saveQuery doesn't work since the conditionTypes are not properly initialized
         predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/segments", "*.json.jackson", true);
         while (predefinedSegmentEntries.hasMoreElements()) {
             URL predefinedSegmentURL = predefinedSegmentEntries.nextElement();
             try {
                 SegmentDefinition segment = ParserHelper.getObjectMapper().readValue(predefinedSegmentURL, SegmentDefinition.class);
+                ParserHelper.resolveConditionTypes(segment.getRootCondition());
                 persistenceService.saveQuery(segment.getSegmentID().getId(), segment.getRootCondition());
                 segmentQueries.put(segment.getSegmentID(), segment);
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
             }
         }
+        */
     }
 
     public Set<User> getMatchingIndividuals(SegmentID segmentID) {

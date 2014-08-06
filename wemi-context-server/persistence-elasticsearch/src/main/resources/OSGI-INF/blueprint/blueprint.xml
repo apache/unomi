@@ -12,12 +12,60 @@
   http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd
   ">
 
+
     <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl" interface="org.oasis_open.wemi.context.server.persistence.spi.PersistenceService" />
+
+    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="andConditionESQueryBuilder" />
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.AndConditionESQueryBuilder" />
+    </service>
+
+    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="hoverEventConditionESQueryBuilder" />
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.HoverEventConditionESQueryBuilder" />
+    </service>
+
+    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="matchAllConditionESQueryBuilder" />
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.MatchAllConditionESQueryBuilder" />
+    </service>
+
+    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="orConditionESQueryBuilder" />
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.OrConditionESQueryBuilder" />
+    </service>
+
+    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="pageViewEventConditionESQueryBuilder" />
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.PageViewEventConditionESQueryBuilder" />
+    </service>
+
+    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="userPropertyConditionESQueryBuilder" />
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.UserPropertyConditionESQueryBuilder" />
+    </service>
+
+    <bean id="conditionESQueryBuilderDispatcher" class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher">
+        <property name="bundleContext" ref="blueprintBundleContext" />
+    </bean>
 
     <bean id="elasticSearchPersistenceServiceImpl"
           class="org.oasis_open.wemi.context.server.persistence.elasticsearch.ElasticSearchPersistenceServiceImpl"
           init-method="start"
           destroy-method="stop">
+        <property name="conditionESQueryBuilderDispatcher" ref="conditionESQueryBuilderDispatcher" />
     </bean>
 
 </blueprint>

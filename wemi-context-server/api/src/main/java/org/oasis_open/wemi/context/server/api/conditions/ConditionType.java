@@ -13,6 +13,7 @@ public class ConditionType {
     String id;
     String name;
     String description;
+    String queryBuilderFilter;
     Set<Tag> tags = new TreeSet<Tag>();
     Set<String> tagIDs = new LinkedHashSet<String>();
     List<Parameter> parameters = new ArrayList<Parameter>();
@@ -43,6 +44,14 @@ public class ConditionType {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getQueryBuilderFilter() {
+        return queryBuilderFilter;
+    }
+
+    public void setQueryBuilderFilter(String queryBuilderFilter) {
+        this.queryBuilderFilter = queryBuilderFilter;
     }
 
     @XmlElement(name="tags")

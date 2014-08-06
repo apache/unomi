@@ -7,10 +7,9 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 /**
 * Created by toto on 27/06/14.
 */
-class MatchAllConditionESQueryBuilder implements ESQueryBuilder {
+public class MatchAllConditionESQueryBuilder implements ESQueryBuilder {
 
-    public String getConditionId() {
-        return "matchAll";
+    public MatchAllConditionESQueryBuilder() {
     }
 
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {

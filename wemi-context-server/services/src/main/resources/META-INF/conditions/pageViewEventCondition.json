@@ -2,6 +2,7 @@
     "id" : "pageViewEventCondition",
     "name" : "Page view event",
     "description" : "A page has been viewed",
+    "queryBuilderFilter" : "(queryBuilderId=pageViewEventConditionESQueryBuilder)",
     "tags" : [ "event" ],
     "parameters" : [
         {

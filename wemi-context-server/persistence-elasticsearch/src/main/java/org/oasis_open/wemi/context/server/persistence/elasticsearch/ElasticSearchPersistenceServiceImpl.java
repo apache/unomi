@@ -46,6 +46,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
     Node node;
     Client client;
 
+    ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
+
     public abstract class InClassLoaderExecute<T> {
 
         protected abstract T execute(Object... args);
@@ -59,6 +61,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                 Thread.currentThread().setContextClassLoader(tccl);
             }
         }
+    }
+
+    public void setConditionESQueryBuilderDispatcher(ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher) {
+        this.conditionESQueryBuilderDispatcher = conditionESQueryBuilderDispatcher;
     }
 
     public void start() {
@@ -208,8 +214,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         if (query == null) {
             return false;
         }
-        final ConditionESQueryBuilderDispatcher builder = new ConditionESQueryBuilderDispatcher();
-        saveQuery(queryName, builder.getQuery(query));
+        saveQuery(queryName, conditionESQueryBuilderDispatcher.getQuery(query));
         return true;
     }
 
