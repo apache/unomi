@@ -1,8 +1,12 @@
 package org.oasis_open.wemi.context.server;
 
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ContainerNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.ValueNode;
 import org.apache.commons.io.IOUtils;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
@@ -19,11 +23,10 @@ import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -67,6 +70,10 @@ public class ScriptFilter implements Filter {
         HttpUtils.dumpBasicRequestInfo(httpServletRequest);
         HttpUtils.dumpRequestHeaders(httpServletRequest);
 
+        if ("options".equals(httpMethod.toLowerCase())) {
+            HttpUtils.setupCORSHeaders(httpServletRequest, response);
+            return;
+        }
 
         User user = null;
 
@@ -102,7 +109,7 @@ public class ScriptFilter implements Filter {
             }
             // associate user with session
             if (userSessionId != null) {
-                Session userSession = new Session(userSessionId,user.getItemId());
+                Session userSession = new Session(userSessionId, user.getItemId());
                 userService.saveSession(userSession);
             }
         } else if (cookieProfileId == null || !cookieProfileId.equals(user.getItemId())) {
@@ -110,80 +117,80 @@ public class ScriptFilter implements Filter {
             sendCookie(user, response);
         }
 
-        if ("post".equals(httpMethod.toLowerCase())) {
-            // we have received an update on the digitalData structure, we must store it.
-            httpServletRequest = (HttpServletRequest) request;
-            String contentType = httpServletRequest.getContentType();
-            if (contentType != null && contentType.contains("application/json")) {
-                InputStream jsonInputStream = httpServletRequest.getInputStream();
-                ObjectMapper mapper = new ObjectMapper(); // create once, reuse
-                JsonNode rootNode = mapper.readTree(jsonInputStream);
-                if (rootNode != null) {
-                    ObjectNode profileInfo = (ObjectNode) rootNode.get("user").get(0).get("profiles").get(0).get("profileInfo");
-                    if (profileInfo != null && user == null && profileInfo.get("profileId") != null) {
-                        user = userService.load(profileInfo.get("profileId").asText());
-                    }
-                    if (user != null) {
-                        Iterator<String> fieldNameIter = profileInfo.fieldNames();
-                        boolean modifiedProperties = false;
-                        while (fieldNameIter.hasNext()) {
-                            String fieldName = fieldNameIter.next();
-                            JsonNode field = profileInfo.get(fieldName);
-                            if (user.hasProperty(fieldName) && user.getProperty(fieldName).equals(field.asText())) {
-
-                            } else {
-                                if (fieldName != null && fieldName.length() > 0) {
-                                    user.setProperty(fieldName, field.asText());
-                                    modifiedProperties = true;
-                                } else {
-                                    // empty field name, won't set the property.
-                                }
-                            }
-                        }
-                        if (modifiedProperties) {
-                            userService.save(user);
-                        }
-                    } else {
-                        // couldn't resolve user !
-                    }
-                }
-            }
-        }
-
         HttpUtils.setupCORSHeaders(httpServletRequest, response);
 
         Writer responseWriter = response.getWriter();
-        if ("post".equals(httpMethod.toLowerCase()) || "get".equals(httpMethod.toLowerCase())) {
 
-            String baseRequestURL = HttpUtils.getBaseRequestURL(httpServletRequest);
+        String baseRequestURL = HttpUtils.getBaseRequestURL(httpServletRequest);
 
-            // we re-use the object naming convention from http://www.w3.org/community/custexpdata/, specifically in
-            // http://www.w3.org/2013/12/ceddl-201312.pdf
-            if (user != null) {
-                if ("get".equals(httpMethod.toLowerCase())) {
-                    responseWriter.append("window.digitalData = window.digitalData || {};\n");
-                    responseWriter.append("var wemiDigitalData = \n");
-                    responseWriter.append(HttpUtils.getJSONDigitalData(user, segmentService, baseRequestURL));
-                    responseWriter.append("; \n");
-                } else {
-                    responseWriter.append(HttpUtils.getJSONDigitalData(user, segmentService, baseRequestURL));
-                }
-            }
+        // we re-use the object naming convention from http://www.w3.org/community/custexpdata/, specifically in
+        // http://www.w3.org/2013/12/ceddl-201312.pdf
+        responseWriter.append("window.digitalData = window.digitalData || {};\n");
+        responseWriter.append("var wemi = {\n");
+        responseWriter.append("    wemiDigitalData : \n");
+        final String jsonDigitalData = HttpUtils.getJSONDigitalData(user, segmentService, baseRequestURL);
+        responseWriter.append(jsonDigitalData);
+        responseWriter.append(", \n");
 
-            if ("get".equals(httpMethod.toLowerCase())) {
-                // now we copy the base script source code
-                if (userSessionId != null) {
-                    responseWriter.append("var wemiUserSession = '" + userSessionId + "';\n");
-                }
-                InputStream baseScriptStream = filterConfig.getServletContext().getResourceAsStream(BASE_SCRIPT_LOCATION);
-                IOUtils.copy(baseScriptStream, responseWriter);
-            }
-
-        } else {
-            responseWriter.append("OK");
+        if (userSessionId != null) {
+            responseWriter.append("    userSession : '" + userSessionId + "',\n");
         }
+
+        if ("post".equals(httpMethod.toLowerCase())) {
+            StringBuilder buffer = new StringBuilder();
+            String line;
+            BufferedReader reader = request.getReader();
+            while ((line = reader.readLine()) != null) {
+                buffer.append(line);
+            }
+
+            ObjectMapper mapper = new ObjectMapper();
+            JsonFactory factory = mapper.getFactory();
+            ArrayNode actualObj = (ArrayNode) mapper.readTree(factory.createParser(buffer.toString()));
+            JsonNode digitalData = mapper.readTree(factory.createParser(jsonDigitalData));
+            JsonNode userNode = digitalData.get("user");
+            responseWriter.append("    filteringResults : {");
+            boolean first = true;
+            for (JsonNode jsonNode : actualObj) {
+                String id = jsonNode.get("filterid").asText();
+                JsonNode node = jsonNode.get("user");
+                boolean result = matchFilter(node, userNode);
+                responseWriter.append((first ? "": ",") + "'"+id+"':" +result);
+                first = false;
+            }
+            responseWriter.append("}\n");
+            responseWriter.append("};\n");
+        }
+
+
+        // now we copy the base script source code
+        InputStream baseScriptStream = filterConfig.getServletContext().getResourceAsStream(BASE_SCRIPT_LOCATION);
+        IOUtils.copy(baseScriptStream, responseWriter);
+
         responseWriter.flush();
 
+    }
+
+    private boolean matchFilter(JsonNode filterNode, JsonNode userNode) {
+        if (filterNode instanceof ContainerNode && userNode instanceof ContainerNode) {
+            boolean res = true;
+            for (JsonNode jsonNode : filterNode) {
+                res &= contains(userNode, jsonNode);
+            }
+            return res;
+        } else if (filterNode instanceof ValueNode && userNode instanceof ValueNode) {
+            return filterNode.equals(userNode);
+        }
+        return false;
+    }
+
+    private boolean contains(JsonNode node2, JsonNode jsonNode) {
+        for (JsonNode node : node2) {
+            if (matchFilter(jsonNode, node)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private User createNewUser(String existingVisitorID, ServletResponse response) {
@@ -198,7 +205,7 @@ public class ScriptFilter implements Filter {
         return user;
     }
 
-    private void sendCookie( User user, ServletResponse response) {
+    private void sendCookie(User user, ServletResponse response) {
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
             Cookie visitorIdCookie = new Cookie("wemi-profileID", user.getItemId());
