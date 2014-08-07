@@ -12,10 +12,13 @@ import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.ops4j.pax.cdi.api.OsgiService;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleEvent;
+import org.osgi.framework.BundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.json.*;
@@ -24,7 +27,7 @@ import java.util.*;
 
 @Singleton
 @OsgiServiceProvider
-public class RulesServiceImpl implements RulesService, EventListenerService  {
+public class RulesServiceImpl implements RulesService, EventListenerService, BundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
 
@@ -47,9 +50,22 @@ public class RulesServiceImpl implements RulesService, EventListenerService  {
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 
-        Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/rules", "*.json", true);
-        while (predefinedSegmentEntries.hasMoreElements()) {
-            URL predefinedSegmentURL = predefinedSegmentEntries.nextElement();
+        loadPredefinedRules(bundleContext);
+        bundleContext.addBundleListener(this);
+    }
+
+    @PreDestroy
+    public void preDestroy() {
+        bundleContext.removeBundleListener(this);
+    }
+
+    private void loadPredefinedRules(BundleContext bundleContext) {
+        Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/wemi/rules", "*.json", true);
+        if (predefinedRuleEntries == null) {
+            return;
+        }
+        while (predefinedRuleEntries.hasMoreElements()) {
+            URL predefinedSegmentURL = predefinedRuleEntries.nextElement();
             logger.debug("Found predefined segment at " + predefinedSegmentURL + ", loading... ");
 
             JsonReader reader = null;
@@ -116,5 +132,16 @@ public class RulesServiceImpl implements RulesService, EventListenerService  {
             }
         }
         return changed;
+    }
+
+    public void bundleChanged(BundleEvent event) {
+        switch (event.getType()) {
+            case BundleEvent.STARTED:
+                loadPredefinedRules(event.getBundle().getBundleContext());
+                break;
+            case BundleEvent.STOPPING:
+                // @todo remove bundle-defined resources (is it possible ?)
+                break;
+        }
     }
 }

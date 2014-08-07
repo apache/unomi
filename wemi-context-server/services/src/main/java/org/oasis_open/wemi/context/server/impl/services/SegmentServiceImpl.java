@@ -10,10 +10,13 @@ import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.ops4j.pax.cdi.api.OsgiService;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleEvent;
+import org.osgi.framework.BundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.json.*;
@@ -27,7 +30,7 @@ import java.util.*;
  */
 @Singleton
 @OsgiServiceProvider
-public class SegmentServiceImpl implements SegmentService {
+public class SegmentServiceImpl implements SegmentService, BundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
 
@@ -50,11 +53,20 @@ public class SegmentServiceImpl implements SegmentService {
     @PostConstruct
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
-        loadPredefinedSegments();
+        loadPredefinedSegments(bundleContext);
+        bundleContext.addBundleListener(this);
     }
 
-    private void loadPredefinedSegments() {
-        Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/segments", "*.json", true);
+    @PreDestroy
+    public void preDestroy() {
+        bundleContext.removeBundleListener(this);
+    }
+
+    private void loadPredefinedSegments(BundleContext bundleContext) {
+        Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/wemi/segments", "*.json", true);
+        if (predefinedSegmentEntries == null) {
+            return;
+        }
         while (predefinedSegmentEntries.hasMoreElements()) {
             URL predefinedSegmentURL = predefinedSegmentEntries.nextElement();
             logger.debug("Found predefined segment at " + predefinedSegmentURL + ", loading... ");
@@ -181,4 +193,14 @@ public class SegmentServiceImpl implements SegmentService {
         }
     }
 
+    public void bundleChanged(BundleEvent event) {
+        switch (event.getType()) {
+            case BundleEvent.STARTED:
+                loadPredefinedSegments(event.getBundle().getBundleContext());
+                break;
+            case BundleEvent.STOPPING:
+                // @todo remove bundle-defined resources (is it possible ?)
+                break;
+        }
+    }
 }

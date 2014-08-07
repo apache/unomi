@@ -9,10 +9,13 @@ import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.ops4j.pax.cdi.api.OsgiService;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleEvent;
+import org.osgi.framework.BundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.enterprise.inject.Default;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -23,7 +26,7 @@ import java.util.*;
 @Singleton
 @Default
 @OsgiServiceProvider
-public class DefinitionsServiceImpl implements DefinitionsService {
+public class DefinitionsServiceImpl implements DefinitionsService, BundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
 
@@ -49,17 +52,27 @@ public class DefinitionsServiceImpl implements DefinitionsService {
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 
-        loadPredefinedMappings();
+        loadPredefinedMappings(bundleContext);
 
-        loadPredefinedTags();
+        loadPredefinedTags(bundleContext);
 
-        loadPredefinedCondition();
-        loadPredefinedConsequences();
+        loadPredefinedCondition(bundleContext);
+        loadPredefinedConsequences(bundleContext);
+
+        bundleContext.addBundleListener(this);
+    }
+
+    @PreDestroy
+    public void preDestroy() {
+        bundleContext.removeBundleListener(this);
     }
 
 
-    private void loadPredefinedMappings() {
-        Enumeration<URL> predefinedMappings = bundleContext.getBundle().findEntries("META-INF/mappings", "*.json", true);
+    private void loadPredefinedMappings(BundleContext bundleContext) {
+        Enumeration<URL> predefinedMappings = bundleContext.getBundle().findEntries("META-INF/wemi/mappings", "*.json", true);
+        if (predefinedMappings == null) {
+            return;
+        }
         while (predefinedMappings.hasMoreElements()) {
             URL predefinedMappingURL = predefinedMappings.nextElement();
             logger.debug("Found mapping at " + predefinedMappingURL + ", loading... ");
@@ -74,15 +87,18 @@ public class DefinitionsServiceImpl implements DefinitionsService {
         }
     }
 
-    private void loadPredefinedTags() {
-        Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/tags", "*.json", true);
-        while (predefinedSegmentEntries.hasMoreElements()) {
-            URL predefinedSegmentURL = predefinedSegmentEntries.nextElement();
-            logger.debug("Found predefined tags at " + predefinedSegmentURL + ", loading... ");
+    private void loadPredefinedTags(BundleContext bundleContext) {
+        Enumeration<URL> predefinedTagEntries = bundleContext.getBundle().findEntries("META-INF/wemi/tags", "*.json", true);
+        if (predefinedTagEntries == null) {
+            return;
+        }
+        while (predefinedTagEntries.hasMoreElements()) {
+            URL predefinedTagURL = predefinedTagEntries.nextElement();
+            logger.debug("Found predefined tags at " + predefinedTagURL + ", loading... ");
 
             JsonReader reader = null;
             try {
-                reader = Json.createReader(predefinedSegmentURL.openStream());
+                reader = Json.createReader(predefinedTagURL.openStream());
                 JsonStructure jsonst = reader.read();
 
                 // dumpJSON(jsonst, null, "");
@@ -94,7 +110,7 @@ public class DefinitionsServiceImpl implements DefinitionsService {
 
                 tags.put(tag.getId(), tag);
             } catch (Exception e) {
-                logger.error("Error while loading tag definition " + predefinedSegmentURL, e);
+                logger.error("Error while loading tag definition " + predefinedTagURL, e);
             } finally {
                 if (reader != null) {
                     reader.close();
@@ -116,10 +132,13 @@ public class DefinitionsServiceImpl implements DefinitionsService {
         }
     }
 
-    private void loadPredefinedCondition() {
-        Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/conditions", "*.json", true);
-        while (predefinedSegmentEntries.hasMoreElements()) {
-            URL predefinedConditionURL = predefinedSegmentEntries.nextElement();
+    private void loadPredefinedCondition(BundleContext bundleContext) {
+        Enumeration<URL> predefinedConditionEntries = bundleContext.getBundle().findEntries("META-INF/wemi/conditions", "*.json", true);
+        if (predefinedConditionEntries == null) {
+            return;
+        }
+        while (predefinedConditionEntries.hasMoreElements()) {
+            URL predefinedConditionURL = predefinedConditionEntries.nextElement();
             logger.debug("Found predefined conditions at " + predefinedConditionURL + ", loading... ");
 
             JsonReader reader = null;
@@ -174,10 +193,13 @@ public class DefinitionsServiceImpl implements DefinitionsService {
 
     }
 
-    private void loadPredefinedConsequences() {
-        Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/consequences", "*.json", true);
-        while (predefinedSegmentEntries.hasMoreElements()) {
-            URL predefinedConsequenceURL = predefinedSegmentEntries.nextElement();
+    private void loadPredefinedConsequences(BundleContext bundleContext) {
+        Enumeration<URL> predefinedConsequencesEntries = bundleContext.getBundle().findEntries("META-INF/wemi/consequences", "*.json", true);
+        if (predefinedConsequencesEntries == null) {
+            return;
+        }
+        while (predefinedConsequencesEntries.hasMoreElements()) {
+            URL predefinedConsequenceURL = predefinedConsequencesEntries.nextElement();
             logger.debug("Found predefined consequence at " + predefinedConsequenceURL + ", loading... ");
 
             JsonReader reader = null;
@@ -273,4 +295,17 @@ public class DefinitionsServiceImpl implements DefinitionsService {
         return consequencesTypeByName.get(name);
     }
 
+    public void bundleChanged(BundleEvent event) {
+        switch (event.getType()) {
+            case BundleEvent.STARTED:
+                loadPredefinedMappings(event.getBundle().getBundleContext());
+                loadPredefinedTags(event.getBundle().getBundleContext());
+                loadPredefinedCondition(event.getBundle().getBundleContext());
+                loadPredefinedConsequences(event.getBundle().getBundleContext());
+                break;
+            case BundleEvent.STOPPING:
+                // @todo remove bundle-defined resources (is it possible ?)
+                break;
+        }
+    }
 }
