@@ -4,10 +4,8 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ContainerNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.ValueNode;
 import org.apache.commons.io.IOUtils;
+import org.oasis_open.wemi.context.server.api.SegmentID;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.EventListenerService;
@@ -29,6 +27,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -85,8 +86,11 @@ public class ContextServlet extends HttpServlet {
         }
 
         final String sessionId = request.getParameter("sessionId");
+
+        Session session = null;
+
         if (sessionId != null) {
-            Session session = userService.loadSession(sessionId);
+            session = userService.loadSession(sessionId);
             if (session != null) {
                 visitorId = session.getUserId();
                 user = userService.load(visitorId);
@@ -106,7 +110,7 @@ public class ContextServlet extends HttpServlet {
             }
             // associate user with session
             if (sessionId != null) {
-                Session session = new Session(sessionId, user.getItemId());
+                session = new Session(sessionId, user.getItemId());
                 userService.saveSession(session);
             }
         } else if (cookieProfileId == null || !cookieProfileId.equals(user.getItemId())) {
@@ -143,15 +147,16 @@ public class ContextServlet extends HttpServlet {
             if (buffer.length() > 0) {
                 ObjectMapper mapper = new ObjectMapper();
                 JsonFactory factory = mapper.getFactory();
-                ArrayNode actualObj = (ArrayNode) mapper.readTree(factory.createParser(buffer.toString()));
-                JsonNode digitalData = mapper.readTree(factory.createParser(jsonDigitalData));
-                JsonNode userNode = digitalData.get("user");
+                ArrayNode actualObj = mapper.readTree(factory.createParser(buffer.toString()));
                 responseWriter.append("    , filteringResults : {");
                 boolean first = true;
                 for (JsonNode jsonNode : actualObj) {
                     String id = jsonNode.get("filterid").asText();
-                    JsonNode node = jsonNode.get("user");
-                    boolean result = matchFilter(node, userNode);
+                    ArrayNode filters = (ArrayNode) jsonNode.get("filters");
+                    boolean result = true;
+                    for (JsonNode filter : filters) {
+                        result &= matchFilter(filter, user, session);
+                    }
                     responseWriter.append((first ? "" : ",") + "'" + id + "':" + result);
                     first = false;
                 }
@@ -169,24 +174,21 @@ public class ContextServlet extends HttpServlet {
 
     }
 
-    private boolean matchFilter(JsonNode filterNode, JsonNode userNode) {
-        if (filterNode instanceof ContainerNode && userNode instanceof ContainerNode) {
-            boolean res = true;
-            for (JsonNode jsonNode : filterNode) {
-                res &= contains(userNode, jsonNode);
+    private boolean matchFilter(JsonNode filterNode, User user, Session session) {
+        // todo : move filter evaluation in separate plugins
+        if (filterNode.get("property").textValue().equals("user.segment")) {
+            String match = filterNode.get("match").textValue();
+            ArrayNode n = (ArrayNode) filterNode.get("values");
+            List<String> segments = new ArrayList<String>();
+            for (JsonNode node : n) {
+                segments.add(node.textValue());
             }
-            return res;
-        } else if (filterNode instanceof ValueNode && userNode instanceof ValueNode) {
-            return filterNode.equals(userNode);
-        }
-        return false;
-    }
-
-    private boolean contains(JsonNode node2, JsonNode jsonNode) {
-        for (JsonNode node : node2) {
-            if (matchFilter(jsonNode, node)) {
-                return true;
+            Set<SegmentID> s = segmentService.getSegmentsForUser(user);
+            boolean found = false;
+            for (SegmentID segmentID : s) {
+                found |= segments.remove(segmentID.getId());
             }
+            return (match.equals("all") && segments.isEmpty()) || (match.equals("none") && !found) || (match.equals("some") && found);
         }
         return false;
     }
