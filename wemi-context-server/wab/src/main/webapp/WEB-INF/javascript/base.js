@@ -125,11 +125,15 @@ wemi.merge(window.digitalData, wemi.wemiDigitalData);
 
 if (window.digitalData.loadCallbacks && window.digitalData.loadCallbacks.length > 0) {
     console.log("wemi: Found WEMI context load callbacks, calling now...");
-    for (var i = 0; i < window.digitalData.loadCallbacks.length; i++) {
-        window.digitalData.loadCallbacks[i](digitalData);
+    if ( window.digitalData.loadCallbacks) {
+        for (var i = 0; i < window.digitalData.loadCallbacks.length; i++) {
+            window.digitalData.loadCallbacks[i](digitalData);
+        }
     }
-    for (var i = 0; i < window.digitalData.filterCallback.length; i++) {
-        window.digitalData.filterCallback[i].callback(wemi.filteringResults[window.digitalData.filterCallback[i].filter.filterid]);
+    if ( window.digitalData.filterCallback) {
+        for (var i = 0; i < window.digitalData.filterCallback.length; i++) {
+            window.digitalData.filterCallback[i].callback(wemi.filteringResults[window.digitalData.filterCallback[i].filter.filterid]);
+        }
     }
 }
 

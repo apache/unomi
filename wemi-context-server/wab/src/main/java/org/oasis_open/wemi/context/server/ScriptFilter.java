@@ -133,7 +133,7 @@ public class ScriptFilter implements Filter {
         responseWriter.append(", \n");
 
         if (sessionId != null) {
-            responseWriter.append("    sessionId : '" + sessionId + "',\n");
+            responseWriter.append("    sessionId : '" + sessionId + "'\n");
         }
 
         if ("post".equals(httpMethod.toLowerCase())) {
@@ -143,24 +143,25 @@ public class ScriptFilter implements Filter {
             while ((line = reader.readLine()) != null) {
                 buffer.append(line);
             }
-
-            ObjectMapper mapper = new ObjectMapper();
-            JsonFactory factory = mapper.getFactory();
-            ArrayNode actualObj = (ArrayNode) mapper.readTree(factory.createParser(buffer.toString()));
-            JsonNode digitalData = mapper.readTree(factory.createParser(jsonDigitalData));
-            JsonNode userNode = digitalData.get("user");
-            responseWriter.append("    filteringResults : {");
-            boolean first = true;
-            for (JsonNode jsonNode : actualObj) {
-                String id = jsonNode.get("filterid").asText();
-                JsonNode node = jsonNode.get("user");
-                boolean result = matchFilter(node, userNode);
-                responseWriter.append((first ? "": ",") + "'"+id+"':" +result);
-                first = false;
+            if (buffer.length() > 0) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonFactory factory = mapper.getFactory();
+                ArrayNode actualObj = (ArrayNode) mapper.readTree(factory.createParser(buffer.toString()));
+                JsonNode digitalData = mapper.readTree(factory.createParser(jsonDigitalData));
+                JsonNode userNode = digitalData.get("user");
+                responseWriter.append("    , filteringResults : {");
+                boolean first = true;
+                for (JsonNode jsonNode : actualObj) {
+                    String id = jsonNode.get("filterid").asText();
+                    JsonNode node = jsonNode.get("user");
+                    boolean result = matchFilter(node, userNode);
+                    responseWriter.append((first ? "" : ",") + "'" + id + "':" + result);
+                    first = false;
+                }
+                responseWriter.append("}\n");
             }
-            responseWriter.append("}\n");
-            responseWriter.append("};\n");
         }
+        responseWriter.append("};\n");
 
 
         // now we copy the base script source code
