@@ -13,7 +13,6 @@ import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -65,21 +64,21 @@ public class EventCollectorServlet extends HttpServlet {
         Date eventTimeStamp = new Date();
         HttpUtils.dumpBasicRequestInfo(req);
 
-        String visitorID = null;
-        Session userSession;
+        String visitorId = null;
+        Session session;
 
         HttpUtils.setupCORSHeaders(req, resp);
 
-        final String userSessionId = req.getParameter("userSession");
-        if (userSessionId == null) {
+        final String sessionId = req.getParameter("sessionId");
+        if (sessionId == null) {
             return;
         }
-        userSession = userService.loadSession(userSessionId);
-        if (userSession != null) {
-            visitorID = userSession.getUserId();
+        session = userService.loadSession(sessionId);
+        if (session != null) {
+            visitorId = session.getUserId();
         }
 
-        if (visitorID == null) {
+        if (visitorId == null) {
             return;
         }
 
@@ -94,7 +93,7 @@ public class EventCollectorServlet extends HttpServlet {
             eventType = eventType.substring(eventType.lastIndexOf("/"));
         }
 
-        Event event = new Event(UUID.randomUUID().toString(), eventType, userSessionId, visitorID, eventTimeStamp);
+        Event event = new Event(UUID.randomUUID().toString(), eventType, sessionId, visitorId, eventTimeStamp);
 
         Enumeration<String> parameterNames = req.getParameterNames();
         while (parameterNames.hasMoreElements()) {
@@ -107,8 +106,8 @@ public class EventCollectorServlet extends HttpServlet {
 
         eventService.save(event);
 
-        event.setSession(userSession);
-        User user = userService.load(event.getVisitorID());
+        event.setSession(session);
+        User user = userService.load(event.getVisitorId());
         if (user != null) {
             event.setUser(user);
         }
@@ -122,7 +121,7 @@ public class EventCollectorServlet extends HttpServlet {
 
             if (changed) {
                 userService.save(user);
-                userService.saveSession(userSession);
+                userService.saveSession(session);
             }
         }
         PrintWriter responseWriter = resp.getWriter();

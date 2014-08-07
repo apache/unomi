@@ -13,8 +13,8 @@ public class Event extends Item {
 
     public static final String EVENT_ITEM_TYPE = "event";
     private String eventType;
-    private String userSession = null;
-    private String visitorID = null;
+    private String sessionId = null;
+    private String visitorId = null;
     private Date timeStamp;
 
     private transient User user;
@@ -29,15 +29,15 @@ public class Event extends Item {
         this.timeStamp = new Date();
     }
 
-    public Event(String itemId, String eventType, String userSession, String visitorID, Date timeStamp) {
+    public Event(String itemId, String eventType, String sessionId, String visitorId, Date timeStamp) {
         super(itemId, EVENT_ITEM_TYPE, null, new Properties());
         this.eventType = eventType;
         setProperty("eventType", eventType);
-        this.userSession = userSession;
-        setProperty("userSession", userSession);
-        this.visitorID = visitorID;
-        if (visitorID != null) {
-            setProperty("visitorID", visitorID);
+        this.sessionId = sessionId;
+        setProperty("sessionId", sessionId);
+        this.visitorId = visitorId;
+        if (visitorId != null) {
+            setProperty("visitorId", visitorId);
         }
         if (timeStamp != null) {
             this.timeStamp = timeStamp;
@@ -49,19 +49,19 @@ public class Event extends Item {
         setProperty("eventTimeStamp", format.format(this.timeStamp));
     }
 
-    public void setVisitorID(String visitorID) {
-        this.visitorID = visitorID;
-        if (visitorID != null) {
-            setProperty("visitorID", visitorID);
+    public void setVisitorId(String visitorId) {
+        this.visitorId = visitorId;
+        if (visitorId != null) {
+            setProperty("visitorId", visitorId);
         }
     }
 
-    public String getUserSession() {
-        return userSession;
+    public String getSessionId() {
+        return sessionId;
     }
 
-    public String getVisitorID() {
-        return visitorID;
+    public String getVisitorId() {
+        return visitorId;
     }
 
     public String getEventType() {

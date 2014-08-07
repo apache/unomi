@@ -63,7 +63,7 @@ public class ScriptFilter implements Filter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         // first we must retrieve the context for the current visitor, and build a Javascript object to attach to the
         // script output.
-        String visitorID = null;
+        String visitorId = null;
 
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
         String httpMethod = httpServletRequest.getMethod();
@@ -81,24 +81,24 @@ public class ScriptFilter implements Filter {
         Cookie[] cookies = httpServletRequest.getCookies();
         // HttpUtils.dumpRequestCookies(cookies);
         for (Cookie cookie : cookies) {
-            if ("wemi-profileID".equals(cookie.getName())) {
+            if ("wemi-profile-id".equals(cookie.getName())) {
                 cookieProfileId = cookie.getValue();
                 break;
             }
         }
 
-        final String userSessionId = request.getParameter("userSession");
-        if (userSessionId != null) {
-            Session userSession = userService.loadSession(userSessionId);
-            if (userSession != null) {
-                visitorID = userSession.getUserId();
-                user = userService.load(visitorID);
+        final String sessionId = request.getParameter("sessionId");
+        if (sessionId != null) {
+            Session session = userService.loadSession(sessionId);
+            if (session != null) {
+                visitorId = session.getUserId();
+                user = userService.load(visitorId);
             }
         }
         if (user == null) {
             // user not stored in session
             if (cookieProfileId == null) {
-                // no visitorID cookie was found, we generate a new one and create the user in the user service
+                // no visitorId cookie was found, we generate a new one and create the user in the user service
                 user = createNewUser(null, response);
             } else {
                 user = userService.load(cookieProfileId);
@@ -108,9 +108,9 @@ public class ScriptFilter implements Filter {
                 }
             }
             // associate user with session
-            if (userSessionId != null) {
-                Session userSession = new Session(userSessionId, user.getItemId());
-                userService.saveSession(userSession);
+            if (sessionId != null) {
+                Session session = new Session(sessionId, user.getItemId());
+                userService.saveSession(session);
             }
         } else if (cookieProfileId == null || !cookieProfileId.equals(user.getItemId())) {
             // user if stored in session but not in cookie
@@ -132,8 +132,8 @@ public class ScriptFilter implements Filter {
         responseWriter.append(jsonDigitalData);
         responseWriter.append(", \n");
 
-        if (userSessionId != null) {
-            responseWriter.append("    userSession : '" + userSessionId + "',\n");
+        if (sessionId != null) {
+            responseWriter.append("    sessionId : '" + sessionId + "',\n");
         }
 
         if ("post".equals(httpMethod.toLowerCase())) {
@@ -193,13 +193,13 @@ public class ScriptFilter implements Filter {
         return false;
     }
 
-    private User createNewUser(String existingVisitorID, ServletResponse response) {
+    private User createNewUser(String existingVisitorId, ServletResponse response) {
         User user;
-        String visitorID = existingVisitorID;
-        if (visitorID == null) {
-            visitorID = UUID.randomUUID().toString();
+        String visitorId = existingVisitorId;
+        if (visitorId == null) {
+            visitorId = UUID.randomUUID().toString();
         }
-        user = new User(visitorID);
+        user = new User(visitorId);
         userService.save(user);
         sendCookie(user, response);
         return user;
@@ -208,7 +208,7 @@ public class ScriptFilter implements Filter {
     private void sendCookie(User user, ServletResponse response) {
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-            Cookie visitorIdCookie = new Cookie("wemi-profileID", user.getItemId());
+            Cookie visitorIdCookie = new Cookie("wemi-profile-id", user.getItemId());
             visitorIdCookie.setPath("/");
             visitorIdCookie.setMaxAge(MAX_COOKIE_AGE_IN_SECONDS);
             httpServletResponse.addCookie(visitorIdCookie);

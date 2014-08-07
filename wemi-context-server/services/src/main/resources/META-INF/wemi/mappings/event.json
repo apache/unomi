@@ -1,7 +1,7 @@
 {
     "event" : {
         "properties" : {
-            "visitorID" : {"type" : "string", "index" : "not_analyzed" },
+            "visitorId" : {"type" : "string", "index" : "not_analyzed" },
             "url" : {"type" : "string", "index" : "not_analyzed" },
             "refferer" : {"type" : "string", "index" : "not_analyzed" }
         }
