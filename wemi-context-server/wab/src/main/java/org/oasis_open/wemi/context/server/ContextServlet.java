@@ -20,7 +20,9 @@ import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.servlet.*;
 import javax.servlet.annotation.WebFilter;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
@@ -32,13 +34,11 @@ import java.util.UUID;
 /**
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
  */
-@WebFilter(urlPatterns = {"/context.js"})
-public class ScriptFilter implements Filter {
+@WebServlet(urlPatterns={"/context.js"})
+public class ContextServlet extends HttpServlet {
 
     public static final String BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/base.js";
     private static final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365 * 10; // 10-years
-
-    FilterConfig filterConfig;
 
     @Inject
     @OsgiService
@@ -56,11 +56,8 @@ public class ScriptFilter implements Filter {
     @OsgiService(dynamic = true)
     private Instance<EventListenerService> eventListeners;
 
-    public void init(FilterConfig filterConfig) throws ServletException {
-        this.filterConfig = filterConfig;
-    }
-
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+    @Override
+    public void service(ServletRequest request, ServletResponse response) throws ServletException, IOException {
         // first we must retrieve the context for the current visitor, and build a Javascript object to attach to the
         // script output.
         String visitorId = null;
@@ -165,7 +162,7 @@ public class ScriptFilter implements Filter {
 
 
         // now we copy the base script source code
-        InputStream baseScriptStream = filterConfig.getServletContext().getResourceAsStream(BASE_SCRIPT_LOCATION);
+        InputStream baseScriptStream = getServletContext().getResourceAsStream(BASE_SCRIPT_LOCATION);
         IOUtils.copy(baseScriptStream, responseWriter);
 
         responseWriter.flush();
