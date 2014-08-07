@@ -77,6 +77,30 @@ you will need to specify the following command line parameter :
 6. If all went smoothly, you should be able to access the WEMI context script here : http://localhost:8181/context.js
  You should see a digitalData object populated with some values. If not something went wrong during the install.
  
+Changing the default configuration
+----------------------------------
+
+If you want to change the default configuration, you can perform any modification you want in the karaf/etc directory.
+If you need to specify an ElasticSearch cluster name that is different than the default, it is recommended to do this
+BEFORE you start the server for the first time, or you will loose all the data you have stored previously.
+
+To change the cluster name, first create a file called 
+
+    etc/org.oasis_open.wemi.context.server.persistence.elasticsearch.cfg
+
+with the following contents:
+
+    # the cluster.name setting is ignored if the elasticSearchConfig points to a valid ElasticSearch configuration file.
+    cluster.name=wemiElasticSearch
+    index.name=wemi
+    elasticSearchConfig=file:${karaf.etc}/elasticsearch.yml
+    
+then you can create the etc/elasticsearch.yml configuration file with the following configuration:
+
+    cluster.name=myClusterName
+    
+You may of course put any standard ElasticSearch configuration options in this last file. 
+ 
 Running the integration tests
 -----------------------------
 
