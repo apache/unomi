@@ -43,8 +43,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
 
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
 
-    Node node;
-    Client client;
+    private Node node;
+    private Client client;
+    private String clusterName = "wemiElasticSearch";
+    private String indexName = "wemi";
 
     ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
 
@@ -63,6 +65,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         }
     }
 
+    public void setClusterName(String clusterName) {
+        this.clusterName = clusterName;
+    }
+
+    public void setIndexName(String indexName) {
+        this.indexName = indexName;
+    }
+
     public void setConditionESQueryBuilderDispatcher(ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher) {
         this.conditionESQueryBuilderDispatcher = conditionESQueryBuilderDispatcher;
     }
@@ -71,13 +81,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         // on startup
         new InClassLoaderExecute<Object>() {
             public Object execute(Object... args) {
-                logger.info("Starting ElasticSearch persistence backend...");
-                node = nodeBuilder().clusterName("wemiElasticSearch").node();
+                logger.info("Starting ElasticSearch persistence backend using cluster name "+clusterName+" and index name "+indexName+"...");
+                node = nodeBuilder().clusterName(clusterName).node();
                 client = node.client();
-                IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists("wemi").execute().actionGet();
+                IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(indexName).execute().actionGet();
                 if (!indicesExistsResponse.isExists()) {
-                    logger.info("WEMI index doesn't exist yet, creating it...");
-                    CreateIndexResponse createIndexResponse = client.admin().indices().prepareCreate("wemi").execute().actionGet();
+                    logger.info(indexName + " index doesn't exist yet, creating it...");
+                    CreateIndexResponse createIndexResponse = client.admin().indices().prepareCreate(indexName).execute().actionGet();
                 }
                 return null;
             }
@@ -109,7 +119,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                     }
                     jsonObject.field("itemClass", item.getClass().getName());
                     jsonObject.endObject();
-                    IndexRequestBuilder indexBuilder = client.prepareIndex("wemi", item.getType(), item.getItemId())
+                    IndexRequestBuilder indexBuilder = client.prepareIndex(indexName, item.getType(), item.getItemId())
                             .setSource(jsonObject);
                     if (item.getParentId() != null) {
                         indexBuilder = indexBuilder.setParent(item.getParentId());
@@ -132,7 +142,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         return new InClassLoaderExecute<Item>() {
             protected Item execute(Object... args) {
                 try {
-                    GetResponse response = client.prepareGet("wemi", itemType, itemId)
+                    GetResponse response = client.prepareGet(indexName, itemType, itemId)
                             .execute()
                             .actionGet();
                     Constructor constructor = clazz.getConstructor(String.class, String.class, Properties.class);
@@ -167,7 +177,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         return new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {
                 client.admin().indices()
-                        .preparePutMapping("wemi")
+                        .preparePutMapping(indexName)
                         .setType(type)
                         .setSource(source)
                         .execute().actionGet();
@@ -179,11 +189,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
     public Map<String, Map<String,String>> getMapping(final String itemType) {
         return new InClassLoaderExecute<Map<String, Map<String,String>>>() {
             protected Map<String, Map<String,String>> execute(Object... args) {
-                GetMappingsResponse getMappingsResponse = client.admin().indices().prepareGetMappings("wemi").setTypes(itemType).execute().actionGet();
+                GetMappingsResponse getMappingsResponse = client.admin().indices().prepareGetMappings(indexName).setTypes(itemType).execute().actionGet();
                 ImmutableOpenMap<String, ImmutableOpenMap<String,MappingMetaData>> mappings = getMappingsResponse.getMappings();
                 Map<String,Map<String,String>> propertyMap = null;
                 try {
-                    propertyMap = (Map<String,Map<String,String>>) mappings.get("wemi").get("user").getSourceAsMap().get("properties");
+                    propertyMap = (Map<String,Map<String,String>>) mappings.get(indexName).get(itemType).getSourceAsMap().get("properties");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -197,7 +207,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
             protected Boolean execute(Object... args) {
             //Index the query = register it in the percolator
                 try {
-                    client.prepareIndex("wemi", ".percolator", queryName)
+                    client.prepareIndex(indexName, ".percolator", queryName)
                         .setSource(query)
                         .setRefresh(true) // Needed when the query shall be available immediately
                         .execute().actionGet();
@@ -223,7 +233,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
             protected Boolean execute(Object... args) {
             //Index the query = register it in the percolator
                 try {
-                    client.prepareDelete("wemi", ".percolator", queryName)
+                    client.prepareDelete(indexName, ".percolator", queryName)
                         .setRefresh(true) // Needed when the query shall be available immediately
                         .execute().actionGet();
                     return true;
@@ -252,7 +262,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
 
                     //Percolate
                     PercolateResponse response = client.preparePercolate()
-                                            .setIndices("wemi")
+                                            .setIndices(indexName)
                                             .setDocumentType(item.getType())
                                             .setSource(documentJsonObject).execute().actionGet();
                     //Iterate over the results
@@ -277,7 +287,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
             @Override
             protected List<Item> execute(Object... args) {
                 List<Item> results = new ArrayList<Item>();
-                SearchResponse response = client.prepareSearch("wemi")
+                SearchResponse response = client.prepareSearch(indexName)
                         .setTypes(itemType)
                         .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
                         .setQuery(QueryBuilders.termQuery(fieldName, fieldValue))             // Query

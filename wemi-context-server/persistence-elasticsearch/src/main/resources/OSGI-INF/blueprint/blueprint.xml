@@ -12,6 +12,12 @@
   http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd
   ">
 
+    <cm:property-placeholder persistent-id="org.oasis_open.wemi.context.server.persistence.elasticsearch" update-strategy="reload" >
+        <cm:default-properties>
+            <cm:property name="cluster.name" value="wemiElasticSearch"/>
+            <cm:property name="index.name" value="wemi"/>
+        </cm:default-properties>
+    </cm:property-placeholder>
 
     <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl" interface="org.oasis_open.wemi.context.server.persistence.spi.PersistenceService" />
 
@@ -66,6 +72,8 @@
           init-method="start"
           destroy-method="stop">
         <property name="conditionESQueryBuilderDispatcher" ref="conditionESQueryBuilderDispatcher" />
+        <property name="clusterName" value="${cluster.name}" />
+        <property name="indexName" value="${index.name}" />
     </bean>
 
 </blueprint>
