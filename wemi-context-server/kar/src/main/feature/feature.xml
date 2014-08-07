@@ -5,7 +5,8 @@
         <feature version="[2.7.11,3)">cxf</feature>
         <feature>openwebbeans</feature>
         <feature>pax-cdi-web-openwebbeans</feature>
-        <configfile finalname="/etc/org.oasis_open.wemi.context.server.persistence.elasticsearch.cfg">mvn:org.oasis-open.wemi/wemi-context-server-persistence-elasticsearch/1.0-SNAPSHOT/cfg/elasticsearchconfig</configfile>
+        <configfile finalname="/etc/org.oasis_open.wemi.context.server.persistence.elasticsearch.cfg">mvn:org.oasis-open.wemi/wemi-context-server-persistence-elasticsearch/1.0-SNAPSHOT/cfg/elasticsearchcfg</configfile>
+        <configfile finalname="/etc/elasticsearch.yml">mvn:org.oasis-open.wemi/wemi-context-server-persistence-elasticsearch/1.0-SNAPSHOT/yml/elasticsearchconfig</configfile>
         <bundle start-level="75">mvn:commons-io/commons-io/2.4</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-core/2.4.0</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-databind/2.4.0</bundle>

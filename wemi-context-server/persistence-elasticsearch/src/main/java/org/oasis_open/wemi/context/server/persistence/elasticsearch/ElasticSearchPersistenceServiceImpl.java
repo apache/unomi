@@ -15,6 +15,8 @@ import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
+import org.elasticsearch.common.settings.ImmutableSettings;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.node.Node;
@@ -34,6 +36,8 @@ import static org.elasticsearch.common.xcontent.XContentFactory.*;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.*;
 
 /**
@@ -47,6 +51,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
     private Client client;
     private String clusterName = "wemiElasticSearch";
     private String indexName = "wemi";
+    private String elasticSearchConfig = null;
 
     ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
 
@@ -73,6 +78,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         this.indexName = indexName;
     }
 
+    public void setElasticSearchConfig(String elasticSearchConfig) {
+        this.elasticSearchConfig = elasticSearchConfig;
+    }
+
     public void setConditionESQueryBuilderDispatcher(ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher) {
         this.conditionESQueryBuilderDispatcher = conditionESQueryBuilderDispatcher;
     }
@@ -82,7 +91,21 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         new InClassLoaderExecute<Object>() {
             public Object execute(Object... args) {
                 logger.info("Starting ElasticSearch persistence backend using cluster name "+clusterName+" and index name "+indexName+"...");
-                node = nodeBuilder().clusterName(clusterName).node();
+                Settings.Builder settingsBuilder = null;
+                if (elasticSearchConfig != null && elasticSearchConfig.length() > 0) {
+                    try {
+                        URL elasticSearchConfigURL = new URL(elasticSearchConfig);
+                        settingsBuilder = ImmutableSettings.builder().loadFromUrl(elasticSearchConfigURL);
+                        logger.info("Successfully loaded ElasticSearch configuration from " + elasticSearchConfigURL);
+                    } catch (MalformedURLException e) {
+                        logger.error("Error in ElasticSearch configuration URL ", e);
+                    }
+                }
+                if (settingsBuilder != null) {
+                    node = nodeBuilder().settings(settingsBuilder).node();
+                } else {
+                    node = nodeBuilder().clusterName(clusterName).node();
+                }
                 client = node.client();
                 IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(indexName).execute().actionGet();
                 if (!indicesExistsResponse.isExists()) {

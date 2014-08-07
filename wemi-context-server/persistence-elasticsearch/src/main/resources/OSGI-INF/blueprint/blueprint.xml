@@ -16,6 +16,7 @@
         <cm:default-properties>
             <cm:property name="cluster.name" value="wemiElasticSearch"/>
             <cm:property name="index.name" value="wemi"/>
+            <cm:property name="elasticSearchConfig" value="file:${karaf.etc}/elasticsearch.yml"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -74,6 +75,7 @@
         <property name="conditionESQueryBuilderDispatcher" ref="conditionESQueryBuilderDispatcher" />
         <property name="clusterName" value="${cluster.name}" />
         <property name="indexName" value="${index.name}" />
+        <property name="elasticSearchConfig" value="${elasticSearchConfig}" />
     </bean>
 
 </blueprint>

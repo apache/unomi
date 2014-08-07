@@ -103,6 +103,11 @@
                                 <artifact>
                                     <file>src/main/resources/org.oasis_open.wemi.context.server.persistence.elasticsearch.cfg</file>
                                     <type>cfg</type>
+                                    <classifier>elasticsearchcfg</classifier>
+                                </artifact>
+                                <artifact>
+                                    <file>src/main/resources/elasticsearch.yml</file>
+                                    <type>yml</type>
                                     <classifier>elasticsearchconfig</classifier>
                                 </artifact>
                             </artifacts>
