@@ -1,6 +1,5 @@
 package org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions;
 
-import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.index.query.QueryBuilders;

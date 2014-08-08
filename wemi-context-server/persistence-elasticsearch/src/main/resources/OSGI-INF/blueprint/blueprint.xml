@@ -31,13 +31,6 @@
 
     <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="hoverEventConditionESQueryBuilder" />
-        </service-properties>
-        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.HoverEventConditionESQueryBuilder" />
-    </service>
-
-    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
-        <service-properties>
             <entry key="queryBuilderId" value="matchAllConditionESQueryBuilder" />
         </service-properties>
         <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.MatchAllConditionESQueryBuilder" />

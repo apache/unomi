@@ -11,6 +11,12 @@
     <artifactId>wemi-context-server-persistence-elasticsearch</artifactId>
     <packaging>bundle</packaging>
 
+    <properties>
+        <elasticsearch.version>1.1.1</elasticsearch.version>
+        <lucene.version>4.7.2</lucene.version>
+        <spatial4j.version>0.4.1</spatial4j.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.osgi</groupId>
@@ -34,7 +40,7 @@
         <dependency>
             <groupId>org.elasticsearch</groupId>
             <artifactId>elasticsearch</artifactId>
-            <version>1.1.1</version>
+            <version>${elasticsearch.version}</version>
         </dependency>
         <dependency>
             <groupId>net.java.dev.jna</groupId>
@@ -83,6 +89,10 @@
                             sun.misc;resolution:=optional,
                             *
                         </Import-Package>
+                        <Export-Package>
+                            org.elasticsearch.*;version="${elasticsearch.version}",
+                            org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions;version="${project.version}"
+                        </Export-Package>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>
                     </instructions>
