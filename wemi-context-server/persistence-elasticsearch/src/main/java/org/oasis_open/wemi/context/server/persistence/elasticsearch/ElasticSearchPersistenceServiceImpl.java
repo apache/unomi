@@ -166,15 +166,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
 
     }
 
-    public Item load(final String itemId, final String itemType, final Class clazz) {
+    public <T extends Item> T load(final String itemId, final String itemType, final Class<T> clazz) {
 
-        return new InClassLoaderExecute<Item>() {
-            protected Item execute(Object... args) {
+        return new InClassLoaderExecute<T>() {
+            protected T execute(Object... args) {
                 try {
                     GetResponse response = client.prepareGet(indexName, itemType, itemId)
                             .execute()
                             .actionGet();
-                    Constructor constructor = clazz.getConstructor(String.class, String.class, Properties.class);
+                    Constructor<T> constructor = clazz.getConstructor(String.class, String.class, Properties.class);
                     Map<String,Object> sourceMap = response.getSource();
                     if (sourceMap == null) {
                         return null;
@@ -183,8 +183,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                     for (Map.Entry<String,Object> sourceEntry : sourceMap.entrySet()) {
                         properties.setProperty(sourceEntry.getKey(), sourceEntry.getValue().toString());
                     }
-                    Item itemInstance = (Item) constructor.newInstance(response.getId(), response.getType(), properties);
-                    return itemInstance;
+                    return constructor.newInstance(response.getId(), response.getType(), properties);
                 } catch (InstantiationException e) {
                     logger.error("Error loading itemType=" + itemType + "itemId=" + itemId, e);
                 } catch (IllegalAccessException e) {
@@ -198,7 +197,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                 }
                 return null;
             }
-        }.executeInClassLoader(itemId, itemType, clazz);
+        }.executeInClassLoader();
 
     }
 
@@ -309,13 +308,46 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
 
     }
 
-    public List<Item> query(final String itemType, final String fieldName, final String fieldValue, final Class clazz) {
-
-        return new InClassLoaderExecute<List<Item>>() {
+    public <T extends Item> List<T> query(final String itemType, final Condition query, final Class<T> clazz) {
+        return new InClassLoaderExecute<List<T>>() {
 
             @Override
-            protected List<Item> execute(Object... args) {
-                List<Item> results = new ArrayList<Item>();
+            protected List<T> execute(Object... args) {
+                List<T> results = new ArrayList<T>();
+                SearchResponse response = client.prepareSearch(indexName)
+                        .setTypes(itemType)
+                        .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+                        .setQuery(conditionESQueryBuilderDispatcher.getQuery(query))
+                        .setFrom(0).setSize(60).setExplain(true)
+                        .execute()
+                        .actionGet();
+                SearchHits searchHits = response.getHits();
+                for (SearchHit searchHit : searchHits) {
+                    Map<String, SearchHitField> fields = searchHit.getFields();
+                    try {
+                        T itemInstance = clazz.newInstance();
+                        for (Map.Entry<String,SearchHitField> searchHitFieldEntry : fields.entrySet()) {
+                            itemInstance.setProperty(searchHitFieldEntry.getKey(), searchHitFieldEntry.getValue().getValue().toString());
+                        }
+                        results.add(itemInstance);
+                    } catch (InstantiationException e) {
+                        logger.error("Error while executing query on itemType=" + itemType + " query=" + query + " clazz=" + clazz, e);
+                    } catch (IllegalAccessException e) {
+                        logger.error("Error while executing query on itemType=" + itemType + " query=" + query + " clazz=" + clazz, e);
+                    }
+                }
+                return results;
+            }
+        }.executeInClassLoader();
+    }
+
+    public <T extends Item> List<T> query(final String itemType, final String fieldName, final String fieldValue, final Class<T> clazz) {
+
+        return new InClassLoaderExecute<List<T>>() {
+
+            @Override
+            protected List<T> execute(Object... args) {
+                List<T> results = new ArrayList<T>();
                 SearchResponse response = client.prepareSearch(indexName)
                         .setTypes(itemType)
                         .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
@@ -328,8 +360,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                 for (SearchHit searchHit : searchHits) {
                     Map<String, SearchHitField> fields = searchHit.getFields();
                     try {
-                        Item itemInstance = null;
-                        itemInstance = (Item) clazz.newInstance();
+                        T itemInstance = clazz.newInstance();
                         for (Map.Entry<String,SearchHitField> searchHitFieldEntry : fields.entrySet()) {
                             itemInstance.setProperty(searchHitFieldEntry.getKey(), searchHitFieldEntry.getValue().getValue().toString());
                         }

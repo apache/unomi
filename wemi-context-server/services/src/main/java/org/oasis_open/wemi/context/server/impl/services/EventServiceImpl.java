@@ -23,7 +23,7 @@ public class EventServiceImpl implements EventService {
     private PersistenceService persistenceService;
 
     public Event load(String eventId) {
-        return (Event) persistenceService.load(eventId, Event.EVENT_ITEM_TYPE, Event.class);
+        return persistenceService.load(eventId, Event.EVENT_ITEM_TYPE, Event.class);
     }
 
     public boolean save(Event event) {

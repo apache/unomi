@@ -14,7 +14,7 @@ public interface PersistenceService {
 
     public boolean save(Item item);
 
-    public Item load(String itemId, String itemType, Class clazz);
+    public <T extends Item> T load(String itemId, String itemType, Class<T> clazz);
 
     public boolean saveQuery(String queryName, Condition query);
 
@@ -26,6 +26,8 @@ public interface PersistenceService {
 
     public List<String> getMatchingSavedQueries(Item item);
 
-    public List<Item> query(String itemType, String fieldName, String fieldValue, Class clazz);
+    public <T extends Item> List<T> query(String itemType, Condition query, Class<T> clazz);
+
+    public <T extends Item> List<T> query(String itemType, String fieldName, String fieldValue, Class<T> clazz);
 
 }
