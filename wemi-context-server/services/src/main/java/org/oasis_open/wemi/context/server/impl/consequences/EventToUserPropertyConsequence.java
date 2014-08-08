@@ -3,6 +3,7 @@ package org.oasis_open.wemi.context.server.impl.consequences;
 import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
+import org.oasis_open.wemi.context.server.api.consequences.ConsequenceExecutor;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
 import org.ops4j.pax.cdi.api.Properties;
 import org.ops4j.pax.cdi.api.Property;

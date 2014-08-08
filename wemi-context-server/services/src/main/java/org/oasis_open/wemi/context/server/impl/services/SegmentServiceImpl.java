@@ -20,6 +20,7 @@ import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.json.*;
+import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 
@@ -94,20 +95,21 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
             }
         }
 
-        /* Deactivated temporarily because the saveQuery doesn't work since the conditionTypes are not properly initialized
-        predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/segments", "*.json.jackson", true);
+        predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/wemi/segments", "*.json.jackson", true);
+        if (predefinedSegmentEntries == null) {
+            return;
+        }
         while (predefinedSegmentEntries.hasMoreElements()) {
             URL predefinedSegmentURL = predefinedSegmentEntries.nextElement();
             try {
                 SegmentDefinition segment = ParserHelper.getObjectMapper().readValue(predefinedSegmentURL, SegmentDefinition.class);
-                ParserHelper.resolveConditionTypes(segment.getRootCondition());
-                persistenceService.saveQuery(segment.getSegmentID().getId(), segment.getRootCondition());
-                segmentQueries.put(segment.getSegmentID(), segment);
+                ParserHelper.resolveConditionTypes(definitionsService, segment.getRootCondition());
+                persistenceService.saveQuery(segment.getMetadata().getId(), segment.getRootCondition());
+                segmentQueries.put(segment.getMetadata().getId(), segment);
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
             }
         }
-        */
     }
 
     public Set<User> getMatchingIndividuals(String segmentDescription) {
@@ -137,13 +139,13 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
     }
 
     public void setSegmentDefinition(String segmentId, SegmentDefinition segmentDefinition) {
+        ParserHelper.resolveConditionTypes(definitionsService, segmentDefinition.getRootCondition());
         persistenceService.saveQuery(segmentId, segmentDefinition.getRootCondition());
         // make sure we update the name and description metadata that might not match, so first we remove the entry from the map
         segmentQueries.remove(segmentId);
         segmentQueries.put(segmentId, segmentDefinition);
     }
 
-    @Override
     public void createSegmentDefinition(String segmentId, String name, String description) {
         Metadata metadata = new Metadata(segmentId, name, description);
         SegmentDefinition segmentDefinition = new SegmentDefinition(metadata);

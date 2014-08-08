@@ -1,4 +1,4 @@
-package org.oasis_open.wemi.context.server.impl.consequences;
+package org.oasis_open.wemi.context.server.api.consequences;
 
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;

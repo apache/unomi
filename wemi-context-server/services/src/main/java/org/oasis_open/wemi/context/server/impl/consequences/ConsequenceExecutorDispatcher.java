@@ -1,16 +1,14 @@
 package org.oasis_open.wemi.context.server.impl.consequences;
 
 import org.oasis_open.wemi.context.server.api.User;
-import org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
+import org.oasis_open.wemi.context.server.api.consequences.ConsequenceExecutor;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 
 import javax.inject.Inject;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Created by toto on 27/06/14.

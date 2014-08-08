@@ -13,10 +13,7 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonString;
 import javax.json.JsonValue;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class ParserHelper {
 
@@ -123,4 +120,25 @@ public class ParserHelper {
         return objectMapper;
     }
 
+    public static void resolveConditionTypes(DefinitionsService definitionsService, Condition rootCondition) {
+        if (rootCondition.getConditionType() == null) {
+            ConditionType conditionType = definitionsService.getConditionType(rootCondition.getConditionTypeId());
+            if (conditionType != null) {
+                rootCondition.setConditionType(conditionType);
+            }
+        }
+        // recursive call for sub-conditions as parameters
+        for (Object parameterValue : rootCondition.getParameterValues().values()) {
+            if (parameterValue instanceof Condition) {
+                resolveConditionTypes(definitionsService, (Condition) parameterValue);
+            } else if (parameterValue instanceof Collection) {
+                Collection<Object> valueList = (Collection<Object>) parameterValue;
+                for (Object value : valueList) {
+                    if (value instanceof Condition) {
+                        resolveConditionTypes(definitionsService, (Condition) value);
+                    }
+                }
+            }
+        }
+    }
 }
