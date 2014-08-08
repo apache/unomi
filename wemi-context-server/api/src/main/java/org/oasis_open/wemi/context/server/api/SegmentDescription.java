@@ -3,20 +3,20 @@ package org.oasis_open.wemi.context.server.api;
 /**
  * Created by loom on 24.04.14.
  */
-public class SegmentID implements Comparable<SegmentID> {
+public class SegmentDescription implements Comparable<SegmentDescription> {
 
     private String id;
     private String name;
     private String description;
 
-    public SegmentID() {
+    public SegmentDescription() {
     }
 
-    public SegmentID(String id) {
+    public SegmentDescription(String id) {
         this.id = id;
     }
 
-    public SegmentID(String id, String name, String description) {
+    public SegmentDescription(String id, String name, String description) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -42,7 +42,7 @@ public class SegmentID implements Comparable<SegmentID> {
         this.description = description;
     }
 
-    public int compareTo(SegmentID o) {
+    public int compareTo(SegmentDescription o) {
         if (id != null) {
             return id.compareTo(o.id);
         } else {
@@ -55,9 +55,9 @@ public class SegmentID implements Comparable<SegmentID> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        SegmentID segmentID = (SegmentID) o;
+        SegmentDescription segmentDescription = (SegmentDescription) o;
 
-        if (id != null ? !id.equals(segmentID.id) : segmentID.id != null) return false;
+        if (id != null ? !id.equals(segmentDescription.id) : segmentDescription.id != null) return false;
 
         return true;
     }

@@ -34,53 +34,51 @@ public class SegmentServiceEndPoint implements SegmentService {
 
     @GET
     @Path("/{segmentID}")
-    public Set<User> getMatchingIndividuals(@PathParam("segmentID") SegmentID segmentID) {
-        return segmentService.getMatchingIndividuals(segmentID);
+    public Set<User> getMatchingIndividuals(@PathParam("segmentID") String segmentId) {
+        return segmentService.getMatchingIndividuals(segmentId);
     }
 
     @GET
     @Path("/{segmentID}/{user}")
-    public Boolean isUserInSegment(@PathParam("user") User user, @PathParam("segmentID") SegmentID segmentID) {
-        return segmentService.isUserInSegment(user, segmentID);
+    public Boolean isUserInSegment(@PathParam("user") User user, @PathParam("segmentID") String segmentId) {
+        return segmentService.isUserInSegment(user, segmentId);
     }
 
     @GET
     @Path("/users/{user}")
-    public Set<SegmentID> getSegmentsForUser(@PathParam("user") User user) {
+    public Set<String> getSegmentsForUser(@PathParam("user") User user) {
         return segmentService.getSegmentsForUser(user);
     }
 
     @GET
     @Path("/")
-    public Set<SegmentID> getSegmentIDs() {
-        return segmentService.getSegmentIDs();
+    public Set<SegmentDescription> getSegmentDescriptions() {
+        return segmentService.getSegmentDescriptions();
     }
 
     @GET
     @Path("/definitions/{segmentID}")
-    public SegmentDefinition getSegmentDefinition(@PathParam("segmentID") SegmentID segmentID) {
-        return segmentService.getSegmentDefinition(segmentID);
+    public SegmentDefinition getSegmentDefinition(@PathParam("segmentID") String segmentId) {
+        return segmentService.getSegmentDefinition(segmentId);
     }
 
     @POST
     @Path("/definitions/{segmentID}")
-    public void setSegmentDefinition(@PathParam("segmentID") SegmentID segmentID, SegmentDefinition segmentDefinition) {
-        segmentService.setSegmentDefinition(segmentDefinition.getSegmentID(), segmentDefinition);
+    public void setSegmentDefinition(@PathParam("segmentID") String segmentId, SegmentDefinition segmentDefinition) {
+        segmentService.setSegmentDefinition(segmentId, segmentDefinition);
     }
 
     @PUT
     @Path("/definitions/{segmentID}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public void createSegmentDefinition(@PathParam("segmentID") SegmentID segmentID, @FormParam("segmentName") String segmentName) {
-        segmentID.setName(segmentName);
-        SegmentDefinition segmentDefinition = new SegmentDefinition(segmentID);
-        segmentService.setSegmentDefinition(segmentDefinition.getSegmentID(), segmentDefinition);
+    public void createSegmentDefinition(@PathParam("segmentID") String segmentId, @FormParam("segmentName") String segmentName, @FormParam("segmentDescription") String segmentDescription) {
+        segmentService.createSegmentDefinition(segmentId, segmentName, segmentDescription);
     }
 
     @DELETE
     @Path("/definitions/{segmentID}")
-    public void removeSegmentDefinition(@PathParam("segmentID") SegmentID segmentID) {
-        segmentService.removeSegmentDefinition(segmentID);
+    public void removeSegmentDefinition(@PathParam("segmentID") String segmentId) {
+        segmentService.removeSegmentDefinition(segmentId);
     }
 
 }

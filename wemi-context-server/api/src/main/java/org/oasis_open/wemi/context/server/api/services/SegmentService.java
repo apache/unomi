@@ -1,9 +1,7 @@
 package org.oasis_open.wemi.context.server.api.services;
 
 import org.oasis_open.wemi.context.server.api.*;
-import org.oasis_open.wemi.context.server.api.conditions.*;
 
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -11,12 +9,13 @@ import java.util.Set;
  */
 public interface SegmentService {
 
-    Set<User> getMatchingIndividuals (SegmentID segmentIDs);
-    Boolean isUserInSegment (User user, SegmentID segmentID);
-    Set<SegmentID> getSegmentsForUser(User user);
-    Set<SegmentID> getSegmentIDs();
-    SegmentDefinition getSegmentDefinition (SegmentID segmentID);
-    void setSegmentDefinition (SegmentID segmentID, SegmentDefinition segmentDefinition);
-    void removeSegmentDefinition(SegmentID segmentID);
+    Set<User> getMatchingIndividuals (String segmentIDs);
+    Boolean isUserInSegment (User user, String segmentDescription);
+    Set<String> getSegmentsForUser(User user);
+    Set<SegmentDescription> getSegmentDescriptions();
+    SegmentDefinition getSegmentDefinition (String segmentDescription);
+    void setSegmentDefinition (String segmentId, SegmentDefinition segmentDefinition);
+    void createSegmentDefinition(String segmentId, String name, String description);
+    void removeSegmentDefinition(String segmentDescription);
 
 }

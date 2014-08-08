@@ -1,6 +1,6 @@
 package org.oasis_open.wemi.context.server;
 
-import org.oasis_open.wemi.context.server.api.SegmentID;
+import org.oasis_open.wemi.context.server.api.SegmentDescription;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 
@@ -106,13 +106,13 @@ public class HttpUtils {
                 responseWriter.append("        \"" + userPropertyName + "\": \"" + user.getProperty(userPropertyName) + "\",  ");
             }
         }
-        Set<SegmentID> userSegments = segmentService.getSegmentsForUser(user);
+        Set<String> userSegments = segmentService.getSegmentsForUser(user);
         if (userSegments != null && userSegments.size() > 0) {
             responseWriter.append("        \"segments\": [ ");
             int i = 0;
-            for (SegmentID segmentID : userSegments) {
+            for (String segmentId : userSegments) {
                 responseWriter.append("\"");
-                responseWriter.append(segmentID.getId());
+                responseWriter.append(segmentId);
                 responseWriter.append("\"");
                 if (i < userSegments.size() - 1) {
                     responseWriter.append(",");

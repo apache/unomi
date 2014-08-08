@@ -11,24 +11,24 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement
 public class SegmentDefinition {
 
-    SegmentID segmentID;
+    SegmentDescription segmentDescription;
 
     Condition rootCondition;
 
     public SegmentDefinition() {
     }
 
-    public SegmentDefinition(SegmentID segmentID) {
-        this.segmentID = segmentID;
+    public SegmentDefinition(SegmentDescription segmentDescription) {
+        this.segmentDescription = segmentDescription;
     }
 
     @XmlElement(name="metadata")
-    public SegmentID getSegmentID() {
-        return segmentID;
+    public SegmentDescription getSegmentDescription() {
+        return segmentDescription;
     }
 
-    public void setSegmentID(SegmentID segmentID) {
-        this.segmentID = segmentID;
+    public void setSegmentDescription(SegmentDescription segmentDescription) {
+        this.segmentDescription = segmentDescription;
     }
 
     @XmlElement(name="condition")

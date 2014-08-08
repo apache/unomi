@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.commons.io.IOUtils;
-import org.oasis_open.wemi.context.server.api.SegmentID;
+import org.oasis_open.wemi.context.server.api.SegmentDescription;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.EventListenerService;
@@ -17,7 +17,6 @@ import org.ops4j.pax.cdi.api.OsgiService;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.servlet.*;
-import javax.servlet.annotation.WebFilter;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
@@ -183,11 +182,7 @@ public class ContextServlet extends HttpServlet {
             for (JsonNode node : n) {
                 segments.add(node.textValue());
             }
-            Set<SegmentID> s = segmentService.getSegmentsForUser(user);
-            boolean found = false;
-            for (SegmentID segmentID : s) {
-                found |= segments.remove(segmentID.getId());
-            }
+            boolean found = segments.removeAll(segmentService.getSegmentsForUser(user));
             return (match.equals("all") && segments.isEmpty()) || (match.equals("none") && !found) || (match.equals("some") && found);
         }
         return false;

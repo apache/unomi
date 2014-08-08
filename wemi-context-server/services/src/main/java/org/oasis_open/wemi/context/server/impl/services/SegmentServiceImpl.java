@@ -1,7 +1,7 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.oasis_open.wemi.context.server.api.SegmentDefinition;
-import org.oasis_open.wemi.context.server.api.SegmentID;
+import org.oasis_open.wemi.context.server.api.SegmentDescription;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.conditions.*;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
@@ -20,8 +20,6 @@ import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.json.*;
-import java.io.IOException;
-import java.io.StringWriter;
 import java.net.URL;
 import java.util.*;
 
@@ -34,7 +32,7 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
 
-    Map<SegmentID, SegmentDefinition> segmentQueries = new LinkedHashMap<SegmentID, SegmentDefinition>();
+    Map<String, SegmentDefinition> segmentQueries = new LinkedHashMap<String, SegmentDefinition>();
 
     @Inject
     private BundleContext bundleContext;
@@ -78,15 +76,15 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
 
                 // dumpJSON(jsonst, null, "");
                 JsonObject segmentObject = (JsonObject) jsonst;
-                SegmentID segmentID = new SegmentID(segmentObject.getString("id"), segmentObject.getString("name"), segmentObject.getString("description"));
+                SegmentDescription segmentDescription = new SegmentDescription(segmentObject.getString("id"), segmentObject.getString("name"), segmentObject.getString("description"));
 
-                SegmentDefinition segment = new SegmentDefinition(segmentID);
+                SegmentDefinition segment = new SegmentDefinition(segmentDescription);
 
                 Condition condition = ParserHelper.parseCondition(definitionsService, segmentObject.getJsonObject("condition"));
                 segment.setRootCondition(condition);
-                persistenceService.saveQuery(segmentID.getId(), condition);
+                persistenceService.saveQuery(segmentDescription.getId(), condition);
 
-                segmentQueries.put(segmentID, segment);
+                segmentQueries.put(segmentDescription.getId(), segment);
             } catch (Exception e) {
                 logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
             } finally {
@@ -112,53 +110,54 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
         */
     }
 
-    public Set<User> getMatchingIndividuals(SegmentID segmentID) {
+    public Set<User> getMatchingIndividuals(String segmentDescription) {
         return null;
     }
 
-    public Boolean isUserInSegment(User user, SegmentID segmentID) {
+    public Boolean isUserInSegment(User user, String segmentId) {
+        Set<String> matchingSegments = getSegmentsForUser(user);
 
-        Set<SegmentID> matchingSegments = getSegmentsForUser(user);
-
-        return matchingSegments.contains(segmentID);
+        return matchingSegments.contains(segmentId);
     }
 
-    public Set<SegmentID> getSegmentsForUser(User user) {
+    public Set<String> getSegmentsForUser(User user) {
+        return new HashSet<String>(persistenceService.getMatchingSavedQueries(user));
+    }
 
-        Set<SegmentID> matchedSegments = new LinkedHashSet<SegmentID>();
-
-        List<String> matchingQueries = persistenceService.getMatchingSavedQueries(user);
-        if (matchingQueries.size() > 0) {
-            for (String matchingQuery : matchingQueries) {
-                for (SegmentID segmentID : segmentQueries.keySet()) {
-                    if (matchingQuery.equals(segmentID.getId())) {
-                        matchedSegments.add(segmentID);
-                    }
-                }
-            }
+    public Set<SegmentDescription> getSegmentDescriptions() {
+        Set<SegmentDescription> descriptions = new HashSet<SegmentDescription>();
+        for (SegmentDefinition definition : segmentQueries.values()) {
+            descriptions.add(definition.getSegmentDescription());
         }
-
-        return matchedSegments;
+        return descriptions;
     }
 
-    public Set<SegmentID> getSegmentIDs() {
-        return segmentQueries.keySet();
+    public SegmentDefinition getSegmentDefinition(String segmentId) {
+        return segmentQueries.get(segmentId);
     }
 
-    public SegmentDefinition getSegmentDefinition(SegmentID segmentID) {
-        return segmentQueries.get(segmentID);
-    }
-
-    public void setSegmentDefinition(SegmentID segmentID, SegmentDefinition segmentDefinition) {
-        persistenceService.saveQuery(segmentID.getId(), segmentDefinition.getRootCondition());
+    public void setSegmentDefinition(String segmentId, SegmentDefinition segmentDefinition) {
+        persistenceService.saveQuery(segmentId, segmentDefinition.getRootCondition());
         // make sure we update the name and description metadata that might not match, so first we remove the entry from the map
-        segmentQueries.remove(segmentID);
-        segmentQueries.put(segmentID, segmentDefinition);
+        segmentQueries.remove(segmentId);
+        segmentQueries.put(segmentId, segmentDefinition);
     }
 
-    public void removeSegmentDefinition(SegmentID segmentID) {
-        persistenceService.removeQuery(segmentID.getId());
-        segmentQueries.remove(segmentID);
+    @Override
+    public void createSegmentDefinition(String segmentId, String name, String description) {
+        SegmentDescription segmentDescription = new SegmentDescription(segmentId, name, description);
+        SegmentDefinition segmentDefinition = new SegmentDefinition(segmentDescription);
+        Condition rootCondition = new Condition();
+        rootCondition.setConditionType(definitionsService.getConditionType("andCondition"));
+        rootCondition.getParameterValues().put("subConditions", new ArrayList<Condition>());
+        segmentDefinition.setRootCondition(rootCondition);
+
+        setSegmentDefinition(segmentId, segmentDefinition);
+    }
+
+    public void removeSegmentDefinition(String segmentId) {
+        persistenceService.removeQuery(segmentId);
+        segmentQueries.remove(segmentId);
     }
 
     public static void dumpJSON(JsonValue tree, String key, String depthPrefix) {
