@@ -17,6 +17,7 @@ import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.settings.SettingsException;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.node.Node;
@@ -99,6 +100,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                         logger.info("Successfully loaded ElasticSearch configuration from " + elasticSearchConfigURL);
                     } catch (MalformedURLException e) {
                         logger.error("Error in ElasticSearch configuration URL ", e);
+                    } catch (SettingsException se) {
+                        logger.info("Error trying to load settings from " + elasticSearchConfig + ": " + se.getMessage() + " (activate debug mode for exception details)");
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Exception details", se);
+                        }
                     }
                 }
                 if (settingsBuilder != null) {
