@@ -12,7 +12,7 @@ public interface SegmentService {
     Set<User> getMatchingIndividuals (String segmentIDs);
     Boolean isUserInSegment (User user, String segmentDescription);
     Set<String> getSegmentsForUser(User user);
-    Set<SegmentDescription> getSegmentDescriptions();
+    Set<Metadata> getSegmentMetadatas();
     SegmentDefinition getSegmentDefinition (String segmentDescription);
     void setSegmentDefinition (String segmentId, SegmentDefinition segmentDefinition);
     void createSegmentDefinition(String segmentId, String name, String description);

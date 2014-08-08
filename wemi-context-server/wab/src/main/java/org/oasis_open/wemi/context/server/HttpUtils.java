@@ -1,6 +1,5 @@
 package org.oasis_open.wemi.context.server;
 
-import org.oasis_open.wemi.context.server.api.SegmentDescription;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 

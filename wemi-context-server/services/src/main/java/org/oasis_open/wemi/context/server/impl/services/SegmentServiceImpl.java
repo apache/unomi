@@ -1,7 +1,7 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.oasis_open.wemi.context.server.api.SegmentDefinition;
-import org.oasis_open.wemi.context.server.api.SegmentDescription;
+import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.conditions.*;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
@@ -76,15 +76,15 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
 
                 // dumpJSON(jsonst, null, "");
                 JsonObject segmentObject = (JsonObject) jsonst;
-                SegmentDescription segmentDescription = new SegmentDescription(segmentObject.getString("id"), segmentObject.getString("name"), segmentObject.getString("description"));
+                Metadata metadata = new Metadata(segmentObject.getString("id"), segmentObject.getString("name"), segmentObject.getString("description"));
 
-                SegmentDefinition segment = new SegmentDefinition(segmentDescription);
+                SegmentDefinition segment = new SegmentDefinition(metadata);
 
                 Condition condition = ParserHelper.parseCondition(definitionsService, segmentObject.getJsonObject("condition"));
                 segment.setRootCondition(condition);
-                persistenceService.saveQuery(segmentDescription.getId(), condition);
+                persistenceService.saveQuery(metadata.getId(), condition);
 
-                segmentQueries.put(segmentDescription.getId(), segment);
+                segmentQueries.put(metadata.getId(), segment);
             } catch (Exception e) {
                 logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
             } finally {
@@ -124,10 +124,10 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
         return new HashSet<String>(persistenceService.getMatchingSavedQueries(user));
     }
 
-    public Set<SegmentDescription> getSegmentDescriptions() {
-        Set<SegmentDescription> descriptions = new HashSet<SegmentDescription>();
+    public Set<Metadata> getSegmentMetadatas() {
+        Set<Metadata> descriptions = new HashSet<Metadata>();
         for (SegmentDefinition definition : segmentQueries.values()) {
-            descriptions.add(definition.getSegmentDescription());
+            descriptions.add(definition.getMetadata());
         }
         return descriptions;
     }
@@ -145,8 +145,8 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
 
     @Override
     public void createSegmentDefinition(String segmentId, String name, String description) {
-        SegmentDescription segmentDescription = new SegmentDescription(segmentId, name, description);
-        SegmentDefinition segmentDefinition = new SegmentDefinition(segmentDescription);
+        Metadata metadata = new Metadata(segmentId, name, description);
+        SegmentDefinition segmentDefinition = new SegmentDefinition(metadata);
         Condition rootCondition = new Condition();
         rootCondition.setConditionType(definitionsService.getConditionType("andCondition"));
         rootCondition.getParameterValues().put("subConditions", new ArrayList<Condition>());

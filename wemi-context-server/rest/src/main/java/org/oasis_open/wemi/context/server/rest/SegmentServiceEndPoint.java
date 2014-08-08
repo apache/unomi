@@ -52,8 +52,8 @@ public class SegmentServiceEndPoint implements SegmentService {
 
     @GET
     @Path("/")
-    public Set<SegmentDescription> getSegmentDescriptions() {
-        return segmentService.getSegmentDescriptions();
+    public Set<Metadata> getSegmentMetadatas() {
+        return segmentService.getSegmentMetadatas();
     }
 
     @GET
