@@ -1,0 +1,9 @@
+{
+    "id" : "allEventToUserPropertiesConsequence",
+    "name" : "copy all event properties to user properties",
+    "description" : "Copies all event properties directly to user properties",
+    "serviceFilter" : "(consequenceExecutorId=allEventToUserProperties)",
+    "tags" : [ "event" ],
+    "parameters" : [
+    ]
+}

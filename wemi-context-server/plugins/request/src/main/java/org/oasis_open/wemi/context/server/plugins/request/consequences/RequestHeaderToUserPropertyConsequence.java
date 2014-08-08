@@ -12,15 +12,15 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * Copies a request parameter to a user property
+ * Copies a request header value to a user property
  * @todo add support for multi-valued parameters or storing values as a list
  */
 @ApplicationScoped
 @OsgiServiceProvider
 @Properties({
-    @Property(name = "consequenceExecutorId", value = "requestParameterToUserProperty")
+    @Property(name = "consequenceExecutorId", value = "requestHeaderToUserProperty")
 })
-public class RequestParameterToUserPropertyConsequence implements ConsequenceExecutor {
+public class RequestHeaderToUserPropertyConsequence implements ConsequenceExecutor {
     public boolean execute(Consequence consequence, User user, Object context) {
         boolean changed = false;
         Event event = (Event) context;
@@ -28,12 +28,12 @@ public class RequestParameterToUserPropertyConsequence implements ConsequenceExe
         if (httpServletRequest == null) {
             return false;
         }
-        String requestParameterName = (String) consequence.getParameterValues().get("requestParameterName");
+        String requestHeaderName = (String) consequence.getParameterValues().get("requestHeaderName");
         String userPropertyName = (String) consequence.getParameterValues().get("userPropertyName");
-        String requestParameterValue = httpServletRequest.getParameter(requestParameterName);
-        if (requestParameterValue != null) {
-            if (user.getProperty(userPropertyName) == null || !user.getProperty(userPropertyName).equals(requestParameterValue)) {
-                user.setProperty(userPropertyName, requestParameterValue);
+        String requestHeaderValue = httpServletRequest.getHeader(requestHeaderName);
+        if (requestHeaderValue != null) {
+            if (user.getProperty(userPropertyName) == null || !user.getProperty(userPropertyName).equals(requestHeaderValue)) {
+                user.setProperty(userPropertyName, requestHeaderValue);
                 changed = true;
             }
         }

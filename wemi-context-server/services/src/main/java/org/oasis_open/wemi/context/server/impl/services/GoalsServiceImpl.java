@@ -75,12 +75,10 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
         }
     }
 
-    @Override
     public Set<Goal> getGoals() {
         return new HashSet<Goal>(goals.values());
     }
 
-    @Override
     public float getGoalSuccessRate(String goalId) {
         Goal goal = goals.get(goalId);
 

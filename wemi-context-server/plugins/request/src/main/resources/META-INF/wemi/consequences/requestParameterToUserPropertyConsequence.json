@@ -20,6 +20,14 @@
             "type" : "string",
             "multivalued" : false,
             "choicelistInitializerFilter" : "(initializerId=userProperty)"
+        },
+        {
+            "id" : "storeAsList",
+            "name" : "Store as a list ?",
+            "description" : "If true, the values will be stored in a list",
+            "type" : "boolean",
+            "multivalued" : false,
+            "choicelistInitializerFilter" : ""
         }
     ]
 }
