@@ -21,6 +21,10 @@ import org.elasticsearch.node.Node;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.bucket.filter.Filter;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.oasis_open.wemi.context.server.api.Item;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
@@ -28,15 +32,15 @@ import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.elasticsearch.node.NodeBuilder.*;
-import static org.elasticsearch.common.xcontent.XContentFactory.*;
-
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
+
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 
 /**
  * Created by loom on 02.05.14.
@@ -333,6 +337,32 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                         logger.error("Error while executing query on itemType=" + itemType + " query=" + query + " clazz=" + clazz, e);
                     }
                 }
+                return results;
+            }
+        }.executeInClassLoader();
+    }
+
+    public List<String> aggregateQuery(final String itemType, final Condition filter, final String aggregateOnField) {
+        return new InClassLoaderExecute<List<String>>() {
+
+            @Override
+            protected List<String> execute(Object... args) {
+                List<String> results = new ArrayList<String>();
+                SearchResponse response = client.prepareSearch(indexName)
+                        .setTypes(itemType)
+                        .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+                        .setQuery(QueryBuilders.matchAllQuery())
+                        .addAggregation(AggregationBuilders.filter("filter").filter(conditionESQueryBuilderDispatcher.buildFilter(filter)).subAggregation(AggregationBuilders.terms("terms").field(aggregateOnField)))
+                        .setFrom(0).setSize(0).setExplain(true)
+                        .execute()
+                        .actionGet();
+                Aggregations searchHits = response.getAggregations();
+                Filter filter = searchHits.get("filter");
+                Terms terms = filter.getAggregations().get("terms");
+                for (Terms.Bucket bucket : terms.getBuckets()) {
+                    results.add(bucket.getKey());
+                }
+
                 return results;
             }
         }.executeInClassLoader();

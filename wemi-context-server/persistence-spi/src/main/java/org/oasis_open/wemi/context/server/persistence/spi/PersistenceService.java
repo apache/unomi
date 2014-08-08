@@ -30,4 +30,6 @@ public interface PersistenceService {
 
     public <T extends Item> List<T> query(String itemType, String fieldName, String fieldValue, Class<T> clazz);
 
+    public List<String> aggregateQuery(final String itemType, final Condition filter, final String aggregateOnField);
+
 }
