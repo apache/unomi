@@ -4,6 +4,7 @@ import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
 
+import javax.xml.bind.annotation.XmlElement;
 import java.util.List;
 
 /**
@@ -13,7 +14,9 @@ public class Rule {
 
     private Metadata metadata;
 
+    @XmlElement(name="condition")
     private Condition rootCondition;
+
     private List<Consequence> consequences;
 
     public Rule() {
