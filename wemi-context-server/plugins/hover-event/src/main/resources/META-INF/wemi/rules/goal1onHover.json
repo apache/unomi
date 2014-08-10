@@ -1,6 +1,9 @@
 {
-    "id": "goal1onHover",
-    "description" : "Set a property when an event is reached",
+    "metadata" : {
+        "id": "goal1onHover",
+        "name": "Sets property goal 1 on hover",
+        "description" : "Sets property goal1=reached when event hover is generated with appropriate content name"
+    },
 
     "condition" : {
         "type": "hoverEventCondition",

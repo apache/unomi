@@ -1,19 +1,34 @@
 package org.oasis_open.wemi.context.server.api.rules;
 
+import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
 
-import java.util.Set;
+import java.util.List;
 
 /**
 * Created by toto on 26/06/14.
 */
 public class Rule {
 
+    private Metadata metadata;
+
     private Condition rootCondition;
-    private Set<Consequence> consequences;
+    private List<Consequence> consequences;
 
     public Rule() {
+    }
+
+    public Rule(Metadata metadata) {
+        this.metadata = metadata;
+    }
+
+    public Metadata getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(Metadata metadata) {
+        this.metadata = metadata;
     }
 
     public Condition getRootCondition() {
@@ -24,11 +39,11 @@ public class Rule {
         this.rootCondition = rootCondition;
     }
 
-    public Set<Consequence> getConsequences() {
+    public List<Consequence> getConsequences() {
         return consequences;
     }
 
-    public void setConsequences(Set<Consequence> consequences) {
+    public void setConsequences(List<Consequence> consequences) {
         this.consequences = consequences;
     }
 

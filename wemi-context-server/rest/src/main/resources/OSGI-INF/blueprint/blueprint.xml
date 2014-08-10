@@ -66,9 +66,21 @@
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
+    <jaxrs:server address="/wemi/rules" id="restRulesService">
+        <jaxrs:providers>
+            <ref component-id="jaxb-provider"/>
+            <ref component-id="cors-filter"/>
+        </jaxrs:providers>
+
+        <jaxrs:serviceBeans>
+            <ref component-id="rulesServiceEndPoint" />
+        </jaxrs:serviceBeans>
+    </jaxrs:server>
+
     <reference id="segmentService" interface="org.oasis_open.wemi.context.server.api.services.SegmentService" />
     <reference id="definitionsService" interface="org.oasis_open.wemi.context.server.api.services.DefinitionsService" />
     <reference id="goalsService" interface="org.oasis_open.wemi.context.server.api.services.GoalsService" />
+    <reference id="rulesService" interface="org.oasis_open.wemi.context.server.api.services.RulesService" />
 
     <bean id="segmentServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.SegmentServiceEndPoint">
         <property name="segmentService" ref="segmentService" />
@@ -81,6 +93,10 @@
 
     <bean id="goalsServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.GoalsServiceEndPoint">
         <property name="goalsService" ref="goalsService" />
+    </bean>
+
+    <bean id="rulesServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.RulesServiceEndPoint">
+        <property name="rulesService" ref="rulesService" />
     </bean>
 
 </blueprint>

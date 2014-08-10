@@ -1,6 +1,8 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.oasis_open.wemi.context.server.api.Event;
+import org.oasis_open.wemi.context.server.api.Metadata;
+import org.oasis_open.wemi.context.server.api.SegmentDefinition;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.rules.Rule;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
@@ -76,14 +78,20 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
                 // dumpJSON(jsonst, null, "");
                 JsonObject ruleObject = (JsonObject) jsonst;
 
-                String ruleID = ruleObject.getString("id");
+                JsonObject metadataObject = ruleObject.getJsonObject("metadata");
+
+                String ruleID = metadataObject.getString("id");
+                String ruleName = metadataObject.getString("name");
+                String ruleDescription = metadataObject.getString("description");
                 Rule rule = new Rule();
+                Metadata ruleMetadata = new Metadata(ruleID, ruleName, ruleDescription);
+                rule.setMetadata(ruleMetadata);
 
                 Condition condition = ParserHelper.parseCondition(definitionsService, ruleObject.getJsonObject("condition"));
                 rule.setRootCondition(condition);
 
                 JsonArray array = ruleObject.getJsonArray("consequences");
-                Set<Consequence> consequences = new HashSet<Consequence>();
+                List<Consequence> consequences = new ArrayList<Consequence>();
                 for (JsonValue value : array) {
                     consequences.add(ParserHelper.parseConsequence(definitionsService, (JsonObject) value));
                 }
@@ -143,5 +151,40 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
                 // @todo remove bundle-defined resources (is it possible ?)
                 break;
         }
+    }
+
+    public Set<Metadata> getRuleMetadatas() {
+        Set<Metadata> metadatas = new HashSet<Metadata>();
+        for (Rule rule : rules.values()) {
+            metadatas.add(rule.getMetadata());
+        }
+        return metadatas;
+    }
+
+    public Rule getRule(String ruleId) {
+        return rules.get(ruleId);
+    }
+
+    public void setRule(String ruleId, Rule rule) {
+        ParserHelper.resolveConditionTypes(definitionsService, rule.getRootCondition());
+        persistenceService.saveQuery(ruleId, rule.getRootCondition());
+        rules.put(ruleId, rule);
+    }
+
+    public void createRule(String ruleId, String name, String description) {
+        Metadata metadata = new Metadata(ruleId, name, description);
+        Rule rule = new Rule(metadata);
+        Condition rootCondition = new Condition();
+        rootCondition.setConditionType(definitionsService.getConditionType("andCondition"));
+        rootCondition.getParameterValues().put("subConditions", new ArrayList<Condition>());
+        rule.setRootCondition(rootCondition);
+
+        setRule(ruleId, rule);
+
+    }
+
+    public void removeRule(String ruleId) {
+        persistenceService.removeQuery(ruleId);
+        rules.remove(ruleId);
     }
 }
