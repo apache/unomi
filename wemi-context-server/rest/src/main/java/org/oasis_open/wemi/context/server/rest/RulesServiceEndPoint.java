@@ -51,7 +51,7 @@ public class RulesServiceEndPoint implements RulesService {
         rulesService.setRule(ruleId, rule);
     }
 
-    @POST
+    @PUT
     @Path("/{ruleId}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public void createRule(@PathParam("ruleId") String ruleId, @FormParam("ruleName") String name, @FormParam("ruleDescription") String description) {
