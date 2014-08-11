@@ -5,13 +5,15 @@ import java.util.Properties;
 public class Session extends Item {
 
     public static final String SESSION_ITEM_TYPE = "session";
+//    public static final String PARENT_ITEM_TYPE = "user";
 
     public Session() {
         type= SESSION_ITEM_TYPE;
     }
 
     public Session(String itemId, String userId) {
-        super(itemId, SESSION_ITEM_TYPE, new Properties());
+        super(itemId, SESSION_ITEM_TYPE, null, new Properties());
+//        super(itemId, SESSION_ITEM_TYPE, userId, new Properties());
         getProperties().setProperty("userId",userId);
     }
 

@@ -1,0 +1,25 @@
+{
+    "id" : "userEventCondition",
+    "name" : "User event",
+    "description" : "The user did an event",
+    "queryBuilderFilter" : "(queryBuilderId=userEventConditionESQueryBuilder)",
+    "tags" : [ "event" ],
+    "parameters" : [
+        {
+            "id" : "numberOfDays",
+            "name" : "Number of days",
+            "description" : "Number of days",
+            "type" : "string",
+            "multivalued" : false,
+            "choicelistInitializerFilter" : ""
+        },
+        {
+            "id" : "subConditions",
+            "name" : "Event conditions",
+            "description" : "Condition on an event",
+            "type" : "Condition",
+            "multivalued" : true,
+            "choicelistInitializerFilter" : "(initializerId=condition)"
+        }
+    ]
+}

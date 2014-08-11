@@ -8,6 +8,9 @@ import org.ops4j.pax.cdi.api.Properties;
 import org.ops4j.pax.cdi.api.Property;
 
 import javax.enterprise.context.ApplicationScoped;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.TimeZone;
 
 /**
  * Created by toto on 26/06/14.
@@ -26,9 +29,15 @@ public class SetPropertyConsequence implements ConsequenceExecutor {
     }
 
     public boolean execute(Consequence consequence, User user, Object context) {
+        String propertyValue = (String) consequence.getParameterValues().get("propertyValue");
+        if (propertyValue.equals("now")) {
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+            format.setTimeZone(TimeZone.getTimeZone("UTC"));
+            propertyValue = format.format(new Date());
+        }
         user.setProperty(
                 (String) consequence.getParameterValues().get("propertyName"),
-                (String) consequence.getParameterValues().get("propertyValue"));
+                propertyValue);
         return true;
     }
 

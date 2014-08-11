@@ -2,6 +2,7 @@ package org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions;
 
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
+import org.elasticsearch.index.query.FilteredQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.osgi.framework.BundleContext;
@@ -25,7 +26,11 @@ public class ConditionESQueryBuilderDispatcher {
     }
 
     public String getQuery(Condition condition) {
-        return "{\"query\": " + QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), buildFilter(condition)).toString() + "}";
+        return "{\"query\": " + getQueryBuilder(condition).toString() + "}";
+    }
+
+    public FilteredQueryBuilder getQueryBuilder(Condition condition) {
+        return QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), buildFilter(condition));
     }
 
     public FilterBuilder buildFilter(Condition condition) {

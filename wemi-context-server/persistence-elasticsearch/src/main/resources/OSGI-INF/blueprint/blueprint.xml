@@ -45,6 +45,13 @@
 
     <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
         <service-properties>
+            <entry key="queryBuilderId" value="userEventConditionESQueryBuilder" />
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.UserEventConditionESQueryBuilder" />
+    </service>
+
+    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
+        <service-properties>
             <entry key="queryBuilderId" value="pageViewEventConditionESQueryBuilder" />
         </service-properties>
         <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.PageViewEventConditionESQueryBuilder" />

@@ -1,10 +1,7 @@
 package org.oasis_open.wemi.context.server.api;
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * Created by loom on 24.04.14.
@@ -12,6 +9,7 @@ import java.util.Properties;
 public class Event extends Item {
 
     public static final String EVENT_ITEM_TYPE = "event";
+//    public static final String PARENT_ITEM_TYPE = "session";
     private String eventType;
     private String sessionId = null;
     private String visitorId = null;
@@ -31,6 +29,7 @@ public class Event extends Item {
 
     public Event(String itemId, String eventType, String sessionId, String visitorId, Date timeStamp) {
         super(itemId, EVENT_ITEM_TYPE, null, new Properties());
+//        super(itemId, EVENT_ITEM_TYPE, sessionId, new Properties());
         this.eventType = eventType;
         setProperty("eventType", eventType);
         this.sessionId = sessionId;
@@ -46,6 +45,7 @@ public class Event extends Item {
         }
 
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        format.setTimeZone(TimeZone.getTimeZone("UTC"));
         setProperty("eventTimeStamp", format.format(this.timeStamp));
     }
 
