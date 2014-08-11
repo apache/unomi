@@ -27,7 +27,7 @@ public class Consequence {
     }
 
     @XmlElement(name="type")
-    public String getConditionTypeId() {
+    public String getConsequenceTypeId() {
         return consequenceTypeId;
     }
 
