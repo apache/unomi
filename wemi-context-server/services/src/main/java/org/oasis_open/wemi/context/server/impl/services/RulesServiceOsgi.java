@@ -69,8 +69,4 @@ public class RulesServiceOsgi implements RulesService, EventListenerService, Bun
     public void createRule(String ruleId, String name, String description) {
         rulesService.createRule(ruleId, name, description);
     }
-
-    public static RulesService getInstance() {
-        return RulesServiceImpl.getInstance();
-    }
 }
