@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Default;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -23,7 +24,7 @@ import javax.json.*;
 import java.net.URL;
 import java.util.*;
 
-@Singleton
+@ApplicationScoped
 @Default
 @OsgiServiceProvider
 public class DefinitionsServiceImpl implements DefinitionsService, BundleListener {

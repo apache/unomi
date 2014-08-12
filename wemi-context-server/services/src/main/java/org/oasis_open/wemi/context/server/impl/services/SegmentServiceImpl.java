@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.json.*;
@@ -33,7 +34,7 @@ import java.util.*;
 /**
  * Created by loom on 26.04.14.
  */
-@Singleton
+@ApplicationScoped
 @OsgiServiceProvider
 public class SegmentServiceImpl implements SegmentService, BundleListener {
 

@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.IOException;
@@ -22,7 +23,7 @@ import java.net.URL;
 import java.util.*;
 
 
-@Singleton
+@ApplicationScoped
 @OsgiServiceProvider
 public class GoalsServiceImpl implements GoalsService, BundleListener {
     private static final Logger logger = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
@@ -39,6 +40,10 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
 
 
     Map<String, Goal> goals = new LinkedHashMap<String, Goal>();
+
+    public GoalsServiceImpl() {
+        System.out.println("Instantiating definitions service...");
+    }
 
     @PostConstruct
     public void postConstruct() {
