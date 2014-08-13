@@ -1,4 +1,4 @@
-package org.oasis_open.wemi.context.server.api.conditions;
+package org.oasis_open.wemi.context.server.persistence.spi;
 
 import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.databind.DeserializationContext;

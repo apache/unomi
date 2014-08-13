@@ -1,8 +1,8 @@
 {
     "user" : {
         "properties" : {
-            "age" : {"type" : "integer" },
-            "income" : {"type" : "integer" }
+            "properties.age" : {"type" : "integer" },
+            "properties.income" : {"type" : "integer" }
         }
     }
 }

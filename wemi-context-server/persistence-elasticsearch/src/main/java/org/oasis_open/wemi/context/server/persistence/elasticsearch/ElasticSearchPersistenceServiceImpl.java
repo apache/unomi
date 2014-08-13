@@ -15,7 +15,6 @@ import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsException;
-import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.node.Node;
@@ -28,18 +27,17 @@ import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.oasis_open.wemi.context.server.api.Item;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
+import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
 
-import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 
 /**
@@ -137,47 +135,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
 
     }
 
-    public boolean save(final Item item) {
-
-        return new InClassLoaderExecute<Boolean>() {
-            protected Boolean execute(Object... args) {
-                try {
-                    XContentBuilder jsonObject = jsonBuilder().startObject();
-                    for (String propertyName : item.getProperties().stringPropertyNames()) {
-                        String propertyValue = item.getProperty(propertyName);
-                        jsonObject.field(propertyName, propertyValue);
-                    }
-                    jsonObject.field("itemClass", item.getClass().getName());
-                    jsonObject.endObject();
-                    IndexRequestBuilder indexBuilder = client.prepareIndex(indexName, item.getType(), item.getItemId())
-                            .setSource(jsonObject);
-                    if (item.getParentId() != null) {
-                        indexBuilder = indexBuilder.setParent(item.getParentId());
-                    }
-                    IndexResponse response = indexBuilder
-                            .execute()
-                            .actionGet();
-                    return true;
-                } catch (IOException e) {
-                    logger.error("Error saving item " + item, e);
-                }
-                return false;
-            }
-        }.executeInClassLoader(item);
-
+    @Override
+    public <T extends Item> Collection<T> getAllItems(final Class<T> clazz) {
+        return query(QueryBuilders.matchAllQuery(), clazz);
     }
 
-    public <T extends Item> T load(final String itemId, final String itemType, final Class<T> clazz) {
-
+    public <T extends Item> T load(final String itemId, final Class<T> clazz) {
         return new InClassLoaderExecute<T>() {
             protected T execute(Object... args) {
                 try {
+                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
                     try {
                         // Check if class has a parent defined - use a query instead, as we can't do a get on items
                         // with parents
                         clazz.getField("PARENT_ITEM_TYPE");
 
-                        List<T> r = query(itemType, QueryBuilders.idsQuery(itemType).ids(itemId),clazz);
+                        List<T> r = query(QueryBuilders.idsQuery(itemType).ids(itemId),clazz);
                         if (r.size() > 0) {
                             return r.get(0);
                         }
@@ -186,32 +159,72 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                         GetResponse response = client.prepareGet(indexName, itemType, itemId)
                                 .execute()
                                 .actionGet();
-                        Constructor<T> constructor = clazz.getConstructor(String.class, String.class, Properties.class);
-                        Map<String, Object> sourceMap = response.getSource();
-                        if (sourceMap == null) {
+                        if (response.isExists()) {
+                            String sourceAsString = response.getSourceAsString();
+                            final T value = MapperHelper.getObjectMapper().readValue(sourceAsString, clazz);
+                            value.setItemId(response.getId());
+                            return value;
+                        } else {
                             return null;
                         }
-                        Properties properties = new Properties();
-                        for (Map.Entry<String, Object> sourceEntry : sourceMap.entrySet()) {
-                            properties.setProperty(sourceEntry.getKey(), sourceEntry.getValue().toString());
-                        }
-                        return constructor.newInstance(response.getId(), response.getType(), properties);
                     }
-                } catch (InstantiationException e) {
-                    logger.error("Error loading itemType=" + itemType + "itemId=" + itemId, e);
                 } catch (IllegalAccessException e) {
-                    logger.error("Error loading itemType=" + itemType + "itemId=" + itemId, e);
-                } catch (NoSuchMethodException e) {
-                    logger.error("Error loading itemType=" + itemType + "itemId=" + itemId, e);
-                } catch (InvocationTargetException e) {
-                    logger.error("Error loading itemType=" + itemType + "itemId=" + itemId, e);
+                    logger.error("Error loading itemType=" + clazz.getName() + "itemId=" + itemId, e);
                 } catch (Throwable t) {
-                    logger.error("Error loading itemType=" + itemType + "itemId=" + itemId, t);
+                    logger.error("Error loading itemType=" + clazz.getName() + "itemId=" + itemId, t);
                 }
                 return null;
             }
         }.executeInClassLoader();
 
+    }
+
+    public boolean save(final Item item) {
+
+        return new InClassLoaderExecute<Boolean>() {
+            protected Boolean execute(Object... args) {
+                try {
+                    String source = MapperHelper.getObjectMapper().writeValueAsString(item);
+                    String itemType = (String) item.getClass().getField("ITEM_TYPE").get(null);
+                    IndexRequestBuilder indexBuilder = client.prepareIndex(indexName, itemType, item.getItemId())
+                            .setSource(source);
+                    if (item.getParentId() != null) {
+                        indexBuilder = indexBuilder.setParent(item.getParentId());
+                    }
+                    IndexResponse response = indexBuilder
+                            .execute()
+                            .actionGet();
+                    return true;
+                } catch (NoSuchFieldException e) {
+                    logger.error("Error saving item " + item, e);
+                } catch (IllegalAccessException e) {
+                    logger.error("Error saving item " + item, e);
+                } catch (IOException e) {
+                    logger.error("Error saving item " + item, e);
+                }
+                return false;
+            }
+        }.executeInClassLoader();
+
+    }
+
+    @Override
+    public <T extends Item> boolean remove(final String itemId, final Class<T> clazz) {
+        return new InClassLoaderExecute<Boolean>() {
+            protected Boolean execute(Object... args) {
+                //Index the query = register it in the percolator
+                try {
+                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
+
+                    client.prepareDelete(indexName, itemType, itemId)
+                            .execute().actionGet();
+                    return true;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return false;
+            }
+        }.executeInClassLoader();
     }
 
     public boolean createMapping(final String type, final String source) {
@@ -258,7 +271,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                 }
                 return false;
             }
-        }.executeInClassLoader(queryName, query);
+        }.executeInClassLoader();
     }
 
     public boolean saveQuery(String queryName, Condition query) {
@@ -283,7 +296,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                 }
                 return false;
             }
-        }.executeInClassLoader(queryName);
+        }.executeInClassLoader();
     }
 
     public List<String> getMatchingSavedQueries(final Item item) {
@@ -291,80 +304,73 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
             protected List<String> execute(Object... args) {
                 List<String> matchingQueries = new ArrayList<String>();
                 try {
-                    XContentBuilder documentJsonObject = jsonBuilder().startObject();
-                    documentJsonObject.startObject("doc");
-                    for (String propertyName : item.getProperties().stringPropertyNames()) {
-                        String propertyValue = item.getProperty(propertyName);
-                        documentJsonObject.field(propertyName, propertyValue);
-                    }
-                    documentJsonObject.field("itemClass", item.getClass().getName());
-                    documentJsonObject.endObject();
-                    documentJsonObject.endObject();
+                    String source = MapperHelper.getObjectMapper().writeValueAsString(item);
+
+                    String itemType = (String) item.getClass().getField("ITEM_TYPE").get(null);
 
                     //Percolate
                     PercolateResponse response = client.preparePercolate()
                                             .setIndices(indexName)
-                                            .setDocumentType(item.getType())
-                                            .setSource(documentJsonObject).execute().actionGet();
+                                            .setDocumentType(itemType)
+                                            .setSource("{doc:"+ source + "}").execute().actionGet();
                     //Iterate over the results
                     for(PercolateResponse.Match match : response) {
                         //Handle the result which is the name of
                         //the query in the percolator
                         matchingQueries.add(match.getId().string());
                     }
+                } catch (NoSuchFieldException e) {
+                    logger.error("Error getting matching saved queries for item=" + item, e);
+                } catch (IllegalAccessException e) {
+                    logger.error("Error getting matching saved queries for item=" + item, e);
                 } catch (IOException e) {
                     logger.error("Error getting matching saved queries for item=" + item, e);
                 }
                 return matchingQueries;
             }
-        }.executeInClassLoader(item);
+        }.executeInClassLoader();
 
     }
 
-    public <T extends Item> List<T> query(final String itemType, final Condition query, final Class<T> clazz) {
-        return query(itemType, conditionESQueryBuilderDispatcher.getQueryBuilder(query), clazz);
+    public <T extends Item> List<T> query(final Condition query, final Class<T> clazz) {
+        return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), clazz);
     }
 
-    public <T extends Item> List<T> query(final String itemType, final String fieldName, final String fieldValue, final Class<T> clazz) {
-        return query(itemType, QueryBuilders.termQuery(fieldName, fieldValue), clazz);
+    public <T extends Item> List<T> query(final String fieldName, final String fieldValue, final Class<T> clazz) {
+        return query(QueryBuilders.termQuery(fieldName, fieldValue), clazz);
     }
 
-    public <T extends Item> List<T> query(final String itemType, final QueryBuilder query, final Class<T> clazz) {
+    public <T extends Item> List<T> query(final QueryBuilder query, final Class<T> clazz) {
         return new InClassLoaderExecute<List<T>>() {
 
             @Override
             protected List<T> execute(Object... args) {
                 List<T> results = new ArrayList<T>();
-                SearchResponse response = client.prepareSearch(indexName)
-                        .setTypes(itemType)
-                        .setFetchSource(true)
-                        .setSearchType(SearchType.QUERY_AND_FETCH)
-                        .setQuery(query)
-                        .setFrom(0).setSize(60)
-                        .execute()
-                        .actionGet();
-                SearchHits searchHits = response.getHits();
-                for (SearchHit searchHit : searchHits) {
-                    try {
-                        Constructor<T> constructor = clazz.getConstructor(String.class, String.class, Properties.class);
-                        Map<String, Object> sourceMap = searchHit.getSource();
-                        Properties properties = new Properties();
-                        for (Map.Entry<String, Object> sourceEntry : sourceMap.entrySet()) {
-                            properties.setProperty(sourceEntry.getKey(), sourceEntry.getValue().toString());
-                        }
-                        results.add(constructor.newInstance(searchHit.getId(), searchHit.getType(), properties));
-                    } catch (InstantiationException e) {
-                        logger.error("Error loading itemType=" + itemType + "query=" + query, e);
-                    } catch (IllegalAccessException e) {
-                        logger.error("Error loading itemType=" + itemType + "query=" + query, e);
-                    } catch (NoSuchMethodException e) {
-                        logger.error("Error loading itemType=" + itemType + "query=" + query, e);
-                    } catch (InvocationTargetException e) {
-                        logger.error("Error loading itemType=" + itemType + "query=" + query, e);
-                    } catch (Throwable t) {
-                        logger.error("Error loading itemType=" + itemType + "query=" + query, t);
+                try {
+                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
+                    SearchResponse response = client.prepareSearch(indexName)
+                            .setTypes(itemType)
+                            .setFetchSource(true)
+                            .setSearchType(SearchType.QUERY_AND_FETCH)
+                            .setQuery(query)
+                            .setFrom(0).setSize(60)
+                            .execute()
+                            .actionGet();
+                    SearchHits searchHits = response.getHits();
+                    for (SearchHit searchHit : searchHits) {
+                        String sourceAsString = searchHit.getSourceAsString();
+                        final T value = MapperHelper.getObjectMapper().readValue(sourceAsString, clazz);
+                        value.setItemId(searchHit.getId());
+                        results.add(value);
                     }
+                } catch (NoSuchFieldException e) {
+                    logger.error("Error loading itemType=" + clazz.getName() + "query=" + query, e);
+                } catch (IllegalAccessException e) {
+                    logger.error("Error loading itemType=" + clazz.getName() + "query=" + query, e);
+                } catch (Throwable t) {
+                    logger.error("Error loading itemType=" + clazz.getName() + "query=" + query, t);
                 }
+
                 return results;
             }
         }.executeInClassLoader();

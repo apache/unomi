@@ -1,29 +1,30 @@
 {
-    "id": "youngRich",
-    "name": "Young rich",
-    "description": "This segment includes all young rich",
+    "metadata": {
+        "id": "youngRich",
+        "name": "Young rich",
+        "description": "This segment includes all young rich"
+    },
     "condition": {
-        "type": "andCondition",
         "parameterValues": {
             "subConditions": [
                 {
-                    "type": "userPropertyCondition",
                     "parameterValues": {
-                        "comparisonOperator": "lessThan",
-                        "propertyName": "age",
-                        "propertyValue": "25"
-                    }
+                        "propertyName": "properties.age",
+                        "propertyValue": "25",
+                        "comparisonOperator": "lessThan"
+                    },
+                    "type": "userPropertyCondition"
                 },
                 {
-                    "type": "userPropertyCondition",
                     "parameterValues": {
-                        "comparisonOperator": "greaterThan",
-                        "propertyName": "income",
-                        "propertyValue": "10000000"
-                    }
+                        "propertyName": "properties.income",
+                        "propertyValue": "10000000",
+                        "comparisonOperator": "greaterThan"
+                    },
+                    "type": "userPropertyCondition"
                 }
             ]
-        }
+        },
+        "type": "andCondition"
     }
-
 }

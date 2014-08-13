@@ -1,9 +1,11 @@
 {
-    "id" : "alwaysTrue",
-    "name" :  "All users",
-    "description" : "This segment includes all users",
-    "condition" : {
-        "type": "matchAll",
-        "parameterValues": { }
+    "metadata": {
+        "id": "alwaysTrue",
+        "name": "All users",
+        "description": "This segment includes all users"
+    },
+    "condition": {
+        "parameterValues": {},
+        "type": "matchAll"
     }
 }

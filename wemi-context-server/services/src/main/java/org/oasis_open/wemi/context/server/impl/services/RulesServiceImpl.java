@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
@@ -9,6 +10,7 @@ import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.EventListenerService;
 import org.oasis_open.wemi.context.server.api.services.RulesService;
 import org.oasis_open.wemi.context.server.impl.consequences.ConsequenceExecutorDispatcher;
+import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -16,8 +18,9 @@ import org.osgi.framework.BundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.json.*;
+import java.io.IOException;
 import java.net.URL;
+import java.security.MessageDigest;
 import java.util.*;
 
 public class RulesServiceImpl implements RulesService, EventListenerService, BundleListener {
@@ -48,8 +51,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
         this.consequenceExecutorDispatcher = consequenceExecutorDispatcher;
     }
 
-    Map<String, Rule> rules = new LinkedHashMap<String, Rule>();
-
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 
@@ -66,46 +67,20 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
         if (predefinedRuleEntries == null) {
             return;
         }
+
         while (predefinedRuleEntries.hasMoreElements()) {
             URL predefinedSegmentURL = predefinedRuleEntries.nextElement();
             logger.debug("Found predefined segment at " + predefinedSegmentURL + ", loading... ");
 
-            JsonReader reader = null;
             try {
-                reader = Json.createReader(predefinedSegmentURL.openStream());
-                JsonStructure jsonst = reader.read();
-
-                // dumpJSON(jsonst, null, "");
-                JsonObject ruleObject = (JsonObject) jsonst;
-
-                JsonObject metadataObject = ruleObject.getJsonObject("metadata");
-
-                String ruleID = metadataObject.getString("id");
-                String ruleName = metadataObject.getString("name");
-                String ruleDescription = metadataObject.getString("description");
-                Rule rule = new Rule();
-                Metadata ruleMetadata = new Metadata(ruleID, ruleName, ruleDescription);
-                rule.setMetadata(ruleMetadata);
-
-                Condition condition = ParserHelper.parseCondition(definitionsService, ruleObject.getJsonObject("condition"));
-                rule.setRootCondition(condition);
-
-                JsonArray array = ruleObject.getJsonArray("consequences");
-                List<Consequence> consequences = new ArrayList<Consequence>();
-                for (JsonValue value : array) {
-                    consequences.add(ParserHelper.parseConsequence(definitionsService, (JsonObject) value));
+                Rule rule = MapperHelper.getObjectMapper().readValue(predefinedSegmentURL, Rule.class);
+                if (getRule(rule.getMetadata().getId()) == null) {
+                    setRule(rule.getMetadata().getId(), rule);
                 }
-                rule.setConsequences(consequences);
-                persistenceService.saveQuery(ruleID, rule.getRootCondition());
-
-                rules.put(ruleID, rule);
-            } catch (Exception e) {
+            } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
-            } finally {
-                if (reader != null) {
-                    reader.close();
-                }
             }
+
         }
     }
 
@@ -116,8 +91,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
 
         if (matchingQueries.size() > 0) {
             for (String matchingQuery : matchingQueries) {
-                if (rules.containsKey(matchingQuery)) {
-                    matchedRules.add(rules.get(matchingQuery));
+                Rule rule = getRule(matchingQuery);
+                if (rule != null) {
+                    matchedRules.add(rule);
                 }
             }
         }
@@ -155,20 +131,24 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
 
     public Set<Metadata> getRuleMetadatas() {
         Set<Metadata> metadatas = new HashSet<Metadata>();
-        for (Rule rule : rules.values()) {
+        for (Rule rule : persistenceService.getAllItems(Rule.class)) {
             metadatas.add(rule.getMetadata());
         }
         return metadatas;
     }
 
     public Rule getRule(String ruleId) {
-        return rules.get(ruleId);
+        Rule rule = persistenceService.load(ruleId, Rule.class);
+        if (rule != null) {
+            ParserHelper.resolveConditionTypes(definitionsService, rule.getCondition());
+        }
+        return rule;
     }
 
     public void setRule(String ruleId, Rule rule) {
-        ParserHelper.resolveConditionTypes(definitionsService, rule.getRootCondition());
-        persistenceService.saveQuery(ruleId, rule.getRootCondition());
-        rules.put(ruleId, rule);
+        ParserHelper.resolveConditionTypes(definitionsService, rule.getCondition());
+        persistenceService.saveQuery(ruleId, rule.getCondition());
+        persistenceService.save(rule);
     }
 
     public void createRule(String ruleId, String name, String description) {
@@ -177,7 +157,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
         Condition rootCondition = new Condition();
         rootCondition.setConditionType(definitionsService.getConditionType("andCondition"));
         rootCondition.getParameterValues().put("subConditions", new ArrayList<Condition>());
-        rule.setRootCondition(rootCondition);
+        rule.setCondition(rootCondition);
 
         setRule(ruleId, rule);
 
@@ -185,6 +165,67 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
 
     public void removeRule(String ruleId) {
         persistenceService.removeQuery(ruleId);
-        rules.remove(ruleId);
+        persistenceService.remove(ruleId, Rule.class);
     }
+
+    public void createAutoGeneratedRules(Condition condition) {
+        List<Rule> rules = new ArrayList<Rule>();
+        getAutoGeneratedRules(condition, rules);
+        for (Rule rule : rules) {
+            setRule(rule.getMetadata().getId(), rule);
+        }
+    }
+
+    private void getAutoGeneratedRules(Condition condition, List<Rule> rules) {
+        if (condition.getConditionTypeId().equals("userEventCondition")) {
+            try {
+                final List<Condition> subConditions = (List<Condition>) condition.getParameterValues().get("subConditions");
+                String key = MapperHelper.getObjectMapper().writeValueAsString(MapperHelper.getObjectMapper().writeValueAsString(subConditions.get(0)));
+                key = "eventTriggered" + getMD5(key);
+                condition.getParameterValues().put("generatedPropertyKey", key);
+                if (getRule(key) == null) {
+                    Rule r = new Rule(new Metadata(key, "",""));
+                    r.setCondition(subConditions.get(0));
+
+                    final Consequence consequence = new Consequence();
+                    consequence.setConsequenceType(definitionsService.getConsequenceType("setPropertyConsequence"));
+                    consequence.getParameterValues().put("propertyName", key);
+                    consequence.getParameterValues().put("propertyValue", "now");
+                    r.setConsequences(Arrays.asList(consequence));
+                    rules.add(r);
+                }
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
+        } else {
+            for (Object parameterValue : condition.getParameterValues().values()) {
+                if (parameterValue instanceof Condition) {
+                    getAutoGeneratedRules((Condition) parameterValue, rules);
+                } else if (parameterValue instanceof Collection) {
+                    for (Object subCondition : (Collection) parameterValue) {
+                        if (subCondition instanceof Condition) {
+                            getAutoGeneratedRules((Condition) subCondition, rules);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private String getMD5(String md5) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] array = md.digest(md5.getBytes());
+            StringBuffer sb = new StringBuffer();
+            for (int i = 0; i < array.length; ++i) {
+                sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1,3));
+            }
+            return sb.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+        }
+        return null;
+    }
+
+
+
 }

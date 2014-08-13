@@ -1,62 +1,45 @@
 package org.oasis_open.wemi.context.server.api;
 
+import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 import java.util.Properties;
 
 /**
  * Created by loom on 24.04.14.
  */
-public class Item implements Serializable {
+public abstract class Item implements Serializable {
 
     protected String itemId;
-    protected String type = "item";
     protected String parentId;
-
-    Properties properties;
 
     public Item() {
     }
 
-    public Item(String itemId, String type, Properties properties) {
-        this(itemId, type, null, properties);
+    public Item(String itemId) {
+        this(itemId, null);
     }
 
-    public Item(String itemId, String type, String parentId, Properties properties) {
+    public Item(String itemId, String parentId) {
         this.itemId = itemId;
-        this.type = type;
         this.parentId = parentId;
-        this.properties = properties;
     }
 
+    @XmlTransient
     public String getItemId() {
         return itemId;
     }
 
+    public void setItemId(String itemId) {
+        this.itemId = itemId;
+    }
+
+    @XmlTransient
     public String getParentId() {
         return parentId;
     }
 
-    public void setProperty(String name, String value) {
-        properties.setProperty(name, value);
-    }
 
-    public String getProperty(String name) {
-        return properties.getProperty(name);
-    }
-
-    public boolean hasProperty(String name) {
-        return properties.containsKey(name);
-    }
-
-    public String removeProperty(String name) {
-        return (String) properties.remove(name);
-    }
-
-    public Properties getProperties() {
-        return properties;
-    }
-
-    public String getType() {
-        return type;
+    public void setParentId(String parentId) {
+        this.parentId = parentId;
     }
 }

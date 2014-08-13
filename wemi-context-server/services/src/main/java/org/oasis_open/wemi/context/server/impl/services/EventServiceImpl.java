@@ -20,7 +20,7 @@ public class EventServiceImpl implements EventService {
     }
 
     public Event load(String eventId) {
-        return persistenceService.load(eventId, Event.EVENT_ITEM_TYPE, Event.class);
+        return persistenceService.load(eventId, Event.class);
     }
 
     public boolean save(Event event) {
@@ -29,7 +29,7 @@ public class EventServiceImpl implements EventService {
     }
 
     public List<String> getEventProperties() {
-        Map<String,Map<String,String>> mappings = persistenceService.getMapping(Event.EVENT_ITEM_TYPE);
+        Map<String,Map<String,String>> mappings = persistenceService.getMapping(Event.ITEM_TYPE);
         return new ArrayList<String>(mappings.keySet());
     }
 

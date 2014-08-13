@@ -30,6 +30,7 @@
     <bean id="goalsServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.GoalsServiceImpl" init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService" />
         <property name="definitionsService" ref="definitionsServiceImpl" />
+        <property name="rulesService" ref="rulesServiceImpl" />
         <property name="bundleContext" ref="blueprintBundleContext" />
     </bean>
     <service id="goalsService" ref="goalsServiceImpl" interface="org.oasis_open.wemi.context.server.api.services.GoalsService" />

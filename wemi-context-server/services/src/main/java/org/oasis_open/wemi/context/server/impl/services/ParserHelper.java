@@ -8,6 +8,7 @@ import org.oasis_open.wemi.context.server.api.conditions.*;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
 import org.oasis_open.wemi.context.server.api.consequences.ConsequenceType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
+import org.oasis_open.wemi.context.server.persistence.spi.PropertyTypedObjectDeserializer;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -16,8 +17,6 @@ import javax.json.JsonValue;
 import java.util.*;
 
 public class ParserHelper {
-
-    private static ObjectMapper objectMapper = null;
 
     public static Condition parseCondition(DefinitionsService service, JsonObject object) {
         ConditionType typeNode = service.getConditionType(object.getString("type"));
@@ -103,21 +102,6 @@ public class ParserHelper {
             parameters.add(conditionParameter);
         }
         return parameters;
-    }
-
-    public synchronized static ObjectMapper getObjectMapper() {
-        if (objectMapper == null) {
-            objectMapper = new ObjectMapper();
-            objectMapper.registerModule(new JaxbAnnotationModule());
-            SimpleModule deserializerModule =
-                  new SimpleModule("PropertyTypedObjectDeserializerModule",
-                      new Version(1, 0, 0, null, "org.oasis_open.wemi.context.server.rest", "deserializer"));
-            PropertyTypedObjectDeserializer propertyTypedObjectDeserializer = new PropertyTypedObjectDeserializer();
-            propertyTypedObjectDeserializer.registerMapping("type=.*Condition", Condition.class);
-            deserializerModule.addDeserializer(Object.class, propertyTypedObjectDeserializer);
-            objectMapper.registerModule(deserializerModule);
-        }
-        return objectMapper;
     }
 
     public static void resolveConditionTypes(DefinitionsService definitionsService, Condition rootCondition) {

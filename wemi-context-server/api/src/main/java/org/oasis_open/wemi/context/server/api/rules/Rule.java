@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.api.rules;
 
+import org.oasis_open.wemi.context.server.api.Item;
 import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
@@ -10,12 +11,13 @@ import java.util.List;
 /**
 * Created by toto on 26/06/14.
 */
-public class Rule {
+public class Rule extends Item {
+
+    public static final String ITEM_TYPE = "rule";
 
     private Metadata metadata;
 
-    @XmlElement(name="condition")
-    private Condition rootCondition;
+    private Condition condition;
 
     private List<Consequence> consequences;
 
@@ -23,6 +25,7 @@ public class Rule {
     }
 
     public Rule(Metadata metadata) {
+        super(metadata.getId());
         this.metadata = metadata;
     }
 
@@ -31,15 +34,16 @@ public class Rule {
     }
 
     public void setMetadata(Metadata metadata) {
+        this.itemId = metadata.getId();
         this.metadata = metadata;
     }
 
-    public Condition getRootCondition() {
-        return rootCondition;
+    public Condition getCondition() {
+        return condition;
     }
 
-    public void setRootCondition(Condition rootCondition) {
-        this.rootCondition = rootCondition;
+    public void setCondition(Condition condition) {
+        this.condition = condition;
     }
 
     public List<Consequence> getConsequences() {

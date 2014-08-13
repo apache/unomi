@@ -11,15 +11,6 @@
     <artifactId>wemi-context-server-api</artifactId>
     <packaging>bundle</packaging>
 
-    <dependencies>
-        <dependency>
-          <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>jackson-databind</artifactId>
-          <version>${version.jackson.core}</version>
-          <scope>provided</scope>
-        </dependency>
-    </dependencies>
-
     <build>
         <plugins>
             <plugin>

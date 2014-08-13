@@ -9,16 +9,19 @@ import javax.xml.bind.annotation.XmlRootElement;
  * Created by loom on 24.04.14.
  */
 @XmlRootElement
-public class SegmentDefinition {
+public class SegmentDefinition extends Item {
 
-    Metadata metadata;
+    public static final String ITEM_TYPE = "segment";
 
-    Condition rootCondition;
+    private Metadata metadata;
+
+    private Condition condition;
 
     public SegmentDefinition() {
     }
 
     public SegmentDefinition(Metadata metadata) {
+        super(metadata.getId());
         this.metadata = metadata;
     }
 
@@ -28,16 +31,16 @@ public class SegmentDefinition {
     }
 
     public void setMetadata(Metadata metadata) {
+        this.itemId = metadata.getId();
         this.metadata = metadata;
     }
 
-    @XmlElement(name="condition")
-    public Condition getRootCondition() {
-        return rootCondition;
+    public Condition getCondition() {
+        return condition;
     }
 
-    public void setRootCondition(Condition rootCondition) {
-        this.rootCondition = rootCondition;
+    public void setCondition(Condition condition) {
+        this.condition = condition;
     }
 
 }

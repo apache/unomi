@@ -29,7 +29,7 @@ public class UserServiceImpl implements UserService {
     }
 
     public User load(String userId) {
-        return persistenceService.load(userId, User.USER_ITEM_TYPE, User.class);
+        return persistenceService.load(userId, User.class);
     }
 
     public boolean save(User user) {
@@ -38,12 +38,12 @@ public class UserServiceImpl implements UserService {
     }
 
     public List<String> getUserProperties() {
-        Map<String,Map<String,String>> mappings = persistenceService.getMapping(User.USER_ITEM_TYPE);
+        Map<String,Map<String,String>> mappings = persistenceService.getMapping(User.ITEM_TYPE);
         return new ArrayList<String>(mappings.keySet());
     }
 
     public Session loadSession(String sessionId) {
-        return persistenceService.load(sessionId, Session.SESSION_ITEM_TYPE, Session.class);
+        return persistenceService.load(sessionId, Session.class);
     }
 
     public boolean saveSession(Session event) {
