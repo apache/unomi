@@ -140,13 +140,19 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
     public Rule getRule(String ruleId) {
         Rule rule = persistenceService.load(ruleId, Rule.class);
         if (rule != null) {
-            ParserHelper.resolveConditionTypes(definitionsService, rule.getCondition());
+            ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
+            for (Consequence consequence : rule.getConsequences()) {
+                ParserHelper.resolveConsequenceType(definitionsService, consequence);
+            }
         }
         return rule;
     }
 
     public void setRule(String ruleId, Rule rule) {
-        ParserHelper.resolveConditionTypes(definitionsService, rule.getCondition());
+        ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
+        for (Consequence consequence : rule.getConsequences()) {
+            ParserHelper.resolveConsequenceType(definitionsService, consequence);
+        }
         persistenceService.saveQuery(ruleId, rule.getCondition());
         persistenceService.save(rule);
     }
@@ -184,7 +190,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
                 key = "eventTriggered" + getMD5(key);
                 condition.getParameterValues().put("generatedPropertyKey", key);
                 if (getRule(key) == null) {
-                    Rule r = new Rule(new Metadata(key, "",""));
+                    Rule r = new Rule(new Metadata(key, "Auto generated rule",""));
                     r.setCondition(subConditions.get(0));
 
                     final Consequence consequence = new Consequence();

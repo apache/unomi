@@ -1,5 +1,7 @@
 package org.oasis_open.wemi.context.server.api.conditions;
 
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlTransient;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -41,6 +43,7 @@ public class Tag implements Comparable<Tag> {
         return description;
     }
 
+    @XmlElement(name="parent")
     public String getParentId() {
         return parentId;
     }

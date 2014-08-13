@@ -4,7 +4,9 @@ import org.apache.cxf.helpers.IOUtils;
 import org.oasis_open.wemi.context.server.api.conditions.Tag;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 import org.oasis_open.wemi.context.server.api.consequences.ConsequenceType;
+import org.oasis_open.wemi.context.server.api.rules.Rule;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
+import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -13,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.json.*;
+import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 
@@ -88,27 +91,12 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
             URL predefinedTagURL = predefinedTagEntries.nextElement();
             logger.debug("Found predefined tags at " + predefinedTagURL + ", loading... ");
 
-            JsonReader reader = null;
             try {
-                reader = Json.createReader(predefinedTagURL.openStream());
-                JsonStructure jsonst = reader.read();
-
-                // dumpJSON(jsonst, null, "");
-                JsonObject tagObject = (JsonObject) jsonst;
-                Tag tag = new Tag(tagObject.getString("id"),
-                        tagObject.getString("name"),
-                        tagObject.getString("description"),
-                        tagObject.getString("parent"));
-
+                Tag tag = MapperHelper.getObjectMapper().readValue(predefinedTagURL, Tag.class);
                 tags.put(tag.getId(), tag);
-            } catch (Exception e) {
-                logger.error("Error while loading tag definition " + predefinedTagURL, e);
-            } finally {
-                if (reader != null) {
-                    reader.close();
-                }
+            } catch (IOException e) {
+                logger.error("Error while loading segment definition " + predefinedTagEntries, e);
             }
-
         }
 
         // now let's resolve all the children.
@@ -133,32 +121,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
             URL predefinedConditionURL = predefinedConditionEntries.nextElement();
             logger.debug("Found predefined conditions at " + predefinedConditionURL + ", loading... ");
 
-            JsonReader reader = null;
             try {
-                reader = Json.createReader(predefinedConditionURL.openStream());
-                JsonStructure jsonst = reader.read();
-
-                // dumpJSON(jsonst, null, "");
-                JsonObject conditionObject = (JsonObject) jsonst;
-
-                String id = conditionObject.getString("id");
-                String name = conditionObject.getString("name");
-                String description = conditionObject.getString("description");
-                String queryBuilderFilter = conditionObject.getString("queryBuilderFilter");
-                JsonArray tagArray = conditionObject.getJsonArray("tags");
-                Set<String> tagIds = new LinkedHashSet<String>();
-                for (int i = 0; i < tagArray.size(); i++) {
-                    tagIds.add(tagArray.getString(i));
-                }
-
-                ConditionType conditionType = new ConditionType(id, name);
-                conditionType.setDescription(description);
-                conditionType.setQueryBuilderFilter(queryBuilderFilter);
-                conditionType.setParameters(ParserHelper.parseParameters(conditionObject));
-                conditionType.setTagIDs(tagIds);
-
+                ConditionType conditionType = MapperHelper.getObjectMapper().readValue(predefinedConditionURL, ConditionType.class);
                 conditionTypeByName.put(conditionType.getId(), conditionType);
-                for (String tagId : tagIds) {
+                for (String tagId : conditionType.getTagIDs()) {
                     Tag tag = tags.get(tagId);
                     if (tag != null) {
                         conditionType.getTags().add(tag);
@@ -175,14 +141,8 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
                 }
             } catch (Exception e) {
                 logger.error("Error while loading condition definition " + predefinedConditionURL, e);
-            } finally {
-                if (reader != null) {
-                    reader.close();
-                }
             }
-
         }
-
     }
 
     private void loadPredefinedConsequences(BundleContext bundleContext) {
@@ -194,33 +154,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
             URL predefinedConsequenceURL = predefinedConsequencesEntries.nextElement();
             logger.debug("Found predefined consequence at " + predefinedConsequenceURL + ", loading... ");
 
-            JsonReader reader = null;
             try {
-                reader = Json.createReader(predefinedConsequenceURL.openStream());
-                JsonStructure jsonst = reader.read();
-
-                // dumpJSON(jsonst, null, "");
-                JsonObject conditionObject = (JsonObject) jsonst;
-
-                String id = conditionObject.getString("id");
-                String name = conditionObject.getString("name");
-                String description = conditionObject.getString("description");
-                String serviceFilter = conditionObject.getString("serviceFilter");
-                JsonArray tagArray = conditionObject.getJsonArray("tags");
-                Set<String> tagIds = new LinkedHashSet<String>();
-                for (int i = 0; i < tagArray.size(); i++) {
-                    tagIds.add(tagArray.getString(i));
-                }
-
-                ConsequenceType consequenceType = new ConsequenceType(id, name);
-
-                consequenceType.setDescription(description);
-                consequenceType.setParameters(ParserHelper.parseParameters(conditionObject));
-                consequenceType.setTagIds(tagIds);
-                consequenceType.setServiceFilter(serviceFilter);
-
+                ConsequenceType consequenceType = MapperHelper.getObjectMapper().readValue(predefinedConsequenceURL, ConsequenceType.class);
                 consequencesTypeByName.put(consequenceType.getId(), consequenceType);
-                for (String tagId : tagIds) {
+                for (String tagId : consequenceType.getTagIds()) {
                     Tag tag = tags.get(tagId);
                     if (tag != null) {
                         consequenceType.getTags().add(tag);
@@ -235,13 +172,8 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
                         logger.warn("Unknown tag " + tagId + " used in consequence definition " + predefinedConsequenceURL);
                     }
                 }
-
             } catch (Exception e) {
                 logger.error("Error while loading consequence definition " + predefinedConsequenceURL, e);
-            } finally {
-                if (reader != null) {
-                    reader.close();
-                }
             }
         }
 

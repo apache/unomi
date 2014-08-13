@@ -134,9 +134,9 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
     }
 
     private void generateChoiceListValues(Parameter parameter, Object context) {
-        if (parameter.getChoiceListInitializerFilter() != null && parameter.getChoiceListInitializerFilter().length() > 0) {
+        if (parameter.getChoicelistInitializerFilter() != null && parameter.getChoicelistInitializerFilter().length() > 0) {
             try {
-                Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, parameter.getChoiceListInitializerFilter());
+                Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, parameter.getChoicelistInitializerFilter());
                 for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
                     ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
                     parameter.setChoiceListValues(choiceListInitializer.getValues(context));
