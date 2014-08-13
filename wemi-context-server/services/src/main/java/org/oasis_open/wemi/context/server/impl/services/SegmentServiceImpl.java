@@ -1,71 +1,71 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.oasis_open.wemi.context.server.api.SegmentDefinition;
 import org.oasis_open.wemi.context.server.api.Metadata;
+import org.oasis_open.wemi.context.server.api.SegmentDefinition;
 import org.oasis_open.wemi.context.server.api.User;
-import org.oasis_open.wemi.context.server.api.conditions.*;
+import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
 import org.oasis_open.wemi.context.server.api.rules.Rule;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.RulesService;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
-import org.ops4j.pax.cdi.api.OsgiService;
-import org.ops4j.pax.cdi.api.OsgiServiceProvider;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.BundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import javax.json.*;
 import java.io.IOException;
 import java.net.URL;
 import java.security.MessageDigest;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
  * Created by loom on 26.04.14.
  */
-@Singleton
-@OsgiServiceProvider
 public class SegmentServiceImpl implements SegmentService, BundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
 
     Map<String, SegmentDefinition> segmentQueries = new LinkedHashMap<String, SegmentDefinition>();
 
-    @Inject
     private BundleContext bundleContext;
 
-    @Inject
-    @OsgiService
     private PersistenceService persistenceService;
 
-    @Inject
     private DefinitionsService definitionsService;
 
-    @Inject
     private RulesService rulesService;
 
     public SegmentServiceImpl() {
         logger.info("Initializing segment service...");
     }
 
-    @PostConstruct
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
+
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
+
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
+    }
+
+    public void setRulesService(RulesService rulesService) {
+        this.rulesService = rulesService;
+    }
+
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
         loadPredefinedSegments(bundleContext);
         bundleContext.addBundleListener(this);
     }
 
-    @PreDestroy
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
     }

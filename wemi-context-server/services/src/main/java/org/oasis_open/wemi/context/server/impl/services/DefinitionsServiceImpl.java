@@ -6,26 +6,16 @@ import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 import org.oasis_open.wemi.context.server.api.consequences.ConsequenceType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
-import org.ops4j.pax.cdi.api.OsgiService;
-import org.ops4j.pax.cdi.api.OsgiServiceProvider;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.BundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.enterprise.inject.Default;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import javax.json.*;
 import java.net.URL;
 import java.util.*;
 
-@Singleton
-@Default
-@OsgiServiceProvider
 public class DefinitionsServiceImpl implements DefinitionsService, BundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
@@ -41,14 +31,18 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         System.out.println("Instantiating definitions service...");
     }
 
-    @Inject
     private BundleContext bundleContext;
 
-    @Inject
-    @OsgiService
     private PersistenceService persistenceService;
 
-    @PostConstruct
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
+
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
+
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 
@@ -62,11 +56,9 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         bundleContext.addBundleListener(this);
     }
 
-    @PreDestroy
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
     }
-
 
     private void loadPredefinedMappings(BundleContext bundleContext) {
         Enumeration<URL> predefinedMappings = bundleContext.getBundle().findEntries("META-INF/wemi/mappings", "*.json", true);

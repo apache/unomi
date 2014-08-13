@@ -7,7 +7,6 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 
-import javax.inject.Inject;
 import java.util.Collection;
 
 /**
@@ -15,8 +14,11 @@ import java.util.Collection;
  */
 public class ConsequenceExecutorDispatcher {
 
-    @Inject
     private BundleContext bundleContext;
+
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
 
     public ConsequenceExecutorDispatcher() {
 

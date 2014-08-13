@@ -10,44 +10,46 @@ import org.oasis_open.wemi.context.server.api.services.EventListenerService;
 import org.oasis_open.wemi.context.server.api.services.RulesService;
 import org.oasis_open.wemi.context.server.impl.consequences.ConsequenceExecutorDispatcher;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
-import org.ops4j.pax.cdi.api.OsgiService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.BundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.enterprise.inject.Default;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import javax.json.*;
 import java.net.URL;
 import java.util.*;
 
-@Singleton
-@Default
 public class RulesServiceImpl implements RulesService, EventListenerService, BundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
 
-    @Inject
     private BundleContext bundleContext;
 
-    @Inject
-    @OsgiService
     private PersistenceService persistenceService;
 
-    @Inject
     private DefinitionsService definitionsService;
 
-    @Inject
     private ConsequenceExecutorDispatcher consequenceExecutorDispatcher;
+
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
+
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
+
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
+    }
+
+    public void setConsequenceExecutorDispatcher(ConsequenceExecutorDispatcher consequenceExecutorDispatcher) {
+        this.consequenceExecutorDispatcher = consequenceExecutorDispatcher;
+    }
 
     Map<String, Rule> rules = new LinkedHashMap<String, Rule>();
 
-    @PostConstruct
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 
@@ -55,7 +57,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
         bundleContext.addBundleListener(this);
     }
 
-    @PreDestroy
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
     }

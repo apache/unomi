@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0" xmlns:cxf="http://cxf.apache.org/blueprint/core"
+    xmlns:jaxrs="http://cxf.apache.org/blueprint/jaxrs" xmlns:jaxws="http://cxf.apache.org/blueprint/jaxws"
+    xsi:schemaLocation="
+  http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+  http://www.osgi.org/xmlns/blueprint-ext/v1.1.0 https://svn.apache.org/repos/asf/aries/tags/blueprint-0.3.1/blueprint-core/src/main/resources/org/apache/aries/blueprint/ext/blueprint-ext.xsd
+  http://cxf.apache.org/blueprint/jaxws http://cxf.apache.org/schemas/blueprint/jaxws.xsd
+  http://cxf.apache.org/blueprint/jaxrs http://cxf.apache.org/schemas/blueprint/jaxrs.xsd
+  http://cxf.apache.org/blueprint/core http://cxf.apache.org/schemas/blueprint/core.xsd
+  http://camel.apache.org/schema/blueprint http://camel.apache.org/schema/blueprint/camel-blueprint.xsd
+  http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd
+  ">
+
+    <reference id="persistenceService" interface="org.oasis_open.wemi.context.server.persistence.spi.PersistenceService" />
+
+    <!-- Service definitions -->
+
+    <bean id="definitionsServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.DefinitionsServiceImpl" init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService" />
+        <property name="bundleContext" ref="blueprintBundleContext" />
+    </bean>
+    <service id="definitionsService" ref="definitionsServiceImpl" interface="org.oasis_open.wemi.context.server.api.services.DefinitionsService" />
+    
+    <bean id="eventServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.EventServiceImpl">
+        <property name="persistenceService" ref="persistenceService" />
+    </bean>
+    <service id="eventService" ref="eventServiceImpl" interface="org.oasis_open.wemi.context.server.api.services.EventService" />
+
+    <bean id="goalsServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.GoalsServiceImpl" init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService" />
+        <property name="definitionsService" ref="definitionsServiceImpl" />
+        <property name="bundleContext" ref="blueprintBundleContext" />
+    </bean>
+    <service id="goalsService" ref="goalsServiceImpl" interface="org.oasis_open.wemi.context.server.api.services.GoalsService" />
+    
+    <bean id="consequenceExecutorDispatcherImpl" class="org.oasis_open.wemi.context.server.impl.consequences.ConsequenceExecutorDispatcher">
+        <property name="bundleContext" ref="blueprintBundleContext" />        
+    </bean>
+
+    <bean id="rulesServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.RulesServiceImpl" init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService" />
+        <property name="definitionsService" ref="definitionsServiceImpl" />
+        <property name="consequenceExecutorDispatcher" ref="consequenceExecutorDispatcherImpl" />
+        <property name="bundleContext" ref="blueprintBundleContext" />
+    </bean>
+    <service id="rulesService" ref="rulesServiceImpl" interface="org.oasis_open.wemi.context.server.api.services.RulesService" />
+
+    <bean id="segmentServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.SegmentServiceImpl" init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService" />
+        <property name="definitionsService" ref="definitionsServiceImpl" />
+        <property name="rulesService" ref="rulesServiceImpl" />
+        <property name="bundleContext" ref="blueprintBundleContext" />
+    </bean>
+    <service id="segmentService" ref="segmentServiceImpl" interface="org.oasis_open.wemi.context.server.api.services.SegmentService" />
+
+    <bean id="userServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.UserServiceImpl">
+        <property name="persistenceService" ref="persistenceService" />
+    </bean>
+    <service id="userService" ref="userServiceImpl" interface="org.oasis_open.wemi.context.server.api.services.UserService" />
+
+    <!-- Choice list initializers -->
+    
+    <bean id="comparisonOperatorChoiceListInitializerImpl" class="org.oasis_open.wemi.context.server.impl.conditions.initializers.ComparisonOperatorChoiceListInitializer">        
+    </bean>
+    <service id="comparisonOperatorChoiceListInitializer" ref="comparisonOperatorChoiceListInitializerImpl" interface="org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer">
+        <service-properties>
+            <entry key="initializerId" value="comparisonOperator"/>
+        </service-properties>
+    </service>
+
+    <bean id="eventPropertyChoiceListInitializerImpl" class="org.oasis_open.wemi.context.server.impl.conditions.initializers.EventPropertyChoiceListInitializer">
+        <property name="eventService" ref="eventServiceImpl" />
+    </bean>
+    <service id="eventPropertyChoiceListInitializer" ref="eventPropertyChoiceListInitializerImpl" interface="org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer">
+        <service-properties>
+            <entry key="initializerId" value="eventProperty"/>
+        </service-properties>
+    </service>
+
+    <bean id="userPropertyChoiceListInitializerImpl" class="org.oasis_open.wemi.context.server.impl.conditions.initializers.UserPropertyChoiceListInitializer">
+        <property name="userService" ref="userServiceImpl" />
+    </bean>
+    <service id="userPropertyChoiceListInitializer" ref="userPropertyChoiceListInitializerImpl" interface="org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer">
+        <service-properties>
+            <entry key="initializerId" value="userProperty"/>
+        </service-properties>
+    </service>
+
+    <!-- Consequence executors -->
+
+    <bean id="allEventToUserPropertiesConsequenceImpl" class="org.oasis_open.wemi.context.server.impl.consequences.AllEventToUserPropertiesConsequence">
+    </bean>
+    <service id="allEventToUserPropertiesConsequence" ref="allEventToUserPropertiesConsequenceImpl" interface="org.oasis_open.wemi.context.server.api.consequences.ConsequenceExecutor">
+        <service-properties>
+            <entry key="consequenceExecutorId" value="allEventToUserProperties"/>
+        </service-properties>
+    </service>
+
+    <bean id="eventToUserPropertyConsequenceImpl" class="org.oasis_open.wemi.context.server.impl.consequences.EventToUserPropertyConsequence">
+    </bean>
+    <service id="eventToUserPropertyConsequence" ref="eventToUserPropertyConsequenceImpl" interface="org.oasis_open.wemi.context.server.api.consequences.ConsequenceExecutor">
+        <service-properties>
+            <entry key="consequenceExecutorId" value="eventToUserProperty"/>
+        </service-properties>
+    </service>
+
+    <bean id="setPropertyConsequenceImpl" class="org.oasis_open.wemi.context.server.impl.consequences.SetPropertyConsequence">
+    </bean>
+    <service id="setPropertyConsequence" ref="setPropertyConsequenceImpl" interface="org.oasis_open.wemi.context.server.api.consequences.ConsequenceExecutor">
+        <service-properties>
+            <entry key="consequenceExecutorId" value="setProperty"/>
+        </service-properties>
+    </service>
+
+</blueprint>
