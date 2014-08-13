@@ -20,12 +20,12 @@
         <property name="persistenceService" ref="persistenceService" />
         <property name="bundleContext" ref="blueprintBundleContext" />
     </bean>
-    <service id="definitionsService" ref="definitionsServiceImpl" interface="org.oasis_open.wemi.context.server.api.services.DefinitionsService" />
+    <service id="definitionsService" ref="definitionsServiceImpl" auto-export="interfaces" />
     
     <bean id="eventServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.EventServiceImpl">
         <property name="persistenceService" ref="persistenceService" />
     </bean>
-    <service id="eventService" ref="eventServiceImpl" interface="org.oasis_open.wemi.context.server.api.services.EventService" />
+    <service id="eventService" ref="eventServiceImpl" auto-export="interfaces" />
 
     <bean id="goalsServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.GoalsServiceImpl" init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService" />
@@ -33,7 +33,7 @@
         <property name="rulesService" ref="rulesServiceImpl" />
         <property name="bundleContext" ref="blueprintBundleContext" />
     </bean>
-    <service id="goalsService" ref="goalsServiceImpl" interface="org.oasis_open.wemi.context.server.api.services.GoalsService" />
+    <service id="goalsService" ref="goalsServiceImpl" auto-export="interfaces" />
     
     <bean id="consequenceExecutorDispatcherImpl" class="org.oasis_open.wemi.context.server.impl.consequences.ConsequenceExecutorDispatcher">
         <property name="bundleContext" ref="blueprintBundleContext" />        
@@ -45,7 +45,7 @@
         <property name="consequenceExecutorDispatcher" ref="consequenceExecutorDispatcherImpl" />
         <property name="bundleContext" ref="blueprintBundleContext" />
     </bean>
-    <service id="rulesService" ref="rulesServiceImpl" interface="org.oasis_open.wemi.context.server.api.services.RulesService" />
+    <service id="rulesService" ref="rulesServiceImpl" auto-export="interfaces" />
 
     <bean id="segmentServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.SegmentServiceImpl" init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService" />
@@ -53,18 +53,18 @@
         <property name="rulesService" ref="rulesServiceImpl" />
         <property name="bundleContext" ref="blueprintBundleContext" />
     </bean>
-    <service id="segmentService" ref="segmentServiceImpl" interface="org.oasis_open.wemi.context.server.api.services.SegmentService" />
+    <service id="segmentService" ref="segmentServiceImpl" auto-export="interfaces" />
 
     <bean id="userServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.UserServiceImpl">
         <property name="persistenceService" ref="persistenceService" />
     </bean>
-    <service id="userService" ref="userServiceImpl" interface="org.oasis_open.wemi.context.server.api.services.UserService" />
+    <service id="userService" ref="userServiceImpl" auto-export="interfaces" />
 
     <!-- Choice list initializers -->
     
     <bean id="comparisonOperatorChoiceListInitializerImpl" class="org.oasis_open.wemi.context.server.impl.conditions.initializers.ComparisonOperatorChoiceListInitializer">        
     </bean>
-    <service id="comparisonOperatorChoiceListInitializer" ref="comparisonOperatorChoiceListInitializerImpl" interface="org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer">
+    <service id="comparisonOperatorChoiceListInitializer" ref="comparisonOperatorChoiceListInitializerImpl" auto-export="interfaces">
         <service-properties>
             <entry key="initializerId" value="comparisonOperator"/>
         </service-properties>
@@ -73,7 +73,7 @@
     <bean id="eventPropertyChoiceListInitializerImpl" class="org.oasis_open.wemi.context.server.impl.conditions.initializers.EventPropertyChoiceListInitializer">
         <property name="eventService" ref="eventServiceImpl" />
     </bean>
-    <service id="eventPropertyChoiceListInitializer" ref="eventPropertyChoiceListInitializerImpl" interface="org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer">
+    <service id="eventPropertyChoiceListInitializer" ref="eventPropertyChoiceListInitializerImpl" auto-export="interfaces">
         <service-properties>
             <entry key="initializerId" value="eventProperty"/>
         </service-properties>
@@ -82,7 +82,7 @@
     <bean id="userPropertyChoiceListInitializerImpl" class="org.oasis_open.wemi.context.server.impl.conditions.initializers.UserPropertyChoiceListInitializer">
         <property name="userService" ref="userServiceImpl" />
     </bean>
-    <service id="userPropertyChoiceListInitializer" ref="userPropertyChoiceListInitializerImpl" interface="org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer">
+    <service id="userPropertyChoiceListInitializer" ref="userPropertyChoiceListInitializerImpl" auto-export="interfaces">
         <service-properties>
             <entry key="initializerId" value="userProperty"/>
         </service-properties>
@@ -92,7 +92,7 @@
 
     <bean id="allEventToUserPropertiesConsequenceImpl" class="org.oasis_open.wemi.context.server.impl.consequences.AllEventToUserPropertiesConsequence">
     </bean>
-    <service id="allEventToUserPropertiesConsequence" ref="allEventToUserPropertiesConsequenceImpl" interface="org.oasis_open.wemi.context.server.api.consequences.ConsequenceExecutor">
+    <service id="allEventToUserPropertiesConsequence" ref="allEventToUserPropertiesConsequenceImpl" auto-export="interfaces">
         <service-properties>
             <entry key="consequenceExecutorId" value="allEventToUserProperties"/>
         </service-properties>
@@ -100,7 +100,7 @@
 
     <bean id="eventToUserPropertyConsequenceImpl" class="org.oasis_open.wemi.context.server.impl.consequences.EventToUserPropertyConsequence">
     </bean>
-    <service id="eventToUserPropertyConsequence" ref="eventToUserPropertyConsequenceImpl" interface="org.oasis_open.wemi.context.server.api.consequences.ConsequenceExecutor">
+    <service id="eventToUserPropertyConsequence" ref="eventToUserPropertyConsequenceImpl" auto-export="interfaces">
         <service-properties>
             <entry key="consequenceExecutorId" value="eventToUserProperty"/>
         </service-properties>
@@ -108,7 +108,7 @@
 
     <bean id="setPropertyConsequenceImpl" class="org.oasis_open.wemi.context.server.impl.consequences.SetPropertyConsequence">
     </bean>
-    <service id="setPropertyConsequence" ref="setPropertyConsequenceImpl" interface="org.oasis_open.wemi.context.server.api.consequences.ConsequenceExecutor">
+    <service id="setPropertyConsequence" ref="setPropertyConsequenceImpl" auto-export="interfaces">
         <service-properties>
             <entry key="consequenceExecutorId" value="setProperty"/>
         </service-properties>
