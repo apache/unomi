@@ -3,13 +3,11 @@ package org.oasis_open.wemi.context.server;
 import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
-import org.oasis_open.wemi.context.server.api.services.EventListenerService;
 import org.oasis_open.wemi.context.server.api.services.EventService;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 import org.oasis_open.wemi.context.server.api.services.UserService;
 import org.ops4j.pax.cdi.api.OsgiService;
 
-import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -29,10 +27,6 @@ public class EventCollectorServlet extends HttpServlet {
     @Inject
     @OsgiService
     private EventService eventService;
-
-    @Inject
-    @OsgiService(dynamic = true)
-    private Instance<EventListenerService> eventListeners;
 
     @Inject
     @OsgiService
@@ -64,21 +58,25 @@ public class EventCollectorServlet extends HttpServlet {
         Date eventTimeStamp = new Date();
         HttpUtils.dumpBasicRequestInfo(req);
 
-        String visitorId = null;
-        Session session;
-
         HttpUtils.setupCORSHeaders(req, resp);
 
-        final String sessionId = req.getParameter("sessionId");
+        String sessionId = req.getParameter("sessionId");
         if (sessionId == null) {
             return;
         }
-        session = userService.loadSession(sessionId);
-        if (session != null) {
-            visitorId = session.getUserId();
+
+        Session session = userService.loadSession(sessionId);
+        if (session == null) {
+            return;
         }
 
-        if (visitorId == null) {
+        String userId = session.getUserId();
+        if (userId == null) {
+            return;
+        }
+
+        User user = userService.load(userId);
+        if (user == null) {
             return;
         }
 
@@ -93,7 +91,7 @@ public class EventCollectorServlet extends HttpServlet {
             eventType = eventType.substring(eventType.lastIndexOf("/"));
         }
 
-        Event event = new Event(UUID.randomUUID().toString(), eventType, sessionId, visitorId, eventTimeStamp);
+        Event event = new Event(eventType, session, user);
 
         Enumeration<String> parameterNames = req.getParameterNames();
         while (parameterNames.hasMoreElements()) {
@@ -104,26 +102,8 @@ public class EventCollectorServlet extends HttpServlet {
         event.getAttributes().put("http_request", req);
         event.getAttributes().put("http_response", resp);
 
-        eventService.save(event);
+        boolean changed = eventService.save(event);
 
-        event.setSession(session);
-        User user = userService.load(event.getVisitorId());
-        if (user != null) {
-            event.setUser(user);
-        }
-        boolean changed = false;
-        if (user != null) {
-            for (EventListenerService eventListenerService : eventListeners) {
-                if (eventListenerService.canHandle(event)) {
-                    changed |= eventListenerService.onEvent(event);
-                }
-            }
-
-            if (changed) {
-                userService.save(user);
-                userService.saveSession(session);
-            }
-        }
         PrintWriter responseWriter = resp.getWriter();
 
         if (changed) {

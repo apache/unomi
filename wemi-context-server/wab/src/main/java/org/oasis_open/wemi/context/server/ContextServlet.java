@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.commons.io.IOUtils;
+import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.EventListenerService;
@@ -49,10 +50,6 @@ public class ContextServlet extends HttpServlet {
     @Inject
     @OsgiService
     private EventService eventService;
-
-    @Inject
-    @OsgiService(dynamic = true)
-    private Instance<EventListenerService> eventListeners;
 
     @Override
     public void service(ServletRequest request, ServletResponse response) throws ServletException, IOException {
@@ -109,6 +106,10 @@ public class ContextServlet extends HttpServlet {
             if (sessionId != null) {
                 session = new Session(sessionId, user.getItemId());
                 userService.saveSession(session);
+                Event event = new Event("sessionCreated", session, user);
+                event.getAttributes().put("http_request", request);
+                event.getAttributes().put("http_response", response);
+                eventService.save(event);
             }
         } else if (cookieProfileId == null || !cookieProfileId.equals(user.getItemId())) {
             // user if stored in session but not in cookie

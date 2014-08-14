@@ -13,7 +13,7 @@ public class Event extends Item {
 //    public static final String PARENT_ITEM_TYPE = "session";
     private String eventType;
     private String sessionId = null;
-    private String visitorId = null;
+    private String userId = null;
     private Date timeStamp;
     private Properties properties;
 
@@ -27,19 +27,14 @@ public class Event extends Item {
     public Event() {
     }
 
-    public Event(String itemId, String eventType, String sessionId, String visitorId, Date timeStamp) {
-        super(itemId);
+    public Event(String eventType, Session session, User user) {
+        super(UUID.randomUUID().toString());
         this.eventType = eventType;
-        this.sessionId = sessionId;
-        this.visitorId = visitorId;
-
-        if (timeStamp != null) {
-            this.timeStamp = timeStamp;
-        } else {
-            this.timeStamp = new Date();
-        }
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        format.setTimeZone(TimeZone.getTimeZone("UTC"));
+        this.user = user;
+        this.session = session;
+        this.userId = user.getItemId();
+        this.sessionId = session.getItemId();
+        this.timeStamp = new Date();
 
         this.properties = new Properties();
     }
@@ -48,12 +43,12 @@ public class Event extends Item {
         return sessionId;
     }
 
-    public String getVisitorId() {
-        return visitorId;
+    public String getUserId() {
+        return userId;
     }
 
-    public void setVisitorId(String visitorId) {
-        this.visitorId = visitorId;
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public String getEventType() {
