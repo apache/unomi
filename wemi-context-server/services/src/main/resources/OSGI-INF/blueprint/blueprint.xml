@@ -116,6 +116,16 @@
         </service-properties>
     </service>
 
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="consequenceExecutorId" value="evaluateUserSegments"/>
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.consequences.EvaluateUserSegmentsConsequence">
+            <property name="segmentService" ref="segmentServiceImpl" />
+        </bean>
+    </service>
+
+
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
     <reference-list id="eventListenerServices" interface="org.oasis_open.wemi.context.server.api.services.EventListenerService"
               availability="optional">

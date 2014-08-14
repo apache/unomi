@@ -5,6 +5,9 @@ import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.index.query.RangeFilterBuilder;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by toto on 11/08/14.
  */
@@ -15,10 +18,19 @@ public class UserEventConditionESQueryBuilder implements ESQueryBuilder {
     @Override
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
         String numberOfDays = (String) condition.getParameterValues().get("numberOfDays");
-        RangeFilterBuilder builder = FilterBuilders.rangeFilter((String) condition.getParameterValues().get("generatedPropertyKey"));
-        if (numberOfDays != null) {
-            builder = builder.gt("now-" + numberOfDays + "d").lt("now");
+
+        final List<Condition> subConditions = (List<Condition>) condition.getParameterValues().get("subConditions");
+
+        List<FilterBuilder> l = new ArrayList<FilterBuilder>();
+        for (Condition sub : subConditions) {
+            if (numberOfDays != null) {
+                l.add(FilterBuilders.rangeFilter("properties."+(String) sub.getParameterValues().get("generatedPropertyKey"))
+                        .gt("now-" + numberOfDays + "d")
+                        .lt("now"));
+            } else {
+                l.add(FilterBuilders.existsFilter("properties."+(String) sub.getParameterValues().get("generatedPropertyKey")));
+            }
         }
-        return builder;
+        return FilterBuilders.andFilter(l.toArray(new FilterBuilder[l.size()]));
     }
 }

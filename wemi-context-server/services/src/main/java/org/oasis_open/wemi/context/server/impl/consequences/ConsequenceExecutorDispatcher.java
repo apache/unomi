@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.consequences;
 
+import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
 import org.oasis_open.wemi.context.server.api.consequences.ConsequenceExecutor;
@@ -24,17 +25,18 @@ public class ConsequenceExecutorDispatcher {
 
     }
 
-    public boolean execute(Consequence consequence, User user, Object context) {
-        Collection<ServiceReference<ConsequenceExecutor>> matchingConsequenceExecutorReferences = null;
+    public boolean execute(Consequence consequence, Event event) {
+        Collection<ServiceReference<ConsequenceExecutor>> matchingConsequenceExecutorReferences;
         try {
             matchingConsequenceExecutorReferences = bundleContext.getServiceReferences(ConsequenceExecutor.class, consequence.getConsequenceType().getServiceFilter());
         } catch (InvalidSyntaxException e) {
             e.printStackTrace();
+            return false;
         }
         boolean changed = false;
         for (ServiceReference<ConsequenceExecutor> consequenceExecutorReference : matchingConsequenceExecutorReferences) {
             ConsequenceExecutor consequenceExecutor = bundleContext.getService(consequenceExecutorReference);
-            changed |= consequenceExecutor.execute(consequence, user, context);
+            changed |= consequenceExecutor.execute(consequence, event);
         }
         return changed;
     }

@@ -1,0 +1,17 @@
+{
+    "id" : "userSegmentCondition",
+    "name" : "User segment",
+    "description" : "The user is in a segment",
+    "queryBuilderFilter" : "(queryBuilderId=userSegmentConditionESQueryBuilder)",
+    "tags" : [ "demographic" ],
+    "parameters" : [
+        {
+            "id" : "segment",
+            "name" : "Segment",
+            "description" : "Segment name",
+            "type" : "string",
+            "multivalued" : true,
+            "choicelistInitializerFilter" : ""
+        }
+    ]
+}

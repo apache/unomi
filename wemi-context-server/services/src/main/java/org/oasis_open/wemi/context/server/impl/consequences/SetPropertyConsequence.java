@@ -1,6 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.consequences;
 
-import org.oasis_open.wemi.context.server.api.User;
+import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
 import org.oasis_open.wemi.context.server.api.consequences.ConsequenceExecutor;
 
@@ -19,14 +19,14 @@ public class SetPropertyConsequence implements ConsequenceExecutor {
         return "setPropertyConsequence";
     }
 
-    public boolean execute(Consequence consequence, User user, Object context) {
+    public boolean execute(Consequence consequence, Event event) {
         String propertyValue = (String) consequence.getParameterValues().get("propertyValue");
         if (propertyValue.equals("now")) {
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
             format.setTimeZone(TimeZone.getTimeZone("UTC"));
             propertyValue = format.format(new Date());
         }
-        user.setProperty(
+        event.getUser().setProperty(
                 (String) consequence.getParameterValues().get("propertyName"),
                 propertyValue);
         return true;

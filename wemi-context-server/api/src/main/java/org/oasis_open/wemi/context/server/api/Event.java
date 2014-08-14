@@ -33,7 +33,9 @@ public class Event extends Item {
         this.user = user;
         this.session = session;
         this.userId = user.getItemId();
-        this.sessionId = session.getItemId();
+        if (session != null) {
+            this.sessionId = session.getItemId();
+        }
         this.timeStamp = new Date();
 
         this.properties = new Properties();
