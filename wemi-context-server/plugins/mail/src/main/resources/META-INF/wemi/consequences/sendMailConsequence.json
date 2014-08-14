@@ -1,0 +1,58 @@
+{
+    "id" : "sendMailConsequence",
+    "name" : "send an e-mail",
+    "description" : "Sends an email",
+    "serviceFilter" : "(consequenceExecutorId=sendMail)",
+    "tags" : [ "event" ],
+    "parameters" : [
+        {
+            "id" : "from",
+            "name" : "From e-mail address",
+            "description" : "The e-mail address of the sender",
+            "type" : "string",
+            "multivalued" : false,
+            "choicelistInitializerFilter" : ""
+        },
+        {
+            "id" : "to",
+            "name" : "Destination e-mail address",
+            "description" : "The e-mail address of the destination",
+            "type" : "string",
+            "multivalued" : false,
+            "choicelistInitializerFilter" : "(initializerId=userProperty)"
+        },
+        {
+            "id" : "cc",
+            "name" : "Carbon copy",
+            "description" : "",
+            "type" : "string",
+            "multivalued" : false,
+            "choicelistInitializerFilter" : ""
+        },
+        {
+            "id" : "bcc",
+            "name" : "",
+            "description" : "",
+            "type" : "string",
+            "multivalued" : false,
+            "choicelistInitializerFilter" : ""
+        },
+        {
+            "id" : "subject",
+            "name" : "Mail subject",
+            "description" : "",
+            "type" : "string",
+            "multivalued" : false,
+            "choicelistInitializerFilter" : ""
+        },
+        {
+            "id" : "template",
+            "name" : "",
+            "description" : "",
+            "type" : "string",
+            "multivalued" : false,
+            "choicelistInitializerFilter" : ""
+        }
+
+    ]
+}
