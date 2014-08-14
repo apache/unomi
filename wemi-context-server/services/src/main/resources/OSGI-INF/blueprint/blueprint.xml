@@ -14,7 +14,6 @@
 
     <reference id="persistenceService" interface="org.oasis_open.wemi.context.server.persistence.spi.PersistenceService" />
 
-    <reference-list id="eventListenerServices" interface="org.oasis_open.wemi.context.server.api.EventListenerService" availability="optional" />
     <!-- Service definitions -->
 
     <bean id="definitionsServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.DefinitionsServiceImpl" init-method="postConstruct" destroy-method="preDestroy">
@@ -26,7 +25,7 @@
     <bean id="eventServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.EventServiceImpl">
         <property name="persistenceService" ref="persistenceService" />
         <property name="userService" ref="userServiceImpl" />
-        <property name="eventListeners" ref="eventListenerServices"/>
+        <property name="bundleContext" ref="blueprintBundleContext" />
     </bean>
     <service id="eventService" ref="eventServiceImpl" auto-export="interfaces" />
 
@@ -116,5 +115,12 @@
             <entry key="consequenceExecutorId" value="setProperty"/>
         </service-properties>
     </service>
+
+    <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
+    <reference-list id="eventListenerServices" interface="org.oasis_open.wemi.context.server.api.services.EventListenerService"
+              availability="optional">
+      <reference-listener
+              bind-method="bind" unbind-method="unbind" ref="eventServiceImpl" />
+   </reference-list>
 
 </blueprint>
