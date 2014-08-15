@@ -8,9 +8,13 @@ import org.oasis_open.wemi.context.server.api.rules.Rule;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.BundleListener;
+import org.osgi.service.http.HttpContext;
+import org.osgi.service.http.HttpService;
+import org.osgi.service.http.NamespaceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +34,8 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
     Map<Tag, Set<ConditionType>> conditionTypeByTag = new HashMap<Tag, Set<ConditionType>>();
     Map<Tag, Set<ConsequenceType>> consequenceTypeByTag = new HashMap<Tag, Set<ConsequenceType>>();
 
+    private List<String> registeredAliases = new ArrayList<String>();
+
     public DefinitionsServiceImpl() {
         System.out.println("Instantiating definitions service...");
     }
@@ -38,8 +44,14 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
 
     private PersistenceService persistenceService;
 
+    private HttpService httpService;
+
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
+    }
+
+    public void setHttpService(HttpService httpService) {
+        this.httpService = httpService;
     }
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -49,6 +61,20 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 
+        processBundleStartup(bundleContext);
+
+        for (Bundle bundle : bundleContext.getBundles()) {
+            if (bundle.getBundleContext() != null) {
+                processBundleStartup(bundle.getBundleContext());
+            }
+        }
+        bundleContext.addBundleListener(this);
+    }
+
+    private void processBundleStartup(BundleContext bundleContext) {
+        if (bundleContext == null) {
+            return;
+        }
         loadPredefinedMappings(bundleContext);
 
         loadPredefinedTags(bundleContext);
@@ -56,10 +82,28 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         loadPredefinedCondition(bundleContext);
         loadPredefinedConsequences(bundleContext);
 
-        bundleContext.addBundleListener(this);
+        HttpContext httpContext = httpService.createDefaultHttpContext();
+        String httpResourcesHeaderValue = bundleContext.getBundle().getHeaders().get("Wemi-Http-Resources");
+        if (httpResourcesHeaderValue == null || httpResourcesHeaderValue.length() == 0) {
+            httpResourcesHeaderValue = "web";
+        }
+        String[] httpResources = httpResourcesHeaderValue.split(",");
+        for (String httpResource : httpResources) {
+            httpResource = httpResource.trim();
+            if (bundleContext.getBundle().getEntry(httpResource) != null) {
+                try {
+                    httpService.registerResources("/plugins/" + bundleContext.getBundle().getSymbolicName() + "/" + httpResource, httpResource, httpContext);
+                } catch (NamespaceException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     public void preDestroy() {
+        for (String registeredAlias : registeredAliases) {
+            httpService.unregister(registeredAlias);
+        }
         bundleContext.removeBundleListener(this);
     }
 
@@ -222,10 +266,9 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {
             case BundleEvent.STARTED:
-                loadPredefinedMappings(event.getBundle().getBundleContext());
-                loadPredefinedTags(event.getBundle().getBundleContext());
-                loadPredefinedCondition(event.getBundle().getBundleContext());
-                loadPredefinedConsequences(event.getBundle().getBundleContext());
+                if (event.getBundle().getBundleContext() != null) {
+                    processBundleStartup(event.getBundle().getBundleContext());
+                }
                 break;
             case BundleEvent.STOPPING:
                 // @todo remove bundle-defined resources (is it possible ?)

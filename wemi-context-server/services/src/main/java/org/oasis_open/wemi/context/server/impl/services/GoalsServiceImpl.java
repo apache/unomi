@@ -7,6 +7,7 @@ import org.oasis_open.wemi.context.server.api.services.GoalsService;
 import org.oasis_open.wemi.context.server.api.services.RulesService;
 import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.BundleListener;
@@ -52,6 +53,11 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 
         loadPredefinedGoals(bundleContext);
+        for (Bundle bundle : bundleContext.getBundles()) {
+            if (bundle.getBundleContext() != null) {
+                loadPredefinedGoals(bundle.getBundleContext());
+            }
+        }
         bundleContext.addBundleListener(this);
     }
 
@@ -60,6 +66,9 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
     }
 
     private void loadPredefinedGoals(BundleContext bundleContext) {
+        if (bundleContext == null) {
+            return;
+        }
         Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/wemi/goals", "*.json", true);
         if (predefinedRuleEntries == null) {
             return;
@@ -111,7 +120,9 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {
             case BundleEvent.STARTED:
-                loadPredefinedGoals(event.getBundle().getBundleContext());
+                if (event.getBundle().getBundleContext() != null) {
+                    loadPredefinedGoals(event.getBundle().getBundleContext());
+                }
                 break;
             case BundleEvent.STOPPING:
                 // @todo remove bundle-defined resources (is it possible ?)

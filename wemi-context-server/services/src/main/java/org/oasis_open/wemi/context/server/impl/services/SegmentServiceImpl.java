@@ -9,6 +9,7 @@ import org.oasis_open.wemi.context.server.api.services.RulesService;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.BundleListener;
@@ -61,6 +62,11 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
         loadPredefinedSegments(bundleContext);
+        for (Bundle bundle : bundleContext.getBundles()) {
+            if (bundle.getBundleContext() != null) {
+                loadPredefinedSegments(bundle.getBundleContext());
+            }
+        }
         bundleContext.addBundleListener(this);
     }
 
@@ -69,6 +75,9 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
     }
 
     private void loadPredefinedSegments(BundleContext bundleContext) {
+        if (bundleContext == null) {
+            return;
+        }
         Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/wemi/segments", "*.json", true);
         if (predefinedSegmentEntries == null) {
             return;

@@ -3,6 +3,7 @@ package org.oasis_open.wemi.context.server.plugins.mail.consequences;
 import org.apache.commons.mail.EmailException;
 import org.apache.commons.mail.HtmlEmail;
 import org.apache.commons.mail.ImageHtmlEmail;
+import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
 import org.oasis_open.wemi.context.server.api.consequences.ConsequenceExecutor;
@@ -21,7 +22,7 @@ public class SendMailConsequence implements ConsequenceExecutor {
         this.mailServerHostName = mailServerHostName;
     }
 
-    public boolean execute(Consequence consequence, User user, Object context) {
+    public boolean execute(Consequence consequence, Event event) {
         String from = (String) consequence.getParameterValues().get("from");
         String to = (String) consequence.getParameterValues().get("to");
         String cc = (String) consequence.getParameterValues().get("cc");

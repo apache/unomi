@@ -12,6 +12,7 @@ import org.oasis_open.wemi.context.server.api.services.RulesService;
 import org.oasis_open.wemi.context.server.impl.consequences.ConsequenceExecutorDispatcher;
 import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.BundleListener;
@@ -55,6 +56,11 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 
         loadPredefinedRules(bundleContext);
+        for (Bundle bundle : bundleContext.getBundles()) {
+            if (bundle.getBundleContext() != null) {
+                loadPredefinedRules(bundle.getBundleContext());
+            }
+        }
         bundleContext.addBundleListener(this);
     }
 
@@ -63,6 +69,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
     }
 
     private void loadPredefinedRules(BundleContext bundleContext) {
+        if (bundleContext == null) {
+            return;
+        }
         Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/wemi/rules", "*.json", true);
         if (predefinedRuleEntries == null) {
             return;
@@ -121,7 +130,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {
             case BundleEvent.STARTED:
-                loadPredefinedRules(event.getBundle().getBundleContext());
+                if (event.getBundle().getBundleContext() != null) {
+                    loadPredefinedRules(event.getBundle().getBundleContext());
+                }
                 break;
             case BundleEvent.STOPPING:
                 // @todo remove bundle-defined resources (is it possible ?)

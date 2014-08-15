@@ -13,11 +13,13 @@
   ">
 
     <reference id="persistenceService" interface="org.oasis_open.wemi.context.server.persistence.spi.PersistenceService" />
+    <reference id="httpService" interface="org.osgi.service.http.HttpService" />
 
     <!-- Service definitions -->
 
     <bean id="definitionsServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.DefinitionsServiceImpl" init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService" />
+        <property name="httpService" ref="httpService" />
         <property name="bundleContext" ref="blueprintBundleContext" />
     </bean>
     <service id="definitionsService" ref="definitionsServiceImpl" auto-export="interfaces" />
