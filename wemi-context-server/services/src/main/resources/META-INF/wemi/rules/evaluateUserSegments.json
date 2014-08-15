@@ -1,0 +1,22 @@
+{
+    "metadata" : {
+        "id": "evaluateUserSegments",
+        "name": "Evaluate segments",
+        "description" : "Evaluate segments when a profile is modified"
+    },
+
+    "condition" : {
+        "type": "userUpdatedEventCondition",
+        "parameterValues": {
+        }
+    },
+
+    "consequences" : [
+        {
+            "type": "evaluateUserSegmentsConsequence",
+            "parameterValues": {
+            }
+        }
+    ]
+
+}

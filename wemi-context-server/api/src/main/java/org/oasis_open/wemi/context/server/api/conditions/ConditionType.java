@@ -1,5 +1,7 @@
 package org.oasis_open.wemi.context.server.api.conditions;
 
+import org.oasis_open.wemi.context.server.api.rules.Rule;
+
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
@@ -17,6 +19,7 @@ public class ConditionType {
     Set<Tag> tags = new TreeSet<Tag>();
     Set<String> tagIDs = new LinkedHashSet<String>();
     List<Parameter> parameters = new ArrayList<Parameter>();
+    Rule autoCreateRule;
 
     public ConditionType() {
     }
@@ -81,4 +84,11 @@ public class ConditionType {
         this.parameters = parameters;
     }
 
+    public Rule getAutoCreateRule() {
+        return autoCreateRule;
+    }
+
+    public void setAutoCreateRule(Rule autoCreateRule) {
+        this.autoCreateRule = autoCreateRule;
+    }
 }

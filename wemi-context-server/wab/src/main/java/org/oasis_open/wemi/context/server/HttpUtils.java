@@ -97,6 +97,22 @@ public class HttpUtils {
         responseWriter.append("  \"loaded\" : true, ");
         responseWriter.append("  \"wemiContextServerURL\" : \"" + wemiContextServerURL + "\",");
         responseWriter.append("  \"user\": [ {  ");
+        Set<String> userSegments = user.getSegments();
+        if (userSegments != null && userSegments.size() > 0) {
+            responseWriter.append("    \"segment\": {  ");
+            int i = 0;
+            for (String segmentId : userSegments) {
+                responseWriter.append("\"");
+                responseWriter.append(segmentId);
+                responseWriter.append("\" : true");
+                if (i < userSegments.size() - 1) {
+                    responseWriter.append(",");
+                }
+                i++;
+            }
+            responseWriter.append("    },");
+        }
+
         responseWriter.append("    \"profiles\": [ {  ");
         responseWriter.append("      \"profileInfo\": { ");
         responseWriter.append("        \"profileId\": \"" + user.getItemId() + "\",  ");
@@ -104,21 +120,6 @@ public class HttpUtils {
             if (!"profileId".equals(userPropertyName)) {
                 responseWriter.append("        \"" + userPropertyName + "\": \"" + user.getProperty(userPropertyName) + "\",  ");
             }
-        }
-        Set<String> userSegments = segmentService.getSegmentsForUser(user);
-        if (userSegments != null && userSegments.size() > 0) {
-            responseWriter.append("        \"segments\": [ ");
-            int i = 0;
-            for (String segmentId : userSegments) {
-                responseWriter.append("\"");
-                responseWriter.append(segmentId);
-                responseWriter.append("\"");
-                if (i < userSegments.size() - 1) {
-                    responseWriter.append(",");
-                }
-                i++;
-            }
-            responseWriter.append("] ");
         }
         responseWriter.append("                   } ");
         responseWriter.append("              } ] ");

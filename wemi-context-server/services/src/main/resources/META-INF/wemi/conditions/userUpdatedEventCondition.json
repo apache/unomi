@@ -1,0 +1,9 @@
+{
+    "id" : "userUpdatedEventCondition",
+    "name" : "User updated event",
+    "description" : "A user profile has been updated",
+    "queryBuilderFilter" : "(queryBuilderId=userUpdatedEventConditionESQueryBuilder)",
+    "tags" : [ "event" ],
+    "parameters" : [
+    ]
+}

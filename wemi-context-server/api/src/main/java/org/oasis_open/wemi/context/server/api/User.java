@@ -1,23 +1,45 @@
 package org.oasis_open.wemi.context.server.api;
 
+import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * Created by loom on 24.04.14.
  */
 public class User extends Item {
 
-    public static final String USER_ITEM_TYPE="user";
+    private Properties properties;
+
+    private Set<String> segments;
+
+    public static final String ITEM_TYPE ="user";
 
     public User() {
-        type=USER_ITEM_TYPE;
     }
 
     public User(String itemId) {
-        super(itemId, USER_ITEM_TYPE, new Properties());
+        super(itemId);
+        properties = new Properties();
     }
 
-    public User(String itemId, String type, Properties properties) {
-        super(itemId, type, properties);
+    public void setProperty(String name, String value) {
+        properties.setProperty(name, value);
+    }
+
+    public String getProperty(String name) {
+        return properties.getProperty(name);
+    }
+
+    public Properties getProperties() {
+        return properties;
+    }
+
+    public Set<String> getSegments() {
+        return segments;
+    }
+
+    public void setSegments(Set<String> segments) {
+        this.segments = segments;
     }
 }

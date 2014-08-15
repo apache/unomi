@@ -2,23 +2,13 @@ package org.oasis_open.wemi.context.server.impl.conditions.initializers;
 
 import org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListValue;
-import org.ops4j.pax.cdi.api.OsgiServiceProvider;
-import org.ops4j.pax.cdi.api.Properties;
-import org.ops4j.pax.cdi.api.Property;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Default;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by loom on 25.06.14.
  */
-@ApplicationScoped
-@OsgiServiceProvider
-@Properties({
-    @Property(name = "initializerId", value = "comparisonOperator")
-})
 public class ComparisonOperatorChoiceListInitializer implements ChoiceListInitializer {
 
     public List<ChoiceListValue> getValues(Object context) {

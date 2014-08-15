@@ -34,17 +34,17 @@
         </dependency>
         <dependency>
             <groupId>org.oasis-open.wemi</groupId>
-            <artifactId>wemi-context-server-plugins-login</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>org.oasis-open.wemi</groupId>
             <artifactId>wemi-context-server-plugins-request</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.oasis-open.wemi</groupId>
             <artifactId>wemi-context-server-plugins-hover-event</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.oasis-open.wemi</groupId>
+            <artifactId>wemi-context-server-plugins-mail</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>

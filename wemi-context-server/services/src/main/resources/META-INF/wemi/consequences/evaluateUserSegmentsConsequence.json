@@ -1,0 +1,9 @@
+{
+    "id" : "evaluateUserSegmentsConsequence",
+    "name" : "Evaluate user segments",
+    "description" : "Evaluate user segments",
+    "serviceFilter" : "(consequenceExecutorId=evaluateUserSegments)",
+    "tags" : [ "event" ],
+    "parameters" : [
+    ]
+}

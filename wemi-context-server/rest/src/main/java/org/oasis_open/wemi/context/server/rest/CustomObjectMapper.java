@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
-import org.oasis_open.wemi.context.server.api.conditions.PropertyTypedObjectDeserializer;
+import org.oasis_open.wemi.context.server.persistence.spi.PropertyTypedObjectDeserializer;
 
 /**
  * Custom object mapper to be able to configure Jackson to our needs

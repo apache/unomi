@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.api.consequences;
 
+import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
 
@@ -8,6 +9,6 @@ import org.oasis_open.wemi.context.server.api.consequences.Consequence;
  */
 public interface ConsequenceExecutor {
 
-    public abstract boolean execute(Consequence consequence, User user, Object context);
+    public abstract boolean execute(Consequence consequence, Event event);
 
 }

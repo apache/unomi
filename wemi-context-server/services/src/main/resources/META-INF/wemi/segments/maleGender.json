@@ -1,13 +1,15 @@
 {
-    "id" : "maleGender",
-    "name" :  "Men",
-    "description" : "This segment includes all men",
-    "condition" : {
-        "type": "userPropertyCondition",
+    "metadata": {
+        "id": "maleGender",
+        "name": "Men",
+        "description": "This segment includes all men"
+    },
+    "condition": {
         "parameterValues": {
-            "comparisonOperator": "equals",
-            "propertyName": "gender",
-            "propertyValue": "male"
-        }
+            "propertyName": "properties.gender",
+            "propertyValue": "male",
+            "comparisonOperator": "equals"
+        },
+        "type": "userPropertyCondition"
     }
 }

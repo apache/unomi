@@ -18,19 +18,19 @@ public class Parameter {
     String description;
     String type;
     boolean multivalued = false;
-    String choiceListInitializerFilter;
+    String choicelistInitializerFilter;
     List<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
 
     public Parameter() {
     }
 
-    public Parameter(String id, String name, String description, String type, boolean multivalued, String choiceListInitializerFilter) {
+    public Parameter(String id, String name, String description, String type, boolean multivalued, String choicelistInitializerFilter) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.type = type;
         this.multivalued = multivalued;
-        this.choiceListInitializerFilter = choiceListInitializerFilter;
+        this.choicelistInitializerFilter = choicelistInitializerFilter;
     }
 
     public String getId() {
@@ -53,8 +53,8 @@ public class Parameter {
         return multivalued;
     }
 
-    public String getChoiceListInitializerFilter() {
-        return choiceListInitializerFilter;
+    public String getChoicelistInitializerFilter() {
+        return choicelistInitializerFilter;
     }
 
     public List<ChoiceListValue> getChoiceListValues() {

@@ -5,15 +5,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.commons.io.IOUtils;
+import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
-import org.oasis_open.wemi.context.server.api.services.EventListenerService;
 import org.oasis_open.wemi.context.server.api.services.EventService;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 import org.oasis_open.wemi.context.server.api.services.UserService;
 import org.ops4j.pax.cdi.api.OsgiService;
 
-import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.servlet.*;
 import javax.servlet.annotation.WebServlet;
@@ -49,10 +48,6 @@ public class ContextServlet extends HttpServlet {
     @Inject
     @OsgiService
     private EventService eventService;
-
-    @Inject
-    @OsgiService(dynamic = true)
-    private Instance<EventListenerService> eventListeners;
 
     @Override
     public void service(ServletRequest request, ServletResponse response) throws ServletException, IOException {
@@ -94,21 +89,35 @@ public class ContextServlet extends HttpServlet {
             }
         }
         if (user == null) {
+            boolean userCreated = false;
             // user not stored in session
             if (cookieProfileId == null) {
                 // no visitorId cookie was found, we generate a new one and create the user in the user service
                 user = createNewUser(null, response);
+                userCreated = true;
             } else {
                 user = userService.load(cookieProfileId);
                 if (user == null) {
                     // this can happen if we have an old cookie but have reset the server.
                     user = createNewUser(cookieProfileId, response);
+                    userCreated = true;
                 }
             }
             // associate user with session
             if (sessionId != null) {
                 session = new Session(sessionId, user.getItemId());
                 userService.saveSession(session);
+                Event event = new Event("sessionCreated", session, user);
+                event.getAttributes().put("http_request", request);
+                event.getAttributes().put("http_response", response);
+                eventService.save(event);
+            }
+
+            if (userCreated) {
+                Event userUpdated = new Event("userUpdated", session, user);
+                userUpdated.getAttributes().put("http_request", request);
+                userUpdated.getAttributes().put("http_response", response);
+                eventService.save(userUpdated);
             }
         } else if (cookieProfileId == null || !cookieProfileId.equals(user.getItemId())) {
             // user if stored in session but not in cookie
@@ -180,7 +189,7 @@ public class ContextServlet extends HttpServlet {
             for (JsonNode node : n) {
                 segments.add(node.textValue());
             }
-            boolean found = segments.removeAll(segmentService.getSegmentsForUser(user));
+            boolean found = segments.removeAll(user.getSegments());
             return (match.equals("all") && segments.isEmpty()) || (match.equals("none") && !found) || (match.equals("some") && found);
         }
         return false;

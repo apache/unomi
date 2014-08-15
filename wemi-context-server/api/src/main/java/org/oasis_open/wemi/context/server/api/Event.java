@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.api;
 
+import javax.xml.bind.annotation.XmlTransient;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -8,12 +9,13 @@ import java.util.*;
  */
 public class Event extends Item {
 
-    public static final String EVENT_ITEM_TYPE = "event";
+    public static final String ITEM_TYPE = "event";
 //    public static final String PARENT_ITEM_TYPE = "session";
     private String eventType;
     private String sessionId = null;
-    private String visitorId = null;
+    private String userId = null;
     private Date timeStamp;
+    private Properties properties;
 
     private transient User user;
     private transient Session session;
@@ -23,45 +25,32 @@ public class Event extends Item {
     private transient Map<String, Object> attributes = new LinkedHashMap<String, Object>();
 
     public Event() {
-        this.type = EVENT_ITEM_TYPE;
-        this.timeStamp = new Date();
     }
 
-    public Event(String itemId, String eventType, String sessionId, String visitorId, Date timeStamp) {
-        super(itemId, EVENT_ITEM_TYPE, null, new Properties());
-//        super(itemId, EVENT_ITEM_TYPE, sessionId, new Properties());
+    public Event(String eventType, Session session, User user) {
+        super(UUID.randomUUID().toString());
         this.eventType = eventType;
-        setProperty("eventType", eventType);
-        this.sessionId = sessionId;
-        setProperty("sessionId", sessionId);
-        this.visitorId = visitorId;
-        if (visitorId != null) {
-            setProperty("visitorId", visitorId);
+        this.user = user;
+        this.session = session;
+        this.userId = user.getItemId();
+        if (session != null) {
+            this.sessionId = session.getItemId();
         }
-        if (timeStamp != null) {
-            this.timeStamp = timeStamp;
-        } else {
-            this.timeStamp = new Date();
-        }
+        this.timeStamp = new Date();
 
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        format.setTimeZone(TimeZone.getTimeZone("UTC"));
-        setProperty("eventTimeStamp", format.format(this.timeStamp));
-    }
-
-    public void setVisitorId(String visitorId) {
-        this.visitorId = visitorId;
-        if (visitorId != null) {
-            setProperty("visitorId", visitorId);
-        }
+        this.properties = new Properties();
     }
 
     public String getSessionId() {
         return sessionId;
     }
 
-    public String getVisitorId() {
-        return visitorId;
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public String getEventType() {
@@ -72,6 +61,7 @@ public class Event extends Item {
         return timeStamp;
     }
 
+    @XmlTransient
     public User getUser() {
         return user;
     }
@@ -80,6 +70,7 @@ public class Event extends Item {
         this.user = user;
     }
 
+    @XmlTransient
     public Session getSession() {
         return session;
     }
@@ -88,7 +79,21 @@ public class Event extends Item {
         this.session = session;
     }
 
+    @XmlTransient
     public Map<String, Object> getAttributes() {
         return attributes;
     }
+
+    public void setProperty(String name, String value) {
+        properties.setProperty(name, value);
+    }
+
+    public String getProperty(String name) {
+        return properties.getProperty(name);
+    }
+
+    public Properties getProperties() {
+        return properties;
+    }
+
 }
