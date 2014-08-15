@@ -1,0 +1,13 @@
+<div class="perso perso-alternate">
+    <div class="remove-condition">
+        <a href="#" ng-click="onRemove(parentValue,parentIndex)"><i class="icon-remove"></i></a>
+    </div>
+    <div ng-repeat="child in ref.parameterValues.subConditions">
+        <div class="block" >
+            <condition ref="child" parent-ref="ref" parent-name="'subConditions'" parent-value="ref.parameterValues.subConditions" parent-index="$index" types="types"/>
+        </div>
+        <div class="operator">OR</div>
+    </div>
+    <div class="block" ui-on-drop="onDrop($event,$data,women)">Drag and drop new condition here
+    </div>
+</div>

@@ -4,6 +4,7 @@
     "description" : "A condition on a user property",
     "queryBuilderFilter" : "(queryBuilderId=userPropertyConditionESQueryBuilder)",
     "tags" : [ "demographic" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/userPropertyCondition.html",
     "parameters" : [
         {
             "id" : "propertyName",

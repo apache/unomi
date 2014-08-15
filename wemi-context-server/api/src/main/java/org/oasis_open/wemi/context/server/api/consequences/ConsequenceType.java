@@ -15,6 +15,7 @@ public class ConsequenceType {
     String serviceFilter;
     Set<Tag> tags = new TreeSet<Tag>();
     Set<String> tagIds = new LinkedHashSet<String>();
+    String template;
     List<Parameter> parameters = new ArrayList<Parameter>();
 
     public ConsequenceType() {
@@ -43,6 +44,14 @@ public class ConsequenceType {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getTemplate() {
+        return template;
+    }
+
+    public void setTemplate(String template) {
+        this.template = template;
     }
 
     public String getServiceFilter() {

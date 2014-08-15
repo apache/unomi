@@ -4,6 +4,7 @@
     "description" : "The user is in a segment",
     "queryBuilderFilter" : "(queryBuilderId=userSegmentConditionESQueryBuilder)",
     "tags" : [ "demographic" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/segmentCondition.html",
     "parameters" : [
         {
             "id" : "segment",

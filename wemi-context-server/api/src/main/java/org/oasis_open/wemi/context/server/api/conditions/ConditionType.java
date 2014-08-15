@@ -15,6 +15,7 @@ public class ConditionType {
     String id;
     String name;
     String description;
+    String template;
     String queryBuilderFilter;
     Set<Tag> tags = new TreeSet<Tag>();
     Set<String> tagIDs = new LinkedHashSet<String>();
@@ -47,6 +48,14 @@ public class ConditionType {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getTemplate() {
+        return template;
+    }
+
+    public void setTemplate(String template) {
+        this.template = template;
     }
 
     public String getQueryBuilderFilter() {

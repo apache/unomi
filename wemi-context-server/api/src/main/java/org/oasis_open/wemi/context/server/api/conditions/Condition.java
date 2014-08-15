@@ -15,7 +15,6 @@ public class Condition {
 
     ConditionType conditionType;
     String conditionTypeId;
-    String target;
     Map<String, Object> parameterValues = new HashMap<String, Object>();
 
     public Condition() {

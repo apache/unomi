@@ -4,6 +4,7 @@
     "description" : "Evaluate user segments",
     "serviceFilter" : "(consequenceExecutorId=evaluateUserSegments)",
     "tags" : [ "event" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/consequences/evaluateUserSegmentsConsequence.html",
     "parameters" : [
     ]
 }

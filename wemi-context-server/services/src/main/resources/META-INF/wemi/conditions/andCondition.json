@@ -4,6 +4,7 @@
     "description" : "Logical AND operator",
     "queryBuilderFilter" : "(queryBuilderId=andConditionESQueryBuilder)",
     "tags" : [ "logical" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/andCondition.html",
     "parameters" : [
         {
             "id" : "subConditions",

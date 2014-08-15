@@ -4,6 +4,7 @@
     "description" : "A page has been viewed",
     "queryBuilderFilter" : "(queryBuilderId=pageViewEventConditionESQueryBuilder)",
     "tags" : [ "event" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/pageViewEventCondition.html",
     "parameters" : [
         {
             "id" : "url",

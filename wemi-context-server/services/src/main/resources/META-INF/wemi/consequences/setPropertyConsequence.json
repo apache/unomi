@@ -4,6 +4,7 @@
     "description" : "Set a property",
     "serviceFilter" : "(consequenceExecutorId=setProperty)",
     "tags" : [ "demographic" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/consequences/setPropertyConsequence.html",
     "parameters" : [
         {
             "id" : "propertyName",

@@ -4,6 +4,7 @@
     "description" : "Copies request parameter to a user property",
     "serviceFilter" : "(consequenceExecutorId=requestParameterToUserProperty)",
     "tags" : [ "event" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-plugins-request/consequences/requestParameterToUserPropertyConsequence.html",
     "parameters" : [
         {
             "id" : "requestParameterName",

@@ -4,6 +4,7 @@
     "description" : "Match all",
     "queryBuilderFilter" : "(queryBuilderId=matchAllConditionESQueryBuilder)",
     "tags" : [ "logical" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/matchAll.html",
     "parameters" : [
     ]
 }

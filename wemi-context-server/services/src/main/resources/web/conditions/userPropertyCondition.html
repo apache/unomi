@@ -1,0 +1,16 @@
+<div class="perso">
+    <div class="block">
+        <div class="remove-condition">
+            <a href="#" ng-click="onRemove(parentValue,parentIndex)"><i class="icon-remove"></i></a>
+        </div>
+    User
+    &nbsp;
+    <select ng-model="ref.parameterValues.propertyName" ng-options="parameter.id as parameter.name for parameter in getConditionParameterChoiceListValues(ref, 'propertyName')" class="form-control">
+    </select>
+    &nbsp;is&nbsp;
+    <select ng-model="ref.parameterValues.comparisonOperator" ng-options="parameter.id as parameter.name for parameter in getConditionParameterChoiceListValues(ref, 'comparisonOperator')" class="form-control">
+    </select>
+    &nbsp;
+    <input ng-model="ref.parameterValues.propertyValue" type="text"/>
+    </div>
+</div>

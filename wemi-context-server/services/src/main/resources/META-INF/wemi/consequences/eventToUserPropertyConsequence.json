@@ -4,6 +4,7 @@
     "description" : "Copies an event property to a user property",
     "serviceFilter" : "(consequenceExecutorId=eventToUserProperty)",
     "tags" : [ "event" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/consequences/eventToUserPropertyConsequence.html",
     "parameters" : [
         {
             "id" : "eventPropertyName",
