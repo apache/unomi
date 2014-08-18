@@ -30,4 +30,11 @@
         </service-properties>
     </service>
 
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="consequenceExecutorId" value="setRemoteHostInfo"/>
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.plugins.request.consequences.SetRemoteHostInfoConsequence"/>
+    </service>
+
 </blueprint>

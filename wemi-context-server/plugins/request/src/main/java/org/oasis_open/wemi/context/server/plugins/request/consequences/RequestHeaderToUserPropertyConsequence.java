@@ -19,11 +19,19 @@ public class RequestHeaderToUserPropertyConsequence implements ConsequenceExecut
         }
         String requestHeaderName = (String) consequence.getParameterValues().get("requestHeaderName");
         String userPropertyName = (String) consequence.getParameterValues().get("userPropertyName");
+        String sessionPropertyName = (String) consequence.getParameterValues().get("sessionPropertyName");
         String requestHeaderValue = httpServletRequest.getHeader(requestHeaderName);
         if (requestHeaderValue != null) {
-            if (event.getUser().getProperty(userPropertyName) == null || !event.getUser().getProperty(userPropertyName).equals(requestHeaderValue)) {
-                event.getUser().setProperty(userPropertyName, requestHeaderValue);
-                changed = true;
+            if (userPropertyName != null) {
+                if (event.getUser().getProperty(userPropertyName) == null || !event.getUser().getProperty(userPropertyName).equals(requestHeaderValue)) {
+                    event.getUser().setProperty(userPropertyName, requestHeaderValue);
+                    changed = true;
+                }
+            } else if (sessionPropertyName != null) {
+                if (event.getSession().getProperty(sessionPropertyName) == null || !event.getSession().getProperty(sessionPropertyName).equals(requestHeaderValue)) {
+                    event.getSession().setProperty(sessionPropertyName, requestHeaderValue);
+                    changed = true;
+                }
             }
         }
         return changed;

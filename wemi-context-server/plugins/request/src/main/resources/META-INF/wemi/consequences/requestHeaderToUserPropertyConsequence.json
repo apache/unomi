@@ -1,15 +1,15 @@
 {
-    "id" : "requestParameterToUserPropertyConsequence",
-    "name" : "copy a request parameter to user property",
-    "description" : "Copies request parameter to a user property",
-    "serviceFilter" : "(consequenceExecutorId=requestParameterToUserProperty)",
+    "id" : "requestHeaderToUserPropertyConsequence",
+    "name" : "copy a request header to user property",
+    "description" : "Copies request header to a user property",
+    "serviceFilter" : "(consequenceExecutorId=requestHeaderToUserProperty)",
     "tags" : [ "event" ],
-    "template": "/plugins/org.oasis-open.wemi.context-server-plugins-request/consequences/requestParameterToUserPropertyConsequence.html",
+    "template": "/plugins/org.oasis-open.wemi.context-server-plugins-request/consequences/requestHeaderToUserPropertyConsequence.html",
     "parameters" : [
         {
-            "id" : "requestParameterName",
-            "name" : "Request parameter name",
-            "description" : "The name of the request parameter to read",
+            "id" : "requestHeaderName",
+            "name" : "Request header name",
+            "description" : "The name of the request header to read",
             "type" : "string",
             "multivalued" : false,
             "choicelistInitializerFilter" : ""
