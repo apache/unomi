@@ -43,6 +43,40 @@ public class PluginsExtender implements BundleListener {
     private Map<BundleContext, List<String>> registeredAliases = new HashMap<BundleContext, List<String>>();
     private Map<BundleContext, Filter> registeredFilters = new HashMap<BundleContext, Filter>();
 
+    /**
+     * Normalize the path for accesing a resource, meaning that will replace
+     * consecutive slashes and will remove a leading slash if present.
+     *
+     * @param path path to normalize
+     * @return normalized path or the original path if there is nothing to be
+     * replaced.
+     */
+    public static String normalizeResourcePath(final String path) {
+        if (path == null) {
+            return null;
+        }
+        String normalizedPath = replaceSlashes(path.trim());
+        if (normalizedPath.startsWith("/") && normalizedPath.length() > 1) {
+            normalizedPath = normalizedPath.substring(1);
+        }
+        return normalizedPath;
+    }
+
+    /**
+     * Replaces multiple subsequent slashes with one slash. E.g. ////a//path//
+     * will becaome /a/path/
+     *
+     * @param target target sring to be replaced
+     * @return a string where the subsequent slashes are replaced with one slash
+     */
+    static String replaceSlashes(final String target) {
+        String replaced = target;
+        if (replaced != null) {
+            replaced = replaced.replaceAll("/+", "/");
+        }
+        return replaced;
+    }
+
     @PostConstruct
     public void postConstruct() {
         for (Bundle otherBundle : bundleContext.getBundles()) {
@@ -96,7 +130,7 @@ public class PluginsExtender implements BundleListener {
         String[] urlPatterns = {
                 "/plugins/" + bundleContext.getBundle().getSymbolicName() + "/*"
         };
-        Filter pluginFilter = new PluginsFilter();
+        Filter pluginFilter = new PluginsCorsFilter();
         webContainer.registerFilter(pluginFilter, urlPatterns, null, null, httpContext);
         registeredFilters.put(bundleContext, pluginFilter);
 
@@ -162,40 +196,6 @@ public class PluginsExtender implements BundleListener {
         }
 
 
-    }
-
-    /**
-     * Normalize the path for accesing a resource, meaning that will replace
-     * consecutive slashes and will remove a leading slash if present.
-     *
-     * @param path path to normalize
-     * @return normalized path or the original path if there is nothing to be
-     * replaced.
-     */
-    public static String normalizeResourcePath(final String path) {
-        if (path == null) {
-            return null;
-        }
-        String normalizedPath = replaceSlashes(path.trim());
-        if (normalizedPath.startsWith("/") && normalizedPath.length() > 1) {
-            normalizedPath = normalizedPath.substring(1);
-        }
-        return normalizedPath;
-    }
-
-    /**
-     * Replaces multiple subsequent slashes with one slash. E.g. ////a//path//
-     * will becaome /a/path/
-     *
-     * @param target target sring to be replaced
-     * @return a string where the subsequent slashes are replaced with one slash
-     */
-    static String replaceSlashes(final String target) {
-        String replaced = target;
-        if (replaced != null) {
-            replaced = replaced.replaceAll("/+", "/");
-        }
-        return replaced;
     }
 
 }

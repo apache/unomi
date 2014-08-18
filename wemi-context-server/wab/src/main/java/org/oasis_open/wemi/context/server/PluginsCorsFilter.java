@@ -6,9 +6,9 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
- * Created by loom on 18.08.14.
+ * A simple filter to setup CORS headers in front of plugin web resources.
  */
-public class PluginsFilter implements Filter {
+public class PluginsCorsFilter implements Filter {
 
     FilterConfig filterConfig;
 

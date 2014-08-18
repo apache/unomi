@@ -1,24 +1,18 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.apache.cxf.helpers.IOUtils;
-import org.oasis_open.wemi.context.server.api.conditions.Tag;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
+import org.oasis_open.wemi.context.server.api.conditions.Tag;
 import org.oasis_open.wemi.context.server.api.consequences.ConsequenceType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.BundleListener;
-import org.osgi.service.http.HttpContext;
-import org.osgi.service.http.HttpService;
-import org.osgi.service.http.NamespaceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
@@ -33,25 +27,15 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
     Map<String, ConsequenceType> consequencesTypeByName = new HashMap<String, ConsequenceType>();
     Map<Tag, Set<ConditionType>> conditionTypeByTag = new HashMap<Tag, Set<ConditionType>>();
     Map<Tag, Set<ConsequenceType>> consequenceTypeByTag = new HashMap<Tag, Set<ConsequenceType>>();
-
-    private List<String> registeredAliases = new ArrayList<String>();
+    private BundleContext bundleContext;
+    private PersistenceService persistenceService;
 
     public DefinitionsServiceImpl() {
         System.out.println("Instantiating definitions service...");
     }
 
-    private BundleContext bundleContext;
-
-    private PersistenceService persistenceService;
-
-    private HttpService httpService;
-
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
-    }
-
-    public void setHttpService(HttpService httpService) {
-        this.httpService = httpService;
     }
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -63,13 +47,6 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
 
         processBundleStartup(bundleContext);
 
-        /*
-        for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null) {
-                processBundleStartup(bundle.getBundleContext());
-            }
-        }
-        */
         bundleContext.addBundleListener(this);
     }
 
@@ -84,40 +61,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         loadPredefinedCondition(bundleContext);
         loadPredefinedConsequences(bundleContext);
 
-        // registerHttpResources(bundleContext);
     }
 
-    private void registerHttpResources(BundleContext bundleContext) {
-        String httpResourcesHeaderValue = bundleContext.getBundle().getHeaders().get("Wemi-Http-Resources");
-        if (httpResourcesHeaderValue == null || httpResourcesHeaderValue.length() == 0) {
-            return;
-        }
-        HttpContext httpContext = new CustomHttpContext(bundleContext.getBundle());
-        String[] httpResourcePairs = httpResourcesHeaderValue.split(",");
-        for (String httpResourcePair : httpResourcePairs) {
-            httpResourcePair = httpResourcePair.trim();
-            String[] httpResourceParts = httpResourcePair.split("=");
-            if (httpResourceParts == null || httpResourceParts.length != 2) {
-                continue;
-            }
-            if (bundleContext.getBundle().getEntry(httpResourceParts[1].trim()) != null) {
-                try {
-                    String alias = "/plugins/" + bundleContext.getBundle().getSymbolicName() + httpResourceParts[0].trim();
-                    if (alias.endsWith("/")) {
-                        alias = alias.substring(0, alias.length() - 1);
-                    }
-                    httpService.registerResources(alias, httpResourceParts[1].trim(), httpContext);
-                } catch (NamespaceException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
 
     public void preDestroy() {
-        for (String registeredAlias : registeredAliases) {
-            httpService.unregister(registeredAlias);
-        }
         bundleContext.removeBundleListener(this);
     }
 
@@ -288,67 +235,6 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
                 // @todo remove bundle-defined resources (is it possible ?)
                 break;
         }
-    }
-
-    public class CustomHttpContext implements HttpContext {
-
-        /**
-         * Bundle using the {@link HttpService}.
-         */
-        private final Bundle bundle;
-
-        public CustomHttpContext(Bundle bundle) {
-            this.bundle = bundle;
-        }
-
-        public boolean handleSecurity(HttpServletRequest request, HttpServletResponse response) throws IOException {
-            return true;
-        }
-
-        public URL getResource(String name) {
-            final String normalizedname = normalizeResourcePath(name);
-            return bundle.getResource(normalizedname);
-        }
-
-        public String getMimeType(String name) {
-            return null;
-        }
-
-
-    }
-
-    /**
-     * Normalize the path for accesing a resource, meaning that will replace
-     * consecutive slashes and will remove a leading slash if present.
-     *
-     * @param path path to normalize
-     * @return normalized path or the original path if there is nothing to be
-     * replaced.
-     */
-    public static String normalizeResourcePath(final String path) {
-        if (path == null) {
-            return null;
-        }
-        String normalizedPath = replaceSlashes(path.trim());
-        if (normalizedPath.startsWith("/") && normalizedPath.length() > 1) {
-            normalizedPath = normalizedPath.substring(1);
-        }
-        return normalizedPath;
-    }
-
-    /**
-     * Replaces multiple subsequent slashes with one slash. E.g. ////a//path//
-     * will becaome /a/path/
-     *
-     * @param target target sring to be replaced
-     * @return a string where the subsequent slashes are replaced with one slash
-     */
-    static String replaceSlashes(final String target) {
-        String replaced = target;
-        if (replaced != null) {
-            replaced = replaced.replaceAll("/+", "/");
-        }
-        return replaced;
     }
 
 }
