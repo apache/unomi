@@ -1,5 +1,8 @@
 package org.oasis_open.wemi.context.server.plugins.request.consequences;
 
+import net.sf.uadetector.ReadableUserAgent;
+import net.sf.uadetector.UserAgentStringParser;
+import net.sf.uadetector.service.UADetectorServiceFactory;
 import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
@@ -37,8 +40,8 @@ public class SetRemoteHostInfoConsequence implements ConsequenceExecutor {
             inputStream = url.openConnection().getInputStream();
             JsonReader reader = Json.createReader(inputStream);
             JsonObject location = (JsonObject) reader.read();
-            session.setProperty("country_code", location.getString("country_code"));
-            session.setProperty("country_name", location.getString("country_name"));
+            session.setProperty("countryCode", location.getString("country_code"));
+            session.setProperty("countryName", location.getString("country_name"));
             session.setProperty("city",location.getString("city"));
         } catch (Exception e) {
             e.printStackTrace();
@@ -51,6 +54,14 @@ public class SetRemoteHostInfoConsequence implements ConsequenceExecutor {
                 }
             }
         }
+
+        UserAgentStringParser parser = UADetectorServiceFactory.getResourceModuleParser();
+        ReadableUserAgent agent = parser.parse(httpServletRequest.getHeader("User-Agent"));
+        session.setProperty("operatingSystemFamily", agent.getOperatingSystem().getFamilyName());
+        session.setProperty("operatingSystemName", agent.getOperatingSystem().getName());
+        session.setProperty("userAgentName", agent.getName());
+        session.setProperty("userAgentVersion", agent.getVersionNumber().toVersionString());
+        session.setProperty("deviceCategory", agent.getDeviceCategory().getName());
 
         return true;
     }
