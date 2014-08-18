@@ -84,6 +84,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         loadPredefinedCondition(bundleContext);
         loadPredefinedConsequences(bundleContext);
 
+        registerHttpResources(bundleContext);
+    }
+
+    private void registerHttpResources(BundleContext bundleContext) {
         String httpResourcesHeaderValue = bundleContext.getBundle().getHeaders().get("Wemi-Http-Resources");
         if (httpResourcesHeaderValue == null || httpResourcesHeaderValue.length() == 0) {
             return;
