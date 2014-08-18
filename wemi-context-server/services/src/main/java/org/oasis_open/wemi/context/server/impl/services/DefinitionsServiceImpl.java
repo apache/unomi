@@ -84,7 +84,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         loadPredefinedCondition(bundleContext);
         loadPredefinedConsequences(bundleContext);
 
-        registerHttpResources(bundleContext);
+        // registerHttpResources(bundleContext);
     }
 
     private void registerHttpResources(BundleContext bundleContext) {

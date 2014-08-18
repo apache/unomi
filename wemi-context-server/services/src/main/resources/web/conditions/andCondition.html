@@ -4,7 +4,7 @@
     </div>
     <div ng-repeat="child in ref.parameterValues.subConditions">
         <div class="block" >
-            <condition ref="child" parent-ref="ref" parent-name="'subConditions'" parent-value="ref.parameterValues.subConditions" parent-index="$index" types="types"/>
+            <condition ref="child" parent-ref="ref" parent-name="'subConditions'" parent-value="ref.parameterValues.subConditions" parent-index="$index" types="types" base-url="baseUrl"/>
         </div>
         <div class="operator">AND</div>
     </div>

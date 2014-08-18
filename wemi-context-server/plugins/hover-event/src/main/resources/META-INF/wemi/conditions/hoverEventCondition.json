@@ -4,7 +4,7 @@
     "description" : "A content has been hovered",
     "queryBuilderFilter" : "(queryBuilderId=hoverEventConditionESQueryBuilder)",
     "tags" : [ "event" ],
-    "template" : "/plugins/org.oasis-open.wemi.context-server-plugins-hover-eventt/conditions/hoverEventCondition.html",
+    "template" : "/plugins/org.oasis-open.wemi.context-server-plugins-hover-event/conditions/hoverEventCondition.html",
     "parameters" : [
         {
             "id" : "contentName",
