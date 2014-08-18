@@ -71,6 +71,20 @@
         <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.UserUpdatedEventConditionESQueryBuilder" />
     </service>
 
+    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="sessionCreatedEventConditionESQueryBuilder" />
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.SessionCreatedEventConditionESQueryBuilder" />
+    </service>
+
+    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="userSegmentConditionESQueryBuilder" />
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.UserSegmentConditionESQueryBuilder" />
+    </service>
+
     <bean id="conditionESQueryBuilderDispatcher" class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher">
         <property name="bundleContext" ref="blueprintBundleContext" />
     </bean>

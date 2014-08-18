@@ -1,5 +1,15 @@
 {
     "user" : {
+        "dynamic_templates": [
+            { "all": {
+                "match":              "*",
+                "match_mapping_type": "string",
+                "mapping": {
+                    "type": "string",
+                    "index" : "not_analyzed"
+                }
+            }}
+        ],
         "properties" : {
             "properties.age" : {"type" : "integer" },
             "properties.income" : {"type" : "integer" }

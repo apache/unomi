@@ -19,11 +19,19 @@ public class RequestParameterToUserPropertyConsequence implements ConsequenceExe
         }
         String requestParameterName = (String) consequence.getParameterValues().get("requestParameterName");
         String userPropertyName = (String) consequence.getParameterValues().get("userPropertyName");
+        String sessionPropertyName = (String) consequence.getParameterValues().get("sessionPropertyName");
         String requestParameterValue = httpServletRequest.getParameter(requestParameterName);
         if (requestParameterValue != null) {
-            if (event.getUser().getProperty(userPropertyName) == null || !event.getUser().getProperty(userPropertyName).equals(requestParameterValue)) {
-                event.getUser().setProperty(userPropertyName, requestParameterValue);
-                changed = true;
+            if (userPropertyName != null) {
+                if (event.getUser().getProperty(userPropertyName) == null || !event.getUser().getProperty(userPropertyName).equals(requestParameterValue)) {
+                    event.getUser().setProperty(userPropertyName, requestParameterValue);
+                    changed = true;
+                }
+            } else if (sessionPropertyName != null) {
+                if (event.getSession().getProperty(sessionPropertyName) == null || !event.getSession().getProperty(sessionPropertyName).equals(requestParameterValue)) {
+                    event.getSession().setProperty(sessionPropertyName, requestParameterValue);
+                    changed = true;
+                }
             }
         }
         return changed;

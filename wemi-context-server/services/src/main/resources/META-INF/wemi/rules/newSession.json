@@ -1,0 +1,29 @@
+{
+    "metadata": {
+        "id": "newSession",
+        "name": "New session",
+        "description": "Fill session attributes when a new session is created"
+    },
+
+    "condition": {
+        "type": "sessionCreatedEventCondition",
+        "parameterValues": {
+        }
+    },
+
+    "consequences": [
+        {
+            "type": "setRemoteHostInfoConsequence",
+            "parameterValues": {
+            }
+        },
+        {
+            "type": "requestHeaderToUserPropertyConsequence",
+            "parameterValues": {
+                "requestHeaderName": "User-Agent",
+                "sessionPropertyName": "userAgent"
+            }
+        }
+    ]
+
+}
