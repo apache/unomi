@@ -4,6 +4,7 @@
     "description" : "Sends an email",
     "serviceFilter" : "(consequenceExecutorId=sendMail)",
     "tags" : [ "event" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-plugins-mail/consequences/sendMailConsequence.html",
     "parameters" : [
         {
             "id" : "from",
