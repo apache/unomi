@@ -1,0 +1,6 @@
+{
+    "id" : "condition",
+    "name" : "Condition",
+    "description" : "Regroups all condition objects",
+    "parent" : "root"
+}

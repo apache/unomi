@@ -3,7 +3,7 @@
     "name" : "User event",
     "description" : "The user did an event",
     "queryBuilderFilter" : "(queryBuilderId=userEventConditionESQueryBuilder)",
-    "tags" : [ "demographic" ],
+    "tags" : [ "demographic", "userCondition" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/userEventCondition.html",
     "parameters" : [
         {

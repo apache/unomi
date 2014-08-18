@@ -22,4 +22,5 @@ public interface UserService {
 
     boolean saveSession(Session event);
 
+    boolean matchCondition(String condition, User user, Session session);
 }

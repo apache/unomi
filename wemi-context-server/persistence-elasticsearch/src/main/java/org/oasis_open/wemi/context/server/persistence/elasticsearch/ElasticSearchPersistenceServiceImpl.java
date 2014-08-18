@@ -15,8 +15,7 @@ import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsException;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
@@ -330,6 +329,25 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
             }
         }.executeInClassLoader();
 
+    }
+
+
+    @Override
+    public boolean testMatch(Condition query, Item item) {
+        try {
+            final Class<? extends Item> clazz = item.getClass();
+            String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
+
+            FilterBuilder builder = FilterBuilders.andFilter(
+                    FilterBuilders.idsFilter(itemType).ids(item.getItemId()),
+                    conditionESQueryBuilderDispatcher.buildFilter(query));
+            return query(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), builder), clazz).size() > 0;
+        } catch (IllegalAccessException e) {
+            logger.error("Error getting query for item=" + item, e);
+        } catch (NoSuchFieldException e) {
+            logger.error("Error getting query for item=" + item, e);
+        }
+        return false;
     }
 
     public <T extends Item> List<T> query(final Condition query, final Class<T> clazz) {

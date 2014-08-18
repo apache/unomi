@@ -50,6 +50,7 @@
 
     <bean id="userServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.UserServiceImpl">
         <property name="persistenceService" ref="persistenceService" />
+        <property name="definitionsService" ref="definitionsServiceImpl" />
     </bean>
     <service id="userService" ref="userServiceImpl" auto-export="interfaces" />
 

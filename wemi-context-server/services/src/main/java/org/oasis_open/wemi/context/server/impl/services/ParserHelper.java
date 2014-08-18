@@ -1,15 +1,12 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
-import org.oasis_open.wemi.context.server.api.conditions.*;
+import org.oasis_open.wemi.context.server.api.conditions.Condition;
+import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 import org.oasis_open.wemi.context.server.api.consequences.Consequence;
 import org.oasis_open.wemi.context.server.api.consequences.ConsequenceType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.json.JsonString;
-import javax.json.JsonValue;
-import java.util.*;
+import java.util.Collection;
 
 public class ParserHelper {
 

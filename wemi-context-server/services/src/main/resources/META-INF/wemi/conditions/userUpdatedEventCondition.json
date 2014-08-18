@@ -3,7 +3,7 @@
     "name" : "User updated event",
     "description" : "A user profile has been updated",
     "queryBuilderFilter" : "(queryBuilderId=userUpdatedEventConditionESQueryBuilder)",
-    "tags" : [ "event" ],
+    "tags" : [ "event", "eventCondition" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/userUpdatedEventCondition.html",
     "parameters" : [
     ]

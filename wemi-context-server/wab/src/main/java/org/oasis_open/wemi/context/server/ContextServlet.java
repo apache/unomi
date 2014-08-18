@@ -161,7 +161,7 @@ public class ContextServlet extends HttpServlet {
                     ArrayNode filters = (ArrayNode) jsonNode.get("filters");
                     boolean result = true;
                     for (JsonNode filter : filters) {
-                        result &= matchFilter(filter, user, session);
+                        result &= userService.matchCondition(mapper.writeValueAsString(filter), user, session);
                     }
                     responseWriter.append((first ? "" : ",") + "'" + id + "':" + result);
                     first = false;
@@ -180,20 +180,20 @@ public class ContextServlet extends HttpServlet {
 
     }
 
-    private boolean matchFilter(JsonNode filterNode, User user, Session session) {
-        // todo : move filter evaluation in separate plugins
-        if (filterNode.get("property").textValue().equals("user.segment")) {
-            String match = filterNode.get("match").textValue();
-            ArrayNode n = (ArrayNode) filterNode.get("values");
-            List<String> segments = new ArrayList<String>();
-            for (JsonNode node : n) {
-                segments.add(node.textValue());
-            }
-            boolean found = segments.removeAll(user.getSegments());
-            return (match.equals("all") && segments.isEmpty()) || (match.equals("none") && !found) || (match.equals("some") && found);
-        }
-        return false;
-    }
+//    private boolean matchFilter(JsonNode filterNode, User user, Session session) {
+//        // todo : move filter evaluation in separate plugins
+//        if (filterNode.get("property").textValue().equals("user.segment")) {
+//            String match = filterNode.get("match").textValue();
+//            ArrayNode n = (ArrayNode) filterNode.get("values");
+//            List<String> segments = new ArrayList<String>();
+//            for (JsonNode node : n) {
+//                segments.add(node.textValue());
+//            }
+//            boolean found = segments.removeAll(user.getSegments());
+//            return (match.equals("all") && segments.isEmpty()) || (match.equals("none") && !found) || (match.equals("some") && found);
+//        }
+//        return false;
+//    }
 
     private User createNewUser(String existingVisitorId, ServletResponse response) {
         User user;

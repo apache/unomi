@@ -31,6 +31,8 @@ public interface PersistenceService {
 
     public List<String> getMatchingSavedQueries(Item item);
 
+    public boolean testMatch(Condition query, Item item);
+
     public <T extends Item> List<T> query(Condition query, Class<T> clazz);
 
     public <T extends Item> List<T> query(String fieldName, String fieldValue, Class<T> clazz);
