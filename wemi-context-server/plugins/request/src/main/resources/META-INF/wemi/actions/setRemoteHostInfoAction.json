@@ -1,0 +1,10 @@
+{
+    "id" : "setRemoteHostInfoAction",
+    "name" : "copy client host name / ip",
+    "description" : "copy client host name / ip",
+    "serviceFilter" : "(actionExecutorId=setRemoteHostInfo)",
+    "tags" : [ "event" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-plugins-request/actions/setRemoteHostInfoAction.html",
+    "parameters" : [
+    ]
+}

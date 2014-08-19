@@ -11,9 +11,9 @@
         }
     },
 
-    "consequences" : [
+    "actions" : [
         {
-            "type": "evaluateUserSegmentsConsequence",
+            "type": "evaluateUserSegmentsAction",
             "parameterValues": {
             }
         }

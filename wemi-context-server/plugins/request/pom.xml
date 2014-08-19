@@ -9,7 +9,7 @@
     </parent>
 
     <artifactId>wemi-context-server-plugins-request</artifactId>
-    <name>WEMI Context Server Plugin - Provides request reading consequences</name>
+    <name>WEMI Context Server Plugin - Provides request reading actions</name>
     <packaging>bundle</packaging>
 
     <dependencies>

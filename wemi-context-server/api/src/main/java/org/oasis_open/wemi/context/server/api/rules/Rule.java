@@ -2,10 +2,9 @@ package org.oasis_open.wemi.context.server.api.rules;
 
 import org.oasis_open.wemi.context.server.api.Item;
 import org.oasis_open.wemi.context.server.api.Metadata;
+import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
-import org.oasis_open.wemi.context.server.api.consequences.Consequence;
 
-import javax.xml.bind.annotation.XmlElement;
 import java.util.List;
 
 /**
@@ -19,7 +18,7 @@ public class Rule extends Item {
 
     private Condition condition;
 
-    private List<Consequence> consequences;
+    private List<Action> actions;
 
     public Rule() {
     }
@@ -46,12 +45,12 @@ public class Rule extends Item {
         this.condition = condition;
     }
 
-    public List<Consequence> getConsequences() {
-        return consequences;
+    public List<Action> getActions() {
+        return actions;
     }
 
-    public void setConsequences(List<Consequence> consequences) {
-        this.consequences = consequences;
+    public void setActions(List<Action> actions) {
+        this.actions = actions;
     }
 
 }

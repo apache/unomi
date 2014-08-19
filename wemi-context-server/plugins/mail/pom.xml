@@ -9,7 +9,7 @@
     </parent>
 
     <artifactId>wemi-context-server-plugins-mail</artifactId>
-    <name>WEMI Context Server Plugin - Mail notifications consequences</name>
+    <name>WEMI Context Server Plugin - Mail notifications actions</name>
     <packaging>bundle</packaging>
 
     <dependencies>

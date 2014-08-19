@@ -12,9 +12,9 @@
         }
     },
 
-    "consequences" : [
+    "actions" : [
         {
-            "type": "setPropertyConsequence",
+            "type": "setPropertyAction",
             "parameterValues": {
                 "propertyName": "goal1",
                 "propertyValue": "reached"

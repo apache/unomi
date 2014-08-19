@@ -12,29 +12,29 @@
   http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd
   ">
 
-    <!-- Consequence executors -->
+    <!-- Action executors -->
 
-    <bean id="requestHeaderToUserPropertyConsequenceImpl" class="org.oasis_open.wemi.context.server.plugins.request.consequences.RequestHeaderToUserPropertyConsequence">
+    <bean id="requestHeaderToUserPropertyActionImpl" class="org.oasis_open.wemi.context.server.plugins.request.actions.RequestHeaderToUserPropertyAction">
     </bean>
-    <service id="requestHeaderToUserPropertyConsequence" ref="requestHeaderToUserPropertyConsequenceImpl" auto-export="interfaces">
+    <service id="requestHeaderToUserPropertyAction" ref="requestHeaderToUserPropertyActionImpl" auto-export="interfaces">
         <service-properties>
-            <entry key="consequenceExecutorId" value="requestHeaderToUserProperty"/>
+            <entry key="actionExecutorId" value="requestHeaderToUserProperty"/>
         </service-properties>
     </service>
 
-    <bean id="requestParameterToUserPropertyConsequenceImpl" class="org.oasis_open.wemi.context.server.plugins.request.consequences.RequestParameterToUserPropertyConsequence">
+    <bean id="requestParameterToUserPropertyActionImpl" class="org.oasis_open.wemi.context.server.plugins.request.actions.RequestParameterToUserPropertyAction">
     </bean>
-    <service id="RequestParameterToUserPropertyConsequence" ref="requestParameterToUserPropertyConsequenceImpl" auto-export="interfaces">
+    <service id="RequestParameterToUserPropertyAction" ref="requestParameterToUserPropertyActionImpl" auto-export="interfaces">
         <service-properties>
-            <entry key="consequenceExecutorId" value="requestParameterToUserProperty"/>
+            <entry key="actionExecutorId" value="requestParameterToUserProperty"/>
         </service-properties>
     </service>
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="consequenceExecutorId" value="setRemoteHostInfo"/>
+            <entry key="actionExecutorId" value="setRemoteHostInfo"/>
         </service-properties>
-        <bean class="org.oasis_open.wemi.context.server.plugins.request.consequences.SetRemoteHostInfoConsequence"/>
+        <bean class="org.oasis_open.wemi.context.server.plugins.request.actions.SetRemoteHostInfoAction"/>
     </service>
 
 </blueprint>

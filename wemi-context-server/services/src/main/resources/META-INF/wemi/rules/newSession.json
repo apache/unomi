@@ -11,14 +11,14 @@
         }
     },
 
-    "consequences": [
+    "actions": [
         {
-            "type": "setRemoteHostInfoConsequence",
+            "type": "setRemoteHostInfoAction",
             "parameterValues": {
             }
         },
         {
-            "type": "requestHeaderToUserPropertyConsequence",
+            "type": "requestHeaderToUserPropertyAction",
             "parameterValues": {
                 "requestHeaderName": "User-Agent",
                 "sessionPropertyName": "userAgent"

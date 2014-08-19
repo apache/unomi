@@ -1,9 +1,9 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.apache.cxf.helpers.IOUtils;
+import org.oasis_open.wemi.context.server.api.actions.ActionType;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 import org.oasis_open.wemi.context.server.api.conditions.Tag;
-import org.oasis_open.wemi.context.server.api.consequences.ConsequenceType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
@@ -24,9 +24,9 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
     Map<String, Tag> tags = new HashMap<String, Tag>();
     Set<Tag> rootTags = new LinkedHashSet<Tag>();
     Map<String, ConditionType> conditionTypeByName = new HashMap<String, ConditionType>();
-    Map<String, ConsequenceType> consequencesTypeByName = new HashMap<String, ConsequenceType>();
+    Map<String, ActionType> actionsTypeByName = new HashMap<String, ActionType>();
     Map<Tag, Set<ConditionType>> conditionTypeByTag = new HashMap<Tag, Set<ConditionType>>();
-    Map<Tag, Set<ConsequenceType>> consequenceTypeByTag = new HashMap<Tag, Set<ConsequenceType>>();
+    Map<Tag, Set<ActionType>> actionTypeByTag = new HashMap<Tag, Set<ActionType>>();
     private BundleContext bundleContext;
     private PersistenceService persistenceService;
 
@@ -59,7 +59,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         loadPredefinedTags(bundleContext);
 
         loadPredefinedCondition(bundleContext);
-        loadPredefinedConsequences(bundleContext);
+        loadPredefinedActions(bundleContext);
 
     }
 
@@ -150,35 +150,35 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         }
     }
 
-    private void loadPredefinedConsequences(BundleContext bundleContext) {
-        Enumeration<URL> predefinedConsequencesEntries = bundleContext.getBundle().findEntries("META-INF/wemi/consequences", "*.json", true);
-        if (predefinedConsequencesEntries == null) {
+    private void loadPredefinedActions(BundleContext bundleContext) {
+        Enumeration<URL> predefinedActionsEntries = bundleContext.getBundle().findEntries("META-INF/wemi/actions", "*.json", true);
+        if (predefinedActionsEntries == null) {
             return;
         }
-        while (predefinedConsequencesEntries.hasMoreElements()) {
-            URL predefinedConsequenceURL = predefinedConsequencesEntries.nextElement();
-            logger.debug("Found predefined consequence at " + predefinedConsequenceURL + ", loading... ");
+        while (predefinedActionsEntries.hasMoreElements()) {
+            URL predefinedActionURL = predefinedActionsEntries.nextElement();
+            logger.debug("Found predefined action at " + predefinedActionURL + ", loading... ");
 
             try {
-                ConsequenceType consequenceType = MapperHelper.getObjectMapper().readValue(predefinedConsequenceURL, ConsequenceType.class);
-                consequencesTypeByName.put(consequenceType.getId(), consequenceType);
-                for (String tagId : consequenceType.getTagIds()) {
+                ActionType actionType = MapperHelper.getObjectMapper().readValue(predefinedActionURL, ActionType.class);
+                actionsTypeByName.put(actionType.getId(), actionType);
+                for (String tagId : actionType.getTagIds()) {
                     Tag tag = tags.get(tagId);
                     if (tag != null) {
-                        consequenceType.getTags().add(tag);
-                        Set<ConsequenceType> consequenceTypes = consequenceTypeByTag.get(tag);
-                        if (consequenceTypes == null) {
-                            consequenceTypes = new LinkedHashSet<ConsequenceType>();
+                        actionType.getTags().add(tag);
+                        Set<ActionType> actionTypes = actionTypeByTag.get(tag);
+                        if (actionTypes == null) {
+                            actionTypes = new LinkedHashSet<ActionType>();
                         }
-                        consequenceTypes.add(consequenceType);
-                        consequenceTypeByTag.put(tag, consequenceTypes);
+                        actionTypes.add(actionType);
+                        actionTypeByTag.put(tag, actionTypes);
                     } else {
                         // we found a tag that is not defined, we will define it automatically
-                        logger.warn("Unknown tag " + tagId + " used in consequence definition " + predefinedConsequenceURL);
+                        logger.warn("Unknown tag " + tagId + " used in action definition " + predefinedActionURL);
                     }
                 }
             } catch (Exception e) {
-                logger.error("Error while loading consequence definition " + predefinedConsequenceURL, e);
+                logger.error("Error while loading action definition " + predefinedActionURL, e);
             }
         }
 
@@ -212,16 +212,16 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         return conditionTypeByName.get(name);
     }
 
-    public Collection<ConsequenceType> getAllConsequenceTypes() {
-        return consequencesTypeByName.values();
+    public Collection<ActionType> getAllActionTypes() {
+        return actionsTypeByName.values();
     }
 
-    public Set<ConsequenceType> getConsequenceTypeByTag(Tag tag) {
+    public Set<ActionType> getActionTypeByTag(Tag tag) {
         return null;
     }
 
-    public ConsequenceType getConsequenceType(String name) {
-        return consequencesTypeByName.get(name);
+    public ActionType getActionType(String name) {
+        return actionsTypeByName.get(name);
     }
 
     public void bundleChanged(BundleEvent event) {

@@ -3,13 +3,13 @@ package org.oasis_open.wemi.context.server.impl.services;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.Metadata;
+import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
-import org.oasis_open.wemi.context.server.api.consequences.Consequence;
 import org.oasis_open.wemi.context.server.api.rules.Rule;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.EventListenerService;
 import org.oasis_open.wemi.context.server.api.services.RulesService;
-import org.oasis_open.wemi.context.server.impl.consequences.ConsequenceExecutorDispatcher;
+import org.oasis_open.wemi.context.server.impl.actions.ActionExecutorDispatcher;
 import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
@@ -34,7 +34,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
 
     private DefinitionsService definitionsService;
 
-    private ConsequenceExecutorDispatcher consequenceExecutorDispatcher;
+    private ActionExecutorDispatcher actionExecutorDispatcher;
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -48,8 +48,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
         this.definitionsService = definitionsService;
     }
 
-    public void setConsequenceExecutorDispatcher(ConsequenceExecutorDispatcher consequenceExecutorDispatcher) {
-        this.consequenceExecutorDispatcher = consequenceExecutorDispatcher;
+    public void setActionExecutorDispatcher(ActionExecutorDispatcher actionExecutorDispatcher) {
+        this.actionExecutorDispatcher = actionExecutorDispatcher;
     }
 
     public void postConstruct() {
@@ -120,8 +120,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
 
         boolean changed = false;
         for (Rule rule: rules) {
-            for (Consequence consequence : rule.getConsequences()) {
-                changed |= consequenceExecutorDispatcher.execute(consequence, event);
+            for (Action action : rule.getActions()) {
+                changed |= actionExecutorDispatcher.execute(action, event);
             }
         }
         return changed;
@@ -152,8 +152,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
         Rule rule = persistenceService.load(ruleId, Rule.class);
         if (rule != null) {
             ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
-            for (Consequence consequence : rule.getConsequences()) {
-                ParserHelper.resolveConsequenceType(definitionsService, consequence);
+            for (Action action : rule.getActions()) {
+                ParserHelper.resolveActionType(definitionsService, action);
             }
         }
         return rule;
@@ -161,8 +161,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
 
     public void setRule(String ruleId, Rule rule) {
         ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
-        for (Consequence consequence : rule.getConsequences()) {
-            ParserHelper.resolveConsequenceType(definitionsService, consequence);
+        for (Action action : rule.getActions()) {
+            ParserHelper.resolveActionType(definitionsService, action);
         }
         persistenceService.saveQuery(ruleId, rule.getCondition());
         persistenceService.save(rule);
@@ -202,11 +202,11 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
                 if (getRule(key) == null) {
                     Rule r = new Rule(new Metadata(key, "Auto generated rule",""));
                     r.setCondition(condition);
-                    final Consequence consequence = new Consequence();
-                    consequence.setConsequenceType(definitionsService.getConsequenceType("setPropertyConsequence"));
-                    consequence.getParameterValues().put("propertyName", key);
-                    consequence.getParameterValues().put("propertyValue", "now");
-                    r.setConsequences(Arrays.asList(consequence));
+                    final Action action = new Action();
+                    action.setActionType(definitionsService.getActionType("setPropertyAction"));
+                    action.getParameterValues().put("propertyName", key);
+                    action.getParameterValues().put("propertyValue", "now");
+                    r.setActions(Arrays.asList(action));
                     rules.add(r);
                 }
             } catch (JsonProcessingException e) {
@@ -224,11 +224,11 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
 //                    Rule r = new Rule(new Metadata(key, "Auto generated rule",""));
 //                    r.setCondition(subConditions.get(0));
 //
-//                    final Consequence consequence = new Consequence();
-//                    consequence.setConsequenceType(definitionsService.getConsequenceType("setPropertyConsequence"));
-//                    consequence.getParameterValues().put("propertyName", key);
-//                    consequence.getParameterValues().put("propertyValue", "now");
-//                    r.setConsequences(Arrays.asList(consequence));
+//                    final Action action = new Action();
+//                    action.setActionType(definitionsService.getActionType("setPropertyAction"));
+//                    action.getParameterValues().put("propertyName", key);
+//                    action.getParameterValues().put("propertyValue", "now");
+//                    r.setActions(Arrays.asList(action));
 //                    rules.add(r);
 //                }
 //            } catch (JsonProcessingException e) {

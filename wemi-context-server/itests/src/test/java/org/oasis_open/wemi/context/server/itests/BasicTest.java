@@ -9,7 +9,7 @@ import org.apache.http.util.EntityUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.oasis_open.wemi.context.server.api.SegmentID;
+import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.Option;
@@ -112,9 +112,9 @@ public class BasicTest {
     @Test
     public void testSegments() {
         Assert.assertNotNull("Segment service should be available", segmentService);
-        Set<SegmentID> segmentIDs = segmentService.getSegmentIDs();
-        Assert.assertNotEquals("Segment ID list should not be empty", 0, segmentIDs.size());
-        LOGGER.info("Retrieved " + segmentIDs.size() + " segment IDs");
+        Set<Metadata> segmentMetadatas = segmentService.getSegmentMetadatas();
+        Assert.assertNotEquals("Segment metadata list should not be empty", 0, segmentMetadatas.size());
+        LOGGER.info("Retrieved " + segmentMetadatas.size() + " segment metadata entries");
     }
 
     @Test

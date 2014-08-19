@@ -1,11 +1,11 @@
 package org.oasis_open.wemi.context.server.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
+import org.oasis_open.wemi.context.server.api.actions.ActionType;
 import org.oasis_open.wemi.context.server.api.conditions.Parameter;
 import org.oasis_open.wemi.context.server.api.conditions.Tag;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 import org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer;
-import org.oasis_open.wemi.context.server.api.consequences.ConsequenceType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
@@ -86,27 +86,27 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
     }
 
     @GET
-    @Path("/consequences")
-    public Collection<ConsequenceType> getAllConsequenceTypes() {
-        Collection<ConsequenceType> consequenceTypes = definitionsService.getAllConsequenceTypes();
-        generateConsequenceChoiceListValues(consequenceTypes, null);
-        return consequenceTypes;
+    @Path("/actions")
+    public Collection<ActionType> getAllActionTypes() {
+        Collection<ActionType> actionTypes = definitionsService.getAllActionTypes();
+        generateActionChoiceListValues(actionTypes, null);
+        return actionTypes;
     }
 
     @GET
-    @Path("/consequences/tags/{tagId}")
-    public Set<ConsequenceType> getConsequenceTypeByTag(@PathParam("tagId") Tag tag) {
-        Set<ConsequenceType> consequenceTypes = definitionsService.getConsequenceTypeByTag(tag);
-        generateConsequenceChoiceListValues(consequenceTypes, null);
-        return consequenceTypes;
+    @Path("/actions/tags/{tagId}")
+    public Set<ActionType> getActionTypeByTag(@PathParam("tagId") Tag tag) {
+        Set<ActionType> actionTypes = definitionsService.getActionTypeByTag(tag);
+        generateActionChoiceListValues(actionTypes, null);
+        return actionTypes;
     }
 
     @GET
-    @Path("/consequences/{consequenceId}")
-    public ConsequenceType getConsequenceType(@PathParam("consequenceId") String consequenceId) {
-        ConsequenceType consequenceType = definitionsService.getConsequenceType(consequenceId);
-        generateChoiceListValues(consequenceType, null);
-        return consequenceType;
+    @Path("/actions/{actionId}")
+    public ActionType getActionType(@PathParam("actionId") String actionId) {
+        ActionType actionType = definitionsService.getActionType(actionId);
+        generateChoiceListValues(actionType, null);
+        return actionType;
     }
 
     private void generateConditionChoiceListValues(Collection<ConditionType> conditionTypes, Object context) {
@@ -115,9 +115,9 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
         }
     }
 
-    private void generateConsequenceChoiceListValues(Collection<ConsequenceType> consequenceTypes, Object context) {
-        for (ConsequenceType consequenceType : consequenceTypes) {
-            generateChoiceListValues(consequenceType, null);
+    private void generateActionChoiceListValues(Collection<ActionType> actionTypes, Object context) {
+        for (ActionType actionType : actionTypes) {
+            generateChoiceListValues(actionType, null);
         }
     }
 
@@ -127,8 +127,8 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
         }
     }
 
-    private void generateChoiceListValues(ConsequenceType consequenceType, Object context) {
-        for (Parameter parameter : consequenceType.getParameters()) {
+    private void generateChoiceListValues(ActionType actionType, Object context) {
+        for (Parameter parameter : actionType.getParameters()) {
             generateChoiceListValues(parameter, context);
         }
     }

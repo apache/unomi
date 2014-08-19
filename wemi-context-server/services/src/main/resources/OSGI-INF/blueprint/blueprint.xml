@@ -28,14 +28,14 @@
     </bean>
     <service id="goalsService" ref="goalsServiceImpl" auto-export="interfaces" />
     
-    <bean id="consequenceExecutorDispatcherImpl" class="org.oasis_open.wemi.context.server.impl.consequences.ConsequenceExecutorDispatcher">
+    <bean id="actionExecutorDispatcherImpl" class="org.oasis_open.wemi.context.server.impl.actions.ActionExecutorDispatcher">
         <property name="bundleContext" ref="blueprintBundleContext" />        
     </bean>
 
     <bean id="rulesServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.RulesServiceImpl" init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService" />
         <property name="definitionsService" ref="definitionsServiceImpl" />
-        <property name="consequenceExecutorDispatcher" ref="consequenceExecutorDispatcherImpl" />
+        <property name="actionExecutorDispatcher" ref="actionExecutorDispatcherImpl" />
         <property name="bundleContext" ref="blueprintBundleContext" />
     </bean>
     <service id="rulesService" ref="rulesServiceImpl" auto-export="interfaces" />
@@ -82,37 +82,37 @@
         </service-properties>
     </service>
 
-    <!-- Consequence executors -->
+    <!-- Action executors -->
 
-    <bean id="allEventToUserPropertiesConsequenceImpl" class="org.oasis_open.wemi.context.server.impl.consequences.AllEventToUserPropertiesConsequence">
+    <bean id="allEventToUserPropertiesActionImpl" class="org.oasis_open.wemi.context.server.impl.actions.AllEventToUserPropertiesAction">
     </bean>
-    <service id="allEventToUserPropertiesConsequence" ref="allEventToUserPropertiesConsequenceImpl" auto-export="interfaces">
+    <service id="allEventToUserPropertiesAction" ref="allEventToUserPropertiesActionImpl" auto-export="interfaces">
         <service-properties>
-            <entry key="consequenceExecutorId" value="allEventToUserProperties"/>
+            <entry key="actionExecutorId" value="allEventToUserProperties"/>
         </service-properties>
     </service>
 
-    <bean id="eventToUserPropertyConsequenceImpl" class="org.oasis_open.wemi.context.server.impl.consequences.EventToUserPropertyConsequence">
+    <bean id="eventToUserPropertyActionImpl" class="org.oasis_open.wemi.context.server.impl.actions.EventToUserPropertyAction">
     </bean>
-    <service id="eventToUserPropertyConsequence" ref="eventToUserPropertyConsequenceImpl" auto-export="interfaces">
+    <service id="eventToUserPropertyAction" ref="eventToUserPropertyActionImpl" auto-export="interfaces">
         <service-properties>
-            <entry key="consequenceExecutorId" value="eventToUserProperty"/>
+            <entry key="actionExecutorId" value="eventToUserProperty"/>
         </service-properties>
     </service>
 
-    <bean id="setPropertyConsequenceImpl" class="org.oasis_open.wemi.context.server.impl.consequences.SetPropertyConsequence">
+    <bean id="setPropertyActionImpl" class="org.oasis_open.wemi.context.server.impl.actions.SetPropertyAction">
     </bean>
-    <service id="setPropertyConsequence" ref="setPropertyConsequenceImpl" auto-export="interfaces">
+    <service id="setPropertyAction" ref="setPropertyActionImpl" auto-export="interfaces">
         <service-properties>
-            <entry key="consequenceExecutorId" value="setProperty"/>
+            <entry key="actionExecutorId" value="setProperty"/>
         </service-properties>
     </service>
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="consequenceExecutorId" value="evaluateUserSegments"/>
+            <entry key="actionExecutorId" value="evaluateUserSegments"/>
         </service-properties>
-        <bean class="org.oasis_open.wemi.context.server.impl.consequences.EvaluateUserSegmentsConsequence">
+        <bean class="org.oasis_open.wemi.context.server.impl.actions.EvaluateUserSegmentsAction">
             <property name="segmentService" ref="segmentServiceImpl" />
         </bean>
     </service>

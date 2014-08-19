@@ -12,14 +12,14 @@
   http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd
   ">
 
-    <!-- Consequence executors -->
+    <!-- Action executors -->
 
-    <bean id="sendMailConsequenceImpl" class="org.oasis_open.wemi.context.server.plugins.mail.consequences.SendMailConsequence">
+    <bean id="sendMailActionImpl" class="org.oasis_open.wemi.context.server.plugins.mail.actions.SendMailAction">
         <property name="mailServerHostName" value="smtp.gmail.com" />
     </bean>
-    <service id="sendMailConsequence" ref="sendMailConsequenceImpl" auto-export="interfaces">
+    <service id="sendMailAction" ref="sendMailActionImpl" auto-export="interfaces">
         <service-properties>
-            <entry key="consequenceExecutorId" value="sendMail"/>
+            <entry key="actionExecutorId" value="sendMail"/>
         </service-properties>
     </service>
 

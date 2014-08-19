@@ -1,9 +1,9 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
+import org.oasis_open.wemi.context.server.api.actions.Action;
+import org.oasis_open.wemi.context.server.api.actions.ActionType;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
-import org.oasis_open.wemi.context.server.api.consequences.Consequence;
-import org.oasis_open.wemi.context.server.api.consequences.ConsequenceType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 
 import java.util.Collection;
@@ -32,11 +32,11 @@ public class ParserHelper {
         }
     }
 
-    public static void resolveConsequenceType(DefinitionsService definitionsService, Consequence consequence) {
-        if (consequence.getConsequenceType() == null) {
-            ConsequenceType consequenceType = definitionsService.getConsequenceType(consequence.getConsequenceTypeId());
-            if (consequenceType != null) {
-                consequence.setConsequenceType(consequenceType);
+    public static void resolveActionType(DefinitionsService definitionsService, Action action) {
+        if (action.getActionType() == null) {
+            ActionType actionType = definitionsService.getActionType(action.getActionTypeId());
+            if (actionType != null) {
+                action.setActionType(actionType);
             }
         }
     }
