@@ -33,9 +33,9 @@ public interface PersistenceService {
 
     public boolean testMatch(Condition query, Item item);
 
-    public <T extends Item> List<T> query(Condition query, Class<T> clazz);
+    public <T extends Item> List<T> query(Condition query, String sortBy, Class<T> clazz);
 
-    public <T extends Item> List<T> query(String fieldName, String fieldValue, Class<T> clazz);
+    public <T extends Item> List<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz);
 
     public List<String> aggregateQuery(final String itemType, final Condition filter, final String aggregateOnField);
 
