@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
+import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
@@ -66,10 +67,23 @@ public class UserServiceImpl implements UserService {
         try {
             Condition condition = MapperHelper.getObjectMapper().readValue(conditionString, Condition.class);
             ParserHelper.resolveConditionType(definitionsService, condition);
-            if (condition.getConditionType().getTagIDs().contains("userCondition")) {
+            if (condition.getConditionTypeId().equals("userEventCondition")) {
+                final Map<String, Object> parameters = condition.getParameterValues();
+                parameters.put("target", session);
+                List<Event> matchingEvents = persistenceService.query(condition, "timeStamp", Event.class);
+
+                String occursIn = (String) condition.getParameterValues().get("eventOccurIn");
+                if (occursIn != null && occursIn.equals("last")) {
+                    //
+                }
+                Integer minimumEventCount = !parameters.containsKey("minimumEventCount") || "".equals(parameters.get("minimumEventCount")) ? 0 : Integer.parseInt((String) parameters.get("minimumEventCount"));
+                Integer maximumEventCount = !parameters.containsKey("maximumEventCount") || "".equals(parameters.get("maximumEventCount")) ? Integer.MAX_VALUE : Integer.parseInt((String) parameters.get("maximumEventCount"));
+
+                return matchingEvents.size() >= minimumEventCount && matchingEvents.size() <= maximumEventCount;
+            } else if (condition.getConditionType().getTagIDs().contains("userCondition")) {
                 return persistenceService.testMatch(condition, user);
             } else if (condition.getConditionType().getTagIDs().contains("sessionCondition")) {
-
+                return persistenceService.testMatch(condition, session);
             }
         } catch (IOException e) {
             e.printStackTrace();

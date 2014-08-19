@@ -1,0 +1,6 @@
+{
+    "id" : "userEventCondition",
+    "name" : "User event condition",
+    "description" : "Regroups all conditions applicable on events",
+    "parent" : "condition"
+}

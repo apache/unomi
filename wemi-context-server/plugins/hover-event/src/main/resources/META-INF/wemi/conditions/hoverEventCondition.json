@@ -3,7 +3,7 @@
     "name" : "Hover event",
     "description" : "A content has been hovered",
     "queryBuilderFilter" : "(queryBuilderId=hoverEventConditionESQueryBuilder)",
-    "tags" : [ "event" ],
+    "tags" : [ "event", "eventCondition", "userEventCondition" ],
     "template" : "/plugins/org.oasis-open.wemi.context-server-plugins-hover-event/conditions/hoverEventCondition.html",
     "parameters" : [
         {

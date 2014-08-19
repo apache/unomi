@@ -7,6 +7,7 @@ import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.percolate.PercolateResponse;
+import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
@@ -23,6 +24,7 @@ import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.bucket.filter.Filter;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.sort.SortOrder;
 import org.oasis_open.wemi.context.server.api.Item;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
@@ -32,7 +34,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
@@ -136,7 +137,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public <T extends Item> Collection<T> getAllItems(final Class<T> clazz) {
-        return query(QueryBuilders.matchAllQuery(), clazz);
+        return query(QueryBuilders.matchAllQuery(), null, clazz);
     }
 
     public <T extends Item> T load(final String itemId, final Class<T> clazz) {
@@ -149,7 +150,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                         // with parents
                         clazz.getField("PARENT_ITEM_TYPE");
 
-                        List<T> r = query(QueryBuilders.idsQuery(itemType).ids(itemId),clazz);
+                        List<T> r = query(QueryBuilders.idsQuery(itemType).ids(itemId), null, clazz);
                         if (r.size() > 0) {
                             return r.get(0);
                         }
@@ -341,7 +342,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
             FilterBuilder builder = FilterBuilders.andFilter(
                     FilterBuilders.idsFilter(itemType).ids(item.getItemId()),
                     conditionESQueryBuilderDispatcher.buildFilter(query));
-            return query(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), builder), clazz).size() > 0;
+            return query(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), builder), null, clazz).size() > 0;
         } catch (IllegalAccessException e) {
             logger.error("Error getting query for item=" + item, e);
         } catch (NoSuchFieldException e) {
@@ -350,15 +351,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         return false;
     }
 
-    public <T extends Item> List<T> query(final Condition query, final Class<T> clazz) {
-        return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), clazz);
+    public <T extends Item> List<T> query(final Condition query, String sortBy, final Class<T> clazz) {
+        return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz);
     }
 
-    public <T extends Item> List<T> query(final String fieldName, final String fieldValue, final Class<T> clazz) {
-        return query(QueryBuilders.termQuery(fieldName, fieldValue), clazz);
+    public <T extends Item> List<T> query(final String fieldName, final String fieldValue, String sortBy, final Class<T> clazz) {
+        return query(QueryBuilders.termQuery(fieldName, fieldValue), sortBy, clazz);
     }
 
-    public <T extends Item> List<T> query(final QueryBuilder query, final Class<T> clazz) {
+    public <T extends Item> List<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz) {
         return new InClassLoaderExecute<List<T>>() {
 
             @Override
@@ -366,12 +367,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                 List<T> results = new ArrayList<T>();
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
-                    SearchResponse response = client.prepareSearch(indexName)
+                    SearchRequestBuilder requestBuilder = client.prepareSearch(indexName)
                             .setTypes(itemType)
                             .setFetchSource(true)
                             .setSearchType(SearchType.QUERY_AND_FETCH)
                             .setQuery(query)
-                            .setFrom(0).setSize(60)
+                            .setFrom(0).setSize(60);
+                    if (sortBy != null) {
+                        requestBuilder = requestBuilder.addSort(sortBy, SortOrder.ASC);
+                    }
+                    SearchResponse response = requestBuilder
                             .execute()
                             .actionGet();
                     SearchHits searchHits = response.getHits();
