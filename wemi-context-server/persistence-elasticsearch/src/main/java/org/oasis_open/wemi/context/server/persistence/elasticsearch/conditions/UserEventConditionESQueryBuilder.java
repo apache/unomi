@@ -18,26 +18,20 @@ public class UserEventConditionESQueryBuilder implements ESQueryBuilder {
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
         String numberOfDays = (String) condition.getParameterValues().get("numberOfDays");
         String occursIn = (String) condition.getParameterValues().get("eventOccurIn");
-        final List<Condition> subConditions = (List<Condition>) condition.getParameterValues().get("eventSubConditions");
+        final Condition eventCondition = (Condition) condition.getParameterValues().get("eventCondition");
 
         Session targetSession = (Session) condition.getParameterValues().get("target");
         if (targetSession == null) {
-            List<FilterBuilder> l = new ArrayList<FilterBuilder>();
-            for (Condition sub : subConditions) {
-                if (numberOfDays != null) {
-                    l.add(FilterBuilders.rangeFilter("properties." + (String) sub.getParameterValues().get("generatedPropertyKey"))
-                            .gt("now-" + numberOfDays + "d")
-                            .lt("now"));
-                } else {
-                    l.add(FilterBuilders.existsFilter("properties." + (String) sub.getParameterValues().get("generatedPropertyKey")));
-                }
+            if (numberOfDays != null) {
+                return FilterBuilders.rangeFilter("properties." + (String) eventCondition.getParameterValues().get("generatedPropertyKey"))
+                        .gt("now-" + numberOfDays + "d")
+                        .lt("now");
+            } else {
+                return FilterBuilders.existsFilter("properties." + (String) eventCondition.getParameterValues().get("generatedPropertyKey"));
             }
-            return FilterBuilders.andFilter(l.toArray(new FilterBuilder[l.size()]));
         } else {
             List<FilterBuilder> l = new ArrayList<FilterBuilder>();
-            for (Condition sub : subConditions) {
-                l.add(dispatcher.buildFilter(sub));
-            }
+            l.add(dispatcher.buildFilter(eventCondition));
             if (occursIn != null && (occursIn.equals("session") || occursIn.equals("last"))) {
                 l.add(FilterBuilders.termFilter("sessionId", targetSession.getItemId()));
             } else {

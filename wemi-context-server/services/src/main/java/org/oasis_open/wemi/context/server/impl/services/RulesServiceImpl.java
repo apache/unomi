@@ -175,7 +175,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
         rootCondition.setConditionType(definitionsService.getConditionType("andCondition"));
         rootCondition.getParameterValues().put("subConditions", new ArrayList<Condition>());
         rule.setCondition(rootCondition);
-
+        rule.setActions(new ArrayList<Action>());
         setRule(ruleId, rule);
 
     }

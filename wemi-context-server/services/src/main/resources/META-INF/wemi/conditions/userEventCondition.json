@@ -12,9 +12,9 @@
             "choicelistInitializerFilter": ""
         },
         {
-            "id": "eventSubConditions",
+            "id": "eventCondition",
             "type": "Condition",
-            "multivalued": true,
+            "multivalued": false,
             "choicelistInitializerFilter": "(initializerId=condition)"
         }
     ]
