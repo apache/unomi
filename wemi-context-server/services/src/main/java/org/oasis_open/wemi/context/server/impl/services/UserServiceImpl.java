@@ -11,6 +11,7 @@ import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -74,8 +75,21 @@ public class UserServiceImpl implements UserService {
 
                 String occursIn = (String) condition.getParameterValues().get("eventOccurIn");
                 if (occursIn != null && occursIn.equals("last")) {
-                    //
+                    if (matchingEvents.size() == 0) {
+                        return false;
+                    }
+                    final Event lastEvent = matchingEvents.get(matchingEvents.size() - 1);
+                    String eventType = lastEvent.getEventType();
+                    List<Event> events = persistenceService.query("sessionId", session.getItemId(), "timeStamp", Event.class);
+                    Collections.reverse(events);
+                    for (Event event : events) {
+                        if (event.getEventType().equals(eventType)) {
+                            return event.getItemId().equals(lastEvent.getItemId());
+                        }
+                    }
+                    return false;
                 }
+
                 Integer minimumEventCount = !parameters.containsKey("minimumEventCount") || "".equals(parameters.get("minimumEventCount")) ? 0 : Integer.parseInt((String) parameters.get("minimumEventCount"));
                 Integer maximumEventCount = !parameters.containsKey("maximumEventCount") || "".equals(parameters.get("maximumEventCount")) ? Integer.MAX_VALUE : Integer.parseInt((String) parameters.get("maximumEventCount"));
 
