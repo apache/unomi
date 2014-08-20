@@ -35,6 +35,7 @@
     <bean id="rulesServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.RulesServiceImpl" init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService" />
         <property name="definitionsService" ref="definitionsServiceImpl" />
+        <property name="userService" ref="userServiceImpl" />
         <property name="actionExecutorDispatcher" ref="actionExecutorDispatcherImpl" />
         <property name="bundleContext" ref="blueprintBundleContext" />
     </bean>
@@ -56,30 +57,38 @@
 
     <!-- Choice list initializers -->
     
-    <bean id="comparisonOperatorChoiceListInitializerImpl" class="org.oasis_open.wemi.context.server.impl.conditions.initializers.ComparisonOperatorChoiceListInitializer">        
-    </bean>
-    <service id="comparisonOperatorChoiceListInitializer" ref="comparisonOperatorChoiceListInitializerImpl" auto-export="interfaces">
+    <service auto-export="interfaces">
         <service-properties>
             <entry key="initializerId" value="comparisonOperator"/>
         </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.conditions.initializers.ComparisonOperatorChoiceListInitializer"/>
     </service>
 
-    <bean id="eventPropertyChoiceListInitializerImpl" class="org.oasis_open.wemi.context.server.impl.conditions.initializers.EventPropertyChoiceListInitializer">
-        <property name="eventService" ref="eventServiceImpl" />
-    </bean>
-    <service id="eventPropertyChoiceListInitializer" ref="eventPropertyChoiceListInitializerImpl" auto-export="interfaces">
+    <service auto-export="interfaces">
         <service-properties>
             <entry key="initializerId" value="eventProperty"/>
         </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.conditions.initializers.EventPropertyChoiceListInitializer">
+            <property name="eventService" ref="eventServiceImpl" />
+        </bean>
     </service>
 
-    <bean id="userPropertyChoiceListInitializerImpl" class="org.oasis_open.wemi.context.server.impl.conditions.initializers.UserPropertyChoiceListInitializer">
-        <property name="userService" ref="userServiceImpl" />
-    </bean>
-    <service id="userPropertyChoiceListInitializer" ref="userPropertyChoiceListInitializerImpl" auto-export="interfaces">
+    <service auto-export="interfaces">
         <service-properties>
             <entry key="initializerId" value="userProperty"/>
         </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.conditions.initializers.UserPropertyChoiceListInitializer">
+            <property name="userService" ref="userServiceImpl" />
+        </bean>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="initializerId" value="segments"/>
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.conditions.initializers.SegmentsChoiceListInitializer">
+            <property name="segmentService" ref="segmentServiceImpl" />
+        </bean>
     </service>
 
     <!-- Action executors -->

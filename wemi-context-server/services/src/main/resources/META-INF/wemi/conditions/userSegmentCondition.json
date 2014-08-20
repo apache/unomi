@@ -2,14 +2,14 @@
     "id": "userSegmentCondition",
     "queryBuilderFilter": "(queryBuilderId=userSegmentConditionESQueryBuilder)",
     "tags": [ "demographic", "userCondition" ],
-    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/segmentCondition.html",
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/userSegmentCondition.html",
     "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
     "parameters": [
         {
             "id": "segments",
             "type": "string",
             "multivalued": true,
-            "choicelistInitializerFilter": ""
+            "choicelistInitializerFilter": "(initializerId=segments)"
         },
         {
             "id": "matchType",

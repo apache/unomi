@@ -1,0 +1,14 @@
+<div class="perso">
+    <div class="block">
+        <div class="remove-condition">
+            <a href="#" ng-click="onRemove(parentValue,parentIndex)"><i class="icon-remove"></i></a>
+        </div>
+        Copy request header
+        &nbsp;
+        <input ng-model="ref.parameterValues.requestHeaderName" type="text"/>
+        to user property
+        &nbsp;
+        <select ng-model="ref.parameterValues.userPropertyName" ng-options="parameter.id as parameter.name for parameter in getActionParameterChoiceListValues(ref, 'userPropertyName')" class="form-control">
+        </select>
+    </div>
+</div>

@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.actions.Action;
@@ -9,6 +10,7 @@ import org.oasis_open.wemi.context.server.api.rules.Rule;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.EventListenerService;
 import org.oasis_open.wemi.context.server.api.services.RulesService;
+import org.oasis_open.wemi.context.server.api.services.UserService;
 import org.oasis_open.wemi.context.server.impl.actions.ActionExecutorDispatcher;
 import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
@@ -34,6 +36,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
 
     private DefinitionsService definitionsService;
 
+    private UserService userService;
+
     private ActionExecutorDispatcher actionExecutorDispatcher;
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -46,6 +50,10 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
+    }
+
+    public void setUserService(UserService userService) {
+        this.userService = userService;
     }
 
     public void setActionExecutorDispatcher(ActionExecutorDispatcher actionExecutorDispatcher) {
@@ -102,6 +110,20 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
             for (String matchingQuery : matchingQueries) {
                 Rule rule = getRule(matchingQuery);
                 if (rule != null) {
+                    ObjectMapper mapper = MapperHelper.getObjectMapper();
+                    try {
+                        Condition userCondition = extractConditionByTag(rule.getCondition(), "userCondition");
+                        if (userCondition != null && !userService.matchCondition(mapper.writeValueAsString(userCondition),event.getUser(), event.getSession())) {
+                            continue;
+                        }
+                        Condition sessionCondition = extractConditionByTag(rule.getCondition(), "sessionCondition");
+                        if (sessionCondition != null && !userService.matchCondition(mapper.writeValueAsString(sessionCondition), event.getUser(), event.getSession())) {
+                            continue;
+                        }
+                    } catch (JsonProcessingException e) {
+                        e.printStackTrace();
+                    }
+
                     matchedRules.add(rule);
                 }
             }
@@ -151,22 +173,67 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
     public Rule getRule(String ruleId) {
         Rule rule = persistenceService.load(ruleId, Rule.class);
         if (rule != null) {
-            ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
-            for (Action action : rule.getActions()) {
-                ParserHelper.resolveActionType(definitionsService, action);
+            if (rule.getCondition() != null) {
+                ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
+            }
+            if (rule.getActions() != null) {
+                for (Action action : rule.getActions()) {
+                    ParserHelper.resolveActionType(definitionsService, action);
+                }
             }
         }
         return rule;
     }
 
     public void setRule(String ruleId, Rule rule) {
-        ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
-        for (Action action : rule.getActions()) {
-            ParserHelper.resolveActionType(definitionsService, action);
+        Condition condition = rule.getCondition();
+        if (condition != null) {
+            ParserHelper.resolveConditionType(definitionsService, condition);
+            Condition eventCondition = extractConditionByTag(condition, "eventCondition");
+            if (eventCondition != null) {
+                persistenceService.saveQuery(ruleId, eventCondition);
+            }
         }
-        persistenceService.saveQuery(ruleId, rule.getCondition());
+        if (rule.getActions() != null) {
+            for (Action action : rule.getActions()) {
+                ParserHelper.resolveActionType(definitionsService, action);
+            }
+        }
         persistenceService.save(rule);
     }
+
+    private Condition extractConditionByTag(Condition rootCondition, String conditionTag) {
+        if (rootCondition.getConditionType().getTagIDs().contains(conditionTag)) {
+            return rootCondition;
+        } else if (rootCondition.getParameterValues().containsKey("subConditions")) {
+            List<Condition> subConditions = (List<Condition>) rootCondition.getParameterValues().get("subConditions");
+            List<Condition> matchingConditions = new ArrayList<Condition>();
+            for (Condition condition : subConditions) {
+                Condition c = extractConditionByTag(condition, conditionTag);
+                if (c != null) {
+                    matchingConditions.add(c);
+                }
+            }
+            if (matchingConditions.size() == 0) {
+                return null;
+            } else if (matchingConditions.equals(subConditions)) {
+                return rootCondition;
+            } else if (rootCondition.getConditionTypeId().equals("andCondition")) {
+                if (matchingConditions.size() == 1) {
+                    return matchingConditions.get(0);
+                } else if (rootCondition.getConditionTypeId().equals("andCondition")) {
+                    Condition res = new Condition();
+                    res.setConditionType(definitionsService.getConditionType("andCondition"));
+                    res.getParameterValues().put("subConditions", matchingConditions);
+                    return res;
+                }
+            }
+            throw new IllegalArgumentException();
+        } else {
+            return null;
+        }
+    }
+
 
     public void createRule(String ruleId, String name, String description) {
         Metadata metadata = new Metadata(ruleId, name, description);

@@ -1,0 +1,19 @@
+<div class="perso">
+    <div class="block">
+        <div class="remove-condition">
+            <a href="#" ng-click="onRemove(parentValue,parentIndex)"><i class="icon-remove"></i></a>
+        </div>
+        <span translate>USER_SEGMENTS_LABEL</span>
+        &nbsp;
+        <select ng-model="ref.parameterValues.matchType" class="form-control">
+            <option value="all"><span translate>ALL_SEGMENTS_MATCH</span></option>
+            <option value="some"><span translate>SOME_SEGMENTS_MATCH</span></option>
+            <option value="none"><span translate>NONE_SEGMENTS_MATCH</span></option>
+        </select>
+        &nbsp;
+        <select ng-model="ref.parameterValues.segments" multiple="true"
+                ng-options="parameter.id as parameter.name for parameter in getConditionParameterChoiceListValues(ref, 'segments')"
+                class="form-control">
+        </select>
+    </div>
+</div>
