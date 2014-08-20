@@ -1,6 +1,8 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.oasis_open.wemi.context.server.api.Event;
+import org.oasis_open.wemi.context.server.api.Session;
+import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.EventListenerService;
 import org.oasis_open.wemi.context.server.api.services.EventService;
 import org.oasis_open.wemi.context.server.api.services.UserService;
@@ -45,7 +47,11 @@ public class EventServiceImpl implements EventService {
         persistenceService.save(event);
 
         boolean changed = false;
-        if (event.getUser() != null) {
+
+        final User user = event.getUser();
+        final Session session = event.getSession();
+
+        if (user != null) {
             for (EventListenerService eventListenerService : eventListeners) {
                 if (eventListenerService.canHandle(event)) {
                     changed |= eventListenerService.onEvent(event);
@@ -53,14 +59,16 @@ public class EventServiceImpl implements EventService {
             }
 
             if (changed) {
-                Event userUpdated = new Event("userUpdated", event.getSession(), event.getUser());
+                Event userUpdated = new Event("userUpdated", session, user);
                 userUpdated.getAttributes().putAll(event.getAttributes());
                 save(userUpdated);
 
-                userService.save(event.getUser());
-                if (event.getSession() != null) {
-                    userService.saveSession(event.getSession());
-                }
+                userService.save(user);
+            }
+
+            if (session != null) {
+                session.setLastEventDate(event.getTimeStamp());
+                userService.saveSession(session);
             }
         }
         return changed;
