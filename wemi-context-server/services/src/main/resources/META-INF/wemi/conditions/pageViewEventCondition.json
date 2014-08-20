@@ -1,17 +1,18 @@
 {
-    "id" : "pageViewEventCondition",
-    "name" : "Page view event",
-    "description" : "A page has been viewed",
-    "queryBuilderFilter" : "(queryBuilderId=pageViewEventConditionESQueryBuilder)",
-    "tags" : [ "event", "eventCondition", "userEventCondition" ],
+    "id": "pageViewEventCondition",
+    "name": "Page view event",
+    "description": "A page has been viewed",
+    "queryBuilderFilter": "(queryBuilderId=pageViewEventConditionESQueryBuilder)",
+    "tags": [ "event", "eventCondition", "userEventCondition" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/pageViewEventCondition.html",
-    "parameters" : [
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
+    "parameters": [
         {
-            "id" : "url",
-            "name" : "Page URL",
-            "description" : "Page URL",
-            "type" : "string",
-            "multivalued" : false,
+            "id": "url",
+            "name": "Page URL",
+            "description": "Page URL",
+            "type": "string",
+            "multivalued": false,
             "choicelistInitializerFilter": ""
         }
     ]

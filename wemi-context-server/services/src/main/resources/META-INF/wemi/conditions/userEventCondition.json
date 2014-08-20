@@ -1,26 +1,27 @@
 {
-    "id" : "userEventCondition",
-    "name" : "User event",
-    "description" : "The user did an event",
-    "queryBuilderFilter" : "(queryBuilderId=userEventConditionESQueryBuilder)",
-    "tags" : [ "demographic", "userCondition" ],
+    "id": "userEventCondition",
+    "name": "User event",
+    "description": "The user did an event",
+    "queryBuilderFilter": "(queryBuilderId=userEventConditionESQueryBuilder)",
+    "tags": [ "demographic", "userCondition" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/userEventCondition.html",
-    "parameters" : [
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
+    "parameters": [
         {
-            "id" : "numberOfDays",
-            "name" : "Number of days",
-            "description" : "Number of days",
-            "type" : "string",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : ""
+            "id": "numberOfDays",
+            "name": "Number of days",
+            "description": "Number of days",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
         },
         {
-            "id" : "subConditions",
-            "name" : "Event conditions",
-            "description" : "Condition on an event",
-            "type" : "Condition",
-            "multivalued" : true,
-            "choicelistInitializerFilter" : "(initializerId=condition)"
+            "id": "subConditions",
+            "name": "Event conditions",
+            "description": "Condition on an event",
+            "type": "Condition",
+            "multivalued": true,
+            "choicelistInitializerFilter": "(initializerId=condition)"
         }
     ]
 }

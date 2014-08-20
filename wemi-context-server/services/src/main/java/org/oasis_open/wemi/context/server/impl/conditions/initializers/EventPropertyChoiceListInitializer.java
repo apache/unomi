@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * @todo we should integrate resource bundles for property names (and possibly add descriptions to choice list values)
+ *
  */
 public class EventPropertyChoiceListInitializer implements ChoiceListInitializer {
 
@@ -20,9 +20,10 @@ public class EventPropertyChoiceListInitializer implements ChoiceListInitializer
 
     public List<ChoiceListValue> getValues(Object context) {
         List<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
-        List<String> userProperties = eventService.getEventProperties();
-        for (String userProperty : userProperties) {
-            choiceListValues.add(new ChoiceListValue(userProperty, userProperty));
+        List<String> eventProperties = eventService.getEventProperties();
+        for (String eventProperty : eventProperties) {
+            String resourceKey = "USER_" + eventProperty.toUpperCase().replaceAll("\\.", "_") + "_LABEL";
+            choiceListValues.add(new ChoiceListValue(eventProperty, resourceKey));
         }
         return choiceListValues;
     }

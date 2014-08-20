@@ -1,10 +1,11 @@
 {
-    "id" : "evaluateUserSegmentsAction",
-    "name" : "Evaluate user segments",
-    "description" : "Evaluate user segments",
-    "serviceFilter" : "(actionExecutorId=evaluateUserSegments)",
-    "tags" : [ "event" ],
+    "id": "evaluateUserSegmentsAction",
+    "name": "Evaluate user segments",
+    "description": "Evaluate user segments",
+    "serviceFilter": "(actionExecutorId=evaluateUserSegments)",
+    "tags": [ "event" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-services/actions/evaluateUserSegmentsAction.html",
-    "parameters" : [
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
+    "parameters": [
     ]
 }

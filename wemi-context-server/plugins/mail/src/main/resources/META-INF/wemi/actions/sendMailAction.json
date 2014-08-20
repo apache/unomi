@@ -5,6 +5,7 @@
     "serviceFilter" : "(actionExecutorId=sendMail)",
     "tags" : [ "event" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-plugins-mail/actions/sendMailAction.html",
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-plugins-mail/messages",
     "parameters" : [
         {
             "id" : "from",

@@ -1,0 +1,22 @@
+{
+    "AND_LABEL": "AND",
+    "DRAG_AND_DROP_CONDITION": "Drag and drop a new condition here",
+    "USER_LABEL": "User",
+    "IS_LABEL": "is",
+    "EQUALS_LABEL": "equals",
+    "NOT_EQUALS_LABEL": "doesn't equal",
+    "LESS_THAN_LABEL": "less than",
+    "GREATER_THAN_LABEL": "greater than",
+    "LESS_THAN_OR_EQUAL_TO_LABEL": "less than or equal to",
+    "GREATER_THAN_OR_EQUAL_TO_LABEL": "greater than or equal to",
+    "STARTS_WITH_LABEL": "starts with",
+    "ENDS_WITH_LABEL": "ends with",
+    "MATCHES_REGULAR_EXPRESSION_LABEL": "matches regular expression",
+    "CONTAINS_LABEL": "contains",
+    "PAGE_WITH_URL_LABEL": "Page with URL",
+    "HAS_BEEN_VIEWED_LABEL": "has been viewed",
+    "SET_USER_PROPERTY_LABEL": "Set user property",
+    "TO_LABEL": "to",
+    "USER_PROPERTIES_AGE_LABEL": "age",
+    "USER_PROPERTIES_INCOME_LABEL": "income"
+}

@@ -1,26 +1,27 @@
 {
-    "id" : "eventToUserPropertyAction",
-    "name" : "copy event property to user property",
-    "description" : "Copies an event property to a user property",
-    "serviceFilter" : "(actionExecutorId=eventToUserProperty)",
-    "tags" : [ "event" ],
+    "id": "eventToUserPropertyAction",
+    "name": "copy event property to user property",
+    "description": "Copies an event property to a user property",
+    "serviceFilter": "(actionExecutorId=eventToUserProperty)",
+    "tags": [ "event" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-services/actions/eventToUserPropertyAction.html",
-    "parameters" : [
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
+    "parameters": [
         {
-            "id" : "eventPropertyName",
-            "name" : "Event property name",
-            "description" : "The name of the event property to read",
-            "type" : "string",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : "(initializerId=eventProperty)"
+            "id": "eventPropertyName",
+            "name": "Event property name",
+            "description": "The name of the event property to read",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": "(initializerId=eventProperty)"
         },
         {
-            "id" : "userPropertyName",
-            "name" : "User property name",
-            "description" : "The name of the user property to write",
-            "type" : "string",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : "(initializerId=userProperty)"
+            "id": "userPropertyName",
+            "name": "User property name",
+            "description": "The name of the user property to write",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": "(initializerId=userProperty)"
         }
     ]
 }

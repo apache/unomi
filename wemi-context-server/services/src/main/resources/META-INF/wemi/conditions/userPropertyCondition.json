@@ -1,34 +1,35 @@
 {
-    "id" : "userPropertyCondition",
-    "name" : "User property",
-    "description" : "A condition on a user property",
-    "queryBuilderFilter" : "(queryBuilderId=userPropertyConditionESQueryBuilder)",
-    "tags" : [ "demographic", "userCondition" ],
+    "id": "userPropertyCondition",
+    "name": "User property",
+    "description": "A condition on a user property",
+    "queryBuilderFilter": "(queryBuilderId=userPropertyConditionESQueryBuilder)",
+    "tags": [ "demographic", "userCondition" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/userPropertyCondition.html",
-    "parameters" : [
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
+    "parameters": [
         {
-            "id" : "propertyName",
-            "name" : "Property name",
-            "description" : "The name of the user property to match",
-            "type" : "string",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : "(initializerId=userProperty)"
+            "id": "propertyName",
+            "name": "Property name",
+            "description": "The name of the user property to match",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": "(initializerId=userProperty)"
         },
         {
-            "id" : "comparisonOperator",
-            "name" : "Comparison operator",
-            "description" : "The operator to use for the user property comparison",
-            "type" : "comparisonOperator",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : "(initializerId=comparisonOperator)"
+            "id": "comparisonOperator",
+            "name": "Comparison operator",
+            "description": "The operator to use for the user property comparison",
+            "type": "comparisonOperator",
+            "multivalued": false,
+            "choicelistInitializerFilter": "(initializerId=comparisonOperator)"
         },
         {
-            "id" : "propertyValue",
-            "name" : "Property value",
-            "description" : "The value of the user property to match",
-            "type" : "string",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : ""
+            "id": "propertyValue",
+            "name": "Property value",
+            "description": "The value of the user property to match",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
         }
     ]
 }

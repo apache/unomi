@@ -5,6 +5,7 @@
     "queryBuilderFilter" : "(queryBuilderId=hoverEventConditionESQueryBuilder)",
     "tags" : [ "event", "eventCondition", "userEventCondition" ],
     "template" : "/plugins/org.oasis-open.wemi.context-server-plugins-hover-event/conditions/hoverEventCondition.html",
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-plugins-hover-event/messages",
     "parameters" : [
         {
             "id" : "contentName",

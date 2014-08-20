@@ -16,6 +16,7 @@ public class ConditionType {
     String name;
     String description;
     String template;
+    String resourceBundle;
     String queryBuilderFilter;
     Set<Tag> tags = new TreeSet<Tag>();
     Set<String> tagIDs = new LinkedHashSet<String>();
@@ -58,6 +59,14 @@ public class ConditionType {
         this.template = template;
     }
 
+    public String getResourceBundle() {
+        return resourceBundle;
+    }
+
+    public void setResourceBundle(String resourceBundle) {
+        this.resourceBundle = resourceBundle;
+    }
+
     public String getQueryBuilderFilter() {
         return queryBuilderFilter;
     }
@@ -66,7 +75,7 @@ public class ConditionType {
         this.queryBuilderFilter = queryBuilderFilter;
     }
 
-    @XmlElement(name="tags")
+    @XmlElement(name = "tags")
     public Set<String> getTagIDs() {
         return tagIDs;
     }
@@ -84,7 +93,7 @@ public class ConditionType {
         this.tags = tags;
     }
 
-    @XmlElement(name="parameters")
+    @XmlElement(name = "parameters")
     public List<Parameter> getParameters() {
         return parameters;
     }

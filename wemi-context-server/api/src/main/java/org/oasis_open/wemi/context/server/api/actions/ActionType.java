@@ -16,6 +16,7 @@ public class ActionType {
     Set<Tag> tags = new TreeSet<Tag>();
     Set<String> tagIds = new LinkedHashSet<String>();
     String template;
+    String resourceBundle;
     List<Parameter> parameters = new ArrayList<Parameter>();
 
     public ActionType() {
@@ -54,6 +55,14 @@ public class ActionType {
         this.template = template;
     }
 
+    public String getResourceBundle() {
+        return resourceBundle;
+    }
+
+    public void setResourceBundle(String resourceBundle) {
+        this.resourceBundle = resourceBundle;
+    }
+
     public String getServiceFilter() {
         return serviceFilter;
     }
@@ -62,7 +71,7 @@ public class ActionType {
         this.serviceFilter = serviceFilter;
     }
 
-    @XmlElement(name="tags")
+    @XmlElement(name = "tags")
     public Set<String> getTagIds() {
         return tagIds;
     }

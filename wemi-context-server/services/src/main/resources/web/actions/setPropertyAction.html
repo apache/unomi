@@ -3,12 +3,14 @@
         <div class="remove-condition">
             <a href="#" ng-click="onRemove(parentValue,parentIndex)"><i class="icon-remove"></i></a>
         </div>
-    Set user property
-    &nbsp;
-    <select ng-model="ref.parameterValues.propertyName" ng-options="parameter.id as parameter.name for parameter in getActionParameterChoiceListValues(ref, 'propertyName')" class="form-control">
-    </select>
-    to
-    &nbsp;
+        <span translate>SET_USER_PROPERTY_LABEL</span>
+        &nbsp;
+        <select ng-model="ref.parameterValues.propertyName"
+                ng-options="parameter.id as parameter.name | translate for parameter in getActionParameterChoiceListValues(ref, 'propertyName')"
+                class="form-control">
+        </select>
+        <span translate>TO_LABEL</span>
+        &nbsp;
     <input ng-model="ref.parameterValues.propertyValue" type="text"/>
     </div>
 </div>
