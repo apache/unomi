@@ -1,7 +1,5 @@
 {
     "id": "allEventToUserPropertiesAction",
-    "name": "copy all event properties to user properties",
-    "description": "Copies all event properties directly to user properties",
     "serviceFilter": "(actionExecutorId=allEventToUserProperties)",
     "tags": [ "event" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-services/actions/allEventToUserPropertiesAction.html",

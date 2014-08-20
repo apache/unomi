@@ -1,7 +1,5 @@
 {
     "id": "orCondition",
-    "name": "OR",
-    "description": "Logical OR operator",
     "queryBuilderFilter": "(queryBuilderId=orConditionESQueryBuilder)",
     "tags": [ "logical" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/orCondition.html",
@@ -9,8 +7,6 @@
     "parameters": [
         {
             "id": "subConditions",
-            "name": "Sub conditions",
-            "description": "Sub conditions that will be evaluated using the OR operator",
             "type": "Condition",
             "multivalued": true,
             "choicelistInitializerFilter": "(initializerId=condition)"

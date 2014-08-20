@@ -1,7 +1,5 @@
 {
     "id": "userSegmentCondition",
-    "name": "User segment",
-    "description": "The user is in a segment",
     "queryBuilderFilter": "(queryBuilderId=userSegmentConditionESQueryBuilder)",
     "tags": [ "demographic", "userCondition" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/segmentCondition.html",
@@ -9,16 +7,12 @@
     "parameters": [
         {
             "id": "segments",
-            "name": "Segments",
-            "description": "Segment names",
             "type": "string",
             "multivalued": true,
             "choicelistInitializerFilter": ""
         },
         {
             "id": "matchType",
-            "name": "Match tpye",
-            "description": "Match type",
             "type": "string",
             "multivalued": false,
             "choicelistInitializerFilter": ""

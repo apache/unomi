@@ -1,23 +1,18 @@
 {
     "id" : "sessionDurationCondition",
-    "name" : "Session duration",
-    "description" : "The session duration",
     "queryBuilderFilter" : "(queryBuilderId=sessionDurationConditionESQueryBuilder)",
     "tags" : [ "demographic", "sessionCondition" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/sessionDurationCondition.html",
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
     "parameters" : [
         {
             "id" : "minimumDuration",
-            "name" : "Session minimum duration in seconds",
-            "description" : "Session minimum  in seconds",
             "type" : "string",
             "multivalued" : false,
             "choicelistInitializerFilter" : ""
         },
         {
             "id" : "maximumDuration",
-            "name" : "Session maximum duration in seconds",
-            "description" : "Session maximum duration in seconds",
             "type" : "string",
             "multivalued" : false,
             "choicelistInitializerFilter" : ""

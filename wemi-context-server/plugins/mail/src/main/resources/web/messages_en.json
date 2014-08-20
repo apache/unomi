@@ -1,0 +1,23 @@
+{
+    "SENDMAILACTION_NAME_LABEL": "Send mail",
+    "SENDMAILACTION_DESCRIPTION_LABEL": "Sends an email using a mail template",
+
+    "FROM_PARAMETER_NAME_LABEL": "From email address",
+    "FROM_PARAMETER_DESCRIPTION_LABEL": "The e-mail address of the sender",
+    "TO_PARAMETER_NAME_LABEL": "Destination e-mail address",
+    "TO_PARAMETER_DESCRIPTION_LABEL": "The e-mail address of the destination",
+    "CC_PARAMETER_NAME_LABEL": "Carbon copy",
+    "CC_PARAMETER_DESCRIPTION_LABEL": "The email addresses to send carbon copies to",
+    "BCC_PARAMETER_NAME_LABEL": "Blind carbon copy",
+    "BCC_PARAMETER_DESCRIPTION_LABEL": "The email addresses to send blind carbon copies to",
+    "SUBJECT_PARAMETER_NAME_LABEL": "Subject",
+    "SUBJECT_PARAMETER_DESCRIPTION_LABEL": "The subject of the email",
+    "TEMPLATE_PARAMETER_NAME_LABEL": "Mail template",
+    "TEMPLATE_PARAMETER_DESCRIPTION_LABEL": "The mail template content",
+
+    "FROM_LABEL": "From",
+    "TO_LABEL": "To",
+    "SUBJECT_LABEL": "Subject",
+    "MAIL_TEMPLATE_LABEL": "Mail template"
+
+}

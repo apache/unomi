@@ -1,7 +1,5 @@
 {
-    "id": "matchAll",
-    "name": "Match all",
-    "description": "Match all",
+    "id": "matchAllCondition",
     "queryBuilderFilter": "(queryBuilderId=matchAllConditionESQueryBuilder)",
     "tags": [ "logical" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/matchAll.html",

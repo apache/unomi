@@ -1,24 +1,18 @@
 {
     "id": "setPropertyAction",
-    "name": "set property",
-    "description": "Set a property",
     "serviceFilter": "(actionExecutorId=setProperty)",
     "tags": [ "demographic" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-services/actions/setPropertyAction.html",
     "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
     "parameters": [
         {
-            "id": "propertyName",
-            "name": "Property name",
-            "description": "The name of the user property to set",
+            "id": "setPropertyName",
             "type": "string",
             "multivalued": false,
             "choicelistInitializerFilter": "(initializerId=userProperty)"
         },
         {
-            "id": "propertyValue",
-            "name": "Property value",
-            "description": "The value of the user property to set",
+            "id": "setPropertyValue",
             "type": "string",
             "multivalued": false,
             "choicelistInitializerFilter": ""

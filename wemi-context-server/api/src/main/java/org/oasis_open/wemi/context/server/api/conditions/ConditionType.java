@@ -13,8 +13,8 @@ import java.util.*;
 @XmlRootElement
 public class ConditionType {
     String id;
-    String name;
-    String description;
+    String nameKey;
+    String descriptionKey;
     String template;
     String resourceBundle;
     String queryBuilderFilter;
@@ -26,29 +26,35 @@ public class ConditionType {
     public ConditionType() {
     }
 
-    public ConditionType(String id, String name) {
+    public ConditionType(String id, String nameKey) {
         this.id = id;
-        this.name = name;
+        this.nameKey = nameKey;
     }
 
     public String getId() {
         return id;
     }
 
-    public String getName() {
-        return name;
+    public String getNameKey() {
+        if (nameKey == null) {
+            nameKey = id.toUpperCase().replaceAll("\\.", "_") + "_NAME_LABEL";
+        }
+        return nameKey;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setNameKey(String nameKey) {
+        this.nameKey = nameKey;
     }
 
-    public String getDescription() {
-        return description;
+    public String getDescriptionKey() {
+        if (descriptionKey == null) {
+            descriptionKey = id.toUpperCase().replaceAll("\\.", "_") + "_DESCRIPTION_LABEL";
+        }
+        return descriptionKey;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
+    public void setDescriptionKey(String descriptionKey) {
+        this.descriptionKey = descriptionKey;
     }
 
     public String getTemplate() {

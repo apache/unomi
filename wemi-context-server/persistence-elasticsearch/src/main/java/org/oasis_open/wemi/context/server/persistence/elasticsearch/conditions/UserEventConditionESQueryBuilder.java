@@ -2,7 +2,6 @@ package org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions;
 
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
-import org.elasticsearch.index.query.RangeFilterBuilder;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
@@ -19,7 +18,7 @@ public class UserEventConditionESQueryBuilder implements ESQueryBuilder {
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
         String numberOfDays = (String) condition.getParameterValues().get("numberOfDays");
         String occursIn = (String) condition.getParameterValues().get("eventOccurIn");
-        final List<Condition> subConditions = (List<Condition>) condition.getParameterValues().get("subConditions");
+        final List<Condition> subConditions = (List<Condition>) condition.getParameterValues().get("eventSubConditions");
 
         Session targetSession = (Session) condition.getParameterValues().get("target");
         if (targetSession == null) {

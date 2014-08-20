@@ -1,59 +1,45 @@
 {
-    "id" : "sendMailAction",
-    "name" : "send an e-mail",
-    "description" : "Sends an email",
-    "serviceFilter" : "(actionExecutorId=sendMail)",
-    "tags" : [ "event" ],
+    "id": "sendMailAction",
+    "serviceFilter": "(actionExecutorId=sendMail)",
+    "tags": [ "event" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-plugins-mail/actions/sendMailAction.html",
     "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-plugins-mail/messages",
-    "parameters" : [
+    "parameters": [
         {
-            "id" : "from",
-            "name" : "From e-mail address",
-            "description" : "The e-mail address of the sender",
-            "type" : "string",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : ""
+            "id": "from",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
         },
         {
-            "id" : "to",
-            "name" : "Destination e-mail address",
-            "description" : "The e-mail address of the destination",
-            "type" : "string",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : "(initializerId=userProperty)"
+            "id": "to",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": "(initializerId=userProperty)"
         },
         {
-            "id" : "cc",
-            "name" : "Carbon copy",
-            "description" : "",
-            "type" : "string",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : ""
+            "id": "cc",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
         },
         {
-            "id" : "bcc",
-            "name" : "",
-            "description" : "",
-            "type" : "string",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : ""
+            "id": "bcc",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
         },
         {
-            "id" : "subject",
-            "name" : "Mail subject",
-            "description" : "",
-            "type" : "string",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : ""
+            "id": "subject",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
         },
         {
-            "id" : "template",
-            "name" : "",
-            "description" : "",
-            "type" : "string",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : ""
+            "id": "template",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
         }
 
     ]

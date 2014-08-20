@@ -1,0 +1,28 @@
+{
+    "REQUESTHEADERTOUSERPROPERTYACTION_NAME_LABEL": "copy a request header to user property",
+    "REQUESTHEADERTOUSERPROPERTYACTION_DESCRIPTION_LABEL": "Copies request header to a user property",
+
+    "REQUESTPARAMETERTOUSERPROPERTYACTION_NAME_LABEL": "copy a request parameter to user property",
+    "REQUESTPARAMETERTOUSERPROPERTYACTION_DESCRIPTION_LABEL": "Copies request parameter to a user property",
+
+    "SETREMOTEHOSTINFOACTION_NAME_LABEL": "copy client host name / ip",
+    "SETREMOTEHOSTINFOACTION_DESCRIPTION_LABEL": "Copies the client's host name or ip address into the session",
+
+    "REQUESTHEADERNAME_PARAMETER_NAME_LABEL": "Request header name",
+    "REQUESTHEADERNAME_PARAMETER_DESCRIPTION_LABEL": "The name of the request header to read",
+
+    "USERPROPERTYNAME_PARAMETER_NAME_LABEL": "User property name",
+    "USERPROPERTYNAME_PARAMETER_DESCRIPTION_LABEL": "The name of the user property to write to",
+
+    "SESSIONPROPERTYNAME_PARAMETER_NAME_LABEL": "Session property name",
+    "SESSIONPROPERTYNAME_PARAMETER_DESCRIPTION_LABEL": "The name of the session property to write to",
+
+    "STOREASLIST_PARAMETER_NAME_LABEL": "Store as a list ?",
+    "STOREASLIST_PARAMETER_DESCRIPTION_LABEL": "If true, the values will be stored in a list",
+
+    "REQUESTPARAMETERNAME_PARAMETER_NAME_LABEL": "Request parameter name",
+    "REQUESTPARAMETERNAME_PARAMETER_DESCRIPTION_LABEL": "The name of the request parameter to read",
+
+    "COPY_REQUEST_PARAMETER_LABEL": "Copy request parameter",
+    "TO_USER_PROPERTY_LABEL": "to user property"
+}

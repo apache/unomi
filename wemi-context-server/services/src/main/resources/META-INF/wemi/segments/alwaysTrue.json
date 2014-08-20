@@ -6,6 +6,6 @@
     },
     "condition": {
         "parameterValues": {},
-        "type": "matchAll"
+        "type": "matchAllCondition"
     }
 }

@@ -1,7 +1,5 @@
 {
     "id": "sessionCreatedEventCondition",
-    "name": "Session created event",
-    "description": "A user session has been created",
     "queryBuilderFilter": "(queryBuilderId=sessionCreatedEventConditionESQueryBuilder)",
     "tags": [ "event", "eventCondition" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/sessionCreatedEventCondition.html",

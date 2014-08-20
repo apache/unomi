@@ -14,8 +14,8 @@ import java.util.List;
 public class Parameter {
 
     String id;
-    String name;
-    String description;
+    String nameKey;
+    String descriptionKey;
     String type;
     boolean multivalued = false;
     String choicelistInitializerFilter;
@@ -24,10 +24,10 @@ public class Parameter {
     public Parameter() {
     }
 
-    public Parameter(String id, String name, String description, String type, boolean multivalued, String choicelistInitializerFilter) {
+    public Parameter(String id, String nameKey, String description, String type, boolean multivalued, String choicelistInitializerFilter) {
         this.id = id;
-        this.name = name;
-        this.description = description;
+        this.nameKey = nameKey;
+        this.descriptionKey = description;
         this.type = type;
         this.multivalued = multivalued;
         this.choicelistInitializerFilter = choicelistInitializerFilter;
@@ -37,12 +37,18 @@ public class Parameter {
         return id;
     }
 
-    public String getName() {
-        return name;
+    public String getNameKey() {
+        if (nameKey == null) {
+            nameKey = id.toUpperCase().replaceAll("\\.", "_") + "_PARAMETER_NAME_LABEL";
+        }
+        return nameKey;
     }
 
-    public String getDescription() {
-        return description;
+    public String getDescriptionKey() {
+        if (descriptionKey == null) {
+            descriptionKey = id.toUpperCase().replaceAll("\\.", "_") + "_PARAMETER_DESCRIPTION_LABEL";
+        }
+        return descriptionKey;
     }
 
     public String getType() {

@@ -1,7 +1,5 @@
 {
     "id": "andCondition",
-    "name": "AND",
-    "description": "Logical AND operator",
     "queryBuilderFilter": "(queryBuilderId=andConditionESQueryBuilder)",
     "tags": [ "logical" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/andCondition.html",
@@ -9,8 +7,6 @@
     "parameters": [
         {
             "id": "subConditions",
-            "name": "Sub conditions",
-            "description": "Sub conditions that will be evaluated using the AND operator",
             "type": "Condition",
             "multivalued": true,
             "choicelistInitializerFilter": "(initializerId=condition)"

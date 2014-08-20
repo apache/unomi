@@ -1,42 +1,33 @@
 {
-    "id" : "requestParameterToUserPropertyAction",
-    "name" : "copy a request parameter to user property",
-    "description" : "Copies request parameter to a user property",
-    "serviceFilter" : "(actionExecutorId=requestParameterToUserProperty)",
-    "tags" : [ "event" ],
+    "id": "requestParameterToUserPropertyAction",
+    "serviceFilter": "(actionExecutorId=requestParameterToUserProperty)",
+    "tags": [ "event" ],
     "template": "/plugins/org.oasis-open.wemi.context-server-plugins-request/actions/requestParameterToUserPropertyAction.html",
-    "parameters" : [
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-plugins-request/messages",
+    "parameters": [
         {
-            "id" : "requestParameterName",
-            "name" : "Request parameter name",
-            "description" : "The name of the request parameter to read",
-            "type" : "string",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : ""
+            "id": "requestParameterName",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
         },
         {
-            "id" : "userPropertyName",
-            "name" : "User property name",
-            "description" : "The name of the user property to write",
-            "type" : "string",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : "(initializerId=userProperty)"
+            "id": "userPropertyName",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": "(initializerId=userProperty)"
         },
         {
-            "id" : "sessionPropertyName",
-            "name" : "Session property name",
-            "description" : "The name of the session property to write",
-            "type" : "string",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : ""
+            "id": "sessionPropertyName",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
         },
         {
-            "id" : "storeAsList",
-            "name" : "Store as a list ?",
-            "description" : "If true, the values will be stored in a list",
-            "type" : "boolean",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : ""
+            "id": "storeAsList",
+            "type": "boolean",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
         }
     ]
 }

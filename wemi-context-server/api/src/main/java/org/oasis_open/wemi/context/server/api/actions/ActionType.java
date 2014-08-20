@@ -10,8 +10,8 @@ import java.util.*;
 public class ActionType {
 
     String id;
-    String name;
-    String description;
+    String nameKey;
+    String descriptionKey;
     String serviceFilter;
     Set<Tag> tags = new TreeSet<Tag>();
     Set<String> tagIds = new LinkedHashSet<String>();
@@ -22,29 +22,35 @@ public class ActionType {
     public ActionType() {
     }
 
-    public ActionType(String id, String name) {
+    public ActionType(String id, String nameKey) {
         this.id = id;
-        this.name = name;
+        this.nameKey = nameKey;
     }
 
     public String getId() {
         return id;
     }
 
-    public String getName() {
-        return name;
+    public String getNameKey() {
+        if (nameKey == null) {
+            nameKey = id.toUpperCase().replaceAll("\\.", "_") + "_NAME_LABEL";
+        }
+        return nameKey;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setNameKey(String nameKey) {
+        this.nameKey = nameKey;
     }
 
-    public String getDescription() {
-        return description;
+    public String getDescriptionKey() {
+        if (descriptionKey == null) {
+            descriptionKey = id.toUpperCase().replaceAll("\\.", "_") + "_DESCRIPTION_LABEL";
+        }
+        return descriptionKey;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
+    public void setDescriptionKey(String descriptionKey) {
+        this.descriptionKey = descriptionKey;
     }
 
     public String getTemplate() {

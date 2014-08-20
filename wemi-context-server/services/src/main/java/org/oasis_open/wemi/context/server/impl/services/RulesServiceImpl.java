@@ -108,7 +108,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
         }
 
         return matchedRules;
-     }
+    }
 
 
     public boolean canHandle(Event event) {
@@ -119,7 +119,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
         Set<Rule> rules = getMatchingRules(event);
 
         boolean changed = false;
-        for (Rule rule: rules) {
+        for (Rule rule : rules) {
             for (Action action : rule.getActions()) {
                 changed |= actionExecutorDispatcher.execute(action, event);
             }
@@ -200,12 +200,12 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
                 key = "eventTriggered" + getMD5(key);
                 condition.getParameterValues().put("generatedPropertyKey", key);
                 if (getRule(key) == null) {
-                    Rule r = new Rule(new Metadata(key, "Auto generated rule",""));
+                    Rule r = new Rule(new Metadata(key, "Auto generated rule", ""));
                     r.setCondition(condition);
                     final Action action = new Action();
                     action.setActionType(definitionsService.getActionType("setPropertyAction"));
-                    action.getParameterValues().put("propertyName", key);
-                    action.getParameterValues().put("propertyValue", "now");
+                    action.getParameterValues().put("setPropertyName", key);
+                    action.getParameterValues().put("setPropertyValue", "now");
                     r.setActions(Arrays.asList(action));
                     rules.add(r);
                 }
@@ -255,14 +255,13 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
             byte[] array = md.digest(md5.getBytes());
             StringBuffer sb = new StringBuffer();
             for (int i = 0; i < array.length; ++i) {
-                sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1,3));
+                sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1, 3));
             }
             return sb.toString();
         } catch (java.security.NoSuchAlgorithmException e) {
         }
         return null;
     }
-
 
 
 }
