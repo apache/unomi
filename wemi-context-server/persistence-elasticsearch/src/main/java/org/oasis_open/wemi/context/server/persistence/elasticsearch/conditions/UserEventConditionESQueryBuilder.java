@@ -39,7 +39,7 @@ public class UserEventConditionESQueryBuilder implements ESQueryBuilder {
             for (Condition sub : subConditions) {
                 l.add(dispatcher.buildFilter(sub));
             }
-            if (occursIn != null && occursIn.equals("session")) {
+            if (occursIn != null && (occursIn.equals("session") || occursIn.equals("last"))) {
                 l.add(FilterBuilders.termFilter("sessionId", targetSession.getItemId()));
             } else {
                 l.add(FilterBuilders.termFilter("userId", targetSession.getUserId()));
