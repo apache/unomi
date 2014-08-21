@@ -1,6 +1,4 @@
 {
-    "id" : "demographic",
-    "name" : "Demographic",
-    "description" : "Regroups all demographic objects",
-    "parent" : "root"
+    "id": "demographic",
+    "parent": "root"
 }

@@ -1,6 +1,4 @@
 {
-    "id" : "eventCondition",
-    "name" : "Event condition",
-    "description" : "Regroups all conditions applicable on events",
-    "parent" : "condition"
+    "id": "eventCondition",
+    "parent": "condition"
 }

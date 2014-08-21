@@ -1,6 +1,4 @@
 {
-    "id" : "event",
-    "name" : "Events",
-    "description" : "All event-related objects",
-    "parent" : "root"
+    "id": "event",
+    "parent": "root"
 }

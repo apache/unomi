@@ -1,10 +1,10 @@
 package org.oasis_open.wemi.context.server.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
+import org.oasis_open.wemi.context.server.api.Tag;
 import org.oasis_open.wemi.context.server.api.actions.ActionType;
-import org.oasis_open.wemi.context.server.api.conditions.Parameter;
-import org.oasis_open.wemi.context.server.api.conditions.Tag;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
+import org.oasis_open.wemi.context.server.api.conditions.Parameter;
 import org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.osgi.framework.BundleContext;
@@ -32,12 +32,12 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
     DefinitionsService definitionsService;
     BundleContext bundleContext;
 
-    @WebMethod(exclude=true)
+    @WebMethod(exclude = true)
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
     }
 
-    @WebMethod(exclude=true)
+    @WebMethod(exclude = true)
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }

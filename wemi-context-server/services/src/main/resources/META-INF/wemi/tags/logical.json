@@ -1,6 +1,4 @@
 {
-    "id" : "logical",
-    "name" : "Logical",
-    "description" : "Regroups all logical objects",
-    "parent" : "root"
+    "id": "logical",
+    "parent": "root"
 }

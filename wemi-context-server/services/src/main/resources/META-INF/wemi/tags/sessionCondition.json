@@ -1,6 +1,4 @@
 {
-    "id" : "sessionCondition",
-    "name" : "Session condition",
-    "description" : "Regroups all conditions applicable on sessions",
-    "parent" : "condition"
+    "id": "sessionCondition",
+    "parent": "condition"
 }

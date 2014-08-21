@@ -1,6 +1,4 @@
 {
-    "id" : "userCondition",
-    "name" : "User condition",
-    "description" : "Regroups all conditions applicable on users",
-    "parent" : "condition"
+    "id": "userCondition",
+    "parent": "condition"
 }

@@ -1,7 +1,6 @@
-package org.oasis_open.wemi.context.server.api.conditions;
+package org.oasis_open.wemi.context.server.api;
 
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlTransient;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -11,8 +10,8 @@ import java.util.TreeSet;
 public class Tag implements Comparable<Tag> {
 
     String id;
-    String name;
-    String description;
+    String nameKey;
+    String descriptionKey;
     String parentId;
 
     Set<Tag> subTags = new TreeSet<Tag>();
@@ -20,10 +19,10 @@ public class Tag implements Comparable<Tag> {
     public Tag() {
     }
 
-    public Tag(String id, String name, String description, String parentId) {
+    public Tag(String id, String nameKey, String descriptionKey, String parentId) {
         this.id = id;
-        this.name = name;
-        this.description = description;
+        this.nameKey = nameKey;
+        this.descriptionKey = descriptionKey;
         this.parentId = parentId;
     }
 
@@ -35,15 +34,21 @@ public class Tag implements Comparable<Tag> {
         return id;
     }
 
-    public String getName() {
-        return name;
+    public String getNameKey() {
+        if (nameKey == null) {
+            nameKey = id.toUpperCase().replaceAll("\\.", "_") + "_TAG_NAME_LABEL";
+        }
+        return nameKey;
     }
 
-    public String getDescription() {
-        return description;
+    public String getDescriptionKey() {
+        if (descriptionKey == null) {
+            descriptionKey = id.toUpperCase().replaceAll("\\.", "_") + "_TAG_DESCRIPTION_LABEL";
+        }
+        return descriptionKey;
     }
 
-    @XmlElement(name="parent")
+    @XmlElement(name = "parent")
     public String getParentId() {
         return parentId;
     }
