@@ -19,6 +19,10 @@
 
     "ANDCONDITION_NAME_LABEL": "AND",
     "ANDCONDITION_DESCRIPTION_LABEL": "Logical AND operator",
+    "EVENTCONDITION_NAME_LABEL": "Event",
+    "EVENTCONDITION_DESCRIPTION_LABEL": "A configured event condition",
+    "LOGINEVENTCONDITION_NAME_LABEL": "Login event",
+    "LOGINEVENTCONDITION_DESCRIPTION_LABEL": "A condition to match event logins",
     "MATCHALLCONDITION_NAME_LABEL": "Match all",
     "MATCHALLCONDITION_DESCRIPTION_LABEL": "Match all users",
     "ORCONDITION_NAME_LABEL": "OR",
@@ -70,6 +74,11 @@
     "MATCHES_REGULAR_EXPRESSION_LABEL": "matches regular expression",
     "CONTAINS_LABEL": "contains",
 
+    "EVENT_TYPE_VIEW_LABEL": "view",
+    "EVENT_TYPE_LOGIN_LABEL": "login",
+    "EVENT_TYPE_SESSIONCREATED_LABEL": "session created",
+    "EVENT_TYPE_USERUPDATED_LABEL": "user updated",
+
     "AND_LABEL": "AND",
     "DRAG_AND_DROP_CONDITION_LABEL": "Drag and drop a new condition here",
     "USER_LABEL": "User",
@@ -94,6 +103,9 @@
     "SOME_SEGMENTS_MATCH_LABEL" : "some of these segments",
     "NONE_SEGMENTS_MATCH_LABEL" : "none of these segments",
     "USER_UPDATED_LABEL" : "User properties were updated",
+    "USER_LOGIN_EVENT_LABEL": "User has logged in",
+    "EVENT_NAMED_LABEL": "Event named ",
+    "HAS_OCCURRED_LABEL": " has occurred.",
 
     "USER_PROPERTIES_AGE_LABEL": "age",
     "USER_PROPERTIES_INCOME_LABEL": "income"

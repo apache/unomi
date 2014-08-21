@@ -15,4 +15,6 @@ public interface EventService {
 
     public List<String> getEventProperties();
 
+    public List<String> getEventTypeIds();
+
 }

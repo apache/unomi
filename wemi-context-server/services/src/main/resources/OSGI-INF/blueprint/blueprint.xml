@@ -91,6 +91,15 @@
         </bean>
     </service>
 
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="initializerId" value="eventTypeId"/>
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.conditions.initializers.EventTypeIdChoiceListInitializer">
+            <property name="eventService" ref="eventServiceImpl"/>
+        </bean>
+    </service>
+
     <!-- Action executors -->
 
     <bean id="allEventToUserPropertiesActionImpl" class="org.oasis_open.wemi.context.server.impl.actions.AllEventToUserPropertiesAction">

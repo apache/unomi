@@ -1,0 +1,15 @@
+{
+    "id": "eventCondition",
+    "queryBuilderFilter": "(queryBuilderId=eventConditionESQueryBuilder)",
+    "tags": [ "event", "eventCondition" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/eventCondition.html",
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
+    "parameters": [
+        {
+            "id": "eventTypeId",
+            "type": "String",
+            "multivalued": false,
+            "choicelistInitializerFilter": "(initializerId=eventTypeId)"
+        }
+    ]
+}

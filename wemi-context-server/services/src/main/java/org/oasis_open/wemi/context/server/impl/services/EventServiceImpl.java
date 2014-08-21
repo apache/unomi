@@ -75,8 +75,13 @@ public class EventServiceImpl implements EventService {
     }
 
     public List<String> getEventProperties() {
-        Map<String,Map<String,String>> mappings = persistenceService.getMapping(Event.ITEM_TYPE);
+        Map<String, Map<String, String>> mappings = persistenceService.getMapping(Event.ITEM_TYPE);
         return new ArrayList<String>(mappings.keySet());
+    }
+
+    public List<String> getEventTypeIds() {
+        // @todo implement this for real
+        return new ArrayList<String>();
     }
 
     public void bind(ServiceReference<EventListenerService> serviceReference) {

@@ -19,6 +19,8 @@
 
     "ANDCONDITION_NAME_LABEL": "ET",
     "ANDCONDITION_DESCRIPTION_LABEL": "Opérateur ET (logique)",
+    "LOGINEVENTCONDITION_NAME_LABEL": "Evénement de login",
+    "LOGINEVENTCONDITION_DESCRIPTION_LABEL": "Une condition pour capturer les événements de login",
     "MATCHALLCONDITION_NAME_LABEL": "Tous",
     "MATCHALLCONDITION_DESCRIPTION_LABEL": "Tous les utilisateurs",
     "ORCONDITION_NAME_LABEL": "OU",
@@ -70,6 +72,11 @@
     "MATCHES_REGULAR_EXPRESSION_LABEL": "satisfait l'expression régulière",
     "CONTAINS_LABEL": "contient",
 
+    "EVENT_TYPE_VIEW_LABEL": "vues",
+    "EVENT_TYPE_LOGIN_LABEL": "login",
+    "EVENT_TYPE_SESSIONCREATED_LABEL": "création d'une session",
+    "EVENT_TYPE_USERUPDATED_LABEL": "mise à jour d'un utilisateur",
+
     "AND_LABEL": "ET",
     "DRAG_AND_DROP_CONDITION_LABEL": "Glissez-déposez une nouvelle condition ici",
     "USER_LABEL": "La propriété ",
@@ -94,6 +101,9 @@
     "SOME_SEGMENTS_MATCH_LABEL" : "de certains de ces segments",
     "NONE_SEGMENTS_MATCH_LABEL" : "d'aucun de ces segments",
     "USER_UPDATED_LABEL" : "Les propriétés utilisateurs ont été mises à jour",
+    "USER_LOGIN_EVENT_LABEL": "L'utilisateur s'est authentifié",
+    "EVENT_NAMED_LABEL": "L'événement ",
+    "HAS_OCCURRED_LABEL": " a été généré.",
 
     "USER_PROPERTIES_AGE_LABEL": "âge",
     "USER_PROPERTIES_INCOME_LABEL": "revenu"

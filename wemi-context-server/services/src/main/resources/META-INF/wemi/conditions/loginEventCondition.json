@@ -1,0 +1,9 @@
+{
+    "id": "loginEventCondition",
+    "queryBuilderFilter": "(queryBuilderId=loginEventConditionESQueryBuilder)",
+    "tags": [ "event", "eventCondition" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/loginEventCondition.html",
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
+    "parameters": [
+    ]
+}
