@@ -32,21 +32,18 @@ public class SegmentServiceEndPoint implements SegmentService {
         this.segmentService = segmentService;
     }
 
-    @GET
-    @Path("/{segmentID}")
-    public Set<User> getMatchingIndividuals(@PathParam("segmentID") String segmentId) {
+    @WebMethod(exclude=true)
+    public Set<User> getMatchingIndividuals(String segmentId) {
         return segmentService.getMatchingIndividuals(segmentId);
     }
 
-    @GET
-    @Path("/{segmentID}/{user}")
-    public Boolean isUserInSegment(@PathParam("user") User user, @PathParam("segmentID") String segmentId) {
+    @WebMethod(exclude=true)
+    public Boolean isUserInSegment(User user, String segmentId) {
         return segmentService.isUserInSegment(user, segmentId);
     }
 
-    @GET
-    @Path("/users/{user}")
-    public Set<String> getSegmentsForUser(@PathParam("user") User user) {
+    @WebMethod(exclude=true)
+    public Set<String> getSegmentsForUser( User user) {
         return segmentService.getSegmentsForUser(user);
     }
 
@@ -57,26 +54,26 @@ public class SegmentServiceEndPoint implements SegmentService {
     }
 
     @GET
-    @Path("/definitions/{segmentID}")
+    @Path("/{segmentID}")
     public SegmentDefinition getSegmentDefinition(@PathParam("segmentID") String segmentId) {
         return segmentService.getSegmentDefinition(segmentId);
     }
 
     @POST
-    @Path("/definitions/{segmentID}")
+    @Path("/{segmentID}")
     public void setSegmentDefinition(@PathParam("segmentID") String segmentId, SegmentDefinition segmentDefinition) {
         segmentService.setSegmentDefinition(segmentId, segmentDefinition);
     }
 
     @PUT
-    @Path("/definitions/{segmentID}")
+    @Path("/{segmentID}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public void createSegmentDefinition(@PathParam("segmentID") String segmentId, @FormParam("segmentName") String segmentName, @FormParam("segmentDescription") String segmentDescription) {
         segmentService.createSegmentDefinition(segmentId, segmentName, segmentDescription);
     }
 
     @DELETE
-    @Path("/definitions/{segmentID}")
+    @Path("/{segmentID}")
     public void removeSegmentDefinition(@PathParam("segmentID") String segmentId) {
         segmentService.removeSegmentDefinition(segmentId);
     }
