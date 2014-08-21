@@ -6,8 +6,7 @@
         <div class="block" >
             <condition ref="child" parent-ref="ref" parent-name="'subConditions'" parent-value="ref.parameterValues.subConditions" parent-index="$index" types="types" base-url="baseUrl"/>
         </div>
-        <div class="operator">OR</div>
+        <div class="operator" translate>OR_LABEL</div>
     </div>
-    <div class="block" ui-on-drop="onDrop($event,$data,'subConditions')">Drag and drop new condition here
-    </div>
+    <div class="block" ui-on-drop="onDrop($event,$data,'subConditions')" translate>DRAG_AND_DROP_CONDITION_LABEL</div>
 </div>

@@ -16,8 +16,10 @@
     "TEMPLATE_PARAMETER_DESCRIPTION_LABEL": "The mail template content",
 
     "FROM_LABEL": "From",
+    "EMAIL_PLACEHOLDER_LABEL": "Enter e-mail address here",
     "TO_LABEL": "To",
     "SUBJECT_LABEL": "Subject",
+    "SUBJECT_PLACEHOLDER_LABEL" : "Enter message subject here...",
     "MAIL_TEMPLATE_LABEL": "Mail template"
 
 }

@@ -2,7 +2,7 @@
     <div class="remove-condition">
         <a href="#" ng-click="onRemove(parentValue,parentIndex)"><i class="icon-remove"></i></a>
     </div>
-    In the last : <input ng-model="ref.parameterValues.numberOfDays" type="text"/> days, user did the following event :
+    <span translate>IN_THE_LAST_X_DAYS_LABEL</span> <input ng-model="ref.parameterValues.numberOfDays" type="text"/> <span translate>USER_DID_EVENT_LABEL</span>
 
     <condition ref="ref.parameterValues.eventCondition" parent-ref="ref" parent-name="'eventCondition'" parent-value="ref.parameterValues.eventCondition" parent-index="$index" types="types" base-url="baseUrl"/>
 

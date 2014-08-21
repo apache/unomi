@@ -4,32 +4,32 @@
             <a href="#" ng-click="onRemove(parentValue,parentIndex)"><i class="icon-remove"></i></a>
         </div>
         <div class="control-group">
-            <label class="control-label" for="fromField">From:</label>
+            <label class="control-label" for="fromField" translate>FROM_LABEL</label>
 
             <div class="controls">
-                <input id="fromField" ng-model="ref.parameterValues.from" type="text" placeholder="email"/>
+                <input id="fromField" ng-model="ref.parameterValues.from" type="text" placeholder="{{ 'EMAIL_PLACEHOLDER_LABEL' | translate}}"/>
             </div>
         </div>
         <div class="control-group">
-            <label class="control-label" for="toField">To:</label>
+            <label class="control-label" for="toField" translate>TO_LABEL</label>
 
             <div class="controls">
-                <input id="toField" ng-model="ref.parameterValues.to" type="text" placeholder="email"/>
+                <input id="toField" ng-model="ref.parameterValues.to" type="text" placeholder="{{ 'EMAIL_PLACEHOLDER_LABEL' | translate}}"/>
             </div>
         </div>
         <div class="control-group">
-            <label class="control-label" for="subjectField">To:</label>
+            <label class="control-label" for="subjectField" translate>SUBJECT_LABEL</label>
 
             <div class="controls">
                 <input id="subjectField" ng-model="ref.parameterValues.subject" type="text"
-                       placeholder="Enter subject here..."/>
+                       placeholder="{{ 'SUBJECT_PLACEHOLDER_LABEL' | translate}}"/>
             </div>
         </div>
         <div class="control-group">
-            <label class="control-label" for="templateField">Mail template:</label>
+            <label class="control-label" for="templateField" translate>MAIL_TEMPLATE_LABEL</label>
 
             <div class="controls">
-                <textarea id="templateField" ng-model="ref.parameterValues.template"/>
+                <textarea id="templateField" ng-model="ref.parameterValues.template" rows="10"/>
             </div>
         </div>
     </div>
