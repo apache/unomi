@@ -1,6 +1,9 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.oasis_open.wemi.context.server.api.Event;
+import org.oasis_open.wemi.context.server.api.Metadata;
+import org.oasis_open.wemi.context.server.api.SegmentDefinition;
+import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.goals.Goal;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.GoalsService;
@@ -16,10 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 
 public class GoalsServiceImpl implements GoalsService, BundleListener {
@@ -96,8 +96,12 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
         persistenceService.save(goal);
     }
 
-    public Set<Goal> getGoals() {
-        return new HashSet<Goal>(persistenceService.getAllItems(Goal.class));
+    public Set<Metadata> getSegmentMetadatas() {
+        Set<Metadata> descriptions = new HashSet<Metadata>();
+        for (Goal definition : persistenceService.getAllItems(Goal.class)) {
+            descriptions.add(definition.getMetadata());
+        }
+        return descriptions;
     }
 
     public Goal getGoal(String goalId) {
@@ -107,6 +111,24 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
             ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent());
         }
         return goal;
+    }
+
+    @Override
+    public void setGoal(String goalId, Goal goal) {
+        persistenceService.save(goal);
+
+    }
+
+    @Override
+    public void createGoal(String goalId, String name, String description) {
+        Metadata metadata = new Metadata(goalId, name, description);
+        Goal goal = new Goal(metadata);
+        setGoal(goalId, goal);
+    }
+
+    @Override
+    public void removeGoal(String goalId) {
+        persistenceService.remove(goalId, Goal.class);
     }
 
     public float getGoalSuccessRate(String goalId) {

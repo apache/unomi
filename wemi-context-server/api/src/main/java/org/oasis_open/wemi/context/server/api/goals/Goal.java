@@ -16,6 +16,15 @@ public class Goal extends Item {
 
     private Condition targetEvent;
 
+    public Goal() {
+    }
+
+    public Goal(Metadata metadata) {
+        super(metadata.getId());
+        this.metadata = metadata;
+    }
+
+
     public Metadata getMetadata() {
         return metadata;
     }

@@ -1,15 +1,14 @@
 package org.oasis_open.wemi.context.server.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
+import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.goals.Goal;
+import org.oasis_open.wemi.context.server.api.rules.Rule;
 import org.oasis_open.wemi.context.server.api.services.GoalsService;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.Set;
 
@@ -30,8 +29,33 @@ public class GoalsServiceEndPoint implements GoalsService {
 
     @GET
     @Path("/")
-    public Set<Goal> getGoals() {
-        return goalsService.getGoals();
+    public Set<Metadata> getSegmentMetadatas() {
+        return goalsService.getSegmentMetadatas();
+    }
+
+    @GET
+    @Path("/{goalId}")
+    public Goal getGoal(@PathParam("goalId") String goalId) {
+        return goalsService.getGoal(goalId);
+    }
+
+    @POST
+    @Path("/{goalId}")
+    public void setGoal(@PathParam("goalId") String goalId, Goal goal) {
+        goalsService.setGoal(goalId, goal);
+    }
+
+    @PUT
+    @Path("/{goalId}")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public void createGoal(@PathParam("goalId") String goalId, @FormParam("goalName") String name, @FormParam("goalDescription") String description) {
+        goalsService.createGoal(goalId, name, description);
+    }
+
+    @DELETE
+    @Path("/{goalId}")
+    public void removeGoal(@PathParam("goalId") String goalId) {
+        goalsService.removeGoal(goalId);
     }
 
     @GET
@@ -39,4 +63,6 @@ public class GoalsServiceEndPoint implements GoalsService {
     public float getGoalSuccessRate(@PathParam("goalID") String goalId) {
         return goalsService.getGoalSuccessRate(goalId);
     }
+
+
 }
