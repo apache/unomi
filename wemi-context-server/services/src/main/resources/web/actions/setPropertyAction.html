@@ -7,10 +7,10 @@
         &nbsp;
         <select ng-model="ref.parameterValues.setPropertyName"
                 ng-options="parameter.id as parameter.name | translate for parameter in getActionParameterChoiceListValues(ref, 'setPropertyName')"
-                class="form-control">
+                class="form-control span2">
         </select>
         <span translate>TO_LABEL</span>
         &nbsp;
-        <input ng-model="ref.parameterValues.setPropertyValue" type="text"/>
+        <input ng-model="ref.parameterValues.setPropertyValue" type="text" class="span2"/>
     </div>
 </div>

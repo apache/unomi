@@ -51,8 +51,8 @@
 
     "AND_LABEL": "ET",
     "DRAG_AND_DROP_CONDITION_LABEL": "Glissez-déposez une nouvelle condition ici",
-    "USER_LABEL": "L'utilisateur",
-    "IS_LABEL": "est",
+    "USER_LABEL": "La propriété ",
+    "IS_LABEL": "de l'utilisateur est",
     "SET_USER_PROPERTY_LABEL": "Assigner la propriété utilisateur",
     "TO_LABEL": "à",
     "COPY_ALL_EVENT_PROPERTIES_TO_USER_PROPERTIES_LABEL": "Copie toutes les propriétés d'événements dans les propriétés utilisateur",
