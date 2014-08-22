@@ -67,6 +67,7 @@
     "EVENT_TYPE_LOGIN_LABEL": "login",
     "EVENT_TYPE_SESSIONCREATED_LABEL": "création d'une session",
     "EVENT_TYPE_USERUPDATED_LABEL": "mise à jour d'un utilisateur",
+    "EVENT_TYPE_FACEBOOKLOGIN_LABEL": "login facebook",
 
     "AND_LABEL": "ET",
     "DRAG_AND_DROP_CONDITION_LABEL": "Glissez-déposez une nouvelle condition ici",

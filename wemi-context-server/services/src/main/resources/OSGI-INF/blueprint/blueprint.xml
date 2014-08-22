@@ -17,6 +17,15 @@
         <property name="persistenceService" ref="persistenceService" />
         <property name="userService" ref="userServiceImpl" />
         <property name="bundleContext" ref="blueprintBundleContext" />
+        <property name="predefinedEventTypeIds">
+            <set>
+                <value>view</value>
+                <value>login</value>
+                <value>sessionCreated</value>
+                <value>facebookLogin</value>
+                <value>userUpdated</value>
+            </set>
+        </property>
     </bean>
     <service id="eventService" ref="eventServiceImpl" auto-export="interfaces" />
 

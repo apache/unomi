@@ -10,9 +10,7 @@ import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by loom on 10.06.14.
@@ -26,6 +24,12 @@ public class EventServiceImpl implements EventService {
     private UserService userService;
 
     private BundleContext bundleContext;
+
+    private Set<String> predefinedEventTypeIds = new LinkedHashSet<String>();
+
+    public void setPredefinedEventTypeIds(Set<String> predefinedEventTypeIds) {
+        this.predefinedEventTypeIds = predefinedEventTypeIds;
+    }
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -79,9 +83,11 @@ public class EventServiceImpl implements EventService {
         return new ArrayList<String>(mappings.keySet());
     }
 
-    public List<String> getEventTypeIds() {
-        // @todo implement this for real
-        return new ArrayList<String>();
+    public Set<String> getEventTypeIds() {
+        Map<String, Long> dynamicEventTypeIds = persistenceService.aggregateQuery(null, "terms", "eventType", Event.class);
+        Set<String> eventTypeIds = new LinkedHashSet<String>(predefinedEventTypeIds);
+        eventTypeIds.addAll(dynamicEventTypeIds.keySet());
+        return eventTypeIds;
     }
 
     public void bind(ServiceReference<EventListenerService> serviceReference) {

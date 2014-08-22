@@ -6,6 +6,7 @@ import org.oasis_open.wemi.context.server.api.services.EventService;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by loom on 21.08.14.
@@ -20,13 +21,7 @@ public class EventTypeIdChoiceListInitializer implements ChoiceListInitializer {
 
     public List<ChoiceListValue> getValues(Object context) {
         List<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
-        // @todo retrieve event types from persistence backend.
-        // List<String> eventTypeIds = eventService.getEventTypes();
-        List<String> eventTypeIds = new ArrayList<String>();
-        eventTypeIds.add("view");
-        eventTypeIds.add("login");
-        eventTypeIds.add("sessionCreated");
-        eventTypeIds.add("userUpdated");
+        Set<String> eventTypeIds = eventService.getEventTypeIds();
         for (String eventProperty : eventTypeIds) {
             String resourceKey = "EVENT_TYPE_" + eventProperty.toUpperCase().replaceAll("\\.", "_") + "_LABEL";
             choiceListValues.add(new ChoiceListValue(eventProperty, resourceKey));
