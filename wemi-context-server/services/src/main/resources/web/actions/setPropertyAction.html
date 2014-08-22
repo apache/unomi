@@ -6,11 +6,10 @@
         <span translate>SET_USER_PROPERTY_LABEL</span>
         &nbsp;
         <select ng-model="ref.parameterValues.setPropertyName"
-                ng-options="parameter.id as parameter.name | translate for parameter in getActionParameterChoiceListValues(ref, 'setPropertyName')"
-                class="form-control span2">
+                ng-options="parameter.id as parameter.name | translate for parameter in getActionParameterChoiceListValues(ref, 'setPropertyName')">
         </select>
         <span translate>TO_LABEL</span>
         &nbsp;
-        <input ng-model="ref.parameterValues.setPropertyValue" type="text" class="span2"/>
+        <input ng-model="ref.parameterValues.setPropertyValue" type="text"/>
     </div>
 </div>

@@ -3,13 +3,15 @@
         <div class="remove-condition">
             <a href="#" ng-click="onRemove(parentValue,parentIndex)"><i class="icon-remove"></i></a>
         </div>
-    <span translate>COPY_EVENT_PROPERTY_LABEL</span>
-    &nbsp;
-    <select ng-model="ref.parameterValues.eventPropertyName" ng-options="parameter.id as parameter.name | translate for parameter in getActionParameterChoiceListValues(ref, 'eventPropertyName')" class="form-control span2">
-    </select>
-    <span translate>TO_USER_PROPERTY_LABEL</span>
-    &nbsp;
-    <select ng-model="ref.parameterValues.userPropertyName" ng-options="parameter.id as parameter.name | translate for parameter in getActionParameterChoiceListValues(ref, 'userPropertyName')" class="form-control span2">
-    </select>
+        <span translate>COPY_EVENT_PROPERTY_LABEL</span>
+        &nbsp;
+        <select ng-model="ref.parameterValues.eventPropertyName"
+                ng-options="parameter.id as parameter.name | translate for parameter in getActionParameterChoiceListValues(ref, 'eventPropertyName')">
+        </select>
+        <span translate>TO_USER_PROPERTY_LABEL</span>
+        &nbsp;
+        <select ng-model="ref.parameterValues.userPropertyName"
+                ng-options="parameter.id as parameter.name | translate for parameter in getActionParameterChoiceListValues(ref, 'userPropertyName')">
+        </select>
     </div>
 </div>
