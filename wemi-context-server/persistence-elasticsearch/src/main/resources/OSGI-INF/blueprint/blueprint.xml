@@ -106,6 +106,13 @@
         <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.EventConditionESQueryBuilder"/>
     </service>
 
+    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="goalMatchConditionESQueryBuilder" />
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.GoalMatchConditionESQueryBuilder" />
+    </service>
+
     <bean id="conditionESQueryBuilderDispatcher"
           class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher">
         <property name="bundleContext" ref="blueprintBundleContext"/>

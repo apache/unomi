@@ -1,0 +1,15 @@
+{
+    "id": "goalMatchCondition",
+    "queryBuilderFilter": "(queryBuilderId=goalMatchConditionESQueryBuilder)",
+    "tags": [ "sessionCondition" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/goalMatchCondition.html",
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
+    "parameters": [
+        {
+            "id": "goalId",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
+        }
+    ]
+}

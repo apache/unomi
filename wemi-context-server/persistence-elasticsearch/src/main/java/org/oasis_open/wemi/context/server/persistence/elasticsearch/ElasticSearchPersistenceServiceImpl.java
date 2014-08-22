@@ -20,9 +20,13 @@ import org.elasticsearch.index.query.*;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.aggregations.Aggregation;
+import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.bucket.filter.Filter;
+import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogram;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.sort.SortOrder;
 import org.oasis_open.wemi.context.server.api.Item;
@@ -359,6 +363,35 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         return query(QueryBuilders.termQuery(fieldName, fieldValue), sortBy, clazz);
     }
 
+    @Override
+    public <T extends Item> long queryCount(final Condition query, final Class<T> clazz) {
+        return new InClassLoaderExecute<Long>() {
+
+            @Override
+            protected Long execute(Object... args) {
+                try {
+                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
+
+                    SearchResponse response = client.prepareSearch(indexName)
+                            .setTypes(itemType)
+                            .setSearchType(SearchType.COUNT)
+                            .setQuery(QueryBuilders.matchAllQuery())
+                            .addAggregation(AggregationBuilders.filter("filter").filter(conditionESQueryBuilderDispatcher.buildFilter(query)))
+                            .execute()
+                            .actionGet();
+                    Aggregations searchHits = response.getAggregations();
+                    Filter filter = searchHits.get("filter");
+                    return filter.getDocCount();
+                } catch (IllegalAccessException e) {
+                    logger.error("Error loading itemType=" + clazz.getName() + "query=" + query, e);
+                } catch (NoSuchFieldException e) {
+                    logger.error("Error loading itemType=" + clazz.getName() + "query=" + query, e);
+                }
+                return -1L;
+            }
+        }.executeInClassLoader();
+    }
+
     public <T extends Item> List<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz) {
         return new InClassLoaderExecute<List<T>>() {
 
@@ -399,27 +432,59 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         }.executeInClassLoader();
     }
 
-    public List<String> aggregateQuery(final String itemType, final Condition filter, final String aggregateOnField) {
-        return new InClassLoaderExecute<List<String>>() {
+    public <T extends Item> Map<String, Long> aggregateQuery(final Condition filter, final String aggregateType, final String aggregateOnField, final Class<T> clazz) {
+        return new InClassLoaderExecute<Map<String, Long>>() {
 
             @Override
-            protected List<String> execute(Object... args) {
-                List<String> results = new ArrayList<String>();
-                SearchResponse response = client.prepareSearch(indexName)
-                        .setTypes(itemType)
-                        .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
-                        .setQuery(QueryBuilders.matchAllQuery())
-                        .addAggregation(AggregationBuilders.filter("filter").filter(conditionESQueryBuilderDispatcher.buildFilter(filter)).subAggregation(AggregationBuilders.terms("terms").field(aggregateOnField)))
-                        .setFrom(0).setSize(0).setExplain(true)
-                        .execute()
-                        .actionGet();
-                Aggregations searchHits = response.getAggregations();
-                Filter filter = searchHits.get("filter");
-                Terms terms = filter.getAggregations().get("terms");
-                for (Terms.Bucket bucket : terms.getBuckets()) {
-                    results.add(bucket.getKey());
-                }
+            protected Map<String, Long> execute(Object... args) {
+                Map<String, Long> results = new LinkedHashMap<String,Long>();
+                try {
+                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
 
+                    SearchRequestBuilder builder = client.prepareSearch(indexName)
+                            .setTypes(itemType)
+                            .setSearchType(SearchType.COUNT)
+                            .setQuery(QueryBuilders.matchAllQuery());
+                    AggregationBuilder filterAggregation = null;
+                    if (filter != null) {
+                        filterAggregation = AggregationBuilders.filter("filter").filter(conditionESQueryBuilderDispatcher.buildFilter(filter));
+                        builder.addAggregation(filterAggregation);
+                    }
+                    AggregationBuilder bucketsAggregation = null;
+                    if ("terms".equals(aggregateType)) {
+                        bucketsAggregation = AggregationBuilders.terms("buckets").field(aggregateOnField);
+                    } else if ("date".equals(aggregateType)) {
+                        // default interval set to 10 minutes for testing
+                        bucketsAggregation = AggregationBuilders.dateHistogram("buckets").field(aggregateOnField).interval(new DateHistogram.Interval("10m"));
+                    }
+                    if (bucketsAggregation != null) {
+                        if (filterAggregation != null) {
+                            filterAggregation.subAggregation(bucketsAggregation);
+                        } else {
+                            builder.addAggregation(bucketsAggregation);
+                        }
+                    }
+
+
+                    SearchResponse response = builder.execute().actionGet();
+
+                    Aggregations aggregations = response.getAggregations();
+                    if (filter != null) {
+                        Filter filterAgg = aggregations.get("filter");
+                        results.put("_filtered", filterAgg.getDocCount());
+                        aggregations = filterAgg.getAggregations();
+                    }
+                    if (bucketsAggregation != null) {
+                        MultiBucketsAggregation terms = aggregations.get("buckets");
+                        for (MultiBucketsAggregation.Bucket bucket : terms.getBuckets()) {
+                            results.put(bucket.getKey(), bucket.getDocCount());
+                        }
+                    }
+                } catch (IllegalAccessException e) {
+                    logger.error("Error loading itemType=" + clazz.getName(), e);
+                } catch (NoSuchFieldException e) {
+                    logger.error("Error loading itemType=" + clazz.getName(), e);
+                }
                 return results;
             }
         }.executeInClassLoader();

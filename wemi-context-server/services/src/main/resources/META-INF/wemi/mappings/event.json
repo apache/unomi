@@ -9,6 +9,9 @@
                     "index" : "not_analyzed"
                 }
             }}
-        ]
+        ],
+        "properties" : {
+            "timestamp" : {"type" : "date" }
+        }
     }
 }

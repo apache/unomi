@@ -2,8 +2,9 @@ package org.oasis_open.wemi.context.server.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.wemi.context.server.api.Metadata;
+import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.goals.Goal;
-import org.oasis_open.wemi.context.server.api.rules.Rule;
+import org.oasis_open.wemi.context.server.api.goals.GoalReport;
 import org.oasis_open.wemi.context.server.api.services.GoalsService;
 
 import javax.jws.WebMethod;
@@ -22,15 +23,15 @@ public class GoalsServiceEndPoint implements GoalsService {
 
     GoalsService goalsService;
 
-    @WebMethod(exclude=true)
+    @WebMethod(exclude = true)
     public void setGoalsService(GoalsService goalsService) {
         this.goalsService = goalsService;
     }
 
     @GET
     @Path("/")
-    public Set<Metadata> getSegmentMetadatas() {
-        return goalsService.getSegmentMetadatas();
+    public Set<Metadata> getGoalMetadatas() {
+        return goalsService.getGoalMetadatas();
     }
 
     @GET
@@ -59,10 +60,21 @@ public class GoalsServiceEndPoint implements GoalsService {
     }
 
     @GET
-    @Path("/{goalID}/success")
-    public float getGoalSuccessRate(@PathParam("goalID") String goalId) {
-        return goalsService.getGoalSuccessRate(goalId);
+    @Path("/{goalID}/report")
+    public GoalReport getGoalReport(@PathParam("goalID") String goalId) {
+        return goalsService.getGoalReport(goalId);
     }
 
+    @GET
+    @Path("/{goalID}/report/{split}")
+    public GoalReport getGoalReport(@PathParam("goalID") String goalId, @PathParam("split") String split) {
+        return goalsService.getGoalReport(goalId, split);
+    }
+
+    @POST
+    @Path("/{goalID}/conditionalReport/{split}")
+    public GoalReport getGoalReport(@PathParam("goalID") String goalId, @PathParam("split") String split, Condition condition) {
+        return goalsService.getGoalReport(goalId, split, condition);
+    }
 
 }

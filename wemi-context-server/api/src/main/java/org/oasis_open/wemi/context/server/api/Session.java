@@ -9,6 +9,8 @@ public class Session extends Item {
 
     private String userId;
 
+    private User user;
+
     private Properties properties;
 
     private Date sessionCreationDate;
@@ -20,9 +22,10 @@ public class Session extends Item {
     public Session() {
     }
 
-    public Session(String itemId, String userId) {
+    public Session(String itemId, User user) {
         super(itemId);
-        this.userId = userId;
+        this.userId = user.getItemId();
+        this.user = user;
         properties = new Properties();
         this.sessionCreationDate = new Date();
     }
@@ -30,6 +33,12 @@ public class Session extends Item {
     public String getUserId() {
         return userId;
     }
+
+    public User getUser() {
+        return user;
+    }
+
+
 
     public void setLastEventDate(Date lastEventDate) {
         this.lastEventDate = lastEventDate;

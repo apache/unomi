@@ -9,6 +9,10 @@
                     "index" : "not_analyzed"
                 }
             }}
-        ]
+        ],
+        "properties" : {
+            "sessionCreationDate" : {"type" : "date" },
+            "lastEventDate" : {"type" : "date" }
+        }
     }
 }

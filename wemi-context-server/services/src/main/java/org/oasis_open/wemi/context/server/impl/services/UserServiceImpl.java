@@ -58,8 +58,8 @@ public class UserServiceImpl implements UserService {
         return persistenceService.load(sessionId, Session.class);
     }
 
-    public boolean saveSession(Session event) {
-        persistenceService.save(event);
+    public boolean saveSession(Session session) {
+        persistenceService.save(session);
         return false;
     }
 

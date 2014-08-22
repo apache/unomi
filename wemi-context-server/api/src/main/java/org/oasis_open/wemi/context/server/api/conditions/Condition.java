@@ -20,6 +20,10 @@ public class Condition {
     public Condition() {
     }
 
+    public Condition(ConditionType conditionType) {
+        setConditionType(conditionType);
+    }
+
     @XmlTransient
     public ConditionType getConditionType() {
         return conditionType;

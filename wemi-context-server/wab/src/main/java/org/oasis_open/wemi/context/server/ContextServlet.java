@@ -105,7 +105,7 @@ public class ContextServlet extends HttpServlet {
             }
             // associate user with session
             if (sessionId != null) {
-                session = new Session(sessionId, user.getItemId());
+                session = new Session(sessionId, user);
                 userService.saveSession(session);
                 Event event = new Event("sessionCreated", session, user);
                 event.getAttributes().put("http_request", request);

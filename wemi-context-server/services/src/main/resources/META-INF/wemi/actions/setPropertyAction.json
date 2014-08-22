@@ -16,6 +16,12 @@
             "type": "string",
             "multivalued": false,
             "choicelistInitializerFilter": ""
+        },
+        {
+            "id": "storeInSession",
+            "type": "boolean",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
         }
     ]
 }

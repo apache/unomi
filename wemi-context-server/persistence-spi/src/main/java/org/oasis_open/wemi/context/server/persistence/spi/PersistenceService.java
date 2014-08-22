@@ -35,8 +35,10 @@ public interface PersistenceService {
 
     public <T extends Item> List<T> query(Condition query, String sortBy, Class<T> clazz);
 
+    public <T extends Item> long queryCount(Condition query, Class<T> clazz);
+
     public <T extends Item> List<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz);
 
-    public List<String> aggregateQuery(final String itemType, final Condition filter, final String aggregateOnField);
+    public <T extends Item> Map<String, Long> aggregateQuery(Condition filter, String aggregateType, String aggregateOnField, Class<T> clazz);
 
 }

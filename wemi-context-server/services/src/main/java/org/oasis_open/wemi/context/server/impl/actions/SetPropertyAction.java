@@ -26,9 +26,15 @@ public class SetPropertyAction implements ActionExecutor {
             format.setTimeZone(TimeZone.getTimeZone("UTC"));
             propertyValue = format.format(new Date());
         }
-        event.getUser().setProperty(
-                (String) action.getParameterValues().get("setPropertyName"),
-                propertyValue);
+        if (Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"))) {
+            event.getSession().setProperty(
+                    (String) action.getParameterValues().get("setPropertyName"),
+                    propertyValue);
+        } else {
+            event.getUser().setProperty(
+                    (String) action.getParameterValues().get("setPropertyName"),
+                    propertyValue);
+        }
         return true;
     }
 
