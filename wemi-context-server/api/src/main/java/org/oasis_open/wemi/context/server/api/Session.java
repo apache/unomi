@@ -22,12 +22,12 @@ public class Session extends Item {
     public Session() {
     }
 
-    public Session(String itemId, User user) {
+    public Session(String itemId, User user, Date sessionCreationDate) {
         super(itemId);
         this.userId = user.getItemId();
         this.user = user;
         properties = new Properties();
-        this.sessionCreationDate = new Date();
+        this.sessionCreationDate = sessionCreationDate;
     }
 
     public String getUserId() {

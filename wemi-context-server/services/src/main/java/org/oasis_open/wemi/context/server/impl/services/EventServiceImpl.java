@@ -63,7 +63,7 @@ public class EventServiceImpl implements EventService {
             }
 
             if (changed) {
-                Event userUpdated = new Event("userUpdated", session, user);
+                Event userUpdated = new Event("userUpdated", session, user, event.getTimeStamp());
                 userUpdated.getAttributes().putAll(event.getAttributes());
                 save(userUpdated);
 
