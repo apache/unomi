@@ -10,7 +10,7 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 public class EventConditionESQueryBuilder implements ESQueryBuilder {
     @Override
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
-        String eventTypeName = (String) condition.getParameterValues().get("eventTypeName");
-        return FilterBuilders.termFilter("eventType", eventTypeName);
+        String eventTypeId = (String) condition.getParameterValues().get("eventTypeId");
+        return FilterBuilders.termFilter("eventType", eventTypeId);
     }
 }
