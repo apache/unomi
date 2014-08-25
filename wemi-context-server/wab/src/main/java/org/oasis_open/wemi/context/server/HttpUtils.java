@@ -116,10 +116,15 @@ public class HttpUtils {
         responseWriter.append("    \"profiles\": [ {  ");
         responseWriter.append("      \"profileInfo\": { ");
         responseWriter.append("        \"profileId\": \"" + user.getItemId() + "\",  ");
+        int i = 0;
         for (String userPropertyName : user.getProperties().stringPropertyNames()) {
             if (!"profileId".equals(userPropertyName)) {
-                responseWriter.append("        \"" + userPropertyName + "\": \"" + user.getProperty(userPropertyName) + "\",  ");
+                responseWriter.append("        \"" + userPropertyName + "\": \"" + user.getProperty(userPropertyName) + "\"");
+                if (i < user.getProperties().size() - 1) {
+                    responseWriter.append(",");
+                }
             }
+            i++;
         }
         responseWriter.append("                   } ");
         responseWriter.append("              } ] ");

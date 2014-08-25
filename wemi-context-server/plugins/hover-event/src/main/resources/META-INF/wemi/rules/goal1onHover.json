@@ -16,8 +16,8 @@
         {
             "type": "setPropertyAction",
             "parameterValues": {
-                "propertyName": "goal1",
-                "propertyValue": "reached"
+                "setPropertyName": "goal1",
+                "setPropertyValue": "reached"
             }
         }
     ]
