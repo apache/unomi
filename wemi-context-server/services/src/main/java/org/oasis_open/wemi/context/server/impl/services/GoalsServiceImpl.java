@@ -199,9 +199,11 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
         report.setSplit(new LinkedHashMap<String, GoalReport.Stat>());
         for (Map.Entry<String, Long> entry : all.entrySet()) {
             GoalReport.Stat dateStat = new GoalReport.Stat();
+            dateStat.setKey(entry.getKey());
             dateStat.setStartCount(entry.getValue());
             dateStat.setTargetCount(match.containsKey(entry.getKey()) ? match.get(entry.getKey()) : 0);
             dateStat.setConversionRate((float) dateStat.getTargetCount() / (float) dateStat.getStartCount());
+            dateStat.setPercentage( (float) dateStat.getTargetCount() / (float) stat.getTargetCount());
             report.getSplit().put(entry.getKey(), dateStat);
         }
 

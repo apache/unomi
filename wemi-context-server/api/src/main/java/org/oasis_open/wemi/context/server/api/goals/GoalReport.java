@@ -30,11 +30,21 @@ public class GoalReport implements Serializable {
     }
 
     public static class Stat implements Serializable {
+        private String key;
         private long startCount;
         private long targetCount;
         private double conversionRate;
+        private double percentage;
 
         public Stat() {
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public void setKey(String key) {
+            this.key = key;
         }
 
         public long getStartCount() {
@@ -61,6 +71,13 @@ public class GoalReport implements Serializable {
             this.conversionRate = conversionRate;
         }
 
+        public double getPercentage() {
+            return percentage;
+        }
+
+        public void setPercentage(double percentage) {
+            this.percentage = percentage;
+        }
     }
 
 }
