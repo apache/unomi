@@ -1,0 +1,29 @@
+{
+    "metadata": {
+        "id": "login",
+        "name": "Login",
+        "description": "Copy event properties to user properties on login"
+    },
+    "condition": {
+        "parameterValues": {
+            "subConditions": [
+                {
+                    "parameterValues": {
+
+                    },
+                    "type": "loginEventCondition"
+                }
+            ]
+        },
+        "type": "andCondition"
+    },
+    "actions": [
+        {
+            "parameterValues": {
+
+            },
+            "type": "allEventToUserPropertiesAction"
+        }
+    ]
+}
+

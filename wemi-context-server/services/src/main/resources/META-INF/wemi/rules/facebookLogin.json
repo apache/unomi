@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "id": "facebookLogin",
+        "name": "Facebook login",
+        "description": "Upon Facebook login event, copy all event properties to user properties"
+    },
+    "condition": {
+        "parameterValues": {
+            "subConditions": [
+                {
+                    "parameterValues": {
+                        "eventTypeId": "facebookLogin"
+                    },
+                    "type": "eventCondition"
+                }
+            ]
+        },
+        "type": "andCondition"
+    },
+    "actions": [
+        {
+            "parameterValues": {
+
+            },
+            "type": "allEventToUserPropertiesAction"
+        }
+    ]
+}
