@@ -24,7 +24,7 @@ public class SetPropertyAction implements ActionExecutor {
         if (propertyValue.equals("now")) {
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
             format.setTimeZone(TimeZone.getTimeZone("UTC"));
-            propertyValue = format.format(new Date());
+            propertyValue = format.format(event.getTimeStamp());
         }
         if (Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"))) {
             event.getSession().setProperty(

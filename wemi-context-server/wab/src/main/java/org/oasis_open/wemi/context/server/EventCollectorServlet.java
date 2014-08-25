@@ -49,18 +49,22 @@ public class EventCollectorServlet extends HttpServlet {
     }
 
     @Override
-    protected void doOptions(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        HttpUtils.dumpBasicRequestInfo(req);
-        HttpUtils.setupCORSHeaders(req, resp);
+    protected void doOptions(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+//        HttpUtils.dumpBasicRequestInfo(request);
+        HttpUtils.setupCORSHeaders(request, response);
     }
 
-    private void doEvent(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        Date eventTimeStamp = new Date();
-        HttpUtils.dumpBasicRequestInfo(req);
+    private void doEvent(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        Date timestamp = new Date();
+        if (request.getParameter("timestamp") != null) {
+            timestamp.setTime(Long.parseLong(request.getParameter("timestamp")));
+        }
 
-        HttpUtils.setupCORSHeaders(req, resp);
+        HttpUtils.dumpBasicRequestInfo(request);
 
-        String sessionId = req.getParameter("sessionId");
+        HttpUtils.setupCORSHeaders(request, response);
+
+        String sessionId = request.getParameter("sessionId");
         if (sessionId == null) {
             return;
         }
@@ -80,7 +84,7 @@ public class EventCollectorServlet extends HttpServlet {
             return;
         }
 
-        String eventType = req.getPathInfo();
+        String eventType = request.getPathInfo();
         if (eventType.startsWith("/")) {
             eventType = eventType.substring(1);
         }
@@ -91,24 +95,24 @@ public class EventCollectorServlet extends HttpServlet {
             eventType = eventType.substring(eventType.lastIndexOf("/"));
         }
 
-        Event event = new Event(eventType, session, user);
+        Event event = new Event(eventType, session, user, timestamp);
 
-        Enumeration<String> parameterNames = req.getParameterNames();
+        Enumeration<String> parameterNames = request.getParameterNames();
         while (parameterNames.hasMoreElements()) {
             String parameterName = parameterNames.nextElement();
-            event.setProperty(parameterName, req.getParameter(parameterName));
+            event.setProperty(parameterName, request.getParameter(parameterName));
         }
 
-        event.getAttributes().put("http_request", req);
-        event.getAttributes().put("http_response", resp);
+        event.getAttributes().put("http_request", request);
+        event.getAttributes().put("http_response", response);
 
         boolean changed = eventService.save(event);
 
-        PrintWriter responseWriter = resp.getWriter();
+        PrintWriter responseWriter = response.getWriter();
 
         if (changed) {
             responseWriter.append("{\"updated\":true, \"digitalData\":");
-            responseWriter.append(HttpUtils.getJSONDigitalData(user, segmentService, HttpUtils.getBaseRequestURL(req)));
+            responseWriter.append(HttpUtils.getJSONDigitalData(user, segmentService, HttpUtils.getBaseRequestURL(request)));
             responseWriter.append("}");
         } else {
             responseWriter.append("{\"updated\":false}");

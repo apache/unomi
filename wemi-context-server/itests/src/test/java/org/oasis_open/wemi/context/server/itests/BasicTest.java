@@ -1,6 +1,9 @@
 package org.oasis_open.wemi.context.server.itests;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
+import org.apache.http.client.config.CookieSpecs;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -25,7 +28,9 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
-import java.util.Set;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.*;
 
 import static org.ops4j.pax.exam.CoreOptions.*;
 import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.karafDistributionConfiguration;
@@ -142,6 +147,73 @@ public class BasicTest {
         Assert.assertTrue("Response should contain context object", responseContent.contains("wemiDigitalData"));
         // @todo we should check the validity of the context object, but this is rather complex since it would
         // potentially require parsing the Javascript !
+    }
+
+    @Test
+    public void testData() throws Exception {
+        URL resource = getClass().getResource("/urllist.txt");
+        InputStream inputStream = resource.openStream();
+        List<String> urls = IOUtils.readLines(inputStream);
+        inputStream.close();
+
+        resource = getClass().getResource("/linklist.txt");
+        inputStream = resource.openStream();
+        List<String> targets = IOUtils.readLines(inputStream);
+        inputStream.close();
+        List<List<Integer>> targetInts = new ArrayList<List<Integer>>();
+        for (String target : targets) {
+            List<Integer> l = new ArrayList<Integer>();
+            l.add(-1);
+            targetInts.add(l);
+            for (String s : target.split(" ")) {
+                if (!s.equals("")) {
+                    l.add(Integer.parseInt(s) - 1);
+                }
+            }
+        }
+
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        RequestConfig globalConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.IGNORE_COOKIES).build();
+        Random r = new Random();
+        for (int user = 0; user < 500; user++) {
+            String userId = null;
+            for (int session = 0; session < r.nextInt(50); session++) {
+                Calendar sessionDate = new GregorianCalendar(2000 + r.nextInt(15), r.nextInt(12), r.nextInt(28), r.nextInt(24), r.nextInt(60), r.nextInt(60));
+                String sessionId = UUID.randomUUID().toString();
+                int currentPage = 0;
+
+                HttpGet httpGet = new HttpGet("http://localhost:8181/context.js?sessionId=" + sessionId + "&timestamp=" + sessionDate.getTimeInMillis());
+                httpGet.setConfig(globalConfig);
+                if (userId != null) {
+                    httpGet.setHeader("Cookie", "wemi-profile-id=" + userId);
+                }
+                CloseableHttpResponse r2 = httpclient.execute(httpGet);
+                CloseableHttpResponse response = r2;
+                if (userId == null) {
+                    String cookie = response.getFirstHeader("Set-Cookie").getValue();
+                    userId = cookie.substring(cookie.indexOf('=') + 1, cookie.indexOf(';'));
+                }
+                response.close();
+
+                List<Integer> pages = new ArrayList<Integer>();
+                for (int event = 0; event < r.nextInt(50); event++) {
+                    pages.add(currentPage);
+                    String path = urls.get(currentPage);
+                    httpGet = new HttpGet("http://localhost:8181/eventcollector/view?sessionId=" + sessionId + "&timestamp=" + sessionDate.getTimeInMillis() + "&url=" + path);
+                    httpGet.setConfig(globalConfig);
+                    httpGet.setHeader("Cookie", "wemi-profile-id=" + userId);
+                    CloseableHttpResponse r1 = httpclient.execute(httpGet);
+                    response = r1;
+                    response.close();
+
+                    sessionDate.add(Calendar.SECOND, r.nextInt(180));
+                    currentPage = targetInts.get(currentPage).get(r.nextInt(targetInts.get(currentPage).size()));
+                    if (currentPage == -1) {
+                        currentPage = pages.get(pages.size()-2 > 0 ? pages.size()-2 : pages.get(0));
+                    }
+                }
+            }
+        }
     }
 
 }

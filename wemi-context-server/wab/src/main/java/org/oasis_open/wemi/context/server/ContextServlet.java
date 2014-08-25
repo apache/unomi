@@ -24,8 +24,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Date;
 import java.util.UUID;
 
 /**
@@ -51,6 +50,10 @@ public class ContextServlet extends HttpServlet {
 
     @Override
     public void service(ServletRequest request, ServletResponse response) throws ServletException, IOException {
+        final Date timestamp = new Date();
+        if (request.getParameter("timestamp") != null) {
+            timestamp.setTime(Long.parseLong(request.getParameter("timestamp")));
+        }
         // first we must retrieve the context for the current visitor, and build a Javascript object to attach to the
         // script output.
         String visitorId = null;
@@ -58,7 +61,7 @@ public class ContextServlet extends HttpServlet {
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
         String httpMethod = httpServletRequest.getMethod();
         HttpUtils.dumpBasicRequestInfo(httpServletRequest);
-        HttpUtils.dumpRequestHeaders(httpServletRequest);
+//        HttpUtils.dumpRequestHeaders(httpServletRequest);
 
         if ("options".equals(httpMethod.toLowerCase())) {
             HttpUtils.setupCORSHeaders(httpServletRequest, response);
@@ -105,16 +108,16 @@ public class ContextServlet extends HttpServlet {
             }
             // associate user with session
             if (sessionId != null) {
-                session = new Session(sessionId, user);
+                session = new Session(sessionId, user, timestamp);
                 userService.saveSession(session);
-                Event event = new Event("sessionCreated", session, user);
+                Event event = new Event("sessionCreated", session, user, timestamp);
                 event.getAttributes().put("http_request", request);
                 event.getAttributes().put("http_response", response);
                 eventService.save(event);
             }
 
             if (userCreated) {
-                Event userUpdated = new Event("userUpdated", session, user);
+                Event userUpdated = new Event("userUpdated", session, user, timestamp);
                 userUpdated.getAttributes().put("http_request", request);
                 userUpdated.getAttributes().put("http_response", response);
                 eventService.save(userUpdated);

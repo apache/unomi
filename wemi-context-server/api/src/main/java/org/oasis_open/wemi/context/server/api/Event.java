@@ -1,7 +1,6 @@
 package org.oasis_open.wemi.context.server.api;
 
 import javax.xml.bind.annotation.XmlTransient;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -27,7 +26,7 @@ public class Event extends Item {
     public Event() {
     }
 
-    public Event(String eventType, Session session, User user) {
+    public Event(String eventType, Session session, User user, Date timestamp) {
         super(UUID.randomUUID().toString());
         this.eventType = eventType;
         this.user = user;
@@ -36,7 +35,7 @@ public class Event extends Item {
         if (session != null) {
             this.sessionId = session.getItemId();
         }
-        this.timeStamp = new Date();
+        this.timeStamp = timestamp;
 
         this.properties = new Properties();
     }

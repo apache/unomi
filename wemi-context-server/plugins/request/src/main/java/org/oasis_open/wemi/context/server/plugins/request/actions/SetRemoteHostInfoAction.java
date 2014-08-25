@@ -15,11 +15,15 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.regex.Pattern;
 
 /**
  * Created by toto on 18/08/14.
  */
 public class SetRemoteHostInfoAction implements ActionExecutor {
+
+    public static final Pattern IPV4 = Pattern.compile("[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}");
+
     @Override
     public boolean execute(Action action, Event event) {
         HttpServletRequest httpServletRequest = (HttpServletRequest) event.getAttributes().get("http_request");
@@ -36,13 +40,15 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         InputStream inputStream = null;
 
         try {
-            final URL url = new URL("http://freegeoip.net/json/" + httpServletRequest.getRemoteAddr());
-            inputStream = url.openConnection().getInputStream();
-            JsonReader reader = Json.createReader(inputStream);
-            JsonObject location = (JsonObject) reader.read();
-            session.setProperty("countryCode", location.getString("country_code"));
-            session.setProperty("countryName", location.getString("country_name"));
-            session.setProperty("city",location.getString("city"));
+            if (!httpServletRequest.getRemoteAddr().equals("127.0.0.1") && IPV4.matcher(httpServletRequest.getRemoteAddr()).matches()) {
+                final URL url = new URL("http://freegeoip.net/json/" + httpServletRequest.getRemoteAddr());
+                inputStream = url.openConnection().getInputStream();
+                JsonReader reader = Json.createReader(inputStream);
+                JsonObject location = (JsonObject) reader.read();
+                session.setProperty("countryCode", location.getString("country_code"));
+                session.setProperty("countryName", location.getString("country_name"));
+                session.setProperty("city", location.getString("city"));
+            }
         } catch (Exception e) {
             e.printStackTrace();
         } finally {

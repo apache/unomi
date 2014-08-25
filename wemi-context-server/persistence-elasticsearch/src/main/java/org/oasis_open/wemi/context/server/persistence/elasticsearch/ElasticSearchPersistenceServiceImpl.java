@@ -455,7 +455,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                         bucketsAggregation = AggregationBuilders.terms("buckets").field(aggregateOnField);
                     } else if ("date".equals(aggregateType)) {
                         // default interval set to 10 minutes for testing
-                        bucketsAggregation = AggregationBuilders.dateHistogram("buckets").field(aggregateOnField).interval(new DateHistogram.Interval("10m"));
+                        bucketsAggregation = AggregationBuilders.dateHistogram("buckets").field(aggregateOnField).interval(new DateHistogram.Interval("1M"));
                     }
                     if (bucketsAggregation != null) {
                         if (filterAggregation != null) {
