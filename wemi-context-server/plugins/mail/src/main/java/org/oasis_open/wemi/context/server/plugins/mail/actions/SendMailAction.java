@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.plugins.mail.actions;
 
+import org.apache.commons.mail.DefaultAuthenticator;
 import org.apache.commons.mail.EmailException;
 import org.apache.commons.mail.HtmlEmail;
 import org.apache.commons.mail.ImageHtmlEmail;
@@ -16,9 +17,29 @@ import java.net.URL;
 public class SendMailAction implements ActionExecutor {
 
     private String mailServerHostName;
+    private int mailServerPort;
+    private String mailServerUsername;
+    private String mailServerPassword;
+    private boolean mailServerSSLOnConnect = true;
 
     public void setMailServerHostName(String mailServerHostName) {
         this.mailServerHostName = mailServerHostName;
+    }
+
+    public void setMailServerPort(int mailServerPort) {
+        this.mailServerPort = mailServerPort;
+    }
+
+    public void setMailServerUsername(String mailServerUsername) {
+        this.mailServerUsername = mailServerUsername;
+    }
+
+    public void setMailServerPassword(String mailServerPassword) {
+        this.mailServerPassword = mailServerPassword;
+    }
+
+    public void setMailServerSSLOnConnect(boolean mailServerSSLOnConnect) {
+        this.mailServerSSLOnConnect = mailServerSSLOnConnect;
     }
 
     public boolean execute(Action action, Event event) {
@@ -44,6 +65,9 @@ public class SendMailAction implements ActionExecutor {
         HtmlEmail email = new ImageHtmlEmail();
         // email.setDataSourceResolver(new DataSourceResolverImpl(url));
         email.setHostName(mailServerHostName);
+        email.setSmtpPort(mailServerPort);
+        email.setAuthenticator(new DefaultAuthenticator(mailServerUsername, mailServerPassword));
+        email.setSSLOnConnect(mailServerSSLOnConnect);
         try {
             email.addTo(to);
             email.setFrom(from);
