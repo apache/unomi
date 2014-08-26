@@ -28,9 +28,13 @@ The "package" sub-project generates a pre-configured Apache Karaf installation t
 Simply uncompress the package/target/wemi-context-server-package-VERSION.tar.gz (for Linux or Mac OS X) or 
  package/target/wemi-context-server-package-VERSION.tar.gz (for Windows) archive into the directory of your choice.
  
-You can then start the server simply by using the command : 
+You can then start the server simply by using the command on UNIX/Linux/MacOS X : 
 
     bin/karaf start    
+    
+or on Windows : 
+
+    bin\karaf.bat start
 
 Deploying manually
 ------------------
