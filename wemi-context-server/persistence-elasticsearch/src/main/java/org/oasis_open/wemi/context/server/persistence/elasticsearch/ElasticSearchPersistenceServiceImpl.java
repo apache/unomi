@@ -25,6 +25,7 @@ import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
+import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregation;
 import org.elasticsearch.search.aggregations.bucket.filter.Filter;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogram;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
@@ -460,8 +461,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                     if (bucketsAggregation != null) {
                         if (filterAggregation != null) {
                             filterAggregation.subAggregation(bucketsAggregation);
+                            filterAggregation.subAggregation(AggregationBuilders.missing("missing").field(aggregateOnField));
                         } else {
                             builder.addAggregation(bucketsAggregation);
+                            builder.addAggregation(AggregationBuilders.missing("missing").field(aggregateOnField));
                         }
                     }
 
@@ -478,6 +481,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                         MultiBucketsAggregation terms = aggregations.get("buckets");
                         for (MultiBucketsAggregation.Bucket bucket : terms.getBuckets()) {
                             results.put(bucket.getKey(), bucket.getDocCount());
+                        }
+                        SingleBucketAggregation missing = aggregations.get("missing");
+                        if (missing.getDocCount() > 0) {
+                            results.put("_missing", missing.getDocCount());
                         }
                     }
                 } catch (IllegalAccessException e) {

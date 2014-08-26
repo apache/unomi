@@ -227,7 +227,7 @@ public class BasicTest {
                 for (int event = 0; event < nbPages; event++) {
                     pages.add(currentPage);
                     String path = urls.get(currentPage);
-                    httpGet = new HttpGet("http://localhost:8181/eventcollector/view?sessionId=" + sessionId + "&timestamp=" + sessionDate.getTimeInMillis() + "&pageInfo.destinationURL=" + path);
+                    httpGet = new HttpGet("http://localhost:8181/eventcollector/view?sessionId=" + sessionId + "&timestamp=" + sessionDate.getTimeInMillis() + "&page.pageInfo.destinationURL=" + path);
                     httpGet.setConfig(globalConfig);
                     httpGet.setHeader("user-agent",agent);
                     httpGet.setHeader("Cookie", "wemi-profile-id=" + userId);
