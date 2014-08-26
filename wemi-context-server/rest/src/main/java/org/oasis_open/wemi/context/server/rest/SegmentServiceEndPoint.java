@@ -39,13 +39,14 @@ public class SegmentServiceEndPoint implements SegmentService {
     }
 
     @GET
-    @Path("/{segmentID}/test/{user}")
+    @Path("/{segmentID}/match/{user}")
     public Boolean isUserInSegment(@PathParam("user") User user, @PathParam("segmentID") String segmentId) {
         return segmentService.isUserInSegment(user, segmentId);
     }
 
-    @WebMethod(exclude=true)
-    public Set<String> getSegmentsForUser( User user) {
+    @GET
+    @Path("/match/{userID}")
+    public Set<String> getSegmentsForUser(@PathParam("userID") User user) {
         return segmentService.getSegmentsForUser(user);
     }
 

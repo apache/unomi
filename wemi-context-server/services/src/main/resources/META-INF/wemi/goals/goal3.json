@@ -2,17 +2,17 @@
     "metadata": {
         "id": "goal3",
         "name": "goal3",
-        "description": "Goal 3 : read travel to mars after going to mars projects"
+        "description": "Goal 3 : read  mars projects after going to forums"
     },
     "startEvent": {
         "parameterValues": {
-            "url": "http://localhost:8080/fr/sites/ACMESPACE/home/community/forums/mars-project.html"
+            "url": "http://localhost:8080/sites/ACMESPACE/home/community/forums.html"
         },
         "type": "pageViewEventCondition"
     },
     "targetEvent": {
         "parameterValues": {
-            "url": "http://localhost:8080/fr/sites/ACMESPACE/home/community/forums/mars-project/travel-to-mars.html"
+            "url": "http://localhost:8080/sites/ACMESPACE/home/community/forums/mars-project.html"
         },
         "type": "pageViewEventCondition"
     }
