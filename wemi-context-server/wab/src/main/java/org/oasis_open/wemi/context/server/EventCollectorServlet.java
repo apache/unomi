@@ -24,6 +24,8 @@ import java.util.*;
 @WebServlet(urlPatterns={"/eventcollector/*"})
 public class EventCollectorServlet extends HttpServlet {
 
+    private static final List<String> reservedParameters = Arrays.asList("timestamp", "sessionId");
+
     @Inject
     @OsgiService
     private EventService eventService;
@@ -100,7 +102,9 @@ public class EventCollectorServlet extends HttpServlet {
         Enumeration<String> parameterNames = request.getParameterNames();
         while (parameterNames.hasMoreElements()) {
             String parameterName = parameterNames.nextElement();
-            event.setProperty(parameterName, request.getParameter(parameterName));
+            if (!reservedParameters.contains(parameterName)) {
+                event.setProperty(parameterName, request.getParameter(parameterName));
+            }
         }
 
         event.getAttributes().put("http_request", request);

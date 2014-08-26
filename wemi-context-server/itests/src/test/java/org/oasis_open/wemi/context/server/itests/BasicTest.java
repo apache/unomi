@@ -172,28 +172,54 @@ public class BasicTest {
             }
         }
 
+        resource = getClass().getResource("/userAgent.txt");
+        inputStream = resource.openStream();
+        List<String> agents = IOUtils.readLines(inputStream);
+        inputStream.close();
+
+
         CloseableHttpClient httpclient = HttpClients.createDefault();
         RequestConfig globalConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.IGNORE_COOKIES).build();
         Random r = new Random();
-        for (int user = 0; user < 500; user++) {
+        for (int user = 0; user < 1000; user++) {
             String userId = null;
+
+            String userProperties = "";
+            if (r.nextBoolean()) {
+                userProperties += "&age=" + Integer.toString(15 + r.nextInt(60));
+                userProperties += "&income=" + Integer.toString(1000 * r.nextInt(20000));
+                userProperties += "&gender=" +  (r.nextBoolean() ? "male" : "female");
+            }
+
             for (int session = 0; session < r.nextInt(50); session++) {
                 Calendar sessionDate = new GregorianCalendar(2000 + r.nextInt(15), r.nextInt(12), r.nextInt(28), r.nextInt(24), r.nextInt(60), r.nextInt(60));
                 String sessionId = UUID.randomUUID().toString();
+                String agent = agents.get(r.nextInt(agents.size()));
                 int currentPage = 0;
 
                 HttpGet httpGet = new HttpGet("http://localhost:8181/context.js?sessionId=" + sessionId + "&timestamp=" + sessionDate.getTimeInMillis());
                 httpGet.setConfig(globalConfig);
+                httpGet.setHeader("user-agent",agent);
                 if (userId != null) {
                     httpGet.setHeader("Cookie", "wemi-profile-id=" + userId);
                 }
-                CloseableHttpResponse r2 = httpclient.execute(httpGet);
-                CloseableHttpResponse response = r2;
+                CloseableHttpResponse response = httpclient.execute(httpGet);
                 if (userId == null) {
                     String cookie = response.getFirstHeader("Set-Cookie").getValue();
                     userId = cookie.substring(cookie.indexOf('=') + 1, cookie.indexOf(';'));
                 }
                 response.close();
+
+                if (userProperties.length() > 0) {
+                    httpGet = new HttpGet("http://localhost:8181/eventcollector/login?sessionId=" + sessionId + "&timestamp=" + sessionDate.getTimeInMillis() + userProperties);
+                    httpGet.setConfig(globalConfig);
+                    httpGet.setHeader("user-agent",agent);
+                    httpGet.setHeader("Cookie", "wemi-profile-id=" + userId);
+                    response = httpclient.execute(httpGet);
+                    response.close();
+
+                    sessionDate.add(Calendar.SECOND, r.nextInt(180));
+                }
 
                 List<Integer> pages = new ArrayList<Integer>();
                 for (int event = 0; event < r.nextInt(50); event++) {
@@ -201,9 +227,9 @@ public class BasicTest {
                     String path = urls.get(currentPage);
                     httpGet = new HttpGet("http://localhost:8181/eventcollector/view?sessionId=" + sessionId + "&timestamp=" + sessionDate.getTimeInMillis() + "&url=" + path);
                     httpGet.setConfig(globalConfig);
+                    httpGet.setHeader("user-agent",agent);
                     httpGet.setHeader("Cookie", "wemi-profile-id=" + userId);
-                    CloseableHttpResponse r1 = httpclient.execute(httpGet);
-                    response = r1;
+                    response = httpclient.execute(httpGet);
                     response.close();
 
                     sessionDate.add(Calendar.SECOND, r.nextInt(180));

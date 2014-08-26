@@ -1,0 +1,26 @@
+{
+    "metadata": {
+        "id": "french",
+        "name": "French",
+        "description": "User accessed the fr home page"
+    },
+    "condition": {
+        "parameterValues": {
+            "subConditions": [
+                {
+                    "parameterValues": {
+                        "numberOfDays": "30",
+                        "eventCondition": {
+                            "parameterValues": {
+                                "url": "http://localhost:8080/sites/ACMESPACE/fr/home.html"
+                            },
+                            "type": "pageViewEventCondition"
+                        }
+                    },
+                    "type": "userEventCondition"
+                }
+            ]
+        },
+        "type": "andCondition"
+    }
+}

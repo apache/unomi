@@ -32,13 +32,15 @@ public class SegmentServiceEndPoint implements SegmentService {
         this.segmentService = segmentService;
     }
 
-    @WebMethod(exclude=true)
-    public Set<User> getMatchingIndividuals(String segmentId) {
+    @GET
+    @Path("/{segmentID}/match")
+    public Set<User> getMatchingIndividuals(@PathParam("segmentID") String segmentId) {
         return segmentService.getMatchingIndividuals(segmentId);
     }
 
-    @WebMethod(exclude=true)
-    public Boolean isUserInSegment(User user, String segmentId) {
+    @GET
+    @Path("/{segmentID}/test/{user}")
+    public Boolean isUserInSegment(@PathParam("user") User user, @PathParam("segmentID") String segmentId) {
         return segmentService.isUserInSegment(user, segmentId);
     }
 

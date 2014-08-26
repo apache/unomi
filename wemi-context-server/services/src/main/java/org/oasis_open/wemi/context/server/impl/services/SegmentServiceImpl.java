@@ -97,8 +97,8 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
         }
     }
 
-    public Set<User> getMatchingIndividuals(String segmentDescription) {
-        return null;
+    public Set<User> getMatchingIndividuals(String segmentID) {
+        return new HashSet<User>(persistenceService.query(getSegmentDefinition(segmentID).getCondition(), null, User.class));
     }
 
     public Boolean isUserInSegment(User user, String segmentId) {
