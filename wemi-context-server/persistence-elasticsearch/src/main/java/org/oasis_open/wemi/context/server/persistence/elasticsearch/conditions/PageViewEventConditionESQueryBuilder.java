@@ -15,7 +15,7 @@ public class PageViewEventConditionESQueryBuilder implements ESQueryBuilder {
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
         return FilterBuilders.andFilter(
                 FilterBuilders.termFilter("eventType", "view"),
-                FilterBuilders.termFilter("properties.pageInfo.destinationURL", (String) condition.getParameterValues().get("url")));
+                FilterBuilders.termFilter("properties.page.pageInfo.destinationURL", (String) condition.getParameterValues().get("url")));
 
     }
 }
