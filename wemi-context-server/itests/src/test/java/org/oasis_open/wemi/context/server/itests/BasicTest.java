@@ -181,18 +181,19 @@ public class BasicTest {
         CloseableHttpClient httpclient = HttpClients.createDefault();
         RequestConfig globalConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.IGNORE_COOKIES).build();
         Random r = new Random();
-        for (int user = 0; user < 1000; user++) {
+        for (int user = 0; user < 100; user++) {
             String userId = null;
 
             String userProperties = "";
-            if (r.nextBoolean()) {
+            if (r.nextInt(4) > 1) {
                 userProperties += "&age=" + Integer.toString(15 + r.nextInt(60));
-                userProperties += "&income=" + Integer.toString(1000 * r.nextInt(20000));
+                userProperties += "&income=" + Integer.toString(10000 * r.nextInt(2000));
                 userProperties += "&gender=" +  (r.nextBoolean() ? "male" : "female");
             }
 
-            for (int session = 0; session < r.nextInt(50); session++) {
-                Calendar sessionDate = new GregorianCalendar(2000 + r.nextInt(15), r.nextInt(12), r.nextInt(28), r.nextInt(24), r.nextInt(60), r.nextInt(60));
+            final int nbSessions = 1 + r.nextInt(10);
+            for (int session = 0; session < nbSessions; session++) {
+                Calendar sessionDate = new GregorianCalendar(2010 + r.nextInt(5), r.nextInt(12), r.nextInt(28), r.nextInt(24), r.nextInt(60), r.nextInt(60));
                 String sessionId = UUID.randomUUID().toString();
                 String agent = agents.get(r.nextInt(agents.size()));
                 int currentPage = 0;
@@ -222,10 +223,11 @@ public class BasicTest {
                 }
 
                 List<Integer> pages = new ArrayList<Integer>();
-                for (int event = 0; event < r.nextInt(50); event++) {
+                final int nbPages = 5 + r.nextInt(50);
+                for (int event = 0; event < nbPages; event++) {
                     pages.add(currentPage);
                     String path = urls.get(currentPage);
-                    httpGet = new HttpGet("http://localhost:8181/eventcollector/view?sessionId=" + sessionId + "&timestamp=" + sessionDate.getTimeInMillis() + "&url=" + path);
+                    httpGet = new HttpGet("http://localhost:8181/eventcollector/view?sessionId=" + sessionId + "&timestamp=" + sessionDate.getTimeInMillis() + "&pageInfo.destinationURL=" + path);
                     httpGet.setConfig(globalConfig);
                     httpGet.setHeader("user-agent",agent);
                     httpGet.setHeader("Cookie", "wemi-profile-id=" + userId);
