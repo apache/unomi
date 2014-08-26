@@ -60,7 +60,7 @@ public class ContextServlet extends HttpServlet {
 
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
         String httpMethod = httpServletRequest.getMethod();
-        HttpUtils.dumpBasicRequestInfo(httpServletRequest);
+//        HttpUtils.dumpBasicRequestInfo(httpServletRequest);
 //        HttpUtils.dumpRequestHeaders(httpServletRequest);
 
         if ("options".equals(httpMethod.toLowerCase())) {

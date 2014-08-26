@@ -21,8 +21,8 @@ public class PluginsCorsFilter implements Filter {
         HttpServletRequest httpServletRequest = (HttpServletRequest) servletRequest;
         HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
         String httpMethod = httpServletRequest.getMethod();
-        HttpUtils.dumpBasicRequestInfo(httpServletRequest);
-        HttpUtils.dumpRequestHeaders(httpServletRequest);
+//        HttpUtils.dumpBasicRequestInfo(httpServletRequest);
+//        HttpUtils.dumpRequestHeaders(httpServletRequest);
 
         if ("options".equals(httpMethod.toLowerCase())) {
             HttpUtils.setupCORSHeaders(httpServletRequest, httpServletResponse);

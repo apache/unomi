@@ -9,6 +9,7 @@ import org.oasis_open.wemi.context.server.api.services.UserService;
 import org.ops4j.pax.cdi.api.OsgiService;
 
 import javax.inject.Inject;
+import javax.json.*;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -16,6 +17,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringReader;
 import java.util.*;
 
 /**
@@ -24,7 +26,7 @@ import java.util.*;
 @WebServlet(urlPatterns={"/eventcollector/*"})
 public class EventCollectorServlet extends HttpServlet {
 
-    private static final List<String> reservedParameters = Arrays.asList("timestamp", "sessionId");
+    private static final List<String> reservedParameters = Arrays.asList("timestamp", "sessionId", "jsondata");
 
     @Inject
     @OsgiService
@@ -62,7 +64,7 @@ public class EventCollectorServlet extends HttpServlet {
             timestamp.setTime(Long.parseLong(request.getParameter("timestamp")));
         }
 
-        HttpUtils.dumpBasicRequestInfo(request);
+//        HttpUtils.dumpBasicRequestInfo(request);
 
         HttpUtils.setupCORSHeaders(request, response);
 
@@ -99,6 +101,12 @@ public class EventCollectorServlet extends HttpServlet {
 
         Event event = new Event(eventType, session, user, timestamp);
 
+        if (request.getParameter("jsondata") != null) {
+            JsonReader reader = Json.createReader(new StringReader(request.getParameter("jsondata")));
+            JsonObject data = (JsonObject) reader.read();
+            addJsonProperties(event, data, "");
+        }
+
         Enumeration<String> parameterNames = request.getParameterNames();
         while (parameterNames.hasMoreElements()) {
             String parameterName = parameterNames.nextElement();
@@ -122,6 +130,22 @@ public class EventCollectorServlet extends HttpServlet {
             responseWriter.append("{\"updated\":false}");
         }
         responseWriter.flush();
+    }
+
+    private void addJsonProperties(Event event, JsonObject data, String name) {
+        for (Map.Entry<String, JsonValue> entry : data.entrySet()) {
+            switch (entry.getValue().getValueType()) {
+                case STRING :
+                    event.setProperty(name + entry.getKey(), ((JsonString)entry.getValue()).getString());
+                    break;
+                case NUMBER:
+                    event.setProperty(name + entry.getKey(), Integer.toString(((JsonNumber)entry.getValue()).intValueExact()));
+                    break;
+                case OBJECT:
+                    addJsonProperties(event, ((JsonObject) entry.getValue()), name + entry.getKey() + ".");
+                    break;
+            }
+        }
     }
 
 
