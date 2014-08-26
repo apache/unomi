@@ -6,13 +6,13 @@
     },
     "startEvent": {
         "parameterValues": {
-            "url": "http://localhost:8080/sites/ACMESPACE/fr/home/community/forums/mars-project.html"
+            "url": "http://localhost:8080/fr/sites/ACMESPACE/home/community/forums/mars-project.html"
         },
         "type": "pageViewEventCondition"
     },
     "targetEvent": {
         "parameterValues": {
-            "url": "http://localhost:8080/sites/ACMESPACE/fr/home/community/forums/mars-project/travel-to-mars.html"
+            "url": "http://localhost:8080/fr/sites/ACMESPACE/home/community/forums/mars-project/travel-to-mars.html"
         },
         "type": "pageViewEventCondition"
     }
