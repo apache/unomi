@@ -40,7 +40,7 @@
             "type": "string",
             "multivalued": false,
             "choicelistInitializerFilter": "",
-            "defaultValue": "\nHello $user.properties.(\"j:firstName\")$ $user.properties.(\"j:lastName\")$,\nHow are you doing today ?"
+            "defaultValue": "Hello $user.properties.(\"j:firstName\")$ $user.properties.(\"j:lastName\")$,\nHow are you doing today ?"
         }
 
     ]
