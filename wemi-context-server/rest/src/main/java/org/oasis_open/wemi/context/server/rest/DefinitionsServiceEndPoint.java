@@ -1,10 +1,10 @@
 package org.oasis_open.wemi.context.server.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
+import org.oasis_open.wemi.context.server.api.Parameter;
 import org.oasis_open.wemi.context.server.api.Tag;
 import org.oasis_open.wemi.context.server.api.actions.ActionType;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
-import org.oasis_open.wemi.context.server.api.conditions.Parameter;
 import org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.osgi.framework.BundleContext;

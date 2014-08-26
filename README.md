@@ -32,7 +32,7 @@ You can then start the server simply by using the command on UNIX/Linux/MacOS X 
 
     bin/karaf start    
     
-or on Windows : 
+or on Windows shell : 
 
     bin\karaf.bat start
 

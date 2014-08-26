@@ -1,4 +1,4 @@
-package org.oasis_open.wemi.context.server.api.conditions;
+package org.oasis_open.wemi.context.server.api;
 
 import org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListValue;
 
@@ -18,15 +18,17 @@ public class Parameter {
     boolean multivalued = false;
     String choicelistInitializerFilter;
     List<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
+    String defaultValue = null;
 
     public Parameter() {
     }
 
-    public Parameter(String id, String nameKey, String description, String type, boolean multivalued, String choicelistInitializerFilter) {
+    public Parameter(String id, String nameKey, String description, String type, boolean multivalued, String choicelistInitializerFilter, String defaultValue) {
         this.id = id;
         this.type = type;
         this.multivalued = multivalued;
         this.choicelistInitializerFilter = choicelistInitializerFilter;
+        this.defaultValue = defaultValue;
     }
 
     public String getId() {
@@ -51,5 +53,13 @@ public class Parameter {
 
     public void setChoiceListValues(List<ChoiceListValue> choiceListValues) {
         this.choiceListValues = choiceListValues;
+    }
+
+    public String getDefaultValue() {
+        return defaultValue;
+    }
+
+    public void setDefaultValue(String defaultValue) {
+        this.defaultValue = defaultValue;
     }
 }

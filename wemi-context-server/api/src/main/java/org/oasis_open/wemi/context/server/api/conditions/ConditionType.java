@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.api.conditions;
 
+import org.oasis_open.wemi.context.server.api.Parameter;
 import org.oasis_open.wemi.context.server.api.Tag;
 import org.oasis_open.wemi.context.server.api.rules.Rule;
 

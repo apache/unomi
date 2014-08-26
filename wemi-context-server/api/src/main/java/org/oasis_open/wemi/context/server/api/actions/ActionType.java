@@ -1,7 +1,7 @@
 package org.oasis_open.wemi.context.server.api.actions;
 
+import org.oasis_open.wemi.context.server.api.Parameter;
 import org.oasis_open.wemi.context.server.api.Tag;
-import org.oasis_open.wemi.context.server.api.conditions.Parameter;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
