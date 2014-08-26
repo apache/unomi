@@ -7,6 +7,7 @@ import org.apache.commons.mail.ImageHtmlEmail;
 import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.actions.ActionExecutor;
+import org.stringtemplate.v4.ST;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -50,8 +51,11 @@ public class SendMailAction implements ActionExecutor {
         String subject = (String) action.getParameterValues().get("subject");
         String template = (String) action.getParameterValues().get("template");
 
+        ST stringTemplate = new ST(template);
+        stringTemplate.add("user", event.getUser());
+        stringTemplate.add("event", event);
         // load your HTML email template
-        String htmlEmailTemplate = template;
+        String htmlEmailTemplate = stringTemplate.render();
 
         // define you base URL to resolve relative resource locations
         URL url = null;
