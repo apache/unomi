@@ -20,7 +20,6 @@ import org.elasticsearch.index.query.*;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
-import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.Aggregations;
@@ -28,11 +27,12 @@ import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregation;
 import org.elasticsearch.search.aggregations.bucket.filter.Filter;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogram;
-import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.missing.MissingBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.oasis_open.wemi.context.server.api.Item;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
+import org.oasis_open.wemi.context.server.persistence.spi.Aggregate;
 import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
@@ -433,7 +433,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         }.executeInClassLoader();
     }
 
-    public <T extends Item> Map<String, Long> aggregateQuery(final Condition filter, final String aggregateType, final String aggregateOnField, final Class<T> clazz) {
+    public <T extends Item> Map<String, Long> aggregateQuery(final Condition filter, final Aggregate aggregate, final Class<T> clazz) {
         return new InClassLoaderExecute<Map<String, Long>>() {
 
             @Override
@@ -446,38 +446,50 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                             .setTypes(itemType)
                             .setSearchType(SearchType.COUNT)
                             .setQuery(QueryBuilders.matchAllQuery());
-                    AggregationBuilder filterAggregation = null;
-                    if (filter != null) {
-                        filterAggregation = AggregationBuilders.filter("filter").filter(conditionESQueryBuilderDispatcher.buildFilter(filter));
-                        builder.addAggregation(filterAggregation);
-                    }
-                    AggregationBuilder bucketsAggregation = null;
-                    if ("terms".equals(aggregateType)) {
-                        bucketsAggregation = AggregationBuilders.terms("buckets").field(aggregateOnField);
-                    } else if ("date".equals(aggregateType)) {
-                        // default interval set to 10 minutes for testing
-                        bucketsAggregation = AggregationBuilders.dateHistogram("buckets").field(aggregateOnField).interval(new DateHistogram.Interval("1M"));
-                    }
-                    if (bucketsAggregation != null) {
-                        if (filterAggregation != null) {
-                            filterAggregation.subAggregation(bucketsAggregation);
-                            filterAggregation.subAggregation(AggregationBuilders.missing("missing").field(aggregateOnField));
-                        } else {
-                            builder.addAggregation(bucketsAggregation);
-                            builder.addAggregation(AggregationBuilders.missing("missing").field(aggregateOnField));
+
+                    List<AggregationBuilder> lastAggregation = new ArrayList<AggregationBuilder>();
+
+                    if (aggregate != null) {
+                        AggregationBuilder bucketsAggregation = null;
+                        switch (aggregate.getType()) {
+                            case TERMS:
+                                bucketsAggregation = AggregationBuilders.terms("buckets").field(aggregate.getField());
+                                break;
+                            case DATE:
+                                bucketsAggregation = AggregationBuilders.dateHistogram("buckets").field(aggregate.getField()).interval(new DateHistogram.Interval("1M"));
+                                break;
+                        }
+                        if (bucketsAggregation != null) {
+                            final MissingBuilder missingBucketsAggregation = AggregationBuilders.missing("missing").field(aggregate.getField());
+                            for (AggregationBuilder aggregationBuilder : lastAggregation) {
+                                bucketsAggregation.subAggregation(aggregationBuilder);
+                                missingBucketsAggregation.subAggregation(aggregationBuilder);
+                            }
+                            lastAggregation = Arrays.asList(bucketsAggregation, missingBucketsAggregation);
                         }
                     }
 
+                    if (filter != null) {
+                        AggregationBuilder filterAggregation = AggregationBuilders.filter("filter").filter(conditionESQueryBuilderDispatcher.buildFilter(filter));
+                        for (AggregationBuilder aggregationBuilder : lastAggregation) {
+                            filterAggregation.subAggregation(aggregationBuilder);
+                        }
+                        lastAggregation = Arrays.asList(filterAggregation);
+                    }
+
+                    for (AggregationBuilder aggregationBuilder : lastAggregation) {
+                        builder.addAggregation(aggregationBuilder);
+                    }
 
                     SearchResponse response = builder.execute().actionGet();
 
                     Aggregations aggregations = response.getAggregations();
-                    if (filter != null) {
+                    if (aggregations.get("filter") != null) {
                         Filter filterAgg = aggregations.get("filter");
                         results.put("_filtered", filterAgg.getDocCount());
                         aggregations = filterAgg.getAggregations();
                     }
-                    if (bucketsAggregation != null) {
+                    if (aggregations.get("buckets") != null) {
                         MultiBucketsAggregation terms = aggregations.get("buckets");
                         for (MultiBucketsAggregation.Bucket bucket : terms.getBuckets()) {
                             results.put(bucket.getKey(), bucket.getDocCount());

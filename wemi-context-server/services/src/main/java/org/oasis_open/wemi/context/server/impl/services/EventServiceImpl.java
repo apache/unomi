@@ -6,6 +6,7 @@ import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.EventListenerService;
 import org.oasis_open.wemi.context.server.api.services.EventService;
 import org.oasis_open.wemi.context.server.api.services.UserService;
+import org.oasis_open.wemi.context.server.persistence.spi.Aggregate;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
@@ -84,7 +85,7 @@ public class EventServiceImpl implements EventService {
     }
 
     public Set<String> getEventTypeIds() {
-        Map<String, Long> dynamicEventTypeIds = persistenceService.aggregateQuery(null, "terms", "eventType", Event.class);
+        Map<String, Long> dynamicEventTypeIds = persistenceService.aggregateQuery(null, new Aggregate(Aggregate.Type.TERMS, "eventType"), Event.class);
         Set<String> eventTypeIds = new LinkedHashSet<String>(predefinedEventTypeIds);
         eventTypeIds.addAll(dynamicEventTypeIds.keySet());
         return eventTypeIds;

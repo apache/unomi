@@ -6,7 +6,6 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 /**
  * Created by loom on 02.05.14.
@@ -39,6 +38,6 @@ public interface PersistenceService {
 
     public <T extends Item> List<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz);
 
-    public <T extends Item> Map<String, Long> aggregateQuery(Condition filter, String aggregateType, String aggregateOnField, Class<T> clazz);
+    public <T extends Item> Map<String, Long> aggregateQuery(Condition filter, Aggregate aggregate, Class<T> clazz);
 
 }

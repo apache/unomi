@@ -10,6 +10,7 @@ import org.oasis_open.wemi.context.server.api.rules.Rule;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.GoalsService;
 import org.oasis_open.wemi.context.server.api.services.RulesService;
+import org.oasis_open.wemi.context.server.persistence.spi.Aggregate;
 import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
@@ -173,13 +174,13 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
         Map<String, Long> match;
 
         if ("sessionCreationDate".equals(split)) {
-            all = persistenceService.aggregateQuery(condition, "date", "sessionCreationDate", Session.class);
+            all = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.DATE, "sessionCreationDate"), Session.class);
             condition.getParameterValues().put("goalReached", true);
-            match = persistenceService.aggregateQuery(condition, "date", "sessionCreationDate", Session.class);
+            match = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.DATE, "sessionCreationDate"), Session.class);
         } else if (split != null) {
-            all = persistenceService.aggregateQuery(condition, "terms", split , Session.class);
+            all = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.TERMS, split) , Session.class);
             condition.getParameterValues().put("goalReached", true);
-            match = persistenceService.aggregateQuery(condition, "terms", split, Session.class);
+            match = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.TERMS, split), Session.class);
         } else {
             all = new HashMap<String, Long>();
             all.put("_filtered",persistenceService.queryCount(condition, Session.class));
