@@ -1,0 +1,9 @@
+{
+    "id": "email",
+    "type": "email",
+    "groupId": "basic",
+    "choiceListInitializerFilter": "",
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ "j:email" ]
+}

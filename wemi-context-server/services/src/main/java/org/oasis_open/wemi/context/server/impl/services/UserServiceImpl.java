@@ -3,26 +3,44 @@ package org.oasis_open.wemi.context.server.impl.services;
 import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
+import org.oasis_open.wemi.context.server.api.UserProperty;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.UserService;
 import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleEvent;
+import org.osgi.framework.BundleListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.URL;
 import java.util.*;
 
 /**
  * Created by loom on 24.04.14.
  */
-public class UserServiceImpl implements UserService {
+public class UserServiceImpl implements UserService, BundleListener {
+
+    private static final Logger logger = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
+
+    private BundleContext bundleContext;
 
     private PersistenceService persistenceService;
 
     private DefinitionsService definitionsService;
 
+    private Map<String, UserProperty> userProperties = new LinkedHashMap<String, UserProperty>();
+
     public UserServiceImpl() {
         System.out.println("Initializing user service...");
+    }
+
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
     }
 
     public void setPersistenceService(PersistenceService persistenceService) {
@@ -33,6 +51,21 @@ public class UserServiceImpl implements UserService {
         this.definitionsService = definitionsService;
     }
 
+    public void postConstruct() {
+        logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
+
+        loadPredefinedUserProperties(bundleContext);
+        for (Bundle bundle : bundleContext.getBundles()) {
+            if (bundle.getBundleContext() != null) {
+                loadPredefinedUserProperties(bundle.getBundleContext());
+            }
+        }
+        bundleContext.addBundleListener(this);
+    }
+
+    public void preDestroy() {
+        bundleContext.removeBundleListener(this);
+    }
 
     public Collection<User> getAllUsers() {
         return persistenceService.getAllItems(User.class);
@@ -110,4 +143,41 @@ public class UserServiceImpl implements UserService {
         }
         return false;
     }
+
+    public void bundleChanged(BundleEvent event) {
+        switch (event.getType()) {
+            case BundleEvent.STARTED:
+                if (event.getBundle().getBundleContext() != null) {
+                    loadPredefinedUserProperties(event.getBundle().getBundleContext());
+                }
+                break;
+            case BundleEvent.STOPPING:
+                // @todo remove bundle-defined resources (is it possible ?)
+                break;
+        }
+    }
+
+    private void loadPredefinedUserProperties(BundleContext bundleContext) {
+        if (bundleContext == null) {
+            return;
+        }
+        Enumeration<URL> predefinedUserPropertiesEntries = bundleContext.getBundle().findEntries("META-INF/wemi/user", "*.json", true);
+        if (predefinedUserPropertiesEntries == null) {
+            return;
+        }
+
+        while (predefinedUserPropertiesEntries.hasMoreElements()) {
+            URL predefinedUserPropertyURL = predefinedUserPropertiesEntries.nextElement();
+            logger.debug("Found predefined user property at " + predefinedUserPropertyURL + ", loading... ");
+
+            try {
+                UserProperty userProperty = MapperHelper.getObjectMapper().readValue(predefinedUserPropertyURL, UserProperty.class);
+                userProperties.put(userProperty.getId(), userProperty);
+            } catch (IOException e) {
+                logger.error("Error while loading user properties " + predefinedUserPropertyURL, e);
+            }
+
+        }
+    }
+
 }

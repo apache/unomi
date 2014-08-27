@@ -58,9 +58,10 @@
     </bean>
     <service id="segmentService" ref="segmentServiceImpl" auto-export="interfaces" />
 
-    <bean id="userServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.UserServiceImpl">
+    <bean id="userServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.UserServiceImpl" init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService" />
         <property name="definitionsService" ref="definitionsServiceImpl" />
+        <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
     <service id="userService" ref="userServiceImpl" auto-export="interfaces" />
 
