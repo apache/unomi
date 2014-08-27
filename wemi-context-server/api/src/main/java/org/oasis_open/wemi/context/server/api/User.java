@@ -24,6 +24,10 @@ public class User extends Item {
         return itemId;
     }
 
+    public void setId(String id) {
+        this.itemId = id;
+    }
+
     public void setProperty(String name, String value) {
         properties.setProperty(name, value);
     }
