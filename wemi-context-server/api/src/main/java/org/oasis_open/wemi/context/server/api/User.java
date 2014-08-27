@@ -1,6 +1,5 @@
 package org.oasis_open.wemi.context.server.api;
 
-import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -9,18 +8,26 @@ import java.util.Set;
  */
 public class User extends Item {
 
+    public static final String ITEM_TYPE = "user";
+    private Metadata metadata;
     private Properties properties;
-
     private Set<String> segments;
-
-    public static final String ITEM_TYPE ="user";
 
     public User() {
     }
 
-    public User(String itemId) {
-        super(itemId);
+    public User(Metadata metadata) {
+        super(metadata.getId());
         properties = new Properties();
+    }
+
+    public Metadata getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(Metadata metadata) {
+        this.itemId = metadata.getId();
+        this.metadata = metadata;
     }
 
     public void setProperty(String name, String value) {

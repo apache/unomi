@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.oasis_open.wemi.context.server.api.Event;
+import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
@@ -10,10 +11,7 @@ import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by loom on 24.04.14.
@@ -24,6 +22,10 @@ public class UserServiceImpl implements UserService {
 
     private DefinitionsService definitionsService;
 
+    public UserServiceImpl() {
+        System.out.println("Initializing user service...");
+    }
+
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }
@@ -32,8 +34,16 @@ public class UserServiceImpl implements UserService {
         this.definitionsService = definitionsService;
     }
 
-    public UserServiceImpl() {
-        System.out.println("Initializing user service...");
+    public Set<Metadata> getUserMetadatas() {
+        Set<Metadata> descriptions = new HashSet<Metadata>();
+        for (User definition : persistenceService.getAllItems(User.class)) {
+            if (definition.getMetadata() != null) {
+                descriptions.add(definition.getMetadata());
+            } else {
+                descriptions.add(new Metadata(definition.getItemId(), "Unknown", definition.getSegments().toString()));
+            }
+        }
+        return descriptions;
     }
 
     public List<User> findUsersByPropertyValue(String propertyName, String propertyValue) {

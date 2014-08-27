@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.commons.io.IOUtils;
 import org.oasis_open.wemi.context.server.api.Event;
+import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.EventService;
@@ -14,7 +15,9 @@ import org.oasis_open.wemi.context.server.api.services.UserService;
 import org.ops4j.pax.cdi.api.OsgiService;
 
 import javax.inject.Inject;
-import javax.servlet.*;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
@@ -189,7 +192,7 @@ public class ContextServlet extends HttpServlet {
         if (visitorId == null) {
             visitorId = UUID.randomUUID().toString();
         }
-        user = new User(visitorId);
+        user = new User(new Metadata(visitorId, "Unknown", ""));
         userService.save(user);
         sendCookie(user, response);
         return user;
