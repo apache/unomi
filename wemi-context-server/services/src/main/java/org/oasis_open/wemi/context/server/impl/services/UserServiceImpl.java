@@ -33,8 +33,7 @@ public class UserServiceImpl implements UserService, BundleListener {
 
     private DefinitionsService definitionsService;
 
-    private Map<String, UserProperty> userProperties = new LinkedHashMap<String, UserProperty>();
-    private Set<String> userPropertyGroups = new LinkedHashSet<String>();
+    private Map<String, Set<UserProperty>> userPropertyGroups = new LinkedHashMap<String, Set<UserProperty>>();
 
     public UserServiceImpl() {
         System.out.println("Initializing user service...");
@@ -173,8 +172,12 @@ public class UserServiceImpl implements UserService, BundleListener {
 
             try {
                 UserProperty userProperty = MapperHelper.getObjectMapper().readValue(predefinedUserPropertyURL, UserProperty.class);
-                userProperties.put(userProperty.getId(), userProperty);
-                userPropertyGroups.add(userProperty.getGroupId());
+                Set<UserProperty> groupUserProperties = userPropertyGroups.get(userProperty.getGroupId());
+                if (groupUserProperties == null) {
+                    groupUserProperties = new TreeSet<UserProperty>();
+                }
+                groupUserProperties.add(userProperty);
+                userPropertyGroups.put(userProperty.getGroupId(), groupUserProperties);
             } catch (IOException e) {
                 logger.error("Error while loading user properties " + predefinedUserPropertyURL, e);
             }
