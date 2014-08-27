@@ -1,7 +1,6 @@
 package org.oasis_open.wemi.context.server.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
-import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.UserService;
@@ -10,8 +9,8 @@ import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Created by loom on 27.08.14.
@@ -37,8 +36,14 @@ public class UserServiceEndPoint implements UserService {
 
     @GET
     @Path("/")
-    public Set<Metadata> getUserMetadatas() {
-        return userService.getUserMetadatas();
+    public Collection<User> getAllUsers() {
+        return userService.getAllUsers();
+    }
+
+    @GET
+    @Path("/_search")
+    public Collection<User> getUsers(@QueryParam("q") String query, int offset, int size) {
+        return userService.getUsers(query, offset, size);
     }
 
     @WebMethod(exclude = true)

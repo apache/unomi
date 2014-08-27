@@ -9,25 +9,19 @@ import java.util.Set;
 public class User extends Item {
 
     public static final String ITEM_TYPE = "user";
-    private Metadata metadata;
     private Properties properties;
     private Set<String> segments;
 
     public User() {
     }
 
-    public User(Metadata metadata) {
-        super(metadata.getId());
+    public User(String userId) {
+        super(userId);
         properties = new Properties();
     }
 
-    public Metadata getMetadata() {
-        return metadata;
-    }
-
-    public void setMetadata(Metadata metadata) {
-        this.itemId = metadata.getId();
-        this.metadata = metadata;
+    public String getId() {
+        return itemId;
     }
 
     public void setProperty(String name, String value) {

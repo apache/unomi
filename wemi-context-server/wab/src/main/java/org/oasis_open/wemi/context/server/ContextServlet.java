@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.commons.io.IOUtils;
 import org.oasis_open.wemi.context.server.api.Event;
-import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.EventService;
@@ -33,7 +32,7 @@ import java.util.UUID;
 /**
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
  */
-@WebServlet(urlPatterns={"/context.js"})
+@WebServlet(urlPatterns = {"/context.js"})
 public class ContextServlet extends HttpServlet {
 
     public static final String BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/base.js";
@@ -192,7 +191,7 @@ public class ContextServlet extends HttpServlet {
         if (visitorId == null) {
             visitorId = UUID.randomUUID().toString();
         }
-        user = new User(new Metadata(visitorId, "Unknown", ""));
+        user = new User(visitorId);
         userService.save(user);
         sendCookie(user, response);
         return user;

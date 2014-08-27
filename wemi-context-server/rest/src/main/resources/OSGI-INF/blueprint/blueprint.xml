@@ -3,14 +3,11 @@
            xmlns:cxf="http://cxf.apache.org/blueprint/core" xmlns:jaxrs="http://cxf.apache.org/blueprint/jaxrs"
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
-
-
   http://cxf.apache.org/blueprint/jaxrs http://cxf.apache.org/schemas/blueprint/jaxrs.xsd
   http://cxf.apache.org/blueprint/core http://cxf.apache.org/schemas/blueprint/core.xsd
-
   http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
     <cm:property-placeholder persistent-id="org.oasis_open.wemi.context.server.rest.segmentserviceendpoint"
-        update-strategy="reload">
+                             update-strategy="reload">
     </cm:property-placeholder>
 
     <cxf:bus id="wemiServiceBus">
@@ -20,7 +17,7 @@
     </cxf:bus>
 
     <bean id="cors-filter" class="org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter"/>
-    <bean id="jacksonMapper" class="org.oasis_open.wemi.context.server.rest.CustomObjectMapper" />
+    <bean id="jacksonMapper" class="org.oasis_open.wemi.context.server.rest.CustomObjectMapper"/>
     <bean id="jaxb-provider" class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider">
         <argument index="0" ref="jacksonMapper" type="com.fasterxml.jackson.databind.ObjectMapper "/>
         <argument index="1" type="com.fasterxml.jackson.jaxrs.cfg.Annotations[]">
@@ -38,29 +35,29 @@
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
-            <ref component-id="segmentServiceEndPoint" />
+            <ref component-id="segmentServiceEndPoint"/>
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
     <jaxrs:server address="/wemi/definitions" id="restDefinitionsService">
         <jaxrs:providers>
             <ref component-id="jaxb-provider"/>
-            <ref component-id="cors-filter" />
+            <ref component-id="cors-filter"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
-            <ref component-id="definitionsServiceEndPoint" />
+            <ref component-id="definitionsServiceEndPoint"/>
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
     <jaxrs:server address="/wemi/goals" id="goalsDefinitionsService">
         <jaxrs:providers>
             <ref component-id="jaxb-provider"/>
-            <ref component-id="cors-filter" />
+            <ref component-id="cors-filter"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
-            <ref component-id="goalsServiceEndPoint" />
+            <ref component-id="goalsServiceEndPoint"/>
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
@@ -71,7 +68,7 @@
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
-            <ref component-id="rulesServiceEndPoint" />
+            <ref component-id="rulesServiceEndPoint"/>
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
@@ -86,27 +83,27 @@
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
-    <reference id="segmentService" interface="org.oasis_open.wemi.context.server.api.services.SegmentService" />
-    <reference id="definitionsService" interface="org.oasis_open.wemi.context.server.api.services.DefinitionsService" />
-    <reference id="goalsService" interface="org.oasis_open.wemi.context.server.api.services.GoalsService" />
-    <reference id="rulesService" interface="org.oasis_open.wemi.context.server.api.services.RulesService" />
+    <reference id="segmentService" interface="org.oasis_open.wemi.context.server.api.services.SegmentService"/>
+    <reference id="definitionsService" interface="org.oasis_open.wemi.context.server.api.services.DefinitionsService"/>
+    <reference id="goalsService" interface="org.oasis_open.wemi.context.server.api.services.GoalsService"/>
+    <reference id="rulesService" interface="org.oasis_open.wemi.context.server.api.services.RulesService"/>
     <reference id="userService" interface="org.oasis_open.wemi.context.server.api.services.UserService"/>
 
     <bean id="segmentServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.SegmentServiceEndPoint">
-        <property name="segmentService" ref="segmentService" />
+        <property name="segmentService" ref="segmentService"/>
     </bean>
 
     <bean id="definitionsServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.DefinitionsServiceEndPoint">
-        <property name="definitionsService" ref="definitionsService" />
-        <property name="bundleContext" ref="blueprintBundleContext" />
+        <property name="definitionsService" ref="definitionsService"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
 
     <bean id="goalsServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.GoalsServiceEndPoint">
-        <property name="goalsService" ref="goalsService" />
+        <property name="goalsService" ref="goalsService"/>
     </bean>
 
     <bean id="rulesServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.RulesServiceEndPoint">
-        <property name="rulesService" ref="rulesService" />
+        <property name="rulesService" ref="rulesService"/>
     </bean>
 
     <bean id="userServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.UserServiceEndPoint">

@@ -14,6 +14,8 @@ public interface PersistenceService {
 
     public <T extends Item> Collection<T> getAllItems(Class<T> clazz);
 
+    public <T extends Item> Collection<T> getAllItems(Class<T> clazz, int offset, int size);
+
     public boolean save(Item item);
 
     public <T extends Item> T load(String itemId, Class<T> clazz);

@@ -1,7 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.oasis_open.wemi.context.server.api.Event;
-import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
@@ -34,16 +33,13 @@ public class UserServiceImpl implements UserService {
         this.definitionsService = definitionsService;
     }
 
-    public Set<Metadata> getUserMetadatas() {
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (User definition : persistenceService.getAllItems(User.class)) {
-            if (definition.getMetadata() != null) {
-                descriptions.add(definition.getMetadata());
-            } else {
-                descriptions.add(new Metadata(definition.getItemId(), "Unknown", definition.getSegments().toString()));
-            }
-        }
-        return descriptions;
+
+    public Collection<User> getAllUsers() {
+        return persistenceService.getAllItems(User.class);
+    }
+
+    public Collection<User> getUsers(String query, int offset, int size) {
+        return persistenceService.getAllItems(User.class, offset, size);
     }
 
     public List<User> findUsersByPropertyValue(String propertyName, String propertyValue) {

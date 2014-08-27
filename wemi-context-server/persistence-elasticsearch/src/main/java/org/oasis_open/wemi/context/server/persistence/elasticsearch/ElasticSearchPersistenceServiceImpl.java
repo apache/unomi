@@ -16,7 +16,10 @@ import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsException;
-import org.elasticsearch.index.query.*;
+import org.elasticsearch.index.query.FilterBuilder;
+import org.elasticsearch.index.query.FilterBuilders;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
@@ -51,29 +54,12 @@ import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
 
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
-
+    ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
     private Node node;
     private Client client;
     private String clusterName = "wemiElasticSearch";
     private String indexName = "wemi";
     private String elasticSearchConfig = null;
-
-    ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
-
-    public abstract class InClassLoaderExecute<T> {
-
-        protected abstract T execute(Object... args);
-
-        public T executeInClassLoader(Object... args) {
-            ClassLoader tccl = Thread.currentThread().getContextClassLoader();
-            try {
-                Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-                return execute(args);
-            } finally {
-                Thread.currentThread().setContextClassLoader(tccl);
-            }
-        }
-    }
 
     public void setClusterName(String clusterName) {
         this.clusterName = clusterName;
@@ -95,7 +81,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         // on startup
         new InClassLoaderExecute<Object>() {
             public Object execute(Object... args) {
-                logger.info("Starting ElasticSearch persistence backend using cluster name "+clusterName+" and index name "+indexName+"...");
+                logger.info("Starting ElasticSearch persistence backend using cluster name " + clusterName + " and index name " + indexName + "...");
                 Settings.Builder settingsBuilder = null;
                 if (elasticSearchConfig != null && elasticSearchConfig.length() > 0) {
                     try {
@@ -143,6 +129,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
     @Override
     public <T extends Item> Collection<T> getAllItems(final Class<T> clazz) {
         return query(QueryBuilders.matchAllQuery(), null, clazz);
+    }
+
+    @Override
+    public <T extends Item> Collection<T> getAllItems(final Class<T> clazz, int offset, int size) {
+        return query(QueryBuilders.matchAllQuery(), null, clazz, offset, size);
     }
 
     public <T extends Item> T load(final String itemId, final Class<T> clazz) {
@@ -245,18 +236,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         }.executeInClassLoader();
     }
 
-    public Map<String, Map<String,String>> getMapping(final String itemType) {
-        return new InClassLoaderExecute<Map<String, Map<String,String>>>() {
-            protected Map<String, Map<String,String>> execute(Object... args) {
+    public Map<String, Map<String, String>> getMapping(final String itemType) {
+        return new InClassLoaderExecute<Map<String, Map<String, String>>>() {
+            protected Map<String, Map<String, String>> execute(Object... args) {
                 GetMappingsResponse getMappingsResponse = client.admin().indices().prepareGetMappings(indexName).setTypes(itemType).execute().actionGet();
-                ImmutableOpenMap<String, ImmutableOpenMap<String,MappingMetaData>> mappings = getMappingsResponse.getMappings();
-                Map<String,Map<String,String>> propertyMap = null;
+                ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> mappings = getMappingsResponse.getMappings();
+                Map<String, Map<String, String>> propertyMap = null;
                 try {
-                    propertyMap = (Map<String,Map<String,String>>) mappings.get(indexName).get(itemType).getSourceAsMap().get("properties");
+                    propertyMap = (Map<String, Map<String, String>>) mappings.get(indexName).get(itemType).getSourceAsMap().get("properties");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                return new HashMap<String,Map<String,String>>(propertyMap);
+                return new HashMap<String, Map<String, String>>(propertyMap);
             }
         }.executeInClassLoader();
     }
@@ -264,12 +255,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
     public boolean saveQuery(final String queryName, final String query) {
         return new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {
-            //Index the query = register it in the percolator
+                //Index the query = register it in the percolator
                 try {
                     client.prepareIndex(indexName, ".percolator", queryName)
-                        .setSource(query)
-                        .setRefresh(true) // Needed when the query shall be available immediately
-                        .execute().actionGet();
+                            .setSource(query)
+                            .setRefresh(true) // Needed when the query shall be available immediately
+                            .execute().actionGet();
                     return true;
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -290,11 +281,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
     public boolean removeQuery(final String queryName) {
         return new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {
-            //Index the query = register it in the percolator
+                //Index the query = register it in the percolator
                 try {
                     client.prepareDelete(indexName, ".percolator", queryName)
-                        .setRefresh(true) // Needed when the query shall be available immediately
-                        .execute().actionGet();
+                            .setRefresh(true) // Needed when the query shall be available immediately
+                            .execute().actionGet();
                     return true;
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -315,11 +306,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
 
                     //Percolate
                     PercolateResponse response = client.preparePercolate()
-                                            .setIndices(indexName)
-                                            .setDocumentType(itemType)
-                                            .setSource("{doc:"+ source + "}").execute().actionGet();
+                            .setIndices(indexName)
+                            .setDocumentType(itemType)
+                            .setSource("{doc:" + source + "}").execute().actionGet();
                     //Iterate over the results
-                    for(PercolateResponse.Match match : response) {
+                    for (PercolateResponse.Match match : response) {
                         //Handle the result which is the name of
                         //the query in the percolator
                         matchingQueries.add(match.getId().string());
@@ -336,7 +327,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         }.executeInClassLoader();
 
     }
-
 
     @Override
     public boolean testMatch(Condition query, Item item) {
@@ -394,6 +384,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
     }
 
     public <T extends Item> List<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz) {
+        return query(query, sortBy, clazz, 0, 60);
+    }
+
+    public <T extends Item> List<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz, final int offset, final int size) {
         return new InClassLoaderExecute<List<T>>() {
 
             @Override
@@ -406,7 +400,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                             .setFetchSource(true)
                             .setSearchType(SearchType.QUERY_AND_FETCH)
                             .setQuery(query)
-                            .setFrom(0).setSize(60);
+                            .setFrom(offset).setSize(size);
                     if (sortBy != null) {
                         requestBuilder = requestBuilder.addSort(sortBy, SortOrder.ASC);
                     }
@@ -438,7 +432,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
 
             @Override
             protected Map<String, Long> execute(Object... args) {
-                Map<String, Long> results = new LinkedHashMap<String,Long>();
+                Map<String, Long> results = new LinkedHashMap<String, Long>();
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
 
@@ -507,6 +501,21 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                 return results;
             }
         }.executeInClassLoader();
+    }
+
+    public abstract class InClassLoaderExecute<T> {
+
+        protected abstract T execute(Object... args);
+
+        public T executeInClassLoader(Object... args) {
+            ClassLoader tccl = Thread.currentThread().getContextClassLoader();
+            try {
+                Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+                return execute(args);
+            } finally {
+                Thread.currentThread().setContextClassLoader(tccl);
+            }
+        }
     }
 
 
