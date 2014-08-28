@@ -3,6 +3,8 @@ package org.oasis_open.wemi.context.server.rest;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
+import org.oasis_open.wemi.context.server.api.UserProperty;
+import org.oasis_open.wemi.context.server.api.UserPropertyGroup;
 import org.oasis_open.wemi.context.server.api.services.UserService;
 
 import javax.jws.WebMethod;
@@ -11,6 +13,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by loom on 27.08.14.
@@ -63,9 +66,22 @@ public class UserServiceEndPoint implements UserService {
         return userService.save(user);
     }
 
-    @WebMethod(exclude = true)
-    public List<String> getUserProperties() {
-        return userService.getUserProperties();
+    @GET
+    @Path("/properties/groups")
+    public Set<UserPropertyGroup> getUserPropertyGroups() {
+        return userService.getUserPropertyGroups();
+    }
+
+    @GET
+    @Path("/properties")
+    public Set<UserProperty> getAllUserProperties() {
+        return userService.getAllUserProperties();
+    }
+
+    @GET
+    @Path("/properties/groups/{groupId}")
+    public Set<UserProperty> getUserProperties(@PathParam("groupId") String propertyGroupId) {
+        return userService.getUserProperties(propertyGroupId);
     }
 
     @WebMethod(exclude = true)

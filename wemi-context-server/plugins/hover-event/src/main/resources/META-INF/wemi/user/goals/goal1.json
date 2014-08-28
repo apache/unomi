@@ -1,0 +1,12 @@
+{
+    "id": "goal1",
+    "type": "string",
+    "groupId": "goals",
+    "choiceListInitializerFilter": "",
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "1.0",
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/properties/string.html",
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-plugins-hover-event/messages"
+}

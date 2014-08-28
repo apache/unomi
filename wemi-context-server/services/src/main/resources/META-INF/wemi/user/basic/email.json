@@ -1,0 +1,12 @@
+{
+    "id": "email",
+    "type": "email",
+    "groupId": "basic",
+    "choiceListInitializerFilter": "",
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ "j:email" ],
+    "rank": "3.0",
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/properties/email.html",
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages"
+}

@@ -1,12 +1,11 @@
 package org.oasis_open.wemi.context.server.api;
 
-import java.io.Serializable;
 import java.util.Set;
 
 /**
  * Created by loom on 27.08.14.
  */
-public class UserProperty implements Serializable, Comparable<UserProperty> {
+public class UserProperty extends Item implements Comparable<UserProperty> {
     String id;
     String type;
     String groupId;
@@ -15,6 +14,8 @@ public class UserProperty implements Serializable, Comparable<UserProperty> {
     String selectorId;
     Set<String> automaticMappingsFrom;
     double rank;
+    private String template;
+    private String resourceBundle;
 
     public UserProperty() {
     }
@@ -85,6 +86,22 @@ public class UserProperty implements Serializable, Comparable<UserProperty> {
 
     public void setRank(double rank) {
         this.rank = rank;
+    }
+
+    public String getTemplate() {
+        return template;
+    }
+
+    public void setTemplate(String template) {
+        this.template = template;
+    }
+
+    public String getResourceBundle() {
+        return resourceBundle;
+    }
+
+    public void setResourceBundle(String resourceBundle) {
+        this.resourceBundle = resourceBundle;
     }
 
     public int compareTo(UserProperty o) {

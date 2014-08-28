@@ -1,0 +1,5 @@
+{
+    "id": "geographic",
+    "rank": "3.0",
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages"
+}

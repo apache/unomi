@@ -1,0 +1,12 @@
+{
+    "id": "income",
+    "type": "integer",
+    "groupId": "demographic",
+    "choiceListInitializerFilter": "",
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ "j:income" ],
+    "rank": "3.0",
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/properties/integer.html",
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages"
+}

@@ -1,0 +1,5 @@
+{
+    "id": "demographic",
+    "rank": "2.0",
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages"
+}

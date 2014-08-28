@@ -1,9 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
-import org.oasis_open.wemi.context.server.api.Event;
-import org.oasis_open.wemi.context.server.api.Session;
-import org.oasis_open.wemi.context.server.api.User;
-import org.oasis_open.wemi.context.server.api.UserProperty;
+import org.oasis_open.wemi.context.server.api.*;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.UserService;
@@ -33,7 +30,8 @@ public class UserServiceImpl implements UserService, BundleListener {
 
     private DefinitionsService definitionsService;
 
-    private Map<String, Set<UserProperty>> userPropertyGroups = new LinkedHashMap<String, Set<UserProperty>>();
+    private Map<String, UserPropertyGroup> userPropertyGroupsById = new LinkedHashMap<String, UserPropertyGroup>();
+    private SortedSet<UserPropertyGroup> userPropertyGroups = new TreeSet<UserPropertyGroup>();
 
     public UserServiceImpl() {
         System.out.println("Initializing user service...");
@@ -54,9 +52,11 @@ public class UserServiceImpl implements UserService, BundleListener {
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 
+        loadPredefinedUserPropertyGroups(bundleContext);
         loadPredefinedUserProperties(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
             if (bundle.getBundleContext() != null) {
+                loadPredefinedUserPropertyGroups(bundle.getBundleContext());
                 loadPredefinedUserProperties(bundle.getBundleContext());
             }
         }
@@ -88,9 +88,24 @@ public class UserServiceImpl implements UserService, BundleListener {
         return false;
     }
 
-    public List<String> getUserProperties() {
-        Map<String,Map<String,String>> mappings = persistenceService.getMapping(User.ITEM_TYPE);
-        return new ArrayList<String>(mappings.keySet());
+    public Set<UserPropertyGroup> getUserPropertyGroups() {
+        return userPropertyGroups;
+    }
+
+    public Set<UserProperty> getAllUserProperties() {
+        Set<UserProperty> allUserProperties = new LinkedHashSet<UserProperty>();
+        for (UserPropertyGroup userPropertyGroup : userPropertyGroups) {
+            allUserProperties.addAll(userPropertyGroup.getUserProperties());
+        }
+        return allUserProperties;
+    }
+
+    public Set<UserProperty> getUserProperties(String propertyGroupId) {
+        UserPropertyGroup userPropertyGroup = userPropertyGroupsById.get(propertyGroupId);
+        if (userPropertyGroup == null) {
+            return null;
+        }
+        return userPropertyGroup.getUserProperties();
     }
 
     public Session loadSession(String sessionId) {
@@ -148,12 +163,37 @@ public class UserServiceImpl implements UserService, BundleListener {
         switch (event.getType()) {
             case BundleEvent.STARTED:
                 if (event.getBundle().getBundleContext() != null) {
+                    loadPredefinedUserPropertyGroups(event.getBundle().getBundleContext());
                     loadPredefinedUserProperties(event.getBundle().getBundleContext());
                 }
                 break;
             case BundleEvent.STOPPING:
                 // @todo remove bundle-defined resources (is it possible ?)
                 break;
+        }
+    }
+
+    private void loadPredefinedUserPropertyGroups(BundleContext bundleContext) {
+        if (bundleContext == null) {
+            return;
+        }
+        Enumeration<URL> predefinedUserPropertyGroupEntries = bundleContext.getBundle().findEntries("META-INF/wemi/user", "*PropertyGroup.json", true);
+        if (predefinedUserPropertyGroupEntries == null) {
+            return;
+        }
+
+        while (predefinedUserPropertyGroupEntries.hasMoreElements()) {
+            URL predefinedUserPropertyGroupURL = predefinedUserPropertyGroupEntries.nextElement();
+            logger.debug("Found predefined user property group at " + predefinedUserPropertyGroupURL + ", loading... ");
+
+            try {
+                UserPropertyGroup userPropertyGroup = MapperHelper.getObjectMapper().readValue(predefinedUserPropertyGroupURL, UserPropertyGroup.class);
+                userPropertyGroups.add(userPropertyGroup);
+                userPropertyGroupsById.put(userPropertyGroup.getId(), userPropertyGroup);
+            } catch (IOException e) {
+                logger.error("Error while loading user property group " + predefinedUserPropertyGroupURL, e);
+            }
+
         }
     }
 
@@ -171,13 +211,17 @@ public class UserServiceImpl implements UserService, BundleListener {
             logger.debug("Found predefined user property at " + predefinedUserPropertyURL + ", loading... ");
 
             try {
-                UserProperty userProperty = MapperHelper.getObjectMapper().readValue(predefinedUserPropertyURL, UserProperty.class);
-                Set<UserProperty> groupUserProperties = userPropertyGroups.get(userProperty.getGroupId());
-                if (groupUserProperties == null) {
-                    groupUserProperties = new TreeSet<UserProperty>();
+                if (!predefinedUserPropertyURL.toExternalForm().endsWith("PropertyGroup.json")) {
+                    UserProperty userProperty = MapperHelper.getObjectMapper().readValue(predefinedUserPropertyURL, UserProperty.class);
+                    UserPropertyGroup userPropertyGroup = userPropertyGroupsById.get(userProperty.getGroupId());
+                    if (userPropertyGroup == null) {
+                        logger.warn("Undeclared groupId " + userPropertyGroup.getId() + " detected, creating dynamically...");
+                        userPropertyGroup = new UserPropertyGroup(userProperty.getGroupId());
+                        userPropertyGroups.add(userPropertyGroup);
+                    }
+                    userPropertyGroup.getUserProperties().add(userProperty);
+                    userPropertyGroupsById.put(userProperty.getGroupId(), userPropertyGroup);
                 }
-                groupUserProperties.add(userProperty);
-                userPropertyGroups.put(userProperty.getGroupId(), groupUserProperties);
             } catch (IOException e) {
                 logger.error("Error while loading user properties " + predefinedUserPropertyURL, e);
             }

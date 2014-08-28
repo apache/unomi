@@ -1,0 +1,12 @@
+{
+    "id": "usageRate",
+    "type": "string",
+    "groupId": "behavorial",
+    "choiceListInitializerFilter": "",
+    "defaultValue": "heavy,moderate,light,nonuser",
+    "selectorId": "",
+    "automaticMappingsFrom": [ "j:gender" ],
+    "rank": "1.0",
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/properties/string.html",
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages"
+}
