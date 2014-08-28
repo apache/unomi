@@ -30,6 +30,8 @@ public interface UserService {
 
     public Set<UserProperty> getUserProperties(String propertyGroupId);
 
+    public String getUserPropertyMapping(String fromPropertyName);
+
     Session loadSession(String eventId);
 
     boolean saveSession(Session event);

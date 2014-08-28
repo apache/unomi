@@ -84,6 +84,12 @@ public class UserServiceEndPoint implements UserService {
         return userService.getUserProperties(propertyGroupId);
     }
 
+    @GET
+    @Path("/properties/mappings/{fromPropertyId}")
+    public String getUserPropertyMapping(@PathParam("fromPropertyId") String fromPropertyName) {
+        return userService.getUserPropertyMapping(fromPropertyName);
+    }
+
     @WebMethod(exclude = true)
     public Session loadSession(String eventId) {
         return userService.loadSession(eventId);

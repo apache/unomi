@@ -5,7 +5,7 @@
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
-    "automaticMappingsFrom": [ "j:gender" ],
+    "automaticMappingsFrom": [ ],
     "rank": "1.0",
     "template": "/plugins/org.oasis-open.wemi.context-server-services/properties/string.html",
     "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages"

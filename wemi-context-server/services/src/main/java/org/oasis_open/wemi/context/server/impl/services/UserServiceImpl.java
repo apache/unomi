@@ -33,6 +33,8 @@ public class UserServiceImpl implements UserService, BundleListener {
     private Map<String, UserPropertyGroup> userPropertyGroupsById = new LinkedHashMap<String, UserPropertyGroup>();
     private SortedSet<UserPropertyGroup> userPropertyGroups = new TreeSet<UserPropertyGroup>();
 
+    private Map<String, String> propertyMappings = new HashMap<String, String>();
+
     public UserServiceImpl() {
         System.out.println("Initializing user service...");
     }
@@ -106,6 +108,10 @@ public class UserServiceImpl implements UserService, BundleListener {
             return null;
         }
         return userPropertyGroup.getUserProperties();
+    }
+
+    public String getUserPropertyMapping(String fromPropertyName) {
+        return propertyMappings.get(fromPropertyName);
     }
 
     public Session loadSession(String sessionId) {
@@ -221,6 +227,13 @@ public class UserServiceImpl implements UserService, BundleListener {
                     }
                     userPropertyGroup.getUserProperties().add(userProperty);
                     userPropertyGroupsById.put(userProperty.getGroupId(), userPropertyGroup);
+
+                    if (userProperty.getAutomaticMappingsFrom() != null && userProperty.getAutomaticMappingsFrom().size() > 0) {
+                        for (String mappingFrom : userProperty.getAutomaticMappingsFrom()) {
+                            propertyMappings.put(mappingFrom, userProperty.getId());
+                        }
+                    }
+
                 }
             } catch (IOException e) {
                 logger.error("Error while loading user properties " + predefinedUserPropertyURL, e);
