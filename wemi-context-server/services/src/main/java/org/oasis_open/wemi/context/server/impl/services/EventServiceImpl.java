@@ -3,6 +3,8 @@ package org.oasis_open.wemi.context.server.impl.services;
 import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
+import org.oasis_open.wemi.context.server.api.conditions.Condition;
+import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.EventListenerService;
 import org.oasis_open.wemi.context.server.api.services.EventService;
 import org.oasis_open.wemi.context.server.api.services.UserService;
@@ -24,6 +26,8 @@ public class EventServiceImpl implements EventService {
 
     private UserService userService;
 
+    private DefinitionsService definitionsService;
+
     private BundleContext bundleContext;
 
     private Set<String> predefinedEventTypeIds = new LinkedHashSet<String>();
@@ -38,6 +42,10 @@ public class EventServiceImpl implements EventService {
 
     public void setUserService(UserService userService) {
         this.userService = userService;
+    }
+
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
     }
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -90,6 +98,41 @@ public class EventServiceImpl implements EventService {
         eventTypeIds.addAll(dynamicEventTypeIds.keySet());
         return eventTypeIds;
     }
+
+    @Override
+    public List<Event> searchEvents(Condition condition) {
+        return persistenceService.query(condition, "timeStamp", Event.class);
+    }
+
+    public boolean hasEventAlreadyBeenRaised(Event event, boolean session) {
+        List<Condition> conditions = new ArrayList<Condition>();
+
+        Condition userIdCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        if (session) {
+            userIdCondition.getParameterValues().put("propertyName", "sessionId");
+            userIdCondition.getParameterValues().put("propertyValue", event.getSessionId());
+        } else {
+            userIdCondition.getParameterValues().put("propertyName", "userId");
+            userIdCondition.getParameterValues().put("propertyValue", event.getUserId());
+        }
+        userIdCondition.getParameterValues().put("comparisonOperator", "equals");
+        conditions.add(userIdCondition);
+
+        for (Map.Entry<Object, Object> entry : event.getProperties().entrySet()) {
+            Condition condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+            condition.getParameterValues().put("propertyName", "properties."+entry.getKey());
+            condition.getParameterValues().put("propertyValue", entry.getValue());
+            condition.getParameterValues().put("comparisonOperator", "equals");
+            conditions.add(condition);
+        }
+
+        Condition andCondition = new Condition(definitionsService.getConditionType("andCondition"));
+        andCondition.getParameterValues().put("subConditions", conditions);
+        long size = persistenceService.queryCount(andCondition, Event.class);
+        return size > 0;
+    }
+
+
 
     public void bind(ServiceReference<EventListenerService> serviceReference) {
         EventListenerService eventListenerService = bundleContext.getService(serviceReference);

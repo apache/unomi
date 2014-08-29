@@ -18,6 +18,7 @@
     <bean id="eventServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.EventServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="userService" ref="userServiceImpl"/>
+        <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="predefinedEventTypeIds">
             <set>
@@ -50,6 +51,7 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="userService" ref="userServiceImpl"/>
+        <property name="eventService" ref="eventServiceImpl"/>
         <property name="actionExecutorDispatcher" ref="actionExecutorDispatcherImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
@@ -119,31 +121,27 @@
 
     <!-- Action executors -->
 
-    <bean id="allEventToUserPropertiesActionImpl"
-          class="org.oasis_open.wemi.context.server.impl.actions.AllEventToUserPropertiesAction">
-        <property name="userService" ref="userServiceImpl"/>
-    </bean>
-    <service id="allEventToUserPropertiesAction" ref="allEventToUserPropertiesActionImpl" auto-export="interfaces">
+    <service auto-export="interfaces">
         <service-properties>
             <entry key="actionExecutorId" value="allEventToUserProperties"/>
         </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.actions.AllEventToUserPropertiesAction">
+            <property name="userService" ref="userServiceImpl"/>
+        </bean>
     </service>
 
-    <bean id="eventToUserPropertyActionImpl"
-          class="org.oasis_open.wemi.context.server.impl.actions.EventToUserPropertyAction">
-    </bean>
-    <service id="eventToUserPropertyAction" ref="eventToUserPropertyActionImpl" auto-export="interfaces">
+    <service auto-export="interfaces">
         <service-properties>
             <entry key="actionExecutorId" value="eventToUserProperty"/>
         </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.actions.EventToUserPropertyAction"/>
     </service>
 
-    <bean id="setPropertyActionImpl" class="org.oasis_open.wemi.context.server.impl.actions.SetPropertyAction">
-    </bean>
-    <service id="setPropertyAction" ref="setPropertyActionImpl" auto-export="interfaces">
+    <service auto-export="interfaces">
         <service-properties>
             <entry key="actionExecutorId" value="setProperty"/>
         </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.actions.SetPropertyAction"/>
     </service>
 
     <service auto-export="interfaces">
@@ -153,6 +151,13 @@
         <bean class="org.oasis_open.wemi.context.server.impl.actions.EvaluateUserSegmentsAction">
             <property name="segmentService" ref="segmentServiceImpl"/>
         </bean>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="actionExecutorId" value="incrementInterestsValues"/>
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.actions.IncrementInterestsValuesAction"/>
     </service>
 
 

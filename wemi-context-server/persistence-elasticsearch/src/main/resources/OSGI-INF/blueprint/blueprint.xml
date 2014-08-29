@@ -59,9 +59,9 @@
 
     <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="userPropertyConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="propertyConditionESQueryBuilder"/>
         </service-properties>
-        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.UserPropertyConditionESQueryBuilder"/>
+        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.PropertyConditionESQueryBuilder"/>
     </service>
 
     <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">

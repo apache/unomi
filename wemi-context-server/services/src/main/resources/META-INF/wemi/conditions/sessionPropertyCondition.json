@@ -1,15 +1,15 @@
 {
-    "id": "userPropertyCondition",
+    "id": "sessionPropertyCondition",
     "queryBuilderFilter": "(queryBuilderId=propertyConditionESQueryBuilder)",
-    "tags": [ "demographic", "userCondition" ],
-    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/userPropertyCondition.html",
+    "tags": [ "demographic", "sessionCondition" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/sessionPropertyCondition.html",
     "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
     "parameters": [
         {
             "id": "propertyName",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": "(initializerId=userProperty)"
+            "choicelistInitializerFilter": ""
         },
         {
             "id": "comparisonOperator",

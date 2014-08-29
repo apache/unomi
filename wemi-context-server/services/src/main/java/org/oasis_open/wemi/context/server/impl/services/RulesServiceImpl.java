@@ -7,10 +7,7 @@ import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.rules.Rule;
-import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
-import org.oasis_open.wemi.context.server.api.services.EventListenerService;
-import org.oasis_open.wemi.context.server.api.services.RulesService;
-import org.oasis_open.wemi.context.server.api.services.UserService;
+import org.oasis_open.wemi.context.server.api.services.*;
 import org.oasis_open.wemi.context.server.impl.actions.ActionExecutorDispatcher;
 import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
@@ -38,6 +35,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
 
     private UserService userService;
 
+    private EventService eventService;
+
     private ActionExecutorDispatcher actionExecutorDispatcher;
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -54,6 +53,10 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
 
     public void setUserService(UserService userService) {
         this.userService = userService;
+    }
+
+    public void setEventService(EventService eventService) {
+        this.eventService = eventService;
     }
 
     public void setActionExecutorDispatcher(ActionExecutorDispatcher actionExecutorDispatcher) {
@@ -106,10 +109,25 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
 
         List<String> matchingQueries = persistenceService.getMatchingSavedQueries(event);
 
+        Boolean hasEventAlreadyBeenRaisedForSession = null;
+        Boolean hasEventAlreadyBeenRaisedForUser = null;
+
         if (matchingQueries.size() > 0) {
             for (String matchingQuery : matchingQueries) {
                 Rule rule = getRule(matchingQuery);
                 if (rule != null) {
+                    if (rule.isRaiseEventOnlyOnceForUser()) {
+                        hasEventAlreadyBeenRaisedForUser = hasEventAlreadyBeenRaisedForUser != null ? hasEventAlreadyBeenRaisedForUser : eventService.hasEventAlreadyBeenRaised(event, false);
+                        if (hasEventAlreadyBeenRaisedForUser) {
+                            continue;
+                        }
+                    } else if (rule.isRaiseEventOnlyOnceForSession()) {
+                        hasEventAlreadyBeenRaisedForSession = hasEventAlreadyBeenRaisedForSession != null ? hasEventAlreadyBeenRaisedForSession : eventService.hasEventAlreadyBeenRaised(event, true);
+                        if (hasEventAlreadyBeenRaisedForSession) {
+                            continue;
+                        }
+                    }
+
                     ObjectMapper mapper = MapperHelper.getObjectMapper();
                     try {
                         Condition userCondition = extractConditionByTag(rule.getCondition(), "userCondition");

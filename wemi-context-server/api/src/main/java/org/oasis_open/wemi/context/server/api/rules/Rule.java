@@ -20,6 +20,10 @@ public class Rule extends Item {
 
     private List<Action> actions;
 
+    private boolean raiseEventOnlyOnceForUser = false;
+
+    private boolean raiseEventOnlyOnceForSession = false;
+
     public Rule() {
     }
 
@@ -53,4 +57,19 @@ public class Rule extends Item {
         this.actions = actions;
     }
 
+    public boolean isRaiseEventOnlyOnceForUser() {
+        return raiseEventOnlyOnceForUser;
+    }
+
+    public void setRaiseEventOnlyOnceForUser(boolean raiseEventOnlyOnceForUser) {
+        this.raiseEventOnlyOnceForUser = raiseEventOnlyOnceForUser;
+    }
+
+    public boolean isRaiseEventOnlyOnceForSession() {
+        return raiseEventOnlyOnceForSession;
+    }
+
+    public void setRaiseEventOnlyOnceForSession(boolean raiseEventOnlyOnceForSession) {
+        this.raiseEventOnlyOnceForSession = raiseEventOnlyOnceForSession;
+    }
 }

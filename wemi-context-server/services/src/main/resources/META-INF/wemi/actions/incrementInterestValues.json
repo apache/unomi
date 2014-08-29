@@ -1,0 +1,10 @@
+{
+    "id": "incrementInterestsValuesAction",
+    "serviceFilter": "(actionExecutorId=incrementInterestsValues)",
+    "tags": [ "event" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/actions/incrementInterestsValuesAction.html",
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
+    "parameters": [
+
+    ]
+}
