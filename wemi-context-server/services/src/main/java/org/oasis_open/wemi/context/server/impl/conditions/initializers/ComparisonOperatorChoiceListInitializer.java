@@ -23,6 +23,7 @@ public class ComparisonOperatorChoiceListInitializer implements ChoiceListInitia
         values.add(new ChoiceListValue("endsWith", "ENDS_WITH_LABEL"));
         values.add(new ChoiceListValue("matchesRegex", "MATCHES_REGULAR_EXPRESSION_LABEL"));
         values.add(new ChoiceListValue("contains", "CONTAINS_LABEL"));
+        values.add(new ChoiceListValue("exists", "EXISTS_LABEL"));
         return values;
     }
 }

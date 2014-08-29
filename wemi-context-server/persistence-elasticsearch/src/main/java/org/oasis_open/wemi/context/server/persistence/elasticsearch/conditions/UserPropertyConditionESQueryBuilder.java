@@ -20,8 +20,22 @@ public class UserPropertyConditionESQueryBuilder implements ESQueryBuilder {
             return FilterBuilders.termFilter(name, value);
         } else if (op.equals("greaterThan")) {
             return FilterBuilders.rangeFilter(name).gt(Integer.parseInt(value));
+        } else if (op.equals("greaterThanOrEqualTo")) {
+            return FilterBuilders.rangeFilter(name).gte(Integer.parseInt(value));
         } else if (op.equals("lessThan")) {
             return FilterBuilders.rangeFilter(name).lt(Integer.parseInt(value));
+        } else if (op.equals("lessThanOrEqualTo")) {
+            return FilterBuilders.rangeFilter(name).lte(Integer.parseInt(value));
+        } else if (op.equals("exists")) {
+            return FilterBuilders.existsFilter(name);
+        } else if (op.equals("contains")) {
+            return FilterBuilders.termFilter(name, value);
+        } else if (op.equals("startsWith")) {
+            return FilterBuilders.prefixFilter(name, value);
+        } else if (op.equals("endsWith")) {
+            return FilterBuilders.regexpFilter(name, ".*" + value);
+        } else if (op.equals("matchesRegex")) {
+            return FilterBuilders.regexpFilter(name, value);
         }
         return null;
     }

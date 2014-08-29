@@ -64,6 +64,7 @@
     "ENDS_WITH_LABEL": "ends with",
     "MATCHES_REGULAR_EXPRESSION_LABEL": "matches regular expression",
     "CONTAINS_LABEL": "contains",
+    "EXISTS_LABEL": "exists",
 
     "EVENT_TYPE_VIEW_LABEL": "view",
     "EVENT_TYPE_LOGIN_LABEL": "login",
