@@ -1,0 +1,8 @@
+{
+    "id": "org.oasis-open.wemi.context-server-services",
+
+    "templateLocations": "/plugins/org.oasis-open.wemi.context-server-services/",
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
+
+    "javascript": "/plugins/org.oasis-open.wemi.context-server-services/javascript/myscript.js"
+}
