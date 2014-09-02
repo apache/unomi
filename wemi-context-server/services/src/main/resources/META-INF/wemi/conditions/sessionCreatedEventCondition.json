@@ -2,8 +2,6 @@
     "id": "sessionCreatedEventCondition",
     "queryBuilderFilter": "(queryBuilderId=sessionCreatedEventConditionESQueryBuilder)",
     "tags": [ "event", "eventCondition" ],
-    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/sessionCreatedEventCondition.html",
-    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
     "parameters": [
     ]
 }

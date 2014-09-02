@@ -2,8 +2,6 @@
     "id": "evaluateUserSegmentsAction",
     "serviceFilter": "(actionExecutorId=evaluateUserSegments)",
     "tags": [ "event" ],
-    "template": "/plugins/org.oasis-open.wemi.context-server-services/actions/evaluateUserSegmentsAction.html",
-    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
     "parameters": [
     ]
 }

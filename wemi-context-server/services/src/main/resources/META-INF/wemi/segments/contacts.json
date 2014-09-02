@@ -1,0 +1,49 @@
+{
+    "metadata": {
+        "id": "contacts",
+        "name": "Contacts",
+        "description": "This segment includes all contacts, meaning all profiles that contain a contact identifier such as an email, a phone number or a Facebook ID"
+    },
+    "condition": {
+        "parameterValues": {
+            "subConditions": [
+                {
+                    "parameterValues": {
+                        "propertyName": "properties.email",
+                        "comparisonOperator": "exists"
+                    },
+                    "type": "userPropertyCondition"
+                },
+                {
+                    "parameterValues": {
+                        "propertyName": "properties.phoneNumber",
+                        "comparisonOperator": "exists"
+                    },
+                    "type": "userPropertyCondition"
+                },
+                {
+                    "parameterValues": {
+                        "propertyName": "properties.facebookId",
+                        "comparisonOperator": "exists"
+                    },
+                    "type": "userPropertyCondition"
+                },
+                {
+                    "parameterValues": {
+                        "propertyName": "properties.twitterId",
+                        "comparisonOperator": "exists"
+                    },
+                    "type": "userPropertyCondition"
+                },
+                {
+                    "parameterValues": {
+                        "propertyName": "properties.linkedInId",
+                        "comparisonOperator": "exists"
+                    },
+                    "type": "userPropertyCondition"
+                }
+            ]
+        },
+        "type": "orCondition"
+    }
+}

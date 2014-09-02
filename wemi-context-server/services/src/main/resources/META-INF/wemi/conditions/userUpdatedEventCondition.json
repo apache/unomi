@@ -2,8 +2,6 @@
     "id": "userUpdatedEventCondition",
     "queryBuilderFilter": "(queryBuilderId=userUpdatedEventConditionESQueryBuilder)",
     "tags": [ "event", "eventCondition" ],
-    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/userUpdatedEventCondition.html",
-    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
     "parameters": [
     ]
 }

@@ -194,6 +194,7 @@ public class UserServiceImpl implements UserService, BundleListener {
 
             try {
                 UserPropertyGroup userPropertyGroup = MapperHelper.getObjectMapper().readValue(predefinedUserPropertyGroupURL, UserPropertyGroup.class);
+                ParserHelper.populatePluginType(userPropertyGroup, bundleContext.getBundle());
                 userPropertyGroups.add(userPropertyGroup);
                 userPropertyGroupsById.put(userPropertyGroup.getId(), userPropertyGroup);
             } catch (IOException e) {
@@ -219,6 +220,8 @@ public class UserServiceImpl implements UserService, BundleListener {
             try {
                 if (!predefinedUserPropertyURL.toExternalForm().endsWith("PropertyGroup.json")) {
                     UserProperty userProperty = MapperHelper.getObjectMapper().readValue(predefinedUserPropertyURL, UserProperty.class);
+                    ParserHelper.resolvePropertyType(definitionsService, userProperty);
+                    ParserHelper.populatePluginType(userProperty, bundleContext.getBundle());
                     UserPropertyGroup userPropertyGroup = userPropertyGroupsById.get(userProperty.getGroupId());
                     if (userPropertyGroup == null) {
                         logger.warn("Undeclared groupId " + userPropertyGroup.getId() + " detected, creating dynamically...");

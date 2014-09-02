@@ -2,8 +2,6 @@
     "id": "userSegmentCondition",
     "queryBuilderFilter": "(queryBuilderId=userSegmentConditionESQueryBuilder)",
     "tags": [ "demographic", "userCondition" ],
-    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/userSegmentCondition.html",
-    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
     "parameters": [
         {
             "id": "segments",

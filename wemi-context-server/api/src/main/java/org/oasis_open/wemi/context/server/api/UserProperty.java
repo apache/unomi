@@ -1,21 +1,26 @@
 package org.oasis_open.wemi.context.server.api;
 
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
 import java.util.Set;
 
 /**
  * Created by loom on 27.08.14.
  */
-public class UserProperty extends Item implements Comparable<UserProperty> {
+@XmlRootElement
+public class UserProperty extends Item implements Comparable<UserProperty>, PluginType {
     String id;
-    String type;
+    String propertyTypeId;
+    PropertyType propertyType;
     String groupId;
     String choiceListInitializerFilter;
     String defaultValue;
     String selectorId;
     Set<String> automaticMappingsFrom;
     double rank;
-    private String template;
-    private String resourceBundle;
+    String pluginId;
+    String resourceBundle;
 
     public UserProperty() {
     }
@@ -32,12 +37,22 @@ public class UserProperty extends Item implements Comparable<UserProperty> {
         this.id = id;
     }
 
-    public String getType() {
-        return type;
+    @XmlElement(name = "type")
+    public String getPropertyTypeId() {
+        return propertyTypeId;
     }
 
-    public void setType(String type) {
-        this.type = type;
+    public void setPropertyTypeId(String propertyTypeId) {
+        this.propertyTypeId = propertyTypeId;
+    }
+
+    @XmlTransient
+    public PropertyType getPropertyType() {
+        return propertyType;
+    }
+
+    public void setPropertyType(PropertyType propertyType) {
+        this.propertyType = propertyType;
     }
 
     public String getGroupId() {
@@ -88,12 +103,12 @@ public class UserProperty extends Item implements Comparable<UserProperty> {
         this.rank = rank;
     }
 
-    public String getTemplate() {
-        return template;
+    public String getPluginId() {
+        return pluginId;
     }
 
-    public void setTemplate(String template) {
-        this.template = template;
+    public void setPluginId(String pluginId) {
+        this.pluginId = pluginId;
     }
 
     public String getResourceBundle() {

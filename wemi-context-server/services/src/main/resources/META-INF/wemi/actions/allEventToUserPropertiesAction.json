@@ -2,8 +2,6 @@
     "id": "allEventToUserPropertiesAction",
     "serviceFilter": "(actionExecutorId=allEventToUserProperties)",
     "tags": [ "event" ],
-    "template": "/plugins/org.oasis-open.wemi.context-server-services/actions/allEventToUserPropertiesAction.html",
-    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
     "parameters": [
     ]
 }

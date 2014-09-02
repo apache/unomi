@@ -1,43 +1,40 @@
-package org.oasis_open.wemi.context.server.api.conditions;
-
-import org.oasis_open.wemi.context.server.api.Parameter;
-import org.oasis_open.wemi.context.server.api.Tag;
-import org.oasis_open.wemi.context.server.api.TemplateablePluginType;
-import org.oasis_open.wemi.context.server.api.rules.Rule;
+package org.oasis_open.wemi.context.server.api;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
-import java.io.Serializable;
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
- * Represents a node in the segment definition expression tree
+ * Created by loom on 02.09.14.
  */
 @XmlRootElement
-public class ConditionType implements TemplateablePluginType, Serializable {
+public class PropertyType implements TemplateablePluginType {
+
     String id;
     String nameKey;
     String descriptionKey;
     String template;
     String resourceBundle;
     String pluginId;
-    String queryBuilderFilter;
     Set<Tag> tags = new TreeSet<Tag>();
-    Set<String> tagIDs = new LinkedHashSet<String>();
-    List<Parameter> parameters = new ArrayList<Parameter>();
-    Rule autoCreateRule;
+    Set<String> tagIds = new LinkedHashSet<String>();
 
-    public ConditionType() {
+    public PropertyType() {
     }
 
-    public ConditionType(String id, String nameKey) {
+    public PropertyType(String id) {
         this.id = id;
-        this.nameKey = nameKey;
     }
 
     public String getId() {
         return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getNameKey() {
@@ -86,23 +83,6 @@ public class ConditionType implements TemplateablePluginType, Serializable {
         this.pluginId = pluginId;
     }
 
-    public String getQueryBuilderFilter() {
-        return queryBuilderFilter;
-    }
-
-    public void setQueryBuilderFilter(String queryBuilderFilter) {
-        this.queryBuilderFilter = queryBuilderFilter;
-    }
-
-    @XmlElement(name = "tags")
-    public Set<String> getTagIDs() {
-        return tagIDs;
-    }
-
-    public void setTagIDs(Set<String> tagIDs) {
-        this.tagIDs = tagIDs;
-    }
-
     @XmlTransient
     public Set<Tag> getTags() {
         return tags;
@@ -112,20 +92,12 @@ public class ConditionType implements TemplateablePluginType, Serializable {
         this.tags = tags;
     }
 
-    @XmlElement(name = "parameters")
-    public List<Parameter> getParameters() {
-        return parameters;
+    @XmlElement(name = "tags")
+    public Set<String> getTagIds() {
+        return tagIds;
     }
 
-    public void setParameters(List<Parameter> parameters) {
-        this.parameters = parameters;
-    }
-
-    public Rule getAutoCreateRule() {
-        return autoCreateRule;
-    }
-
-    public void setAutoCreateRule(Rule autoCreateRule) {
-        this.autoCreateRule = autoCreateRule;
+    public void setTagIds(Set<String> tagIds) {
+        this.tagIds = tagIds;
     }
 }

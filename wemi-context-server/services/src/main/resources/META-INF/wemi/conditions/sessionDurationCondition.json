@@ -1,21 +1,19 @@
 {
-    "id" : "sessionDurationCondition",
-    "queryBuilderFilter" : "(queryBuilderId=sessionDurationConditionESQueryBuilder)",
-    "tags" : [ "demographic", "sessionCondition" ],
-    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/sessionDurationCondition.html",
-    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
-    "parameters" : [
+    "id": "sessionDurationCondition",
+    "queryBuilderFilter": "(queryBuilderId=sessionDurationConditionESQueryBuilder)",
+    "tags": [ "demographic", "sessionCondition" ],
+    "parameters": [
         {
-            "id" : "minimumDuration",
-            "type" : "string",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : ""
+            "id": "minimumDuration",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
         },
         {
-            "id" : "maximumDuration",
-            "type" : "string",
-            "multivalued" : false,
-            "choicelistInitializerFilter" : ""
+            "id": "maximumDuration",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
         }
     ]
 }

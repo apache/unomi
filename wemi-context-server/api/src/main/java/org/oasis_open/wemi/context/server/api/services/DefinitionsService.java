@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.api.services;
 
+import org.oasis_open.wemi.context.server.api.PropertyType;
 import org.oasis_open.wemi.context.server.api.Tag;
 import org.oasis_open.wemi.context.server.api.actions.ActionType;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
@@ -18,11 +19,17 @@ public interface DefinitionsService {
 
     Set<ConditionType> getConditionTypesByTag(Tag tag);
 
-    ConditionType getConditionType(String name);
+    ConditionType getConditionType(String id);
 
     Collection<ActionType> getAllActionTypes();
 
     Set<ActionType> getActionTypeByTag(Tag tag);
 
-    ActionType getActionType(String name);
+    ActionType getActionType(String id);
+
+    Collection<PropertyType> getAllPropertyTypes();
+
+    Set<PropertyType> getPropertyTypeByTag(Tag tag);
+
+    PropertyType getPropertyType(String id);
 }

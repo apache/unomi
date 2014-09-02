@@ -7,11 +7,12 @@ import java.util.TreeSet;
 /**
  * Created by loom on 28.08.14.
  */
-public class UserPropertyGroup extends Item implements Comparable<UserPropertyGroup> {
+public class UserPropertyGroup extends Item implements Comparable<UserPropertyGroup>, PluginType {
 
     private String id;
     private double rank;
     private String resourceBundle;
+    private String pluginId;
     private SortedSet<UserProperty> userProperties = new TreeSet<UserProperty>();
 
     public UserPropertyGroup() {
@@ -53,6 +54,14 @@ public class UserPropertyGroup extends Item implements Comparable<UserPropertyGr
 
     public void setResourceBundle(String resourceBundle) {
         this.resourceBundle = resourceBundle;
+    }
+
+    public String getPluginId() {
+        return pluginId;
+    }
+
+    public void setPluginId(String pluginId) {
+        this.pluginId = pluginId;
     }
 
     public int compareTo(UserPropertyGroup o) {

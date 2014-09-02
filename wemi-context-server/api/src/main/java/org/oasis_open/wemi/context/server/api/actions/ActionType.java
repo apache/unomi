@@ -2,12 +2,14 @@ package org.oasis_open.wemi.context.server.api.actions;
 
 import org.oasis_open.wemi.context.server.api.Parameter;
 import org.oasis_open.wemi.context.server.api.Tag;
+import org.oasis_open.wemi.context.server.api.TemplateablePluginType;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
+import java.io.Serializable;
 import java.util.*;
 
-public class ActionType {
+public class ActionType implements TemplateablePluginType, Serializable {
 
     String id;
     String nameKey;
@@ -17,6 +19,7 @@ public class ActionType {
     Set<String> tagIds = new LinkedHashSet<String>();
     String template;
     String resourceBundle;
+    String pluginId;
     List<Parameter> parameters = new ArrayList<Parameter>();
 
     public ActionType() {
@@ -67,6 +70,14 @@ public class ActionType {
 
     public void setResourceBundle(String resourceBundle) {
         this.resourceBundle = resourceBundle;
+    }
+
+    public String getPluginId() {
+        return pluginId;
+    }
+
+    public void setPluginId(String pluginId) {
+        this.pluginId = pluginId;
     }
 
     public String getServiceFilter() {

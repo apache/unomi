@@ -1,5 +1,4 @@
 {
     "id": "basic",
-    "rank": "1.0",
-    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages"
+    "rank": "1.0"
 }

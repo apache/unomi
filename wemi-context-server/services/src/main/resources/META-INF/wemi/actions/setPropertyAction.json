@@ -2,8 +2,6 @@
     "id": "setPropertyAction",
     "serviceFilter": "(actionExecutorId=setProperty)",
     "tags": [ "demographic" ],
-    "template": "/plugins/org.oasis-open.wemi.context-server-services/actions/setPropertyAction.html",
-    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
     "parameters": [
         {
             "id": "setPropertyName",

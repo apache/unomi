@@ -1,10 +1,10 @@
 {
-    "id": "lastName",
+    "id": "twitterId",
     "type": "string",
     "groupId": "basic",
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
-    "automaticMappingsFrom": [ "j:lastName" ],
-    "rank": "2.0"
+    "automaticMappingsFrom": [ "j:twitterID" ],
+    "rank": "7.0"
 }

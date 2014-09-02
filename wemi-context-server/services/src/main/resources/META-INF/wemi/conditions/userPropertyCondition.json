@@ -2,8 +2,6 @@
     "id": "userPropertyCondition",
     "queryBuilderFilter": "(queryBuilderId=propertyConditionESQueryBuilder)",
     "tags": [ "demographic", "userCondition" ],
-    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/userPropertyCondition.html",
-    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
     "parameters": [
         {
             "id": "propertyName",

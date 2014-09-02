@@ -2,8 +2,6 @@
     "id": "matchAllCondition",
     "queryBuilderFilter": "(queryBuilderId=matchAllConditionESQueryBuilder)",
     "tags": [ "logical" ],
-    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/matchAll.html",
-    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
     "parameters": [
     ]
 }

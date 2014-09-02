@@ -6,7 +6,5 @@
     "defaultValue": "totally,mostly,not at all",
     "selectorId": "",
     "automaticMappingsFrom": [ ],
-    "rank": "2.0",
-    "template": "/plugins/org.oasis-open.wemi.context-server-services/properties/string.html",
-    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages"
+    "rank": "2.0"
 }

@@ -2,6 +2,7 @@ package org.oasis_open.wemi.context.server.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.wemi.context.server.api.Parameter;
+import org.oasis_open.wemi.context.server.api.PropertyType;
 import org.oasis_open.wemi.context.server.api.Tag;
 import org.oasis_open.wemi.context.server.api.actions.ActionType;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
@@ -79,8 +80,8 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
 
     @GET
     @Path("/conditions/{conditionId}")
-    public ConditionType getConditionType(@PathParam("conditionId") String conditionId) {
-        ConditionType conditionType = definitionsService.getConditionType(conditionId);
+    public ConditionType getConditionType(@PathParam("conditionId") String id) {
+        ConditionType conditionType = definitionsService.getConditionType(id);
         generateChoiceListValues(conditionType, null);
         return conditionType;
     }
@@ -103,10 +104,28 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
 
     @GET
     @Path("/actions/{actionId}")
-    public ActionType getActionType(@PathParam("actionId") String actionId) {
-        ActionType actionType = definitionsService.getActionType(actionId);
+    public ActionType getActionType(@PathParam("actionId") String id) {
+        ActionType actionType = definitionsService.getActionType(id);
         generateChoiceListValues(actionType, null);
         return actionType;
+    }
+
+    @GET
+    @Path("/properties")
+    public Collection<PropertyType> getAllPropertyTypes() {
+        return definitionsService.getAllPropertyTypes();
+    }
+
+    @GET
+    @Path("/properties/tags/{tagId}")
+    public Set<PropertyType> getPropertyTypeByTag(@PathParam("tagId") Tag tag) {
+        return definitionsService.getPropertyTypeByTag(tag);
+    }
+
+    @GET
+    @Path("/properties/{propertyId}")
+    public PropertyType getPropertyType(@PathParam("propertyId") String id) {
+        return definitionsService.getPropertyType(id);
     }
 
     private void generateConditionChoiceListValues(Collection<ConditionType> conditionTypes, Object context) {

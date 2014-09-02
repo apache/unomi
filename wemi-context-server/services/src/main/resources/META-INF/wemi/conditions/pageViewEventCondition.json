@@ -2,8 +2,6 @@
     "id": "pageViewEventCondition",
     "queryBuilderFilter": "(queryBuilderId=pageViewEventConditionESQueryBuilder)",
     "tags": [ "event", "eventCondition", "userEventCondition" ],
-    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/pageViewEventCondition.html",
-    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
     "parameters": [
         {
             "id": "url",

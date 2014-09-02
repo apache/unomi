@@ -1,0 +1,21 @@
+{
+    "metadata": {
+        "id": "leads",
+        "name": "Leads",
+        "description": "This segment includes all leads, meaning all profiles that are assigned to an account manager"
+    },
+    "condition": {
+        "parameterValues": {
+            "subConditions": [
+                {
+                    "parameterValues": {
+                        "propertyName": "properties.leadAssignedTo",
+                        "comparisonOperator": "exists"
+                    },
+                    "type": "userPropertyCondition"
+                }
+            ]
+        },
+        "type": "andCondition"
+    }
+}

@@ -2,8 +2,6 @@
     "id": "andCondition",
     "queryBuilderFilter": "(queryBuilderId=andConditionESQueryBuilder)",
     "tags": [ "logical" ],
-    "template": "/plugins/org.oasis-open.wemi.context-server-services/conditions/andCondition.html",
-    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
     "parameters": [
         {
             "id": "subConditions",
