@@ -1,7 +1,7 @@
 {
     "id": "userEventCondition",
     "queryBuilderFilter": "(queryBuilderId=userEventConditionESQueryBuilder)",
-    "tags": [ "demographic", "userCondition" ],
+    "tags": [ "event", "userCondition" ],
     "parameters": [
         {
             "id": "numberOfDays",
