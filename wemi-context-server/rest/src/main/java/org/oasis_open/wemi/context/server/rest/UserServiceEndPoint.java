@@ -46,6 +46,7 @@ public class UserServiceEndPoint implements UserService {
     @GET
     @Path("/count")
     public int getUserCount() {
+        // @todo we could probably optimize this by asking the service to count it for us using aggregate queries
         Collection<User> users = userService.getAllUsers();
         if (users != null) {
             return users.size();
