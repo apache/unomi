@@ -129,12 +129,18 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
     }
 
     private void generateConditionChoiceListValues(Collection<ConditionType> conditionTypes, Object context) {
+        if (conditionTypes == null) {
+            return;
+        }
         for (ConditionType conditionType : conditionTypes) {
             generateChoiceListValues(conditionType, null);
         }
     }
 
     private void generateActionChoiceListValues(Collection<ActionType> actionTypes, Object context) {
+        if (actionTypes == null) {
+            return;
+        }
         for (ActionType actionType : actionTypes) {
             generateChoiceListValues(actionType, null);
         }
