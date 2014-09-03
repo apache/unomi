@@ -43,6 +43,7 @@ public class SegmentServiceEndPoint implements SegmentService {
     @GET
     @Path("/{segmentID}/count")
     public int getMatchingIndividualsCount(@PathParam("segmentID") String segmentId) {
+        // @todo optimize this using aggregate queries
         Set<User> matchingUsers = segmentService.getMatchingIndividuals(segmentId);
         if (matchingUsers != null) {
             return matchingUsers.size();
