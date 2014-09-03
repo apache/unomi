@@ -44,7 +44,17 @@ public class UserServiceEndPoint implements UserService {
     }
 
     @GET
-    @Path("/_search")
+    @Path("/count")
+    public int getUserCount() {
+        Collection<User> users = userService.getAllUsers();
+        if (users != null) {
+            return users.size();
+        }
+        return 0;
+    }
+
+    @GET
+    @Path("/search")
     public Collection<User> getUsers(@QueryParam("q") String query, int offset, int size) {
         return userService.getUsers(query, offset, size);
     }

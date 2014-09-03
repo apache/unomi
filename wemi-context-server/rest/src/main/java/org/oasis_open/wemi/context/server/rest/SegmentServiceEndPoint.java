@@ -1,7 +1,9 @@
 package org.oasis_open.wemi.context.server.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
-import org.oasis_open.wemi.context.server.api.*;
+import org.oasis_open.wemi.context.server.api.Metadata;
+import org.oasis_open.wemi.context.server.api.SegmentDefinition;
+import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 
 import javax.jws.WebMethod;
@@ -36,6 +38,16 @@ public class SegmentServiceEndPoint implements SegmentService {
     @Path("/{segmentID}/match")
     public Set<User> getMatchingIndividuals(@PathParam("segmentID") String segmentId) {
         return segmentService.getMatchingIndividuals(segmentId);
+    }
+
+    @GET
+    @Path("/{segmentID}/count")
+    public int getMatchingIndividualsCount(@PathParam("segmentID") String segmentId) {
+        Set<User> matchingUsers = segmentService.getMatchingIndividuals(segmentId);
+        if (matchingUsers != null) {
+            return matchingUsers.size();
+        }
+        return 0;
     }
 
     @GET
