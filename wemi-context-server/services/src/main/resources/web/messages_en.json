@@ -32,6 +32,7 @@
     "USERSEGMENTCONDITION_DESCRIPTION_LABEL": "The user is in a segment",
     "USERUPDATEDEVENTCONDITION_NAME_LABEL": "Updated user event",
     "USERUPDATEDEVENTCONDITION_DESCRIPTION_LABEL": "A user profile has been updated",
+    "USERINTERESTCONDITION_NAME_LABEL": "User interest",
 
     "CONDITION_TAG_NAME_LABEL": "Condition",
     "CONDITION_TAG_DESCRIPTION_LABEL": "Regroups all condition objects",
@@ -90,6 +91,7 @@
     "SESSION_DURATION_MIN_LABEL": "Minimum session duration",
     "SESSION_DURATION_MAX_LABEL": "Maximum session duration",
     "IN_THE_LAST_X_DAYS_LABEL": "In the last :",
+    "USER_INTEREST": "User interest in ",
     "USER_DID_X_TIMES": " days, user did : ",
     "USER_DID_EVENT_LABEL": " times the following event: ",
     "USER_SEGMENTS_LABEL": "User matches ",
