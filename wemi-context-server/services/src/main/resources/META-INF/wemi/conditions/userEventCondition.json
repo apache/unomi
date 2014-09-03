@@ -5,7 +5,13 @@
     "parameters": [
         {
             "id": "numberOfDays",
-            "type": "string",
+            "type": "integer",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
+        },
+        {
+            "id": "count",
+            "type": "integer",
             "multivalued": false,
             "choicelistInitializerFilter": ""
         },

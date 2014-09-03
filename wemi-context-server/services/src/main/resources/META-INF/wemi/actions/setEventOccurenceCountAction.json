@@ -1,0 +1,15 @@
+{
+    "id": "setEventOccurenceCountAction",
+    "serviceFilter": "(actionExecutorId=setEventOccurenceCount)",
+    "tags": [ "demographic" ],
+    "template": "/plugins/org.oasis-open.wemi.context-server-services/actions/setEventOccurenceCountAction.html",
+    "resourceBundle": "/plugins/org.oasis-open.wemi.context-server-services/messages",
+    "parameters": [
+        {
+            "id": "userEventCondition",
+            "type": "condition",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
+        }
+    ]
+}

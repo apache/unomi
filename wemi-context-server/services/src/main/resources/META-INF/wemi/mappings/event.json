@@ -11,7 +11,7 @@
             }}
         ],
         "properties" : {
-            "timestamp" : {"type" : "date" }
+            "timeStamp" : {"type" : "date" }
         }
     }
 }

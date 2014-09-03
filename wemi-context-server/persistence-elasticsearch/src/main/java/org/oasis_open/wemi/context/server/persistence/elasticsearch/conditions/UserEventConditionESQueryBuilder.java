@@ -18,14 +18,14 @@ public class UserEventConditionESQueryBuilder implements ESQueryBuilder {
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
         String numberOfDays = (String) condition.getParameterValues().get("numberOfDays");
         String occursIn = (String) condition.getParameterValues().get("eventOccurIn");
+        String count = (String) condition.getParameterValues().get("count");
         final Condition eventCondition = (Condition) condition.getParameterValues().get("eventCondition");
 
         Session targetSession = (Session) condition.getParameterValues().get("target");
         if (targetSession == null) {
-            if (numberOfDays != null) {
+            if (count != null) {
                 return FilterBuilders.rangeFilter("properties." + (String) eventCondition.getParameterValues().get("generatedPropertyKey"))
-                        .gt("now-" + numberOfDays + "d")
-                        .lt("now");
+                        .gt(count);
             } else {
                 return FilterBuilders.existsFilter("properties." + (String) eventCondition.getParameterValues().get("generatedPropertyKey"));
             }

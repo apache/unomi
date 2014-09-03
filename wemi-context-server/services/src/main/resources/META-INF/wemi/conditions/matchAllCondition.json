@@ -1,7 +1,7 @@
 {
     "id": "matchAllCondition",
     "queryBuilderFilter": "(queryBuilderId=matchAllConditionESQueryBuilder)",
-    "tags": [ "logical" ],
+    "tags": [ "logical", "userCondition", "eventCondition", "sessionCondition" ],
     "parameters": [
     ]
 }
