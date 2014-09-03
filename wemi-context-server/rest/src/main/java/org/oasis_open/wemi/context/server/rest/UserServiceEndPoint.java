@@ -62,8 +62,8 @@ public class UserServiceEndPoint implements UserService {
 
     @POST
     @Path("/{userId}")
-    public boolean save(User user) {
-        return userService.save(user);
+    public void save(User user) {
+        userService.save(user);
     }
 
     @GET

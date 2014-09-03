@@ -22,7 +22,7 @@ public interface UserService {
 
     User load(String userId);
 
-    boolean save(User user);
+    void save(User user);
 
     public Set<UserPropertyGroup> getUserPropertyGroups();
 

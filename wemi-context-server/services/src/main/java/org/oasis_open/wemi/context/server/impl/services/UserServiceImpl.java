@@ -85,9 +85,8 @@ public class UserServiceImpl implements UserService, BundleListener {
         return persistenceService.load(userId, User.class);
     }
 
-    public boolean save(User user) {
+    public void save(User user) {
         persistenceService.save(user);
-        return false;
     }
 
     public Set<UserPropertyGroup> getUserPropertyGroups() {
