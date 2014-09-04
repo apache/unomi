@@ -6,7 +6,7 @@ import org.oasis_open.wemi.context.server.api.Tag;
 import org.oasis_open.wemi.context.server.api.actions.ActionType;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
-import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
+import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -101,7 +101,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
             logger.debug("Found predefined tags at " + predefinedTagURL + ", loading... ");
 
             try {
-                Tag tag = MapperHelper.getObjectMapper().readValue(predefinedTagURL, Tag.class);
+                Tag tag = CustomObjectMapper.getObjectMapper().readValue(predefinedTagURL, Tag.class);
                 tags.put(tag.getId(), tag);
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedTagEntries, e);
@@ -131,7 +131,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
             logger.debug("Found predefined conditions at " + predefinedConditionURL + ", loading... ");
 
             try {
-                ConditionType conditionType = MapperHelper.getObjectMapper().readValue(predefinedConditionURL, ConditionType.class);
+                ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(predefinedConditionURL, ConditionType.class);
                 ParserHelper.populatePluginType(conditionType, bundleContext.getBundle(), "conditions", conditionType.getId());
                 conditionTypeById.put(conditionType.getId(), conditionType);
                 for (String tagId : conditionType.getTagIDs()) {
@@ -165,7 +165,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
             logger.debug("Found predefined action at " + predefinedActionURL + ", loading... ");
 
             try {
-                ActionType actionType = MapperHelper.getObjectMapper().readValue(predefinedActionURL, ActionType.class);
+                ActionType actionType = CustomObjectMapper.getObjectMapper().readValue(predefinedActionURL, ActionType.class);
                 ParserHelper.populatePluginType(actionType, bundleContext.getBundle(), "actions", actionType.getId());
                 actionsTypeById.put(actionType.getId(), actionType);
                 for (String tagId : actionType.getTagIds()) {
@@ -200,7 +200,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
             logger.debug("Found predefined property type at " + predefinedPropertyURL + ", loading... ");
 
             try {
-                PropertyType propertyType = MapperHelper.getObjectMapper().readValue(predefinedPropertyURL, PropertyType.class);
+                PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyURL, PropertyType.class);
                 ParserHelper.populatePluginType(propertyType, bundleContext.getBundle(), "properties", propertyType.getId());
                 propertyTypeById.put(propertyType.getId(), propertyType);
                 for (String tagId : propertyType.getTagIds()) {

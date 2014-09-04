@@ -18,7 +18,7 @@ public class AllEventToUserPropertiesAction implements ActionExecutor {
 
     public boolean execute(Action action, Event event) {
         boolean changed = false;
-        for (String eventPropertyName : event.getProperties().stringPropertyNames()) {
+        for (String eventPropertyName : event.getProperties().keySet()) {
             if (event.getUser().getProperty(eventPropertyName) == null || !event.getUser().getProperty(eventPropertyName).equals(event.getProperty(eventPropertyName))) {
                 String propertyMapping = userService.getUserPropertyMapping(eventPropertyName);
                 if (propertyMapping != null) {

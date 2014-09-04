@@ -5,13 +5,13 @@
     "parameters": [
         {
             "id": "minimumDuration",
-            "type": "string",
+            "type": "integer",
             "multivalued": false,
             "choicelistInitializerFilter": ""
         },
         {
             "id": "maximumDuration",
-            "type": "string",
+            "type": "integer",
             "multivalued": false,
             "choicelistInitializerFilter": ""
         }

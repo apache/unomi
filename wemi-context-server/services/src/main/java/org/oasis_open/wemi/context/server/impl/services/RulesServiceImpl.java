@@ -9,7 +9,7 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.rules.Rule;
 import org.oasis_open.wemi.context.server.api.services.*;
 import org.oasis_open.wemi.context.server.impl.actions.ActionExecutorDispatcher;
-import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
+import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URL;
-import java.security.MessageDigest;
 import java.util.*;
 
 public class RulesServiceImpl implements RulesService, EventListenerService, BundleListener {
@@ -93,7 +92,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
             logger.debug("Found predefined segment at " + predefinedSegmentURL + ", loading... ");
 
             try {
-                Rule rule = MapperHelper.getObjectMapper().readValue(predefinedSegmentURL, Rule.class);
+                Rule rule = CustomObjectMapper.getObjectMapper().readValue(predefinedSegmentURL, Rule.class);
                 if (getRule(rule.getMetadata().getId()) == null) {
                     setRule(rule.getMetadata().getId(), rule);
                 }
@@ -128,7 +127,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
                         }
                     }
 
-                    ObjectMapper mapper = MapperHelper.getObjectMapper();
+                    ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
                     try {
                         Condition userCondition = extractConditionByTag(rule.getCondition(), "userCondition");
                         if (userCondition != null && !userService.matchCondition(mapper.writeValueAsString(userCondition),event.getUser(), event.getSession())) {

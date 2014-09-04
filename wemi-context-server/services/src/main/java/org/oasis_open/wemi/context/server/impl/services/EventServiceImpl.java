@@ -118,7 +118,7 @@ public class EventServiceImpl implements EventService {
         userIdCondition.getParameterValues().put("comparisonOperator", "equals");
         conditions.add(userIdCondition);
 
-        for (Map.Entry<Object, Object> entry : event.getProperties().entrySet()) {
+        for (Map.Entry<String, Object> entry : event.getProperties().entrySet()) {
             Condition condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
             condition.getParameterValues().put("propertyName", "properties."+entry.getKey());
             condition.getParameterValues().put("propertyValue", entry.getValue());

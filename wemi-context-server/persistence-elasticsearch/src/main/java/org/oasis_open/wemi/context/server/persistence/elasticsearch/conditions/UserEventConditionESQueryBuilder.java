@@ -16,18 +16,18 @@ public class UserEventConditionESQueryBuilder implements ESQueryBuilder {
     }
 
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
-        String numberOfDays = (String) condition.getParameterValues().get("numberOfDays");
+        Integer numberOfDays = (Integer) condition.getParameterValues().get("numberOfDays");
         String occursIn = (String) condition.getParameterValues().get("eventOccurIn");
-        String count = (String) condition.getParameterValues().get("count");
+        Integer count = (Integer) condition.getParameterValues().get("count");
         final Condition eventCondition = (Condition) condition.getParameterValues().get("eventCondition");
 
         Session targetSession = (Session) condition.getParameterValues().get("target");
         if (targetSession == null) {
             if (count != null) {
-                return FilterBuilders.rangeFilter("properties." + (String) eventCondition.getParameterValues().get("generatedPropertyKey"))
+                return FilterBuilders.rangeFilter("properties." + eventCondition.getParameterValues().get("generatedPropertyKey"))
                         .gt(count);
             } else {
-                return FilterBuilders.existsFilter("properties." + (String) eventCondition.getParameterValues().get("generatedPropertyKey"));
+                return FilterBuilders.existsFilter("properties." + eventCondition.getParameterValues().get("generatedPropertyKey"));
             }
         } else {
             List<FilterBuilder> l = new ArrayList<FilterBuilder>();
@@ -37,7 +37,7 @@ public class UserEventConditionESQueryBuilder implements ESQueryBuilder {
             } else {
                 l.add(FilterBuilders.termFilter("userId", targetSession.getUserId()));
             }
-            if (numberOfDays != null && !numberOfDays.equals("")) {
+            if (numberOfDays != null) {
                 l.add(FilterBuilders.rangeFilter("timeStamp")
                         .gt("now-" + numberOfDays + "d")
                         .lt("now"));

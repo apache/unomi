@@ -139,7 +139,7 @@ public class EventCollectorServlet extends HttpServlet {
                     event.setProperty(name + entry.getKey(), ((JsonString)entry.getValue()).getString());
                     break;
                 case NUMBER:
-                    event.setProperty(name + entry.getKey(), Integer.toString(((JsonNumber)entry.getValue()).intValueExact()));
+                    event.setProperty(name + entry.getKey(), ((JsonNumber)entry.getValue()).intValueExact());
                     break;
                 case OBJECT:
                     addJsonProperties(event, ((JsonObject) entry.getValue()), name + entry.getKey() + ".");

@@ -22,7 +22,7 @@ public class SetPropertyAction implements ActionExecutor {
     public boolean execute(Action action, Event event) {
         String propertyValue = (String) action.getParameterValues().get("setPropertyValue");
         if (propertyValue.equals("now")) {
-            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
             format.setTimeZone(TimeZone.getTimeZone("UTC"));
             propertyValue = format.format(event.getTimeStamp());
         }

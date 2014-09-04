@@ -14,7 +14,7 @@ public class Event extends Item {
     private String sessionId = null;
     private String userId = null;
     private Date timeStamp;
-    private Properties properties;
+    private Map<String,Object> properties;
 
     private transient User user;
     private transient Session session;
@@ -37,7 +37,7 @@ public class Event extends Item {
         }
         this.timeStamp = timestamp;
 
-        this.properties = new Properties();
+        this.properties = new HashMap<String, Object>();
     }
 
     public String getSessionId() {
@@ -83,15 +83,15 @@ public class Event extends Item {
         return attributes;
     }
 
-    public void setProperty(String name, String value) {
-        properties.setProperty(name, value);
+    public void setProperty(String name, Object value) {
+        properties.put(name, value);
     }
 
-    public String getProperty(String name) {
-        return properties.getProperty(name);
+    public Object getProperty(String name) {
+        return properties.get(name);
     }
 
-    public Properties getProperties() {
+    public Map<String,Object> getProperties() {
         return properties;
     }
 

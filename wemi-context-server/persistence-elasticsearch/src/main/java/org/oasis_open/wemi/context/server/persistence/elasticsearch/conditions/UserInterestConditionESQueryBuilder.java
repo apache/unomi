@@ -14,7 +14,7 @@ public class UserInterestConditionESQueryBuilder implements ESQueryBuilder {
 
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
         String name = (String) condition.getParameterValues().get("propertyName");
-        String value = (String) condition.getParameterValues().get("propertyValue");
+        Integer value = (Integer) condition.getParameterValues().get("propertyValue");
         return FilterBuilders.rangeFilter("properties.interest."+name).gt(value);
     }
 }

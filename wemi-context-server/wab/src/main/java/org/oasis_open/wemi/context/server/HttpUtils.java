@@ -117,7 +117,7 @@ public class HttpUtils {
         responseWriter.append("      \"profileInfo\": { ");
         responseWriter.append("        \"profileId\": \"" + user.getItemId() + "\",  ");
         int i = 0;
-        for (String userPropertyName : user.getProperties().stringPropertyNames()) {
+        for (String userPropertyName : user.getProperties().keySet()) {
             if (!"profileId".equals(userPropertyName)) {
                 responseWriter.append("        \"" + userPropertyName + "\": \"" + user.getProperty(userPropertyName) + "\"");
                 if (i < user.getProperties().size() - 1) {

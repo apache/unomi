@@ -36,7 +36,7 @@ import org.oasis_open.wemi.context.server.api.Item;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 import org.oasis_open.wemi.context.server.persistence.spi.Aggregate;
-import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
+import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -157,7 +157,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                                 .actionGet();
                         if (response.isExists()) {
                             String sourceAsString = response.getSourceAsString();
-                            final T value = MapperHelper.getObjectMapper().readValue(sourceAsString, clazz);
+                            final T value = CustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
                             value.setItemId(response.getId());
                             return value;
                         } else {
@@ -180,7 +180,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         return new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {
                 try {
-                    String source = MapperHelper.getObjectMapper().writeValueAsString(item);
+                    String source = CustomObjectMapper.getObjectMapper().writeValueAsString(item);
                     String itemType = (String) item.getClass().getField("ITEM_TYPE").get(null);
                     IndexRequestBuilder indexBuilder = client.prepareIndex(indexName, itemType, item.getItemId())
                             .setSource(source);
@@ -300,7 +300,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
             protected List<String> execute(Object... args) {
                 List<String> matchingQueries = new ArrayList<String>();
                 try {
-                    String source = MapperHelper.getObjectMapper().writeValueAsString(item);
+                    String source = CustomObjectMapper.getObjectMapper().writeValueAsString(item);
 
                     String itemType = (String) item.getClass().getField("ITEM_TYPE").get(null);
 
@@ -410,7 +410,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                     SearchHits searchHits = response.getHits();
                     for (SearchHit searchHit : searchHits) {
                         String sourceAsString = searchHit.getSourceAsString();
-                        final T value = MapperHelper.getObjectMapper().readValue(sourceAsString, clazz);
+                        final T value = CustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
                         value.setItemId(searchHit.getId());
                         results.add(value);
                     }

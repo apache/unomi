@@ -4,7 +4,7 @@ import org.oasis_open.wemi.context.server.api.*;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.UserService;
-import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
+import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -125,7 +125,7 @@ public class UserServiceImpl implements UserService, BundleListener {
     @Override
     public boolean matchCondition(String conditionString, User user, Session session) {
         try {
-            Condition condition = MapperHelper.getObjectMapper().readValue(conditionString, Condition.class);
+            Condition condition = CustomObjectMapper.getObjectMapper().readValue(conditionString, Condition.class);
             ParserHelper.resolveConditionType(definitionsService, condition);
             if (condition.getConditionTypeId().equals("userEventCondition")) {
                 final Map<String, Object> parameters = condition.getParameterValues();
@@ -192,7 +192,7 @@ public class UserServiceImpl implements UserService, BundleListener {
             logger.debug("Found predefined user property group at " + predefinedUserPropertyGroupURL + ", loading... ");
 
             try {
-                UserPropertyGroup userPropertyGroup = MapperHelper.getObjectMapper().readValue(predefinedUserPropertyGroupURL, UserPropertyGroup.class);
+                UserPropertyGroup userPropertyGroup = CustomObjectMapper.getObjectMapper().readValue(predefinedUserPropertyGroupURL, UserPropertyGroup.class);
                 ParserHelper.populatePluginType(userPropertyGroup, bundleContext.getBundle());
                 userPropertyGroups.add(userPropertyGroup);
                 userPropertyGroupsById.put(userPropertyGroup.getId(), userPropertyGroup);
@@ -218,7 +218,7 @@ public class UserServiceImpl implements UserService, BundleListener {
 
             try {
                 if (!predefinedUserPropertyURL.toExternalForm().endsWith("PropertyGroup.json")) {
-                    UserProperty userProperty = MapperHelper.getObjectMapper().readValue(predefinedUserPropertyURL, UserProperty.class);
+                    UserProperty userProperty = CustomObjectMapper.getObjectMapper().readValue(predefinedUserPropertyURL, UserProperty.class);
                     ParserHelper.resolvePropertyType(definitionsService, userProperty);
                     ParserHelper.populatePluginType(userProperty, bundleContext.getBundle());
                     UserPropertyGroup userPropertyGroup = userPropertyGroupsById.get(userProperty.getGroupId());

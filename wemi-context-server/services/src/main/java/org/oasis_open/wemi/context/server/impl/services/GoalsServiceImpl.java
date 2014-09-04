@@ -11,7 +11,7 @@ import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.GoalsService;
 import org.oasis_open.wemi.context.server.api.services.RulesService;
 import org.oasis_open.wemi.context.server.persistence.spi.Aggregate;
-import org.oasis_open.wemi.context.server.persistence.spi.MapperHelper;
+import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -81,7 +81,7 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
             logger.debug("Found predefined goals at " + predefinedGoalURL + ", loading... ");
 
             try {
-                Goal goal = MapperHelper.getObjectMapper().readValue(predefinedGoalURL, Goal.class);
+                Goal goal = CustomObjectMapper.getObjectMapper().readValue(predefinedGoalURL, Goal.class);
                 if (getGoal(goal.getMetadata().getId()) == null) {
                     saveGoal(goal);
                 }

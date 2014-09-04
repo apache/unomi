@@ -17,7 +17,7 @@
     </cxf:bus>
 
     <bean id="cors-filter" class="org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter"/>
-    <bean id="jacksonMapper" class="org.oasis_open.wemi.context.server.rest.CustomObjectMapper"/>
+    <bean id="jacksonMapper" class="org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper"/>
     <bean id="jaxb-provider" class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider">
         <argument index="0" ref="jacksonMapper" type="com.fasterxml.jackson.databind.ObjectMapper "/>
         <argument index="1" type="com.fasterxml.jackson.jaxrs.cfg.Annotations[]">

@@ -1,5 +1,7 @@
 package org.oasis_open.wemi.context.server.api;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -9,7 +11,7 @@ import java.util.Set;
 public class User extends Item {
 
     public static final String ITEM_TYPE = "user";
-    private Properties properties;
+    private Map<String,Object> properties;
     private Set<String> segments;
 
     public User() {
@@ -17,7 +19,7 @@ public class User extends Item {
 
     public User(String userId) {
         super(userId);
-        properties = new Properties();
+        properties = new HashMap<String, Object>();
     }
 
     public String getId() {
@@ -28,15 +30,15 @@ public class User extends Item {
         this.itemId = id;
     }
 
-    public void setProperty(String name, String value) {
-        properties.setProperty(name, value);
+    public void setProperty(String name, Object value) {
+        properties.put(name, value);
     }
 
-    public String getProperty(String name) {
-        return properties.getProperty(name);
+    public Object getProperty(String name) {
+        return properties.get(name);
     }
 
-    public Properties getProperties() {
+    public Map<String,Object> getProperties() {
         return properties;
     }
 

@@ -15,7 +15,7 @@ public class PropertyConditionESQueryBuilder implements ESQueryBuilder {
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
         String op = (String) condition.getParameterValues().get("comparisonOperator");
         String name = (String) condition.getParameterValues().get("propertyName");
-        String value = (String) condition.getParameterValues().get("propertyValue");
+        Object value = condition.getParameterValues().get("propertyValue");
         if (op.equals("equals")) {
             return FilterBuilders.termFilter(name, value);
         } else if (op.equals("greaterThan")) {
@@ -31,11 +31,11 @@ public class PropertyConditionESQueryBuilder implements ESQueryBuilder {
         } else if (op.equals("contains")) {
             return FilterBuilders.termFilter(name, value);
         } else if (op.equals("startsWith")) {
-            return FilterBuilders.prefixFilter(name, value);
+            return FilterBuilders.prefixFilter(name, value.toString());
         } else if (op.equals("endsWith")) {
             return FilterBuilders.regexpFilter(name, ".*" + value);
         } else if (op.equals("matchesRegex")) {
-            return FilterBuilders.regexpFilter(name, value);
+            return FilterBuilders.regexpFilter(name, value.toString());
         }
         return null;
     }
