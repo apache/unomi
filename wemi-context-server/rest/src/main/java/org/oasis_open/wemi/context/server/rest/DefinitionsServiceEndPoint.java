@@ -14,10 +14,7 @@ import org.osgi.framework.ServiceReference;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.Collection;
 import java.util.Set;
@@ -72,8 +69,8 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
 
     @GET
     @Path("/conditions/tags/{tagId}")
-    public Set<ConditionType> getConditionTypesByTag(@PathParam("tagId") Tag tag) {
-        Set<ConditionType> conditionTypes = definitionsService.getConditionTypesByTag(tag);
+    public Set<ConditionType> getConditionTypesByTag(@PathParam("tagId") Tag tag, @QueryParam("recursive") @DefaultValue("false") boolean recursive) {
+        Set<ConditionType> conditionTypes = definitionsService.getConditionTypesByTag(tag, recursive);
         generateConditionChoiceListValues(conditionTypes, null);
         return conditionTypes;
     }
@@ -96,8 +93,8 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
 
     @GET
     @Path("/actions/tags/{tagId}")
-    public Set<ActionType> getActionTypeByTag(@PathParam("tagId") Tag tag) {
-        Set<ActionType> actionTypes = definitionsService.getActionTypeByTag(tag);
+    public Set<ActionType> getActionTypeByTag(@PathParam("tagId") Tag tag, @QueryParam("recursive") @DefaultValue("false") boolean recursive) {
+        Set<ActionType> actionTypes = definitionsService.getActionTypeByTag(tag, recursive);
         generateActionChoiceListValues(actionTypes, null);
         return actionTypes;
     }
@@ -118,8 +115,8 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
 
     @GET
     @Path("/properties/tags/{tagId}")
-    public Set<PropertyType> getPropertyTypeByTag(@PathParam("tagId") Tag tag) {
-        return definitionsService.getPropertyTypeByTag(tag);
+    public Set<PropertyType> getPropertyTypeByTag(@PathParam("tagId") Tag tag, @QueryParam("recursive") @DefaultValue("false") boolean recursive) {
+        return definitionsService.getPropertyTypeByTag(tag, recursive);
     }
 
     @GET

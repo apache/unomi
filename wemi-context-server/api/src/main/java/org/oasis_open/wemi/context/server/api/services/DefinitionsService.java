@@ -17,19 +17,19 @@ public interface DefinitionsService {
 
     Collection<ConditionType> getAllConditionTypes();
 
-    Set<ConditionType> getConditionTypesByTag(Tag tag);
+    Set<ConditionType> getConditionTypesByTag(Tag tag, boolean recursive);
 
     ConditionType getConditionType(String id);
 
     Collection<ActionType> getAllActionTypes();
 
-    Set<ActionType> getActionTypeByTag(Tag tag);
+    Set<ActionType> getActionTypeByTag(Tag tag, boolean recursive);
 
     ActionType getActionType(String id);
 
     Collection<PropertyType> getAllPropertyTypes();
 
-    Set<PropertyType> getPropertyTypeByTag(Tag tag);
+    Set<PropertyType> getPropertyTypeByTag(Tag tag, boolean recursive);
 
     PropertyType getPropertyType(String id);
 }

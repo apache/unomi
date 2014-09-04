@@ -245,8 +245,20 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         return conditionTypeById.values();
     }
 
-    public Set<ConditionType> getConditionTypesByTag(Tag tag) {
-        return conditionTypeByTag.get(tag);
+    public Set<ConditionType> getConditionTypesByTag(Tag tag, boolean recursive) {
+        Set<ConditionType> conditionTypes = new LinkedHashSet<ConditionType>();
+        Set<ConditionType> directConditionTypes = conditionTypeByTag.get(tag);
+        if (directConditionTypes != null) {
+            conditionTypes.addAll(directConditionTypes);
+        }
+        if (recursive) {
+            Tag completeTag = getTag(tag);
+            for (Tag subTag : completeTag.getSubTags()) {
+                Set<ConditionType> childConditionTypes = getConditionTypesByTag(subTag, true);
+                conditionTypes.addAll(childConditionTypes);
+            }
+        }
+        return conditionTypes;
     }
 
     public ConditionType getConditionType(String id) {
@@ -257,8 +269,20 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         return actionsTypeById.values();
     }
 
-    public Set<ActionType> getActionTypeByTag(Tag tag) {
-        return null;
+    public Set<ActionType> getActionTypeByTag(Tag tag, boolean recursive) {
+        Set<ActionType> actionTypes = new LinkedHashSet<ActionType>();
+        Set<ActionType> directActionTypes = actionTypeByTag.get(tag);
+        if (directActionTypes != null) {
+            actionTypes.addAll(directActionTypes);
+        }
+        if (recursive) {
+            Tag completeTag = getTag(tag);
+            for (Tag subTag : completeTag.getSubTags()) {
+                Set<ActionType> childActionTypes = getActionTypeByTag(subTag, true);
+                actionTypes.addAll(childActionTypes);
+            }
+        }
+        return actionTypes;
     }
 
     public ActionType getActionType(String id) {
@@ -269,8 +293,20 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         return propertyTypeById.values();
     }
 
-    public Set<PropertyType> getPropertyTypeByTag(Tag tag) {
-        return null;
+    public Set<PropertyType> getPropertyTypeByTag(Tag tag, boolean recursive) {
+        Set<PropertyType> propertyTypes = new LinkedHashSet<PropertyType>();
+        Set<PropertyType> directPropertyTypes = propertyTypeByTag.get(tag);
+        if (directPropertyTypes != null) {
+            propertyTypes.addAll(directPropertyTypes);
+        }
+        if (recursive) {
+            Tag completeTag = getTag(tag);
+            for (Tag subTag : completeTag.getSubTags()) {
+                Set<PropertyType> childPropertyTypes = getPropertyTypeByTag(subTag, true);
+                propertyTypes.addAll(childPropertyTypes);
+            }
+        }
+        return propertyTypes;
     }
 
     public PropertyType getPropertyType(String id) {
