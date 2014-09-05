@@ -7,7 +7,7 @@
             "id": "setPropertyName",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": "(initializerId=userProperty)"
+            "choicelistInitializerFilter": "(initializerId=propertyType)"
         },
         {
             "id": "setPropertyValue",

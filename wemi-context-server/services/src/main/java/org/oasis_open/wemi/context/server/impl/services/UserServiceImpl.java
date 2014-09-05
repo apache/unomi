@@ -30,8 +30,8 @@ public class UserServiceImpl implements UserService, BundleListener {
 
     private DefinitionsService definitionsService;
 
-    private Map<String, UserPropertyGroup> userPropertyGroupsById = new LinkedHashMap<String, UserPropertyGroup>();
-    private SortedSet<UserPropertyGroup> userPropertyGroups = new TreeSet<UserPropertyGroup>();
+    private Map<String, PropertyTypeGroup> propertyTypeGroupsById = new LinkedHashMap<String, PropertyTypeGroup>();
+    private SortedSet<PropertyTypeGroup> propertyTypeGroups = new TreeSet<PropertyTypeGroup>();
 
     private Map<String, String> propertyMappings = new HashMap<String, String>();
 
@@ -54,12 +54,12 @@ public class UserServiceImpl implements UserService, BundleListener {
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 
-        loadPredefinedUserPropertyGroups(bundleContext);
-        loadPredefinedUserProperties(bundleContext);
+        loadPredefinedPropertyTypeGroups(bundleContext);
+        loadPredefinedPropertyTypes(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
             if (bundle.getBundleContext() != null) {
-                loadPredefinedUserPropertyGroups(bundle.getBundleContext());
-                loadPredefinedUserProperties(bundle.getBundleContext());
+                loadPredefinedPropertyTypeGroups(bundle.getBundleContext());
+                loadPredefinedPropertyTypes(bundle.getBundleContext());
             }
         }
         bundleContext.addBundleListener(this);
@@ -89,28 +89,28 @@ public class UserServiceImpl implements UserService, BundleListener {
         persistenceService.save(user);
     }
 
-    public Set<UserPropertyGroup> getUserPropertyGroups() {
-        return userPropertyGroups;
+    public Set<PropertyTypeGroup> getPropertyTypeGroups() {
+        return propertyTypeGroups;
     }
 
-    public Set<UserProperty> getAllUserProperties() {
-        Set<UserProperty> allUserProperties = new LinkedHashSet<UserProperty>();
-        for (UserPropertyGroup userPropertyGroup : userPropertyGroups) {
-            allUserProperties.addAll(userPropertyGroup.getUserProperties());
+    public Set<PropertyType> getAllPropertyTypes() {
+        Set<PropertyType> allUserProperties = new LinkedHashSet<PropertyType>();
+        for (PropertyTypeGroup propertyTypeGroup : propertyTypeGroups) {
+            allUserProperties.addAll(propertyTypeGroup.getPropertyTypes());
         }
         return allUserProperties;
     }
 
-    public Set<UserProperty> getUserProperties(String propertyGroupId) {
-        UserPropertyGroup userPropertyGroup = userPropertyGroupsById.get(propertyGroupId);
-        if (userPropertyGroup == null) {
+    public Set<PropertyType> getPropertyTypes(String propertyGroupId) {
+        PropertyTypeGroup propertyTypeGroup = propertyTypeGroupsById.get(propertyGroupId);
+        if (propertyTypeGroup == null) {
             return null;
         }
-        return userPropertyGroup.getUserProperties();
+        return propertyTypeGroup.getPropertyTypes();
     }
 
-    public String getUserPropertyMapping(String fromPropertyName) {
-        return propertyMappings.get(fromPropertyName);
+    public String getPropertyTypeMapping(String fromPropertyTypeId) {
+        return propertyMappings.get(fromPropertyTypeId);
     }
 
     public Session loadSession(String sessionId) {
@@ -168,8 +168,8 @@ public class UserServiceImpl implements UserService, BundleListener {
         switch (event.getType()) {
             case BundleEvent.STARTED:
                 if (event.getBundle().getBundleContext() != null) {
-                    loadPredefinedUserPropertyGroups(event.getBundle().getBundleContext());
-                    loadPredefinedUserProperties(event.getBundle().getBundleContext());
+                    loadPredefinedPropertyTypeGroups(event.getBundle().getBundleContext());
+                    loadPredefinedPropertyTypes(event.getBundle().getBundleContext());
                 }
                 break;
             case BundleEvent.STOPPING:
@@ -178,67 +178,67 @@ public class UserServiceImpl implements UserService, BundleListener {
         }
     }
 
-    private void loadPredefinedUserPropertyGroups(BundleContext bundleContext) {
+    private void loadPredefinedPropertyTypeGroups(BundleContext bundleContext) {
         if (bundleContext == null) {
             return;
         }
-        Enumeration<URL> predefinedUserPropertyGroupEntries = bundleContext.getBundle().findEntries("META-INF/wemi/user", "*PropertyGroup.json", true);
-        if (predefinedUserPropertyGroupEntries == null) {
+        Enumeration<URL> predefinedPropertyTypeGroupEntries = bundleContext.getBundle().findEntries("META-INF/wemi/properties", "*PropertyGroup.json", true);
+        if (predefinedPropertyTypeGroupEntries == null) {
             return;
         }
 
-        while (predefinedUserPropertyGroupEntries.hasMoreElements()) {
-            URL predefinedUserPropertyGroupURL = predefinedUserPropertyGroupEntries.nextElement();
-            logger.debug("Found predefined user property group at " + predefinedUserPropertyGroupURL + ", loading... ");
+        while (predefinedPropertyTypeGroupEntries.hasMoreElements()) {
+            URL predefinedPropertyTypeGroupURL = predefinedPropertyTypeGroupEntries.nextElement();
+            logger.debug("Found predefined property group at " + predefinedPropertyTypeGroupURL + ", loading... ");
 
             try {
-                UserPropertyGroup userPropertyGroup = CustomObjectMapper.getObjectMapper().readValue(predefinedUserPropertyGroupURL, UserPropertyGroup.class);
-                ParserHelper.populatePluginType(userPropertyGroup, bundleContext.getBundle());
-                userPropertyGroups.add(userPropertyGroup);
-                userPropertyGroupsById.put(userPropertyGroup.getId(), userPropertyGroup);
+                PropertyTypeGroup propertyTypeGroup = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeGroupURL, PropertyTypeGroup.class);
+                ParserHelper.populatePluginType(propertyTypeGroup, bundleContext.getBundle());
+                propertyTypeGroups.add(propertyTypeGroup);
+                propertyTypeGroupsById.put(propertyTypeGroup.getId(), propertyTypeGroup);
             } catch (IOException e) {
-                logger.error("Error while loading user property group " + predefinedUserPropertyGroupURL, e);
+                logger.error("Error while loading property group " + predefinedPropertyTypeGroupURL, e);
             }
 
         }
     }
 
-    private void loadPredefinedUserProperties(BundleContext bundleContext) {
+    private void loadPredefinedPropertyTypes(BundleContext bundleContext) {
         if (bundleContext == null) {
             return;
         }
-        Enumeration<URL> predefinedUserPropertiesEntries = bundleContext.getBundle().findEntries("META-INF/wemi/user", "*.json", true);
-        if (predefinedUserPropertiesEntries == null) {
+        Enumeration<URL> predefinedPropertyTypeEntries = bundleContext.getBundle().findEntries("META-INF/wemi/properties", "*.json", true);
+        if (predefinedPropertyTypeEntries == null) {
             return;
         }
 
-        while (predefinedUserPropertiesEntries.hasMoreElements()) {
-            URL predefinedUserPropertyURL = predefinedUserPropertiesEntries.nextElement();
-            logger.debug("Found predefined user property at " + predefinedUserPropertyURL + ", loading... ");
+        while (predefinedPropertyTypeEntries.hasMoreElements()) {
+            URL predefinedPropertyTypeURL = predefinedPropertyTypeEntries.nextElement();
+            logger.debug("Found predefined property type at " + predefinedPropertyTypeURL + ", loading... ");
 
             try {
-                if (!predefinedUserPropertyURL.toExternalForm().endsWith("PropertyGroup.json")) {
-                    UserProperty userProperty = CustomObjectMapper.getObjectMapper().readValue(predefinedUserPropertyURL, UserProperty.class);
-                    ParserHelper.resolvePropertyType(definitionsService, userProperty);
-                    ParserHelper.populatePluginType(userProperty, bundleContext.getBundle());
-                    UserPropertyGroup userPropertyGroup = userPropertyGroupsById.get(userProperty.getGroupId());
-                    if (userPropertyGroup == null) {
-                        logger.warn("Undeclared groupId " + userPropertyGroup.getId() + " detected, creating dynamically...");
-                        userPropertyGroup = new UserPropertyGroup(userProperty.getGroupId());
-                        userPropertyGroups.add(userPropertyGroup);
+                if (!predefinedPropertyTypeURL.toExternalForm().endsWith("PropertyGroup.json")) {
+                    PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeURL, PropertyType.class);
+                    ParserHelper.resolveValueType(definitionsService, propertyType);
+                    ParserHelper.populatePluginType(propertyType, bundleContext.getBundle());
+                    PropertyTypeGroup propertyTypeGroup = propertyTypeGroupsById.get(propertyType.getGroupId());
+                    if (propertyTypeGroup == null) {
+                        logger.warn("Undeclared groupId " + propertyTypeGroup.getId() + " detected, creating dynamically...");
+                        propertyTypeGroup = new PropertyTypeGroup(propertyType.getGroupId());
+                        propertyTypeGroups.add(propertyTypeGroup);
                     }
-                    userPropertyGroup.getUserProperties().add(userProperty);
-                    userPropertyGroupsById.put(userProperty.getGroupId(), userPropertyGroup);
+                    propertyTypeGroup.getPropertyTypes().add(propertyType);
+                    propertyTypeGroupsById.put(propertyType.getGroupId(), propertyTypeGroup);
 
-                    if (userProperty.getAutomaticMappingsFrom() != null && userProperty.getAutomaticMappingsFrom().size() > 0) {
-                        for (String mappingFrom : userProperty.getAutomaticMappingsFrom()) {
-                            propertyMappings.put(mappingFrom, userProperty.getId());
+                    if (propertyType.getAutomaticMappingsFrom() != null && propertyType.getAutomaticMappingsFrom().size() > 0) {
+                        for (String mappingFrom : propertyType.getAutomaticMappingsFrom()) {
+                            propertyMappings.put(mappingFrom, propertyType.getId());
                         }
                     }
 
                 }
             } catch (IOException e) {
-                logger.error("Error while loading user properties " + predefinedUserPropertyURL, e);
+                logger.error("Error while loading properties " + predefinedPropertyTypeURL, e);
             }
 
         }

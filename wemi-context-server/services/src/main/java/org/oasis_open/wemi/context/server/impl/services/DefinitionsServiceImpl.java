@@ -1,8 +1,8 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.apache.cxf.helpers.IOUtils;
-import org.oasis_open.wemi.context.server.api.PropertyType;
 import org.oasis_open.wemi.context.server.api.Tag;
+import org.oasis_open.wemi.context.server.api.ValueType;
 import org.oasis_open.wemi.context.server.api.actions.ActionType;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
@@ -26,10 +26,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
     Set<Tag> rootTags = new LinkedHashSet<Tag>();
     Map<String, ConditionType> conditionTypeById = new HashMap<String, ConditionType>();
     Map<String, ActionType> actionsTypeById = new HashMap<String, ActionType>();
-    Map<String, PropertyType> propertyTypeById = new HashMap<String, PropertyType>();
+    Map<String, ValueType> valueTypeById = new HashMap<String, ValueType>();
     Map<Tag, Set<ConditionType>> conditionTypeByTag = new HashMap<Tag, Set<ConditionType>>();
     Map<Tag, Set<ActionType>> actionTypeByTag = new HashMap<Tag, Set<ActionType>>();
-    Map<Tag, Set<PropertyType>> propertyTypeByTag = new HashMap<Tag, Set<PropertyType>>();
+    Map<Tag, Set<ValueType>> valueTypeByTag = new HashMap<Tag, Set<ValueType>>();
     private BundleContext bundleContext;
     private PersistenceService persistenceService;
 
@@ -61,9 +61,9 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
 
         loadPredefinedTags(bundleContext);
 
-        loadPredefinedCondition(bundleContext);
-        loadPredefinedActions(bundleContext);
-        loadPredefinedProperties(bundleContext);
+        loadPredefinedConditionTypes(bundleContext);
+        loadPredefinedActionTypes(bundleContext);
+        loadPredefinedValueTypes(bundleContext);
 
     }
 
@@ -121,7 +121,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         }
     }
 
-    private void loadPredefinedCondition(BundleContext bundleContext) {
+    private void loadPredefinedConditionTypes(BundleContext bundleContext) {
         Enumeration<URL> predefinedConditionEntries = bundleContext.getBundle().findEntries("META-INF/wemi/conditions", "*.json", true);
         if (predefinedConditionEntries == null) {
             return;
@@ -155,7 +155,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         }
     }
 
-    private void loadPredefinedActions(BundleContext bundleContext) {
+    private void loadPredefinedActionTypes(BundleContext bundleContext) {
         Enumeration<URL> predefinedActionsEntries = bundleContext.getBundle().findEntries("META-INF/wemi/actions", "*.json", true);
         if (predefinedActionsEntries == null) {
             return;
@@ -190,8 +190,8 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
 
     }
 
-    private void loadPredefinedProperties(BundleContext bundleContext) {
-        Enumeration<URL> predefinedPropertiesEntries = bundleContext.getBundle().findEntries("META-INF/wemi/properties", "*.json", true);
+    private void loadPredefinedValueTypes(BundleContext bundleContext) {
+        Enumeration<URL> predefinedPropertiesEntries = bundleContext.getBundle().findEntries("META-INF/wemi/values", "*.json", true);
         if (predefinedPropertiesEntries == null) {
             return;
         }
@@ -200,19 +200,19 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
             logger.debug("Found predefined property type at " + predefinedPropertyURL + ", loading... ");
 
             try {
-                PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyURL, PropertyType.class);
-                ParserHelper.populatePluginType(propertyType, bundleContext.getBundle(), "properties", propertyType.getId());
-                propertyTypeById.put(propertyType.getId(), propertyType);
-                for (String tagId : propertyType.getTagIds()) {
+                ValueType valueType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyURL, ValueType.class);
+                ParserHelper.populatePluginType(valueType, bundleContext.getBundle(), "values", valueType.getId());
+                valueTypeById.put(valueType.getId(), valueType);
+                for (String tagId : valueType.getTagIds()) {
                     Tag tag = tags.get(tagId);
                     if (tag != null) {
-                        propertyType.getTags().add(tag);
-                        Set<PropertyType> propertyTypes = propertyTypeByTag.get(tag);
-                        if (propertyTypes == null) {
-                            propertyTypes = new LinkedHashSet<PropertyType>();
+                        valueType.getTags().add(tag);
+                        Set<ValueType> valueTypes = valueTypeByTag.get(tag);
+                        if (valueTypes == null) {
+                            valueTypes = new LinkedHashSet<ValueType>();
                         }
-                        propertyTypes.add(propertyType);
-                        propertyTypeByTag.put(tag, propertyTypes);
+                        valueTypes.add(valueType);
+                        valueTypeByTag.put(tag, valueTypes);
                     } else {
                         // we found a tag that is not defined, we will define it automatically
                         logger.warn("Unknown tag " + tagId + " used in property type definition " + predefinedPropertyURL);
@@ -289,28 +289,28 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         return actionsTypeById.get(id);
     }
 
-    public Collection<PropertyType> getAllPropertyTypes() {
-        return propertyTypeById.values();
+    public Collection<ValueType> getAllValueTypes() {
+        return valueTypeById.values();
     }
 
-    public Set<PropertyType> getPropertyTypeByTag(Tag tag, boolean recursive) {
-        Set<PropertyType> propertyTypes = new LinkedHashSet<PropertyType>();
-        Set<PropertyType> directPropertyTypes = propertyTypeByTag.get(tag);
-        if (directPropertyTypes != null) {
-            propertyTypes.addAll(directPropertyTypes);
+    public Set<ValueType> getValueTypeByTag(Tag tag, boolean recursive) {
+        Set<ValueType> valueTypes = new LinkedHashSet<ValueType>();
+        Set<ValueType> directValueTypes = valueTypeByTag.get(tag);
+        if (directValueTypes != null) {
+            valueTypes.addAll(directValueTypes);
         }
         if (recursive) {
             Tag completeTag = getTag(tag);
             for (Tag subTag : completeTag.getSubTags()) {
-                Set<PropertyType> childPropertyTypes = getPropertyTypeByTag(subTag, true);
-                propertyTypes.addAll(childPropertyTypes);
+                Set<ValueType> childValueTypes = getValueTypeByTag(subTag, true);
+                valueTypes.addAll(childValueTypes);
             }
         }
-        return propertyTypes;
+        return valueTypes;
     }
 
-    public PropertyType getPropertyType(String id) {
-        return propertyTypeById.get(id);
+    public ValueType getValueType(String id) {
+        return valueTypeById.get(id);
     }
 
     public void bundleChanged(BundleEvent event) {

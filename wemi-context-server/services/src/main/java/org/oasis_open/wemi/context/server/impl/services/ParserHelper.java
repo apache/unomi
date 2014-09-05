@@ -3,7 +3,7 @@ package org.oasis_open.wemi.context.server.impl.services;
 import org.oasis_open.wemi.context.server.api.PluginType;
 import org.oasis_open.wemi.context.server.api.PropertyType;
 import org.oasis_open.wemi.context.server.api.TemplateablePluginType;
-import org.oasis_open.wemi.context.server.api.UserProperty;
+import org.oasis_open.wemi.context.server.api.ValueType;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.actions.ActionType;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
@@ -48,11 +48,11 @@ public class ParserHelper {
         }
     }
 
-    public static void resolvePropertyType(DefinitionsService definitionsService, UserProperty userProperty) {
-        if (userProperty.getPropertyType() == null) {
-            PropertyType propertyType = definitionsService.getPropertyType(userProperty.getPropertyTypeId());
-            if (propertyType != null) {
-                userProperty.setPropertyType(propertyType);
+    public static void resolveValueType(DefinitionsService definitionsService, PropertyType propertyType) {
+        if (propertyType.getValueType() == null) {
+            ValueType valueType = definitionsService.getValueType(propertyType.getValueTypeId());
+            if (valueType != null) {
+                propertyType.setValueType(valueType);
             }
         }
     }

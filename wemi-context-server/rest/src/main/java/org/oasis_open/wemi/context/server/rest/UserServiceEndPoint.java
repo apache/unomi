@@ -1,10 +1,10 @@
 package org.oasis_open.wemi.context.server.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
+import org.oasis_open.wemi.context.server.api.PropertyType;
+import org.oasis_open.wemi.context.server.api.PropertyTypeGroup;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
-import org.oasis_open.wemi.context.server.api.UserProperty;
-import org.oasis_open.wemi.context.server.api.UserPropertyGroup;
 import org.oasis_open.wemi.context.server.api.services.UserService;
 
 import javax.jws.WebMethod;
@@ -79,26 +79,26 @@ public class UserServiceEndPoint implements UserService {
 
     @GET
     @Path("/properties/groups")
-    public Set<UserPropertyGroup> getUserPropertyGroups() {
-        return userService.getUserPropertyGroups();
+    public Set<PropertyTypeGroup> getPropertyTypeGroups() {
+        return userService.getPropertyTypeGroups();
     }
 
     @GET
     @Path("/properties")
-    public Set<UserProperty> getAllUserProperties() {
-        return userService.getAllUserProperties();
+    public Set<PropertyType> getAllPropertyTypes() {
+        return userService.getAllPropertyTypes();
     }
 
     @GET
     @Path("/properties/groups/{groupId}")
-    public Set<UserProperty> getUserProperties(@PathParam("groupId") String propertyGroupId) {
-        return userService.getUserProperties(propertyGroupId);
+    public Set<PropertyType> getPropertyTypes(@PathParam("groupId") String propertyGroupId) {
+        return userService.getPropertyTypes(propertyGroupId);
     }
 
     @GET
-    @Path("/properties/mappings/{fromPropertyId}")
-    public String getUserPropertyMapping(@PathParam("fromPropertyId") String fromPropertyName) {
-        return userService.getUserPropertyMapping(fromPropertyName);
+    @Path("/properties/mappings/{fromPropertyTypeId}")
+    public String getPropertyTypeMapping(@PathParam("fromPropertyTypeId") String fromPropertyTypeId) {
+        return userService.getPropertyTypeMapping(fromPropertyTypeId);
     }
 
     @WebMethod(exclude = true)

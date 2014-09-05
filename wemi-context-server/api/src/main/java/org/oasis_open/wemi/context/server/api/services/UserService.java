@@ -1,9 +1,9 @@
 package org.oasis_open.wemi.context.server.api.services;
 
+import org.oasis_open.wemi.context.server.api.PropertyType;
+import org.oasis_open.wemi.context.server.api.PropertyTypeGroup;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
-import org.oasis_open.wemi.context.server.api.UserProperty;
-import org.oasis_open.wemi.context.server.api.UserPropertyGroup;
 
 import java.util.Collection;
 import java.util.List;
@@ -24,13 +24,13 @@ public interface UserService {
 
     void save(User user);
 
-    public Set<UserPropertyGroup> getUserPropertyGroups();
+    public Set<PropertyTypeGroup> getPropertyTypeGroups();
 
-    public Set<UserProperty> getAllUserProperties();
+    public Set<PropertyType> getAllPropertyTypes();
 
-    public Set<UserProperty> getUserProperties(String propertyGroupId);
+    public Set<PropertyType> getPropertyTypes(String propertyGroupId);
 
-    public String getUserPropertyMapping(String fromPropertyName);
+    public String getPropertyTypeMapping(String fromPropertyTypeId);
 
     Session loadSession(String eventId);
 

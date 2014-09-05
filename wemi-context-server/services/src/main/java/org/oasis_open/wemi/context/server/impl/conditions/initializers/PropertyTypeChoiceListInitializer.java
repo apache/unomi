@@ -1,6 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.conditions.initializers;
 
-import org.oasis_open.wemi.context.server.api.UserProperty;
+import org.oasis_open.wemi.context.server.api.PropertyType;
 import org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListValue;
 import org.oasis_open.wemi.context.server.api.services.UserService;
@@ -12,7 +12,7 @@ import java.util.Set;
 /**
  *
  */
-public class UserPropertyChoiceListInitializer implements ChoiceListInitializer {
+public class PropertyTypeChoiceListInitializer implements ChoiceListInitializer {
 
     UserService userService;
 
@@ -22,10 +22,10 @@ public class UserPropertyChoiceListInitializer implements ChoiceListInitializer 
 
     public List<ChoiceListValue> getValues(Object context) {
         List<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
-        Set<UserProperty> userProperties = userService.getAllUserProperties();
-        for (UserProperty userProperty : userProperties) {
-            String resourceKey = "USER_PROPERTIES_" + userProperty.getId().toUpperCase().replaceAll("\\.", "_") + "_LABEL";
-            choiceListValues.add(new ChoiceListValue(userProperty.getId(), resourceKey));
+        Set<PropertyType> userProperties = userService.getAllPropertyTypes();
+        for (PropertyType propertyType : userProperties) {
+            String resourceKey = "USER_PROPERTIES_" + propertyType.getId().toUpperCase().replaceAll("\\.", "_") + "_LABEL";
+            choiceListValues.add(new ChoiceListValue(propertyType.getId(), resourceKey));
         }
         return choiceListValues;
     }

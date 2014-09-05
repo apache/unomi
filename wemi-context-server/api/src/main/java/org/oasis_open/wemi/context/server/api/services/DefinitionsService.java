@@ -1,7 +1,7 @@
 package org.oasis_open.wemi.context.server.api.services;
 
-import org.oasis_open.wemi.context.server.api.PropertyType;
 import org.oasis_open.wemi.context.server.api.Tag;
+import org.oasis_open.wemi.context.server.api.ValueType;
 import org.oasis_open.wemi.context.server.api.actions.ActionType;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 
@@ -27,9 +27,9 @@ public interface DefinitionsService {
 
     ActionType getActionType(String id);
 
-    Collection<PropertyType> getAllPropertyTypes();
+    Collection<ValueType> getAllValueTypes();
 
-    Set<PropertyType> getPropertyTypeByTag(Tag tag, boolean recursive);
+    Set<ValueType> getValueTypeByTag(Tag tag, boolean recursive);
 
-    PropertyType getPropertyType(String id);
+    ValueType getValueType(String id);
 }

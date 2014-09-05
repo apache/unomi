@@ -7,18 +7,18 @@ import java.util.TreeSet;
 /**
  * Created by loom on 28.08.14.
  */
-public class UserPropertyGroup extends Item implements Comparable<UserPropertyGroup>, PluginType {
+public class PropertyTypeGroup extends Item implements Comparable<PropertyTypeGroup>, PluginType {
 
     private String id;
     private double rank;
     private String resourceBundle;
     private String pluginId;
-    private SortedSet<UserProperty> userProperties = new TreeSet<UserProperty>();
+    private SortedSet<PropertyType> propertyTypes = new TreeSet<PropertyType>();
 
-    public UserPropertyGroup() {
+    public PropertyTypeGroup() {
     }
 
-    public UserPropertyGroup(String itemId) {
+    public PropertyTypeGroup(String itemId) {
         super(itemId);
         this.id = itemId;
     }
@@ -40,12 +40,12 @@ public class UserPropertyGroup extends Item implements Comparable<UserPropertyGr
     }
 
     @XmlTransient
-    public SortedSet<UserProperty> getUserProperties() {
-        return userProperties;
+    public SortedSet<PropertyType> getPropertyTypes() {
+        return propertyTypes;
     }
 
-    public void setUserProperties(SortedSet<UserProperty> userProperties) {
-        this.userProperties = userProperties;
+    public void setPropertyTypes(SortedSet<PropertyType> propertyTypes) {
+        this.propertyTypes = propertyTypes;
     }
 
     public String getResourceBundle() {
@@ -64,7 +64,7 @@ public class UserPropertyGroup extends Item implements Comparable<UserPropertyGr
         this.pluginId = pluginId;
     }
 
-    public int compareTo(UserPropertyGroup o) {
+    public int compareTo(PropertyTypeGroup o) {
         return Double.compare(rank, o.rank);
     }
 }

@@ -94,10 +94,10 @@
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="initializerId" value="userProperty"/>
+            <entry key="initializerId" value="propertyType"/>
         </service-properties>
-        <bean class="org.oasis_open.wemi.context.server.impl.conditions.initializers.UserPropertyChoiceListInitializer">
-            <property name="userService" ref="userServiceImpl"/>
+        <bean class="org.oasis_open.wemi.context.server.impl.conditions.initializers.PropertyTypeChoiceListInitializer">
+        <property name="userService" ref="userServiceImpl"/>
         </bean>
     </service>
 

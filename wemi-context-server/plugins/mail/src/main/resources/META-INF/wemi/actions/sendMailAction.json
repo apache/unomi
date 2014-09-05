@@ -15,7 +15,7 @@
             "id": "to",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": "(initializerId=userProperty)"
+            "choicelistInitializerFilter": ""
         },
         {
             "id": "cc",

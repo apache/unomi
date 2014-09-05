@@ -3,24 +3,24 @@ package org.oasis_open.wemi.context.server.api;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
-import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.TreeSet;
 
 /**
- * Created by loom on 02.09.14.
+ * Created by loom on 27.08.14.
  */
 @XmlRootElement
-public class PropertyType implements TemplateablePluginType {
-
+public class PropertyType extends Item implements Comparable<PropertyType>, PluginType {
     String id;
-    String nameKey;
-    String descriptionKey;
-    String template;
-    String resourceBundle;
+    String valueTypeId;
+    ValueType valueType;
+    String groupId;
+    String choiceListInitializerFilter;
+    String defaultValue;
+    String selectorId;
+    Set<String> automaticMappingsFrom;
+    double rank;
     String pluginId;
-    Set<Tag> tags = new TreeSet<Tag>();
-    Set<String> tagIds = new LinkedHashSet<String>();
+    String resourceBundle;
 
     public PropertyType() {
     }
@@ -37,42 +37,70 @@ public class PropertyType implements TemplateablePluginType {
         this.id = id;
     }
 
-    public String getNameKey() {
-        if (nameKey == null) {
-            nameKey = id.toUpperCase().replaceAll("\\.", "_") + "_NAME_LABEL";
-        }
-        return nameKey;
+    @XmlElement(name = "type")
+    public String getValueTypeId() {
+        return valueTypeId;
     }
 
-    public void setNameKey(String nameKey) {
-        this.nameKey = nameKey;
+    public void setValueTypeId(String valueTypeId) {
+        this.valueTypeId = valueTypeId;
     }
 
-    public String getDescriptionKey() {
-        if (descriptionKey == null) {
-            descriptionKey = id.toUpperCase().replaceAll("\\.", "_") + "_DESCRIPTION_LABEL";
-        }
-        return descriptionKey;
+    @XmlTransient
+    public ValueType getValueType() {
+        return valueType;
     }
 
-    public void setDescriptionKey(String descriptionKey) {
-        this.descriptionKey = descriptionKey;
+    public void setValueType(ValueType valueType) {
+        this.valueType = valueType;
     }
 
-    public String getTemplate() {
-        return template;
+    public String getGroupId() {
+        return groupId;
     }
 
-    public void setTemplate(String template) {
-        this.template = template;
+    public void setGroupId(String groupId) {
+        this.groupId = groupId;
     }
 
-    public String getResourceBundle() {
-        return resourceBundle;
+    public String getChoiceListInitializerFilter() {
+        return choiceListInitializerFilter;
     }
 
-    public void setResourceBundle(String resourceBundle) {
-        this.resourceBundle = resourceBundle;
+    public void setChoiceListInitializerFilter(String choiceListInitializerFilter) {
+        this.choiceListInitializerFilter = choiceListInitializerFilter;
+    }
+
+    public String getDefaultValue() {
+        return defaultValue;
+    }
+
+    public void setDefaultValue(String defaultValue) {
+        this.defaultValue = defaultValue;
+    }
+
+    public String getSelectorId() {
+        return selectorId;
+    }
+
+    public void setSelectorId(String selectorId) {
+        this.selectorId = selectorId;
+    }
+
+    public Set<String> getAutomaticMappingsFrom() {
+        return automaticMappingsFrom;
+    }
+
+    public void setAutomaticMappingsFrom(Set<String> automaticMappingsFrom) {
+        this.automaticMappingsFrom = automaticMappingsFrom;
+    }
+
+    public double getRank() {
+        return rank;
+    }
+
+    public void setRank(double rank) {
+        this.rank = rank;
     }
 
     public String getPluginId() {
@@ -83,21 +111,15 @@ public class PropertyType implements TemplateablePluginType {
         this.pluginId = pluginId;
     }
 
-    @XmlTransient
-    public Set<Tag> getTags() {
-        return tags;
+    public String getResourceBundle() {
+        return resourceBundle;
     }
 
-    public void setTags(Set<Tag> tags) {
-        this.tags = tags;
+    public void setResourceBundle(String resourceBundle) {
+        this.resourceBundle = resourceBundle;
     }
 
-    @XmlElement(name = "tags")
-    public Set<String> getTagIds() {
-        return tagIds;
-    }
-
-    public void setTagIds(Set<String> tagIds) {
-        this.tagIds = tagIds;
+    public int compareTo(PropertyType o) {
+        return Double.compare(rank, o.rank);
     }
 }
