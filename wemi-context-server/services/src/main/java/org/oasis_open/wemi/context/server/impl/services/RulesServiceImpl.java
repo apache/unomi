@@ -219,14 +219,12 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
         persistenceService.save(rule);
     }
 
-    private Condition extractConditionByTag(Condition rootCondition, String conditionTag) {
-        if (rootCondition.getConditionType().getTagIDs().contains(conditionTag)) {
-            return rootCondition;
-        } else if (rootCondition.getParameterValues().containsKey("subConditions")) {
+    private Condition extractConditionByTag(Condition rootCondition, String tagId) {
+        if (rootCondition.getParameterValues().containsKey("subConditions")) {
             List<Condition> subConditions = (List<Condition>) rootCondition.getParameterValues().get("subConditions");
             List<Condition> matchingConditions = new ArrayList<Condition>();
             for (Condition condition : subConditions) {
-                Condition c = extractConditionByTag(condition, conditionTag);
+                Condition c = extractConditionByTag(condition, tagId);
                 if (c != null) {
                     matchingConditions.add(c);
                 }
@@ -246,6 +244,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
                 }
             }
             throw new IllegalArgumentException();
+        } else if (rootCondition.getConditionType().getTagIDs().contains(tagId)) {
+            return rootCondition;
         } else {
             return null;
         }
