@@ -8,7 +8,7 @@
     <cm:property-placeholder persistent-id="org.oasis_open.wemi.context.server.plugins.request"
                              update-strategy="reload">
         <cm:default-properties>
-            <cm:property name="request.ipDatabase.location" value="${karaf.etc}/GeoIP2-City.mmdb"/>
+            <cm:property name="request.ipDatabase.location" value="file:${karaf.etc}/GeoIP2-City.mmdb"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
