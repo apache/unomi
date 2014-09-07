@@ -73,6 +73,10 @@ public class UserServiceImpl implements UserService, BundleListener {
         return persistenceService.getAllItems(User.class);
     }
 
+    public long getAllUsersCount() {
+        return persistenceService.getAllItemsCount(User.class);
+    }
+
     public Collection<User> getUsers(String query, int offset, int size) {
         return persistenceService.getAllItems(User.class, offset, size);
     }

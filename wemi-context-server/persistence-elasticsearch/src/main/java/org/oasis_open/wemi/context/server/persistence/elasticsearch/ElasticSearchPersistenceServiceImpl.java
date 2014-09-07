@@ -131,6 +131,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
         return query(QueryBuilders.matchAllQuery(), null, clazz);
     }
 
+    public <T extends Item> long getAllItemsCount(Class<T> clazz) {
+        return queryCount(FilterBuilders.matchAllFilter(), clazz);
+    }
+
     @Override
     public <T extends Item> Collection<T> getAllItems(final Class<T> clazz, int offset, int size) {
         return query(QueryBuilders.matchAllQuery(), null, clazz, offset, size);
@@ -356,6 +360,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public <T extends Item> long queryCount(final Condition query, final Class<T> clazz) {
+        return queryCount(conditionESQueryBuilderDispatcher.buildFilter(query), clazz);
+    }
+
+    public <T extends Item> long queryCount(final FilterBuilder filter, final Class<T> clazz) {
         return new InClassLoaderExecute<Long>() {
 
             @Override
@@ -367,16 +375,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                             .setTypes(itemType)
                             .setSearchType(SearchType.COUNT)
                             .setQuery(QueryBuilders.matchAllQuery())
-                            .addAggregation(AggregationBuilders.filter("filter").filter(conditionESQueryBuilderDispatcher.buildFilter(query)))
+                            .addAggregation(AggregationBuilders.filter("filter").filter(filter))
                             .execute()
                             .actionGet();
                     Aggregations searchHits = response.getAggregations();
                     Filter filter = searchHits.get("filter");
                     return filter.getDocCount();
                 } catch (IllegalAccessException e) {
-                    logger.error("Error loading itemType=" + clazz.getName() + "query=" + query, e);
+                    logger.error("Error loading itemType=" + clazz.getName() + "query=" + filter, e);
                 } catch (NoSuchFieldException e) {
-                    logger.error("Error loading itemType=" + clazz.getName() + "query=" + query, e);
+                    logger.error("Error loading itemType=" + clazz.getName() + "query=" + filter, e);
                 }
                 return -1L;
             }

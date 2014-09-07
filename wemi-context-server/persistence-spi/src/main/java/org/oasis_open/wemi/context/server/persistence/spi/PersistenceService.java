@@ -14,6 +14,8 @@ public interface PersistenceService {
 
     public <T extends Item> Collection<T> getAllItems(Class<T> clazz);
 
+    public <T extends Item> long getAllItemsCount(Class<T> clazz);
+
     public <T extends Item> Collection<T> getAllItems(Class<T> clazz, int offset, int size);
 
     public boolean save(Item item);

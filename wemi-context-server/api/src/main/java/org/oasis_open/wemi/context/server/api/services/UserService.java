@@ -16,6 +16,8 @@ public interface UserService {
 
     Collection<User> getAllUsers();
 
+    public long getAllUsersCount();
+
     Collection<User> getUsers(String query, int offset, int size);
 
     List<User> findUsersByPropertyValue(String propertyName, String propertyValue);
