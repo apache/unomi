@@ -244,7 +244,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
                 }
             }
             throw new IllegalArgumentException();
-        } else if (rootCondition.getConditionType().getTagIDs().contains(tagId)) {
+        } else if (rootCondition.getConditionType() != null && rootCondition.getConditionType().getTagIDs().contains(tagId)) {
             return rootCondition;
         } else {
             return null;

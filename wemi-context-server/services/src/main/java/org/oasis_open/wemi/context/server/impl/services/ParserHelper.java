@@ -10,6 +10,8 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.osgi.framework.Bundle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URL;
 import java.util.Collection;
@@ -17,26 +19,39 @@ import java.util.Enumeration;
 
 public class ParserHelper {
 
-    public static void resolveConditionType(DefinitionsService definitionsService, Condition rootCondition) {
+    private static final Logger logger = LoggerFactory.getLogger(ParserHelper.class);
+
+    public static boolean resolveConditionType(DefinitionsService definitionsService, Condition rootCondition) {
+        boolean result = false;
         if (rootCondition.getConditionType() == null) {
             ConditionType conditionType = definitionsService.getConditionType(rootCondition.getConditionTypeId());
             if (conditionType != null) {
                 rootCondition.setConditionType(conditionType);
+                return true;
             }
         }
         // recursive call for sub-conditions as parameters
         for (Object parameterValue : rootCondition.getParameterValues().values()) {
             if (parameterValue instanceof Condition) {
-                resolveConditionType(definitionsService, (Condition) parameterValue);
+                Condition parameterValueCondition = (Condition) parameterValue;
+                result &= resolveConditionType(definitionsService, parameterValueCondition);
+                if (!result) {
+                    logger.warn("Couldn't resolve condition type " + parameterValueCondition.getConditionTypeId() + " for parameter value " + parameterValueCondition.getParameterValues() + " from parent condition " + rootCondition.getConditionTypeId());
+                }
             } else if (parameterValue instanceof Collection) {
                 Collection<Object> valueList = (Collection<Object>) parameterValue;
                 for (Object value : valueList) {
                     if (value instanceof Condition) {
-                        resolveConditionType(definitionsService, (Condition) value);
+                        Condition valueCondition = (Condition) value;
+                        result &= resolveConditionType(definitionsService, valueCondition);
+                        if (!result) {
+                            logger.warn("Couldn't resolve condition type " + valueCondition.getConditionTypeId() + " for parameter value " + valueCondition.getParameterValues() + " from parent condition " + rootCondition.getConditionTypeId());
+                        }
                     }
                 }
             }
         }
+        return result;
     }
 
     public static void resolveActionType(DefinitionsService definitionsService, Action action) {

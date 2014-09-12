@@ -157,9 +157,9 @@ public class UserServiceImpl implements UserService, BundleListener {
                 Integer maximumEventCount = !parameters.containsKey("maximumEventCount") || "".equals(parameters.get("maximumEventCount")) ? Integer.MAX_VALUE : Integer.parseInt((String) parameters.get("maximumEventCount"));
 
                 return matchingEvents.size() >= minimumEventCount && matchingEvents.size() <= maximumEventCount;
-            } else if (condition.getConditionType().getTagIDs().contains("userCondition")) {
+            } else if (condition.getConditionType() != null && condition.getConditionType().getTagIDs().contains("userCondition")) {
                 return persistenceService.testMatch(condition, user);
-            } else if (condition.getConditionType().getTagIDs().contains("sessionCondition")) {
+            } else if (condition.getConditionType() != null && condition.getConditionType().getTagIDs().contains("sessionCondition")) {
                 return persistenceService.testMatch(condition, session);
             }
         } catch (IOException e) {
