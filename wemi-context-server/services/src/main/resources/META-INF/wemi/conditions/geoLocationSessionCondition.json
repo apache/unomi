@@ -1,0 +1,13 @@
+{
+    "id": "geoLocationSessionCondition",
+    "queryBuilderFilter": "(queryBuilderId=geoLocationSessionConditionESQueryBuilder)",
+    "tags": [ "geographic", "sessionCondition" ],
+    "parameters": [
+        {
+            "id": "countries",
+            "type": "string",
+            "multivalued": true,
+            "choicelistInitializerFilter": ""
+        }
+    ]
+}

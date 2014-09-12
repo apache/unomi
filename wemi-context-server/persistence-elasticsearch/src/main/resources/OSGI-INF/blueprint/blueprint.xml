@@ -120,6 +120,13 @@
         <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.UserInterestConditionESQueryBuilder"/>
     </service>
 
+    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="geoLocationSessionConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.GeoLocationSessionConditionESQueryBuilder"/>
+    </service>
+
     <bean id="conditionESQueryBuilderDispatcher"
           class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher">
         <property name="bundleContext" ref="blueprintBundleContext"/>
