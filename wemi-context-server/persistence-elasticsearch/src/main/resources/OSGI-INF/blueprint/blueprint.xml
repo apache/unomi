@@ -19,8 +19,12 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
-    <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl"
-             interface="org.oasis_open.wemi.context.server.persistence.spi.PersistenceService"/>
+    <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl">
+        <interfaces>
+            <value>org.oasis_open.wemi.context.server.persistence.spi.PersistenceService</value>
+            <value>org.oasis_open.wemi.context.server.api.services.ClusterService</value>
+        </interfaces>
+    </service>
 
     <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
         <service-properties>

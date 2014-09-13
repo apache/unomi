@@ -1,5 +1,7 @@
 package org.oasis_open.wemi.context.server.persistence.elasticsearch;
 
+import org.elasticsearch.action.admin.cluster.node.stats.NodeStats;
+import org.elasticsearch.action.admin.cluster.node.stats.NodesStatsResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
@@ -32,8 +34,10 @@ import org.elasticsearch.search.aggregations.bucket.filter.Filter;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogram;
 import org.elasticsearch.search.aggregations.bucket.missing.MissingBuilder;
 import org.elasticsearch.search.sort.SortOrder;
+import org.oasis_open.wemi.context.server.api.ClusterNode;
 import org.oasis_open.wemi.context.server.api.Item;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
+import org.oasis_open.wemi.context.server.api.services.ClusterService;
 import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 import org.oasis_open.wemi.context.server.persistence.spi.Aggregate;
 import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
@@ -51,7 +55,7 @@ import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 /**
  * Created by loom on 02.05.14.
  */
-public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
+public class ElasticSearchPersistenceServiceImpl implements PersistenceService, ClusterService {
 
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
     ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
@@ -507,6 +511,30 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService {
                     logger.error("Error loading itemType=" + clazz.getName(), e);
                 }
                 return results;
+            }
+        }.executeInClassLoader();
+    }
+
+    public List<ClusterNode> getClusterNodes() {
+        return new InClassLoaderExecute<List<ClusterNode>>() {
+
+            @Override
+            protected List<ClusterNode> execute(Object... args) {
+                List<ClusterNode> clusterNodes = new ArrayList<ClusterNode>();
+
+                NodesStatsResponse nodesStatsResponse = client.admin().cluster().prepareNodesStats(null)
+                        .execute()
+                        .actionGet();
+                NodeStats[] nodeStatsArray = nodesStatsResponse.getNodes();
+                for (NodeStats nodeStats : nodeStatsArray) {
+                    ClusterNode clusterNode = new ClusterNode();
+                    clusterNode.setHostName(nodeStats.getHostname());
+                    clusterNode.setPublicPort(8181);
+                    clusterNode.setCpuLoad(nodeStats.getProcess().getCpu().getPercent());
+                    clusterNodes.add(clusterNode);
+                }
+
+                return clusterNodes;
             }
         }.executeInClassLoader();
     }
