@@ -1,10 +1,7 @@
 package org.oasis_open.wemi.context.server.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
-import org.oasis_open.wemi.context.server.api.PropertyType;
-import org.oasis_open.wemi.context.server.api.PropertyTypeGroup;
-import org.oasis_open.wemi.context.server.api.Session;
-import org.oasis_open.wemi.context.server.api.User;
+import org.oasis_open.wemi.context.server.api.*;
 import org.oasis_open.wemi.context.server.api.services.UserService;
 
 import javax.jws.WebMethod;
@@ -72,6 +69,12 @@ public class UserServiceEndPoint implements UserService {
         userService.save(user);
     }
 
+    @DELETE
+    @Path("/{userId}")
+    public void delete(User user) {
+        userService.delete(user);
+    }
+
     @GET
     @Path("/properties/groups")
     public Set<PropertyTypeGroup> getPropertyTypeGroups() {
@@ -96,6 +99,38 @@ public class UserServiceEndPoint implements UserService {
         return userService.getPropertyTypeMapping(fromPropertyTypeId);
     }
 
+    @GET
+    @Path("/personas")
+    public Collection<Persona> getPersonas() {
+        return null;
+    }
+
+    @GET
+    @Path("/personas/{personaId}")
+    public Persona loadPersona(@PathParam("personaId") String userId) {
+        return (Persona) userService.load(userId);
+    }
+
+    @POST
+    @Path("/personas/{personaId}")
+    public void savePersona(Persona persona) {
+        userService.save(persona);
+    }
+
+    @DELETE
+    @Path("/personas/{personaId}")
+    public void deletePersona(Persona persona) {
+        userService.delete(persona);
+    }
+
+    @PUT
+    @Path("/personas/{personaId}")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public void createPersona(@PathParam("personaId") String personaId) {
+        userService.createPersona(personaId);
+    }
+
+
     @WebMethod(exclude = true)
     public Session loadSession(String eventId) {
         return userService.loadSession(eventId);
@@ -110,4 +145,5 @@ public class UserServiceEndPoint implements UserService {
     public boolean matchCondition(String condition, User user, Session session) {
         return userService.matchCondition(condition, user, session);
     }
+
 }

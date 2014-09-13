@@ -1,9 +1,6 @@
 package org.oasis_open.wemi.context.server.api.services;
 
-import org.oasis_open.wemi.context.server.api.PropertyType;
-import org.oasis_open.wemi.context.server.api.PropertyTypeGroup;
-import org.oasis_open.wemi.context.server.api.Session;
-import org.oasis_open.wemi.context.server.api.User;
+import org.oasis_open.wemi.context.server.api.*;
 
 import java.util.Collection;
 import java.util.List;
@@ -26,6 +23,8 @@ public interface UserService {
 
     void save(User user);
 
+    void delete(User user);
+
     public Set<PropertyTypeGroup> getPropertyTypeGroups();
 
     public Set<PropertyType> getAllPropertyTypes();
@@ -39,4 +38,9 @@ public interface UserService {
     boolean saveSession(Session event);
 
     boolean matchCondition(String condition, User user, Session session);
+
+    Collection<Persona> getPersonas();
+
+    public void createPersona(String personaId);
+
 }

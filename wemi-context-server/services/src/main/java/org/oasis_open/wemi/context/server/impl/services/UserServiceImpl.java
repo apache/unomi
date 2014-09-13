@@ -93,6 +93,14 @@ public class UserServiceImpl implements UserService, BundleListener {
         persistenceService.save(user);
     }
 
+    public void delete(User user) {
+        if (user instanceof Persona) {
+            persistenceService.remove(user.getItemId(), Persona.class);
+        } else {
+            persistenceService.remove(user.getItemId(), User.class);
+        }
+    }
+
     public Set<PropertyTypeGroup> getPropertyTypeGroups() {
         return propertyTypeGroups;
     }
@@ -166,6 +174,15 @@ public class UserServiceImpl implements UserService, BundleListener {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public Collection<Persona> getPersonas() {
+        return persistenceService.getAllItems(Persona.class);
+    }
+
+    public void createPersona(String personaId) {
+        Persona newPersona = new Persona(personaId);
+        persistenceService.save(newPersona);
     }
 
     public void bundleChanged(BundleEvent event) {

@@ -18,6 +18,7 @@ public class GeoLocationSessionConditionESQueryBuilder implements ESQueryBuilder
         List<FilterBuilder> subFilters = new ArrayList<FilterBuilder>();
         for (String country : countryList) {
             FilterBuilder countryFilterBuilder = FilterBuilders.termFilter("countryCode", country);
+            subFilters.add(countryFilterBuilder);
         }
         OrFilterBuilder orFilterBuilder = FilterBuilders.orFilter(subFilters.toArray(new FilterBuilder[subFilters.size()]));
         return orFilterBuilder;
