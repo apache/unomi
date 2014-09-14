@@ -1,7 +1,7 @@
 package org.oasis_open.wemi.context.server;
 
+import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
-import org.oasis_open.wemi.context.server.api.services.SegmentService;
 
 import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
@@ -90,12 +90,29 @@ public class HttpUtils {
         return baseRequestURL;
     }
 
-    public static String getJSONDigitalData(User user, SegmentService segmentService, String wemiContextServerURL) {
+    public static String getJSONDigitalData(User user, Session session, String wemiContextServerURL) {
         // @todo find a better to generate this JSON using either a template or a JSON databinding
         StringBuilder responseWriter = new StringBuilder();
         responseWriter.append("{");
         responseWriter.append("  \"loaded\" : true, ");
         responseWriter.append("  \"wemiContextServerURL\" : \"" + wemiContextServerURL + "\",");
+        if (session != null) {
+            responseWriter.append("  \"session\": {  ");
+            responseWriter.append("      \"duration\": \"" + session.getDuration() + "\",");
+            responseWriter.append("      \"lastEventDate\": \"" + session.getLastEventDate() + "\",");
+            responseWriter.append("      \"creationDate\": \"" + session.getSessionCreationDate() + "\",");
+            responseWriter.append("      \"properties\": {");
+            int i = 0;
+            for (String sessionPropertyName : session.getProperties().keySet()) {
+                responseWriter.append("        \"" + sessionPropertyName + "\": \"" + session.getProperty(sessionPropertyName) + "\"");
+                if (i < session.getProperties().size() - 1) {
+                    responseWriter.append(",");
+                }
+                i++;
+            }
+            responseWriter.append("      }");
+            responseWriter.append("  },  ");
+        }
         responseWriter.append("  \"user\": [ {  ");
         Set<String> userSegments = user.getSegments();
         if (userSegments != null && userSegments.size() > 0) {

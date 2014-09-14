@@ -148,7 +148,7 @@ public class EventCollectorServlet extends HttpServlet {
 
         if (changed) {
             responseWriter.append("{\"updated\":true, \"digitalData\":");
-            responseWriter.append(HttpUtils.getJSONDigitalData(user, segmentService, HttpUtils.getBaseRequestURL(request)));
+            responseWriter.append(HttpUtils.getJSONDigitalData(user, session, HttpUtils.getBaseRequestURL(request)));
             responseWriter.append("}");
         } else {
             responseWriter.append("{\"updated\":false}");

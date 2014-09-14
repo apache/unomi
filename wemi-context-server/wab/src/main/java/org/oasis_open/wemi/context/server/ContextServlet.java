@@ -166,7 +166,7 @@ public class ContextServlet extends HttpServlet {
         responseWriter.append("window.digitalData = window.digitalData || {};\n");
         responseWriter.append("var wemi = {\n");
         responseWriter.append("    wemiDigitalData : \n");
-        final String jsonDigitalData = HttpUtils.getJSONDigitalData(user, segmentService, baseRequestURL);
+        final String jsonDigitalData = HttpUtils.getJSONDigitalData(user, session, baseRequestURL);
         responseWriter.append(jsonDigitalData);
         responseWriter.append(", \n");
 
