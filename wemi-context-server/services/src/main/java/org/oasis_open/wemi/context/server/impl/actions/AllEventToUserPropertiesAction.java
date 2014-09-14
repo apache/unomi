@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.impl.actions;
 
 import org.oasis_open.wemi.context.server.api.Event;
+import org.oasis_open.wemi.context.server.api.Persona;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.actions.ActionExecutor;
 import org.oasis_open.wemi.context.server.api.services.UserService;
@@ -18,6 +19,10 @@ public class AllEventToUserPropertiesAction implements ActionExecutor {
 
     public boolean execute(Action action, Event event) {
         boolean changed = false;
+        if (event.getUser() instanceof Persona) {
+            return false;
+        }
+
         for (String eventPropertyName : event.getProperties().keySet()) {
             if (event.getUser().getProperty(eventPropertyName) == null || !event.getUser().getProperty(eventPropertyName).equals(event.getProperty(eventPropertyName))) {
                 String propertyMapping = userService.getPropertyTypeMapping(eventPropertyName);

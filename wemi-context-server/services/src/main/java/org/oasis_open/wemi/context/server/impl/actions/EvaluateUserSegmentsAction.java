@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.impl.actions;
 
 import org.oasis_open.wemi.context.server.api.Event;
+import org.oasis_open.wemi.context.server.api.Persona;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.actions.ActionExecutor;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
@@ -24,6 +25,10 @@ public class EvaluateUserSegmentsAction implements ActionExecutor {
 
     @Override
     public boolean execute(Action action, Event event) {
+        if (event.getUser() instanceof Persona) {
+            return false;
+        }
+
         Set<String> segments = segmentService.getSegmentsForUser(event.getUser());
         if (!segments.equals(event.getUser().getSegments())) {
             event.getUser().setSegments(segments);

@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.plugins.request.actions;
 
 import org.oasis_open.wemi.context.server.api.Event;
+import org.oasis_open.wemi.context.server.api.Persona;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.actions.ActionExecutor;
 
@@ -13,6 +14,10 @@ import javax.servlet.http.HttpServletRequest;
 public class RequestParameterToUserPropertyAction implements ActionExecutor {
     public boolean execute(Action action, Event event) {
         boolean changed = false;
+        if (event.getUser() instanceof Persona) {
+            return false;
+        }
+
         HttpServletRequest httpServletRequest = (HttpServletRequest) event.getAttributes().get("http_request");
         if (httpServletRequest == null) {
             return false;

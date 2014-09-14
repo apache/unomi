@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.impl.actions;
 
 import org.oasis_open.wemi.context.server.api.Event;
+import org.oasis_open.wemi.context.server.api.Persona;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.actions.ActionExecutor;
 
@@ -13,6 +14,9 @@ public class EventToUserPropertyAction implements ActionExecutor {
         boolean changed = false;
         String eventPropertyName = (String) action.getParameterValues().get("eventPropertyName");
         String userPropertyName = (String) action.getParameterValues().get("userPropertyName");
+        if (event.getUser() instanceof Persona) {
+            return false;
+        }
         if (event.getUser().getProperty(userPropertyName) == null || !event.getUser().getProperty(userPropertyName).equals(event.getProperty(eventPropertyName))) {
             event.getUser().setProperty(userPropertyName, event.getProperty(eventPropertyName));
             changed = true;
