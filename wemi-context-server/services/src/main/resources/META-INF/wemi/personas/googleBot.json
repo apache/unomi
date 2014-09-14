@@ -1,8 +1,10 @@
 {
     "id": "googleBot",
     "properties": {
+        "name": "Google Bot",
         "firstName": "Google",
-        "lastName": "Bot"
+        "lastName": "Bot",
+        "persona": true
     },
     "segments": [
         "bots"

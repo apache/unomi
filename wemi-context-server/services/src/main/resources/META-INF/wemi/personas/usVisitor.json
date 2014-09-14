@@ -1,8 +1,10 @@
 {
     "id": "usVisitor",
     "properties": {
+        "name": "U.S. Visitor",
         "firstName": "U.S.",
-        "lastName": "Visitor"
+        "lastName": "Visitor",
+        "persona": true
     },
     "segments": [],
     "requestParameters": {
