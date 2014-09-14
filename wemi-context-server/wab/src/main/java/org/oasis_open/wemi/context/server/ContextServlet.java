@@ -80,7 +80,6 @@ public class ContextServlet extends HttpServlet {
         for (Cookie cookie : cookies) {
             if ("wemi-profile-id".equals(cookie.getName())) {
                 cookieProfileId = cookie.getValue();
-                break;
             } else if ("wemi-persona-id".equals(cookie.getName())) {
                 cookiePersonaId = cookie.getValue();
             }
