@@ -39,6 +39,8 @@ public interface UserService {
 
     boolean matchCondition(String condition, User user, Session session);
 
+    public Persona loadPersona(String personaId);
+
     Collection<Persona> getPersonas();
 
     public void createPersona(String personaId);

@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server;
 
 import org.oasis_open.wemi.context.server.api.Event;
+import org.oasis_open.wemi.context.server.api.Persona;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.EventService;
@@ -12,6 +13,7 @@ import javax.inject.Inject;
 import javax.json.*;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -68,6 +70,23 @@ public class EventCollectorServlet extends HttpServlet {
 
         HttpUtils.setupCORSHeaders(request, response);
 
+        User user = null;
+        String cookiePersonaId = null;
+        Cookie[] cookies = ((HttpServletRequest) request).getCookies();
+        // HttpUtils.dumpRequestCookies(cookies);
+        for (Cookie cookie : cookies) {
+            if ("wemi-persona-id".equals(cookie.getName())) {
+                cookiePersonaId = cookie.getValue();
+            }
+        }
+
+        final String personaId = request.getParameter("persona");
+        if (personaId != null) {
+            user = userService.loadPersona(personaId);
+        } else if (cookiePersonaId != null) {
+            user = userService.loadPersona(cookiePersonaId);
+        }
+
         String sessionId = request.getParameter("sessionId");
         if (sessionId == null) {
             return;
@@ -83,9 +102,11 @@ public class EventCollectorServlet extends HttpServlet {
             return;
         }
 
-        User user = userService.load(userId);
         if (user == null) {
-            return;
+            user = userService.load(userId);
+            if (user == null) {
+                return;
+            }
         }
 
         String eventType = request.getPathInfo();
@@ -115,6 +136,9 @@ public class EventCollectorServlet extends HttpServlet {
             }
         }
 
+        if (user instanceof Persona) {
+            request = new PersonaRequestWrapper((HttpServletRequest) request, (Persona) user);
+        }
         event.getAttributes().put("http_request", request);
         event.getAttributes().put("http_response", response);
 

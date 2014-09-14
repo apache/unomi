@@ -107,8 +107,8 @@ public class UserServiceEndPoint implements UserService {
 
     @GET
     @Path("/personas/{personaId}")
-    public Persona loadPersona(@PathParam("personaId") String userId) {
-        return (Persona) userService.load(userId);
+    public Persona loadPersona(@PathParam("personaId") String personaId) {
+        return userService.loadPersona(personaId);
     }
 
     @POST

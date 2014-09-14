@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.commons.io.IOUtils;
 import org.oasis_open.wemi.context.server.api.Event;
+import org.oasis_open.wemi.context.server.api.Persona;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.EventService;
@@ -73,13 +74,29 @@ public class ContextServlet extends HttpServlet {
         User user = null;
 
         String cookieProfileId = null;
+        String cookiePersonaId = null;
         Cookie[] cookies = httpServletRequest.getCookies();
         // HttpUtils.dumpRequestCookies(cookies);
         for (Cookie cookie : cookies) {
             if ("wemi-profile-id".equals(cookie.getName())) {
                 cookieProfileId = cookie.getValue();
                 break;
+            } else if ("wemi-persona-id".equals(cookie.getName())) {
+                cookiePersonaId = cookie.getValue();
             }
+        }
+
+        final String personaId = request.getParameter("persona");
+        if (personaId != null) {
+            if ("currentUser".equals(personaId)) {
+                user = null;
+                clearPersonaCookie(response);
+            } else {
+                user = userService.loadPersona(personaId);
+                sendCookie(user, response);
+            }
+        } else if (cookiePersonaId != null) {
+            user = userService.loadPersona(cookiePersonaId);
         }
 
         final String sessionId = request.getParameter("sessionId");
@@ -90,7 +107,9 @@ public class ContextServlet extends HttpServlet {
             session = userService.loadSession(sessionId);
             if (session != null) {
                 visitorId = session.getUserId();
-                user = userService.load(visitorId);
+                if (user == null) { // could be non null in case of persona
+                    user = userService.load(visitorId);
+                }
             }
         }
         if (user == null) {
@@ -113,6 +132,9 @@ public class ContextServlet extends HttpServlet {
                 session = new Session(sessionId, user, timestamp);
                 userService.saveSession(session);
                 Event event = new Event("sessionCreated", session, user, timestamp);
+                if (user instanceof Persona) {
+                    request = new PersonaRequestWrapper(httpServletRequest, (Persona) user);
+                }
                 event.getAttributes().put("http_request", request);
                 event.getAttributes().put("http_response", response);
                 eventService.save(event);
@@ -120,6 +142,9 @@ public class ContextServlet extends HttpServlet {
 
             if (userCreated) {
                 Event userUpdated = new Event("userUpdated", session, user, timestamp);
+                if (user instanceof Persona) {
+                    request = new PersonaRequestWrapper(httpServletRequest, (Persona) user);
+                }
                 userUpdated.getAttributes().put("http_request", request);
                 userUpdated.getAttributes().put("http_response", response);
                 eventService.save(userUpdated);
@@ -200,10 +225,27 @@ public class ContextServlet extends HttpServlet {
     private void sendCookie(User user, ServletResponse response) {
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-            Cookie visitorIdCookie = new Cookie("wemi-profile-id", user.getItemId());
-            visitorIdCookie.setPath("/");
-            visitorIdCookie.setMaxAge(MAX_COOKIE_AGE_IN_SECONDS);
-            httpServletResponse.addCookie(visitorIdCookie);
+            if (user instanceof Persona) {
+                Cookie personaIdCookie = new Cookie("wemi-persona-id", user.getItemId());
+                personaIdCookie.setPath("/");
+                personaIdCookie.setMaxAge(MAX_COOKIE_AGE_IN_SECONDS);
+                httpServletResponse.addCookie(personaIdCookie);
+            } else {
+                Cookie visitorIdCookie = new Cookie("wemi-profile-id", user.getItemId());
+                visitorIdCookie.setPath("/");
+                visitorIdCookie.setMaxAge(MAX_COOKIE_AGE_IN_SECONDS);
+                httpServletResponse.addCookie(visitorIdCookie);
+            }
+        }
+    }
+
+    private void clearPersonaCookie(ServletResponse response) {
+        if (response instanceof HttpServletResponse) {
+            HttpServletResponse httpServletResponse = (HttpServletResponse) response;
+            Cookie personaIdCookie = new Cookie("wemi-persona-id", "");
+            personaIdCookie.setPath("/");
+            personaIdCookie.setMaxAge(0);
+            httpServletResponse.addCookie(personaIdCookie);
         }
     }
 

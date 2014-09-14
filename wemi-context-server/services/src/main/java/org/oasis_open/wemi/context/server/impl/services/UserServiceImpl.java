@@ -178,6 +178,10 @@ public class UserServiceImpl implements UserService, BundleListener {
         return false;
     }
 
+    public Persona loadPersona(String personaId) {
+        return persistenceService.load(personaId, Persona.class);
+    }
+
     public Collection<Persona> getPersonas() {
         return persistenceService.getAllItems(Persona.class);
     }
