@@ -87,7 +87,7 @@ public class ContextServlet extends HttpServlet {
 
         final String personaId = request.getParameter("persona");
         if (personaId != null) {
-            if ("currentUser".equals(personaId)) {
+            if ("currentUser".equals(personaId) || personaId.equals(cookieProfileId)) {
                 user = null;
                 clearPersonaCookie(response);
             } else {
