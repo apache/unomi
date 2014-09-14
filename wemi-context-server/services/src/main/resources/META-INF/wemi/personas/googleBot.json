@@ -1,0 +1,17 @@
+{
+    "id": "googleBot",
+    "properties": {
+        "firstName": "Google",
+        "lastName": "Bot"
+    },
+    "segments": [
+        "bots"
+    ],
+    "requestParameters": {
+    },
+    "requestHeaders": {
+        "Remote-Address": "66.249.66.1",
+        "Remote-Host": "www.google.com",
+        "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+    }
+}

@@ -1,0 +1,14 @@
+{
+    "id": "usVisitor",
+    "properties": {
+        "firstName": "U.S.",
+        "lastName": "Visitor"
+    },
+    "segments": [],
+    "requestParameters": {
+    },
+    "requestHeaders": {
+        "Remote-Address": "66.249.66.1",
+        "Remote-Host": "www.google.com"
+    }
+}

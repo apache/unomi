@@ -56,10 +56,12 @@ public class UserServiceImpl implements UserService, BundleListener {
 
         loadPredefinedPropertyTypeGroups(bundleContext);
         loadPredefinedPropertyTypes(bundleContext);
+        loadPredefinedPersonas(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
             if (bundle.getBundleContext() != null) {
                 loadPredefinedPropertyTypeGroups(bundle.getBundleContext());
                 loadPredefinedPropertyTypes(bundle.getBundleContext());
+                loadPredefinedPersonas(bundle.getBundleContext());
             }
         }
         bundleContext.addBundleListener(this);
@@ -191,6 +193,7 @@ public class UserServiceImpl implements UserService, BundleListener {
                 if (event.getBundle().getBundleContext() != null) {
                     loadPredefinedPropertyTypeGroups(event.getBundle().getBundleContext());
                     loadPredefinedPropertyTypes(event.getBundle().getBundleContext());
+                    loadPredefinedPersonas(event.getBundle().getBundleContext());
                 }
                 break;
             case BundleEvent.STOPPING:
@@ -260,6 +263,29 @@ public class UserServiceImpl implements UserService, BundleListener {
                 }
             } catch (IOException e) {
                 logger.error("Error while loading properties " + predefinedPropertyTypeURL, e);
+            }
+
+        }
+    }
+
+    private void loadPredefinedPersonas(BundleContext bundleContext) {
+        if (bundleContext == null) {
+            return;
+        }
+        Enumeration<URL> predefinedPersonaEntries = bundleContext.getBundle().findEntries("META-INF/wemi/personas", "*.json", true);
+        if (predefinedPersonaEntries == null) {
+            return;
+        }
+
+        while (predefinedPersonaEntries.hasMoreElements()) {
+            URL predefinedPersonaURL = predefinedPersonaEntries.nextElement();
+            logger.debug("Found predefined persona at " + predefinedPersonaURL + ", loading... ");
+
+            try {
+                Persona persona = CustomObjectMapper.getObjectMapper().readValue(predefinedPersonaURL, Persona.class);
+                persistenceService.save(persona);
+            } catch (IOException e) {
+                logger.error("Error while loading persona " + predefinedPersonaURL, e);
             }
 
         }

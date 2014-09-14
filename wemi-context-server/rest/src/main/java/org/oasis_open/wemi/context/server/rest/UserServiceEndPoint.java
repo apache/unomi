@@ -102,7 +102,7 @@ public class UserServiceEndPoint implements UserService {
     @GET
     @Path("/personas")
     public Collection<Persona> getPersonas() {
-        return null;
+        return userService.getPersonas();
     }
 
     @GET
