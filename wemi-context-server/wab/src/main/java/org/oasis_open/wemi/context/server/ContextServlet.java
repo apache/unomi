@@ -93,7 +93,9 @@ public class ContextServlet extends HttpServlet {
                 clearPersonaCookie(response);
             } else {
                 user = userService.loadPersona(personaId);
-                sendCookie(user, response);
+                if (user != null) {
+                    sendCookie(user, response);
+                }
             }
         } else if (cookiePersonaId != null) {
             user = userService.loadPersona(cookiePersonaId);
