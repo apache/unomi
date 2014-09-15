@@ -72,17 +72,28 @@ public class EventCollectorServlet extends HttpServlet {
 
         User user = null;
         String cookiePersonaId = null;
+        String cookieProfileId = null;
         Cookie[] cookies = ((HttpServletRequest) request).getCookies();
         // HttpUtils.dumpRequestCookies(cookies);
         for (Cookie cookie : cookies) {
-            if ("wemi-persona-id".equals(cookie.getName())) {
+            if ("wemi-profile-id".equals(cookie.getName())) {
+                cookieProfileId = cookie.getValue();
+            } else if ("wemi-persona-id".equals(cookie.getName())) {
                 cookiePersonaId = cookie.getValue();
             }
         }
 
         final String personaId = request.getParameter("persona");
         if (personaId != null) {
-            user = userService.loadPersona(personaId);
+            if ("currentUser".equals(personaId) || personaId.equals(cookieProfileId)) {
+                user = null;
+                HttpUtils.clearCookie(response, "wemi-persona-id");
+            } else {
+                user = userService.loadPersona(personaId);
+                if (user != null) {
+                    HttpUtils.sendCookie(user, response);
+                }
+            }
         } else if (cookiePersonaId != null) {
             user = userService.loadPersona(cookiePersonaId);
         }
@@ -146,7 +157,7 @@ public class EventCollectorServlet extends HttpServlet {
 
         PrintWriter responseWriter = response.getWriter();
 
-        if (changed) {
+        if (changed || "impersonate".equals(event.getEventType())) {
             responseWriter.append("{\"updated\":true, \"digitalData\":");
             responseWriter.append(HttpUtils.getJSONDigitalData(user, session, HttpUtils.getBaseRequestURL(request)));
             responseWriter.append("}");

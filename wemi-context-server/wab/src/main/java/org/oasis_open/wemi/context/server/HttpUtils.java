@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server;
 
+import org.oasis_open.wemi.context.server.api.Persona;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 
@@ -9,12 +10,18 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Enumeration;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
 /**
  * Created by loom on 10.06.14.
  */
 public class HttpUtils {
+
+    private static final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365 * 10; // 10-years
+
+    private static int cookieAgeInSeconds = MAX_COOKIE_AGE_IN_SECONDS;
 
     public static void setupCORSHeaders(HttpServletRequest httpServletRequest, ServletResponse response) throws IOException {
         if (response instanceof HttpServletResponse) {
@@ -150,5 +157,39 @@ public class HttpUtils {
         return responseWriter.toString();
     }
 
+    public static void sendCookie(User user, ServletResponse response) {
+        if (response instanceof HttpServletResponse) {
+            HttpServletResponse httpServletResponse = (HttpServletResponse) response;
+            if (user instanceof Persona) {
+                Cookie personaIdCookie = new Cookie("wemi-persona-id", user.getItemId());
+                personaIdCookie.setPath("/");
+                personaIdCookie.setMaxAge(cookieAgeInSeconds);
+                httpServletResponse.addCookie(personaIdCookie);
+            } else {
+                Cookie visitorIdCookie = new Cookie("wemi-profile-id", user.getItemId());
+                visitorIdCookie.setPath("/");
+                visitorIdCookie.setMaxAge(cookieAgeInSeconds);
+                httpServletResponse.addCookie(visitorIdCookie);
+            }
+        }
+    }
+
+    public static void clearCookie(ServletResponse response, String cookieName) {
+        if (response instanceof HttpServletResponse) {
+            HttpServletResponse httpServletResponse = (HttpServletResponse) response;
+            Cookie personaIdCookie = new Cookie(cookieName, "");
+            personaIdCookie.setPath("/");
+            personaIdCookie.setMaxAge(0);
+            httpServletResponse.addCookie(personaIdCookie);
+        }
+    }
+
+    public static Map<String, Cookie> getCookieMap(Cookie[] cookieArray) {
+        Map<String, Cookie> cookieMap = new LinkedHashMap<String, Cookie>();
+        for (Cookie cookie : cookieArray) {
+            cookieMap.put(cookie.getName(), cookie);
+        }
+        return cookieMap;
+    }
 
 }

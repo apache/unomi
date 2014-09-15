@@ -61,6 +61,8 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
                 session.setProperty("countryCode", "CH");
                 session.setProperty("countryName", "Switzerland");
                 session.setProperty("city", "Geneva");
+                session.setProperty("latitude", "46.1884341");
+                session.setProperty("longitude", "6.1282508");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -99,6 +101,8 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             session.setProperty("countryCode", location.getString("country_code"));
             session.setProperty("countryName", location.getString("country_name"));
             session.setProperty("city", location.getString("city"));
+            session.setProperty("latitude", location.getString("latitude"));
+            session.setProperty("longitude", location.getString("longitude"));
             return true;
         } catch (MalformedURLException e) {
             e.printStackTrace();
@@ -150,6 +154,8 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             session.setProperty("countryCode", cityResponse.getCountry().getIsoCode());
             session.setProperty("countryName", cityResponse.getCountry().getName());
             session.setProperty("city", cityResponse.getCity().getName());
+            session.setProperty("latitude", cityResponse.getLocation().getLatitude());
+            session.setProperty("longitude", cityResponse.getLocation().getLongitude());
             return true;
         } catch (IOException e) {
             e.printStackTrace();

@@ -22,7 +22,6 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,7 +36,6 @@ import java.util.UUID;
 public class ContextServlet extends HttpServlet {
 
     public static final String BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/base.js";
-    private static final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365 * 10; // 10-years
 
     @Inject
     @OsgiService
@@ -89,11 +87,11 @@ public class ContextServlet extends HttpServlet {
         if (personaId != null) {
             if ("currentUser".equals(personaId) || personaId.equals(cookieProfileId)) {
                 user = null;
-                clearPersonaCookie(response);
+                HttpUtils.clearCookie(response, "wemi-person-id");
             } else {
                 user = userService.loadPersona(personaId);
                 if (user != null) {
-                    sendCookie(user, response);
+                    HttpUtils.sendCookie(user, response);
                 }
             }
         } else if (cookiePersonaId != null) {
@@ -152,7 +150,7 @@ public class ContextServlet extends HttpServlet {
             }
         } else if (cookieProfileId == null || !cookieProfileId.equals(user.getItemId())) {
             // user if stored in session but not in cookie
-            sendCookie(user, response);
+            HttpUtils.sendCookie(user, response);
         }
 
         HttpUtils.setupCORSHeaders(httpServletRequest, response);
@@ -219,36 +217,10 @@ public class ContextServlet extends HttpServlet {
         }
         user = new User(visitorId);
         userService.save(user);
-        sendCookie(user, response);
+        HttpUtils.sendCookie(user, response);
         return user;
     }
 
-    private void sendCookie(User user, ServletResponse response) {
-        if (response instanceof HttpServletResponse) {
-            HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-            if (user instanceof Persona) {
-                Cookie personaIdCookie = new Cookie("wemi-persona-id", user.getItemId());
-                personaIdCookie.setPath("/");
-                personaIdCookie.setMaxAge(MAX_COOKIE_AGE_IN_SECONDS);
-                httpServletResponse.addCookie(personaIdCookie);
-            } else {
-                Cookie visitorIdCookie = new Cookie("wemi-profile-id", user.getItemId());
-                visitorIdCookie.setPath("/");
-                visitorIdCookie.setMaxAge(MAX_COOKIE_AGE_IN_SECONDS);
-                httpServletResponse.addCookie(visitorIdCookie);
-            }
-        }
-    }
-
-    private void clearPersonaCookie(ServletResponse response) {
-        if (response instanceof HttpServletResponse) {
-            HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-            Cookie personaIdCookie = new Cookie("wemi-persona-id", "");
-            personaIdCookie.setPath("/");
-            personaIdCookie.setMaxAge(0);
-            httpServletResponse.addCookie(personaIdCookie);
-        }
-    }
 
     public void destroy() {
     }
