@@ -17,6 +17,7 @@ public class PersonaRequestWrapper extends HttpServletRequestWrapper {
 
     public PersonaRequestWrapper(HttpServletRequest request, Persona persona) {
         super(request);
+        this.persona = persona;
     }
 
     @Override
