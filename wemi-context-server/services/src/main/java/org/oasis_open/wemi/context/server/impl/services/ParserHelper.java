@@ -27,7 +27,7 @@ public class ParserHelper {
             ConditionType conditionType = definitionsService.getConditionType(rootCondition.getConditionTypeId());
             if (conditionType != null) {
                 rootCondition.setConditionType(conditionType);
-                return true;
+                result = true;
             }
         }
         // recursive call for sub-conditions as parameters
