@@ -36,6 +36,8 @@ import java.util.UUID;
 public class ContextServlet extends HttpServlet {
 
     public static final String BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/base.js";
+    public static final String SESSIONID_PERSONA_PREFIX = "persona-";
+    public static final String SESSIONID_PERSONA_SEPARATOR = "___";
 
     @Inject
     @OsgiService
@@ -83,11 +85,12 @@ public class ContextServlet extends HttpServlet {
             }
         }
 
-        final String personaId = request.getParameter("persona");
+        String personaId = request.getParameter("personaId");
         if (personaId != null) {
             if ("currentUser".equals(personaId) || personaId.equals(cookieProfileId)) {
                 user = null;
-                HttpUtils.clearCookie(response, "wemi-person-id");
+                HttpUtils.clearCookie(response, "wemi-persona-id");
+                personaId = null;
             } else {
                 user = userService.loadPersona(personaId);
                 if (user != null) {
@@ -96,9 +99,13 @@ public class ContextServlet extends HttpServlet {
             }
         } else if (cookiePersonaId != null) {
             user = userService.loadPersona(cookiePersonaId);
+            personaId = cookiePersonaId;
         }
 
-        final String sessionId = request.getParameter("sessionId");
+        String sessionId = request.getParameter("sessionId");
+        if (personaId != null) {
+            sessionId = SESSIONID_PERSONA_PREFIX + personaId + SESSIONID_PERSONA_SEPARATOR + sessionId;
+        }
 
         Session session = null;
 
@@ -126,18 +133,6 @@ public class ContextServlet extends HttpServlet {
                     userCreated = true;
                 }
             }
-            // associate user with session
-            if (sessionId != null) {
-                session = new Session(sessionId, user, timestamp);
-                userService.saveSession(session);
-                Event event = new Event("sessionCreated", session, user, timestamp);
-                if (user instanceof Persona) {
-                    request = new PersonaRequestWrapper(httpServletRequest, (Persona) user);
-                }
-                event.getAttributes().put("http_request", request);
-                event.getAttributes().put("http_response", response);
-                eventService.save(event);
-            }
 
             if (userCreated) {
                 Event userUpdated = new Event("userUpdated", session, user, timestamp);
@@ -151,6 +146,27 @@ public class ContextServlet extends HttpServlet {
         } else if (cookieProfileId == null || !cookieProfileId.equals(user.getItemId())) {
             // user if stored in session but not in cookie
             HttpUtils.sendCookie(user, response);
+        }
+
+        // associate user with session
+        if (sessionId != null && session == null) {
+            session = new Session(sessionId, user, timestamp);
+            userService.saveSession(session);
+            Event event = new Event("sessionCreated", session, user, timestamp);
+            if (user instanceof Persona) {
+                request = new PersonaRequestWrapper(httpServletRequest, (Persona) user);
+            }
+            event.getAttributes().put("http_request", request);
+            event.getAttributes().put("http_response", response);
+            eventService.save(event);
+
+            if (user instanceof Persona) {
+                Event impersonateEvent = new Event("impersonate", session, user, timestamp);
+                request = new PersonaRequestWrapper(httpServletRequest, (Persona) user);
+                impersonateEvent.getAttributes().put("http_request", request);
+                impersonateEvent.getAttributes().put("http_response", response);
+                eventService.save(impersonateEvent);
+            }
         }
 
         HttpUtils.setupCORSHeaders(httpServletRequest, response);
@@ -182,15 +198,16 @@ public class ContextServlet extends HttpServlet {
             if (buffer.length() > 0) {
                 ObjectMapper mapper = new ObjectMapper();
                 JsonFactory factory = mapper.getFactory();
-                ArrayNode actualObj = mapper.readTree(factory.createParser(buffer.toString()));
+                ArrayNode filterNodes = mapper.readTree(factory.createParser(buffer.toString()));
                 responseWriter.append("    , filteringResults : {");
                 boolean first = true;
-                for (JsonNode jsonNode : actualObj) {
+                for (JsonNode jsonNode : filterNodes) {
                     String id = jsonNode.get("filterid").asText();
                     ArrayNode filters = (ArrayNode) jsonNode.get("filters");
                     boolean result = true;
                     for (JsonNode filter : filters) {
-                        result &= userService.matchCondition(mapper.writeValueAsString(filter), user, session);
+                        JsonNode condition = filter.get("condition");
+                        result &= userService.matchCondition(mapper.writeValueAsString(condition), user, session);
                     }
                     responseWriter.append((first ? "" : ",") + "'" + id + "':" + result);
                     first = false;
@@ -199,7 +216,6 @@ public class ContextServlet extends HttpServlet {
             }
         }
         responseWriter.append("};\n");
-
 
         // now we copy the base script source code
         InputStream baseScriptStream = getServletContext().getResourceAsStream(BASE_SCRIPT_LOCATION);
