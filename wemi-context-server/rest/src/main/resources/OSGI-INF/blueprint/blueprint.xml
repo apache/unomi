@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
+<blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
            xmlns:cxf="http://cxf.apache.org/blueprint/core" xmlns:jaxrs="http://cxf.apache.org/blueprint/jaxrs"
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
@@ -83,11 +84,23 @@
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
+    <jaxrs:server address="/wemi/cluster" id="restClusterService">
+        <jaxrs:providers>
+            <ref component-id="jaxb-provider"/>
+            <ref component-id="cors-filter"/>
+        </jaxrs:providers>
+
+        <jaxrs:serviceBeans>
+            <ref component-id="clusterServiceEndPoint"/>
+        </jaxrs:serviceBeans>
+    </jaxrs:server>
+
     <reference id="segmentService" interface="org.oasis_open.wemi.context.server.api.services.SegmentService"/>
     <reference id="definitionsService" interface="org.oasis_open.wemi.context.server.api.services.DefinitionsService"/>
     <reference id="goalsService" interface="org.oasis_open.wemi.context.server.api.services.GoalsService"/>
     <reference id="rulesService" interface="org.oasis_open.wemi.context.server.api.services.RulesService"/>
     <reference id="userService" interface="org.oasis_open.wemi.context.server.api.services.UserService"/>
+    <reference id="clusterService" interface="org.oasis_open.wemi.context.server.api.services.ClusterService"/>
 
     <bean id="segmentServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.SegmentServiceEndPoint">
         <property name="segmentService" ref="segmentService"/>
@@ -108,6 +121,10 @@
 
     <bean id="userServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.UserServiceEndPoint">
         <property name="userService" ref="userService"/>
+    </bean>
+
+    <bean id="clusterServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.ClusterServiceEndPoint">
+        <property name="clusterService" ref="clusterService"/>
     </bean>
 
 </blueprint>

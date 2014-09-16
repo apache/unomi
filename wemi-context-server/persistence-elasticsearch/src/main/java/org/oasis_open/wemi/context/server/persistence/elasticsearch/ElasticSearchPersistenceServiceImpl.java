@@ -107,8 +107,20 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     node = nodeBuilder().clusterName(clusterName).node();
                 }
                 client = node.client();
-                IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(indexName).execute().actionGet();
-                if (!indicesExistsResponse.isExists()) {
+                // @todo is there a better way to detect index existence than to wait for it to startup ?
+                boolean indexExists = false;
+                int tries = 0;
+                while (!indexExists && tries < 20) {
+                    IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(indexName).execute().actionGet();
+                    indexExists = indicesExistsResponse.isExists();
+                    tries++;
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (!indexExists) {
                     logger.info(indexName + " index doesn't exist yet, creating it...");
                     CreateIndexResponse createIndexResponse = client.admin().indices().prepareCreate(indexName).execute().actionGet();
                 }
@@ -530,7 +542,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     ClusterNode clusterNode = new ClusterNode();
                     clusterNode.setHostName(nodeStats.getHostname());
                     clusterNode.setPublicPort(8181);
-                    clusterNode.setCpuLoad(nodeStats.getProcess().getCpu().getPercent());
+                    if (nodeStats.getProcess() != null) {
+                        clusterNode.setCpuLoad(nodeStats.getProcess().getCpu().getPercent());
+                    }
                     clusterNodes.add(clusterNode);
                 }
 

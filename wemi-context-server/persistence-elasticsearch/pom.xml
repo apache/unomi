@@ -1,4 +1,4 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -12,9 +12,7 @@
     <packaging>bundle</packaging>
 
     <properties>
-        <elasticsearch.version>1.1.1</elasticsearch.version>
-        <lucene.version>4.7.2</lucene.version>
-        <spatial4j.version>0.4.1</spatial4j.version>
+        <elasticsearch.version>1.3.2</elasticsearch.version>
     </properties>
 
     <dependencies>
@@ -42,10 +40,17 @@
             <artifactId>elasticsearch</artifactId>
             <version>${elasticsearch.version}</version>
         </dependency>
+
+        <!-- The following are optional dependencies from the ElasticSearch that are made mandatory -->
         <dependency>
-            <groupId>net.java.dev.jna</groupId>
-            <artifactId>jna</artifactId>
-            <version>3.3.0</version>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-expressions</artifactId>
+            <version>4.9.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.spatial4j</groupId>
+            <artifactId>spatial4j</artifactId>
+            <version>0.4.1</version>
         </dependency>
         <dependency>
             <groupId>com.vividsolutions</groupId>
@@ -53,15 +58,43 @@
             <version>1.13</version>
         </dependency>
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>1.2.17</version>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+            <version>2.3.2</version>
+        </dependency>
+        <!--
+        <dependency>
+          <groupId>log4j</groupId>
+          <artifactId>log4j</artifactId>
+          <version>1.2.17</version>
+        </dependency>
+        -->
+        <!--
+        <dependency>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+          <version>1.6.2</version>
+        </dependency>
+        -->
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>4.1.0</version>
         </dependency>
         <dependency>
             <groupId>org.fusesource</groupId>
             <artifactId>sigar</artifactId>
             <version>1.6.4</version>
         </dependency>
+        <dependency>
+            <groupId>org.fusesource</groupId>
+            <artifactId>sigar</artifactId>
+            <version>1.6.4</version>
+            <classifier>native</classifier>
+        </dependency>
+
+        <!-- End of optional ElasticSearch dependencies -->
+
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
@@ -80,18 +113,96 @@
                 <configuration>
                     <instructions>
                         <Import-Package>
-                            com.sun.jdmk.comm;resolution:=optional,
+                            com.google.protobuf;resolution:=optional,
                             com.ibm.uvm.tools;resolution:=optional,
+                            com.sun.jdmk.comm;resolution:=optional,
+                            com.thoughtworks.qdox;resolution:=optional,
+                            com.thoughtworks.qdox.model;resolution:=optional,
+                            com.thoughtworks.xstream;resolution:=optional,
+                            groovyjarjarasm.asm.tree.analysis;resolution:=optional,
+                            javax.accessibility;resolution:=optional,
+                            javax.annotation;resolution:=optional,
                             javax.jmdns;resolution:=optional,
                             javax.jms;resolution:=optional,
                             javax.mail;resolution:=optional,
                             javax.mail.internet;resolution:=optional,
-                            org.apache.regexp;resolution:=optional,
+                            javax.management;resolution:=optional,
+                            javax.management.modelmbean;resolution:=optional,
+                            javax.management.remote;resolution:=optional,
+                            javax.management.remote.rmi;resolution:=optional,
+                            javax.management.timer;resolution:=optional,
+                            javax.naming;resolution:=optional,
+                            javax.net.ssl;resolution:=optional,
+                            javax.print.attribute.standard;resolution:=optional,
+                            javax.rmi.ssl;resolution:=optional,
+                            javax.script;resolution:=optional,
+                            javax.servlet;resolution:=optional,
+                            javax.servlet.http;resolution:=optional,
+                            javax.servlet.jsp;resolution:=optional,
+                            javax.sql;resolution:=optional,
+                            javax.swing;resolution:=optional,
+                            javax.swing.border;resolution:=optional,
+                            javax.swing.event;resolution:=optional,
+                            javax.swing.filechooser;resolution:=optional,
+                            javax.swing.plaf;resolution:=optional,
+                            javax.swing.plaf.metal;resolution:=optional,
+                            javax.swing.table;resolution:=optional,
+                            javax.swing.text;resolution:=optional,
+                            javax.swing.text.html;resolution:=optional,
+                            javax.swing.tree;resolution:=optional,
+                            javax.swing.undo;resolution:=optional,
+                            javax.xml.namespace;resolution:=optional,
+                            javax.xml.parsers;resolution:=optional,
+                            javax.xml.transform;resolution:=optional,
+                            javax.xml.transform.dom;resolution:=optional,
+                            javax.xml.transform.stream;resolution:=optional,
+                            javax.xml.validation;resolution:=optional,
+                            javax.xml.xpath;resolution:=optional,
+                            jline;resolution:=optional,
+                            jline.console;resolution:=optional,
+                            jline.console.completer;resolution:=optional,
+                            jline.console.history;resolution:=optional,
+                            jline.internal;resolution:=optional,
+                            junit.framework; resolution:=optional
                             junit.framework;resolution:=optional,
+                            junit.textui; resolution:=optional
                             junit.textui;resolution:=optional,
+                            org.antlr.stringtemplate;resolution:=optional,
+                            org.apache.bsf;resolution:=optional,
+                            org.apache.bsf.util;resolution:=optional,
+                            org.apache.commons.cli;resolution:=optional,
+                            org.apache.commons.logging;resolution:=optional,
+                            org.apache.ivy;resolution:=optional,
+                            org.apache.ivy.core.cache;resolution:=optional,
+                            org.apache.ivy.core.event;resolution:=optional,
+                            org.apache.ivy.core.event.download;resolution:=optional,
+                            org.apache.ivy.core.event.resolve;resolution:=optional,
+                            org.apache.ivy.core.module.descriptor;resolution:=optional,
+                            org.apache.ivy.core.module.id;resolution:=optional,
+                            org.apache.ivy.core.report;resolution:=optional,
+                            org.apache.ivy.core.resolve;resolution:=optional,
+                            org.apache.ivy.core.settings;resolution:=optional,
+                            org.apache.ivy.plugins.matcher;resolution:=optional,
+                            org.apache.ivy.plugins.resolver;resolution:=optional,
+                            org.apache.ivy.util;resolution:=optional,
+                            org.apache.regexp; resolution:=optional
+                            org.apache.regexp;resolution:=optional,
+                            org.apache.tools.ant; resolution:=optional
                             org.apache.tools.ant;resolution:=optional,
+                            org.apache.tools.ant.dispatch;resolution:=optional,
+                            org.apache.tools.ant.helper;resolution:=optional,
+                            org.apache.tools.ant.taskdefs; resolution:=optional
                             org.apache.tools.ant.taskdefs;resolution:=optional,
-                            sun.misc;resolution:=optional,
+                            org.apache.tools.ant.types;resolution:=optional,
+                            org.apache.tools.ant.util;resolution:=optional,
+                            org.fusesource.jansi;resolution:=optional,
+                            org.jboss.logging;resolution:=optional,
+                            org.jboss.marshalling;resolution:=optional,
+                            org.junit;resolution:=optional,
+                            org.objectweb.asm.tree;resolution:=optional,
+                            sun.awt;resolution:=optional,
+                            sun.java2d.pipe;resolution:=optional,
+                            sun.misc; resolution:=optional,
                             *
                         </Import-Package>
                         <Export-Package>
@@ -116,7 +227,9 @@
                         <configuration>
                             <artifacts>
                                 <artifact>
-                                    <file>src/main/resources/org.oasis_open.wemi.context.server.persistence.elasticsearch.cfg</file>
+                                    <file>
+                                        src/main/resources/org.oasis_open.wemi.context.server.persistence.elasticsearch.cfg
+                                    </file>
                                     <type>cfg</type>
                                     <classifier>elasticsearchcfg</classifier>
                                 </artifact>
