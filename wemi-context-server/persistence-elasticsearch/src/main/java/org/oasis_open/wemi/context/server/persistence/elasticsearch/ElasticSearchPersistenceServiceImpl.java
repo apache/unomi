@@ -410,7 +410,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz) {
-        return query(query, sortBy, clazz, 0, 60);
+        return query(query, sortBy, clazz, 0, 10);
     }
 
     public <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz, final int offset, final int size) {
