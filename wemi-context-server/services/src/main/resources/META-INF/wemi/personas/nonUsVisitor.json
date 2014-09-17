@@ -2,6 +2,7 @@
     "id": "nonUsVisitor",
     "properties": {
         "name": "Non U.S. Visitor",
+        "description": "Represents a visitor browsing from somewhere outside the US",
         "firstName": "Non U.S.",
         "lastName": "Visitor",
         "persona": true
@@ -10,7 +11,7 @@
     "requestParameters": {
     },
     "requestHeaders": {
-        "Remote-Address": "66.249.66.1",
-        "Remote-Host": "www.google.com"
+        "Remote-Address": "128.178.50.12",
+        "Remote-Host": "www.epfl.ch"
     }
 }

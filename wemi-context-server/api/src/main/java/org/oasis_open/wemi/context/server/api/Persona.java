@@ -11,8 +11,6 @@ public class Persona extends User {
 
     public static final String ITEM_TYPE = "persona";
 
-    private String description;
-
     private Map<String, Object> requestParameters = new LinkedHashMap<String, Object>();
     private Map<String, Object> requestHeaders = new LinkedHashMap<String, Object>();
 
@@ -21,14 +19,6 @@ public class Persona extends User {
 
     public Persona(String personaId) {
         super(personaId);
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 
     public Map<String, Object> getRequestParameters() {

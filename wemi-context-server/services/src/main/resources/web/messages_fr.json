@@ -99,6 +99,8 @@
     "EVENT_NAMED_LABEL": "L'événement ",
     "HAS_OCCURRED_LABEL": " a été généré.",
 
+    "USER_PROPERTIES_NAME_LABEL": "Nom",
+    "USER_PROPERTIES_DESCRIPTION_LABEL": "Description",
     "USER_PROPERTIES_FIRSTNAME_LABEL": "Prénom",
     "USER_PROPERTIES_LASTNAME_LABEL": "Nom de famille",
     "USER_PROPERTIES_EMAIL_LABEL": "E-mail",

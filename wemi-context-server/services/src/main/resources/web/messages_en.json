@@ -103,6 +103,8 @@
     "EVENT_NAMED_LABEL": "Event named ",
     "HAS_OCCURRED_LABEL": " has occurred.",
 
+    "USER_PROPERTIES_NAME_LABEL": "Name",
+    "USER_PROPERTIES_DESCRIPTION_LABEL": "Description",
     "USER_PROPERTIES_FIRSTNAME_LABEL": "First name",
     "USER_PROPERTIES_LASTNAME_LABEL": "Last name",
     "USER_PROPERTIES_EMAIL_LABEL": "E-mail",

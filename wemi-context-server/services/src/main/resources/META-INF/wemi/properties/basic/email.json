@@ -6,5 +6,5 @@
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ "j:email" ],
-    "rank": "3.0"
+    "rank": "5.0"
 }

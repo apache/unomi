@@ -2,6 +2,7 @@
     "id": "googleBot",
     "properties": {
         "name": "Google Bot",
+        "description": "Represents a Google bot",
         "firstName": "Google",
         "lastName": "Bot",
         "persona": true

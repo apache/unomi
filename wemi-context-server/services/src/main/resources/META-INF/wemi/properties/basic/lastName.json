@@ -6,5 +6,5 @@
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ "j:lastName" ],
-    "rank": "2.0"
+    "rank": "4.0"
 }

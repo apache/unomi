@@ -1,10 +1,10 @@
 {
-    "id": "firstName",
+    "id": "name",
     "type": "string",
     "groupId": "basic",
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
-    "automaticMappingsFrom": [ "j:firstName" ],
-    "rank": "3.0"
+    "automaticMappingsFrom": [ ],
+    "rank": "1.0"
 }
