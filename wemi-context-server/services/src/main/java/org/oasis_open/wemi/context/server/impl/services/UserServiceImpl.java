@@ -71,7 +71,7 @@ public class UserServiceImpl implements UserService, BundleListener {
         bundleContext.removeBundleListener(this);
     }
 
-    public Collection<User> getAllUsers() {
+    public PartialList<User> getAllUsers() {
         return persistenceService.getAllItems(User.class);
     }
 
@@ -79,12 +79,12 @@ public class UserServiceImpl implements UserService, BundleListener {
         return persistenceService.getAllItemsCount(User.class);
     }
 
-    public Collection<User> getUsers(String query, int offset, int size) {
+    public PartialList<User> getUsers(String query, int offset, int size) {
         return persistenceService.getAllItems(User.class, offset, size);
     }
 
-    public List<User> findUsersByPropertyValue(String propertyName, String propertyValue) {
-        return new ArrayList<User>();
+    public PartialList<User> findUsersByPropertyValue(String propertyName, String propertyValue) {
+        return new PartialList<User>();
     }
 
     public User load(String userId) {
@@ -144,7 +144,7 @@ public class UserServiceImpl implements UserService, BundleListener {
             if (condition.getConditionTypeId().equals("userEventCondition")) {
                 final Map<String, Object> parameters = condition.getParameterValues();
                 parameters.put("target", session);
-                List<Event> matchingEvents = persistenceService.query(condition, "timeStamp", Event.class);
+                PartialList<Event> matchingEvents = persistenceService.query(condition, "timeStamp", Event.class);
 
                 String occursIn = (String) condition.getParameterValues().get("eventOccurIn");
                 if (occursIn != null && occursIn.equals("last")) {
@@ -153,9 +153,9 @@ public class UserServiceImpl implements UserService, BundleListener {
                     }
                     final Event lastEvent = matchingEvents.get(matchingEvents.size() - 1);
                     String eventType = lastEvent.getEventType();
-                    List<Event> events = persistenceService.query("sessionId", session.getItemId(), "timeStamp", Event.class);
-                    Collections.reverse(events);
-                    for (Event event : events) {
+                    PartialList<Event> events = persistenceService.query("sessionId", session.getItemId(), "timeStamp", Event.class);
+                    Collections.reverse(events.getList());
+                    for (Event event : events.getList()) {
                         if (event.getEventType().equals(eventType)) {
                             return event.getItemId().equals(lastEvent.getItemId());
                         }
@@ -182,7 +182,7 @@ public class UserServiceImpl implements UserService, BundleListener {
         return persistenceService.load(personaId, Persona.class);
     }
 
-    public Collection<Persona> getPersonas() {
+    public PartialList<Persona> getPersonas() {
         return persistenceService.getAllItems(Persona.class);
     }
 

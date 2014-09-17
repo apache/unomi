@@ -37,6 +37,7 @@ import org.elasticsearch.search.aggregations.bucket.missing.MissingBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.oasis_open.wemi.context.server.api.ClusterNode;
 import org.oasis_open.wemi.context.server.api.Item;
+import org.oasis_open.wemi.context.server.api.PartialList;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.services.ClusterService;
 import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
@@ -144,7 +145,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
-    public <T extends Item> Collection<T> getAllItems(final Class<T> clazz) {
+    public <T extends Item> PartialList<T> getAllItems(final Class<T> clazz) {
         return query(QueryBuilders.matchAllQuery(), null, clazz);
     }
 
@@ -153,7 +154,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
-    public <T extends Item> Collection<T> getAllItems(final Class<T> clazz, int offset, int size) {
+    public <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size) {
         return query(QueryBuilders.matchAllQuery(), null, clazz, offset, size);
     }
 
@@ -167,7 +168,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         // with parents
                         clazz.getField("PARENT_ITEM_TYPE");
 
-                        List<T> r = query(QueryBuilders.idsQuery(itemType).ids(itemId), null, clazz);
+                        PartialList<T> r = query(QueryBuilders.idsQuery(itemType).ids(itemId), null, clazz);
                         if (r.size() > 0) {
                             return r.get(0);
                         }
@@ -367,11 +368,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return false;
     }
 
-    public <T extends Item> List<T> query(final Condition query, String sortBy, final Class<T> clazz) {
+    public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz) {
         return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz);
     }
 
-    public <T extends Item> List<T> query(final String fieldName, final String fieldValue, String sortBy, final Class<T> clazz) {
+    public <T extends Item> PartialList<T> query(final String fieldName, final String fieldValue, String sortBy, final Class<T> clazz) {
         return query(QueryBuilders.termQuery(fieldName, fieldValue), sortBy, clazz);
     }
 
@@ -408,16 +409,17 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
-    public <T extends Item> List<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz) {
+    public <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz) {
         return query(query, sortBy, clazz, 0, 60);
     }
 
-    public <T extends Item> List<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz, final int offset, final int size) {
-        return new InClassLoaderExecute<List<T>>() {
+    public <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz, final int offset, final int size) {
+        return new InClassLoaderExecute<PartialList<T>>() {
 
             @Override
-            protected List<T> execute(Object... args) {
+            protected PartialList<T> execute(Object... args) {
                 List<T> results = new ArrayList<T>();
+                long totalHits = 0;
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
                     SearchRequestBuilder requestBuilder = client.prepareSearch(indexName)
@@ -433,6 +435,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             .execute()
                             .actionGet();
                     SearchHits searchHits = response.getHits();
+                    totalHits = searchHits.getTotalHits();
                     for (SearchHit searchHit : searchHits) {
                         String sourceAsString = searchHit.getSourceAsString();
                         final T value = CustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
@@ -447,7 +450,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     logger.error("Error loading itemType=" + clazz.getName() + "query=" + query, t);
                 }
 
-                return results;
+                return new PartialList<T>(results, offset, size, totalHits);
             }
         }.executeInClassLoader();
     }

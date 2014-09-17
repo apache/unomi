@@ -1,9 +1,9 @@
 package org.oasis_open.wemi.context.server.persistence.spi;
 
 import org.oasis_open.wemi.context.server.api.Item;
+import org.oasis_open.wemi.context.server.api.PartialList;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -12,11 +12,11 @@ import java.util.Map;
  */
 public interface PersistenceService {
 
-    public <T extends Item> Collection<T> getAllItems(Class<T> clazz);
+    public <T extends Item> PartialList<T> getAllItems(Class<T> clazz);
 
     public <T extends Item> long getAllItemsCount(Class<T> clazz);
 
-    public <T extends Item> Collection<T> getAllItems(Class<T> clazz, int offset, int size);
+    public <T extends Item> PartialList<T> getAllItems(Class<T> clazz, int offset, int size);
 
     public boolean save(Item item);
 
@@ -36,11 +36,11 @@ public interface PersistenceService {
 
     public boolean testMatch(Condition query, Item item);
 
-    public <T extends Item> List<T> query(Condition query, String sortBy, Class<T> clazz);
+    public <T extends Item> PartialList<T> query(Condition query, String sortBy, Class<T> clazz);
 
     public <T extends Item> long queryCount(Condition query, Class<T> clazz);
 
-    public <T extends Item> List<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz);
+    public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz);
 
     public <T extends Item> Map<String, Long> aggregateQuery(Condition filter, Aggregate aggregate, Class<T> clazz);
 

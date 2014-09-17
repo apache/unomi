@@ -2,8 +2,6 @@ package org.oasis_open.wemi.context.server.api.services;
 
 import org.oasis_open.wemi.context.server.api.*;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -11,13 +9,13 @@ import java.util.Set;
  */
 public interface UserService {
 
-    Collection<User> getAllUsers();
+    PartialList<User> getAllUsers();
 
     public long getAllUsersCount();
 
-    Collection<User> getUsers(String query, int offset, int size);
+    PartialList<User> getUsers(String query, int offset, int size);
 
-    List<User> findUsersByPropertyValue(String propertyName, String propertyValue);
+    PartialList<User> findUsersByPropertyValue(String propertyName, String propertyValue);
 
     User load(String userId);
 
@@ -41,7 +39,7 @@ public interface UserService {
 
     public Persona loadPersona(String personaId);
 
-    Collection<Persona> getPersonas();
+    PartialList<Persona> getPersonas();
 
     public void createPersona(String personaId);
 

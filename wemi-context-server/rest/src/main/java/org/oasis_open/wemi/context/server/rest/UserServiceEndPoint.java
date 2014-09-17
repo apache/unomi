@@ -8,8 +8,6 @@ import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import java.util.Collection;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -36,7 +34,7 @@ public class UserServiceEndPoint implements UserService {
 
     @GET
     @Path("/")
-    public Collection<User> getAllUsers() {
+    public PartialList<User> getAllUsers() {
         return userService.getAllUsers();
     }
 
@@ -48,12 +46,12 @@ public class UserServiceEndPoint implements UserService {
 
     @GET
     @Path("/search")
-    public Collection<User> getUsers(@QueryParam("q") String query, int offset, int size) {
+    public PartialList<User> getUsers(@QueryParam("q") String query, int offset, int size) {
         return userService.getUsers(query, offset, size);
     }
 
     @WebMethod(exclude = true)
-    public List<User> findUsersByPropertyValue(String propertyName, String propertyValue) {
+    public PartialList<User> findUsersByPropertyValue(String propertyName, String propertyValue) {
         return userService.findUsersByPropertyValue(propertyName, propertyValue);
     }
 
@@ -101,7 +99,7 @@ public class UserServiceEndPoint implements UserService {
 
     @GET
     @Path("/personas")
-    public Collection<Persona> getPersonas() {
+    public PartialList<Persona> getPersonas() {
         return userService.getPersonas();
     }
 

@@ -102,11 +102,11 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
     }
 
     private void createRule(Goal goal, Condition event, String id) {
-        Rule r1 = new Rule(new Metadata(goal.getItemId()+ "." + id + "Event", "Auto generated rule for goal "+goal.getMetadata().getName(), ""));
+        Rule r1 = new Rule(new Metadata(goal.getItemId() + "." + id + "Event", "Auto generated rule for goal " + goal.getMetadata().getName(), ""));
         r1.setCondition(event);
         Action action1 = new Action();
         action1.setActionType(definitionsService.getActionType("setPropertyAction"));
-        action1.getParameterValues().put("setPropertyName", goal.getMetadata().getId()+ "." + id + ".reached");
+        action1.getParameterValues().put("setPropertyName", goal.getMetadata().getId() + "." + id + ".reached");
         action1.getParameterValues().put("setPropertyValue", "now");
         action1.getParameterValues().put("storeInSession", true);
         r1.setActions(Arrays.asList(action1));
@@ -115,7 +115,7 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
 
     public Set<Metadata> getGoalMetadatas() {
         Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Goal definition : persistenceService.getAllItems(Goal.class)) {
+        for (Goal definition : persistenceService.getAllItems(Goal.class).getList()) {
             descriptions.add(definition.getMetadata());
         }
         return descriptions;
@@ -178,15 +178,15 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
             condition.getParameterValues().put("goalReached", true);
             match = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.DATE, "sessionCreationDate"), Session.class);
         } else if (split != null) {
-            all = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.TERMS, split) , Session.class);
+            all = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.TERMS, split), Session.class);
             condition.getParameterValues().put("goalReached", true);
             match = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.TERMS, split), Session.class);
         } else {
             all = new HashMap<String, Long>();
-            all.put("_filtered",persistenceService.queryCount(condition, Session.class));
+            all.put("_filtered", persistenceService.queryCount(condition, Session.class));
             condition.getParameterValues().put("goalReached", true);
             match = new HashMap<String, Long>();
-            match.put("_filtered",persistenceService.queryCount(condition, Session.class));
+            match.put("_filtered", persistenceService.queryCount(condition, Session.class));
         }
 
         GoalReport report = new GoalReport();
@@ -204,7 +204,7 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
             dateStat.setStartCount(entry.getValue());
             dateStat.setTargetCount(match.containsKey(entry.getKey()) ? match.get(entry.getKey()) : 0);
             dateStat.setConversionRate((float) dateStat.getTargetCount() / (float) dateStat.getStartCount());
-            dateStat.setPercentage( (float) dateStat.getTargetCount() / (float) stat.getTargetCount());
+            dateStat.setPercentage((float) dateStat.getTargetCount() / (float) stat.getTargetCount());
             report.getSplit().put(entry.getKey(), dateStat);
         }
 

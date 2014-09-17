@@ -130,7 +130,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
                     ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
                     try {
                         Condition userCondition = extractConditionByTag(rule.getCondition(), "userCondition");
-                        if (userCondition != null && !userService.matchCondition(mapper.writeValueAsString(userCondition),event.getUser(), event.getSession())) {
+                        if (userCondition != null && !userService.matchCondition(mapper.writeValueAsString(userCondition), event.getUser(), event.getSession())) {
                             continue;
                         }
                         Condition sessionCondition = extractConditionByTag(rule.getCondition(), "sessionCondition");
@@ -181,7 +181,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
 
     public Set<Metadata> getRuleMetadatas() {
         Set<Metadata> metadatas = new HashSet<Metadata>();
-        for (Rule rule : persistenceService.getAllItems(Rule.class)) {
+        for (Rule rule : persistenceService.getAllItems(Rule.class).getList()) {
             metadatas.add(rule.getMetadata());
         }
         return metadatas;
@@ -268,7 +268,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
         persistenceService.removeQuery(ruleId);
         persistenceService.remove(ruleId, Rule.class);
     }
-
 
 
 }

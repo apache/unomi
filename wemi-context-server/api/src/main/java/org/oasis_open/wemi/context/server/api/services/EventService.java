@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.api.services;
 
 import org.oasis_open.wemi.context.server.api.Event;
+import org.oasis_open.wemi.context.server.api.PartialList;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
 import java.util.List;
@@ -19,7 +20,7 @@ public interface EventService {
 
     public Set<String> getEventTypeIds();
 
-    public List<Event> searchEvents(Condition condition);
+    public PartialList<Event> searchEvents(Condition condition);
 
     public boolean hasEventAlreadyBeenRaised(Event event, boolean session);
 }

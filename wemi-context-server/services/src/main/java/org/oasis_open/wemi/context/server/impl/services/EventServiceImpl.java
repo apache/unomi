@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.oasis_open.wemi.context.server.api.Event;
+import org.oasis_open.wemi.context.server.api.PartialList;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
@@ -100,7 +101,7 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public List<Event> searchEvents(Condition condition) {
+    public PartialList<Event> searchEvents(Condition condition) {
         return persistenceService.query(condition, "timeStamp", Event.class);
     }
 
@@ -120,7 +121,7 @@ public class EventServiceImpl implements EventService {
 
         for (Map.Entry<String, Object> entry : event.getProperties().entrySet()) {
             Condition condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-            condition.getParameterValues().put("propertyName", "properties."+entry.getKey());
+            condition.getParameterValues().put("propertyName", "properties." + entry.getKey());
             condition.getParameterValues().put("propertyValue", entry.getValue());
             condition.getParameterValues().put("comparisonOperator", "equals");
             conditions.add(condition);
@@ -131,7 +132,6 @@ public class EventServiceImpl implements EventService {
         long size = persistenceService.queryCount(andCondition, Event.class);
         return size > 0;
     }
-
 
 
     public void bind(ServiceReference<EventListenerService> serviceReference) {

@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.api.services;
 
 import org.oasis_open.wemi.context.server.api.Metadata;
+import org.oasis_open.wemi.context.server.api.PartialList;
 import org.oasis_open.wemi.context.server.api.SegmentDefinition;
 import org.oasis_open.wemi.context.server.api.User;
 
@@ -11,7 +12,7 @@ import java.util.Set;
  */
 public interface SegmentService {
 
-    Set<User> getMatchingIndividuals(String segmentID);
+    PartialList<User> getMatchingIndividuals(String segmentID);
 
     long getMatchingIndividualsCount(String segmentID);
     Boolean isUserInSegment (User user, String segmentDescription);

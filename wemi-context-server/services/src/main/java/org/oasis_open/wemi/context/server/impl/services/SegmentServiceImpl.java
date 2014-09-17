@@ -2,6 +2,7 @@ package org.oasis_open.wemi.context.server.impl.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.oasis_open.wemi.context.server.api.Metadata;
+import org.oasis_open.wemi.context.server.api.PartialList;
 import org.oasis_open.wemi.context.server.api.SegmentDefinition;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.actions.Action;
@@ -130,11 +131,11 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
         }
     }
 
-    public Set<User> getMatchingIndividuals(String segmentID) {
+    public PartialList<User> getMatchingIndividuals(String segmentID) {
         if (getSegmentDefinition(segmentID) == null) {
-            return new HashSet<User>();
+            return new PartialList<User>();
         }
-        return new HashSet<User>(persistenceService.query(getSegmentDefinition(segmentID).getCondition(), null, User.class));
+        return persistenceService.query(getSegmentDefinition(segmentID).getCondition(), null, User.class);
     }
 
     public long getMatchingIndividualsCount(String segmentID) {
@@ -156,7 +157,7 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
 
     public Set<Metadata> getSegmentMetadatas() {
         Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (SegmentDefinition definition : persistenceService.getAllItems(SegmentDefinition.class)) {
+        for (SegmentDefinition definition : persistenceService.getAllItems(SegmentDefinition.class).getList()) {
             descriptions.add(definition.getMetadata());
         }
         return descriptions;
