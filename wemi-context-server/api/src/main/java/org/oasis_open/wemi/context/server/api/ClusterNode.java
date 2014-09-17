@@ -8,8 +8,10 @@ import java.io.Serializable;
 public class ClusterNode implements Serializable {
 
     private double cpuLoad;
+    private double[] loadAverage;
     private String hostName;
     private int publicPort;
+    private long uptime;
 
     public ClusterNode() {
     }
@@ -36,5 +38,21 @@ public class ClusterNode implements Serializable {
 
     public void setPublicPort(int publicPort) {
         this.publicPort = publicPort;
+    }
+
+    public double[] getLoadAverage() {
+        return loadAverage;
+    }
+
+    public void setLoadAverage(double[] loadAverage) {
+        this.loadAverage = loadAverage;
+    }
+
+    public long getUptime() {
+        return uptime;
+    }
+
+    public void setUptime(long uptime) {
+        this.uptime = uptime;
     }
 }

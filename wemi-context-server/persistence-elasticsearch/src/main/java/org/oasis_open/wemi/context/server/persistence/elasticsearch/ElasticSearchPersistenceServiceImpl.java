@@ -12,6 +12,7 @@ import org.elasticsearch.action.percolate.PercolateResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.action.support.nodes.NodesOperationRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
@@ -534,7 +535,17 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected List<ClusterNode> execute(Object... args) {
                 List<ClusterNode> clusterNodes = new ArrayList<ClusterNode>();
 
-                NodesStatsResponse nodesStatsResponse = client.admin().cluster().prepareNodesStats(null)
+                NodesStatsResponse nodesStatsResponse = client.admin().cluster().prepareNodesStats(NodesOperationRequest.ALL_NODES)
+                        .setFs(true)
+                        .setBreaker(true)
+                        .setHttp(true)
+                        .setJvm(true)
+                        .setOs(true)
+                        .setNetwork(true)
+                        .setProcess(true)
+                        .setIndices(true)
+                        .setThreadPool(true)
+                        .setTransport(true)
                         .execute()
                         .actionGet();
                 NodeStats[] nodeStatsArray = nodesStatsResponse.getNodes();
@@ -542,8 +553,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     ClusterNode clusterNode = new ClusterNode();
                     clusterNode.setHostName(nodeStats.getHostname());
                     clusterNode.setPublicPort(8181);
-                    if (nodeStats.getProcess() != null) {
+                    // the following may be null in the case where Sigar didn't initialize properly, for example
+                    // because the native libraries were not installed or if we redeployed the OSGi bundle in which
+                    // case Sigar cannot initialize properly since it tries to reload the native libraries, generates
+                    // an error and doesn't initialize properly.
+                    if (nodeStats.getProcess() != null && nodeStats.getProcess().getCpu() != null) {
                         clusterNode.setCpuLoad(nodeStats.getProcess().getCpu().getPercent());
+                    }
+                    if (nodeStats.getOs() != null) {
+                        clusterNode.setLoadAverage(nodeStats.getOs().getLoadAverage());
+                        clusterNode.setUptime(nodeStats.getOs().getUptime().getMillis());
                     }
                     clusterNodes.add(clusterNode);
                 }
