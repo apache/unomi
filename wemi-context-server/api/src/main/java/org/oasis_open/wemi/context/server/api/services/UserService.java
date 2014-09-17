@@ -13,7 +13,7 @@ public interface UserService {
 
     public long getAllUsersCount();
 
-    PartialList<User> getUsers(String query, int offset, int size);
+    PartialList<User> getUsers(String query, int offset, int size, String sortBy);
 
     PartialList<User> findUsersByPropertyValue(String propertyName, String propertyValue);
 

@@ -79,8 +79,8 @@ public class UserServiceImpl implements UserService, BundleListener {
         return persistenceService.getAllItemsCount(User.class);
     }
 
-    public PartialList<User> getUsers(String query, int offset, int size) {
-        return persistenceService.getAllItems(User.class, offset, size);
+    public PartialList<User> getUsers(String query, int offset, int size, String sortBy) {
+        return persistenceService.getAllItems(User.class, offset, size, sortBy);
     }
 
     public PartialList<User> findUsersByPropertyValue(String propertyName, String propertyValue) {

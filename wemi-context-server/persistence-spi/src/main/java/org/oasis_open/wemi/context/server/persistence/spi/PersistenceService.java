@@ -16,7 +16,7 @@ public interface PersistenceService {
 
     public <T extends Item> long getAllItemsCount(Class<T> clazz);
 
-    public <T extends Item> PartialList<T> getAllItems(Class<T> clazz, int offset, int size);
+    public <T extends Item> PartialList<T> getAllItems(Class<T> clazz, int offset, int size, String sortBy);
 
     public boolean save(Item item);
 

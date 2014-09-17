@@ -154,8 +154,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
-    public <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size) {
-        return query(QueryBuilders.matchAllQuery(), null, clazz, offset, size);
+    public <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy) {
+        return query(QueryBuilders.matchAllQuery(), sortBy, clazz, offset, size);
     }
 
     public <T extends Item> T load(final String itemId, final Class<T> clazz) {
@@ -429,7 +429,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             .setQuery(query)
                             .setFrom(offset).setSize(size);
                     if (sortBy != null) {
-                        requestBuilder = requestBuilder.addSort(sortBy, SortOrder.ASC);
+                        String[] sortByArray = sortBy.split(",");
+                        for (String sortByElement : sortByArray) {
+                            if (sortByElement.endsWith(":desc")) {
+                                requestBuilder = requestBuilder.addSort(sortByElement.substring(0, sortByElement.length() - ":desc".length()), SortOrder.DESC);
+                            } else if (sortByElement.endsWith(":asc")) {
+                                requestBuilder = requestBuilder.addSort(sortByElement.substring(0, sortByElement.length() - ":asc".length()), SortOrder.ASC);
+                            } else {
+                                requestBuilder = requestBuilder.addSort(sortByElement, SortOrder.ASC);
+                            }
+                        }
                     }
                     SearchResponse response = requestBuilder
                             .execute()

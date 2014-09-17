@@ -46,8 +46,8 @@ public class UserServiceEndPoint implements UserService {
 
     @GET
     @Path("/search")
-    public PartialList<User> getUsers(@QueryParam("q") String query, int offset, int size) {
-        return userService.getUsers(query, offset, size);
+    public PartialList<User> getUsers(@QueryParam("q") String query, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("-1") int size, @QueryParam("sort") String sortBy) {
+        return userService.getUsers(query, offset, size, sortBy);
     }
 
     @WebMethod(exclude = true)
