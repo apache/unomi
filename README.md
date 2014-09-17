@@ -8,6 +8,7 @@ Requirements
 * JDK 6 or later, http://www.oracle.com/technetwork/java/javase/downloads/index.html (JDK 7+ needed for tests execution)
 * Apache Karaf 3.0+, http://karaf.apache.org
 * Maven 3.0+, http://maven.apache.org
+* Local copy of the ElasticSearch ZIP package, available here : http://www.elasticsearch.org
 
 Building
 --------
@@ -44,18 +45,25 @@ default maximum memory size and perm gen size by adjusting the following environ
 files (at the end of the file):
 
     ```
-       export KARAF_OPTS="-XX:+CMSClassUnloadingEnabled -XX:+CMSPermGenSweepingEnabled"
+       MY_DIRNAME=`dirname $0`
+       MY_KARAF_HOME=`cd "$MY_DIRNAME/.."; pwd`
+       export KARAF_OPTS="-Djava.library.path=$MY_KARAF_HOME/lib/sigar"
        export JAVA_MAX_MEM=3G
        export JAVA_MAX_PERM_MEM=384M
     ```
+    
+2. You will also need to have the Hyperic Sigar native libraries in your Karaf installation, so in order to this
+go to the ElasticSearch website (http://www.elasticsearch.org)  and download the ZIP package. Decompress it somewhere 
+on your disk and copy all the files from the lib/sigar directory into Karaf's lib/sigar directory 
+(must be created first) EXCEPT THE SIGAR.JAR file.
 
-2. If you haven't done it yet, install the WAR support into Karaf by doing the following in the Karaf command line:
+3. If you haven't done it yet, install the WAR support into Karaf by doing the following in the Karaf command line:
 
     ```
        feature:install -v war
     ```
 
-3. You will also need to install CXF and CDI (OpenWebBeans) for the REST service support
+4. You will also need to install CXF and CDI (OpenWebBeans) for the REST service support
 
     ```
        feature:repo-add cxf 2.7.11
@@ -64,19 +72,11 @@ files (at the end of the file):
        feature:install -v pax-cdi-web-openwebbeans
     ```
 
-4. Copy the following KAR to the Karaf deploy directory, as in this example line:
+5. Copy the following KAR to the Karaf deploy directory, as in this example line:
 
     ```
       cp wemi-context-server/kar/target/wemi-context-server-kar-1.0-SNAPSHOT.kar ~/java/deployments/wemi-sandbox/apache-karaf-3.0.1/deploy/
     ```
-
-5. (optional) If you prefer a clean startup without an non-blocking error on the native libraries needed for ElasticSearch,
-you will need to specify the following command line parameter : 
-    ```
-      -Djava.library.path=/usr/local/elasticsearch-1.1.1/lib/sigar
-    ```
-    If this is not specified this will however not impact functionality of the server. The path points to a local 
-    installation of ElasticSearch which you will need to download seperately.
    
 6. If all went smoothly, you should be able to access the WEMI context script here : http://localhost:8181/context.js
  You should see a digitalData object populated with some values. If not something went wrong during the install.
