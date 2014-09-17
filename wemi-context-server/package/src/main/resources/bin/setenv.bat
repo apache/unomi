@@ -61,3 +61,6 @@ rem SET KARAF_OPTS
 rem Enable debug mode
 rem SET KARAF_DEBUG
 
+set MY_DIRNAME=%~dp0%
+set MY_KARAF_HOME=%DIRNAME%..
+set KARAF_OPTS=""-Djava.library.path=%MY_KARAF_HOME%/lib/sigar"

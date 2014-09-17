@@ -47,6 +47,10 @@
 # export KARAF_OPTS # Additional available Karaf options
 # export KARAF_DEBUG # Enable debug mode
 
+MY_DIRNAME=`dirname $0`
+MY_KARAF_HOME=`cd "$MY_DIRNAME/.."; pwd`
+export KARAF_OPTS="-Djava.library.path=$MY_KARAF_HOME/lib/sigar"
+
 export JAVA_MAX_MEM=3G
 export JAVA_MAX_PERM_MEM=512M
 # export YOURKIT_AGENTPATH="/Applications/YourKit_Java_Profiler_2013_build_13048.app/bin/mac/libyjpagent.jnilib"
