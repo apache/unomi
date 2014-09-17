@@ -3,15 +3,12 @@ package org.oasis_open.wemi.context.server.api;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
 public class Session extends Item {
 
     public static final String ITEM_TYPE = "session";
 
     private String userId;
-
-    private User user;
 
     private Map<String,Object> properties;
 
@@ -24,27 +21,15 @@ public class Session extends Item {
     public Session() {
     }
 
-    public Session(String itemId, User user, Date sessionCreationDate) {
+    public Session(String itemId, String userId, Date sessionCreationDate) {
         super(itemId);
-        this.userId = user.getItemId();
-        this.user = user;
+        this.userId = userId;
         properties = new HashMap<String,Object>();
         this.sessionCreationDate = sessionCreationDate;
     }
 
     public String getUserId() {
         return userId;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-
-
-    public void setLastEventDate(Date lastEventDate) {
-        this.lastEventDate = lastEventDate;
-        duration = lastEventDate.getTime() - sessionCreationDate.getTime();
     }
 
     public void setProperty(String name, Object value) {
@@ -55,7 +40,7 @@ public class Session extends Item {
         return properties.get(name);
     }
 
-    public Map<String,Object> getProperties() {
+    public Map<String, Object> getProperties() {
         return properties;
     }
 
@@ -65,6 +50,11 @@ public class Session extends Item {
 
     public Date getLastEventDate() {
         return lastEventDate;
+    }
+
+    public void setLastEventDate(Date lastEventDate) {
+        this.lastEventDate = lastEventDate;
+        duration = lastEventDate.getTime() - sessionCreationDate.getTime();
     }
 
     public long getDuration() {

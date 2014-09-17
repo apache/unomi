@@ -16,7 +16,7 @@ public class GoalMatchConditionESQueryBuilder implements ESQueryBuilder  {
         if (reached) {
             return FilterBuilders.andFilter(
                     FilterBuilders.existsFilter("session.properties." + goalId + ".start.reached"),
-                    FilterBuilders.scriptFilter("doc['session.properties." + goalId + ".target.reached'].value > doc['session.properties." + goalId + ".start.reached'].value")
+                    FilterBuilders.scriptFilter("doc['session.properties." + goalId + ".target.reached'].value > doc['session.properties." + goalId + ".start.reached'].value").lang("groovy")
             );
         } else {
             return FilterBuilders.existsFilter("session.properties." + goalId + ".start.reached");
