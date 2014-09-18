@@ -410,7 +410,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz) {
-        return query(query, sortBy, clazz, 0, 10);
+        return query(query, sortBy, clazz, 0, 50);
     }
 
     public <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz, final int offset, final int size) {
@@ -425,7 +425,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     SearchRequestBuilder requestBuilder = client.prepareSearch(indexName)
                             .setTypes(itemType)
                             .setFetchSource(true)
-                            .setSearchType(SearchType.QUERY_AND_FETCH)
                             .setQuery(query)
                             .setFrom(offset).setSize(size);
                     if (sortBy != null) {
