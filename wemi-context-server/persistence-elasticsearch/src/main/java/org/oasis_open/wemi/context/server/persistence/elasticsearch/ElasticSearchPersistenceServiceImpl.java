@@ -368,8 +368,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return false;
     }
 
-    public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz) {
-        return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz);
+    public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size) {
+        return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz, offset, size);
     }
 
     public <T extends Item> PartialList<T> query(final String fieldName, final String fieldValue, String sortBy, final Class<T> clazz) {
@@ -426,7 +426,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             .setTypes(itemType)
                             .setFetchSource(true)
                             .setQuery(query)
-                            .setFrom(offset).setSize(size);
+                            .setFrom(offset);
+                    if (size != -1) {
+                        requestBuilder.setSize(size);
+                    }
                     if (sortBy != null) {
                         String[] sortByArray = sortBy.split(",");
                         for (String sortByElement : sortByArray) {

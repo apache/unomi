@@ -131,11 +131,11 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
         }
     }
 
-    public PartialList<User> getMatchingIndividuals(String segmentID) {
+    public PartialList<User> getMatchingIndividuals(String segmentID, int offset, int size, String sortBy) {
         if (getSegmentDefinition(segmentID) == null) {
             return new PartialList<User>();
         }
-        return persistenceService.query(getSegmentDefinition(segmentID).getCondition(), null, User.class);
+        return persistenceService.query(getSegmentDefinition(segmentID).getCondition(), sortBy, User.class, offset, size);
     }
 
     public long getMatchingIndividualsCount(String segmentID) {

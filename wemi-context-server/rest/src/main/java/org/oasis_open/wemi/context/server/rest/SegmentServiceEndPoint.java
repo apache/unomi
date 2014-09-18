@@ -37,8 +37,8 @@ public class SegmentServiceEndPoint implements SegmentService {
 
     @GET
     @Path("/{segmentID}/match")
-    public PartialList<User> getMatchingIndividuals(@PathParam("segmentID") String segmentId) {
-        return segmentService.getMatchingIndividuals(segmentId);
+    public PartialList<User> getMatchingIndividuals(@PathParam("segmentID") String segmentId, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("-1") int size, @QueryParam("sort") String sortBy) {
+        return segmentService.getMatchingIndividuals(segmentId, offset, size, sortBy);
     }
 
     @GET

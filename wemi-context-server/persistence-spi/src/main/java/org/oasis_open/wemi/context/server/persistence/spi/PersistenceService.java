@@ -36,7 +36,7 @@ public interface PersistenceService {
 
     public boolean testMatch(Condition query, Item item);
 
-    public <T extends Item> PartialList<T> query(Condition query, String sortBy, Class<T> clazz);
+    public <T extends Item> PartialList<T> query(Condition query, String sortBy, Class<T> clazz, int offset, int size);
 
     public <T extends Item> long queryCount(Condition query, Class<T> clazz);
 

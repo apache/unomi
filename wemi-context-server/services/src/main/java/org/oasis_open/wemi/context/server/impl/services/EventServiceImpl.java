@@ -101,8 +101,8 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public PartialList<Event> searchEvents(Condition condition) {
-        return persistenceService.query(condition, "timeStamp", Event.class);
+    public PartialList<Event> searchEvents(Condition condition, int offset, int size) {
+        return persistenceService.query(condition, "timeStamp", Event.class, offset, size);
     }
 
     public boolean hasEventAlreadyBeenRaised(Event event, boolean session) {

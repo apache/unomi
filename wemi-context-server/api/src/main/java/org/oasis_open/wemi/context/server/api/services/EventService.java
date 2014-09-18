@@ -20,7 +20,7 @@ public interface EventService {
 
     public Set<String> getEventTypeIds();
 
-    public PartialList<Event> searchEvents(Condition condition);
+    public PartialList<Event> searchEvents(Condition condition, int offset, int size);
 
     public boolean hasEventAlreadyBeenRaised(Event event, boolean session);
 }

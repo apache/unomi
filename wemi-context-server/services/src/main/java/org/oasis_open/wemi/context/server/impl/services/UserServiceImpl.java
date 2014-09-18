@@ -144,7 +144,7 @@ public class UserServiceImpl implements UserService, BundleListener {
             if (condition.getConditionTypeId().equals("userEventCondition")) {
                 final Map<String, Object> parameters = condition.getParameterValues();
                 parameters.put("target", session);
-                PartialList<Event> matchingEvents = persistenceService.query(condition, "timeStamp", Event.class);
+                PartialList<Event> matchingEvents = persistenceService.query(condition, "timeStamp", Event.class, 0, 100);
 
                 String occursIn = (String) condition.getParameterValues().get("eventOccurIn");
                 if (occursIn != null && occursIn.equals("last")) {

@@ -12,7 +12,7 @@ import java.util.Set;
  */
 public interface SegmentService {
 
-    PartialList<User> getMatchingIndividuals(String segmentID);
+    PartialList<User> getMatchingIndividuals(String segmentID, int offset, int size, String sortBy);
 
     long getMatchingIndividualsCount(String segmentID);
     Boolean isUserInSegment (User user, String segmentDescription);
