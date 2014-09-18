@@ -182,8 +182,8 @@ public class UserServiceImpl implements UserService, BundleListener {
         return persistenceService.load(personaId, Persona.class);
     }
 
-    public PartialList<Persona> getPersonas() {
-        return persistenceService.getAllItems(Persona.class);
+    public PartialList<Persona> getPersonas(int offset, int size, String sortBy) {
+        return persistenceService.getAllItems(Persona.class, offset, size, sortBy);
     }
 
     public void createPersona(String personaId) {

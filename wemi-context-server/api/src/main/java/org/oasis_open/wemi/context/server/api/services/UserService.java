@@ -39,7 +39,7 @@ public interface UserService {
 
     public Persona loadPersona(String personaId);
 
-    PartialList<Persona> getPersonas();
+    PartialList<Persona> getPersonas(int offset, int size, String sortBy);
 
     public void createPersona(String personaId);
 
