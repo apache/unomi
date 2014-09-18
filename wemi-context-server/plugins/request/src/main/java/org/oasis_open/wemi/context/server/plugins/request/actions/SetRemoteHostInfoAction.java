@@ -101,8 +101,8 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             session.setProperty("countryCode", location.getString("country_code"));
             session.setProperty("countryName", location.getString("country_name"));
             session.setProperty("city", location.getString("city"));
-            session.setProperty("latitude", location.getString("latitude"));
-            session.setProperty("longitude", location.getString("longitude"));
+            session.setProperty("latitude", location.getJsonNumber("latitude").toString());
+            session.setProperty("longitude", location.getJsonNumber("longitude").toString());
             return true;
         } catch (MalformedURLException e) {
             e.printStackTrace();

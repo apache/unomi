@@ -36,6 +36,24 @@ You can then start the server simply by using the command on UNIX/Linux/MacOS X 
 or on Windows shell : 
 
     bin\karaf.bat start
+    
+Installing the MaxMind GeoIPLite2 IP lookup database
+----------------------------------------------------
+
+By default, the Context Server will use a remote IP lookup service but this can proove very inefficient in terms of
+ performance especially as the service throttles the lookups and is limited. Also this will prevent working offline.
+The IP lookup service also supports downloadable maps from MaxMind that you can get here : 
+http://dev.maxmind.com/geoip/geoip2/geolite2/
+
+Simply download the desired maps into the "etc" directory and then adjust the following configuration file : 
+
+    etc/org.oasis_open.wemi.context.server.plugins.request.cfg
+    
+it should point to a file such as : 
+
+    request.ipDatabase.location=${karaf.etc}/GeoLite2-City.mmdb
+    
+(by default we reference the free city database).
 
 Deploying manually
 ------------------
