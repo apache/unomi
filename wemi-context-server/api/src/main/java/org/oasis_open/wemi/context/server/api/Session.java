@@ -62,7 +62,9 @@ public class Session extends Item {
 
     public void setLastEventDate(Date lastEventDate) {
         this.lastEventDate = lastEventDate;
-        duration = lastEventDate.getTime() - sessionCreationDate.getTime();
+        if (lastEventDate != null) {
+            duration = lastEventDate.getTime() - sessionCreationDate.getTime();
+        }
     }
 
     public long getDuration() {
