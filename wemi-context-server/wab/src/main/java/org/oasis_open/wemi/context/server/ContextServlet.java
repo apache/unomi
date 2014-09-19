@@ -36,6 +36,7 @@ import java.util.UUID;
 public class ContextServlet extends HttpServlet {
 
     public static final String BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/base.js";
+    public static final String IMPERSONATE_BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/impersonateBase.js";
     public static final String SESSIONID_PERSONA_PREFIX = "persona-";
     public static final String SESSIONID_PERSONA_SEPARATOR = "___";
 
@@ -90,7 +91,6 @@ public class ContextServlet extends HttpServlet {
             if ("currentUser".equals(personaId) || personaId.equals(cookieProfileId)) {
                 user = null;
                 HttpUtils.clearCookie(response, "wemi-persona-id");
-                personaId = null;
             } else {
                 user = userService.loadPersona(personaId);
                 if (user != null) {
@@ -99,75 +99,63 @@ public class ContextServlet extends HttpServlet {
             }
         } else if (cookiePersonaId != null) {
             user = userService.loadPersona(cookiePersonaId);
-            personaId = cookiePersonaId;
         }
 
         String sessionId = request.getParameter("sessionId");
-        if (personaId != null) {
-            sessionId = SESSIONID_PERSONA_PREFIX + personaId + SESSIONID_PERSONA_SEPARATOR + sessionId;
-        }
 
         Session session = null;
 
-        if (sessionId != null) {
-            session = userService.loadSession(sessionId);
-            if (session != null) {
-                visitorId = session.getUserId();
-                if (user == null) { // could be non null in case of persona
-                    user = userService.load(visitorId);
+        if (user instanceof Persona) {
+            session = ((Persona) user).getSession();
+        } else {
+            if (sessionId != null) {
+                session = userService.loadSession(sessionId);
+                if (session != null) {
+                    visitorId = session.getUserId();
+                    if (user == null) { // could be non null in case of persona
+                        user = userService.load(visitorId);
+                    }
                 }
             }
-        }
-        if (user == null) {
-            boolean userCreated = false;
-            // user not stored in session
-            if (cookieProfileId == null) {
-                // no visitorId cookie was found, we generate a new one and create the user in the user service
-                user = createNewUser(null, response);
-                userCreated = true;
-            } else {
-                user = userService.load(cookieProfileId);
-                if (user == null) {
-                    // this can happen if we have an old cookie but have reset the server.
-                    user = createNewUser(cookieProfileId, response);
+            if (user == null) {
+                boolean userCreated = false;
+                // user not stored in session
+                if (cookieProfileId == null) {
+                    // no visitorId cookie was found, we generate a new one and create the user in the user service
+                    user = createNewUser(null, response);
                     userCreated = true;
+                } else {
+                    user = userService.load(cookieProfileId);
+                    if (user == null) {
+                        // this can happen if we have an old cookie but have reset the server.
+                        user = createNewUser(cookieProfileId, response);
+                        userCreated = true;
+                    }
                 }
-            }
 
-            if (userCreated) {
-                Event userUpdated = new Event("userUpdated", session, user, timestamp);
-                if (user instanceof Persona) {
-                    request = new PersonaRequestWrapper(httpServletRequest, (Persona) user);
+                if (userCreated) {
+                    Event userUpdated = new Event("userUpdated", session, user, timestamp);
+
+                    userUpdated.getAttributes().put("http_request", request);
+                    userUpdated.getAttributes().put("http_response", response);
+                    eventService.save(userUpdated);
                 }
-                userUpdated.getAttributes().put("http_request", request);
-                userUpdated.getAttributes().put("http_response", response);
-                eventService.save(userUpdated);
+            } else if (cookieProfileId == null || !cookieProfileId.equals(user.getItemId())) {
+                // user if stored in session but not in cookie
+                HttpUtils.sendCookie(user, response);
             }
-        } else if (cookieProfileId == null || !cookieProfileId.equals(user.getItemId())) {
-            // user if stored in session but not in cookie
-            HttpUtils.sendCookie(user, response);
+            // associate user with session
+            if (sessionId != null && session == null) {
+                session = new Session(sessionId, user.getItemId(), timestamp);
+                userService.saveSession(session);
+                Event event = new Event("sessionCreated", session, user, timestamp);
+
+                event.getAttributes().put("http_request", request);
+                event.getAttributes().put("http_response", response);
+                eventService.save(event);
+            }
         }
 
-        // associate user with session
-        if (sessionId != null && session == null) {
-            session = new Session(sessionId, user.getItemId(), timestamp);
-            userService.saveSession(session);
-            Event event = new Event("sessionCreated", session, user, timestamp);
-            if (user instanceof Persona) {
-                request = new PersonaRequestWrapper(httpServletRequest, (Persona) user);
-            }
-            event.getAttributes().put("http_request", request);
-            event.getAttributes().put("http_response", response);
-            eventService.save(event);
-
-            if (user instanceof Persona) {
-                Event impersonateEvent = new Event("impersonate", session, user, timestamp);
-                request = new PersonaRequestWrapper(httpServletRequest, (Persona) user);
-                impersonateEvent.getAttributes().put("http_request", request);
-                impersonateEvent.getAttributes().put("http_response", response);
-                eventService.save(impersonateEvent);
-            }
-        }
 
         HttpUtils.setupCORSHeaders(httpServletRequest, response);
 
@@ -218,7 +206,8 @@ public class ContextServlet extends HttpServlet {
         responseWriter.append("};\n");
 
         // now we copy the base script source code
-        InputStream baseScriptStream = getServletContext().getResourceAsStream(BASE_SCRIPT_LOCATION);
+        InputStream baseScriptStream = getServletContext().getResourceAsStream(user instanceof Persona ? IMPERSONATE_BASE_SCRIPT_LOCATION : BASE_SCRIPT_LOCATION);
+
         IOUtils.copy(baseScriptStream, responseWriter);
 
         responseWriter.flush();

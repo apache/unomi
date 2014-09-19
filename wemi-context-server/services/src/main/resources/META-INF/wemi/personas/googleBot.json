@@ -10,11 +10,23 @@
     "segments": [
         "bots"
     ],
-    "requestParameters": {
-    },
-    "requestHeaders": {
-        "Remote-Address": "66.249.66.1",
-        "Remote-Host": "www.google.com",
-        "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
-    }
+    "sessions": [ {
+        "id": "6bb362d8-d094-44b4-ba2e-012163286825",
+        "userId": "googleBot",
+        "properties": {
+            "operatingSystemName": "unknown",
+            "countryName": "United States",
+            "userAgentVersion": "2.1",
+            "countryCode": "US",
+            "deviceCategory": "Other",
+            "operatingSystemFamily": "unknown",
+            "userAgentName": "Googlebot/2.1",
+            "city": "Mountain View",
+            "remoteHost": "www.google.com",
+            "remoteAddr": "66.249.66.1"
+        },
+        "sessionCreationDate": "2014-09-18T09:18:52.579+0000",
+        "lastEventDate": "2014-09-18T11:23:59.647+0000",
+        "duration": 7507068
+    } ]
 }

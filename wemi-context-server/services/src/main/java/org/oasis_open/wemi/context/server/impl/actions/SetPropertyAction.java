@@ -1,7 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.actions;
 
 import org.oasis_open.wemi.context.server.api.Event;
-import org.oasis_open.wemi.context.server.api.Persona;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.actions.ActionExecutor;
 
@@ -31,13 +30,9 @@ public class SetPropertyAction implements ActionExecutor {
                     (String) action.getParameterValues().get("setPropertyName"),
                     propertyValue);
         } else {
-            if (event.getUser() instanceof Persona) {
-                // we might want to log something here
-            } else {
-                event.getUser().setProperty(
-                        (String) action.getParameterValues().get("setPropertyName"),
-                        propertyValue);
-            }
+            event.getUser().setProperty(
+                    (String) action.getParameterValues().get("setPropertyName"),
+                    propertyValue);
         }
         return true;
     }

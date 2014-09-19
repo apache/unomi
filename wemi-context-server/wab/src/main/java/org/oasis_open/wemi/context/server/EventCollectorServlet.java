@@ -71,32 +71,6 @@ public class EventCollectorServlet extends HttpServlet {
         HttpUtils.setupCORSHeaders(request, response);
 
         User user = null;
-        String cookiePersonaId = null;
-        String cookieProfileId = null;
-        Cookie[] cookies = ((HttpServletRequest) request).getCookies();
-        // HttpUtils.dumpRequestCookies(cookies);
-        for (Cookie cookie : cookies) {
-            if ("wemi-profile-id".equals(cookie.getName())) {
-                cookieProfileId = cookie.getValue();
-            } else if ("wemi-persona-id".equals(cookie.getName())) {
-                cookiePersonaId = cookie.getValue();
-            }
-        }
-
-        final String personaId = request.getParameter("persona");
-        if (personaId != null) {
-            if ("currentUser".equals(personaId) || personaId.equals(cookieProfileId)) {
-                user = null;
-                HttpUtils.clearCookie(response, "wemi-persona-id");
-            } else {
-                user = userService.loadPersona(personaId);
-                if (user != null) {
-                    HttpUtils.sendCookie(user, response);
-                }
-            }
-        } else if (cookiePersonaId != null) {
-            user = userService.loadPersona(cookiePersonaId);
-        }
 
         String sessionId = request.getParameter("sessionId");
         if (sessionId == null) {
@@ -113,11 +87,9 @@ public class EventCollectorServlet extends HttpServlet {
             return;
         }
 
-        if (user == null) {
-            user = userService.load(userId);
-            if (user == null) {
-                return;
-            }
+        user = userService.load(userId);
+        if (user == null || user instanceof Persona) {
+            return;
         }
 
         String eventType = request.getPathInfo();
@@ -147,9 +119,6 @@ public class EventCollectorServlet extends HttpServlet {
             }
         }
 
-        if (user instanceof Persona) {
-            request = new PersonaRequestWrapper((HttpServletRequest) request, (Persona) user);
-        }
         event.getAttributes().put("http_request", request);
         event.getAttributes().put("http_response", response);
 
@@ -157,7 +126,7 @@ public class EventCollectorServlet extends HttpServlet {
 
         PrintWriter responseWriter = response.getWriter();
 
-        if (changed || "impersonate".equals(event.getEventType())) {
+        if (changed) {
             responseWriter.append("{\"updated\":true, \"digitalData\":");
             responseWriter.append(HttpUtils.getJSONDigitalData(user, session, HttpUtils.getBaseRequestURL(request)));
             responseWriter.append("}");

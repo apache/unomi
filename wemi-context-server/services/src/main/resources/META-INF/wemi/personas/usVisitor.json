@@ -8,10 +8,24 @@
         "persona": true
     },
     "segments": [],
-    "requestParameters": {
-    },
-    "requestHeaders": {
-        "Remote-Address": "66.249.66.1",
-        "Remote-Host": "www.google.com"
+    "sessions": [ {
+        "id": "aa3b04bd-8f4d-4a07-8e96-d33ffa04d3d9",
+        "userId": "usVisitor",
+        "properties": {
+            "operatingSystemName": "OS X 10.9 Mavericks",
+            "countryName": "United States",
+            "userAgentVersion": "37.0.2062.120",
+            "countryCode": "US",
+            "deviceCategory": "Personal computer",
+            "operatingSystemFamily": "OS X",
+            "userAgentName": "Chrome",
+            "city": "Mountain View",
+            "remoteHost": "www.google.com",
+            "remoteAddr": "66.249.66.1"
+        },
+        "sessionCreationDate": "2014-09-18T11:40:54.828+0000",
+        "lastEventDate": "2014-09-18T11:40:59.618+0000",
+        "duration": 4790
     }
+    ]
 }

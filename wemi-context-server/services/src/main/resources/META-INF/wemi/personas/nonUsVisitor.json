@@ -8,10 +8,23 @@
         "persona": true
     },
     "segments": [],
-    "requestParameters": {
-    },
-    "requestHeaders": {
-        "Remote-Address": "128.178.50.12",
-        "Remote-Host": "www.epfl.ch"
-    }
+    "sessions": [ {
+        "id": "51c8e9a8-3db6-41f8-9569-057c339e3017",
+        "userId": "nonUsVisitor",
+        "properties": {
+            "operatingSystemName": "OS X 10.9 Mavericks",
+            "countryName": "Switzerland",
+            "userAgentVersion": "37.0.2062.120",
+            "countryCode": "CH",
+            "deviceCategory": "Personal computer",
+            "operatingSystemFamily": "OS X",
+            "userAgentName": "Chrome",
+            "city": "Lausanne",
+            "remoteHost": "www.epfl.ch",
+            "remoteAddr": "128.178.50.12"
+        },
+        "sessionCreationDate": "2014-09-18T11:40:54.828+0000",
+        "lastEventDate": "2014-09-18T11:40:59.618+0000",
+        "duration": 4790
+    } ]
 }

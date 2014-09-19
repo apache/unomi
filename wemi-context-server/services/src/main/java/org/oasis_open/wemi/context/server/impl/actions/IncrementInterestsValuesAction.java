@@ -2,7 +2,6 @@ package org.oasis_open.wemi.context.server.impl.actions;
 
 import org.apache.commons.lang3.StringUtils;
 import org.oasis_open.wemi.context.server.api.Event;
-import org.oasis_open.wemi.context.server.api.Persona;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.actions.ActionExecutor;
 
@@ -16,10 +15,6 @@ public class IncrementInterestsValuesAction implements ActionExecutor {
     @Override
     public boolean execute(Action action, Event event) {
         boolean modified = false;
-        if (event.getUser() instanceof Persona) {
-            return false;
-        }
-
         Map<String, Object> userProps = event.getUser().getProperties();
 
         for (String s : event.getProperties().keySet()) {

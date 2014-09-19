@@ -188,7 +188,12 @@ public class UserServiceImpl implements UserService, BundleListener {
 
     public void createPersona(String personaId) {
         Persona newPersona = new Persona(personaId);
+
+        Session session = new Session(UUID.randomUUID().toString(), personaId, new Date());
+        newPersona.getSessions().add(session);
+
         persistenceService.save(newPersona);
+        persistenceService.save(session);
     }
 
     public void bundleChanged(BundleEvent event) {
@@ -288,6 +293,10 @@ public class UserServiceImpl implements UserService, BundleListener {
             try {
                 Persona persona = CustomObjectMapper.getObjectMapper().readValue(predefinedPersonaURL, Persona.class);
                 persistenceService.save(persona);
+
+                for (Session session : persona.getSessions()) {
+                    persistenceService.save(session);
+                }
             } catch (IOException e) {
                 logger.error("Error while loading persona " + predefinedPersonaURL, e);
             }

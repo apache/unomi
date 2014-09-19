@@ -1,7 +1,7 @@
 package org.oasis_open.wemi.context.server.api;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import javax.xml.bind.annotation.XmlTransient;
+import java.util.*;
 
 /**
  * A persona is a "virtual" user used to represent categories of users, and may also be used to test
@@ -11,29 +11,28 @@ public class Persona extends User {
 
     public static final String ITEM_TYPE = "persona";
 
-    private Map<String, Object> requestParameters = new LinkedHashMap<String, Object>();
-    private Map<String, Object> requestHeaders = new LinkedHashMap<String, Object>();
+    private List<Session> sessions;
 
     public Persona() {
     }
 
     public Persona(String personaId) {
         super(personaId);
+        this.sessions = new ArrayList<Session>();
     }
 
-    public Map<String, Object> getRequestParameters() {
-        return requestParameters;
+    public List<Session> getSessions() {
+        return sessions;
     }
 
-    public void setRequestParameters(Map<String, Object> requestParameters) {
-        this.requestParameters = requestParameters;
+    public void setSessions(List<Session> sessions) {
+        this.sessions = sessions;
     }
 
-    public Map<String, Object> getRequestHeaders() {
-        return requestHeaders;
+    @XmlTransient
+    public Session getSession() {
+        return sessions.get(sessions.size() - 1);
     }
 
-    public void setRequestHeaders(Map<String, Object> requestHeaders) {
-        this.requestHeaders = requestHeaders;
-    }
+
 }

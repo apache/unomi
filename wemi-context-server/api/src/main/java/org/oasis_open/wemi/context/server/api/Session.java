@@ -28,6 +28,14 @@ public class Session extends Item {
         this.sessionCreationDate = sessionCreationDate;
     }
 
+    public String getId() {
+        return itemId;
+    }
+
+    public void setId(String id) {
+        this.itemId = id;
+    }
+
     public String getUserId() {
         return userId;
     }

@@ -1,7 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.actions;
 
 import org.oasis_open.wemi.context.server.api.Event;
-import org.oasis_open.wemi.context.server.api.Persona;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.actions.ActionExecutor;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
@@ -29,10 +28,6 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
     @Override
     public boolean execute(Action action, Event event) {
-        if (event.getUser() instanceof Persona) {
-            return false;
-        }
-
         final Condition userEventCondition = (Condition) action.getParameterValues().get("eventCondition");
 
         Condition andCondition = new Condition(definitionsService.getConditionType("andCondition"));
