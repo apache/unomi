@@ -14,6 +14,8 @@
         "properties": {
             "operatingSystemName": "OS X 10.9 Mavericks",
             "countryName": "Switzerland",
+            "latitude":"46.1884341",
+            "longitude":"6.1282508",
             "userAgentVersion": "37.0.2062.120",
             "countryCode": "CH",
             "deviceCategory": "Personal computer",
