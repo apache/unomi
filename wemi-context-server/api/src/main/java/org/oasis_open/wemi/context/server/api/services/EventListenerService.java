@@ -9,8 +9,8 @@ import org.oasis_open.wemi.context.server.api.Event;
  */
 public interface EventListenerService {
 
-    public boolean canHandle(Event event);
+    boolean canHandle(Event event);
 
-    public boolean onEvent(Event event);
+    boolean onEvent(Event event);
 
 }

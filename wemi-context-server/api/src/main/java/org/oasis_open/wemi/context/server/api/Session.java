@@ -10,6 +10,8 @@ public class Session extends Item {
 
     private String userId;
 
+    private User user;
+
     private Map<String,Object> properties;
 
     private Date sessionCreationDate;
@@ -21,9 +23,10 @@ public class Session extends Item {
     public Session() {
     }
 
-    public Session(String itemId, String userId, Date sessionCreationDate) {
+    public Session(String itemId, User user, Date sessionCreationDate) {
         super(itemId);
-        this.userId = userId;
+        this.user = user;
+        this.userId = user.getId();
         properties = new HashMap<String,Object>();
         this.sessionCreationDate = sessionCreationDate;
     }
@@ -38,6 +41,15 @@ public class Session extends Item {
 
     public String getUserId() {
         return userId;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.userId = user.getId();
+        this.user = user;
     }
 
     public void setProperty(String name, Object value) {

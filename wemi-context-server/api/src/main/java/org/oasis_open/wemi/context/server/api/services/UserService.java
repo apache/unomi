@@ -11,7 +11,7 @@ public interface UserService {
 
     PartialList<User> getAllUsers();
 
-    public long getAllUsersCount();
+    long getAllUsersCount();
 
     PartialList<User> getUsers(String query, int offset, int size, String sortBy);
 
@@ -23,24 +23,26 @@ public interface UserService {
 
     void delete(User user);
 
-    public Set<PropertyTypeGroup> getPropertyTypeGroups();
+    Set<PropertyTypeGroup> getPropertyTypeGroups();
 
-    public Set<PropertyType> getAllPropertyTypes();
+    Set<PropertyType> getAllPropertyTypes();
 
-    public Set<PropertyType> getPropertyTypes(String propertyGroupId);
+    Set<PropertyType> getPropertyTypes(String propertyGroupId);
 
-    public String getPropertyTypeMapping(String fromPropertyTypeId);
+    String getPropertyTypeMapping(String fromPropertyTypeId);
 
-    Session loadSession(String eventId);
+    Session loadSession(String sessionId);
 
     boolean saveSession(Session event);
 
+    PartialList<Session> findUserSessions(String userId);
+
     boolean matchCondition(String condition, User user, Session session);
 
-    public Persona loadPersona(String personaId);
+    Persona loadPersona(String personaId);
 
     PartialList<Persona> getPersonas(int offset, int size, String sortBy);
 
-    public void createPersona(String personaId);
+    void createPersona(String personaId);
 
 }

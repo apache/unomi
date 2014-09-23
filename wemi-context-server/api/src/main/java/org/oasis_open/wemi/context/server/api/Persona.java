@@ -11,28 +11,11 @@ public class Persona extends User {
 
     public static final String ITEM_TYPE = "persona";
 
-    private List<Session> sessions;
-
     public Persona() {
     }
 
     public Persona(String personaId) {
         super(personaId);
-        this.sessions = new ArrayList<Session>();
     }
-
-    public List<Session> getSessions() {
-        return sessions;
-    }
-
-    public void setSessions(List<Session> sessions) {
-        this.sessions = sessions;
-    }
-
-    @XmlTransient
-    public Session getSession() {
-        return sessions.get(sessions.size() - 1);
-    }
-
 
 }

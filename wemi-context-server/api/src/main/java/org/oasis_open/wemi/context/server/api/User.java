@@ -1,9 +1,6 @@
 package org.oasis_open.wemi.context.server.api;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by loom on 24.04.14.
@@ -20,6 +17,7 @@ public class User extends Item {
     public User(String userId) {
         super(userId);
         properties = new HashMap<String, Object>();
+        segments = new HashSet<String>();
     }
 
     public String getId() {

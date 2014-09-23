@@ -22,7 +22,7 @@ public class IncrementInterestsValuesAction implements ActionExecutor {
                 String interestName = StringUtils.substringAfter(s, "page.");
                 int value = (Integer) event.getProperty(s);
                 int oldValue = (userProps.containsKey(interestName)) ? (Integer) userProps.get(interestName) : 0;
-                userProps.put(interestName, value + oldValue);
+                event.getUser().setProperty(interestName, value + oldValue);
                 modified = true;
             }
         }

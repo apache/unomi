@@ -130,13 +130,18 @@ public class UserServiceEndPoint implements UserService {
 
 
     @WebMethod(exclude = true)
-    public Session loadSession(String eventId) {
-        return userService.loadSession(eventId);
+    public Session loadSession(String sessionId) {
+        return userService.loadSession(sessionId);
     }
 
     @WebMethod(exclude = true)
     public boolean saveSession(Session event) {
         return userService.saveSession(event);
+    }
+
+    @WebMethod(exclude = true)
+    public PartialList<Session> findUserSessions(String userId) {
+        return null;
     }
 
     @WebMethod(exclude = true)

@@ -2,6 +2,8 @@ package org.oasis_open.wemi.context.server.api;
 
 import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 /**

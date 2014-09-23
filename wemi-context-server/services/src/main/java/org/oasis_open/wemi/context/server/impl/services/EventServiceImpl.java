@@ -66,13 +66,16 @@ public class EventServiceImpl implements EventService {
         final Session session = event.getSession();
 
         if (user != null) {
+            Map<String,Object> previousProperties = new HashMap<String, Object>(user.getProperties());
+            Set<String> previousSegments = new HashSet<String>(user.getSegments());
+
             for (EventListenerService eventListenerService : eventListeners) {
                 if (eventListenerService.canHandle(event)) {
                     changed |= eventListenerService.onEvent(event);
                 }
             }
 
-            if (changed) {
+            if (changed && (!user.getProperties().equals(previousProperties) || !user.getSegments().equals(previousSegments))) {
                 Event userUpdated = new Event("userUpdated", session, user, event.getTimeStamp());
                 userUpdated.getAttributes().putAll(event.getAttributes());
                 save(userUpdated);
@@ -94,7 +97,7 @@ public class EventServiceImpl implements EventService {
     }
 
     public Set<String> getEventTypeIds() {
-        Map<String, Long> dynamicEventTypeIds = persistenceService.aggregateQuery(null, new Aggregate(Aggregate.Type.TERMS, "eventType"), Event.class);
+        Map<String, Long> dynamicEventTypeIds = persistenceService.aggregateQuery(null, new Aggregate(Aggregate.Type.TERMS, "eventType"), Event.ITEM_TYPE);
         Set<String> eventTypeIds = new LinkedHashSet<String>(predefinedEventTypeIds);
         eventTypeIds.addAll(dynamicEventTypeIds.keySet());
         return eventTypeIds;
@@ -129,7 +132,7 @@ public class EventServiceImpl implements EventService {
 
         Condition andCondition = new Condition(definitionsService.getConditionType("andCondition"));
         andCondition.getParameterValues().put("subConditions", conditions);
-        long size = persistenceService.queryCount(andCondition, Event.class);
+        long size = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
         return size > 0;
     }
 

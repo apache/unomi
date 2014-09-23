@@ -14,7 +14,7 @@ public interface PersistenceService {
 
     public <T extends Item> PartialList<T> getAllItems(Class<T> clazz);
 
-    public <T extends Item> long getAllItemsCount(Class<T> clazz);
+    public long getAllItemsCount(String itemType);
 
     public <T extends Item> PartialList<T> getAllItems(Class<T> clazz, int offset, int size, String sortBy);
 
@@ -38,10 +38,10 @@ public interface PersistenceService {
 
     public <T extends Item> PartialList<T> query(Condition query, String sortBy, Class<T> clazz, int offset, int size);
 
-    public <T extends Item> long queryCount(Condition query, Class<T> clazz);
+    public long queryCount(Condition query, String itemType);
 
     public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz);
 
-    public <T extends Item> Map<String, Long> aggregateQuery(Condition filter, Aggregate aggregate, Class<T> clazz);
+    public Map<String, Long> aggregateQuery(Condition filter, Aggregate aggregate, String itemType);
 
 }

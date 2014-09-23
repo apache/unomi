@@ -74,6 +74,14 @@
     </bean>
     <service id="userService" ref="userServiceImpl" auto-export="interfaces"/>
 
+    <bean id="queryServiceImpl" class="org.oasis_open.wemi.context.server.impl.services.QueryServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="definitionsService" ref="definitionsServiceImpl"/>
+    </bean>
+    <service id="queryService" ref="queryServiceImpl" auto-export="interfaces"/>
+
+
     <!-- Choice list initializers -->
 
     <service auto-export="interfaces">

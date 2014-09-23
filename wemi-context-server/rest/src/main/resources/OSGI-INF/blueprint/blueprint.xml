@@ -95,12 +95,24 @@
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
+    <jaxrs:server address="/wemi/query" id="restQueryService">
+        <jaxrs:providers>
+            <ref component-id="jaxb-provider"/>
+            <ref component-id="cors-filter"/>
+        </jaxrs:providers>
+
+        <jaxrs:serviceBeans>
+            <ref component-id="queryServiceEndPoint"/>
+        </jaxrs:serviceBeans>
+    </jaxrs:server>
+
     <reference id="segmentService" interface="org.oasis_open.wemi.context.server.api.services.SegmentService"/>
     <reference id="definitionsService" interface="org.oasis_open.wemi.context.server.api.services.DefinitionsService"/>
     <reference id="goalsService" interface="org.oasis_open.wemi.context.server.api.services.GoalsService"/>
     <reference id="rulesService" interface="org.oasis_open.wemi.context.server.api.services.RulesService"/>
     <reference id="userService" interface="org.oasis_open.wemi.context.server.api.services.UserService"/>
     <reference id="clusterService" interface="org.oasis_open.wemi.context.server.api.services.ClusterService"/>
+    <reference id="queryService" interface="org.oasis_open.wemi.context.server.api.services.QueryService"/>
 
     <bean id="segmentServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.SegmentServiceEndPoint">
         <property name="segmentService" ref="segmentService"/>
@@ -125,6 +137,10 @@
 
     <bean id="clusterServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.ClusterServiceEndPoint">
         <property name="clusterService" ref="clusterService"/>
+    </bean>
+
+    <bean id="queryServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.QueryServiceEndPoint">
+        <property name="queryService" ref="queryService"/>
     </bean>
 
 </blueprint>

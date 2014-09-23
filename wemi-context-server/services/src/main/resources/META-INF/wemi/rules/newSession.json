@@ -23,6 +23,22 @@
                 "requestHeaderName": "User-Agent",
                 "sessionPropertyName": "userAgent"
             }
+        },
+        {
+            "parameterValues": {
+                "setPropertyName": "lastVisit",
+                "setPropertyValue": "now",
+                "storeInSession": null
+            },
+            "type": "setPropertyAction"
+        },
+        {
+            "parameterValues": {
+                "setPropertyName": "nbOfVisits",
+                "script": "user.properties.?nbOfVisits != null ? (user.properties.nbOfVisits + 1) : 1",
+                "storeInSession": false
+            },
+            "type": "setPropertyAction"
         }
     ]
 

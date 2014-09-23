@@ -16,11 +16,11 @@ public interface EventService {
 
     boolean save(Event event);
 
-    public List<String> getEventProperties();
+    List<String> getEventProperties();
 
-    public Set<String> getEventTypeIds();
+    Set<String> getEventTypeIds();
 
-    public PartialList<Event> searchEvents(Condition condition, int offset, int size);
+    PartialList<Event> searchEvents(Condition condition, int offset, int size);
 
-    public boolean hasEventAlreadyBeenRaised(Event event, boolean session);
+    boolean hasEventAlreadyBeenRaised(Event event, boolean session);
 }

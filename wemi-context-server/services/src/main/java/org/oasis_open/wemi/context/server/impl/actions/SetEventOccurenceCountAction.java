@@ -56,9 +56,9 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
         andCondition.getParameterValues().put("subConditions", conditions);
 
-        long count = persistenceService.queryCount(andCondition, Event.class);
+        long count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
 
-        event.getUser().getProperties().put((String) eventCondition.getParameterValues().get("generatedPropertyKey"), count+1);
+        event.getUser().setProperty((String) eventCondition.getParameterValues().get("generatedPropertyKey"), count+1);
 
         return true;
     }

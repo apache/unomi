@@ -32,6 +32,7 @@ import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregation;
 import org.elasticsearch.search.aggregations.bucket.filter.Filter;
+import org.elasticsearch.search.aggregations.bucket.global.Global;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogram;
 import org.elasticsearch.search.aggregations.bucket.missing.MissingBuilder;
 import org.elasticsearch.search.sort.SortOrder;
@@ -149,8 +150,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return query(QueryBuilders.matchAllQuery(), null, clazz);
     }
 
-    public <T extends Item> long getAllItemsCount(Class<T> clazz) {
-        return queryCount(FilterBuilders.matchAllFilter(), clazz);
+    public long getAllItemsCount(String itemType) {
+        return queryCount(FilterBuilders.matchAllFilter(), itemType);
     }
 
     @Override
@@ -377,34 +378,25 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
-    public <T extends Item> long queryCount(final Condition query, final Class<T> clazz) {
-        return queryCount(conditionESQueryBuilderDispatcher.buildFilter(query), clazz);
+    public long queryCount(Condition query, String itemType) {
+        return queryCount(conditionESQueryBuilderDispatcher.buildFilter(query), itemType);
     }
 
-    public <T extends Item> long queryCount(final FilterBuilder filter, final Class<T> clazz) {
+    public long queryCount(final FilterBuilder filter, final String itemType) {
         return new InClassLoaderExecute<Long>() {
 
             @Override
             protected Long execute(Object... args) {
-                try {
-                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
-
-                    SearchResponse response = client.prepareSearch(indexName)
-                            .setTypes(itemType)
-                            .setSearchType(SearchType.COUNT)
-                            .setQuery(QueryBuilders.matchAllQuery())
-                            .addAggregation(AggregationBuilders.filter("filter").filter(filter))
-                            .execute()
-                            .actionGet();
-                    Aggregations searchHits = response.getAggregations();
-                    Filter filter = searchHits.get("filter");
-                    return filter.getDocCount();
-                } catch (IllegalAccessException e) {
-                    logger.error("Error loading itemType=" + clazz.getName() + "query=" + filter, e);
-                } catch (NoSuchFieldException e) {
-                    logger.error("Error loading itemType=" + clazz.getName() + "query=" + filter, e);
-                }
-                return -1L;
+                SearchResponse response = client.prepareSearch(indexName)
+                        .setTypes(itemType)
+                        .setSearchType(SearchType.COUNT)
+                        .setQuery(QueryBuilders.matchAllQuery())
+                        .addAggregation(AggregationBuilders.filter("filter").filter(filter))
+                        .execute()
+                        .actionGet();
+                Aggregations searchHits = response.getAggregations();
+                Filter filter = searchHits.get("filter");
+                return filter.getDocCount();
             }
         }.executeInClassLoader();
     }
@@ -466,77 +458,80 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
-    public <T extends Item> Map<String, Long> aggregateQuery(final Condition filter, final Aggregate aggregate, final Class<T> clazz) {
+    public Map<String, Long> aggregateQuery(final Condition filter, final Aggregate aggregate, final String itemType) {
         return new InClassLoaderExecute<Map<String, Long>>() {
 
             @Override
             protected Map<String, Long> execute(Object... args) {
                 Map<String, Long> results = new LinkedHashMap<String, Long>();
-                try {
-                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
 
-                    SearchRequestBuilder builder = client.prepareSearch(indexName)
-                            .setTypes(itemType)
-                            .setSearchType(SearchType.COUNT)
-                            .setQuery(QueryBuilders.matchAllQuery());
+                SearchRequestBuilder builder = client.prepareSearch(indexName)
+                        .setTypes(itemType)
+                        .setSearchType(SearchType.COUNT)
+                        .setQuery(QueryBuilders.matchAllQuery());
 
-                    List<AggregationBuilder> lastAggregation = new ArrayList<AggregationBuilder>();
+                List<AggregationBuilder> lastAggregation = new ArrayList<AggregationBuilder>();
 
-                    if (aggregate != null) {
-                        AggregationBuilder bucketsAggregation = null;
-                        switch (aggregate.getType()) {
-                            case TERMS:
-                                bucketsAggregation = AggregationBuilders.terms("buckets").field(aggregate.getField());
-                                break;
-                            case DATE:
-                                bucketsAggregation = AggregationBuilders.dateHistogram("buckets").field(aggregate.getField()).interval(new DateHistogram.Interval("1M"));
-                                break;
-                        }
-                        if (bucketsAggregation != null) {
-                            final MissingBuilder missingBucketsAggregation = AggregationBuilders.missing("missing").field(aggregate.getField());
-                            for (AggregationBuilder aggregationBuilder : lastAggregation) {
-                                bucketsAggregation.subAggregation(aggregationBuilder);
-                                missingBucketsAggregation.subAggregation(aggregationBuilder);
-                            }
-                            lastAggregation = Arrays.asList(bucketsAggregation, missingBucketsAggregation);
-                        }
+                if (aggregate != null) {
+                    AggregationBuilder bucketsAggregation = null;
+                    switch (aggregate.getType()) {
+                        case TERMS:
+                            bucketsAggregation = AggregationBuilders.terms("buckets").field(aggregate.getField());
+                            break;
+                        case DATE:
+                            bucketsAggregation = AggregationBuilders.dateHistogram("buckets").field(aggregate.getField()).interval(new DateHistogram.Interval("1M"));
+                            break;
                     }
-
-                    if (filter != null) {
-                        AggregationBuilder filterAggregation = AggregationBuilders.filter("filter").filter(conditionESQueryBuilderDispatcher.buildFilter(filter));
+                    if (bucketsAggregation != null) {
+                        final MissingBuilder missingBucketsAggregation = AggregationBuilders.missing("missing").field(aggregate.getField());
                         for (AggregationBuilder aggregationBuilder : lastAggregation) {
-                            filterAggregation.subAggregation(aggregationBuilder);
+                            bucketsAggregation.subAggregation(aggregationBuilder);
+                            missingBucketsAggregation.subAggregation(aggregationBuilder);
                         }
-                        lastAggregation = Arrays.asList(filterAggregation);
+                        lastAggregation = Arrays.asList(bucketsAggregation, missingBucketsAggregation);
                     }
-
-                    for (AggregationBuilder aggregationBuilder : lastAggregation) {
-                        builder.addAggregation(aggregationBuilder);
-                    }
-
-                    SearchResponse response = builder.execute().actionGet();
-
-                    Aggregations aggregations = response.getAggregations();
-                    if (aggregations.get("filter") != null) {
-                        Filter filterAgg = aggregations.get("filter");
-                        results.put("_filtered", filterAgg.getDocCount());
-                        aggregations = filterAgg.getAggregations();
-                    }
-                    if (aggregations.get("buckets") != null) {
-                        MultiBucketsAggregation terms = aggregations.get("buckets");
-                        for (MultiBucketsAggregation.Bucket bucket : terms.getBuckets()) {
-                            results.put(bucket.getKey(), bucket.getDocCount());
-                        }
-                        SingleBucketAggregation missing = aggregations.get("missing");
-                        if (missing.getDocCount() > 0) {
-                            results.put("_missing", missing.getDocCount());
-                        }
-                    }
-                } catch (IllegalAccessException e) {
-                    logger.error("Error loading itemType=" + clazz.getName(), e);
-                } catch (NoSuchFieldException e) {
-                    logger.error("Error loading itemType=" + clazz.getName(), e);
                 }
+
+                if (filter != null) {
+                    AggregationBuilder filterAggregation = AggregationBuilders.filter("filter").filter(conditionESQueryBuilderDispatcher.buildFilter(filter));
+                    for (AggregationBuilder aggregationBuilder : lastAggregation) {
+                        filterAggregation.subAggregation(aggregationBuilder);
+                    }
+                    lastAggregation = Arrays.asList(filterAggregation);
+                }
+
+
+                AggregationBuilder globalAggregation = AggregationBuilders.global("global");
+                for (AggregationBuilder aggregationBuilder : lastAggregation) {
+                    globalAggregation.subAggregation(aggregationBuilder);
+                }
+
+                builder.addAggregation(globalAggregation);
+
+                SearchResponse response = builder.execute().actionGet();
+
+                Aggregations aggregations = response.getAggregations();
+
+                Global globalAgg = aggregations.get("global");
+                results.put("_all", globalAgg.getDocCount());
+                aggregations = globalAgg.getAggregations();
+
+                if (aggregations.get("filter") != null) {
+                    Filter filterAgg = aggregations.get("filter");
+                    results.put("_filtered", filterAgg.getDocCount());
+                    aggregations = filterAgg.getAggregations();
+                }
+                if (aggregations.get("buckets") != null) {
+                    MultiBucketsAggregation terms = aggregations.get("buckets");
+                    for (MultiBucketsAggregation.Bucket bucket : terms.getBuckets()) {
+                        results.put(bucket.getKey(), bucket.getDocCount());
+                    }
+                    SingleBucketAggregation missing = aggregations.get("missing");
+                    if (missing.getDocCount() > 0) {
+                        results.put("_missing", missing.getDocCount());
+                    }
+                }
+
                 return results;
             }
         }.executeInClassLoader();

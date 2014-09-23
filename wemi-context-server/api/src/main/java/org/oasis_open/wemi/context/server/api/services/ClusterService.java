@@ -9,6 +9,6 @@ import java.util.List;
  */
 public interface ClusterService {
 
-    public List<ClusterNode> getClusterNodes();
+    List<ClusterNode> getClusterNodes();
 
 }

@@ -106,7 +106,7 @@ public class ContextServlet extends HttpServlet {
         Session session = null;
 
         if (user instanceof Persona) {
-            session = ((Persona) user).getSession();
+            session = userService.findUserSessions(user.getId()).get(0);
         } else {
             if (sessionId != null) {
                 session = userService.loadSession(sessionId);
@@ -122,13 +122,13 @@ public class ContextServlet extends HttpServlet {
                 // user not stored in session
                 if (cookieProfileId == null) {
                     // no visitorId cookie was found, we generate a new one and create the user in the user service
-                    user = createNewUser(null, response);
+                    user = createNewUser(null, response, timestamp);
                     userCreated = true;
                 } else {
                     user = userService.load(cookieProfileId);
                     if (user == null) {
                         // this can happen if we have an old cookie but have reset the server.
-                        user = createNewUser(cookieProfileId, response);
+                        user = createNewUser(cookieProfileId, response, timestamp);
                         userCreated = true;
                     }
                 }
@@ -146,7 +146,7 @@ public class ContextServlet extends HttpServlet {
             }
             // associate user with session
             if (sessionId != null && session == null) {
-                session = new Session(sessionId, user.getItemId(), timestamp);
+                session = new Session(sessionId, user, timestamp);
                 userService.saveSession(session);
                 Event event = new Event("sessionCreated", session, user, timestamp);
 
@@ -214,13 +214,14 @@ public class ContextServlet extends HttpServlet {
 
     }
 
-    private User createNewUser(String existingVisitorId, ServletResponse response) {
+    private User createNewUser(String existingVisitorId, ServletResponse response, Date timestamp) {
         User user;
         String visitorId = existingVisitorId;
         if (visitorId == null) {
             visitorId = UUID.randomUUID().toString();
         }
         user = new User(visitorId);
+        user.setProperty("firstVisit", timestamp);
         userService.save(user);
         HttpUtils.sendCookie(user, response);
         return user;

@@ -174,19 +174,19 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
         Map<String, Long> match;
 
         if ("sessionCreationDate".equals(split)) {
-            all = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.DATE, "sessionCreationDate"), Session.class);
+            all = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.DATE, "sessionCreationDate"), Session.ITEM_TYPE);
             condition.getParameterValues().put("goalReached", true);
-            match = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.DATE, "sessionCreationDate"), Session.class);
+            match = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.DATE, "sessionCreationDate"), Session.ITEM_TYPE);
         } else if (split != null) {
-            all = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.TERMS, split), Session.class);
+            all = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.TERMS, split), Session.ITEM_TYPE);
             condition.getParameterValues().put("goalReached", true);
-            match = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.TERMS, split), Session.class);
+            match = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.TERMS, split), Session.ITEM_TYPE);
         } else {
             all = new HashMap<String, Long>();
-            all.put("_filtered", persistenceService.queryCount(condition, Session.class));
+            all.put("_filtered", persistenceService.queryCount(condition, Session.ITEM_TYPE));
             condition.getParameterValues().put("goalReached", true);
             match = new HashMap<String, Long>();
-            match.put("_filtered", persistenceService.queryCount(condition, Session.class));
+            match.put("_filtered", persistenceService.queryCount(condition, Session.ITEM_TYPE));
         }
 
         GoalReport report = new GoalReport();

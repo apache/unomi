@@ -142,7 +142,7 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
         if (getSegmentDefinition(segmentID) == null) {
             return 0;
         }
-        return persistenceService.queryCount(getSegmentDefinition(segmentID).getCondition(), User.class);
+        return persistenceService.queryCount(getSegmentDefinition(segmentID).getCondition(), User.ITEM_TYPE);
     }
 
     public Boolean isUserInSegment(User user, String segmentId) {

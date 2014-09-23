@@ -1,15 +1,17 @@
 {
-    "id": "googleBot",
-    "properties": {
-        "name": "Google Bot",
-        "description": "Represents a Google bot",
-        "firstName": "Google",
-        "lastName": "Bot",
-        "persona": true
+    "persona": {
+        "id": "googleBot",
+        "properties": {
+            "name": "Google Bot",
+            "description": "Represents a Google bot",
+            "firstName": "Google",
+            "lastName": "Bot",
+            "persona": true
+        },
+        "segments": [
+            "bots"
+        ]
     },
-    "segments": [
-        "bots"
-    ],
     "sessions": [ {
         "id": "6bb362d8-d094-44b4-ba2e-012163286825",
         "userId": "googleBot",

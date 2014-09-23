@@ -162,6 +162,11 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
             for (Action action : rule.getActions()) {
                 changed |= actionExecutorDispatcher.execute(action, event);
             }
+
+            Event ruleFired = new Event("ruleFired", event.getSession(), event.getUser(), event.getTimeStamp());
+            ruleFired.getAttributes().putAll(event.getAttributes());
+            ruleFired.setProperty("ruleName", rule.getItemId());
+            eventService.save(ruleFired);
         }
         return changed;
     }

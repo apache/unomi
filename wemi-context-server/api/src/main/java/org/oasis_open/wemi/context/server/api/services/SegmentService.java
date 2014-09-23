@@ -15,12 +15,19 @@ public interface SegmentService {
     PartialList<User> getMatchingIndividuals(String segmentID, int offset, int size, String sortBy);
 
     long getMatchingIndividualsCount(String segmentID);
-    Boolean isUserInSegment (User user, String segmentDescription);
+
+    Boolean isUserInSegment(User user, String segmentDescription);
+
     Set<String> getSegmentsForUser(User user);
+
     Set<Metadata> getSegmentMetadatas();
-    SegmentDefinition getSegmentDefinition (String segmentDescription);
-    void setSegmentDefinition (String segmentId, SegmentDefinition segmentDefinition);
+
+    SegmentDefinition getSegmentDefinition(String segmentDescription);
+
+    void setSegmentDefinition(String segmentId, SegmentDefinition segmentDefinition);
+
     void createSegmentDefinition(String segmentId, String name, String description);
+
     void removeSegmentDefinition(String segmentDescription);
 
 }

@@ -8,9 +8,23 @@
     "raiseEventOnlyOnceForUser":true,
 
     "condition" : {
-        "type": "pageViewEventCondition",
         "parameterValues": {
-        }
+            "subConditions":[
+                {
+                    "type": "pageViewEventCondition",
+                    "parameterValues": {
+                    }
+                },
+                {
+                    "type": "eventPropertyCondition",
+                    "parameterValues":{
+                        "propertyName":"properties.page.interests",
+                        "comparisonOperator":"exists"
+                    }
+                }
+            ]
+        },
+        "type": "andCondition"
     },
 
     "actions" : [

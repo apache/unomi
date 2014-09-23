@@ -1,13 +1,15 @@
 {
-    "id": "nonUsVisitor",
-    "properties": {
-        "name": "Non U.S. Visitor",
-        "description": "Represents a visitor browsing from somewhere outside the US",
-        "firstName": "Non U.S.",
-        "lastName": "Visitor",
-        "persona": true
+    "persona": {
+        "id": "nonUsVisitor",
+        "properties": {
+            "name": "Non U.S. Visitor",
+            "description": "Represents a visitor browsing from somewhere outside the US",
+            "firstName": "Non U.S.",
+            "lastName": "Visitor",
+            "persona": true
+        },
+        "segments": []
     },
-    "segments": [],
     "sessions": [ {
         "id": "51c8e9a8-3db6-41f8-9569-057c339e3017",
         "userId": "nonUsVisitor",

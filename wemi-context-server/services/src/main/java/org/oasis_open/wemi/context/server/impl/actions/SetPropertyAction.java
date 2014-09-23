@@ -36,17 +36,20 @@ public class SetPropertyAction implements ActionExecutor {
             ctx.put("user", event.getUser());
             propertyValue = MVEL.eval((String)action.getParameterValues().get("script"),ctx);
         }
-
+        boolean modified = false;
+        String propertyName = (String) action.getParameterValues().get("setPropertyName");
         if (Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"))) {
-            event.getSession().setProperty(
-                    (String) action.getParameterValues().get("setPropertyName"),
-                    propertyValue);
+            if (propertyValue != null && !propertyValue.equals(event.getSession().getProperty(propertyName))) {
+                event.getSession().setProperty(propertyName, propertyValue);
+                modified = true;
+            }
         } else {
-            event.getUser().setProperty(
-                    (String) action.getParameterValues().get("setPropertyName"),
-                    propertyValue);
+            if (propertyValue != null && !propertyValue.equals(event.getUser().getProperty(propertyName))) {
+                event.getUser().setProperty(propertyName, propertyValue);
+                modified = true;
+            }
         }
-        return true;
+        return modified;
     }
 
 }
