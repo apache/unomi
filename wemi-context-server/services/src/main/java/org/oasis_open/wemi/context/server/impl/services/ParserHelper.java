@@ -14,53 +14,85 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
+import java.util.List;
 
 public class ParserHelper {
 
     private static final Logger logger = LoggerFactory.getLogger(ParserHelper.class);
 
-    public static boolean resolveConditionType(DefinitionsService definitionsService, Condition rootCondition) {
-        boolean result = false;
-        if (rootCondition.getConditionType() == null) {
-            ConditionType conditionType = definitionsService.getConditionType(rootCondition.getConditionTypeId());
-            if (conditionType != null) {
-                rootCondition.setConditionType(conditionType);
-                result = true;
+    public static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition) {
+        final List<String> result = new ArrayList<String>();
+        visitConditions(rootCondition, new ConditionVisitor() {
+            @Override
+            public void visit(Condition condition) {
+                if (condition.getConditionType() == null) {
+                    ConditionType conditionType = definitionsService.getConditionType(condition.getConditionTypeId());
+                    if (conditionType != null) {
+                        condition.setConditionType(conditionType);
+                    } else {
+                        result.add(condition.getConditionTypeId());
+                    }
+                }
             }
+        });
+        if (!result.isEmpty()) {
+            logger.warn("Couldn't resolve condition types : " + result);
         }
+        return result.isEmpty();
+    }
+
+    public static List<String> getConditionTypeIds(Condition rootCondition) {
+        final List<String> result = new ArrayList<String>();
+        visitConditions(rootCondition, new ConditionVisitor() {
+            @Override
+            public void visit(Condition condition) {
+                result.add(condition.getConditionTypeId());
+            }
+        });
+        return result;
+    }
+
+    private static void visitConditions(Condition rootCondition, ConditionVisitor visitor) {
+        visitor.visit(rootCondition);
         // recursive call for sub-conditions as parameters
         for (Object parameterValue : rootCondition.getParameterValues().values()) {
             if (parameterValue instanceof Condition) {
                 Condition parameterValueCondition = (Condition) parameterValue;
-                result &= resolveConditionType(definitionsService, parameterValueCondition);
-                if (!result) {
-                    logger.warn("Couldn't resolve condition type " + parameterValueCondition.getConditionTypeId() + " for parameter value " + parameterValueCondition.getParameterValues() + " from parent condition " + rootCondition.getConditionTypeId());
-                }
+                visitConditions(parameterValueCondition, visitor);
             } else if (parameterValue instanceof Collection) {
                 Collection<Object> valueList = (Collection<Object>) parameterValue;
                 for (Object value : valueList) {
                     if (value instanceof Condition) {
                         Condition valueCondition = (Condition) value;
-                        result &= resolveConditionType(definitionsService, valueCondition);
-                        if (!result) {
-                            logger.warn("Couldn't resolve condition type " + valueCondition.getConditionTypeId() + " for parameter value " + valueCondition.getParameterValues() + " from parent condition " + rootCondition.getConditionTypeId());
-                        }
+                        visitConditions(valueCondition, visitor);
                     }
                 }
             }
         }
+    }
+
+    public static boolean resolveActionTypes(DefinitionsService definitionsService, List<Action> actions) {
+        boolean result = true;
+        for (Action action : actions) {
+            result &= ParserHelper.resolveActionType(definitionsService, action);
+        }
         return result;
     }
 
-    public static void resolveActionType(DefinitionsService definitionsService, Action action) {
+    public static boolean resolveActionType(DefinitionsService definitionsService, Action action) {
         if (action.getActionType() == null) {
             ActionType actionType = definitionsService.getActionType(action.getActionTypeId());
             if (actionType != null) {
                 action.setActionType(actionType);
+            } else {
+                logger.warn("Couldn't resolve action types : " + action.getActionTypeId());
+                return false;
             }
         }
+        return true;
     }
 
     public static void resolveValueType(DefinitionsService definitionsService, PropertyType propertyType) {
@@ -96,5 +128,9 @@ public class ParserHelper {
                 }
             }
         }
+    }
+
+    interface ConditionVisitor {
+        public void visit(Condition condition);
     }
 }

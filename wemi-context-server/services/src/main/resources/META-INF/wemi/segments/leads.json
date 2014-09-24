@@ -2,7 +2,8 @@
     "metadata": {
         "id": "leads",
         "name": "Leads",
-        "description": "This segment includes all leads, meaning all profiles that are assigned to an account manager"
+        "description": "This segment includes all leads, meaning all profiles that are assigned to an account manager",
+        "readOnly":true
     },
     "condition": {
         "parameterValues": {

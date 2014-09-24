@@ -1,5 +1,7 @@
-package org.oasis_open.wemi.context.server.api;
+package org.oasis_open.wemi.context.server.api.segments;
 
+import org.oasis_open.wemi.context.server.api.Item;
+import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
 import javax.xml.bind.annotation.XmlElement;
@@ -9,7 +11,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  * Created by loom on 24.04.14.
  */
 @XmlRootElement
-public class SegmentDefinition extends Item {
+public class Segment extends Item {
 
     public static final String ITEM_TYPE = "segment";
 
@@ -17,10 +19,10 @@ public class SegmentDefinition extends Item {
 
     private Condition condition;
 
-    public SegmentDefinition() {
+    public Segment() {
     }
 
-    public SegmentDefinition(Metadata metadata) {
+    public Segment(Metadata metadata) {
         super(metadata.getId());
         this.metadata = metadata;
     }

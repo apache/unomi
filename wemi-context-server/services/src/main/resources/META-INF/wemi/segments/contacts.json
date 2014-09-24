@@ -2,7 +2,8 @@
     "metadata": {
         "id": "contacts",
         "name": "Contacts",
-        "description": "This segment includes all contacts, meaning all profiles that contain a contact identifier such as an email, a phone number or a Facebook ID"
+        "description": "This segment includes all contacts, meaning all profiles that contain a contact identifier such as an email, a phone number or a Facebook ID",
+        "readOnly":true
     },
     "condition": {
         "parameterValues": {

@@ -8,6 +8,10 @@ public class Metadata implements Comparable<Metadata> {
     private String id;
     private String name;
     private String description;
+    private boolean enabled = true;
+    private boolean missingPlugins = false;
+    private boolean hidden = false;
+    private boolean readOnly = false;
 
     public Metadata() {
     }
@@ -40,6 +44,38 @@ public class Metadata implements Comparable<Metadata> {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public boolean isMissingPlugins() {
+        return missingPlugins;
+    }
+
+    public void setMissingPlugins(boolean missingPlugins) {
+        this.missingPlugins = missingPlugins;
+    }
+
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
+    }
+
+    public boolean isReadOnly() {
+        return readOnly;
+    }
+
+    public void setReadOnly(boolean readOnly) {
+        this.readOnly = readOnly;
     }
 
     public int compareTo(Metadata o) {

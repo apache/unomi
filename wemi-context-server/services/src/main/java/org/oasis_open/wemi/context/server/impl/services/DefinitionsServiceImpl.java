@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.apache.cxf.helpers.IOUtils;
+import org.oasis_open.wemi.context.server.api.PluginType;
 import org.oasis_open.wemi.context.server.api.Tag;
 import org.oasis_open.wemi.context.server.api.ValueType;
 import org.oasis_open.wemi.context.server.api.actions.ActionType;
@@ -10,7 +11,7 @@ import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
-import org.osgi.framework.BundleListener;
+import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,18 +19,20 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 
-public class DefinitionsServiceImpl implements DefinitionsService, BundleListener {
+public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
 
     Map<String, Tag> tags = new HashMap<String, Tag>();
     Set<Tag> rootTags = new LinkedHashSet<Tag>();
     Map<String, ConditionType> conditionTypeById = new HashMap<String, ConditionType>();
-    Map<String, ActionType> actionsTypeById = new HashMap<String, ActionType>();
+    Map<String, ActionType> actionTypeById = new HashMap<String, ActionType>();
     Map<String, ValueType> valueTypeById = new HashMap<String, ValueType>();
     Map<Tag, Set<ConditionType>> conditionTypeByTag = new HashMap<Tag, Set<ConditionType>>();
     Map<Tag, Set<ActionType>> actionTypeByTag = new HashMap<Tag, Set<ActionType>>();
     Map<Tag, Set<ValueType>> valueTypeByTag = new HashMap<Tag, Set<ValueType>>();
+    Map<Long, List<PluginType>> pluginTypes = new HashMap<Long, List<PluginType>>();
+
     private BundleContext bundleContext;
     private PersistenceService persistenceService;
 
@@ -57,6 +60,9 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         if (bundleContext == null) {
             return;
         }
+
+        pluginTypes.put(bundleContext.getBundle().getBundleId(), new ArrayList<PluginType>());
+
         loadPredefinedMappings(bundleContext);
 
         loadPredefinedTags(bundleContext);
@@ -65,6 +71,36 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         loadPredefinedActionTypes(bundleContext);
         loadPredefinedValueTypes(bundleContext);
 
+    }
+
+    private void processBundleStop(BundleContext bundleContext) {
+        if (bundleContext == null) {
+            return;
+        }
+        List<PluginType> types = pluginTypes.get(bundleContext.getBundle().getBundleId());
+        if (types != null) {
+            for (PluginType type : types) {
+                if (type instanceof ActionType) {
+                    ActionType actionType = (ActionType) type;
+                    actionTypeById.remove(actionType.getId());
+                    for (Tag tag : actionType.getTags()) {
+                        actionTypeByTag.get(tag).remove(actionType);
+                    }
+                } else if (type instanceof ConditionType) {
+                    ConditionType conditionType = (ConditionType) type;
+                    conditionTypeById.remove(conditionType.getId());
+                    for (Tag tag : conditionType.getTags()) {
+                        conditionTypeByTag.get(tag).remove(conditionType);
+                    }
+                } else if (type instanceof ValueType) {
+                    ValueType valueType = (ValueType) type;
+                    valueTypeById.remove(valueType.getId());
+                    for (Tag tag : valueType.getTags()) {
+                        valueTypeByTag.get(tag).remove(valueType);
+                    }
+                }
+            }
+        }
     }
 
 
@@ -126,6 +162,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         if (predefinedConditionEntries == null) {
             return;
         }
+        ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
         while (predefinedConditionEntries.hasMoreElements()) {
             URL predefinedConditionURL = predefinedConditionEntries.nextElement();
             logger.debug("Found predefined conditions at " + predefinedConditionURL + ", loading... ");
@@ -134,6 +171,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
                 ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(predefinedConditionURL, ConditionType.class);
                 ParserHelper.populatePluginType(conditionType, bundleContext.getBundle(), "conditions", conditionType.getId());
                 conditionTypeById.put(conditionType.getId(), conditionType);
+                pluginTypeArrayList.add(conditionType);
                 for (String tagId : conditionType.getTagIDs()) {
                     Tag tag = tags.get(tagId);
                     if (tag != null) {
@@ -160,6 +198,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         if (predefinedActionsEntries == null) {
             return;
         }
+        ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
         while (predefinedActionsEntries.hasMoreElements()) {
             URL predefinedActionURL = predefinedActionsEntries.nextElement();
             logger.debug("Found predefined action at " + predefinedActionURL + ", loading... ");
@@ -167,7 +206,8 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
             try {
                 ActionType actionType = CustomObjectMapper.getObjectMapper().readValue(predefinedActionURL, ActionType.class);
                 ParserHelper.populatePluginType(actionType, bundleContext.getBundle(), "actions", actionType.getId());
-                actionsTypeById.put(actionType.getId(), actionType);
+                actionTypeById.put(actionType.getId(), actionType);
+                pluginTypeArrayList.add(actionType);
                 for (String tagId : actionType.getTagIds()) {
                     Tag tag = tags.get(tagId);
                     if (tag != null) {
@@ -195,6 +235,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         if (predefinedPropertiesEntries == null) {
             return;
         }
+        ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
         while (predefinedPropertiesEntries.hasMoreElements()) {
             URL predefinedPropertyURL = predefinedPropertiesEntries.nextElement();
             logger.debug("Found predefined property type at " + predefinedPropertyURL + ", loading... ");
@@ -203,6 +244,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
                 ValueType valueType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyURL, ValueType.class);
                 ParserHelper.populatePluginType(valueType, bundleContext.getBundle(), "values", valueType.getId());
                 valueTypeById.put(valueType.getId(), valueType);
+                pluginTypeArrayList.add(valueType);
                 for (String tagId : valueType.getTagIds()) {
                     Tag tag = tags.get(tagId);
                     if (tag != null) {
@@ -245,6 +287,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
         return conditionTypeById.values();
     }
 
+    public Map<Long, List<PluginType>> getTypesByPlugin() {
+        return pluginTypes;
+    }
+
     public Set<ConditionType> getConditionTypesByTag(Tag tag, boolean recursive) {
         Set<ConditionType> conditionTypes = new LinkedHashSet<ConditionType>();
         Set<ConditionType> directConditionTypes = conditionTypeByTag.get(tag);
@@ -266,7 +312,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
     }
 
     public Collection<ActionType> getAllActionTypes() {
-        return actionsTypeById.values();
+        return actionTypeById.values();
     }
 
     public Set<ActionType> getActionTypeByTag(Tag tag, boolean recursive) {
@@ -286,7 +332,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
     }
 
     public ActionType getActionType(String id) {
-        return actionsTypeById.get(id);
+        return actionTypeById.get(id);
     }
 
     public Collection<ValueType> getAllValueTypes() {
@@ -316,12 +362,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, BundleListene
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {
             case BundleEvent.STARTED:
-                if (event.getBundle().getBundleContext() != null) {
-                    processBundleStartup(event.getBundle().getBundleContext());
-                }
+                processBundleStartup(event.getBundle().getBundleContext());
                 break;
             case BundleEvent.STOPPING:
-                // @todo remove bundle-defined resources (is it possible ?)
+                processBundleStop(event.getBundle().getBundleContext());
                 break;
         }
     }

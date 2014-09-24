@@ -2,7 +2,7 @@ package org.oasis_open.wemi.context.server.api.services;
 
 import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.PartialList;
-import org.oasis_open.wemi.context.server.api.SegmentDefinition;
+import org.oasis_open.wemi.context.server.api.segments.Segment;
 import org.oasis_open.wemi.context.server.api.User;
 
 import java.util.Set;
@@ -22,9 +22,9 @@ public interface SegmentService {
 
     Set<Metadata> getSegmentMetadatas();
 
-    SegmentDefinition getSegmentDefinition(String segmentDescription);
+    Segment getSegmentDefinition(String segmentDescription);
 
-    void setSegmentDefinition(String segmentId, SegmentDefinition segmentDefinition);
+    void setSegmentDefinition(String segmentId, Segment segment);
 
     void createSegmentDefinition(String segmentId, String name, String description);
 

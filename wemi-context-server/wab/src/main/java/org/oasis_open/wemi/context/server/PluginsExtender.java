@@ -3,10 +3,7 @@ package org.oasis_open.wemi.context.server;
 import org.ops4j.pax.cdi.api.OsgiService;
 import org.ops4j.pax.cdi.api.OsgiServiceProvider;
 import org.ops4j.pax.web.service.WebContainer;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.BundleListener;
+import org.osgi.framework.*;
 import org.osgi.service.http.HttpContext;
 import org.osgi.service.http.NamespaceException;
 
@@ -31,7 +28,7 @@ import java.util.Map;
 @ApplicationScoped
 @Default
 @OsgiServiceProvider // we set this annotation just to make sure that the bean will be eagerly instantiated, which is not the cleanest way of doing this
-public class PluginsExtender implements BundleListener {
+public class PluginsExtender implements SynchronousBundleListener {
 
     @Inject
     private BundleContext bundleContext;
@@ -165,10 +162,15 @@ public class PluginsExtender implements BundleListener {
 
     private void unregisterHttpResources(BundleContext bundleContext) {
         List<String> aliasList = registeredAliases.remove(bundleContext);
-        for (String alias : aliasList) {
-            webContainer.unregister(alias);
+        if (aliasList != null) {
+            for (String alias : aliasList) {
+                webContainer.unregister(alias);
+            }
         }
-        webContainer.unregisterFilter(registeredFilters.remove(bundleContext));
+        Filter filter = registeredFilters.remove(bundleContext);
+        if (filter != null) {
+            webContainer.unregisterFilter(filter);
+        }
     }
 
     public class CustomHttpContext implements HttpContext {

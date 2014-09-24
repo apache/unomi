@@ -6,10 +6,7 @@ import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.UserService;
 import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.BundleListener;
+import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,7 +17,7 @@ import java.util.*;
 /**
  * Created by loom on 24.04.14.
  */
-public class UserServiceImpl implements UserService, BundleListener {
+public class UserServiceImpl implements UserService, SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
 
@@ -69,6 +66,18 @@ public class UserServiceImpl implements UserService, BundleListener {
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
+    }
+
+    private void processBundleStartup(BundleContext bundleContext) {
+        if (bundleContext == null) {
+            return;
+        }
+        loadPredefinedPropertyTypeGroups(bundleContext);
+        loadPredefinedPropertyTypes(bundleContext);
+        loadPredefinedPersonas(bundleContext);
+    }
+
+    private void processBundleStop(BundleContext bundleContext) {
     }
 
     public PartialList<User> getAllUsers() {
@@ -199,20 +208,6 @@ public class UserServiceImpl implements UserService, BundleListener {
         persistenceService.save(session);
     }
 
-    public void bundleChanged(BundleEvent event) {
-        switch (event.getType()) {
-            case BundleEvent.STARTED:
-                if (event.getBundle().getBundleContext() != null) {
-                    loadPredefinedPropertyTypeGroups(event.getBundle().getBundleContext());
-                    loadPredefinedPropertyTypes(event.getBundle().getBundleContext());
-                    loadPredefinedPersonas(event.getBundle().getBundleContext());
-                }
-                break;
-            case BundleEvent.STOPPING:
-                // @todo remove bundle-defined resources (is it possible ?)
-                break;
-        }
-    }
 
     private void loadPredefinedPropertyTypeGroups(BundleContext bundleContext) {
         if (bundleContext == null) {
@@ -306,6 +301,17 @@ public class UserServiceImpl implements UserService, BundleListener {
                 logger.error("Error while loading persona " + predefinedPersonaURL, e);
             }
 
+        }
+    }
+
+    public void bundleChanged(BundleEvent event) {
+        switch (event.getType()) {
+            case BundleEvent.STARTED:
+                processBundleStartup(event.getBundle().getBundleContext());
+                break;
+            case BundleEvent.STOPPING:
+                processBundleStop(event.getBundle().getBundleContext());
+                break;
         }
     }
 

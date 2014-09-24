@@ -3,7 +3,9 @@ package org.oasis_open.wemi.context.server.impl.services;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.PartialList;
-import org.oasis_open.wemi.context.server.api.SegmentDefinition;
+import org.oasis_open.wemi.context.server.api.PluginType;
+import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
+import org.oasis_open.wemi.context.server.api.segments.Segment;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
@@ -13,10 +15,7 @@ import org.oasis_open.wemi.context.server.api.services.RulesService;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.BundleListener;
+import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +28,7 @@ import java.util.*;
 /**
  * Created by loom on 26.04.14.
  */
-public class SegmentServiceImpl implements SegmentService, BundleListener {
+public class SegmentServiceImpl implements SegmentService, SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
 
@@ -108,10 +107,60 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
         bundleContext.removeBundleListener(this);
     }
 
-    private void loadPredefinedSegments(BundleContext bundleContext) {
+
+    private void processBundleStartup(BundleContext bundleContext) {
         if (bundleContext == null) {
             return;
         }
+        loadPredefinedSegments(bundleContext);
+
+        List<PluginType> types = definitionsService.getTypesByPlugin().get(bundleContext.getBundle().getBundleId());
+        List<String> addedConditions = new ArrayList<String>();
+        if (types != null) {
+            for (PluginType type : types) {
+                if (type instanceof ConditionType) {
+                    addedConditions.add(((ConditionType) type).getId());
+                }
+            }
+        }
+        if (!addedConditions.isEmpty()) {
+            for (Segment segment : persistenceService.query("missingPlugins", "true", null, Segment.class).getList()) {
+                boolean succeed = ParserHelper.resolveConditionType(definitionsService, segment.getCondition());
+                if (succeed) {
+                    logger.info("Enable segment " + segment.getItemId());
+                    segment.getMetadata().setMissingPlugins(false);
+                    setSegmentDefinition(segment.getItemId(), segment);
+                }
+            }
+        }
+    }
+
+    private void processBundleStop(BundleContext bundleContext) {
+        if (bundleContext == null) {
+            return;
+        }
+        List<PluginType> types = definitionsService.getTypesByPlugin().get(bundleContext.getBundle().getBundleId());
+        List<String> removedConditions = new ArrayList<String>();
+        if (types != null) {
+            for (PluginType type : types) {
+                if (type instanceof ConditionType) {
+                    removedConditions.add(((ConditionType) type).getId());
+                }
+            }
+        }
+        if (!removedConditions.isEmpty()) {
+            for (Segment segment : persistenceService.getAllItems(Segment.class).getList()) {
+                List<String> conditions = ParserHelper.getConditionTypeIds(segment.getCondition());
+                if (!Collections.disjoint(conditions, removedConditions)) {
+                    logger.info("Disable segment " + segment.getItemId());
+                    segment.getMetadata().setMissingPlugins(true);
+                    setSegmentDefinition(segment.getItemId(), segment);
+                }
+            }
+        }
+    }
+
+    private void loadPredefinedSegments(BundleContext bundleContext) {
         Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/wemi/segments", "*.json", true);
         if (predefinedSegmentEntries == null) {
             return;
@@ -121,7 +170,7 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
             logger.debug("Found predefined segment at " + predefinedSegmentURL + ", loading... ");
 
             try {
-                SegmentDefinition segment = CustomObjectMapper.getObjectMapper().readValue(predefinedSegmentURL, SegmentDefinition.class);
+                Segment segment = CustomObjectMapper.getObjectMapper().readValue(predefinedSegmentURL, Segment.class);
                 if (getSegmentDefinition(segment.getMetadata().getId()) == null) {
                     setSegmentDefinition(segment.getMetadata().getId(), segment);
                 }
@@ -157,42 +206,46 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
 
     public Set<Metadata> getSegmentMetadatas() {
         Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (SegmentDefinition definition : persistenceService.getAllItems(SegmentDefinition.class).getList()) {
+        for (Segment definition : persistenceService.getAllItems(Segment.class).getList()) {
             descriptions.add(definition.getMetadata());
         }
         return descriptions;
     }
 
-    public SegmentDefinition getSegmentDefinition(String segmentId) {
-        SegmentDefinition definition = persistenceService.load(segmentId, SegmentDefinition.class);
+    public Segment getSegmentDefinition(String segmentId) {
+        Segment definition = persistenceService.load(segmentId, Segment.class);
         if (definition != null) {
             ParserHelper.resolveConditionType(definitionsService, definition.getCondition());
         }
         return definition;
     }
 
-    public void setSegmentDefinition(String segmentId, SegmentDefinition segmentDefinition) {
-        ParserHelper.resolveConditionType(definitionsService, segmentDefinition.getCondition());
-        createAutoGeneratedRules(segmentDefinition.getCondition());
-        persistenceService.saveQuery(segmentId, segmentDefinition.getCondition());
+    public void setSegmentDefinition(String segmentId, Segment segment) {
+        ParserHelper.resolveConditionType(definitionsService, segment.getCondition());
+        if (segment.getMetadata().isEnabled() && !segment.getMetadata().isMissingPlugins()) {
+            createAutoGeneratedRules(segment.getCondition());
+            persistenceService.saveQuery(segmentId, segment.getCondition());
+        } else {
+            persistenceService.removeQuery(segmentId);
+        }
         // make sure we update the name and description metadata that might not match, so first we remove the entry from the map
-        persistenceService.save(segmentDefinition);
+        persistenceService.save(segment);
     }
 
     public void createSegmentDefinition(String segmentId, String name, String description) {
         Metadata metadata = new Metadata(segmentId, name, description);
-        SegmentDefinition segmentDefinition = new SegmentDefinition(metadata);
+        Segment segment = new Segment(metadata);
         Condition rootCondition = new Condition();
         rootCondition.setConditionType(definitionsService.getConditionType("andCondition"));
         rootCondition.getParameterValues().put("subConditions", new ArrayList<Condition>());
-        segmentDefinition.setCondition(rootCondition);
+        segment.setCondition(rootCondition);
 
-        setSegmentDefinition(segmentId, segmentDefinition);
+        setSegmentDefinition(segmentId, segment);
     }
 
     public void removeSegmentDefinition(String segmentId) {
         persistenceService.removeQuery(segmentId);
-        persistenceService.remove(segmentId, SegmentDefinition.class);
+        persistenceService.remove(segmentId, Segment.class);
     }
 
     public void createAutoGeneratedRules(Condition condition) {
@@ -210,13 +263,14 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
                 key = "eventTriggered" + getMD5(key);
                 condition.getParameterValues().put("generatedPropertyKey", key);
                 if (rulesService.getRule(key) == null) {
-                    Rule r = new Rule(new Metadata(key, "Auto generated rule", ""));
-                    r.setCondition(condition);
+                    Rule rule = new Rule(new Metadata(key, "Auto generated rule", ""));
+                    rule.setCondition(condition);
+                    rule.getMetadata().setHidden(true);
                     final Action action = new Action();
                     action.setActionType(definitionsService.getActionType("setEventOccurenceCountAction"));
                     action.getParameterValues().put("eventCondition", parentCondition);
-                    r.setActions(Arrays.asList(action));
-                    rules.add(r);
+                    rule.setActions(Arrays.asList(action));
+                    rules.add(rule);
                 }
             } catch (JsonProcessingException e) {
                 e.printStackTrace();
@@ -253,10 +307,10 @@ public class SegmentServiceImpl implements SegmentService, BundleListener {
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {
             case BundleEvent.STARTED:
-                loadPredefinedSegments(event.getBundle().getBundleContext());
-                break;
+                processBundleStartup(event.getBundle().getBundleContext());
+               break;
             case BundleEvent.STOPPING:
-                // @todo remove bundle-defined resources (is it possible ?)
+                processBundleStop(event.getBundle().getBundleContext());
                 break;
         }
     }

@@ -1,22 +1,22 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.oasis_open.wemi.context.server.api.Metadata;
+import org.oasis_open.wemi.context.server.api.PluginType;
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
+import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 import org.oasis_open.wemi.context.server.api.goals.Goal;
 import org.oasis_open.wemi.context.server.api.goals.GoalReport;
 import org.oasis_open.wemi.context.server.api.rules.Rule;
+import org.oasis_open.wemi.context.server.api.segments.Segment;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.GoalsService;
 import org.oasis_open.wemi.context.server.api.services.RulesService;
 import org.oasis_open.wemi.context.server.persistence.spi.Aggregate;
 import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.BundleListener;
+import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,7 +25,7 @@ import java.net.URL;
 import java.util.*;
 
 
-public class GoalsServiceImpl implements GoalsService, BundleListener {
+public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener {
     private static final Logger logger = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
 
     private BundleContext bundleContext;
@@ -68,10 +68,42 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
         bundleContext.removeBundleListener(this);
     }
 
-    private void loadPredefinedGoals(BundleContext bundleContext) {
+    private void processBundleStartup(BundleContext bundleContext) {
         if (bundleContext == null) {
             return;
         }
+        loadPredefinedGoals(bundleContext);
+    }
+
+    private void processBundleStop(BundleContext bundleContext) {
+        if (bundleContext == null) {
+            return;
+        }
+        List<PluginType> types = definitionsService.getTypesByPlugin().get(bundleContext.getBundle().getBundleId());
+        List<String> removedConditions = new ArrayList<String>();
+        if (types != null) {
+            for (PluginType type : types) {
+                if (type instanceof ConditionType) {
+                    removedConditions.add(((ConditionType) type).getId());
+                }
+            }
+        }
+        if (!removedConditions.isEmpty()) {
+            for (Metadata metadata : getGoalMetadatas()) {
+                Goal goal = getGoal(metadata.getId());
+                List<String> conditions = ParserHelper.getConditionTypeIds(goal.getStartEvent());
+                conditions.addAll(ParserHelper.getConditionTypeIds(goal.getTargetEvent()));
+
+                if (!Collections.disjoint(conditions, removedConditions)) {
+                    logger.info("Disable goal " + goal.getItemId());
+                    goal.getMetadata().setEnabled(false);
+                    setGoal(goal.getItemId(), goal);
+                }
+            }
+        }
+    }
+
+    private void loadPredefinedGoals(BundleContext bundleContext) {
         Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/wemi/goals", "*.json", true);
         if (predefinedRuleEntries == null) {
             return;
@@ -83,7 +115,7 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
             try {
                 Goal goal = CustomObjectMapper.getObjectMapper().readValue(predefinedGoalURL, Goal.class);
                 if (getGoal(goal.getMetadata().getId()) == null) {
-                    saveGoal(goal);
+                    setGoal(goal.getMetadata().getId(), goal);
                 }
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedGoalURL, e);
@@ -91,26 +123,17 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
         }
     }
 
-    private void saveGoal(Goal goal) {
-        ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent());
-        ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent());
-
-        createRule(goal, goal.getStartEvent(), "start");
-        createRule(goal, goal.getTargetEvent(), "target");
-
-        persistenceService.save(goal);
-    }
-
     private void createRule(Goal goal, Condition event, String id) {
-        Rule r1 = new Rule(new Metadata(goal.getItemId() + "." + id + "Event", "Auto generated rule for goal " + goal.getMetadata().getName(), ""));
-        r1.setCondition(event);
+        Rule rule = new Rule(new Metadata(goal.getItemId() + "." + id + "Event", "Auto generated rule for goal " + goal.getMetadata().getName(), ""));
+        rule.setCondition(event);
+        rule.getMetadata().setHidden(true);
         Action action1 = new Action();
         action1.setActionType(definitionsService.getActionType("setPropertyAction"));
         action1.getParameterValues().put("setPropertyName", goal.getMetadata().getId() + "." + id + ".reached");
         action1.getParameterValues().put("setPropertyValue", "now");
         action1.getParameterValues().put("storeInSession", true);
-        r1.setActions(Arrays.asList(action1));
-        rulesService.setRule(r1.getItemId(), r1);
+        rule.setActions(Arrays.asList(action1));
+        rulesService.setRule(rule.getItemId(), rule);
     }
 
     public Set<Metadata> getGoalMetadatas() {
@@ -132,8 +155,15 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
 
     @Override
     public void setGoal(String goalId, Goal goal) {
-        persistenceService.save(goal);
+        ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent());
+        ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent());
 
+        if (goal.getMetadata().isEnabled()) {
+            createRule(goal, goal.getStartEvent(), "start");
+            createRule(goal, goal.getTargetEvent(), "target");
+        }
+
+        persistenceService.save(goal);
     }
 
     @Override
@@ -214,12 +244,10 @@ public class GoalsServiceImpl implements GoalsService, BundleListener {
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {
             case BundleEvent.STARTED:
-                if (event.getBundle().getBundleContext() != null) {
-                    loadPredefinedGoals(event.getBundle().getBundleContext());
-                }
+                processBundleStartup(event.getBundle().getBundleContext());
                 break;
             case BundleEvent.STOPPING:
-                // @todo remove bundle-defined resources (is it possible ?)
+                processBundleStop(event.getBundle().getBundleContext());
                 break;
         }
     }

@@ -2,7 +2,8 @@
     "metadata" : {
         "id": "evaluateUserSegments",
         "name": "Evaluate segments",
-        "description" : "Evaluate segments when a profile is modified"
+        "description" : "Evaluate segments when a profile is modified",
+        "readOnly":true
     },
 
     "condition" : {

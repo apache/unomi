@@ -2,7 +2,8 @@
     "metadata": {
         "id": "newSession",
         "name": "New session",
-        "description": "Fill session attributes when a new session is created"
+        "description": "Fill session attributes when a new session is created",
+        "readOnly":true
     },
 
     "condition": {

@@ -4,8 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.Metadata;
+import org.oasis_open.wemi.context.server.api.PluginType;
 import org.oasis_open.wemi.context.server.api.actions.Action;
+import org.oasis_open.wemi.context.server.api.actions.ActionType;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
+import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 import org.oasis_open.wemi.context.server.api.rules.Rule;
 import org.oasis_open.wemi.context.server.api.services.*;
 import org.oasis_open.wemi.context.server.impl.actions.ActionExecutorDispatcher;
@@ -14,7 +17,7 @@ import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
-import org.osgi.framework.BundleListener;
+import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +25,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 
-public class RulesServiceImpl implements RulesService, EventListenerService, BundleListener {
+public class RulesServiceImpl implements RulesService, EventListenerService, SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
 
@@ -78,10 +81,70 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
         bundleContext.removeBundleListener(this);
     }
 
-    private void loadPredefinedRules(BundleContext bundleContext) {
+    private void processBundleStartup(BundleContext bundleContext) {
         if (bundleContext == null) {
             return;
         }
+        loadPredefinedRules(bundleContext);
+
+        List<PluginType> types = definitionsService.getTypesByPlugin().get(bundleContext.getBundle().getBundleId());
+        List<String> addedConditions = new ArrayList<String>();
+        List<String> addedActions = new ArrayList<String>();
+        if (types != null) {
+            for (PluginType type : types) {
+                if (type instanceof ConditionType) {
+                    addedConditions.add(((ConditionType) type).getId());
+                } else if (type instanceof ActionType) {
+                    addedActions.add(((ActionType) type).getId());
+                }
+            }
+        }
+        if (!addedConditions.isEmpty() || !addedActions.isEmpty()) {
+            for (Rule rule : persistenceService.query("missingPlugins", "true", null, Rule.class).getList()) {
+                boolean succeed = ParserHelper.resolveConditionType(definitionsService, rule.getCondition()) &&
+                        ParserHelper.resolveActionTypes(definitionsService, rule.getActions());
+                if (succeed) {
+                    logger.info("Enable rule " + rule.getItemId());
+                    rule.getMetadata().setMissingPlugins(false);
+                    setRule(rule.getItemId(), rule);
+                }
+            }
+        }
+    }
+
+    private void processBundleStop(BundleContext bundleContext) {
+        if (bundleContext == null) {
+            return;
+        }
+        List<PluginType> types = definitionsService.getTypesByPlugin().get(bundleContext.getBundle().getBundleId());
+        List<String> removedConditions = new ArrayList<String>();
+        List<String> removedActions = new ArrayList<String>();
+        if (types != null) {
+            for (PluginType type : types) {
+                if (type instanceof ConditionType) {
+                    removedConditions.add(((ConditionType) type).getId());
+                } else if (type instanceof ActionType) {
+                    removedActions.add(((ActionType) type).getId());
+                }
+            }
+        }
+        if (!removedConditions.isEmpty() || !removedActions.isEmpty()) {
+            for (Rule rule : persistenceService.getAllItems(Rule.class).getList()) {
+                List<String> conditions = ParserHelper.getConditionTypeIds(rule.getCondition());
+                List<String> actions = new ArrayList<String>();
+                for (Action action : rule.getActions()) {
+                    actions.add(action.getActionTypeId());
+                }
+                if (!Collections.disjoint(conditions, removedConditions) || !Collections.disjoint(actions, removedActions)) {
+                    logger.info("Disable rule " + rule.getItemId());
+                    rule.getMetadata().setMissingPlugins(true);
+                    setRule(rule.getItemId(), rule);
+                }
+            }
+        }
+    }
+
+    private void loadPredefinedRules(BundleContext bundleContext) {
         Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/wemi/rules", "*.json", true);
         if (predefinedRuleEntries == null) {
             return;
@@ -171,19 +234,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
         return changed;
     }
 
-    public void bundleChanged(BundleEvent event) {
-        switch (event.getType()) {
-            case BundleEvent.STARTED:
-                if (event.getBundle().getBundleContext() != null) {
-                    loadPredefinedRules(event.getBundle().getBundleContext());
-                }
-                break;
-            case BundleEvent.STOPPING:
-                // @todo remove bundle-defined resources (is it possible ?)
-                break;
-        }
-    }
-
     public Set<Metadata> getRuleMetadatas() {
         Set<Metadata> metadatas = new HashSet<Metadata>();
         for (Rule rule : persistenceService.getAllItems(Rule.class).getList()) {
@@ -199,9 +249,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
                 ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
             }
             if (rule.getActions() != null) {
-                for (Action action : rule.getActions()) {
-                    ParserHelper.resolveActionType(definitionsService, action);
-                }
+                ParserHelper.resolveActionTypes(definitionsService, rule.getActions());
             }
         }
         return rule;
@@ -210,15 +258,14 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
     public void setRule(String ruleId, Rule rule) {
         Condition condition = rule.getCondition();
         if (condition != null) {
-            ParserHelper.resolveConditionType(definitionsService, condition);
-            Condition eventCondition = extractConditionByTag(condition, "eventCondition");
-            if (eventCondition != null) {
-                persistenceService.saveQuery(ruleId, eventCondition);
-            }
-        }
-        if (rule.getActions() != null) {
-            for (Action action : rule.getActions()) {
-                ParserHelper.resolveActionType(definitionsService, action);
+            if (rule.getMetadata().isEnabled() && !rule.getMetadata().isMissingPlugins()) {
+                ParserHelper.resolveConditionType(definitionsService, condition);
+                Condition eventCondition = extractConditionByTag(condition, "eventCondition");
+                if (eventCondition != null) {
+                    persistenceService.saveQuery(ruleId, eventCondition);
+                }
+            } else {
+                persistenceService.removeQuery(ruleId);
             }
         }
         persistenceService.save(rule);
@@ -274,5 +321,14 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Bun
         persistenceService.remove(ruleId, Rule.class);
     }
 
-
+    public void bundleChanged(BundleEvent event) {
+        switch (event.getType()) {
+            case BundleEvent.STARTED:
+                processBundleStartup(event.getBundle().getBundleContext());
+                break;
+            case BundleEvent.STOPPING:
+                processBundleStop(event.getBundle().getBundleContext());
+                break;
+        }
+    }
 }

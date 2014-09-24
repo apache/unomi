@@ -2,6 +2,7 @@ package org.oasis_open.wemi.context.server.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.wemi.context.server.api.Parameter;
+import org.oasis_open.wemi.context.server.api.PluginType;
 import org.oasis_open.wemi.context.server.api.Tag;
 import org.oasis_open.wemi.context.server.api.ValueType;
 import org.oasis_open.wemi.context.server.api.actions.ActionType;
@@ -17,6 +18,8 @@ import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @WebService
@@ -123,6 +126,12 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
     @Path("/values/{valueTypeId}")
     public ValueType getValueType(@PathParam("valueTypeId") String id) {
         return definitionsService.getValueType(id);
+    }
+
+    @GET
+    @Path("/typesByPlugin")
+    public Map<Long, List<PluginType>> getTypesByPlugin() {
+        return definitionsService.getTypesByPlugin();
     }
 
     private void generateConditionChoiceListValues(Collection<ConditionType> conditionTypes, Object context) {
