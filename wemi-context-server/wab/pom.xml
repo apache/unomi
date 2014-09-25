@@ -107,6 +107,7 @@
                         <Import-Package>
                             org.oasis_open.wemi.context.server.api,
                             org.oasis_open.wemi.context.server.api.conditions,
+                            org.oasis_open.wemi.context.server.api.segments,
                             *
                         </Import-Package>
                         <Web-ContextPath>/</Web-ContextPath>
