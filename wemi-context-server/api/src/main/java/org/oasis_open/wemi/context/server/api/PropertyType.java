@@ -10,17 +10,19 @@ import java.util.Set;
  */
 @XmlRootElement
 public class PropertyType extends Item implements Comparable<PropertyType>, PluginType {
-    String id;
-    String valueTypeId;
-    ValueType valueType;
-    String groupId;
-    String choiceListInitializerFilter;
-    String defaultValue;
-    String selectorId;
-    Set<String> automaticMappingsFrom;
-    double rank;
-    String pluginId;
-    String resourceBundle;
+    public static final String ITEM_TYPE = "propertyType";
+
+    private String id;
+    private String valueTypeId;
+    private ValueType valueType;
+    private String groupId;
+    private String choiceListInitializerFilter;
+    private String defaultValue;
+    private String selectorId;
+    private Set<String> automaticMappingsFrom;
+    private double rank;
+    private String pluginId;
+    private String resourceBundle;
 
     public PropertyType() {
     }
@@ -34,6 +36,7 @@ public class PropertyType extends Item implements Comparable<PropertyType>, Plug
     }
 
     public void setId(String id) {
+        this.itemId = id;
         this.id = id;
     }
 

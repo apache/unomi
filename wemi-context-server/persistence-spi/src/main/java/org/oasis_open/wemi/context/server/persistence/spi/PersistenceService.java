@@ -12,11 +12,11 @@ import java.util.Map;
  */
 public interface PersistenceService {
 
-    public <T extends Item> PartialList<T> getAllItems(Class<T> clazz);
-
-    public long getAllItemsCount(String itemType);
+    public <T extends Item> List<T> getAllItems(Class<T> clazz);
 
     public <T extends Item> PartialList<T> getAllItems(Class<T> clazz, int offset, int size, String sortBy);
+
+    public long getAllItemsCount(String itemType);
 
     public boolean save(Item item);
 
@@ -36,11 +36,15 @@ public interface PersistenceService {
 
     public boolean testMatch(Condition query, Item item);
 
+    public <T extends Item> List<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz);
+
+    public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz, int offset, int size);
+
+    public <T extends Item> List<T> query(Condition query, String sortBy, Class<T> clazz);
+
     public <T extends Item> PartialList<T> query(Condition query, String sortBy, Class<T> clazz, int offset, int size);
 
     public long queryCount(Condition query, String itemType);
-
-    public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz);
 
     public Map<String, Long> aggregateQuery(Condition filter, Aggregate aggregate, String itemType);
 

@@ -23,15 +23,15 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     private static final Logger logger = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
 
-    Map<String, Tag> tags = new HashMap<String, Tag>();
-    Set<Tag> rootTags = new LinkedHashSet<Tag>();
-    Map<String, ConditionType> conditionTypeById = new HashMap<String, ConditionType>();
-    Map<String, ActionType> actionTypeById = new HashMap<String, ActionType>();
-    Map<String, ValueType> valueTypeById = new HashMap<String, ValueType>();
-    Map<Tag, Set<ConditionType>> conditionTypeByTag = new HashMap<Tag, Set<ConditionType>>();
-    Map<Tag, Set<ActionType>> actionTypeByTag = new HashMap<Tag, Set<ActionType>>();
-    Map<Tag, Set<ValueType>> valueTypeByTag = new HashMap<Tag, Set<ValueType>>();
-    Map<Long, List<PluginType>> pluginTypes = new HashMap<Long, List<PluginType>>();
+    private Map<String, Tag> tags = new HashMap<String, Tag>();
+    private Set<Tag> rootTags = new LinkedHashSet<Tag>();
+    private Map<String, ConditionType> conditionTypeById = new HashMap<String, ConditionType>();
+    private Map<String, ActionType> actionTypeById = new HashMap<String, ActionType>();
+    private Map<String, ValueType> valueTypeById = new HashMap<String, ValueType>();
+    private Map<Tag, Set<ConditionType>> conditionTypeByTag = new HashMap<Tag, Set<ConditionType>>();
+    private Map<Tag, Set<ActionType>> actionTypeByTag = new HashMap<Tag, Set<ActionType>>();
+    private Map<Tag, Set<ValueType>> valueTypeByTag = new HashMap<Tag, Set<ValueType>>();
+    private Map<Long, List<PluginType>> pluginTypes = new HashMap<Long, List<PluginType>>();
 
     private BundleContext bundleContext;
     private PersistenceService persistenceService;

@@ -8,12 +8,12 @@ import java.util.TreeSet;
  * Created by loom on 28.08.14.
  */
 public class PropertyTypeGroup extends Item implements Comparable<PropertyTypeGroup>, PluginType {
+    public static final String ITEM_TYPE = "propertyTypeGroup";
 
     private String id;
     private double rank;
     private String resourceBundle;
     private String pluginId;
-    private SortedSet<PropertyType> propertyTypes = new TreeSet<PropertyType>();
 
     public PropertyTypeGroup() {
     }
@@ -28,6 +28,7 @@ public class PropertyTypeGroup extends Item implements Comparable<PropertyTypeGr
     }
 
     public void setId(String id) {
+        this.itemId = id;
         this.id = id;
     }
 
@@ -37,15 +38,6 @@ public class PropertyTypeGroup extends Item implements Comparable<PropertyTypeGr
 
     public void setRank(double rank) {
         this.rank = rank;
-    }
-
-    @XmlTransient
-    public SortedSet<PropertyType> getPropertyTypes() {
-        return propertyTypes;
-    }
-
-    public void setPropertyTypes(SortedSet<PropertyType> propertyTypes) {
-        this.propertyTypes = propertyTypes;
     }
 
     public String getResourceBundle() {

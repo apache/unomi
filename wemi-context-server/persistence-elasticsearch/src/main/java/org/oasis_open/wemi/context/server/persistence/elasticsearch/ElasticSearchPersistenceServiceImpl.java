@@ -146,8 +146,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
-    public <T extends Item> PartialList<T> getAllItems(final Class<T> clazz) {
-        return query(QueryBuilders.matchAllQuery(), null, clazz);
+    public <T extends Item> List<T> getAllItems(final Class<T> clazz) {
+        return getAllItems(clazz, 0 , -1, null).getList();
     }
 
     public long getAllItemsCount(String itemType) {
@@ -169,7 +169,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         // with parents
                         clazz.getField("PARENT_ITEM_TYPE");
 
-                        PartialList<T> r = query(QueryBuilders.idsQuery(itemType).ids(itemId), null, clazz);
+                        PartialList<T> r = query(QueryBuilders.idsQuery(itemType).ids(itemId), null, clazz,0, 1);
                         if (r.size() > 0) {
                             return r.get(0);
                         }
@@ -360,7 +360,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             FilterBuilder builder = FilterBuilders.andFilter(
                     FilterBuilders.idsFilter(itemType).ids(item.getItemId()),
                     conditionESQueryBuilderDispatcher.buildFilter(query));
-            return query(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), builder), null, clazz).size() > 0;
+            return queryCount(builder,itemType) > 0;
         } catch (IllegalAccessException e) {
             logger.error("Error getting query for item=" + item, e);
         } catch (NoSuchFieldException e) {
@@ -369,12 +369,21 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return false;
     }
 
+    public <T extends Item> List<T> query(final Condition query, String sortBy, final Class<T> clazz) {
+        return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz, 0, -1).getList();
+    }
+
     public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size) {
         return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz, offset, size);
     }
 
-    public <T extends Item> PartialList<T> query(final String fieldName, final String fieldValue, String sortBy, final Class<T> clazz) {
-        return query(QueryBuilders.termQuery(fieldName, fieldValue), sortBy, clazz);
+    public <T extends Item> List<T> query(final String fieldName, final String fieldValue, String sortBy, final Class<T> clazz) {
+        return query(fieldName, fieldValue, sortBy, clazz, 0, -1).getList();
+    }
+
+    @Override
+    public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz, int offset, int size) {
+        return query(QueryBuilders.termQuery(fieldName, fieldValue), sortBy, clazz, offset, size);
     }
 
     @Override
@@ -382,7 +391,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return queryCount(conditionESQueryBuilderDispatcher.buildFilter(query), itemType);
     }
 
-    public long queryCount(final FilterBuilder filter, final String itemType) {
+    private long queryCount(final FilterBuilder filter, final String itemType) {
         return new InClassLoaderExecute<Long>() {
 
             @Override
@@ -401,11 +410,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
-    public <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz) {
-        return query(query, sortBy, clazz, 0, 50);
-    }
-
-    public <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz, final int offset, final int size) {
+    private <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz, final int offset, final int size) {
         return new InClassLoaderExecute<PartialList<T>>() {
 
             @Override
@@ -421,7 +426,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             .setFrom(offset);
                     if (size != -1) {
                         requestBuilder.setSize(size);
+                    } else {
+                        requestBuilder.setSize(Integer.MAX_VALUE);
                     }
+
                     if (sortBy != null) {
                         String[] sortByArray = sortBy.split(",");
                         for (String sortByElement : sortByArray) {

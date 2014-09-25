@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
+import org.oasis_open.wemi.context.server.api.Item;
 import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.PluginType;
 import org.oasis_open.wemi.context.server.api.Session;
@@ -9,7 +10,6 @@ import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 import org.oasis_open.wemi.context.server.api.goals.Goal;
 import org.oasis_open.wemi.context.server.api.goals.GoalReport;
 import org.oasis_open.wemi.context.server.api.rules.Rule;
-import org.oasis_open.wemi.context.server.api.segments.Segment;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.GoalsService;
 import org.oasis_open.wemi.context.server.api.services.RulesService;
@@ -89,8 +89,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             }
         }
         if (!removedConditions.isEmpty()) {
-            for (Metadata metadata : getGoalMetadatas()) {
-                Goal goal = getGoal(metadata.getId());
+            for (Goal goal : persistenceService.getAllItems(Goal.class)) {
                 List<String> conditions = ParserHelper.getConditionTypeIds(goal.getStartEvent());
                 conditions.addAll(ParserHelper.getConditionTypeIds(goal.getTargetEvent()));
 
@@ -138,7 +137,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     public Set<Metadata> getGoalMetadatas() {
         Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Goal definition : persistenceService.getAllItems(Goal.class).getList()) {
+        for (Goal definition : persistenceService.getAllItems(Goal.class,0,50,null).getList()) {
             descriptions.add(definition.getMetadata());
         }
         return descriptions;

@@ -100,7 +100,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             }
         }
         if (!addedConditions.isEmpty() || !addedActions.isEmpty()) {
-            for (Rule rule : persistenceService.query("missingPlugins", "true", null, Rule.class).getList()) {
+            for (Rule rule : persistenceService.query("missingPlugins", "true", null, Rule.class)) {
                 boolean succeed = ParserHelper.resolveConditionType(definitionsService, rule.getCondition()) &&
                         ParserHelper.resolveActionTypes(definitionsService, rule.getActions());
                 if (succeed) {
@@ -129,7 +129,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             }
         }
         if (!removedConditions.isEmpty() || !removedActions.isEmpty()) {
-            for (Rule rule : persistenceService.getAllItems(Rule.class).getList()) {
+            for (Rule rule : persistenceService.getAllItems(Rule.class)) {
                 List<String> conditions = ParserHelper.getConditionTypeIds(rule.getCondition());
                 List<String> actions = new ArrayList<String>();
                 for (Action action : rule.getActions()) {
@@ -236,7 +236,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public Set<Metadata> getRuleMetadatas() {
         Set<Metadata> metadatas = new HashSet<Metadata>();
-        for (Rule rule : persistenceService.getAllItems(Rule.class).getList()) {
+        for (Rule rule : persistenceService.getAllItems(Rule.class,0,50,null).getList()) {
             metadatas.add(rule.getMetadata());
         }
         return metadatas;

@@ -124,7 +124,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             }
         }
         if (!addedConditions.isEmpty()) {
-            for (Segment segment : persistenceService.query("missingPlugins", "true", null, Segment.class).getList()) {
+            for (Segment segment : persistenceService.query("missingPlugins", "true", null, Segment.class)) {
                 boolean succeed = ParserHelper.resolveConditionType(definitionsService, segment.getCondition());
                 if (succeed) {
                     logger.info("Enable segment " + segment.getItemId());
@@ -149,7 +149,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             }
         }
         if (!removedConditions.isEmpty()) {
-            for (Segment segment : persistenceService.getAllItems(Segment.class).getList()) {
+            for (Segment segment : persistenceService.getAllItems(Segment.class)) {
                 List<String> conditions = ParserHelper.getConditionTypeIds(segment.getCondition());
                 if (!Collections.disjoint(conditions, removedConditions)) {
                     logger.info("Disable segment " + segment.getItemId());
@@ -206,7 +206,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
     public Set<Metadata> getSegmentMetadatas() {
         Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Segment definition : persistenceService.getAllItems(Segment.class).getList()) {
+        for (Segment definition : persistenceService.getAllItems(Segment.class, 0, 50, null).getList()) {
             descriptions.add(definition.getMetadata());
         }
         return descriptions;

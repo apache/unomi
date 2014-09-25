@@ -27,11 +27,6 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
 
     private DefinitionsService definitionsService;
 
-    private Map<String, PropertyTypeGroup> propertyTypeGroupsById = new LinkedHashMap<String, PropertyTypeGroup>();
-    private SortedSet<PropertyTypeGroup> propertyTypeGroups = new TreeSet<PropertyTypeGroup>();
-
-    private Map<String, String> propertyMappings = new HashMap<String, String>();
-
     public UserServiceImpl() {
         System.out.println("Initializing user service...");
     }
@@ -81,7 +76,7 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
     }
 
     public PartialList<User> getAllUsers() {
-        return persistenceService.getAllItems(User.class);
+        return persistenceService.getAllItems(User.class, 0, 50, null);
     }
 
     public long getAllUsersCount() {
@@ -113,27 +108,23 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
     }
 
     public Set<PropertyTypeGroup> getPropertyTypeGroups() {
-        return propertyTypeGroups;
+        return new TreeSet<PropertyTypeGroup>(persistenceService.getAllItems(PropertyTypeGroup.class));
     }
 
     public Set<PropertyType> getAllPropertyTypes() {
-        Set<PropertyType> allUserProperties = new LinkedHashSet<PropertyType>();
-        for (PropertyTypeGroup propertyTypeGroup : propertyTypeGroups) {
-            allUserProperties.addAll(propertyTypeGroup.getPropertyTypes());
-        }
-        return allUserProperties;
+        return new LinkedHashSet<PropertyType>(persistenceService.getAllItems(PropertyType.class));
     }
 
     public Set<PropertyType> getPropertyTypes(String propertyGroupId) {
-        PropertyTypeGroup propertyTypeGroup = propertyTypeGroupsById.get(propertyGroupId);
-        if (propertyTypeGroup == null) {
-            return null;
-        }
-        return propertyTypeGroup.getPropertyTypes();
+        return new TreeSet<PropertyType>(persistenceService.query("groupId", propertyGroupId, null, PropertyType.class));
     }
 
     public String getPropertyTypeMapping(String fromPropertyTypeId) {
-        return propertyMappings.get(fromPropertyTypeId);
+        PartialList<PropertyType> types = persistenceService.query("automaticMappingsFrom",fromPropertyTypeId, null,PropertyType.class, 0,1);
+        if (types.size() > 0) {
+            return types.get(0).getId();
+        }
+        return null;
     }
 
     public Session loadSession(String sessionId) {
@@ -146,7 +137,7 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
     }
 
     public PartialList<Session> findUserSessions(String userId) {
-        return persistenceService.query("userId", userId, "sessionCreationDate:desc", Session.class);
+        return persistenceService.query("userId", userId, "sessionCreationDate:desc", Session.class, 0, 50);
     }
 
     @Override
@@ -166,9 +157,9 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
                     }
                     final Event lastEvent = matchingEvents.get(matchingEvents.size() - 1);
                     String eventType = lastEvent.getEventType();
-                    PartialList<Event> events = persistenceService.query("sessionId", session.getItemId(), "timeStamp", Event.class);
-                    Collections.reverse(events.getList());
-                    for (Event event : events.getList()) {
+                    List<Event> events = persistenceService.query("sessionId", session.getItemId(), "timeStamp", Event.class);
+                    Collections.reverse(events);
+                    for (Event event : events) {
                         if (event.getEventType().equals(eventType)) {
                             return event.getItemId().equals(lastEvent.getItemId());
                         }
@@ -225,8 +216,7 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
             try {
                 PropertyTypeGroup propertyTypeGroup = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeGroupURL, PropertyTypeGroup.class);
                 ParserHelper.populatePluginType(propertyTypeGroup, bundleContext.getBundle());
-                propertyTypeGroups.add(propertyTypeGroup);
-                propertyTypeGroupsById.put(propertyTypeGroup.getId(), propertyTypeGroup);
+                persistenceService.save(propertyTypeGroup);
             } catch (IOException e) {
                 logger.error("Error while loading property group " + predefinedPropertyTypeGroupURL, e);
             }
@@ -252,20 +242,21 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
                     PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeURL, PropertyType.class);
                     ParserHelper.resolveValueType(definitionsService, propertyType);
                     ParserHelper.populatePluginType(propertyType, bundleContext.getBundle());
-                    PropertyTypeGroup propertyTypeGroup = propertyTypeGroupsById.get(propertyType.getGroupId());
+                    PropertyTypeGroup propertyTypeGroup = persistenceService.load(propertyType.getGroupId(), PropertyTypeGroup.class);
                     if (propertyTypeGroup == null) {
-                        logger.warn("Undeclared groupId " + propertyTypeGroup.getId() + " detected, creating dynamically...");
+                        logger.warn("Undeclared groupId " + propertyType.getGroupId() + " detected, creating dynamically...");
                         propertyTypeGroup = new PropertyTypeGroup(propertyType.getGroupId());
-                        propertyTypeGroups.add(propertyTypeGroup);
+                        persistenceService.save(propertyTypeGroup);
                     }
-                    propertyTypeGroup.getPropertyTypes().add(propertyType);
-                    propertyTypeGroupsById.put(propertyType.getGroupId(), propertyTypeGroup);
+//                    propertyTypeGroup.getPropertyTypes().add(propertyType);
 
-                    if (propertyType.getAutomaticMappingsFrom() != null && propertyType.getAutomaticMappingsFrom().size() > 0) {
-                        for (String mappingFrom : propertyType.getAutomaticMappingsFrom()) {
-                            propertyMappings.put(mappingFrom, propertyType.getId());
-                        }
-                    }
+                    persistenceService.save(propertyType);
+
+//                    if (propertyType.getAutomaticMappingsFrom() != null && propertyType.getAutomaticMappingsFrom().size() > 0) {
+//                        for (String mappingFrom : propertyType.getAutomaticMappingsFrom()) {
+//                            propertyMappings.put(mappingFrom, propertyType.getId());
+//                        }
+//                    }
 
                 }
             } catch (IOException e) {
