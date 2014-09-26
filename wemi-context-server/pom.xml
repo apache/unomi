@@ -26,8 +26,15 @@
               <module>itests</module>
           </modules>
       </profile>
+
+      <profile>
+          <id>performance-tests</id>
+          <modules>
+              <module>performance-tests</module>
+          </modules>
+      </profile>
   </profiles>
-  
+
   <modules>
     <module>api</module>
     <module>persistence-spi</module>
