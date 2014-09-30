@@ -23,6 +23,8 @@ public interface UserService {
 
     void delete(User user);
 
+    PartialList<Session> getUserSessions(String userId, int offset, int size, String sortBy);
+
     Set<PropertyTypeGroup> getPropertyTypeGroups();
 
     Set<PropertyType> getAllPropertyTypes();
@@ -44,5 +46,7 @@ public interface UserService {
     PartialList<Persona> getPersonas(int offset, int size, String sortBy);
 
     void createPersona(String personaId);
+
+    PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy);
 
 }

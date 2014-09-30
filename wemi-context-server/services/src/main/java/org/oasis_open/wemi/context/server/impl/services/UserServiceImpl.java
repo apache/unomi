@@ -6,7 +6,10 @@ import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.UserService;
 import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
-import org.osgi.framework.*;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleEvent;
+import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,6 +110,10 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
         }
     }
 
+    public PartialList<Session> getUserSessions(String userId, int offset, int size, String sortBy) {
+        return persistenceService.query("userId", userId, sortBy, Session.class, offset, size);
+    }
+
     public Set<PropertyTypeGroup> getPropertyTypeGroups() {
         return new TreeSet<PropertyTypeGroup>(persistenceService.getAllItems(PropertyTypeGroup.class));
     }
@@ -199,6 +206,9 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
         persistenceService.save(session);
     }
 
+    public PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy) {
+        return persistenceService.query("userId", personaId, sortBy, Session.class, offset, size);
+    }
 
     private void loadPredefinedPropertyTypeGroups(BundleContext bundleContext) {
         if (bundleContext == null) {

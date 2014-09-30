@@ -46,7 +46,10 @@ public class UserServiceEndPoint implements UserService {
 
     @GET
     @Path("/search")
-    public PartialList<User> getUsers(@QueryParam("q") String query, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
+    public PartialList<User> getUsers(@QueryParam("q") String query,
+                                      @QueryParam("offset") @DefaultValue("0") int offset,
+                                      @QueryParam("size") @DefaultValue("50") int size,
+                                      @QueryParam("sort") String sortBy) {
         return userService.getUsers(query, offset, size, sortBy);
     }
 
@@ -71,6 +74,15 @@ public class UserServiceEndPoint implements UserService {
     @Path("/{userId}")
     public void delete(User user) {
         userService.delete(user);
+    }
+
+    @GET
+    @Path("/{userId}/sessions")
+    public PartialList<Session> getUserSessions(@PathParam("userId") String userId,
+                                                @QueryParam("offset") @DefaultValue("0") int offset,
+                                                @QueryParam("size") @DefaultValue("50") int size,
+                                                @QueryParam("sort") String sortBy) {
+        return userService.getUserSessions(userId, offset, size, sortBy);
     }
 
     @GET
@@ -99,7 +111,9 @@ public class UserServiceEndPoint implements UserService {
 
     @GET
     @Path("/personas")
-    public PartialList<Persona> getPersonas(@QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
+    public PartialList<Persona> getPersonas(@QueryParam("offset") @DefaultValue("0") int offset,
+                                            @QueryParam("size") @DefaultValue("50") int size,
+                                            @QueryParam("sort") String sortBy) {
         return userService.getPersonas(offset, size, sortBy);
     }
 
@@ -128,6 +142,14 @@ public class UserServiceEndPoint implements UserService {
         userService.createPersona(personaId);
     }
 
+    @GET
+    @Path("/personas/{personaId}/sessions")
+    public PartialList<Session> getPersonaSessions(@PathParam("personaId") String personaId,
+                                                   @QueryParam("offset") @DefaultValue("0") int offset,
+                                                   @QueryParam("size") @DefaultValue("50") int size,
+                                                   @QueryParam("sort") String sortBy) {
+        return userService.getPersonaSessions(personaId, offset, size, sortBy);
+    }
 
     @WebMethod(exclude = true)
     public Session loadSession(String sessionId) {
