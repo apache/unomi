@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <features xmlns="http://karaf.apache.org/xmlns/features/v1.2.0" name="wemi-context-server-kar">
-    <feature description="wemi-context-server-kar" version="1.0-SNAPSHOT" name="wemi-context-server-kar">
-        <feature>war</feature>
+    <feature description="wemi-context-server-kar" version="1.0-SNAPSHOT" name="wemi-context-server-kar"
+             start-level="75">
+    <feature>war</feature>
         <feature version="[2.7.11,3)">cxf</feature>
         <feature>openwebbeans</feature>
         <feature>pax-cdi-web-openwebbeans</feature>

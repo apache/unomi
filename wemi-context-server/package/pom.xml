@@ -107,7 +107,56 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>org.apache.karaf.tooling</groupId>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.9</version>
+                <executions>
+                    <execution>
+                        <id>copy</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.oasis-open.wemi</groupId>
+                                    <artifactId>wemi-context-server-persistence-elasticsearch</artifactId>
+                                    <version>1.0-SNAPSHOT</version>
+                                    <classifier>elasticsearchcfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>
+                                        ${project.build.directory}/assembly/system/org/oasis-open/wemi/wemi-context-server-persistence-elasticsearch/1.0-SNAPSHOT
+                                    </outputDirectory>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.oasis-open.wemi</groupId>
+                                    <artifactId>wemi-context-server-persistence-elasticsearch</artifactId>
+                                    <version>1.0-SNAPSHOT</version>
+                                    <classifier>elasticsearchconfig</classifier>
+                                    <type>yml</type>
+                                    <outputDirectory>
+                                        ${project.build.directory}/assembly/system/org/oasis-open/wemi/wemi-context-server-persistence-elasticsearch/1.0-SNAPSHOT
+                                    </outputDirectory>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.oasis-open.wemi</groupId>
+                                    <artifactId>wemi-context-server-plugins-request</artifactId>
+                                    <version>1.0-SNAPSHOT</version>
+                                    <classifier>requestcfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>
+                                        ${project.build.directory}/assembly/system/org/oasis-open/wemi/wemi-context-server-plugins-request/1.0-SNAPSHOT
+                                    </outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                            <!-- other configurations here -->
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+            <groupId>org.apache.karaf.tooling</groupId>
                 <artifactId>karaf-maven-plugin</artifactId>
                 <version>${version.karaf}</version>
                 <executions>
