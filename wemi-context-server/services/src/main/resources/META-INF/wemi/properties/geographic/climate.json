@@ -1,7 +1,7 @@
 {
     "id": "climate",
     "type": "string",
-    "groupId": "geographic",
+    "tags": ["geographicUserProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",

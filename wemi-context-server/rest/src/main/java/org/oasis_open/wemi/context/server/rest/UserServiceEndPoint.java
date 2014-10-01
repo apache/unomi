@@ -86,21 +86,15 @@ public class UserServiceEndPoint implements UserService {
     }
 
     @GET
-    @Path("/properties/groups")
-    public Set<PropertyTypeGroup> getPropertyTypeGroups() {
-        return userService.getPropertyTypeGroups();
-    }
-
-    @GET
     @Path("/properties")
     public Set<PropertyType> getAllPropertyTypes() {
         return userService.getAllPropertyTypes();
     }
 
     @GET
-    @Path("/properties/groups/{groupId}")
-    public Set<PropertyType> getPropertyTypes(@PathParam("groupId") String propertyGroupId) {
-        return userService.getPropertyTypes(propertyGroupId);
+    @Path("/properties/tags/{tagId}")
+    public Set<PropertyType> getPropertyTypes(@PathParam("tagId") String tagId) {
+        return userService.getPropertyTypes(tagId);
     }
 
     @GET

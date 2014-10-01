@@ -138,6 +138,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
             try {
                 Tag tag = CustomObjectMapper.getObjectMapper().readValue(predefinedTagURL, Tag.class);
+                ParserHelper.populatePluginType(tag, bundleContext.getBundle(), "tags", tag.getId());
                 tags.put(tag.getId(), tag);
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedTagEntries, e);

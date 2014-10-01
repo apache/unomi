@@ -1,7 +1,7 @@
 {
     "id": "leadAssignedTo",
     "type": "string",
-    "groupId": "crm",
+    "tags": ["crmUserProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",

@@ -1,7 +1,7 @@
 {
     "id": "income",
     "type": "integer",
-    "groupId": "demographic",
+    "tags": ["demographicUserProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",

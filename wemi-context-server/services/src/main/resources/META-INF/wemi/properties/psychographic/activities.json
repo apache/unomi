@@ -1,7 +1,7 @@
 {
     "id": "activities",
     "type": "string",
-    "groupId": "psychographic",
+    "tags": ["psychographicUserProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",

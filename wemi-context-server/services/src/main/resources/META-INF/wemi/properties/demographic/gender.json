@@ -1,7 +1,7 @@
 {
     "id": "gender",
     "type": "string",
-    "groupId": "demographic",
+    "tags": ["demographicUserProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",

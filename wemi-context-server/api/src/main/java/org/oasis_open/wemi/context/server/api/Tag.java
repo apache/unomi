@@ -7,14 +7,16 @@ import java.util.TreeSet;
 /**
  * Represents a tag on a condition
  */
-public class Tag implements Comparable<Tag> {
-
-    String id;
-    String nameKey;
-    String descriptionKey;
-    String parentId;
+public class Tag implements PluginType, Comparable<Tag> {
 
     Set<Tag> subTags = new TreeSet<Tag>();
+    private String id;
+    private String nameKey;
+    private String descriptionKey;
+    private String parentId;
+    private double rank = 0.0;
+    private String pluginId;
+    private String resourceBundle;
 
     public Tag() {
     }
@@ -61,6 +63,30 @@ public class Tag implements Comparable<Tag> {
         this.subTags = subTags;
     }
 
+    public double getRank() {
+        return rank;
+    }
+
+    public void setRank(double rank) {
+        this.rank = rank;
+    }
+
+    public String getPluginId() {
+        return pluginId;
+    }
+
+    public void setPluginId(String pluginId) {
+        this.pluginId = pluginId;
+    }
+
+    public String getResourceBundle() {
+        return resourceBundle;
+    }
+
+    public void setResourceBundle(String resourceBundle) {
+        this.resourceBundle = resourceBundle;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -79,7 +105,11 @@ public class Tag implements Comparable<Tag> {
         return result;
     }
 
-    public int compareTo(Tag o) {
-        return id.compareTo(o.id);
+    public int compareTo(Tag otherRank) {
+        int rankCompare = Double.compare(rank, otherRank.rank);
+        if (rankCompare != 0) {
+            return rankCompare;
+        }
+        return id.compareTo(otherRank.id);
     }
 }

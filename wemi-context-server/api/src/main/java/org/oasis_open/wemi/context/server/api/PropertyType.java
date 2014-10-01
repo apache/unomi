@@ -3,6 +3,7 @@ package org.oasis_open.wemi.context.server.api;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
@@ -11,11 +12,10 @@ import java.util.Set;
 @XmlRootElement
 public class PropertyType extends Item implements Comparable<PropertyType>, PluginType {
     public static final String ITEM_TYPE = "propertyType";
-
+    Set<String> tagIds = new LinkedHashSet<String>();
     private String id;
     private String valueTypeId;
     private ValueType valueType;
-    private String groupId;
     private String choiceListInitializerFilter;
     private String defaultValue;
     private String selectorId;
@@ -58,12 +58,13 @@ public class PropertyType extends Item implements Comparable<PropertyType>, Plug
         this.valueType = valueType;
     }
 
-    public String getGroupId() {
-        return groupId;
+    @XmlElement(name = "tags")
+    public Set<String> getTagIds() {
+        return tagIds;
     }
 
-    public void setGroupId(String groupId) {
-        this.groupId = groupId;
+    public void setTagIds(Set<String> tagIds) {
+        this.tagIds = tagIds;
     }
 
     public String getChoiceListInitializerFilter() {

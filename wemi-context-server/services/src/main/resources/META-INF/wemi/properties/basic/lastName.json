@@ -1,7 +1,7 @@
 {
     "id": "lastName",
     "type": "string",
-    "groupId": "basic",
+    "tags": ["basicUserProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",

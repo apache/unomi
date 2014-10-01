@@ -1,7 +1,7 @@
 {
     "id": "lastVisit",
     "type": "date",
-    "groupId": "behavorial",
+    "tags": ["behavioralUserProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",

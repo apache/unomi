@@ -25,11 +25,9 @@ public interface UserService {
 
     PartialList<Session> getUserSessions(String userId, int offset, int size, String sortBy);
 
-    Set<PropertyTypeGroup> getPropertyTypeGroups();
-
     Set<PropertyType> getAllPropertyTypes();
 
-    Set<PropertyType> getPropertyTypes(String propertyGroupId);
+    Set<PropertyType> getPropertyTypes(String tagId);
 
     String getPropertyTypeMapping(String fromPropertyTypeId);
 

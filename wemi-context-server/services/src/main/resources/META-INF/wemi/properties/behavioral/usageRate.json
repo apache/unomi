@@ -1,7 +1,7 @@
 {
     "id": "usageRate",
     "type": "string",
-    "groupId": "behavorial",
+    "tags": ["behavioralUserProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "heavy,moderate,light,nonuser",
     "selectorId": "",
