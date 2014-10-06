@@ -145,14 +145,16 @@ public class UserServiceEndPoint implements UserService {
         return userService.getPersonaSessions(personaId, offset, size, sortBy);
     }
 
-    @WebMethod(exclude = true)
-    public Session loadSession(String sessionId) {
+    @GET
+    @Path("/sessions/{sessionId}")
+    public Session loadSession(@PathParam("sessionId") String sessionId) {
         return userService.loadSession(sessionId);
     }
 
-    @WebMethod(exclude = true)
-    public boolean saveSession(Session event) {
-        return userService.saveSession(event);
+    @POST
+    @Path("/sessions/{sessionId}")
+    public boolean saveSession(Session session) {
+        return userService.saveSession(session);
     }
 
     @WebMethod(exclude = true)

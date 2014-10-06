@@ -33,7 +33,7 @@ public interface UserService {
 
     Session loadSession(String sessionId);
 
-    boolean saveSession(Session event);
+    boolean saveSession(Session session);
 
     PartialList<Session> findUserSessions(String userId);
 

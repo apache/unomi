@@ -11,5 +11,20 @@
     "COPY_REQUEST_PARAMETER_LABEL": "Copier le paramètre de requête",
     "COPY_REQUEST_HEADER_LABEL": "Copier l'en-tête de requête",
     "TO_USER_PROPERTY_LABEL": "vers la propriété utilisateur",
-    "COPY_REMOTE_IP_AND_LOCATION_LABEL": "Copier l'adresse Internet/géographique du client dans la session"
+    "COPY_REMOTE_IP_AND_LOCATION_LABEL": "Copier l'adresse Internet/géographique du client dans la session",
+
+    "SESSION_PROPERTIES_CITY_LABEL": "Ville",
+    "SESSION_PROPERTIES_COUNTRYCODE_LABEL": "Code pays",
+    "SESSION_PROPERTIES_COUNTRYNAME_LABEL": "Pays",
+    "SESSION_PROPERTIES_LATITUDE_LABEL": "Latitude",
+    "SESSION_PROPERTIES_LONGITUDE_LABEL": "Longitude",
+
+    "SESSION_PROPERTIES_DEVICECATEGORY_LABEL": "Catégorie d'appareil",
+    "SESSION_PROPERTIES_OPERATINGSYSTEMFAMILY_LABEL": "Type de système d'exploitation",
+    "SESSION_PROPERTIES_OPERATINGSYSTEMNAME_LABEL": "Nom du système d'exploitation",
+    "SESSION_PROPERTIES_REMOTEADDR_LABEL": "Adresse IP",
+    "SESSION_PROPERTIES_REMOTEHOST_LABEL": "Nom de la machine",
+    "SESSION_PROPERTIES_USERAGENTNAME_LABEL": "Navigateur",
+    "SESSION_PROPERTIES_USERAGENTVERSION_LABEL": "Version du navigateur"
+
 }
