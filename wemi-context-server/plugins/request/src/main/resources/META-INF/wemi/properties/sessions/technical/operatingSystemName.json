@@ -1,0 +1,10 @@
+{
+    "id": "operatingSystemName",
+    "type": "string",
+    "tags": ["technicalSessionProperties"],
+    "choiceListInitializerFilter": "",
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "2.0"
+}

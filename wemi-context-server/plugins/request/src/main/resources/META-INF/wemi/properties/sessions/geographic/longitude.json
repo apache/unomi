@@ -1,0 +1,10 @@
+{
+    "id": "longitude",
+    "type": "string",
+    "tags": ["geographicSessionProperties"],
+    "choiceListInitializerFilter": "",
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "5.0"
+}

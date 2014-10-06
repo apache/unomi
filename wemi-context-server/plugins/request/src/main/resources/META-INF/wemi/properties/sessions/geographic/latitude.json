@@ -1,0 +1,10 @@
+{
+    "id": "latitude",
+    "type": "string",
+    "tags": ["geographicSessionProperties"],
+    "choiceListInitializerFilter": "",
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "4.0"
+}

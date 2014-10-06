@@ -1,0 +1,10 @@
+{
+    "id": "userAgentName",
+    "type": "string",
+    "tags": ["technicalSessionProperties"],
+    "choiceListInitializerFilter": "",
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "3.0"
+}

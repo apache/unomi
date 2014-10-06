@@ -1,0 +1,10 @@
+{
+    "id": "countryName",
+    "type": "string",
+    "tags": ["geographicSessionProperties"],
+    "choiceListInitializerFilter": "",
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "2.0"
+}

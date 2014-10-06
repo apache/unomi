@@ -1,0 +1,10 @@
+{
+    "id": "city",
+    "type": "string",
+    "tags": ["geographicSessionProperties"],
+    "choiceListInitializerFilter": "",
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "3.0"
+}

@@ -1,0 +1,10 @@
+{
+    "id": "deviceCategory",
+    "type": "string",
+    "tags": ["technicalSessionProperties"],
+    "choiceListInitializerFilter": "",
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "5.0"
+}
