@@ -124,6 +124,43 @@ public class PropertyType extends Item implements Comparable<PropertyType>, Plug
     }
 
     public int compareTo(PropertyType o) {
-        return Double.compare(rank, o.rank);
+        int rankCompare = Double.compare(rank, o.rank);
+        if (rankCompare != 0) {
+            return rankCompare;
+        }
+        int idCompare = id.compareTo(o.id);
+        if (idCompare != 0) {
+            return idCompare;
+        }
+        if (pluginId != null && o.pluginId != null) {
+            return pluginId.compareTo(o.pluginId);
+        } else {
+            return idCompare;
+        }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        PropertyType that = (PropertyType) o;
+
+        if (Double.compare(that.rank, rank) != 0) return false;
+        if (!id.equals(that.id)) return false;
+        if (pluginId != null ? !pluginId.equals(that.pluginId) : that.pluginId != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result;
+        long temp;
+        result = id.hashCode();
+        temp = Double.doubleToLongBits(rank);
+        result = 31 * result + (int) (temp ^ (temp >>> 32));
+        result = 31 * result + (pluginId != null ? pluginId.hashCode() : 0);
+        return result;
     }
 }

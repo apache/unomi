@@ -115,8 +115,24 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
         return new LinkedHashSet<PropertyType>(persistenceService.getAllItems(PropertyType.class));
     }
 
-    public Set<PropertyType> getPropertyTypes(String tagId) {
-        return new TreeSet<PropertyType>(persistenceService.query("tags", tagId, null, PropertyType.class));
+    public Set<PropertyType> getPropertyTypes(String tagId, boolean recursive) {
+        if (recursive) {
+            Set<String> allTagIds = new HashSet<String>();
+            collectSubTagIds(tagId, allTagIds);
+            return new TreeSet<PropertyType>(persistenceService.query("tags", allTagIds.toArray(new String[allTagIds.size()]), null, PropertyType.class));
+        } else {
+            return new TreeSet<PropertyType>(persistenceService.query("tags", tagId, null, PropertyType.class));
+        }
+    }
+
+    private void collectSubTagIds(String tagId, Set<String> allTagIds) {
+        allTagIds.add(tagId);
+        Tag rootTag = definitionsService.getTag(new Tag(tagId));
+        if (rootTag.getSubTags() != null && rootTag.getSubTags().size() > 0) {
+            for (Tag subTag : rootTag.getSubTags()) {
+                collectSubTagIds(subTag.getId(), allTagIds);
+            }
+        }
     }
 
     public String getPropertyTypeMapping(String fromPropertyTypeId) {

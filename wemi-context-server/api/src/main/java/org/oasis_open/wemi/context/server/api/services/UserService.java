@@ -27,7 +27,7 @@ public interface UserService {
 
     Set<PropertyType> getAllPropertyTypes();
 
-    Set<PropertyType> getPropertyTypes(String tagId);
+    Set<PropertyType> getPropertyTypes(String tagId, boolean recursive);
 
     String getPropertyTypeMapping(String fromPropertyTypeId);
 

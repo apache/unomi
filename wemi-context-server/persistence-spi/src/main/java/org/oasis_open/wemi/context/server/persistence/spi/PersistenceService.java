@@ -38,6 +38,8 @@ public interface PersistenceService {
 
     public <T extends Item> List<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz);
 
+    public <T extends Item> List<T> query(String fieldName, String[] fieldValues, String sortBy, Class<T> clazz);
+
     public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz, int offset, int size);
 
     public <T extends Item> List<T> query(Condition query, String sortBy, Class<T> clazz);

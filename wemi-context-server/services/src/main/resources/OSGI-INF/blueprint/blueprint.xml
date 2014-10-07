@@ -104,8 +104,8 @@
         <service-properties>
             <entry key="initializerId" value="propertyType"/>
         </service-properties>
-        <bean class="org.oasis_open.wemi.context.server.impl.conditions.initializers.PropertyTypeChoiceListInitializer">
-        <property name="userService" ref="userServiceImpl"/>
+        <bean class="org.oasis_open.wemi.context.server.impl.conditions.initializers.UserPropertyTypeChoiceListInitializer">
+            <property name="userService" ref="userServiceImpl"/>
         </bean>
     </service>
 
@@ -173,8 +173,8 @@
             <entry key="actionExecutorId" value="setEventOccurenceCount"/>
         </service-properties>
         <bean class="org.oasis_open.wemi.context.server.impl.actions.SetEventOccurenceCountAction">
-            <property name="definitionsService" ref="definitionsServiceImpl" />
-            <property name="persistenceService" ref="persistenceService" />
+            <property name="definitionsService" ref="definitionsServiceImpl"/>
+            <property name="persistenceService" ref="persistenceService"/>
         </bean>
     </service>
 

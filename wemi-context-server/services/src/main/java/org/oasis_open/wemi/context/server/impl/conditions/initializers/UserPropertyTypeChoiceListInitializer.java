@@ -12,7 +12,7 @@ import java.util.Set;
 /**
  *
  */
-public class PropertyTypeChoiceListInitializer implements ChoiceListInitializer {
+public class UserPropertyTypeChoiceListInitializer implements ChoiceListInitializer {
 
     UserService userService;
 
@@ -22,7 +22,7 @@ public class PropertyTypeChoiceListInitializer implements ChoiceListInitializer 
 
     public List<ChoiceListValue> getValues(Object context) {
         List<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
-        Set<PropertyType> userProperties = userService.getAllPropertyTypes();
+        Set<PropertyType> userProperties = userService.getPropertyTypes("userProperties", true);
         for (PropertyType propertyType : userProperties) {
             String resourceKey = "USER_PROPERTIES_" + propertyType.getId().toUpperCase().replaceAll("\\.", "_") + "_LABEL";
             choiceListValues.add(new ChoiceListValue(propertyType.getId(), resourceKey));

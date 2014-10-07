@@ -93,8 +93,8 @@ public class UserServiceEndPoint implements UserService {
 
     @GET
     @Path("/properties/tags/{tagId}")
-    public Set<PropertyType> getPropertyTypes(@PathParam("tagId") String tagId) {
-        return userService.getPropertyTypes(tagId);
+    public Set<PropertyType> getPropertyTypes(@PathParam("tagId") String tagId, @QueryParam("recursive") @DefaultValue("false") boolean recursive) {
+        return userService.getPropertyTypes(tagId, recursive);
     }
 
     @GET

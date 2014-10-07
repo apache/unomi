@@ -381,6 +381,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return query(fieldName, fieldValue, sortBy, clazz, 0, -1).getList();
     }
 
+    public <T extends Item> List<T> query(final String fieldName, final String[] fieldValues, String sortBy, final Class<T> clazz) {
+        return query(QueryBuilders.termsQuery(fieldName, fieldValues), sortBy, clazz, 0, -1).getList();
+    }
+
     @Override
     public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz, int offset, int size) {
         return query(QueryBuilders.termQuery(fieldName, fieldValue), sortBy, clazz, offset, size);
