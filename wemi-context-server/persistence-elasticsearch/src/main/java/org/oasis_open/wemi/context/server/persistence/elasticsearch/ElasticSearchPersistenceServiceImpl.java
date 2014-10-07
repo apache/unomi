@@ -1,5 +1,7 @@
 package org.oasis_open.wemi.context.server.persistence.elasticsearch;
 
+import org.elasticsearch.action.admin.cluster.node.info.NodeInfo;
+import org.elasticsearch.action.admin.cluster.node.info.NodesInfoResponse;
 import org.elasticsearch.action.admin.cluster.node.stats.NodeStats;
 import org.elasticsearch.action.admin.cluster.node.stats.NodesStatsResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
@@ -20,6 +22,7 @@ import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsException;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.index.query.QueryBuilder;
@@ -77,6 +80,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private Map<String,String> mappings = new HashMap<String, String>();
 
     private static List<String> DAILY_ITEMS = Arrays.asList("session","event");
+    private String address;
+    private String port;
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -118,11 +123,17 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                     }
                 }
-                if (settingsBuilder != null) {
-                    node = nodeBuilder().settings(settingsBuilder).node();
-                } else {
-                    node = nodeBuilder().clusterName(clusterName).node();
+
+                address = System.getProperty("contextserver.address","localhost");
+                port = System.getProperty("contextserver.port","8181");
+
+                if (settingsBuilder == null) {
+                    settingsBuilder = ImmutableSettings.builder()
+                            .put("cluster.name", clusterName)
+                            .put("node.contextserver.address", address)
+                            .put("node.contextserver.port", port);
                 }
+                node = nodeBuilder().settings(settingsBuilder).node();
                 client = node.client();
                 // @todo is there a better way to detect index existence than to wait for it to startup ?
                 boolean indexExists = false;
@@ -168,7 +179,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private String getDailyIndex(Date date) {
-        String d = new SimpleDateFormat("-YYYY-MM-dd-HH").format(date);
+        String d = new SimpleDateFormat("-YYYY-MM-dd").format(date);
         String dailyIndexName = indexName + d;
 
         IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(dailyIndexName).execute().actionGet();
@@ -271,7 +282,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String source = CustomObjectMapper.getObjectMapper().writeValueAsString(item);
                     String itemType = (String) item.getClass().getField("ITEM_TYPE").get(null);
-                    IndexRequestBuilder indexBuilder = client.prepareIndex(DAILY_ITEMS.contains(itemType) ? getDailyIndex(((TimestampedItem)item).getTimeStamp()) : indexName, itemType, item.getItemId())
+                    IndexRequestBuilder indexBuilder = client.prepareIndex(DAILY_ITEMS.contains(itemType) ? getDailyIndex(((TimestampedItem) item).getTimeStamp()) : indexName, itemType, item.getItemId())
                             .setSource(source);
                     if (item.getParentId() != null) {
                         indexBuilder = indexBuilder.setParent(item.getParentId());
@@ -616,27 +627,29 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
             @Override
             protected List<ClusterNode> execute(Object... args) {
-                List<ClusterNode> clusterNodes = new ArrayList<ClusterNode>();
+                Map<String,ClusterNode> clusterNodes = new LinkedHashMap<String, ClusterNode>();
+
+                NodesInfoResponse nodesInfoResponse = client.admin().cluster().prepareNodesInfo(NodesOperationRequest.ALL_NODES)
+                        .setSettings(true)
+                        .execute()
+                        .actionGet();
+                NodeInfo[] nodesInfoArray = nodesInfoResponse.getNodes();
+                for (NodeInfo nodeInfo : nodesInfoArray) {
+                    ClusterNode clusterNode = new ClusterNode();
+                    clusterNode.setHostName(nodeInfo.getHostname());
+                    clusterNode.setHostAddress(nodeInfo.getSettings().get("node.contextserver.address", address));
+                    clusterNode.setPublicPort(Integer.parseInt(nodeInfo.getSettings().get("node.contextserver.port", port)));
+                    clusterNodes.put(nodeInfo.getNode().getId(), clusterNode);
+                }
 
                 NodesStatsResponse nodesStatsResponse = client.admin().cluster().prepareNodesStats(NodesOperationRequest.ALL_NODES)
-                        .setFs(true)
-                        .setBreaker(true)
-                        .setHttp(true)
-                        .setJvm(true)
                         .setOs(true)
-                        .setNetwork(true)
                         .setProcess(true)
-                        .setIndices(true)
-                        .setThreadPool(true)
-                        .setTransport(true)
                         .execute()
                         .actionGet();
                 NodeStats[] nodeStatsArray = nodesStatsResponse.getNodes();
                 for (NodeStats nodeStats : nodeStatsArray) {
-                    ClusterNode clusterNode = new ClusterNode();
-                    clusterNode.setHostName(nodeStats.getHostname());
-                    clusterNode.setHostAddress(nodeStats.getNode().getHostAddress());
-                    clusterNode.setPublicPort(8181);
+                    ClusterNode clusterNode = clusterNodes.get(nodeStats.getNode().getId());
                     // the following may be null in the case where Sigar didn't initialize properly, for example
                     // because the native libraries were not installed or if we redeployed the OSGi bundle in which
                     // case Sigar cannot initialize properly since it tries to reload the native libraries, generates
@@ -648,10 +661,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         clusterNode.setLoadAverage(nodeStats.getOs().getLoadAverage());
                         clusterNode.setUptime(nodeStats.getOs().getUptime().getMillis());
                     }
-                    clusterNodes.add(clusterNode);
                 }
 
-                return clusterNodes;
+                return new ArrayList<ClusterNode>(clusterNodes.values());
             }
         }.executeInClassLoader();
     }
