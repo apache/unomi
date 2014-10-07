@@ -107,7 +107,7 @@ public class HttpUtils {
             responseWriter.append("  \"session\": {  ");
             responseWriter.append("      \"duration\": \"" + session.getDuration() + "\",");
             responseWriter.append("      \"lastEventDate\": \"" + session.getLastEventDate() + "\",");
-            responseWriter.append("      \"creationDate\": \"" + session.getSessionCreationDate() + "\",");
+            responseWriter.append("      \"creationDate\": \"" + session.getTimeStamp() + "\",");
             responseWriter.append("      \"properties\": {");
             int i = 0;
             for (String sessionPropertyName : session.getProperties().keySet()) {

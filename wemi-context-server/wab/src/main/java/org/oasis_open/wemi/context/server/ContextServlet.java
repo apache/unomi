@@ -105,6 +105,8 @@ public class ContextServlet extends HttpServlet {
 
         Session session = null;
 
+        boolean userCreated = false;
+
         if (user instanceof Persona) {
             session = userService.findUserSessions(user.getId()).get(0);
         } else {
@@ -118,7 +120,6 @@ public class ContextServlet extends HttpServlet {
                 }
             }
             if (user == null) {
-                boolean userCreated = false;
                 // user not stored in session
                 if (cookieProfileId == null) {
                     // no visitorId cookie was found, we generate a new one and create the user in the user service
@@ -133,13 +134,6 @@ public class ContextServlet extends HttpServlet {
                     }
                 }
 
-                if (userCreated) {
-                    Event userUpdated = new Event("userUpdated", session, user, timestamp);
-
-                    userUpdated.getAttributes().put("http_request", request);
-                    userUpdated.getAttributes().put("http_response", response);
-                    eventService.save(userUpdated);
-                }
             } else if (cookieProfileId == null || !cookieProfileId.equals(user.getItemId())) {
                 // user if stored in session but not in cookie
                 HttpUtils.sendCookie(user, response);
@@ -156,6 +150,13 @@ public class ContextServlet extends HttpServlet {
             }
         }
 
+        if (userCreated) {
+            Event userUpdated = new Event("userUpdated", session, user, timestamp);
+
+            userUpdated.getAttributes().put("http_request", request);
+            userUpdated.getAttributes().put("http_response", response);
+            eventService.save(userUpdated);
+        }
 
         HttpUtils.setupCORSHeaders(httpServletRequest, response);
 

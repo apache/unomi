@@ -4,7 +4,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Session extends Item {
+public class Session extends Item implements TimestampedItem {
 
     public static final String ITEM_TYPE = "session";
 
@@ -14,7 +14,7 @@ public class Session extends Item {
 
     private Map<String,Object> properties;
 
-    private Date sessionCreationDate;
+    private Date timeStamp;
 
     private Date lastEventDate;
 
@@ -23,12 +23,12 @@ public class Session extends Item {
     public Session() {
     }
 
-    public Session(String itemId, User user, Date sessionCreationDate) {
+    public Session(String itemId, User user, Date timeStamp) {
         super(itemId);
         this.user = user;
         this.userId = user.getId();
         properties = new HashMap<String,Object>();
-        this.sessionCreationDate = sessionCreationDate;
+        this.timeStamp = timeStamp;
     }
 
     public String getId() {
@@ -64,8 +64,8 @@ public class Session extends Item {
         return properties;
     }
 
-    public Date getSessionCreationDate() {
-        return sessionCreationDate;
+    public Date getTimeStamp() {
+        return timeStamp;
     }
 
     public Date getLastEventDate() {
@@ -75,7 +75,7 @@ public class Session extends Item {
     public void setLastEventDate(Date lastEventDate) {
         this.lastEventDate = lastEventDate;
         if (lastEventDate != null) {
-            duration = lastEventDate.getTime() - sessionCreationDate.getTime();
+            duration = lastEventDate.getTime() - timeStamp.getTime();
         }
     }
 

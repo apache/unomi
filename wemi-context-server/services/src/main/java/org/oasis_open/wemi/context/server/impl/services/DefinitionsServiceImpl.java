@@ -1,6 +1,5 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
-import org.apache.cxf.helpers.IOUtils;
 import org.oasis_open.wemi.context.server.api.PluginType;
 import org.oasis_open.wemi.context.server.api.Tag;
 import org.oasis_open.wemi.context.server.api.ValueType;
@@ -63,8 +62,6 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
         pluginTypes.put(bundleContext.getBundle().getBundleId(), new ArrayList<PluginType>());
 
-        loadPredefinedMappings(bundleContext);
-
         loadPredefinedTags(bundleContext);
 
         loadPredefinedConditionTypes(bundleContext);
@@ -106,25 +103,6 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
-    }
-
-    private void loadPredefinedMappings(BundleContext bundleContext) {
-        Enumeration<URL> predefinedMappings = bundleContext.getBundle().findEntries("META-INF/wemi/mappings", "*.json", true);
-        if (predefinedMappings == null) {
-            return;
-        }
-        while (predefinedMappings.hasMoreElements()) {
-            URL predefinedMappingURL = predefinedMappings.nextElement();
-            logger.debug("Found mapping at " + predefinedMappingURL + ", loading... ");
-            try {
-                final String path = predefinedMappingURL.getPath();
-                String name = path.substring(path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
-                String content = IOUtils.readStringFromStream(predefinedMappingURL.openStream());
-                persistenceService.createMapping(name, content);
-            } catch (Exception e) {
-                logger.error("Error while loading segment definition " + predefinedMappingURL, e);
-            }
-        }
     }
 
     private void loadPredefinedTags(BundleContext bundleContext) {
