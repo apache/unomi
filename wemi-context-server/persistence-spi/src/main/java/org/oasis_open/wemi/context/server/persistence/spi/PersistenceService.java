@@ -28,8 +28,6 @@ public interface PersistenceService {
 
     public boolean removeQuery(String queryName);
 
-    public boolean createMapping(String queryName, String query);
-
     public Map<String, Map<String,String>> getMapping(String itemType);
 
     public List<String> getMatchingSavedQueries(Item item);

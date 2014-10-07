@@ -153,7 +153,7 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
     }
 
     public PartialList<Session> findUserSessions(String userId) {
-        return persistenceService.query("userId", userId, "sessionCreationDate:desc", Session.class, 0, 50);
+        return persistenceService.query("userId", userId, "timeStamp:desc", Session.class, 0, 50);
     }
 
     @Override

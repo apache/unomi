@@ -202,10 +202,10 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         Map<String, Long> all;
         Map<String, Long> match;
 
-        if ("sessionCreationDate".equals(split)) {
-            all = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.DATE, "sessionCreationDate"), Session.ITEM_TYPE);
+        if ("timeStamp".equals(split)) {
+            all = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.DATE, "timeStamp"), Session.ITEM_TYPE);
             condition.getParameterValues().put("goalReached", true);
-            match = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.DATE, "sessionCreationDate"), Session.ITEM_TYPE);
+            match = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.DATE, "timeStamp"), Session.ITEM_TYPE);
         } else if (split != null) {
             all = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.TERMS, split), Session.ITEM_TYPE);
             condition.getParameterValues().put("goalReached", true);

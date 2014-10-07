@@ -6,7 +6,7 @@ import java.util.*;
 /**
  * Created by loom on 24.04.14.
  */
-public class Event extends Item {
+public class Event extends Item implements TimestampedItem {
 
     public static final String ITEM_TYPE = "event";
 //    public static final String PARENT_ITEM_TYPE = "session";

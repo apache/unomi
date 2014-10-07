@@ -140,6 +140,7 @@
           class="org.oasis_open.wemi.context.server.persistence.elasticsearch.ElasticSearchPersistenceServiceImpl"
           init-method="start"
           destroy-method="stop">
+        <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="conditionESQueryBuilderDispatcher" ref="conditionESQueryBuilderDispatcher"/>
         <property name="clusterName" value="${cluster.name}"/>
         <property name="indexName" value="${index.name}"/>

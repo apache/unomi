@@ -11,7 +11,7 @@
             }}
         ],
         "properties" : {
-            "sessionCreationDate" : {"type" : "date" },
+            "timeStamp" : {"type" : "date" },
             "lastEventDate" : {"type" : "date" }
         }
     }

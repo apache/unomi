@@ -1,10 +1,13 @@
 package org.oasis_open.wemi.context.server.persistence.elasticsearch;
 
+import org.elasticsearch.action.admin.cluster.node.info.NodeInfo;
+import org.elasticsearch.action.admin.cluster.node.info.NodesInfoResponse;
 import org.elasticsearch.action.admin.cluster.node.stats.NodeStats;
 import org.elasticsearch.action.admin.cluster.node.stats.NodesStatsResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
+import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
@@ -19,6 +22,7 @@ import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsException;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.index.query.QueryBuilder;
@@ -39,18 +43,23 @@ import org.elasticsearch.search.sort.SortOrder;
 import org.oasis_open.wemi.context.server.api.ClusterNode;
 import org.oasis_open.wemi.context.server.api.Item;
 import org.oasis_open.wemi.context.server.api.PartialList;
+import org.oasis_open.wemi.context.server.api.TimestampedItem;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.services.ClusterService;
 import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 import org.oasis_open.wemi.context.server.persistence.spi.Aggregate;
 import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
+import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
@@ -67,6 +76,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String clusterName = "wemiElasticSearch";
     private String indexName = "wemi";
     private String elasticSearchConfig = null;
+    private BundleContext bundleContext;
+    private Map<String,String> mappings = new HashMap<String, String>();
+
+    private static List<String> DAILY_ITEMS = Arrays.asList("session","event");
+    private String address;
+    private String port;
+
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
 
     public void setClusterName(String clusterName) {
         this.clusterName = clusterName;
@@ -104,11 +123,17 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                     }
                 }
-                if (settingsBuilder != null) {
-                    node = nodeBuilder().settings(settingsBuilder).node();
-                } else {
-                    node = nodeBuilder().clusterName(clusterName).node();
+
+                address = System.getProperty("contextserver.address","localhost");
+                port = System.getProperty("contextserver.port","8181");
+
+                if (settingsBuilder == null) {
+                    settingsBuilder = ImmutableSettings.builder()
+                            .put("cluster.name", clusterName)
+                            .put("node.contextserver.address", address)
+                            .put("node.contextserver.port", port);
                 }
+                node = nodeBuilder().settings(settingsBuilder).node();
                 client = node.client();
                 // @todo is there a better way to detect index existence than to wait for it to startup ?
                 boolean indexExists = false;
@@ -127,9 +152,17 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     logger.info(indexName + " index doesn't exist yet, creating it...");
                     CreateIndexResponse createIndexResponse = client.admin().indices().prepareCreate(indexName).execute().actionGet();
                 }
+
+                PutIndexTemplateResponse response = client.admin().indices().preparePutTemplate("wemi_dailyindex")
+                        .setTemplate("wemi-*")
+                        .setOrder(1)
+                        .setSettings(ImmutableSettings.settingsBuilder().put("number_of_shards", 1).build())
+                        .execute().actionGet();
                 return null;
             }
         }.executeInClassLoader();
+
+        loadPredefinedMappings(bundleContext);
 
     }
 
@@ -144,6 +177,54 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
 
     }
+
+    private String getDailyIndex(Date date) {
+        String d = new SimpleDateFormat("-YYYY-MM-dd").format(date);
+        String dailyIndexName = indexName + d;
+
+        IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(dailyIndexName).execute().actionGet();
+        boolean indexExists = indicesExistsResponse.isExists();
+
+        if (!indexExists) {
+            logger.info(indexName + " index doesn't exist yet, creating it...");
+            CreateIndexResponse createIndexResponse = client.admin().indices().prepareCreate(dailyIndexName).execute().actionGet();
+
+            for (Map.Entry<String, String> entry : mappings.entrySet()) {
+                createMapping(entry.getKey(), entry.getValue(), dailyIndexName);
+            }
+        }
+
+        return dailyIndexName;
+    }
+
+    private void loadPredefinedMappings(BundleContext bundleContext) {
+        Enumeration<URL> predefinedMappings = bundleContext.getBundle().findEntries("META-INF/wemi/mappings", "*.json", true);
+        if (predefinedMappings == null) {
+            return;
+        }
+        while (predefinedMappings.hasMoreElements()) {
+            URL predefinedMappingURL = predefinedMappings.nextElement();
+            logger.debug("Found mapping at " + predefinedMappingURL + ", loading... ");
+            try {
+                final String path = predefinedMappingURL.getPath();
+                String name = path.substring(path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
+                BufferedReader reader = new BufferedReader(new InputStreamReader(predefinedMappingURL.openStream()));
+
+                StringBuilder content = new StringBuilder();
+                String l;
+                while ((l = reader.readLine()) != null) {
+                    content.append(l);
+                }
+                mappings.put(name, content.toString());
+
+                createMapping(name, content.toString(), indexName);
+            } catch (Exception e) {
+                logger.error("Error while loading segment definition " + predefinedMappingURL, e);
+            }
+        }
+    }
+
+
 
     @Override
     public <T extends Item> List<T> getAllItems(final Class<T> clazz) {
@@ -164,17 +245,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected T execute(Object... args) {
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
-                    try {
-                        // Check if class has a parent defined - use a query instead, as we can't do a get on items
-                        // with parents
-                        clazz.getField("PARENT_ITEM_TYPE");
-
+                    if (DAILY_ITEMS.contains(itemType)) {
                         PartialList<T> r = query(QueryBuilders.idsQuery(itemType).ids(itemId), null, clazz,0, 1);
                         if (r.size() > 0) {
                             return r.get(0);
                         }
                         return null;
-                    } catch (NoSuchFieldException e) {
+                    } else {
                         GetResponse response = client.prepareGet(indexName, itemType, itemId)
                                 .execute()
                                 .actionGet();
@@ -205,7 +282,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String source = CustomObjectMapper.getObjectMapper().writeValueAsString(item);
                     String itemType = (String) item.getClass().getField("ITEM_TYPE").get(null);
-                    IndexRequestBuilder indexBuilder = client.prepareIndex(indexName, itemType, item.getItemId())
+                    IndexRequestBuilder indexBuilder = client.prepareIndex(DAILY_ITEMS.contains(itemType) ? getDailyIndex(((TimestampedItem) item).getTimeStamp()) : indexName, itemType, item.getItemId())
                             .setSource(source);
                     if (item.getParentId() != null) {
                         indexBuilder = indexBuilder.setParent(item.getParentId());
@@ -235,7 +312,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
 
-                    client.prepareDelete(indexName, itemType, itemId)
+                    client.prepareDelete(DAILY_ITEMS.contains(itemType) ? indexName + "-*" : indexName, itemType, itemId)
                             .execute().actionGet();
                     return true;
                 } catch (Exception e) {
@@ -246,7 +323,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
-    public boolean createMapping(final String type, final String source) {
+    private boolean createMapping(final String type, final String source, final String indexName) {
         return new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {
                 client.admin().indices()
@@ -400,7 +477,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
             @Override
             protected Long execute(Object... args) {
-                SearchResponse response = client.prepareSearch(indexName)
+                SearchResponse response = client.prepareSearch(DAILY_ITEMS.contains(itemType) ? indexName + "-*" : indexName)
                         .setTypes(itemType)
                         .setSearchType(SearchType.COUNT)
                         .setQuery(QueryBuilders.matchAllQuery())
@@ -423,7 +500,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 long totalHits = 0;
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
-                    SearchRequestBuilder requestBuilder = client.prepareSearch(indexName)
+                    SearchRequestBuilder requestBuilder = client.prepareSearch(DAILY_ITEMS.contains(itemType) ? indexName + "-*" : indexName)
                             .setTypes(itemType)
                             .setFetchSource(true)
                             .setQuery(query)
@@ -477,7 +554,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Map<String, Long> execute(Object... args) {
                 Map<String, Long> results = new LinkedHashMap<String, Long>();
 
-                SearchRequestBuilder builder = client.prepareSearch(indexName)
+                SearchRequestBuilder builder = client.prepareSearch(DAILY_ITEMS.contains(itemType) ? indexName + "-*" : indexName)
                         .setTypes(itemType)
                         .setSearchType(SearchType.COUNT)
                         .setQuery(QueryBuilders.matchAllQuery());
@@ -554,26 +631,29 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
             @Override
             protected List<ClusterNode> execute(Object... args) {
-                List<ClusterNode> clusterNodes = new ArrayList<ClusterNode>();
+                Map<String,ClusterNode> clusterNodes = new LinkedHashMap<String, ClusterNode>();
+
+                NodesInfoResponse nodesInfoResponse = client.admin().cluster().prepareNodesInfo(NodesOperationRequest.ALL_NODES)
+                        .setSettings(true)
+                        .execute()
+                        .actionGet();
+                NodeInfo[] nodesInfoArray = nodesInfoResponse.getNodes();
+                for (NodeInfo nodeInfo : nodesInfoArray) {
+                    ClusterNode clusterNode = new ClusterNode();
+                    clusterNode.setHostName(nodeInfo.getHostname());
+                    clusterNode.setHostAddress(nodeInfo.getSettings().get("node.contextserver.address", address));
+                    clusterNode.setPublicPort(Integer.parseInt(nodeInfo.getSettings().get("node.contextserver.port", port)));
+                    clusterNodes.put(nodeInfo.getNode().getId(), clusterNode);
+                }
 
                 NodesStatsResponse nodesStatsResponse = client.admin().cluster().prepareNodesStats(NodesOperationRequest.ALL_NODES)
-                        .setFs(true)
-                        .setBreaker(true)
-                        .setHttp(true)
-                        .setJvm(true)
                         .setOs(true)
-                        .setNetwork(true)
                         .setProcess(true)
-                        .setIndices(true)
-                        .setThreadPool(true)
-                        .setTransport(true)
                         .execute()
                         .actionGet();
                 NodeStats[] nodeStatsArray = nodesStatsResponse.getNodes();
                 for (NodeStats nodeStats : nodeStatsArray) {
-                    ClusterNode clusterNode = new ClusterNode();
-                    clusterNode.setHostName(nodeStats.getHostname());
-                    clusterNode.setPublicPort(8181);
+                    ClusterNode clusterNode = clusterNodes.get(nodeStats.getNode().getId());
                     // the following may be null in the case where Sigar didn't initialize properly, for example
                     // because the native libraries were not installed or if we redeployed the OSGi bundle in which
                     // case Sigar cannot initialize properly since it tries to reload the native libraries, generates
@@ -585,10 +665,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         clusterNode.setLoadAverage(nodeStats.getOs().getLoadAverage());
                         clusterNode.setUptime(nodeStats.getOs().getUptime().getMillis());
                     }
-                    clusterNodes.add(clusterNode);
                 }
 
-                return clusterNodes;
+                return new ArrayList<ClusterNode>(clusterNodes.values());
             }
         }.executeInClassLoader();
     }
