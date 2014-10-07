@@ -12,8 +12,6 @@ import java.util.Set;
  */
 public interface EventService {
 
-    Event load(String eventId);
-
     boolean save(Event event);
 
     List<String> getEventProperties();

@@ -13,7 +13,6 @@ import javax.inject.Inject;
 import javax.json.*;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -77,7 +76,7 @@ public class EventCollectorServlet extends HttpServlet {
             return;
         }
 
-        Session session = userService.loadSession(sessionId);
+        Session session = userService.loadSession(sessionId, timestamp);
         if (session == null) {
             return;
         }

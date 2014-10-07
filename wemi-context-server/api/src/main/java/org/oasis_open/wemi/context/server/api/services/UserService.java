@@ -2,6 +2,7 @@ package org.oasis_open.wemi.context.server.api.services;
 
 import org.oasis_open.wemi.context.server.api.*;
 
+import java.util.Date;
 import java.util.Set;
 
 /**
@@ -31,7 +32,7 @@ public interface UserService {
 
     String getPropertyTypeMapping(String fromPropertyTypeId);
 
-    Session loadSession(String sessionId);
+    Session loadSession(String sessionId, Date dateHint);
 
     boolean saveSession(Session session);
 

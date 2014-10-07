@@ -8,6 +8,7 @@ import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.util.Date;
 import java.util.Set;
 
 /**
@@ -147,8 +148,8 @@ public class UserServiceEndPoint implements UserService {
 
     @GET
     @Path("/sessions/{sessionId}")
-    public Session loadSession(@PathParam("sessionId") String sessionId) {
-        return userService.loadSession(sessionId);
+    public Session loadSession(@PathParam("sessionId") String sessionId, Date dateHint) {
+        return userService.loadSession(sessionId, dateHint);
     }
 
     @POST

@@ -143,8 +143,16 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
         return null;
     }
 
-    public Session loadSession(String sessionId) {
-        return persistenceService.load(sessionId, Session.class);
+    public Session loadSession(String sessionId, Date dateHint) {
+        Session s = persistenceService.load(sessionId, dateHint, Session.class);
+        if (s == null) {
+            Date yesterday = new Date(dateHint.getTime() - (24L * 60L * 60L * 1000L));
+            s = persistenceService.load(sessionId, yesterday, Session.class);
+            if (s == null) {
+                s = persistenceService.load(sessionId, null, Session.class);
+            }
+        }
+        return s;
     }
 
     public boolean saveSession(Session session) {

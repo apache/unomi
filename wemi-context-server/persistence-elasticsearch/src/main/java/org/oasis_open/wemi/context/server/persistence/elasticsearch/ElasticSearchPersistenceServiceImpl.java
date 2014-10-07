@@ -5,9 +5,13 @@ import org.elasticsearch.action.admin.cluster.node.info.NodesInfoResponse;
 import org.elasticsearch.action.admin.cluster.node.stats.NodeStats;
 import org.elasticsearch.action.admin.cluster.node.stats.NodesStatsResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
+import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
+import org.elasticsearch.action.admin.indices.stats.IndicesStatsRequestBuilder;
+import org.elasticsearch.action.admin.indices.stats.IndicesStatsResponse;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateResponse;
+import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
@@ -59,6 +63,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -241,18 +246,26 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public <T extends Item> T load(final String itemId, final Class<T> clazz) {
+        return load(itemId, null, clazz);
+    }
+
+    public <T extends Item> T load(final String itemId, final Date dateHint, final Class<T> clazz) {
         return new InClassLoaderExecute<T>() {
             protected T execute(Object... args) {
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
-                    if (DAILY_ITEMS.contains(itemType)) {
+                    String dailyIndexName = indexName;
+                    if (DAILY_ITEMS.contains(itemType) && dateHint != null) {
+                        dailyIndexName = getDailyIndex(dateHint);
+                    }
+                    if (DAILY_ITEMS.contains(itemType) && dateHint == null) {
                         PartialList<T> r = query(QueryBuilders.idsQuery(itemType).ids(itemId), null, clazz,0, 1);
                         if (r.size() > 0) {
                             return r.get(0);
                         }
                         return null;
                     } else {
-                        GetResponse response = client.prepareGet(indexName, itemType, itemId)
+                        GetResponse response = client.prepareGet(dailyIndexName, itemType, itemId)
                                 .execute()
                                 .actionGet();
                         if (response.isExists()) {
@@ -671,6 +684,49 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             }
         }.executeInClassLoader();
     }
+
+
+    public void purge(final Date date) {
+        new InClassLoaderExecute<Object>() {
+            @Override
+            protected Object execute(Object... args) {
+                IndicesStatsResponse statsResponse = client.admin().indices().prepareStats("wemi-*")
+                        .setIndexing(false)
+                        .setGet(false)
+                        .setSearch(false)
+                        .setWarmer(false)
+                        .setMerge(false)
+                        .setFieldData(false)
+                        .setFlush(false)
+                        .setCompletion(false)
+                        .setRefresh(false)
+                        .setSuggest(false)
+                        .execute()
+                        .actionGet();
+
+                SimpleDateFormat d = new SimpleDateFormat("yyyy-MM-dd");
+
+                List<String> toDelete = new ArrayList<String>();
+                for (String indexName : statsResponse.getIndices().keySet()) {
+                    if (indexName.startsWith("wemi-")) {
+                        try {
+                            Date indexDate = d.parse(indexName.substring(5));
+                            if (indexDate.before(date)) {
+                                toDelete.add(indexName);
+                            }
+                        } catch (ParseException e) {
+                            logger.error("Cannot parse index name "+indexName ,e);
+                        }
+                    }
+                };
+                if (!toDelete.isEmpty()) {
+                    DeleteIndexResponse response = client.admin().indices().prepareDelete(toDelete.toArray(new String[toDelete.size()])).execute().actionGet();
+                }
+                return null;
+            }
+        }.executeInClassLoader();
+    }
+
 
     public abstract class InClassLoaderExecute<T> {
 

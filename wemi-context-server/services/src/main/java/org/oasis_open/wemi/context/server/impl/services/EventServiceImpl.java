@@ -53,10 +53,6 @@ public class EventServiceImpl implements EventService {
         this.bundleContext = bundleContext;
     }
 
-    public Event load(String eventId) {
-        return persistenceService.load(eventId, Event.class);
-    }
-
     public boolean save(Event event) {
         persistenceService.save(event);
 

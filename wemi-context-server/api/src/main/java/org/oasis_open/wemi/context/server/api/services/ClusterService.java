@@ -2,6 +2,7 @@ package org.oasis_open.wemi.context.server.api.services;
 
 import org.oasis_open.wemi.context.server.api.ClusterNode;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -10,5 +11,7 @@ import java.util.List;
 public interface ClusterService {
 
     List<ClusterNode> getClusterNodes();
+
+    public void purge(final Date date);
 
 }

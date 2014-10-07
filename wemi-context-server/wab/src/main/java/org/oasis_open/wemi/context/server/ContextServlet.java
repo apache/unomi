@@ -111,7 +111,7 @@ public class ContextServlet extends HttpServlet {
             session = userService.findUserSessions(user.getId()).get(0);
         } else {
             if (sessionId != null) {
-                session = userService.loadSession(sessionId);
+                session = userService.loadSession(sessionId, timestamp);
                 if (session != null) {
                     visitorId = session.getUserId();
                     if (user == null) { // could be non null in case of persona

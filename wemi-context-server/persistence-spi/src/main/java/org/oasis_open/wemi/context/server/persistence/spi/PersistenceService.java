@@ -4,6 +4,7 @@ import org.oasis_open.wemi.context.server.api.Item;
 import org.oasis_open.wemi.context.server.api.PartialList;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -22,13 +23,15 @@ public interface PersistenceService {
 
     public <T extends Item> T load(String itemId, Class<T> clazz);
 
+    public <T extends Item> T load(String itemId, Date dateHint, Class<T> clazz);
+
     public <T extends Item> boolean remove(String itemId, Class<T> clazz);
 
     public boolean saveQuery(String queryName, Condition query);
 
     public boolean removeQuery(String queryName);
 
-    public Map<String, Map<String,String>> getMapping(String itemType);
+    public Map<String, Map<String, String>> getMapping(String itemType);
 
     public List<String> getMatchingSavedQueries(Item item);
 
@@ -48,4 +51,5 @@ public interface PersistenceService {
 
     public Map<String, Long> aggregateQuery(Condition filter, Aggregate aggregate, String itemType);
 
+    public void purge(Date date);
 }
