@@ -8,10 +8,8 @@ import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
-import org.elasticsearch.action.admin.indices.stats.IndicesStatsRequestBuilder;
 import org.elasticsearch.action.admin.indices.stats.IndicesStatsResponse;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateResponse;
-import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
@@ -26,7 +24,6 @@ import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsException;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.index.query.QueryBuilder;
@@ -75,6 +72,7 @@ import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 public class ElasticSearchPersistenceServiceImpl implements PersistenceService, ClusterService {
 
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
+    public static final long MILLIS_PER_DAY = 24L * 60L * 60L * 1000L;
     ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
     private Node node;
     private Client client;
@@ -87,6 +85,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private static List<String> DAILY_ITEMS = Arrays.asList("session","event");
     private String address;
     private String port;
+
+    private Timer timer;
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -169,6 +169,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
         loadPredefinedMappings(bundleContext);
 
+        initializeTimer();
+
     }
 
     public void stop() {
@@ -180,6 +182,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return null;
             }
         }.executeInClassLoader();
+
+        if (timer != null) {
+            timer.cancel();
+            timer = null;
+        }
 
     }
 
@@ -656,6 +663,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     clusterNode.setHostName(nodeInfo.getHostname());
                     clusterNode.setHostAddress(nodeInfo.getSettings().get("node.contextserver.address", address));
                     clusterNode.setPublicPort(Integer.parseInt(nodeInfo.getSettings().get("node.contextserver.port", port)));
+                    clusterNode.setMaster(nodeInfo.getNode().isMasterNode());
                     clusterNodes.put(nodeInfo.getNode().getId(), clusterNode);
                 }
 
@@ -683,6 +691,27 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return new ArrayList<ClusterNode>(clusterNodes.values());
             }
         }.executeInClassLoader();
+    }
+
+    private void initializeTimer() {
+        final int autoPurge = node.settings().getAsInt("node.contextserver.autoPurge",-1);
+        if (autoPurge > 0) {
+            timer = new Timer();
+            TimerTask task = new TimerTask() {
+                @Override
+                public void run() {
+                    purge(getDay(-autoPurge).getTime());
+                }
+            };
+            timer.scheduleAtFixedRate(task, getDay(1).getTime(), MILLIS_PER_DAY);
+        }
+    }
+
+    private GregorianCalendar getDay(int offset) {
+        GregorianCalendar gc = new GregorianCalendar();
+        gc = new GregorianCalendar(gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), gc.get(Calendar.DAY_OF_MONTH));
+        gc.add(Calendar.DAY_OF_MONTH,offset);
+        return gc;
     }
 
 

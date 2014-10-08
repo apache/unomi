@@ -13,6 +13,7 @@ public class ClusterNode implements Serializable {
     private String hostAddress;
     private int publicPort;
     private long uptime;
+    private boolean master;
 
     public ClusterNode() {
     }
@@ -63,5 +64,13 @@ public class ClusterNode implements Serializable {
 
     public void setUptime(long uptime) {
         this.uptime = uptime;
+    }
+
+    public boolean isMaster() {
+        return master;
+    }
+
+    public void setMaster(boolean master) {
+        this.master = master;
     }
 }
