@@ -42,6 +42,8 @@ public interface UserService {
 
     Persona loadPersona(String personaId);
 
+    PersonaWithSessions loadPersonaWithSessions(String personaId);
+
     PartialList<Persona> getPersonas(int offset, int size, String sortBy);
 
     void createPersona(String personaId);

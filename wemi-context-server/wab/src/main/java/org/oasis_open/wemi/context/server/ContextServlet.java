@@ -5,10 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.commons.io.IOUtils;
-import org.oasis_open.wemi.context.server.api.Event;
-import org.oasis_open.wemi.context.server.api.Persona;
-import org.oasis_open.wemi.context.server.api.Session;
-import org.oasis_open.wemi.context.server.api.User;
+import org.oasis_open.wemi.context.server.api.*;
 import org.oasis_open.wemi.context.server.api.services.EventService;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 import org.oasis_open.wemi.context.server.api.services.UserService;
@@ -86,30 +83,32 @@ public class ContextServlet extends HttpServlet {
             }
         }
 
+        Session session = null;
+
         String personaId = request.getParameter("personaId");
         if (personaId != null) {
             if ("currentUser".equals(personaId) || personaId.equals(cookieProfileId)) {
                 user = null;
                 HttpUtils.clearCookie(response, "wemi-persona-id");
             } else {
-                user = userService.loadPersona(personaId);
+                PersonaWithSessions personaWithSessions = userService.loadPersonaWithSessions(personaId);
+                user = personaWithSessions.getPersona();
+                session = personaWithSessions.getLastSession();
                 if (user != null) {
                     HttpUtils.sendCookie(user, response);
                 }
             }
         } else if (cookiePersonaId != null) {
-            user = userService.loadPersona(cookiePersonaId);
+            PersonaWithSessions personaWithSessions = userService.loadPersonaWithSessions(cookiePersonaId);
+            user = personaWithSessions.getPersona();
+            session = personaWithSessions.getLastSession();
         }
 
         String sessionId = request.getParameter("sessionId");
 
-        Session session = null;
-
         boolean userCreated = false;
 
-        if (user instanceof Persona) {
-            session = userService.findUserSessions(user.getId()).get(0);
-        } else {
+        if (!(user instanceof Persona)) {
             if (sessionId != null) {
                 session = userService.loadSession(sessionId, timestamp);
                 if (session != null) {

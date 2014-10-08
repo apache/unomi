@@ -118,6 +118,12 @@ public class UserServiceEndPoint implements UserService {
         return userService.loadPersona(personaId);
     }
 
+    @GET
+    @Path("/personasWithSessions/{personaId}")
+    public PersonaWithSessions loadPersonaWithSessions(@PathParam("personaId") String personaId) {
+        return userService.loadPersonaWithSessions(personaId);
+    }
+
     @POST
     @Path("/personas/{personaId}")
     public void savePersona(Persona persona) {

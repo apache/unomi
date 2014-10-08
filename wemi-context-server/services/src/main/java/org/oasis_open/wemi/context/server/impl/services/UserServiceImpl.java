@@ -210,6 +210,12 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
         return persistenceService.load(personaId, Persona.class);
     }
 
+    public PersonaWithSessions loadPersonaWithSessions(String personaId) {
+        Persona persona = persistenceService.load(personaId, Persona.class);
+        List<PersonaSession> sessions = persistenceService.query("userId", persona.getId(), "timeStamp:desc", PersonaSession.class);
+        return new PersonaWithSessions(persona, sessions);
+    }
+
     public PartialList<Persona> getPersonas(int offset, int size, String sortBy) {
         return persistenceService.getAllItems(Persona.class, offset, size, sortBy);
     }
@@ -217,7 +223,7 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
     public void createPersona(String personaId) {
         Persona newPersona = new Persona(personaId);
 
-        Session session = new Session(UUID.randomUUID().toString(), newPersona, new Date());
+        Session session = new PersonaSession(UUID.randomUUID().toString(), newPersona, new Date());
 
         persistenceService.save(newPersona);
         persistenceService.save(session);
@@ -270,11 +276,11 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
             logger.debug("Found predefined persona at " + predefinedPersonaURL + ", loading... ");
 
             try {
-                PredefinedPersona persona = CustomObjectMapper.getObjectMapper().readValue(predefinedPersonaURL, PredefinedPersona.class);
+                PersonaWithSessions persona = CustomObjectMapper.getObjectMapper().readValue(predefinedPersonaURL, PersonaWithSessions.class);
                 persistenceService.save(persona.getPersona());
 
-                List<Session> sessions = persona.getSessions();
-                for (Session session : sessions) {
+                List<PersonaSession> sessions = persona.getSessions();
+                for (PersonaSession session : sessions) {
                     session.setUser(persona.getPersona());
                     persistenceService.save(session);
                 }
