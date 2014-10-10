@@ -44,7 +44,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         conditions.add(c);
 
         if (userEventCondition.getParameterValues().get("numberOfDays") != null) {
-            int i = Integer.parseInt((String) userEventCondition.getParameterValues().get("numberOfDays"));
+            int i = (Integer) userEventCondition.getParameterValues().get("numberOfDays");
 
             Condition timeCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
             timeCondition.getParameterValues().put("propertyName","timeStamp");

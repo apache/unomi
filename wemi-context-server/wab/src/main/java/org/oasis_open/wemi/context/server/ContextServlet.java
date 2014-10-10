@@ -171,7 +171,9 @@ public class ContextServlet extends HttpServlet {
         data.setUserSegments(user.getSegments());
         data.setUserProperties(user.getProperties());
         data.setFilteringResults(new HashMap<String, Boolean>());
-        data.setSessionProperties(session.getProperties());
+        if (session != null) {
+            data.setSessionProperties(session.getProperties());
+        }
 
         responseWriter.append("window.digitalData = window.digitalData || {};\n");
         responseWriter.append("var wemi = ");
