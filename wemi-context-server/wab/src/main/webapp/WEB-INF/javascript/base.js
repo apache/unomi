@@ -73,23 +73,7 @@ wemi.collectEvent = function (eventType, parameters, successCallBack) {
     xhr.onreadystatechange = function () {
         if (xhr.readyState == 4 && xhr.status == 200) {
             var jsonResponse = JSON.parse(xhr.responseText);
-            if (jsonResponse['updated']) {
-                var newDigitalData = jsonResponse['digitalData'];
-                newDigitalData.loaded = window.digitalData.loaded;
-                newDigitalData.loadCallbacks = window.digitalData.loadCallbacks;
-                newDigitalData.updateCallbacks = window.digitalData.updateCallbacks;
-                newDigitalData.filterCallback = window.digitalData.filterCallback;
-                window.digitalData = newDigitalData;
-                successCallBack(xhr);
-                if (window.digitalData.updateCallbacks && window.digitalData.updateCallbacks.length > 0) {
-                    console.log("wemi: Found WEMI context update callbacks, calling now...");
-                    for (var i = 0; i < window.digitalData.updateCallbacks.length; i++) {
-                        window.digitalData.updateCallbacks[i](digitalData);
-                    }
-                }
-            } else {
-                successCallBack(xhr);
-            }
+            successCallBack(xhr);
         }
     }
     xhr.send();
@@ -120,8 +104,6 @@ wemi.eraseCookie = function (name) {
     createCookie(name, "", -1);
 };
 
-
-wemi.merge(window.digitalData, wemi.wemiDigitalData);
 
 if (window.digitalData.loadCallbacks && window.digitalData.loadCallbacks.length > 0) {
     console.log("wemi: Found WEMI context load callbacks, calling now...");

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.io.IOUtils;
 import org.oasis_open.wemi.context.server.api.*;
 import org.oasis_open.wemi.context.server.api.services.EventService;
@@ -23,8 +24,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
-import java.util.Date;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
@@ -163,18 +163,18 @@ public class ContextServlet extends HttpServlet {
 
         String baseRequestURL = HttpUtils.getBaseRequestURL(httpServletRequest);
 
-        // we re-use the object naming convention from http://www.w3.org/community/custexpdata/, specifically in
-        // http://www.w3.org/2013/12/ceddl-201312.pdf
-        responseWriter.append("window.digitalData = window.digitalData || {};\n");
-        responseWriter.append("var wemi = {\n");
-        responseWriter.append("    wemiDigitalData : \n");
-        final String jsonDigitalData = HttpUtils.getJSONDigitalData(user, session, baseRequestURL);
-        responseWriter.append(jsonDigitalData);
-        responseWriter.append(", \n");
+        ObjectMapper mapper = new ObjectMapper();
 
-        if (sessionId != null) {
-            responseWriter.append("    sessionId : '" + sessionId + "'\n");
-        }
+        DigitalData data = new DigitalData();
+        data.setUserId(user.getId());
+        data.setSessionId(sessionId);
+        data.setUserSegments(user.getSegments());
+        data.setUserProperties(user.getProperties());
+        data.setFilteringResults(new HashMap<String, Boolean>());
+        data.setSessionProperties(session.getProperties());
+
+        responseWriter.append("window.digitalData = window.digitalData || {};\n");
+        responseWriter.append("var wemi = ");
 
         if ("post".equals(httpMethod.toLowerCase())) {
             StringBuilder buffer = new StringBuilder();
@@ -184,26 +184,26 @@ public class ContextServlet extends HttpServlet {
                 buffer.append(line);
             }
             if (buffer.length() > 0) {
-                ObjectMapper mapper = new ObjectMapper();
                 JsonFactory factory = mapper.getFactory();
-                ArrayNode filterNodes = mapper.readTree(factory.createParser(buffer.toString()));
-                responseWriter.append("    , filteringResults : {");
-                boolean first = true;
-                for (JsonNode jsonNode : filterNodes) {
-                    String id = jsonNode.get("filterid").asText();
-                    ArrayNode filters = (ArrayNode) jsonNode.get("filters");
-                    boolean result = true;
-                    for (JsonNode filter : filters) {
-                        JsonNode condition = filter.get("condition");
-                        result &= userService.matchCondition(mapper.writeValueAsString(condition), user, session);
+                ObjectNode payload = mapper.readTree(factory.createParser(buffer.toString()));
+                ArrayNode filterNodes =  (ArrayNode) payload.get("filters");
+                if (filterNodes != null) {
+                    data.setFilteringResults(new HashMap<String, Boolean>());
+                    for (JsonNode jsonNode : filterNodes) {
+
+                        String id = jsonNode.get("filterid").asText();
+                        ArrayNode filters = (ArrayNode) jsonNode.get("filters");
+                        boolean result = true;
+                        for (JsonNode filter : filters) {
+                            JsonNode condition = filter.get("condition");
+                            result &= userService.matchCondition(mapper.writeValueAsString(condition), user, session);
+                        }
+                        data.getFilteringResults().put(id, result);
                     }
-                    responseWriter.append((first ? "" : ",") + "'" + id + "':" + result);
-                    first = false;
                 }
-                responseWriter.append("}\n");
             }
         }
-        responseWriter.append("};\n");
+        responseWriter.append(mapper.writeValueAsString(data));
 
         // now we copy the base script source code
         InputStream baseScriptStream = getServletContext().getResourceAsStream(user instanceof Persona ? IMPERSONATE_BASE_SCRIPT_LOCATION : BASE_SCRIPT_LOCATION);

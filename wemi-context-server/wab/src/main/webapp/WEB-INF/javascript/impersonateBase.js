@@ -94,8 +94,6 @@ wemi.eraseCookie = function (name) {
 };
 
 
-wemi.merge(window.digitalData, wemi.wemiDigitalData);
-
 if (window.digitalData.loadCallbacks && window.digitalData.loadCallbacks.length > 0) {
     console.log("wemi: Found WEMI context load callbacks, calling now...");
     if ( window.digitalData.loadCallbacks) {

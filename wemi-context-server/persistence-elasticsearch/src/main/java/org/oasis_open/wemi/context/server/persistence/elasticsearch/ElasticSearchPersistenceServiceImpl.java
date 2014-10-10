@@ -304,9 +304,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     String itemType = (String) item.getClass().getField("ITEM_TYPE").get(null);
                     IndexRequestBuilder indexBuilder = client.prepareIndex(DAILY_ITEMS.contains(itemType) ? getDailyIndex(((TimestampedItem) item).getTimeStamp()) : indexName, itemType, item.getItemId())
                             .setSource(source);
-                    if (item.getParentId() != null) {
-                        indexBuilder = indexBuilder.setParent(item.getParentId());
-                    }
                     IndexResponse response = indexBuilder
                             .execute()
                             .actionGet();

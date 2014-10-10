@@ -12,7 +12,6 @@ import java.util.Properties;
 public abstract class Item implements Serializable {
 
     protected String itemId;
-    protected String parentId;
 
     public Item() {
     }
@@ -23,7 +22,6 @@ public abstract class Item implements Serializable {
 
     public Item(String itemId, String parentId) {
         this.itemId = itemId;
-        this.parentId = parentId;
     }
 
     @XmlTransient
@@ -35,13 +33,4 @@ public abstract class Item implements Serializable {
         this.itemId = itemId;
     }
 
-    @XmlTransient
-    public String getParentId() {
-        return parentId;
-    }
-
-
-    public void setParentId(String parentId) {
-        this.parentId = parentId;
-    }
 }

@@ -1,7 +1,6 @@
 package org.oasis_open.wemi.context.server;
 
 import org.oasis_open.wemi.context.server.api.Persona;
-import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
 
 import javax.servlet.ServletResponse;
@@ -95,66 +94,6 @@ public class HttpUtils {
             baseRequestURL += ":" + httpServletRequest.getServerPort();
         }
         return baseRequestURL;
-    }
-
-    public static String getJSONDigitalData(User user, Session session, String wemiContextServerURL) {
-        // @todo find a better to generate this JSON using either a template or a JSON databinding
-        StringBuilder responseWriter = new StringBuilder();
-        responseWriter.append("{");
-        responseWriter.append("  \"loaded\" : true, ");
-        responseWriter.append("  \"wemiContextServerURL\" : \"" + wemiContextServerURL + "\",");
-        if (session != null) {
-            responseWriter.append("  \"session\": {  ");
-            responseWriter.append("      \"duration\": \"" + session.getDuration() + "\",");
-            responseWriter.append("      \"lastEventDate\": \"" + session.getLastEventDate() + "\",");
-            responseWriter.append("      \"creationDate\": \"" + session.getTimeStamp() + "\",");
-            responseWriter.append("      \"properties\": {");
-            int i = 0;
-            for (String sessionPropertyName : session.getProperties().keySet()) {
-                responseWriter.append("        \"" + sessionPropertyName + "\": \"" + session.getProperty(sessionPropertyName) + "\"");
-                if (i < session.getProperties().size() - 1) {
-                    responseWriter.append(",");
-                }
-                i++;
-            }
-            responseWriter.append("      }");
-            responseWriter.append("  },  ");
-        }
-        responseWriter.append("  \"user\": [ {  ");
-        Set<String> userSegments = user.getSegments();
-        if (userSegments != null && userSegments.size() > 0) {
-            responseWriter.append("    \"segment\": {  ");
-            int i = 0;
-            for (String segmentId : userSegments) {
-                responseWriter.append("\"");
-                responseWriter.append(segmentId);
-                responseWriter.append("\" : true");
-                if (i < userSegments.size() - 1) {
-                    responseWriter.append(",");
-                }
-                i++;
-            }
-            responseWriter.append("    },");
-        }
-
-        responseWriter.append("    \"profiles\": [ {  ");
-        responseWriter.append("      \"profileInfo\": { ");
-        responseWriter.append("        \"profileId\": \"" + user.getItemId() + "\",  ");
-        int i = 0;
-        for (String userPropertyName : user.getProperties().keySet()) {
-            if (!"profileId".equals(userPropertyName)) {
-                responseWriter.append("        \"" + userPropertyName + "\": \"" + user.getProperty(userPropertyName) + "\"");
-                if (i < user.getProperties().size() - 1) {
-                    responseWriter.append(",");
-                }
-            }
-            i++;
-        }
-        responseWriter.append("                   } ");
-        responseWriter.append("              } ] ");
-        responseWriter.append("        } ] ");
-        responseWriter.append("}");
-        return responseWriter.toString();
     }
 
     public static void sendCookie(User user, ServletResponse response) {
