@@ -229,6 +229,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             Event ruleFired = new Event("ruleFired", event.getSession(), event.getUser(), event.getTimeStamp());
             ruleFired.getAttributes().putAll(event.getAttributes());
             ruleFired.setProperty("ruleName", rule.getItemId());
+            ruleFired.setPersistent(false);
             eventService.save(ruleFired);
         }
         return changed;

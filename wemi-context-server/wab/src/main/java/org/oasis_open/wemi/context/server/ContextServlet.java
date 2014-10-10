@@ -151,9 +151,10 @@ public class ContextServlet extends HttpServlet {
 
         if (userCreated) {
             Event userUpdated = new Event("userUpdated", session, user, timestamp);
-
+            userUpdated.setPersistent(false);
             userUpdated.getAttributes().put("http_request", request);
             userUpdated.getAttributes().put("http_response", response);
+
             eventService.save(userUpdated);
         }
 

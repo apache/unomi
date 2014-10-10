@@ -54,7 +54,9 @@ public class EventServiceImpl implements EventService {
     }
 
     public boolean save(Event event) {
-        persistenceService.save(event);
+        if (event.isPersistent()) {
+            persistenceService.save(event);
+        }
 
         boolean changed = false;
 
@@ -73,6 +75,7 @@ public class EventServiceImpl implements EventService {
 
             if (changed && (!user.getProperties().equals(previousProperties) || !user.getSegments().equals(previousSegments))) {
                 Event userUpdated = new Event("userUpdated", session, user, event.getTimeStamp());
+                userUpdated.setPersistent(false);
                 userUpdated.getAttributes().putAll(event.getAttributes());
                 save(userUpdated);
 

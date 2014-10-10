@@ -18,6 +18,7 @@ public class Event extends Item implements TimestampedItem {
 
     private transient User user;
     private transient Session session;
+    private transient boolean persistent = true;
 
     // attributes are not serializable, and can be used to pass additional contextual object such as HTTP request
     // response objects, etc...
@@ -76,6 +77,15 @@ public class Event extends Item implements TimestampedItem {
 
     public void setSession(Session session) {
         this.session = session;
+    }
+
+    @XmlTransient
+    public boolean isPersistent() {
+        return persistent;
+    }
+
+    public void setPersistent(boolean persistent) {
+        this.persistent = persistent;
     }
 
     @XmlTransient
