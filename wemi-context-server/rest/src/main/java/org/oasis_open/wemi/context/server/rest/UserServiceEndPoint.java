@@ -2,6 +2,7 @@ package org.oasis_open.wemi.context.server.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.wemi.context.server.api.*;
+import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.services.UserService;
 
 import javax.jws.WebMethod;
@@ -170,7 +171,7 @@ public class UserServiceEndPoint implements UserService {
     }
 
     @WebMethod(exclude = true)
-    public boolean matchCondition(String condition, User user, Session session) {
+    public boolean matchCondition(Condition condition, User user, Session session) {
         return userService.matchCondition(condition, user, session);
     }
 

@@ -8,19 +8,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class DigitalData implements Serializable {
+public class ContextResponse implements Serializable {
 
     private String userId;
 
     private String sessionId;
 
-    private Map<String,Object> userProperties;
+    private Map<String, Object> userProperties;
 
-    private Map<String,Object> sessionProperties;
+    private Map<String, Object> sessionProperties;
 
     private Set<String> userSegments;
 
-    private Map<String,Boolean> filteringResults;
+    private Map<String, Boolean> filteringResults;
+
+    private List<String> formNames;
 
     public String getUserId() {
         return userId;

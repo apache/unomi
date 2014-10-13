@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.api.services;
 
 import org.oasis_open.wemi.context.server.api.*;
+import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
 import java.util.Date;
 import java.util.Set;
@@ -38,7 +39,7 @@ public interface UserService {
 
     PartialList<Session> findUserSessions(String userId);
 
-    boolean matchCondition(String condition, User user, Session session);
+    boolean matchCondition(Condition condition, User user, Session session);
 
     Persona loadPersona(String personaId);
 
