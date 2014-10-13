@@ -190,18 +190,13 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                         }
                     }
 
-                    ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
-                    try {
-                        Condition userCondition = extractConditionByTag(rule.getCondition(), "userCondition");
-                        if (userCondition != null && !userService.matchCondition(mapper.writeValueAsString(userCondition), event.getUser(), event.getSession())) {
-                            continue;
-                        }
-                        Condition sessionCondition = extractConditionByTag(rule.getCondition(), "sessionCondition");
-                        if (sessionCondition != null && !userService.matchCondition(mapper.writeValueAsString(sessionCondition), event.getUser(), event.getSession())) {
-                            continue;
-                        }
-                    } catch (JsonProcessingException e) {
-                        e.printStackTrace();
+                    Condition userCondition = extractConditionByTag(rule.getCondition(), "userCondition");
+                    if (userCondition != null && !userService.matchCondition(userCondition, event.getUser(), event.getSession())) {
+                        continue;
+                    }
+                    Condition sessionCondition = extractConditionByTag(rule.getCondition(), "sessionCondition");
+                    if (sessionCondition != null && !userService.matchCondition(sessionCondition, event.getUser(), event.getSession())) {
+                        continue;
                     }
 
                     matchedRules.add(rule);
