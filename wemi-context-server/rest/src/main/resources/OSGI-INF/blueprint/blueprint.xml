@@ -35,7 +35,9 @@
              while initializing a SecurityContext -->
         <property name="rolePrefix" value="ROLE_"/>
 
-        <property name="redirectURI" value="/login.jsp"/>
+        <!-- Activate this if you want to force a redirect if auth is missing, by default it will trigger a 403 which
+             is usually preferred -->
+        <!--property name="redirectURI" value="/login.jsp"/-->
     </bean>
 
     <jaxrs:server address="/wemi/segments" id="restSegmentService">
