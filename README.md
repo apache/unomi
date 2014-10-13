@@ -122,6 +122,15 @@ then you can create the etc/elasticsearch.yml configuration file with the follow
     cluster.name=myClusterName
     
 You may of course put any standard ElasticSearch configuration options in this last file. 
+
+REST API Security
+-----------------
+
+The Context Server REST API is protected using JAAS authentication and using Basic or Digest HTTP auth. It is recommended
+to setup SSL Transport to make sure that the transmission of the authentication data is not done in clear text.
+
+By default, the login/password for the REST API full administrative access is "karaf/karaf".
+
  
 Running the integration tests
 -----------------------------
