@@ -127,8 +127,6 @@ You will also need to add the following settings :
 
     node.contextserver.address=localhost
     node.contextserver.port=8181
-    node.contextserver.secureAddress=localhost
-    node.contextserver.securePort=9443
     
 if you use a custom elasticsearch.yml configuration file.
 
@@ -153,8 +151,14 @@ Here are the steps to setup SSL on Karaf:
     org.ops4j.pax.web.ssl.password=tomcat
     org.ops4j.pax.web.ssl.keypassword=tomcat
     org.osgi.service.http.port.secure=9443
+
+3. Add the following lines to the /etc/elasticsearch.yml file : 
+
+    node.contextserver.secureAddress=localhost
+    node.contextserver.securePort=9443
     
 You should now have SSL setup on Karaf, and you can test it by trying to access it on port 9443.
+
  
 Running the integration tests
 -----------------------------

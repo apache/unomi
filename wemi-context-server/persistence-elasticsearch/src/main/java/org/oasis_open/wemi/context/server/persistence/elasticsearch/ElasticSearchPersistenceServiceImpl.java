@@ -132,8 +132,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 address = System.getProperty("contextserver.address","localhost");
                 port = System.getProperty("contextserver.port","8181");
-                secureAddress = System.getProperty("contextserver.secureAddress", "localhost");
-                securePort = System.getProperty("contextserver.securePort", "9443");
+                secureAddress = System.getProperty("contextserver.secureAddress", "");
+                securePort = System.getProperty("contextserver.securePort", "0");
 
                 if (settingsBuilder == null) {
                     settingsBuilder = ImmutableSettings.builder()
