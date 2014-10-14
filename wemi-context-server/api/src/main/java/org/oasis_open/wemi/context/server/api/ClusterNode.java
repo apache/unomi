@@ -12,6 +12,8 @@ public class ClusterNode implements Serializable {
     private String hostName;
     private String hostAddress;
     private int publicPort;
+    private String secureHostAddress;
+    private int securePort;
     private long uptime;
     private boolean master;
 
@@ -48,6 +50,22 @@ public class ClusterNode implements Serializable {
 
     public void setPublicPort(int publicPort) {
         this.publicPort = publicPort;
+    }
+
+    public String getSecureHostAddress() {
+        return secureHostAddress;
+    }
+
+    public void setSecureHostAddress(String secureHostAddress) {
+        this.secureHostAddress = secureHostAddress;
+    }
+
+    public int getSecurePort() {
+        return securePort;
+    }
+
+    public void setSecurePort(int securePort) {
+        this.securePort = securePort;
     }
 
     public double[] getLoadAverage() {

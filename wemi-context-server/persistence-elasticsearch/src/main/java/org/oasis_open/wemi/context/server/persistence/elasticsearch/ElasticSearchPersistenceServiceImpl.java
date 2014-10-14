@@ -71,8 +71,9 @@ import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
  */
 public class ElasticSearchPersistenceServiceImpl implements PersistenceService, ClusterService {
 
-    private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
     public static final long MILLIS_PER_DAY = 24L * 60L * 60L * 1000L;
+    private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
+    private static List<String> DAILY_ITEMS = Arrays.asList("session", "event");
     ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
     private Node node;
     private Client client;
@@ -81,10 +82,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String elasticSearchConfig = null;
     private BundleContext bundleContext;
     private Map<String,String> mappings = new HashMap<String, String>();
-
-    private static List<String> DAILY_ITEMS = Arrays.asList("session","event");
     private String address;
     private String port;
+    private String secureAddress;
+    private String securePort;
 
     private Timer timer;
 
@@ -131,12 +132,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 address = System.getProperty("contextserver.address","localhost");
                 port = System.getProperty("contextserver.port","8181");
+                secureAddress = System.getProperty("contextserver.secureAddress", "localhost");
+                securePort = System.getProperty("contextserver.securePort", "9443");
 
                 if (settingsBuilder == null) {
                     settingsBuilder = ImmutableSettings.builder()
                             .put("cluster.name", clusterName)
                             .put("node.contextserver.address", address)
-                            .put("node.contextserver.port", port);
+                            .put("node.contextserver.port", port)
+                            .put("node.contextserver.secureAddress", secureAddress)
+                            .put("node.contextserver.securePort", securePort);
                 }
                 node = nodeBuilder().settings(settingsBuilder).node();
                 client = node.client();
@@ -660,6 +665,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     clusterNode.setHostName(nodeInfo.getHostname());
                     clusterNode.setHostAddress(nodeInfo.getSettings().get("node.contextserver.address", address));
                     clusterNode.setPublicPort(Integer.parseInt(nodeInfo.getSettings().get("node.contextserver.port", port)));
+                    clusterNode.setSecureHostAddress(nodeInfo.getSettings().get("node.contextserver.secureAddress", secureAddress));
+                    clusterNode.setSecurePort(Integer.parseInt(nodeInfo.getSettings().get("node.contextserver.securePort", securePort)));
                     clusterNode.setMaster(nodeInfo.getNode().isMasterNode());
                     clusterNodes.put(nodeInfo.getNode().getId(), clusterNode);
                 }

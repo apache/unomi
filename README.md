@@ -121,7 +121,16 @@ then you can create the etc/elasticsearch.yml configuration file with the follow
 
     cluster.name=myClusterName
     
-You may of course put any standard ElasticSearch configuration options in this last file. 
+You may of course put any standard ElasticSearch configuration options in this last file.
+
+You will also need to add the following settings : 
+
+    node.contextserver.address=localhost
+    node.contextserver.port=8181
+    node.contextserver.secureAddress=localhost
+    node.contextserver.securePort=9443
+    
+if you use a custom elasticsearch.yml configuration file.
 
 REST API Security
 -----------------
@@ -131,6 +140,21 @@ to setup SSL Transport to make sure that the transmission of the authentication 
 
 By default, the login/password for the REST API full administrative access is "karaf/karaf".
 
+Here are the steps to setup SSL on Karaf:
+
+1. Follow the steps here to setup the keystore : 
+ 
+    http://wiki.eclipse.org/Jetty/Howto/Configure_SSL
+    
+2. Add the following to the /etc/custom.properties file : 
+ 
+    org.osgi.service.http.secure.enabled = true
+    org.ops4j.pax.web.ssl.keystore=${karaf.etc}/keystore
+    org.ops4j.pax.web.ssl.password=tomcat
+    org.ops4j.pax.web.ssl.keypassword=tomcat
+    org.osgi.service.http.port.secure=9443
+    
+You should now have SSL setup on Karaf, and you can test it by trying to access it on port 9443.
  
 Running the integration tests
 -----------------------------
