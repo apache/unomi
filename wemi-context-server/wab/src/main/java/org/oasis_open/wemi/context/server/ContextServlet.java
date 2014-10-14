@@ -105,14 +105,12 @@ public class ContextServlet extends HttpServlet {
 
         boolean userCreated = false;
 
-        if (!(user instanceof Persona)) {
+        if (user == null) {
             if (sessionId != null) {
                 session = userService.loadSession(sessionId, timestamp);
                 if (session != null) {
                     visitorId = session.getUserId();
-                    if (user == null) { // could be non null in case of persona
-                        user = userService.load(visitorId);
-                    }
+                    user = userService.load(visitorId);
                 }
             }
             if (user == null) {

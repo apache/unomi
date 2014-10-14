@@ -145,6 +145,16 @@
         <property name="clusterName" value="${cluster.name}"/>
         <property name="indexName" value="${index.name}"/>
         <property name="elasticSearchConfig" value="${elasticSearchConfig}"/>
+        <property name="itemsDailyIndexed">
+            <list>
+                <value>event</value>
+                <value>session</value>
+            </list>
+        </property>
+        <property name="routingByType">
+            <map>
+            </map>
+        </property>
     </bean>
 
 </blueprint>

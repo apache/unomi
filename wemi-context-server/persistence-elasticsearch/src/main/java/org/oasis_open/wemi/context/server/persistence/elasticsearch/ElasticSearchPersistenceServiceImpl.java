@@ -73,7 +73,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public static final long MILLIS_PER_DAY = 24L * 60L * 60L * 1000L;
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
-    private static List<String> DAILY_ITEMS = Arrays.asList("session", "event");
     ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
     private Node node;
     private Client client;
@@ -82,6 +81,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String elasticSearchConfig = null;
     private BundleContext bundleContext;
     private Map<String,String> mappings = new HashMap<String, String>();
+
+    private List<String> itemsDailyIndexed;
+    private Map<String, String> routingByType;
+
     private String address;
     private String port;
     private String secureAddress;
@@ -99,6 +102,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setIndexName(String indexName) {
         this.indexName = indexName;
+    }
+
+    public void setItemsDailyIndexed(List<String> itemsDailyIndexed) {
+        this.itemsDailyIndexed = itemsDailyIndexed;
+    }
+
+    public void setRoutingByType(Map<String, String> routingByType) {
+        this.routingByType = routingByType;
     }
 
     public void setElasticSearchConfig(String elasticSearchConfig) {
@@ -254,7 +265,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy) {
-        return query(QueryBuilders.matchAllQuery(), sortBy, clazz, offset, size);
+        return query(QueryBuilders.matchAllQuery(), sortBy, clazz, offset, size, null);
     }
 
     public <T extends Item> T load(final String itemId, final Class<T> clazz) {
@@ -267,11 +278,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
                     String dailyIndexName = indexName;
-                    if (DAILY_ITEMS.contains(itemType) && dateHint != null) {
+                    if (itemsDailyIndexed.contains(itemType) && dateHint != null) {
                         dailyIndexName = getDailyIndex(dateHint);
                     }
-                    if (DAILY_ITEMS.contains(itemType) && dateHint == null) {
-                        PartialList<T> r = query(QueryBuilders.idsQuery(itemType).ids(itemId), null, clazz,0, 1);
+                    if (itemsDailyIndexed.contains(itemType) && dateHint == null) {
+                        PartialList<T> r = query(QueryBuilders.idsQuery(itemType).ids(itemId), null, clazz,0, 1, null);
                         if (r.size() > 0) {
                             return r.get(0);
                         }
@@ -307,8 +318,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String source = CustomObjectMapper.getObjectMapper().writeValueAsString(item);
                     String itemType = (String) item.getClass().getField("ITEM_TYPE").get(null);
-                    IndexRequestBuilder indexBuilder = client.prepareIndex(DAILY_ITEMS.contains(itemType) ? getDailyIndex(((TimestampedItem) item).getTimeStamp()) : indexName, itemType, item.getItemId())
+                    IndexRequestBuilder indexBuilder = client.prepareIndex(itemsDailyIndexed.contains(itemType) ? getDailyIndex(((TimestampedItem) item).getTimeStamp()) : indexName, itemType, item.getItemId())
                             .setSource(source);
+                    if (routingByType.containsKey(itemType)) {
+                        indexBuilder = indexBuilder.setRouting(routingByType.get(itemType));
+                    }
                     IndexResponse response = indexBuilder
                             .execute()
                             .actionGet();
@@ -334,7 +348,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
 
-                    client.prepareDelete(DAILY_ITEMS.contains(itemType) ? indexName + "-*" : indexName, itemType, itemId)
+                    client.prepareDelete(itemsDailyIndexed.contains(itemType) ? indexName + "-*" : indexName, itemType, itemId)
                             .execute().actionGet();
                     return true;
                 } catch (Exception e) {
@@ -469,11 +483,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public <T extends Item> List<T> query(final Condition query, String sortBy, final Class<T> clazz) {
-        return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz, 0, -1).getList();
+        return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz, 0, -1, null).getList();
     }
 
     public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size) {
-        return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz, offset, size);
+        return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz, offset, size, null);
     }
 
     public <T extends Item> List<T> query(final String fieldName, final String fieldValue, String sortBy, final Class<T> clazz) {
@@ -481,12 +495,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public <T extends Item> List<T> query(final String fieldName, final String[] fieldValues, String sortBy, final Class<T> clazz) {
-        return query(QueryBuilders.termsQuery(fieldName, fieldValues), sortBy, clazz, 0, -1).getList();
+        return query(QueryBuilders.termsQuery(fieldName, fieldValues), sortBy, clazz, 0, -1, getRouting(fieldName, fieldValues, clazz)).getList();
     }
 
     @Override
     public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz, int offset, int size) {
-        return query(QueryBuilders.termQuery(fieldName, fieldValue), sortBy, clazz, offset, size);
+        return query(QueryBuilders.termQuery(fieldName, fieldValue), sortBy, clazz, offset, size, getRouting(fieldName, new String[] { fieldValue }, clazz));
     }
 
     @Override
@@ -499,7 +513,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
             @Override
             protected Long execute(Object... args) {
-                SearchResponse response = client.prepareSearch(DAILY_ITEMS.contains(itemType) ? indexName + "-*" : indexName)
+                SearchResponse response = client.prepareSearch(itemsDailyIndexed.contains(itemType) ? indexName + "-*" : indexName)
                         .setTypes(itemType)
                         .setSearchType(SearchType.COUNT)
                         .setQuery(QueryBuilders.matchAllQuery())
@@ -513,7 +527,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
-    private <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz, final int offset, final int size) {
+    private <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz, final int offset, final int size, final String[] routing) {
         return new InClassLoaderExecute<PartialList<T>>() {
 
             @Override
@@ -521,8 +535,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 List<T> results = new ArrayList<T>();
                 long totalHits = 0;
                 try {
-                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
-                    SearchRequestBuilder requestBuilder = client.prepareSearch(DAILY_ITEMS.contains(itemType) ? indexName + "-*" : indexName)
+                    String itemType = getItemType(clazz);
+                    SearchRequestBuilder requestBuilder = client.prepareSearch(itemsDailyIndexed.contains(itemType) ? indexName + "-*" : indexName)
                             .setTypes(itemType)
                             .setFetchSource(true)
                             .setQuery(query)
@@ -532,7 +546,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     } else {
                         requestBuilder.setSize(Integer.MAX_VALUE);
                     }
-
+                    if (routing != null) {
+                        requestBuilder.setRouting(routing);
+                    }
                     if (sortBy != null) {
                         String[] sortByArray = sortBy.split(",");
                         for (String sortByElement : sortByArray) {
@@ -556,11 +572,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         value.setItemId(searchHit.getId());
                         results.add(value);
                     }
-                } catch (NoSuchFieldException e) {
-                    logger.error("Error loading itemType=" + clazz.getName() + "query=" + query, e);
-                } catch (IllegalAccessException e) {
-                    logger.error("Error loading itemType=" + clazz.getName() + "query=" + query, e);
-                } catch (Throwable t) {
+                } catch (Exception t) {
                     logger.error("Error loading itemType=" + clazz.getName() + "query=" + query, t);
                 }
 
@@ -576,7 +588,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Map<String, Long> execute(Object... args) {
                 Map<String, Long> results = new LinkedHashMap<String, Long>();
 
-                SearchRequestBuilder builder = client.prepareSearch(DAILY_ITEMS.contains(itemType) ? indexName + "-*" : indexName)
+                SearchRequestBuilder builder = client.prepareSearch(itemsDailyIndexed.contains(itemType) ? indexName + "-*" : indexName)
                         .setTypes(itemType)
                         .setSearchType(SearchType.COUNT)
                         .setQuery(QueryBuilders.matchAllQuery());
@@ -647,6 +659,28 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             }
         }.executeInClassLoader();
     }
+
+    private <T extends Item> String getItemType(Class<T> clazz) {
+        try {
+            return (String) clazz.getField("ITEM_TYPE").get(null);
+        } catch (NoSuchFieldException e) {
+            logger.error("Error loading itemType=" + clazz.getName(), e);
+        } catch (IllegalAccessException e) {
+            logger.error("Error loading itemType=" + clazz.getName(), e);
+        }
+        return null;
+    }
+
+    private <T extends Item> String[] getRouting(String fieldName, String[] fieldValues, Class<T> clazz) {
+        String itemType = getItemType(clazz);
+        String[] routing = null;
+        if (routingByType.containsKey(itemType) && routingByType.get(itemType).equals(fieldName)) {
+            routing = fieldValues;
+        }
+        return routing;
+    }
+
+
 
     public List<ClusterNode> getClusterNodes() {
         return new InClassLoaderExecute<List<ClusterNode>>() {
