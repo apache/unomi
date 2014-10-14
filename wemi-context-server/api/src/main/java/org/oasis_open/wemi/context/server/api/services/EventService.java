@@ -12,7 +12,7 @@ import java.util.Set;
  */
 public interface EventService {
 
-    boolean save(Event event);
+    boolean send(Event event);
 
     List<String> getEventProperties();
 

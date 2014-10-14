@@ -178,6 +178,15 @@
         </bean>
     </service>
 
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="actionExecutorId" value="sendEvent"/>
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.actions.SendEventAction">
+            <property name="eventService" ref="eventServiceImpl"/>
+        </bean>
+    </service>
+
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
     <reference-list id="eventListenerServices"
                     interface="org.oasis_open.wemi.context.server.api.services.EventListenerService"

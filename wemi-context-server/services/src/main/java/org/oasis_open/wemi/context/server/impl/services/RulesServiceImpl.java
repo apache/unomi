@@ -1,7 +1,5 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.PluginType;
@@ -225,7 +223,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             ruleFired.getAttributes().putAll(event.getAttributes());
             ruleFired.setProperty("ruleName", rule.getItemId());
             ruleFired.setPersistent(false);
-            eventService.save(ruleFired);
+            eventService.send(ruleFired);
         }
         return changed;
     }

@@ -1,0 +1,51 @@
+{
+    "metadata" : {
+        "id": "searchForm",
+        "name": "Search form submit detection",
+        "description" : "Search form submit detection",
+        "readOnly":false
+    },
+
+    "condition" : {
+        "parameterValues": {
+            "subConditions": [
+                {
+                    "type": "eventCondition",
+                    "parameterValues": {
+                        "eventTypeId":"form"
+                    }
+                },
+                {
+                    "type": "eventPropertyCondition",
+                    "parameterValues": {
+                        "propertyName":"properties.formname",
+                        "propertyValue":"searchForm",
+                        "comparisonOperator":"equals"
+                    }
+                }
+            ]
+        },
+        "type": "andCondition"
+    },
+
+    "actions" : [
+        {
+            "type": "sendEventAction",
+            "parameterValues": {
+                "eventType":"search",
+                "eventProperties": {
+                    "origin": {
+                        "script":"event.properties.origin"
+                    },
+                    "originForm": {
+                        "value":"searchForm"
+                    },
+                    "keyword": {
+                        "script":"event.properties['src_terms[0].term']"
+                    }
+                }
+            }
+        }
+    ]
+
+}

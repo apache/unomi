@@ -84,6 +84,9 @@ public class PropertyTypedObjectDeserializer extends UntypedObjectDeserializer {
                     }
                 }
             }
+            if (objectClass == null) {
+                objectClass = HashMap.class;
+            }
         } else {
 
         }
