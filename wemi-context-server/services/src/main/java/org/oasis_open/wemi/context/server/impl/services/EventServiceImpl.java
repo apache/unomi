@@ -53,7 +53,7 @@ public class EventServiceImpl implements EventService {
         this.bundleContext = bundleContext;
     }
 
-    public boolean save(Event event) {
+    public boolean send(Event event) {
         if (event.isPersistent()) {
             persistenceService.save(event);
         }
@@ -77,7 +77,7 @@ public class EventServiceImpl implements EventService {
                 Event userUpdated = new Event("userUpdated", session, user, event.getTimeStamp());
                 userUpdated.setPersistent(false);
                 userUpdated.getAttributes().putAll(event.getAttributes());
-                save(userUpdated);
+                send(userUpdated);
 
                 userService.save(user);
             }

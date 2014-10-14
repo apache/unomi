@@ -142,7 +142,7 @@ public class ContextServlet extends HttpServlet {
 
                 event.getAttributes().put("http_request", request);
                 event.getAttributes().put("http_response", response);
-                eventService.save(event);
+                eventService.send(event);
             }
         }
 
@@ -152,7 +152,7 @@ public class ContextServlet extends HttpServlet {
             userUpdated.getAttributes().put("http_request", request);
             userUpdated.getAttributes().put("http_response", response);
 
-            eventService.save(userUpdated);
+            eventService.send(userUpdated);
         }
 
         HttpUtils.setupCORSHeaders(httpServletRequest, response);

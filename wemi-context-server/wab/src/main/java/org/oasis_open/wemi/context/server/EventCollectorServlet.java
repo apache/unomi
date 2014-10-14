@@ -121,7 +121,7 @@ public class EventCollectorServlet extends HttpServlet {
         event.getAttributes().put("http_request", request);
         event.getAttributes().put("http_response", response);
 
-        boolean changed = eventService.save(event);
+        boolean changed = eventService.send(event);
 
         PrintWriter responseWriter = response.getWriter();
 
