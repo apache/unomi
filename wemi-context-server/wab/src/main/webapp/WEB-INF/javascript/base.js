@@ -66,7 +66,7 @@ wemi.loadXMLDoc = function (url, successCallBack) {
 
 wemi.collectEvent = function (eventType, parameters, successCallBack) {
     // @todo we should pass the parameters as an array or a map instead of a string
-    var xhr = this.createCORSRequest("GET", window.digitalData.wemiContextServerURL + "/eventcollector/" + eventType + "?sessionId=" + wemi.sessionId + "&" + parameters);
+    var xhr = this.createCORSRequest("GET", window.digitalData.contextServerPublicUrl + "/eventcollector/" + eventType + "?sessionId=" + wemi.sessionId + "&" + parameters);
     if (!xhr) {
         alert("CORS not supported by browser!");
     }
