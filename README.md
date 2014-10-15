@@ -119,14 +119,14 @@ with the following contents:
     
 then you can create the etc/elasticsearch.yml configuration file with the following configuration:
 
-    cluster.name=myClusterName
+    cluster.name: myClusterName
     
 You may of course put any standard ElasticSearch configuration options in this last file.
 
 You will also need to add the following settings : 
 
-    node.contextserver.address=localhost
-    node.contextserver.port=8181
+    node.contextserver.address: localhost
+    node.contextserver.port: 8181
     
 if you use a custom elasticsearch.yml configuration file.
 
@@ -154,8 +154,8 @@ Here are the steps to setup SSL on Karaf:
 
 3. Add the following lines to the /etc/elasticsearch.yml file : 
 
-    node.contextserver.secureAddress=localhost
-    node.contextserver.securePort=9443
+    node.contextserver.secureAddress: localhost
+    node.contextserver.securePort: 9443
     
 You should now have SSL setup on Karaf, and you can test it by trying to access it on port 9443.
 
