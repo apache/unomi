@@ -18,8 +18,10 @@
         "properties": {
             "operatingSystemName": "unknown",
             "countryName": "United States",
-            "latitude":"37.422",
-            "longitude":"-122.084058",
+            "location": {
+                "lat":37.422,
+                "lon":-122.084058
+            },
             "userAgentVersion": "2.1",
             "countryCode": "US",
             "deviceCategory": "Other",

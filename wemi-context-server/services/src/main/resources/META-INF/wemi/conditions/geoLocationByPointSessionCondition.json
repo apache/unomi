@@ -1,0 +1,25 @@
+{
+    "id": "geoLocationByPointSessionCondition",
+    "queryBuilderFilter": "(queryBuilderId=geoLocationByPointSessionConditionESQueryBuilder)",
+    "tags": [ "geographic", "sessionCondition" ],
+    "parameters": [
+        {
+            "id": "latitude",
+            "type": "string",
+            "multivalued": true,
+            "choicelistInitializerFilter": ""
+        },
+        {
+            "id": "longitude",
+            "type": "string",
+            "multivalued": true,
+            "choicelistInitializerFilter": ""
+        },
+        {
+            "id": "distance",
+            "type": "string",
+            "multivalued": true,
+            "choicelistInitializerFilter": ""
+        }
+    ]
+}

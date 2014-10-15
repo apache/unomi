@@ -12,7 +12,14 @@
         ],
         "properties" : {
             "timeStamp" : {"type" : "date" },
-            "lastEventDate" : {"type" : "date" }
+            "lastEventDate" : {"type" : "date" },
+            "properties" : {
+                "properties" : {
+                    "location": {
+                        "type": "geo_point"
+                    }
+                }
+            }
         }
     }
 }

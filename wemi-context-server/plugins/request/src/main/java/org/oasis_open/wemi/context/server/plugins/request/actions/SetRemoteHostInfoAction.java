@@ -22,6 +22,8 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -61,8 +63,10 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
                 session.setProperty("countryCode", "CH");
                 session.setProperty("countryName", "Switzerland");
                 session.setProperty("city", "Geneva");
-                session.setProperty("latitude", "46.1884341");
-                session.setProperty("longitude", "6.1282508");
+                Map<String,Double> location = new HashMap<String,Double>();
+                location.put("lat",46.1884341);
+                location.put("lon",6.1282508);
+                session.setProperty("location", location);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -101,8 +105,11 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             session.setProperty("countryCode", location.getString("country_code"));
             session.setProperty("countryName", location.getString("country_name"));
             session.setProperty("city", location.getString("city"));
-            session.setProperty("latitude", location.getJsonNumber("latitude").toString());
-            session.setProperty("longitude", location.getJsonNumber("longitude").toString());
+
+            Map<String,Double> locationMap = new HashMap<String,Double>();
+            locationMap.put("lat",location.getJsonNumber("latitude").doubleValue());
+            locationMap.put("lon",location.getJsonNumber("longitude").doubleValue());
+            session.setProperty("location", locationMap);
             return true;
         } catch (MalformedURLException e) {
             e.printStackTrace();
@@ -154,8 +161,11 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             session.setProperty("countryCode", cityResponse.getCountry().getIsoCode());
             session.setProperty("countryName", cityResponse.getCountry().getName());
             session.setProperty("city", cityResponse.getCity().getName());
-            session.setProperty("latitude", cityResponse.getLocation().getLatitude());
-            session.setProperty("longitude", cityResponse.getLocation().getLongitude());
+
+            Map<String,Double> locationMap = new HashMap<String,Double>();
+            locationMap.put("lat",cityResponse.getLocation().getLatitude());
+            locationMap.put("lon",cityResponse.getLocation().getLongitude());
+            session.setProperty("location", locationMap);
             return true;
         } catch (IOException e) {
             e.printStackTrace();

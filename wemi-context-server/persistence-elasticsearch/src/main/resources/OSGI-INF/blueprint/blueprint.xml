@@ -131,6 +131,13 @@
         <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.GeoLocationSessionConditionESQueryBuilder"/>
     </service>
 
+    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="geoLocationByPointSessionConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.GeoLocationByPointSessionConditionESQueryBuilder"/>
+    </service>
+
     <bean id="conditionESQueryBuilderDispatcher"
           class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher">
         <property name="bundleContext" ref="blueprintBundleContext"/>
