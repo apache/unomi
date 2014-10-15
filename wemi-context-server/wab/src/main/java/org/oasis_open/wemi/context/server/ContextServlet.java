@@ -174,7 +174,7 @@ public class ContextServlet extends HttpServlet {
             if (buffer.length() > 0) {
                 handleRequest(buffer.toString(), user, session, data);
             }
-        } else if ("get".equals(httpMethod.toLowerCase())) {
+        } else if ("get".equals(httpMethod.toLowerCase()) && request.getParameter("payload") != null) {
             handleRequest(request.getParameter("payload"), user, session, data);
         }
         responseWriter.append(CustomObjectMapper.getObjectMapper().writeValueAsString(data));
