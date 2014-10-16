@@ -28,6 +28,8 @@ public class PropertyConditionESQueryBuilder implements ESQueryBuilder {
             return FilterBuilders.rangeFilter(name).lte(value);
         } else if (op.equals("exists")) {
             return FilterBuilders.existsFilter(name);
+        } else if (op.equals("missing")) {
+            return FilterBuilders.missingFilter(name);
         } else if (op.equals("contains")) {
             return FilterBuilders.termFilter(name, value);
         } else if (op.equals("startsWith")) {

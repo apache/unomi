@@ -78,6 +78,7 @@
     "MATCHES_REGULAR_EXPRESSION_LABEL": "matches regular expression",
     "CONTAINS_LABEL": "contains",
     "EXISTS_LABEL": "exists",
+    "MISSING_LABEL": "missing",
 
     "EVENT_TYPE_VIEW_LABEL": "view",
     "EVENT_TYPE_LOGIN_LABEL": "login",

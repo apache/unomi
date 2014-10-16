@@ -15,7 +15,7 @@
                 >
         </select>
     &nbsp;
-        <input ng-model="ref.parameterValues.propertyValue" ng-if="ref.parameterValues.comparisonOperator != 'exists'"
+        <input ng-model="ref.parameterValues.propertyValue" ng-if="ref.parameterValues.comparisonOperator != 'exists' && ref.parameterValues.comparisonOperator != 'missing'"
                type="text"/>
     </div>
 </div>

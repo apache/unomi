@@ -27,6 +27,14 @@
         },
         {
             "parameterValues": {
+                "setPropertyName": "previousVisit",
+                "script": "user.properties.?lastVisit",
+                "storeInSession": null
+            },
+            "type": "setPropertyAction"
+        },
+        {
+            "parameterValues": {
                 "setPropertyName": "lastVisit",
                 "setPropertyValue": "now",
                 "storeInSession": null

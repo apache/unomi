@@ -24,6 +24,7 @@ public class ComparisonOperatorChoiceListInitializer implements ChoiceListInitia
         values.add(new ChoiceListValue("matchesRegex", "MATCHES_REGULAR_EXPRESSION_LABEL"));
         values.add(new ChoiceListValue("contains", "CONTAINS_LABEL"));
         values.add(new ChoiceListValue("exists", "EXISTS_LABEL"));
+        values.add(new ChoiceListValue("missing", "MISSING_LABEL"));
         return values;
     }
 }

@@ -75,6 +75,7 @@
     "MATCHES_REGULAR_EXPRESSION_LABEL": "satisfait l'expression régulière",
     "CONTAINS_LABEL": "contient",
     "EXISTS_LABEL": "existe",
+    "MISSING_LABEL": "n'existe pas",
 
     "EVENT_TYPE_VIEW_LABEL": "vues",
     "EVENT_TYPE_LOGIN_LABEL": "login",
