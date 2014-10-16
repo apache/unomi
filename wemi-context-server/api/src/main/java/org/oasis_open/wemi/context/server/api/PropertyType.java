@@ -23,6 +23,7 @@ public class PropertyType extends Item implements Comparable<PropertyType>, Plug
     private double rank;
     private String pluginId;
     private String resourceBundle;
+    private String mergeStrategy;
 
     public PropertyType() {
     }
@@ -121,6 +122,14 @@ public class PropertyType extends Item implements Comparable<PropertyType>, Plug
 
     public void setResourceBundle(String resourceBundle) {
         this.resourceBundle = resourceBundle;
+    }
+
+    public String getMergeStrategy() {
+        return mergeStrategy;
+    }
+
+    public void setMergeStrategy(String mergeStrategy) {
+        this.mergeStrategy = mergeStrategy;
     }
 
     public int compareTo(PropertyType o) {

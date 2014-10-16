@@ -1,0 +1,4 @@
+{
+    "id": "nonEmptyMergeStrategy",
+    "filter": "(propertyMergeStrategyExecutorId=nonEmptyPropertyMergeStrategyExecutor)"
+}

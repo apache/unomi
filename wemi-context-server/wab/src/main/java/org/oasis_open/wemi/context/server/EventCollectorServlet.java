@@ -118,8 +118,8 @@ public class EventCollectorServlet extends HttpServlet {
             }
         }
 
-        event.getAttributes().put("http_request", request);
-        event.getAttributes().put("http_response", response);
+        event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
+        event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
 
         boolean changed = eventService.send(event);
 

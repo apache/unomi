@@ -1,0 +1,12 @@
+<div class="perso">
+    <div class="block">
+        <div class="remove-condition">
+            <a href="#" ng-click="onRemove(parentValue,parentIndex)"><i class="icon-remove"></i></a>
+        </div>
+        <span translate>MERGE_PROFILES_ON_PROPERTY_LABEL</span>
+        &nbsp;
+        <select ng-model="ref.parameterValues.mergeProfilePropertyName"
+                ng-options="parameter.id as parameter.name | translate for parameter in getActionParameterChoiceListValues(ref, 'mergeProfilePropertyName')">
+        </select>
+    </div>
+</div>

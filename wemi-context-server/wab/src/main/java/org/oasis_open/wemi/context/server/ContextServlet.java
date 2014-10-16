@@ -33,15 +33,14 @@ public class ContextServlet extends HttpServlet {
 
     public static final String BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/base.js";
     public static final String IMPERSONATE_BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/impersonateBase.js";
-
     @Inject
     @OsgiService
     UserService userService;
-
     @Inject
     @OsgiService
     SegmentService segmentService;
-
+    private String profileIdCookieName = "context-profile-id";
+    private String personaIdCookieName = "context-persona-id";
     @Inject
     @OsgiService
     private EventService eventService;
@@ -73,9 +72,9 @@ public class ContextServlet extends HttpServlet {
         Cookie[] cookies = httpServletRequest.getCookies();
         // HttpUtils.dumpRequestCookies(cookies);
         for (Cookie cookie : cookies) {
-            if ("wemi-profile-id".equals(cookie.getName())) {
+            if (profileIdCookieName.equals(cookie.getName())) {
                 cookieProfileId = cookie.getValue();
-            } else if ("wemi-persona-id".equals(cookie.getName())) {
+            } else if (personaIdCookieName.equals(cookie.getName())) {
                 cookiePersonaId = cookie.getValue();
             }
         }
@@ -86,13 +85,13 @@ public class ContextServlet extends HttpServlet {
         if (personaId != null) {
             if ("currentUser".equals(personaId) || personaId.equals(cookieProfileId)) {
                 user = null;
-                HttpUtils.clearCookie(response, "wemi-persona-id");
+                HttpUtils.clearCookie(response, personaIdCookieName);
             } else {
                 PersonaWithSessions personaWithSessions = userService.loadPersonaWithSessions(personaId);
                 user = personaWithSessions.getPersona();
                 session = personaWithSessions.getLastSession();
                 if (user != null) {
-                    HttpUtils.sendCookie(user, response);
+                    HttpUtils.sendProfileCookie(user, response, profileIdCookieName, personaIdCookieName);
                 }
             }
         } else if (cookiePersonaId != null) {
@@ -130,7 +129,7 @@ public class ContextServlet extends HttpServlet {
 
             } else if (cookieProfileId == null || !cookieProfileId.equals(user.getItemId())) {
                 // user if stored in session but not in cookie
-                HttpUtils.sendCookie(user, response);
+                HttpUtils.sendProfileCookie(user, response, profileIdCookieName, personaIdCookieName);
             }
             // associate user with session
             if (sessionId != null && session == null) {
@@ -138,8 +137,8 @@ public class ContextServlet extends HttpServlet {
                 userService.saveSession(session);
                 Event event = new Event("sessionCreated", session, user, timestamp);
 
-                event.getAttributes().put("http_request", request);
-                event.getAttributes().put("http_response", response);
+                event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
+                event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                 eventService.send(event);
             }
         }
@@ -147,8 +146,8 @@ public class ContextServlet extends HttpServlet {
         if (userCreated) {
             Event userUpdated = new Event("userUpdated", session, user, timestamp);
             userUpdated.setPersistent(false);
-            userUpdated.getAttributes().put("http_request", request);
-            userUpdated.getAttributes().put("http_response", response);
+            userUpdated.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
+            userUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
 
             eventService.send(userUpdated);
         }
@@ -217,7 +216,7 @@ public class ContextServlet extends HttpServlet {
             }
         }
 
-        List<ContextRequest.FilteredContent> filterNodes =  request.getFilters();
+        List<ContextRequest.FilteredContent> filterNodes = request.getFilters();
         if (filterNodes != null) {
             data.setFilteringResults(new HashMap<String, Boolean>());
             for (ContextRequest.FilteredContent filteredContent : filterNodes) {
@@ -240,7 +239,7 @@ public class ContextServlet extends HttpServlet {
         user = new User(visitorId);
         user.setProperty("firstVisit", timestamp);
         userService.save(user);
-        HttpUtils.sendCookie(user, response);
+        HttpUtils.sendProfileCookie(user, response, profileIdCookieName, personaIdCookieName);
         return user;
     }
 

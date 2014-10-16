@@ -7,6 +7,8 @@
     "EVENTTOUSERPROPERTYACTION_DESCRIPTION_LABEL": "Copie une propriété d'un événement dans une propriété utilisateur",
     "SETPROPERTYACTION_NAME_LABEL": "Assigne une propriété utilisateur",
     "SETPROPERTYACTION_DESCRIPTION_LABEL": "Assigne une valeur préfinie à une propriété utilisateur",
+    "MERGEPROFILESONPROPERTYACTION_NAME_LABEL": "Fusionne des profils utilisateurs",
+    "MERGEPROFILESONPROPERTYACTION_DESCRIPTION_LABEL": "Fusionne des profiles utilisateurs basés sur une propriété avec une valeur identifiante commune",
 
     "ANDCONDITION_NAME_LABEL": "ET",
     "ANDCONDITION_DESCRIPTION_LABEL": "Opérateur ET (logique)",
@@ -108,6 +110,7 @@
     "USER_LOGIN_EVENT_LABEL": "L'utilisateur s'est authentifié",
     "EVENT_NAMED_LABEL": "L'événement ",
     "HAS_OCCURRED_LABEL": " a été généré.",
+    "MERGE_PROFILES_ON_PROPERTY_LABEL": "Fusionne les profils utilisateurs sur la base de la propriété ",
 
     "USER_PROPERTIES_NAME_LABEL": "Nom",
     "USER_PROPERTIES_DESCRIPTION_LABEL": "Description",

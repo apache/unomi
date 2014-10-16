@@ -60,6 +60,11 @@ public class UserServiceEndPoint implements UserService {
         return userService.findUsersByPropertyValue(propertyName, propertyValue);
     }
 
+    @WebMethod(exclude = true)
+    public User mergeUsersOnProperty(String propertyName, String propertyValue) {
+        return userService.mergeUsersOnProperty(propertyName, propertyValue);
+    }
+
     @GET
     @Path("/{userId}")
     public User load(@PathParam("userId") String userId) {

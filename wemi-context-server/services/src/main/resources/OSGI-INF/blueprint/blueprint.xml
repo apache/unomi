@@ -187,6 +187,15 @@
         </bean>
     </service>
 
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="actionExecutorId" value="mergeProfilesOnProperty"/>
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.actions.MergeProfilesOnPropertyAction">
+            <property name="userService" ref="userServiceImpl"/>
+        </bean>
+    </service>
+
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
     <reference-list id="eventListenerServices"
                     interface="org.oasis_open.wemi.context.server.api.services.EventListenerService"
@@ -194,5 +203,47 @@
         <reference-listener
                 bind-method="bind" unbind-method="unbind" ref="eventServiceImpl"/>
     </reference-list>
+
+    <!-- Property merge strategy executors -->
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="propertyMergeStrategyExecutorId" value="defaultMergeStrategy"/>
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.mergers.DefaultPropertyMergeStrategyExecutor">
+        </bean>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="propertyMergeStrategyExecutorId" value="addMergeStrategy"/>
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.mergers.AddPropertyMergeStrategyExecutor">
+        </bean>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="propertyMergeStrategyExecutorId" value="mostRecentMergeStrategy"/>
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.mergers.MostRecentPropertyMergeStrategyExecutor">
+        </bean>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="propertyMergeStrategyExecutorId" value="oldestMergeStrategy"/>
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.mergers.OldestPropertyMergeStrategyExecutor">
+        </bean>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="propertyMergeStrategyExecutorId" value="nonEmptyMergeStrategy"/>
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.impl.mergers.NonEmptyPropertyMergeStrategyExecutor">
+        </bean>
+    </service>
 
 </blueprint>

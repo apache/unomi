@@ -9,12 +9,14 @@ import java.util.*;
 public class Event extends Item implements TimestampedItem {
 
     public static final String ITEM_TYPE = "event";
-//    public static final String PARENT_ITEM_TYPE = "session";
+    public static final String HTTP_REQUEST_ATTRIBUTE = "http_request";
+    public static final String HTTP_RESPONSE_ATTRIBUTE = "http_response";
+    //    public static final String PARENT_ITEM_TYPE = "session";
     private String eventType;
     private String sessionId = null;
     private String userId = null;
     private Date timeStamp;
-    private Map<String,Object> properties;
+    private Map<String, Object> properties;
 
     private transient User user;
     private transient Session session;
@@ -101,7 +103,7 @@ public class Event extends Item implements TimestampedItem {
         return properties.get(name);
     }
 
-    public Map<String,Object> getProperties() {
+    public Map<String, Object> getProperties() {
         return properties;
     }
 

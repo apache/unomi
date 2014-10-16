@@ -20,9 +20,14 @@
     "actions": [
         {
             "parameterValues": {
-
             },
             "type": "allEventToUserPropertiesAction"
+        },
+        {
+            "parameterValues": {
+                "mergeProfilePropertyName": "email"
+            },
+            "type": "mergeProfilesOnPropertyAction"
         }
     ]
 }

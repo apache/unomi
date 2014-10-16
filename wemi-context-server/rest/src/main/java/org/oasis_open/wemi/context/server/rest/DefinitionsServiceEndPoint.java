@@ -1,10 +1,7 @@
 package org.oasis_open.wemi.context.server.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
-import org.oasis_open.wemi.context.server.api.Parameter;
-import org.oasis_open.wemi.context.server.api.PluginType;
-import org.oasis_open.wemi.context.server.api.Tag;
-import org.oasis_open.wemi.context.server.api.ValueType;
+import org.oasis_open.wemi.context.server.api.*;
 import org.oasis_open.wemi.context.server.api.actions.ActionType;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 import org.oasis_open.wemi.context.server.api.conditions.initializers.ChoiceListInitializer;
@@ -132,6 +129,11 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
     @Path("/typesByPlugin")
     public Map<Long, List<PluginType>> getTypesByPlugin() {
         return definitionsService.getTypesByPlugin();
+    }
+
+    @WebMethod(exclude = true)
+    public PropertyMergeStrategyType getPropertyMergeStrategyType(String id) {
+        return definitionsService.getPropertyMergeStrategyType(id);
     }
 
     private void generateConditionChoiceListValues(Collection<ConditionType> conditionTypes, Object context) {

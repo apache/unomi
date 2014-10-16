@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import org.oasis_open.wemi.context.server.api.PluginType;
+import org.oasis_open.wemi.context.server.api.PropertyMergeStrategyType;
 import org.oasis_open.wemi.context.server.api.Tag;
 import org.oasis_open.wemi.context.server.api.ValueType;
 import org.oasis_open.wemi.context.server.api.actions.ActionType;
@@ -31,6 +32,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     private Map<Tag, Set<ActionType>> actionTypeByTag = new HashMap<Tag, Set<ActionType>>();
     private Map<Tag, Set<ValueType>> valueTypeByTag = new HashMap<Tag, Set<ValueType>>();
     private Map<Long, List<PluginType>> pluginTypes = new HashMap<Long, List<PluginType>>();
+    private Map<String, PropertyMergeStrategyType> propertyMergeStrategyTypeById = new HashMap<String, PropertyMergeStrategyType>();
 
     private BundleContext bundleContext;
     private PersistenceService persistenceService;
@@ -67,6 +69,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         loadPredefinedConditionTypes(bundleContext);
         loadPredefinedActionTypes(bundleContext);
         loadPredefinedValueTypes(bundleContext);
+        loadPredefinedPropertyMergeStrategies(bundleContext);
 
     }
 
@@ -347,6 +350,32 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 processBundleStop(event.getBundle().getBundleContext());
                 break;
         }
+    }
+
+    private void loadPredefinedPropertyMergeStrategies(BundleContext bundleContext) {
+        Enumeration<URL> predefinedPropertyMergeStrategyEntries = bundleContext.getBundle().findEntries("META-INF/wemi/mergers", "*.json", true);
+        if (predefinedPropertyMergeStrategyEntries == null) {
+            return;
+        }
+        ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
+        while (predefinedPropertyMergeStrategyEntries.hasMoreElements()) {
+            URL predefinedPropertyMergeStrategyURL = predefinedPropertyMergeStrategyEntries.nextElement();
+            logger.debug("Found predefined property merge strategy type at " + predefinedPropertyMergeStrategyURL + ", loading... ");
+
+            try {
+                PropertyMergeStrategyType propertyMergeStrategyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyMergeStrategyURL, PropertyMergeStrategyType.class);
+                ParserHelper.populatePluginType(propertyMergeStrategyType, bundleContext.getBundle(), "values", propertyMergeStrategyType.getId());
+                propertyMergeStrategyTypeById.put(propertyMergeStrategyType.getId(), propertyMergeStrategyType);
+                pluginTypeArrayList.add(propertyMergeStrategyType);
+            } catch (Exception e) {
+                logger.error("Error while loading property type definition " + predefinedPropertyMergeStrategyURL, e);
+            }
+        }
+
+    }
+
+    public PropertyMergeStrategyType getPropertyMergeStrategyType(String id) {
+        return propertyMergeStrategyTypeById.get(id);
     }
 
 }

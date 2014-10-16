@@ -19,6 +19,8 @@ public interface UserService {
 
     PartialList<User> findUsersByPropertyValue(String propertyName, String propertyValue);
 
+    User mergeUsersOnProperty(String propertyName, String propertyValue);
+
     User load(String userId);
 
     void save(User user);

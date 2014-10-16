@@ -4,6 +4,5 @@ echo Deploying KAR package...
 cp wemi-context-server/kar/target/wemi-context-server-kar-1.0-SNAPSHOT.kar ~/java/deployments/wemi-sandbox/apache-karaf-3.0.1/deploy/
 echo Purging Karaf local Maven repository, exploded KAR directory and temporary directory... 
 rm -rf ~/java/deployments/wemi-sandbox/apache-karaf-3.0.1/data/maven/repository/*
-rm -rf ~/java/deployments/wemi-sandbox/apache-karaf-3.0.1/data/kar/*
 rm -rf ~/java/deployments/wemi-sandbox/apache-karaf-3.0.1/data/tmp/*
 echo Compilation and deployment completed successfully.

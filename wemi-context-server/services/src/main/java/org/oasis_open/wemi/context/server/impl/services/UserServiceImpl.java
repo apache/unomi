@@ -6,10 +6,7 @@ import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.UserService;
 import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.SynchronousBundleListener;
+import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,7 +85,7 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
     }
 
     public PartialList<User> findUsersByPropertyValue(String propertyName, String propertyValue) {
-        return new PartialList<User>();
+        return persistenceService.query(propertyName, propertyValue, null, User.class, 0, -1);
     }
 
     public User load(String userId) {
@@ -105,6 +102,75 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
         } else {
             persistenceService.remove(user.getItemId(), User.class);
         }
+    }
+
+    public User mergeUsersOnProperty(String propertyName, String propertyValue) {
+        PartialList<User> usersToMerge = findUsersByPropertyValue(propertyName, propertyValue);
+
+        if (usersToMerge.getTotalSize() == 0) {
+            return null;
+        }
+
+        if (usersToMerge.getTotalSize() == 1) {
+            return usersToMerge.get(0);
+        }
+
+        Set<String> allUserProperties = new LinkedHashSet<String>();
+        for (User user : usersToMerge.getList()) {
+            allUserProperties.addAll(user.getProperties().keySet());
+        }
+
+        Set<PropertyType> userPropertyTypes = getPropertyTypes("userProperties", true);
+        Map<String, PropertyType> userPropertyTypeById = new HashMap<String, PropertyType>();
+        for (PropertyType propertyType : userPropertyTypes) {
+            userPropertyTypeById.put(propertyType.getId(), propertyType);
+        }
+        User masterUser = usersToMerge.get(0);
+        for (String userProperty : allUserProperties) {
+            PropertyType propertyType = userPropertyTypeById.get(userProperty);
+            String propertyMergeStrategyId = "defaultMergeStrategy";
+            if (propertyType != null) {
+                if (propertyType.getMergeStrategy() != null && propertyMergeStrategyId.length() > 0) {
+                    propertyMergeStrategyId = propertyType.getMergeStrategy();
+                }
+            }
+            PropertyMergeStrategyType propertyMergeStrategyType = definitionsService.getPropertyMergeStrategyType(propertyMergeStrategyId);
+
+            Collection<ServiceReference<PropertyMergeStrategyExecutor>> matchingPropertyMergeStrategyExecutors;
+            try {
+                matchingPropertyMergeStrategyExecutors = bundleContext.getServiceReferences(PropertyMergeStrategyExecutor.class, propertyMergeStrategyType.getFilter());
+            } catch (InvalidSyntaxException e) {
+                e.printStackTrace();
+                return null;
+            }
+            for (ServiceReference<PropertyMergeStrategyExecutor> propertyMergeStrategyExecutorReference : matchingPropertyMergeStrategyExecutors) {
+                PropertyMergeStrategyExecutor propertyMergeStrategyExecutor = bundleContext.getService(propertyMergeStrategyExecutorReference);
+                masterUser = propertyMergeStrategyExecutor.mergeProperty(userProperty, propertyType, usersToMerge.getList(), masterUser);
+            }
+        }
+
+        // we must now retrieve all the session associated with all the profiles and associate them with the master profile
+        for (User user : usersToMerge.getList()) {
+            if (user.getId().equals(masterUser.getId())) {
+                continue;
+            }
+            PartialList<Session> userSessions = getUserSessions(user.getId(), 0, -1, null);
+            for (Session userSession : userSessions.getList()) {
+                userSession.setUser(user);
+                saveSession(userSession);
+            }
+        }
+
+        // we must mark all the profiles that we merged into the master as merged with the master, and they will
+        // be deleted upon next load
+        for (User user : usersToMerge.getList()) {
+            if (user.getId().equals(masterUser.getId())) {
+                continue;
+            }
+            user.setProperty("mergedWith", masterUser.getId());
+        }
+
+        return masterUser;
     }
 
     public PartialList<Session> getUserSessions(String userId, int offset, int size, String sortBy) {

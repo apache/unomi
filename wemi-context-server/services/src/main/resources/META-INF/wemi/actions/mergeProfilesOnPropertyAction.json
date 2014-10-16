@@ -1,0 +1,13 @@
+{
+    "id": "mergeProfilesOnPropertyAction",
+    "serviceFilter": "(actionExecutorId=mergeProfilesOnProperty)",
+    "tags": [ "demographic" ],
+    "parameters": [
+        {
+            "id": "mergeProfilePropertyName",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": "(initializerId=propertyType)"
+        }
+    ]
+}

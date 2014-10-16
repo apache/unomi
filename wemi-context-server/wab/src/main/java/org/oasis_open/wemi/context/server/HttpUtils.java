@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Created by loom on 10.06.14.
@@ -51,10 +50,10 @@ public class HttpUtils {
         }
         System.out.println(
                 " sessionId=" + sessionId +
-                " serverName=" + httpServletRequest.getServerName() +
-                " serverPort=" + httpServletRequest.getServerPort() +
-                " remoteAddr=" + httpServletRequest.getRemoteAddr() +
-                " remotePort=" + httpServletRequest.getRemotePort());
+                        " serverName=" + httpServletRequest.getServerName() +
+                        " serverPort=" + httpServletRequest.getServerPort() +
+                        " remoteAddr=" + httpServletRequest.getRemoteAddr() +
+                        " remotePort=" + httpServletRequest.getRemotePort());
     }
 
 
@@ -88,7 +87,7 @@ public class HttpUtils {
         String baseRequestURL;
         baseRequestURL = httpServletRequest.getScheme() + "://" + httpServletRequest.getServerName();
         if (("http".equals(httpServletRequest.getScheme()) && (httpServletRequest.getServerPort() == 80)) ||
-                ("https".equals(httpServletRequest.getScheme()) && (httpServletRequest.getServerPort() == 443)) ) {
+                ("https".equals(httpServletRequest.getScheme()) && (httpServletRequest.getServerPort() == 443))) {
             // normal case, don't add the port
         } else {
             baseRequestURL += ":" + httpServletRequest.getServerPort();
@@ -96,16 +95,16 @@ public class HttpUtils {
         return baseRequestURL;
     }
 
-    public static void sendCookie(User user, ServletResponse response) {
+    public static void sendProfileCookie(User user, ServletResponse response, String profileIdCookieName, String personaIdCookieName) {
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
             if (user instanceof Persona) {
-                Cookie personaIdCookie = new Cookie("wemi-persona-id", user.getItemId());
+                Cookie personaIdCookie = new Cookie(personaIdCookieName, user.getItemId());
                 personaIdCookie.setPath("/");
                 personaIdCookie.setMaxAge(cookieAgeInSeconds);
                 httpServletResponse.addCookie(personaIdCookie);
             } else {
-                Cookie visitorIdCookie = new Cookie("wemi-profile-id", user.getItemId());
+                Cookie visitorIdCookie = new Cookie(profileIdCookieName, user.getItemId());
                 visitorIdCookie.setPath("/");
                 visitorIdCookie.setMaxAge(cookieAgeInSeconds);
                 httpServletResponse.addCookie(visitorIdCookie);
@@ -116,10 +115,10 @@ public class HttpUtils {
     public static void clearCookie(ServletResponse response, String cookieName) {
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-            Cookie personaIdCookie = new Cookie(cookieName, "");
-            personaIdCookie.setPath("/");
-            personaIdCookie.setMaxAge(0);
-            httpServletResponse.addCookie(personaIdCookie);
+            Cookie cookie = new Cookie(cookieName, "");
+            cookie.setPath("/");
+            cookie.setMaxAge(0);
+            httpServletResponse.addCookie(cookie);
         }
     }
 

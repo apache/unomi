@@ -42,7 +42,7 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
 
     @Override
     public boolean execute(Action action, Event event) {
-        HttpServletRequest httpServletRequest = (HttpServletRequest) event.getAttributes().get("http_request");
+        HttpServletRequest httpServletRequest = (HttpServletRequest) event.getAttributes().get(Event.HTTP_REQUEST_ATTRIBUTE);
         if (httpServletRequest == null) {
             return false;
         }
@@ -63,9 +63,9 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
                 session.setProperty("countryCode", "CH");
                 session.setProperty("countryName", "Switzerland");
                 session.setProperty("city", "Geneva");
-                Map<String,Double> location = new HashMap<String,Double>();
-                location.put("lat",46.1884341);
-                location.put("lon",6.1282508);
+                Map<String, Double> location = new HashMap<String, Double>();
+                location.put("lat", 46.1884341);
+                location.put("lon", 6.1282508);
                 session.setProperty("location", location);
             }
         } catch (Exception e) {
@@ -106,9 +106,9 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             session.setProperty("countryName", location.getString("country_name"));
             session.setProperty("city", location.getString("city"));
 
-            Map<String,Double> locationMap = new HashMap<String,Double>();
-            locationMap.put("lat",location.getJsonNumber("latitude").doubleValue());
-            locationMap.put("lon",location.getJsonNumber("longitude").doubleValue());
+            Map<String, Double> locationMap = new HashMap<String, Double>();
+            locationMap.put("lat", location.getJsonNumber("latitude").doubleValue());
+            locationMap.put("lon", location.getJsonNumber("longitude").doubleValue());
             session.setProperty("location", locationMap);
             return true;
         } catch (MalformedURLException e) {
@@ -162,9 +162,9 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             session.setProperty("countryName", cityResponse.getCountry().getName());
             session.setProperty("city", cityResponse.getCity().getName());
 
-            Map<String,Double> locationMap = new HashMap<String,Double>();
-            locationMap.put("lat",cityResponse.getLocation().getLatitude());
-            locationMap.put("lon",cityResponse.getLocation().getLongitude());
+            Map<String, Double> locationMap = new HashMap<String, Double>();
+            locationMap.put("lat", cityResponse.getLocation().getLatitude());
+            locationMap.put("lon", cityResponse.getLocation().getLongitude());
             session.setProperty("location", locationMap);
             return true;
         } catch (IOException e) {

@@ -7,6 +7,8 @@
     "EVENTTOUSERPROPERTYACTION_DESCRIPTION_LABEL": "Copies an event property to a user property",
     "SETPROPERTYACTION_NAME_LABEL": "Set user property",
     "SETPROPERTYACTION_DESCRIPTION_LABEL": "Sets user property to a predefined value",
+    "MERGEPROFILESONPROPERTYACTION_NAME_LABEL": "Merge user profiles",
+    "MERGEPROFILESONPROPERTYACTION_DESCRIPTION_LABEL": "Merge user profiles based on a property with a shared identifying value",
 
     "ANDCONDITION_NAME_LABEL": "AND",
     "ANDCONDITION_DESCRIPTION_LABEL": "Logical AND operator",
@@ -112,6 +114,7 @@
     "USER_LOGIN_EVENT_LABEL": "User has logged in",
     "EVENT_NAMED_LABEL": "Event named ",
     "HAS_OCCURRED_LABEL": " has occurred.",
+    "MERGE_PROFILES_ON_PROPERTY_LABEL": "Merge user profiles based on property",
 
     "USER_PROPERTIES_NAME_LABEL": "Name",
     "USER_PROPERTIES_DESCRIPTION_LABEL": "Description",

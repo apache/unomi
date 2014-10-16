@@ -8,12 +8,13 @@ import javax.servlet.http.HttpServletRequest;
 
 /**
  * Copies a request parameter to a user property
+ *
  * @todo add support for multi-valued parameters or storing values as a list
  */
 public class RequestParameterToUserPropertyAction implements ActionExecutor {
     public boolean execute(Action action, Event event) {
         boolean changed = false;
-        HttpServletRequest httpServletRequest = (HttpServletRequest) event.getAttributes().get("http_request");
+        HttpServletRequest httpServletRequest = (HttpServletRequest) event.getAttributes().get(Event.HTTP_REQUEST_ATTRIBUTE);
         if (httpServletRequest == null) {
             return false;
         }

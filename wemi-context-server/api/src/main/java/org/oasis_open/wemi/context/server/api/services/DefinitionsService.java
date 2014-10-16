@@ -1,6 +1,7 @@
 package org.oasis_open.wemi.context.server.api.services;
 
 import org.oasis_open.wemi.context.server.api.PluginType;
+import org.oasis_open.wemi.context.server.api.PropertyMergeStrategyType;
 import org.oasis_open.wemi.context.server.api.Tag;
 import org.oasis_open.wemi.context.server.api.ValueType;
 import org.oasis_open.wemi.context.server.api.actions.ActionType;
@@ -37,4 +38,7 @@ public interface DefinitionsService {
     ValueType getValueType(String id);
 
     Map<Long, List<PluginType>> getTypesByPlugin();
+
+    PropertyMergeStrategyType getPropertyMergeStrategyType(String id);
+
 }
