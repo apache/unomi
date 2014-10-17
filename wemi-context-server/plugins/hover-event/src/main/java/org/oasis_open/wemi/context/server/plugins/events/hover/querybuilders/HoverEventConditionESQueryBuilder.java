@@ -4,12 +4,12 @@ import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
-import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder;
+import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 
 /**
 * Created by toto on 27/06/14.
 */
-public class HoverEventConditionESQueryBuilder implements ESQueryBuilder {
+public class HoverEventConditionESQueryBuilder implements ConditionESQueryBuilder {
 
     public HoverEventConditionESQueryBuilder() {
     }

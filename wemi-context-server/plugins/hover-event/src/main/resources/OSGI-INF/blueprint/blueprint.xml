@@ -12,7 +12,7 @@
   http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd
   ">
 
-    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ESQueryBuilder">
+    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
         <service-properties>
             <entry key="queryBuilderId" value="hoverEventConditionESQueryBuilder" />
         </service-properties>

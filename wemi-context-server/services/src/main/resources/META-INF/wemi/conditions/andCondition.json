@@ -1,5 +1,6 @@
 {
     "id": "andCondition",
+    "conditionEvaluator": "(conditionEvaluatorId=andConditionEvaluator)",
     "queryBuilderFilter": "(queryBuilderId=andConditionESQueryBuilder)",
     "tags": [ "logical", "userCondition", "eventCondition", "sessionCondition" ],
     "parameters": [

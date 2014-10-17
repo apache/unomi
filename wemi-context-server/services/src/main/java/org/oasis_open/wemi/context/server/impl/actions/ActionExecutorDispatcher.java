@@ -26,6 +26,9 @@ public class ActionExecutorDispatcher {
 
     public boolean execute(Action action, Event event) {
         Collection<ServiceReference<ActionExecutor>> matchingActionExecutorReferences;
+        if (action.getActionType().getServiceFilter() == null) {
+            throw new UnsupportedOperationException("No service defined for : "+action.getActionType());
+        }
         try {
             matchingActionExecutorReferences = bundleContext.getServiceReferences(ActionExecutor.class, action.getActionType().getServiceFilter());
         } catch (InvalidSyntaxException e) {

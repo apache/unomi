@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * Created by toto on 14/08/14.
  */
-public class UserSegmentConditionESQueryBuilder implements ESQueryBuilder {
+public class UserSegmentConditionESQueryBuilder implements ConditionESQueryBuilder {
 
     public UserSegmentConditionESQueryBuilder() {
     }

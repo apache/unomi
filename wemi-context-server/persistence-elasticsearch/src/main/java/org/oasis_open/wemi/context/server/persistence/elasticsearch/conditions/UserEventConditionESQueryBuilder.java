@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * Created by toto on 11/08/14.
  */
-public class UserEventConditionESQueryBuilder implements ESQueryBuilder {
+public class UserEventConditionESQueryBuilder implements ConditionESQueryBuilder {
     public UserEventConditionESQueryBuilder() {
     }
 

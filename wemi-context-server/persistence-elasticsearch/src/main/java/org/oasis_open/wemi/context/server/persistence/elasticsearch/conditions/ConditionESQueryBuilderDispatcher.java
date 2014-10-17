@@ -34,15 +34,18 @@ public class ConditionESQueryBuilderDispatcher {
     }
 
     public FilterBuilder buildFilter(Condition condition) {
-        Collection<ServiceReference<ESQueryBuilder>> matchingQueryBuilderReferences = null;
+        Collection<ServiceReference<ConditionESQueryBuilder>> matchingQueryBuilderReferences = null;
+        if (condition.getConditionType().getQueryBuilderFilter() == null) {
+            throw new UnsupportedOperationException("No query builder defined for : "+condition.getConditionTypeId());
+        }
         try {
-            matchingQueryBuilderReferences = bundleContext.getServiceReferences(ESQueryBuilder.class, condition.getConditionType().getQueryBuilderFilter());
+            matchingQueryBuilderReferences = bundleContext.getServiceReferences(ConditionESQueryBuilder.class, condition.getConditionType().getQueryBuilderFilter());
         } catch (InvalidSyntaxException e) {
             e.printStackTrace();
         }
         // despite multiple references possible, we will only execute the first one
-        for (ServiceReference<ESQueryBuilder> queryBuilderServiceReference : matchingQueryBuilderReferences) {
-            ESQueryBuilder queryBuilder = bundleContext.getService(queryBuilderServiceReference);
+        for (ServiceReference<ConditionESQueryBuilder> queryBuilderServiceReference : matchingQueryBuilderReferences) {
+            ConditionESQueryBuilder queryBuilder = bundleContext.getService(queryBuilderServiceReference);
             return queryBuilder.buildFilter(condition, this);
         }
         // if no matching

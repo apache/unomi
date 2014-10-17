@@ -48,6 +48,7 @@ import org.oasis_open.wemi.context.server.api.TimestampedItem;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.services.ClusterService;
 import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
+import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 import org.oasis_open.wemi.context.server.persistence.spi.Aggregate;
 import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
@@ -73,7 +74,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public static final long MILLIS_PER_DAY = 24L * 60L * 60L * 1000L;
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
-    ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
     private Node node;
     private Client client;
     private String clusterName = "wemiElasticSearch";
@@ -81,6 +81,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String elasticSearchConfig = null;
     private BundleContext bundleContext;
     private Map<String,String> mappings = new HashMap<String, String>();
+    private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
+    private ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
 
     private List<String> itemsDailyIndexed;
     private Map<String, String> routingByType;
@@ -114,6 +116,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setElasticSearchConfig(String elasticSearchConfig) {
         this.elasticSearchConfig = elasticSearchConfig;
+    }
+
+    public void setConditionEvaluatorDispatcher(ConditionEvaluatorDispatcher conditionEvaluatorDispatcher) {
+        this.conditionEvaluatorDispatcher = conditionEvaluatorDispatcher;
     }
 
     public void setConditionESQueryBuilderDispatcher(ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher) {
@@ -466,6 +472,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean testMatch(Condition query, Item item) {
+        try {
+            return conditionEvaluatorDispatcher.eval(query, item);
+        } catch (UnsupportedOperationException e) {
+            logger.error("Eval not supported, continue with query",e);
+        }
         try {
             final Class<? extends Item> clazz = item.getClass();
             String itemType = (String) clazz.getField("ITEM_TYPE").get(null);

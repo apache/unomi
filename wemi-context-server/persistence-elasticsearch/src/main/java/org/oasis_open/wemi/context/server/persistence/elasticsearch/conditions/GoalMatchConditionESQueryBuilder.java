@@ -7,7 +7,7 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 /**
  * Created by toto on 21/08/14.
  */
-public class GoalMatchConditionESQueryBuilder implements ESQueryBuilder  {
+public class GoalMatchConditionESQueryBuilder implements ConditionESQueryBuilder {
     @Override
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
         final String goalId = (String) condition.getParameterValues().get("goalId");

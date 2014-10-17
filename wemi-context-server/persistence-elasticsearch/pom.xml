@@ -101,6 +101,22 @@
             <version>${version.jackson.core}</version>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.3.2</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-beanutils</groupId>
+            <artifactId>commons-beanutils</artifactId>
+            <version>1.9.2</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-collections</groupId>
+            <artifactId>commons-collections</artifactId>
+            <version>3.2.1</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -185,6 +201,7 @@
                             org.apache.ivy.plugins.matcher;resolution:=optional,
                             org.apache.ivy.plugins.resolver;resolution:=optional,
                             org.apache.ivy.util;resolution:=optional,
+                            org.apache.log;resolution:=optional,
                             org.apache.regexp; resolution:=optional
                             org.apache.regexp;resolution:=optional,
                             org.apache.tools.ant; resolution:=optional

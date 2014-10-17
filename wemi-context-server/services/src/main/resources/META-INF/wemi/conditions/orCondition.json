@@ -1,5 +1,6 @@
 {
     "id": "orCondition",
+    "conditionEvaluator": "(conditionEvaluatorId=orConditionEvaluator)",
     "queryBuilderFilter": "(queryBuilderId=orConditionESQueryBuilder)",
     "tags": [ "logical", "userCondition", "eventCondition", "sessionCondition" ],
     "parameters": [
