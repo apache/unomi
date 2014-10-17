@@ -23,6 +23,12 @@
 
             },
             "type": "allEventToUserPropertiesAction"
+        },
+        {
+            "parameterValues": {
+                "mergeProfilePropertyName": "j:nodename"
+            },
+            "type": "mergeProfilesOnPropertyAction"
         }
     ]
 }
