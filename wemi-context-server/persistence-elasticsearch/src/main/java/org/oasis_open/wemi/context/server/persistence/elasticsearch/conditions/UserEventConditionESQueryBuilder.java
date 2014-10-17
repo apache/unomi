@@ -7,6 +7,7 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by toto on 11/08/14.
@@ -15,7 +16,7 @@ public class UserEventConditionESQueryBuilder implements ConditionESQueryBuilder
     public UserEventConditionESQueryBuilder() {
     }
 
-    public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
+    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         Integer numberOfDays = (Integer) condition.getParameterValues().get("numberOfDays");
         String occursIn = (String) condition.getParameterValues().get("eventOccurIn");
         Integer count = (Integer) condition.getParameterValues().get("count");
@@ -31,7 +32,7 @@ public class UserEventConditionESQueryBuilder implements ConditionESQueryBuilder
             }
         } else {
             List<FilterBuilder> l = new ArrayList<FilterBuilder>();
-            l.add(dispatcher.buildFilter(eventCondition));
+            l.add(dispatcher.buildFilter(eventCondition, context));
             if (occursIn != null && (occursIn.equals("session") || occursIn.equals("last"))) {
                 l.add(FilterBuilders.termFilter("sessionId", targetSession.getItemId()));
             } else {

@@ -16,6 +16,13 @@ public class Action {
 
     protected Map<String,Object> parameterValues = new HashMap<String, Object>();
 
+    public Action() {
+    }
+
+    public Action(ActionType actionType) {
+        setActionType(actionType);
+    }
+
     @XmlTransient
     public ActionType getActionType() {
         return actionType;

@@ -1,6 +1,13 @@
 {
     "id": "loginEventCondition",
-    "queryBuilderFilter": "(queryBuilderId=loginEventConditionESQueryBuilder)",
+    "parentCondition" : {
+        "type": "eventPropertyCondition",
+        "parameterValues": {
+            "propertyName": "eventType",
+            "propertyValue": "login",
+            "comparisonOperator": "equals"
+        }
+    },
     "tags": [ "event", "eventCondition" ],
     "parameters": [
     ]

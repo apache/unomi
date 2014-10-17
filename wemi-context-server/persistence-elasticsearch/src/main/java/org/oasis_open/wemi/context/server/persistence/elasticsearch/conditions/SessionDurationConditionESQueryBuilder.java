@@ -5,12 +5,14 @@ import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.index.query.RangeFilterBuilder;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
+import java.util.Map;
+
 /**
  * Created by toto on 20/08/14.
  */
 public class SessionDurationConditionESQueryBuilder implements ConditionESQueryBuilder {
     @Override
-    public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
+    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         Integer min = (Integer) condition.getParameterValues().get("minimumDuration");
         Integer max = (Integer) condition.getParameterValues().get("maximumDuration");
         RangeFilterBuilder builder = FilterBuilders.rangeFilter("duration");

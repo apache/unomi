@@ -1,6 +1,13 @@
 {
     "id": "sessionCreatedEventCondition",
-    "queryBuilderFilter": "(queryBuilderId=sessionCreatedEventConditionESQueryBuilder)",
+    "parentCondition" : {
+        "type": "eventPropertyCondition",
+        "parameterValues": {
+            "propertyName": "eventType",
+            "propertyValue": "sessionCreated",
+            "comparisonOperator": "equals"
+        }
+    },
     "tags": [ "event", "eventCondition" ],
     "parameters": [
     ]

@@ -6,21 +6,23 @@ import org.elasticsearch.index.query.TermsFilterBuilder;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by toto on 14/08/14.
  */
-public class UserSegmentConditionESQueryBuilder implements ConditionESQueryBuilder {
+public class MultipleValuesPropertyMatchConditionESQueryBuilder implements ConditionESQueryBuilder {
 
-    public UserSegmentConditionESQueryBuilder() {
+    public MultipleValuesPropertyMatchConditionESQueryBuilder() {
     }
 
     @Override
-    public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
-        final List<String> segment = (List<String>) condition.getParameterValues().get("segments");
+    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+        String name = (String) condition.getParameterValues().get("propertyName");
         String matchType = (String) condition.getParameterValues().get("matchType");
+        final List<String> values = (List<String>) condition.getParameterValues().get("propertyValues");
 
-        final TermsFilterBuilder builder = FilterBuilders.termsFilter("segments", segment.toArray(new String[segment.size()]));
+        final TermsFilterBuilder builder = FilterBuilders.termsFilter(name, values.toArray(new String[values.size()]));
 
         if (matchType != null) {
             if (matchType.equals("some")) {

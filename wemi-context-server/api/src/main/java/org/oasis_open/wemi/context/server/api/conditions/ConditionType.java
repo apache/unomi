@@ -24,6 +24,7 @@ public class ConditionType implements TemplateablePluginType, Serializable {
     String pluginId;
     String conditionEvaluator;
     String queryBuilderFilter;
+    Condition parentCondition;
     Set<Tag> tags = new TreeSet<Tag>();
     Set<String> tagIDs = new LinkedHashSet<String>();
     List<Parameter> parameters = new ArrayList<Parameter>();
@@ -101,6 +102,14 @@ public class ConditionType implements TemplateablePluginType, Serializable {
 
     public void setQueryBuilderFilter(String queryBuilderFilter) {
         this.queryBuilderFilter = queryBuilderFilter;
+    }
+
+    public Condition getParentCondition() {
+        return parentCondition;
+    }
+
+    public void setParentCondition(Condition parentCondition) {
+        this.parentCondition = parentCondition;
     }
 
     @XmlElement(name = "tags")

@@ -1,0 +1,26 @@
+{
+    "id": "multipleValuesPropertyMatchCondition",
+    "conditionEvaluator": "(conditionEvaluatorId=multipleValuesPropertyMatchConditionEvaluator)",
+    "queryBuilderFilter": "(queryBuilderId=multipleValuesPropertyMatchConditionESQueryBuilder)",
+    "tags": [ "demographic", "userCondition" ],
+    "parameters": [
+        {
+            "id": "propertyName",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": "(initializerId=propertyType)"
+        },
+        {
+            "id": "propertyValues",
+            "type": "string",
+            "multivalued": true,
+            "choicelistInitializerFilter": "(initializerId=segments)"
+        },
+        {
+            "id": "matchType",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
+        }
+    ]
+}

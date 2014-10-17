@@ -28,7 +28,7 @@
         {
             "parameterValues": {
                 "setPropertyName": "previousVisit",
-                "script": "user.properties.?lastVisit",
+                "setPropertyValue": "userProperty::lastVisit",
                 "storeInSession": null
             },
             "type": "setPropertyAction"
@@ -44,7 +44,7 @@
         {
             "parameterValues": {
                 "setPropertyName": "nbOfVisits",
-                "script": "user.properties.?nbOfVisits != null ? (user.properties.nbOfVisits + 1) : 1",
+                "setPropertyValue": "script::user.properties.?nbOfVisits != null ? (user.properties.nbOfVisits + 1) : 1",
                 "storeInSession": false
             },
             "type": "setPropertyAction"

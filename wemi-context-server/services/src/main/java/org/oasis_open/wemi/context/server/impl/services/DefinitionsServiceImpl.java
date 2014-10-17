@@ -173,6 +173,11 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 logger.error("Error while loading condition definition " + predefinedConditionURL, e);
             }
         }
+        for (ConditionType type : conditionTypeById.values()) {
+            if (type.getParentCondition() != null) {
+                ParserHelper.resolveConditionType(this, type.getParentCondition());
+            }
+        }
     }
 
     private void loadPredefinedActionTypes(BundleContext bundleContext) {

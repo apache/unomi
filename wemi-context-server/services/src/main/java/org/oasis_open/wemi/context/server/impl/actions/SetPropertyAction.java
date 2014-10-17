@@ -31,11 +31,6 @@ public class SetPropertyAction implements ActionExecutor {
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
             format.setTimeZone(TimeZone.getTimeZone("UTC"));
             propertyValue = format.format(event.getTimeStamp());
-        } else if (action.getParameterValues().containsKey("script")) {
-            Map<String,Object> ctx = new HashMap<String,Object>();
-            ctx.put("session", event.getSession());
-            ctx.put("user", event.getUser());
-            propertyValue = MVEL.eval((String)action.getParameterValues().get("script"),ctx);
         }
         boolean modified = false;
         String propertyName = (String) action.getParameterValues().get("setPropertyName");

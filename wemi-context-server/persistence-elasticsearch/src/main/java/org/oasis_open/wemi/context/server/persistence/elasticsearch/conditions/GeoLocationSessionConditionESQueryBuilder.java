@@ -7,13 +7,14 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by loom on 12.09.14.
  */
 public class GeoLocationSessionConditionESQueryBuilder implements ConditionESQueryBuilder {
     @Override
-    public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
+    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         List<String> countryList = (List<String>) condition.getParameterValues().get("countries");
         List<FilterBuilder> subFilters = new ArrayList<FilterBuilder>();
         for (String country : countryList) {

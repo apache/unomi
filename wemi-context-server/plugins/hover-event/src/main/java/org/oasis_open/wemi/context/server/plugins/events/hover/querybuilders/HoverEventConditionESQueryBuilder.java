@@ -6,6 +6,8 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 
+import java.util.Map;
+
 /**
 * Created by toto on 27/06/14.
 */
@@ -14,7 +16,7 @@ public class HoverEventConditionESQueryBuilder implements ConditionESQueryBuilde
     public HoverEventConditionESQueryBuilder() {
     }
 
-    public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
+    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         return FilterBuilders.andFilter(
                 FilterBuilders.termFilter("eventType", "hover"),
                 FilterBuilders.termFilter("properties.hoverContentName", ((String) condition.getParameterValues().get("contentName"))));

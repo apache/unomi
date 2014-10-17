@@ -1,7 +1,14 @@
 {
     "id": "eventCondition",
-    "queryBuilderFilter": "(queryBuilderId=eventConditionESQueryBuilder)",
     "tags": [ "event", "eventCondition" ],
+    "parentCondition" : {
+        "type": "eventPropertyCondition",
+        "parameterValues": {
+            "propertyName": "eventType",
+            "propertyValue": "parameter::eventTypeId",
+            "comparisonOperator": "equals"
+        }
+    },
     "parameters": [
         {
             "id": "eventTypeId",

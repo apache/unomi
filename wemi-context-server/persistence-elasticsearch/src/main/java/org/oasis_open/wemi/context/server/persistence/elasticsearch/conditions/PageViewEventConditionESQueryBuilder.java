@@ -6,6 +6,7 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
 * Created by toto on 27/06/14.
@@ -15,7 +16,7 @@ public class PageViewEventConditionESQueryBuilder implements ConditionESQueryBui
     public PageViewEventConditionESQueryBuilder() {
     }
 
-    public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
+    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         List<FilterBuilder> l = new ArrayList<FilterBuilder>();
         l.add(FilterBuilders.termFilter("eventType", "view"));
         if (condition.getParameterValues().get("url") != null && !"".equals(condition.getParameterValues().get("url"))) {

@@ -1,6 +1,13 @@
 {
     "id": "userSegmentCondition",
-    "queryBuilderFilter": "(queryBuilderId=userSegmentConditionESQueryBuilder)",
+    "parentCondition" : {
+        "type": "multipleValuesPropertyMatchCondition",
+        "parameterValues": {
+            "propertyName": "segments",
+            "propertyValues": "parameter::segments",
+            "matchType": "parameter::matchType"
+        }
+    },
     "tags": [ "demographic", "userCondition" ],
     "parameters": [
         {

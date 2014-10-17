@@ -1,6 +1,13 @@
 {
     "id": "userUpdatedEventCondition",
-    "queryBuilderFilter": "(queryBuilderId=userUpdatedEventConditionESQueryBuilder)",
+    "parentCondition" : {
+        "type": "eventPropertyCondition",
+        "parameterValues": {
+            "propertyName": "eventType",
+            "propertyValue": "userUpdated",
+            "comparisonOperator": "equals"
+        }
+    },
     "tags": [ "event", "eventCondition" ],
     "parameters": [
     ]

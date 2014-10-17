@@ -4,6 +4,8 @@ import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
+import java.util.Map;
+
 /**
 * Created by toto on 27/06/14.
 */
@@ -12,7 +14,7 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
     public PropertyConditionESQueryBuilder() {
     }
 
-    public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
+    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         String op = (String) condition.getParameterValues().get("comparisonOperator");
         String name = (String) condition.getParameterValues().get("propertyName");
         Object value = condition.getParameterValues().get("propertyValue");

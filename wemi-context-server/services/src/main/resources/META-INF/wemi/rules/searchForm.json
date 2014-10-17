@@ -34,15 +34,9 @@
             "parameterValues": {
                 "eventType":"search",
                 "eventProperties": {
-                    "origin": {
-                        "script":"event.properties.origin"
-                    },
-                    "originForm": {
-                        "value":"searchForm"
-                    },
-                    "keyword": {
-                        "script":"event.properties['src_terms[0].term']"
-                    }
+                    "origin": "eventProperty::origin",
+                    "originForm": "searchForm",
+                    "keyword": "eventProperty::src_terms[0].term"
                 }
             }
         }

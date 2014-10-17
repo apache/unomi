@@ -70,23 +70,9 @@
 
     <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="userUpdatedEventConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="multipleValuesPropertyMatchConditionESQueryBuilder"/>
         </service-properties>
-        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.UserUpdatedEventConditionESQueryBuilder"/>
-    </service>
-
-    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="sessionCreatedEventConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.SessionCreatedEventConditionESQueryBuilder"/>
-    </service>
-
-    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="userSegmentConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.UserSegmentConditionESQueryBuilder"/>
+        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.MultipleValuesPropertyMatchConditionESQueryBuilder"/>
     </service>
 
     <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
@@ -94,20 +80,6 @@
             <entry key="queryBuilderId" value="sessionDurationConditionESQueryBuilder"/>
         </service-properties>
         <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.SessionDurationConditionESQueryBuilder"/>
-    </service>
-
-    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="loginEventConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.LoginEventConditionESQueryBuilder"/>
-    </service>
-
-    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="eventConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.EventConditionESQueryBuilder"/>
     </service>
 
     <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
@@ -169,9 +141,16 @@
 
     <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionEvaluator">
         <service-properties>
-            <entry key="queryBuilderId" value="matchAllConditionEvaluator"/>
+            <entry key="conditionEvaluatorId" value="matchAllConditionEvaluator"/>
         </service-properties>
         <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.MatchAllConditionEvaluator"/>
+    </service>
+
+    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionEvaluator">
+        <service-properties>
+            <entry key="conditionEvaluatorId" value="multipleValuesPropertyMatchConditionEvaluator"/>
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.MultipleValuesPropertyMatchConditionEvaluator"/>
     </service>
 
     <bean id="conditionEvaluatorDispatcherImpl"

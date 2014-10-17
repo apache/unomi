@@ -6,10 +6,9 @@ import org.elasticsearch.common.joda.DateMathParser;
 import org.elasticsearch.index.mapper.core.DateFieldMapper;
 import org.oasis_open.wemi.context.server.api.Item;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Date;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -19,7 +18,7 @@ import java.util.regex.Pattern;
 public class PropertyConditionEvaluator implements ConditionEvaluator {
 
     @Override
-    public boolean eval(Condition condition, Item item, ConditionEvaluatorDispatcher dispatcher) {
+    public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
         String op = (String) condition.getParameterValues().get("comparisonOperator");
         String name = (String) condition.getParameterValues().get("propertyName");
         Object expectedValue = condition.getParameterValues().get("propertyValue");

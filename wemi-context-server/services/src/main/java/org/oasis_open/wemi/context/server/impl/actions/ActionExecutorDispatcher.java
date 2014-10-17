@@ -1,5 +1,7 @@
 package org.oasis_open.wemi.context.server.impl.actions;
 
+import org.apache.commons.lang3.StringUtils;
+import org.mvel2.MVEL;
 import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.actions.ActionExecutor;
@@ -8,6 +10,8 @@ import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by toto on 27/06/14.
@@ -27,7 +31,7 @@ public class ActionExecutorDispatcher {
     public boolean execute(Action action, Event event) {
         Collection<ServiceReference<ActionExecutor>> matchingActionExecutorReferences;
         if (action.getActionType().getServiceFilter() == null) {
-            throw new UnsupportedOperationException("No service defined for : "+action.getActionType());
+            throw new UnsupportedOperationException("No service defined for : " + action.getActionType());
         }
         try {
             matchingActionExecutorReferences = bundleContext.getServiceReferences(ActionExecutor.class, action.getActionType().getServiceFilter());
@@ -38,9 +42,64 @@ public class ActionExecutorDispatcher {
         boolean changed = false;
         for (ServiceReference<ActionExecutor> actionExecutorReference : matchingActionExecutorReferences) {
             ActionExecutor actionExecutor = bundleContext.getService(actionExecutorReference);
-            changed |= actionExecutor.execute(action, event);
+            changed |= actionExecutor.execute(getContextualAction(action, event), event);
         }
         return changed;
+    }
+
+    public static Action getContextualAction(Action action, Event event) {
+        if (!hasContextualParameter(action.getParameterValues())) {
+            return action;
+        }
+
+        Map<String, Object> values = parseMap(event, action.getParameterValues());
+        Action n = new Action(action.getActionType());
+        n.setParameterValues(values);
+        return n;
+    }
+
+    private static Map<String, Object> parseMap(Event event, Map<String, Object> map) {
+        Map<String, Object> values = new HashMap<String, Object>();
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof String) {
+                String s = (String) value;
+                if (s.startsWith("userProperty::")) {
+                    value = event.getUser().getProperty(StringUtils.substringAfter(s, "userProperty::"));
+                } else if (s.startsWith("sessionProperty::")) {
+                    value = event.getSession().getProperty(StringUtils.substringAfter(s, "sessionProperty::"));
+                } else if (s.startsWith("eventProperty::")) {
+                    value = event.getProperty(StringUtils.substringAfter(s, "eventProperty::"));
+                } else if (s.startsWith("script::")) {
+                    Map<String, Object> ctx = new HashMap<String, Object>();
+                    ctx.put("event", event);
+                    ctx.put("session", event.getSession());
+                    ctx.put("user", event.getUser());
+                    value = MVEL.eval(StringUtils.substringAfter(s, "script::"), ctx);
+                }
+            } else if (value instanceof Map) {
+                value = parseMap(event, (Map<String, Object>) value);
+            }
+            values.put(entry.getKey(), value);
+        }
+        return values;
+    }
+
+    private static boolean hasContextualParameter(Map<String, Object> values) {
+        for (Map.Entry<String, Object> entry : values.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof String) {
+                String s = (String) value;
+                if (s.startsWith("eventProperty::") || s.startsWith("userProperty::") || s.startsWith("sessionProperty::") || s.startsWith("script::")) {
+                    return true;
+                }
+            } else if (value instanceof Map) {
+                if (hasContextualParameter((Map<String, Object>) value)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
 }
