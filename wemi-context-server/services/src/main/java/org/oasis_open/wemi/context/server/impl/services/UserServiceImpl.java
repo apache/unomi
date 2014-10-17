@@ -135,6 +135,9 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
                 }
             }
             PropertyMergeStrategyType propertyMergeStrategyType = definitionsService.getPropertyMergeStrategyType(propertyMergeStrategyId);
+            if (propertyMergeStrategyType == null) {
+                // we couldn't find the strategy
+            }
 
             Collection<ServiceReference<PropertyMergeStrategyExecutor>> matchingPropertyMergeStrategyExecutors;
             try {
@@ -156,7 +159,7 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
             }
             PartialList<Session> userSessions = getUserSessions(user.getId(), 0, -1, null);
             for (Session userSession : userSessions.getList()) {
-                userSession.setUser(user);
+                userSession.setUser(masterUser);
                 saveSession(userSession);
             }
         }

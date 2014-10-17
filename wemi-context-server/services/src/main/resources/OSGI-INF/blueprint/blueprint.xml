@@ -208,7 +208,7 @@
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="propertyMergeStrategyExecutorId" value="defaultMergeStrategy"/>
+            <entry key="propertyMergeStrategyExecutorId" value="defaultPropertyMergeStrategyExecutor"/>
         </service-properties>
         <bean class="org.oasis_open.wemi.context.server.impl.mergers.DefaultPropertyMergeStrategyExecutor">
         </bean>
@@ -216,7 +216,7 @@
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="propertyMergeStrategyExecutorId" value="addMergeStrategy"/>
+            <entry key="propertyMergeStrategyExecutorId" value="addPropertyMergeStrategyExecutor"/>
         </service-properties>
         <bean class="org.oasis_open.wemi.context.server.impl.mergers.AddPropertyMergeStrategyExecutor">
         </bean>
@@ -224,7 +224,7 @@
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="propertyMergeStrategyExecutorId" value="mostRecentMergeStrategy"/>
+            <entry key="propertyMergeStrategyExecutorId" value="mostRecentPropertyMergeStrategyExecutor"/>
         </service-properties>
         <bean class="org.oasis_open.wemi.context.server.impl.mergers.MostRecentPropertyMergeStrategyExecutor">
         </bean>
@@ -232,7 +232,7 @@
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="propertyMergeStrategyExecutorId" value="oldestMergeStrategy"/>
+            <entry key="propertyMergeStrategyExecutorId" value="oldestPropertyMergeStrategyExecutor"/>
         </service-properties>
         <bean class="org.oasis_open.wemi.context.server.impl.mergers.OldestPropertyMergeStrategyExecutor">
         </bean>
@@ -240,7 +240,7 @@
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="propertyMergeStrategyExecutorId" value="nonEmptyMergeStrategy"/>
+            <entry key="propertyMergeStrategyExecutorId" value="nonEmptyPropertyMergeStrategyExecutor"/>
         </service-properties>
         <bean class="org.oasis_open.wemi.context.server.impl.mergers.NonEmptyPropertyMergeStrategyExecutor">
         </bean>
