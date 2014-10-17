@@ -2,6 +2,8 @@ package org.oasis_open.wemi.context.server;
 
 import org.oasis_open.wemi.context.server.api.Persona;
 import org.oasis_open.wemi.context.server.api.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
@@ -16,6 +18,8 @@ import java.util.Map;
  * Created by loom on 10.06.14.
  */
 public class HttpUtils {
+
+    public static final Logger logger = LoggerFactory.getLogger(HttpUtils.class);
 
     private static final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365 * 10; // 10-years
 
@@ -39,14 +43,14 @@ public class HttpUtils {
     }
 
     public static void dumpBasicRequestInfo(HttpServletRequest httpServletRequest) {
-        System.out.println("=== ");
+        logger.info("=== ");
         String sessionId = null;
         if (httpServletRequest.getSession(false) != null) {
             sessionId = httpServletRequest.getSession(false).getId();
         }
-        System.out.print(httpServletRequest.getMethod() + " " + httpServletRequest.getRequestURI());
+        logger.info(httpServletRequest.getMethod() + " " + httpServletRequest.getRequestURI());
         if (httpServletRequest.getQueryString() != null) {
-            System.out.print("?" + httpServletRequest.getQueryString());
+            logger.info("?" + httpServletRequest.getQueryString());
         }
         System.out.println(
                 " sessionId=" + sessionId +
@@ -58,10 +62,10 @@ public class HttpUtils {
 
 
     public static void dumpRequestCookies(Cookie[] cookies) {
-        System.out.println("Cookies:");
-        System.out.println("--------");
+        logger.info("Cookies:");
+        logger.info("--------");
         for (Cookie cookie : cookies) {
-            System.out.println("  name=" + cookie.getName() +
+            logger.info("  name=" + cookie.getName() +
                     " value=" + cookie.getValue() +
                     " domain=" + cookie.getDomain() +
                     " path=" + cookie.getPath() +
@@ -74,12 +78,12 @@ public class HttpUtils {
     }
 
     public static void dumpRequestHeaders(HttpServletRequest httpServletRequest) {
-        System.out.println("Headers:");
-        System.out.println("--------");
+        logger.info("Headers:");
+        logger.info("--------");
         Enumeration<String> headerNameEnum = httpServletRequest.getHeaderNames();
         while (headerNameEnum.hasMoreElements()) {
             String headerName = headerNameEnum.nextElement();
-            System.out.println(headerName + ": " + httpServletRequest.getHeader(headerName));
+            logger.info(headerName + ": " + httpServletRequest.getHeader(headerName));
         }
     }
 

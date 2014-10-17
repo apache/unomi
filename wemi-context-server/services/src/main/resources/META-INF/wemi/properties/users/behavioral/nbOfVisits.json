@@ -1,10 +1,11 @@
 {
-    "id": "brandLoyalty",
-    "type": "string",
+    "id": "nbOfVisits",
+    "type": "integer",
     "tags": ["behavioralUserProperties"],
     "choiceListInitializerFilter": "",
-    "defaultValue": "totally,mostly,not at all",
+    "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ ],
-    "rank": "4.0"
+    "mergeStrategy": "addMergeStrategy",
+    "rank": "2.0"
 }

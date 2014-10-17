@@ -19,7 +19,7 @@ public interface UserService {
 
     PartialList<User> findUsersByPropertyValue(String propertyName, String propertyValue);
 
-    User mergeUsersOnProperty(String propertyName, String propertyValue);
+    User mergeUsersOnProperty(User currentUser, Session currentSession, String propertyName, String propertyValue);
 
     User load(String userId);
 

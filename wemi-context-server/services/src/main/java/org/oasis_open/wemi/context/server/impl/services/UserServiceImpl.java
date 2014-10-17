@@ -104,8 +104,12 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
         }
     }
 
-    public User mergeUsersOnProperty(String propertyName, String propertyValue) {
+    public User mergeUsersOnProperty(User currentUser, Session currentSession, String propertyName, String propertyValue) {
         PartialList<User> usersToMerge = findUsersByPropertyValue(propertyName, propertyValue);
+        if (!usersToMerge.getList().contains(currentUser)) {
+            usersToMerge.getList().add(currentUser);
+            usersToMerge.setTotalSize(usersToMerge.getList().size());
+        }
 
         if (usersToMerge.getTotalSize() == 0) {
             return null;
@@ -126,6 +130,11 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
             userPropertyTypeById.put(propertyType.getId(), propertyType);
         }
         User masterUser = usersToMerge.get(0);
+        Set<String> userIdsToMerge = new TreeSet<String>();
+        for (User userToMerge : usersToMerge.getList()) {
+            userIdsToMerge.add(userToMerge.getId());
+        }
+        logger.info("Merging users " + userIdsToMerge + " into user " + masterUser.getId());
         for (String userProperty : allUserProperties) {
             PropertyType propertyType = userPropertyTypeById.get(userProperty);
             String propertyMergeStrategyId = "defaultMergeStrategy";
@@ -137,13 +146,21 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
             PropertyMergeStrategyType propertyMergeStrategyType = definitionsService.getPropertyMergeStrategyType(propertyMergeStrategyId);
             if (propertyMergeStrategyType == null) {
                 // we couldn't find the strategy
+                if (propertyMergeStrategyId.equals("defaultMergeStrategy")) {
+                    logger.warn("Couldn't resolve default strategy, ignoring property merge for property " + userProperty);
+                    continue;
+                } else {
+                    logger.warn("Couldn't resolve strategy " + propertyMergeStrategyId + " for property " + userProperty + ", using default strategy instead");
+                    propertyMergeStrategyId = "defaultMergeStrategy";
+                    propertyMergeStrategyType = definitionsService.getPropertyMergeStrategyType(propertyMergeStrategyId);
+                }
             }
 
             Collection<ServiceReference<PropertyMergeStrategyExecutor>> matchingPropertyMergeStrategyExecutors;
             try {
                 matchingPropertyMergeStrategyExecutors = bundleContext.getServiceReferences(PropertyMergeStrategyExecutor.class, propertyMergeStrategyType.getFilter());
             } catch (InvalidSyntaxException e) {
-                e.printStackTrace();
+                logger.error("Error retrieving strategy implementation", e);
                 return null;
             }
             for (ServiceReference<PropertyMergeStrategyExecutor> propertyMergeStrategyExecutorReference : matchingPropertyMergeStrategyExecutors) {
@@ -152,18 +169,29 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
             }
         }
 
+        // we now have to merge the user's segments
+        for (User user : usersToMerge.getList()) {
+            masterUser.getSegments().addAll(user.getSegments());
+        }
+
         // we must now retrieve all the session associated with all the profiles and associate them with the master profile
         for (User user : usersToMerge.getList()) {
             if (user.getId().equals(masterUser.getId())) {
                 continue;
             }
             PartialList<Session> userSessions = getUserSessions(user.getId(), 0, -1, null);
+            if (currentSession.getUserId().equals(user.getId()) && !userSessions.getList().contains(currentSession)) {
+                userSessions.getList().add(currentSession);
+                userSessions.setTotalSize(userSessions.getList().size());
+            }
             for (Session userSession : userSessions.getList()) {
                 userSession.setUser(masterUser);
                 saveSession(userSession);
             }
+            delete(user);
         }
 
+        /*
         // we must mark all the profiles that we merged into the master as merged with the master, and they will
         // be deleted upon next load
         for (User user : usersToMerge.getList()) {
@@ -172,6 +200,7 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
             }
             user.setProperty("mergedWith", masterUser.getId());
         }
+        */
 
         return masterUser;
     }

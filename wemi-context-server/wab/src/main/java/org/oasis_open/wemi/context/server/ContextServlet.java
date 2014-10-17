@@ -110,6 +110,18 @@ public class ContextServlet extends HttpServlet {
                 if (session != null) {
                     visitorId = session.getUserId();
                     user = userService.load(visitorId);
+                    /*
+                    if (user.getProperty("mergedWith") != null) {
+                        visitorId = (String) user.getProperty("mergedWith");
+                        log("Session user was merged with user " + visitorId + ", replacing user in session");
+                        User userToDelete = user;
+                        user = userService.load(visitorId);
+                        session.setUser(user);
+                        userService.saveSession(session);
+                        userService.delete(userToDelete);
+                        HttpUtils.sendProfileCookie(user, response, profileIdCookieName, personaIdCookieName);
+                    }
+                    */
                 }
             }
             if (user == null) {
@@ -122,8 +134,9 @@ public class ContextServlet extends HttpServlet {
                     user = userService.load(cookieProfileId);
                     if (user == null) {
                         // this can happen if we have an old cookie but have reset the server.
-                        user = createNewUser(cookieProfileId, response, timestamp);
+                        user = createNewUser(null, response, timestamp);
                         userCreated = true;
+                        HttpUtils.sendProfileCookie(user, response, profileIdCookieName, personaIdCookieName);
                     }
                 }
 

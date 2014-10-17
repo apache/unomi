@@ -61,8 +61,8 @@ public class UserServiceEndPoint implements UserService {
     }
 
     @WebMethod(exclude = true)
-    public User mergeUsersOnProperty(String propertyName, String propertyValue) {
-        return userService.mergeUsersOnProperty(propertyName, propertyValue);
+    public User mergeUsersOnProperty(User currentUser, Session currentSession, String propertyName, String propertyValue) {
+        return userService.mergeUsersOnProperty(currentUser, currentSession, propertyName, propertyValue);
     }
 
     @GET

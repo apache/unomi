@@ -1,6 +1,9 @@
 package org.oasis_open.wemi.context.server.api;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by loom on 24.04.14.
@@ -47,4 +50,6 @@ public class User extends Item {
     public void setSegments(Set<String> segments) {
         this.segments = segments;
     }
+
+
 }
