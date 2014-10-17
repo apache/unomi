@@ -2,8 +2,6 @@ package org.oasis_open.wemi.context.server;
 
 import org.oasis_open.wemi.context.server.api.Persona;
 import org.oasis_open.wemi.context.server.api.User;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
@@ -18,8 +16,6 @@ import java.util.Map;
  * Created by loom on 10.06.14.
  */
 public class HttpUtils {
-
-    public static final Logger logger = LoggerFactory.getLogger(HttpUtils.class);
 
     private static final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365 * 10; // 10-years
 
@@ -42,49 +38,42 @@ public class HttpUtils {
         }
     }
 
-    public static void dumpBasicRequestInfo(HttpServletRequest httpServletRequest) {
-        logger.info("=== ");
+    public static String dumpBasicRequestInfo(HttpServletRequest httpServletRequest) {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("=== \n");
         String sessionId = null;
         if (httpServletRequest.getSession(false) != null) {
             sessionId = httpServletRequest.getSession(false).getId();
         }
-        logger.info(httpServletRequest.getMethod() + " " + httpServletRequest.getRequestURI());
+        stringBuilder.append(httpServletRequest.getMethod()).append(" ").append(httpServletRequest.getRequestURI());
         if (httpServletRequest.getQueryString() != null) {
-            logger.info("?" + httpServletRequest.getQueryString());
+            stringBuilder.append("?").append(httpServletRequest.getQueryString());
         }
-        System.out.println(
-                " sessionId=" + sessionId +
-                        " serverName=" + httpServletRequest.getServerName() +
-                        " serverPort=" + httpServletRequest.getServerPort() +
-                        " remoteAddr=" + httpServletRequest.getRemoteAddr() +
-                        " remotePort=" + httpServletRequest.getRemotePort());
+        stringBuilder.append(" sessionId=").append(sessionId).append(" serverName=").append(httpServletRequest.getServerName()).append(" serverPort=").append(httpServletRequest.getServerPort()).append(" remoteAddr=").append(httpServletRequest.getRemoteAddr()).append(" remotePort=").append(httpServletRequest.getRemotePort());
+        return stringBuilder.toString();
     }
 
 
-    public static void dumpRequestCookies(Cookie[] cookies) {
-        logger.info("Cookies:");
-        logger.info("--------");
+    public static String dumpRequestCookies(Cookie[] cookies) {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("Cookies:\n");
+        stringBuilder.append("--------\n");
         for (Cookie cookie : cookies) {
-            logger.info("  name=" + cookie.getName() +
-                    " value=" + cookie.getValue() +
-                    " domain=" + cookie.getDomain() +
-                    " path=" + cookie.getPath() +
-                    " maxAge=" + cookie.getMaxAge() +
-                    " httpOnly=" + cookie.isHttpOnly() +
-                    " secure=" + cookie.getSecure() +
-                    " version=" + cookie.getVersion() +
-                    " comment=" + cookie.getComment());
+            stringBuilder.append("  name=").append(cookie.getName()).append(" value=").append(cookie.getValue()).append(" domain=").append(cookie.getDomain()).append(" path=").append(cookie.getPath()).append(" maxAge=").append(cookie.getMaxAge()).append(" httpOnly=").append(cookie.isHttpOnly()).append(" secure=").append(cookie.getSecure()).append(" version=").append(cookie.getVersion()).append(" comment=").append(cookie.getComment()).append("\n");
         }
+        return stringBuilder.toString();
     }
 
-    public static void dumpRequestHeaders(HttpServletRequest httpServletRequest) {
-        logger.info("Headers:");
-        logger.info("--------");
+    public static String dumpRequestHeaders(HttpServletRequest httpServletRequest) {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("Headers:\n");
+        stringBuilder.append("--------\n");
         Enumeration<String> headerNameEnum = httpServletRequest.getHeaderNames();
         while (headerNameEnum.hasMoreElements()) {
             String headerName = headerNameEnum.nextElement();
-            logger.info(headerName + ": " + httpServletRequest.getHeader(headerName));
+            stringBuilder.append(headerName).append(": ").append(httpServletRequest.getHeader(headerName)).append("\n");
         }
+        return stringBuilder.toString();
     }
 
     public static String getBaseRequestURL(HttpServletRequest httpServletRequest) {

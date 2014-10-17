@@ -57,8 +57,8 @@ public class ContextServlet extends HttpServlet {
 
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
         String httpMethod = httpServletRequest.getMethod();
-//        HttpUtils.dumpBasicRequestInfo(httpServletRequest);
-//        HttpUtils.dumpRequestHeaders(httpServletRequest);
+        log(HttpUtils.dumpBasicRequestInfo(httpServletRequest));
+        log(HttpUtils.dumpRequestHeaders(httpServletRequest));
 
         if ("options".equals(httpMethod.toLowerCase())) {
             HttpUtils.setupCORSHeaders(httpServletRequest, response);
@@ -70,7 +70,7 @@ public class ContextServlet extends HttpServlet {
         String cookieProfileId = null;
         String cookiePersonaId = null;
         Cookie[] cookies = httpServletRequest.getCookies();
-        // HttpUtils.dumpRequestCookies(cookies);
+        log(HttpUtils.dumpRequestCookies(cookies));
         for (Cookie cookie : cookies) {
             if (profileIdCookieName.equals(cookie.getName())) {
                 cookieProfileId = cookie.getValue();

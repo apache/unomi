@@ -55,7 +55,7 @@ public class EventCollectorServlet extends HttpServlet {
 
     @Override
     protected void doOptions(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-//        HttpUtils.dumpBasicRequestInfo(request);
+        log(HttpUtils.dumpBasicRequestInfo(request));
         HttpUtils.setupCORSHeaders(request, response);
     }
 
@@ -65,7 +65,8 @@ public class EventCollectorServlet extends HttpServlet {
             timestamp.setTime(Long.parseLong(request.getParameter("timestamp")));
         }
 
-//        HttpUtils.dumpBasicRequestInfo(request);
+        log(HttpUtils.dumpBasicRequestInfo(request));
+        log(HttpUtils.dumpRequestHeaders(request));
 
         HttpUtils.setupCORSHeaders(request, response);
 
