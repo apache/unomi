@@ -31,8 +31,8 @@
             "remoteHost": "www.google.com",
             "remoteAddr": "66.249.66.1"
         },
-        "timeStamp": "2014-09-18T09:18:52.579+0000",
-        "lastEventDate": "2014-09-18T11:23:59.647+0000",
+        "timeStamp": "2014-09-18T09:18:52Z",
+        "lastEventDate": "2014-09-18T11:23:59Z",
         "duration": 7507068
     } ]
 }

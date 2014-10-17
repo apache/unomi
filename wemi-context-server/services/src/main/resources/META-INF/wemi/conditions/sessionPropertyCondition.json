@@ -1,5 +1,6 @@
 {
     "id": "sessionPropertyCondition",
+    "conditionEvaluator": "(conditionEvaluatorId=propertyConditionEvaluator)",
     "queryBuilderFilter": "(queryBuilderId=propertyConditionESQueryBuilder)",
     "tags": [ "demographic", "sessionCondition" ],
     "parameters": [

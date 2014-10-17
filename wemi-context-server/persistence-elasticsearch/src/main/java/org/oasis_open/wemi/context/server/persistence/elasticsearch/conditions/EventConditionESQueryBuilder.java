@@ -7,7 +7,7 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 /**
  * Created by loom on 21.08.14.
  */
-public class EventConditionESQueryBuilder implements ESQueryBuilder {
+public class EventConditionESQueryBuilder implements ConditionESQueryBuilder {
     @Override
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
         String eventTypeId = (String) condition.getParameterValues().get("eventTypeId");

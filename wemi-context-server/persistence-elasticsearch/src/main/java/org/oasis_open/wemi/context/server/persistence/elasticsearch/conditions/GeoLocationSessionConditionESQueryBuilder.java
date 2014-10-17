@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * Created by loom on 12.09.14.
  */
-public class GeoLocationSessionConditionESQueryBuilder implements ESQueryBuilder {
+public class GeoLocationSessionConditionESQueryBuilder implements ConditionESQueryBuilder {
     @Override
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
         List<String> countryList = (List<String>) condition.getParameterValues().get("countries");

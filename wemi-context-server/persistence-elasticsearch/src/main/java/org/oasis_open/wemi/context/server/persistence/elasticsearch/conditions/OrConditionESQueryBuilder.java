@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * Created by loom on 06.08.14.
  */
-public class OrConditionESQueryBuilder implements ESQueryBuilder {
+public class OrConditionESQueryBuilder implements ConditionESQueryBuilder {
 
     public OrConditionESQueryBuilder() {
     }

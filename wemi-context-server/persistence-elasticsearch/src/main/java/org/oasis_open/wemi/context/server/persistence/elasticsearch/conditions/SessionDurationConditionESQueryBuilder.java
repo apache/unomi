@@ -8,7 +8,7 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 /**
  * Created by toto on 20/08/14.
  */
-public class SessionDurationConditionESQueryBuilder implements ESQueryBuilder {
+public class SessionDurationConditionESQueryBuilder implements ConditionESQueryBuilder {
     @Override
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
         Integer min = (Integer) condition.getParameterValues().get("minimumDuration");

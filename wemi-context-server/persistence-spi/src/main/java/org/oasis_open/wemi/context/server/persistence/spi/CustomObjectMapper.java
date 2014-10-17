@@ -8,6 +8,9 @@ import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.persistence.spi.PropertyTypedObjectDeserializer;
 
+import java.text.SimpleDateFormat;
+import java.util.TimeZone;
+
 /**
  * Custom object mapper to be able to configure Jackson to our needs
  */
@@ -19,6 +22,9 @@ public class CustomObjectMapper extends ObjectMapper {
         super();
         super.registerModule(new JaxbAnnotationModule());
         configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+        setDateFormat(dateFormat);
         SimpleModule deserializerModule =
               new SimpleModule("PropertyTypedObjectDeserializerModule",
                   new Version(1, 0, 0, null, "org.oasis_open.wemi.context.server.rest", "deserializer"));

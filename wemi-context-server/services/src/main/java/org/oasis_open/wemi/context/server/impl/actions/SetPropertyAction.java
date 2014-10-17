@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.actions;
 
+import com.fasterxml.jackson.databind.util.ISO8601Utils;
 import org.mvel2.MVEL;
 import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.actions.Action;
@@ -27,7 +28,7 @@ public class SetPropertyAction implements ActionExecutor {
     public boolean execute(Action action, Event event) {
         Object propertyValue = action.getParameterValues().get("setPropertyValue");
         if (propertyValue != null && propertyValue.equals("now")) {
-            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
             format.setTimeZone(TimeZone.getTimeZone("UTC"));
             propertyValue = format.format(event.getTimeStamp());
         } else if (action.getParameterValues().containsKey("script")) {

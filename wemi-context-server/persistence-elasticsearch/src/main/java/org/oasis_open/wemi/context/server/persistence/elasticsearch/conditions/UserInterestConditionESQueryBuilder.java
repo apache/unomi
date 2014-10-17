@@ -7,7 +7,7 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 /**
 * Created by toto on 27/06/14.
 */
-public class UserInterestConditionESQueryBuilder implements ESQueryBuilder {
+public class UserInterestConditionESQueryBuilder implements ConditionESQueryBuilder {
 
     public UserInterestConditionESQueryBuilder() {
     }

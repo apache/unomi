@@ -7,7 +7,7 @@ import org.oasis_open.wemi.context.server.api.conditions.Condition;
 /**
  * Created by loom on 21.08.14.
  */
-public class LoginEventConditionESQueryBuilder implements ESQueryBuilder {
+public class LoginEventConditionESQueryBuilder implements ConditionESQueryBuilder {
     @Override
     public FilterBuilder buildFilter(Condition condition, ConditionESQueryBuilderDispatcher dispatcher) {
         return FilterBuilders.termFilter("eventType", "login");

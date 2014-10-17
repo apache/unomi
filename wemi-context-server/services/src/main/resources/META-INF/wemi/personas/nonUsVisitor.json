@@ -29,8 +29,8 @@
             "remoteHost": "www.epfl.ch",
             "remoteAddr": "128.178.50.12"
         },
-        "timeStamp": "2014-09-18T11:40:54.828+0000",
-        "lastEventDate": "2014-09-18T11:40:59.618+0000",
+        "timeStamp": "2014-09-18T11:40:54Z",
+        "lastEventDate": "2014-09-18T11:40:59Z",
         "duration": 4790
     } ]
 }

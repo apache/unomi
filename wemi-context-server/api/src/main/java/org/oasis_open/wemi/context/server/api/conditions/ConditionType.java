@@ -22,6 +22,7 @@ public class ConditionType implements TemplateablePluginType, Serializable {
     String template;
     String resourceBundle;
     String pluginId;
+    String conditionEvaluator;
     String queryBuilderFilter;
     Set<Tag> tags = new TreeSet<Tag>();
     Set<String> tagIDs = new LinkedHashSet<String>();
@@ -84,6 +85,14 @@ public class ConditionType implements TemplateablePluginType, Serializable {
 
     public void setPluginId(String pluginId) {
         this.pluginId = pluginId;
+    }
+
+    public String getConditionEvaluator() {
+        return conditionEvaluator;
+    }
+
+    public void setConditionEvaluator(String conditionEvaluator) {
+        this.conditionEvaluator = conditionEvaluator;
     }
 
     public String getQueryBuilderFilter() {
