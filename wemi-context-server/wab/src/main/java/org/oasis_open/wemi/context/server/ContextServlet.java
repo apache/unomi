@@ -110,18 +110,7 @@ public class ContextServlet extends HttpServlet {
                 if (session != null) {
                     visitorId = session.getUserId();
                     user = userService.load(visitorId);
-                    /*
-                    if (user.getProperty("mergedWith") != null) {
-                        visitorId = (String) user.getProperty("mergedWith");
-                        log("Session user was merged with user " + visitorId + ", replacing user in session");
-                        User userToDelete = user;
-                        user = userService.load(visitorId);
-                        session.setUser(user);
-                        userService.saveSession(session);
-                        userService.delete(userToDelete);
-                        HttpUtils.sendProfileCookie(user, response, profileIdCookieName, personaIdCookieName);
-                    }
-                    */
+                    user = checkMergedUser(response, user, session);
                 }
             }
             if (user == null) {
@@ -133,10 +122,13 @@ public class ContextServlet extends HttpServlet {
                 } else {
                     user = userService.load(cookieProfileId);
                     if (user == null) {
-                        // this can happen if we have an old cookie but have reset the server.
+                        // this can happen if we have an old cookie but have reset the server,
+                        // or if we merged the profiles and somehow this cookie didn't get updated.
                         user = createNewUser(null, response, timestamp);
                         userCreated = true;
                         HttpUtils.sendProfileCookie(user, response, profileIdCookieName, personaIdCookieName);
+                    } else {
+                        user = checkMergedUser(response, user, session);
                     }
                 }
 
@@ -198,6 +190,23 @@ public class ContextServlet extends HttpServlet {
 
         responseWriter.flush();
 
+    }
+
+    private User checkMergedUser(ServletResponse response, User user, Session session) {
+        String visitorId;
+        if (user.getProperty("mergedWith") != null) {
+            visitorId = (String) user.getProperty("mergedWith");
+            log("Session user was merged with user " + visitorId + ", replacing user in session");
+            User userToDelete = user;
+            user = userService.load(visitorId);
+            if (session != null) {
+                session.setUser(user);
+                userService.saveSession(session);
+                userService.delete(userToDelete);
+            }
+            HttpUtils.sendProfileCookie(user, response, profileIdCookieName, personaIdCookieName);
+        }
+        return user;
     }
 
     private void handleRequest(String stringPayload, User user, Session session, ContextResponse data) throws IOException {

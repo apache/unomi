@@ -188,10 +188,9 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
                 userSession.setUser(masterUser);
                 saveSession(userSession);
             }
-            delete(user);
+            // delete(user);
         }
 
-        /*
         // we must mark all the profiles that we merged into the master as merged with the master, and they will
         // be deleted upon next load
         for (User user : usersToMerge.getList()) {
@@ -200,7 +199,6 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
             }
             user.setProperty("mergedWith", masterUser.getId());
         }
-        */
 
         return masterUser;
     }
