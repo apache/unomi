@@ -96,11 +96,11 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
         persistenceService.save(user);
     }
 
-    public void delete(User user) {
-        if (user instanceof Persona) {
-            persistenceService.remove(user.getItemId(), Persona.class);
+    public void delete(String userId, boolean persona) {
+        if (persona) {
+            persistenceService.remove(userId, Persona.class);
         } else {
-            persistenceService.remove(user.getItemId(), User.class);
+            persistenceService.remove(userId, User.class);
         }
     }
 

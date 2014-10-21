@@ -54,7 +54,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         if (!masterUser.getId().equals(user.getId())) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
             sendProfileCookie(masterUser, httpServletResponse);
-            userService.delete(user);
+            userService.delete(user.getId(), false);
             Session session = event.getSession();
             if (!session.getUserId().equals(masterUser.getId())) {
                 session.setUser(masterUser);

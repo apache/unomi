@@ -204,7 +204,7 @@ public class ContextServlet extends HttpServlet {
                 if (session != null) {
                     session.setUser(user);
                     userService.saveSession(session);
-                    userService.delete(userToDelete);
+                    userService.delete(userToDelete.getId(), false);
                 }
                 HttpUtils.sendProfileCookie(user, response, profileIdCookieName, personaIdCookieName);
             } else {

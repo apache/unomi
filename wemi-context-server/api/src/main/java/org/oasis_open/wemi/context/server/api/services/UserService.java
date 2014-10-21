@@ -25,7 +25,7 @@ public interface UserService {
 
     void save(User user);
 
-    void delete(User user);
+    void delete(String userId, boolean persona);
 
     PartialList<Session> getUserSessions(String userId, int offset, int size, String sortBy);
 

@@ -79,8 +79,8 @@ public class UserServiceEndPoint implements UserService {
 
     @DELETE
     @Path("/{userId}")
-    public void delete(User user) {
-        userService.delete(user);
+    public void delete(@PathParam("userId") String userId, @QueryParam("persona") @DefaultValue("false") boolean persona) {
+        userService.delete(userId, false);
     }
 
     @GET
@@ -139,7 +139,7 @@ public class UserServiceEndPoint implements UserService {
     @DELETE
     @Path("/personas/{personaId}")
     public void deletePersona(Persona persona) {
-        userService.delete(persona);
+        userService.delete(persona.getId(), true);
     }
 
     @PUT
