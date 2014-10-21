@@ -115,6 +115,22 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
             return null;
         }
 
+        User masterUser = usersToMerge.get(0);
+
+        // now let's remove all the already merged users from the list.
+        PartialList<User> filteredUsersToMerge = new PartialList<User>(new ArrayList<User>(), 0, 0, 0);
+        for (User filteredUser : usersToMerge.getList()) {
+            if (!filteredUser.getId().equals(masterUser.getId()) &&
+                    filteredUser.getProperty("mergedWith") != null &&
+                    filteredUser.getProperty("mergedWith").equals(masterUser.getId())) {
+                // user was already merged with the master user, we will not merge him again.
+                continue;
+            }
+            filteredUsersToMerge.getList().add(filteredUser);
+        }
+        filteredUsersToMerge.setTotalSize(filteredUsersToMerge.getList().size());
+        usersToMerge = filteredUsersToMerge;
+
         if (usersToMerge.getTotalSize() == 1) {
             return usersToMerge.get(0);
         }
@@ -129,7 +145,6 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
         for (PropertyType propertyType : userPropertyTypes) {
             userPropertyTypeById.put(propertyType.getId(), propertyType);
         }
-        User masterUser = usersToMerge.get(0);
         Set<String> userIdsToMerge = new TreeSet<String>();
         for (User userToMerge : usersToMerge.getList()) {
             userIdsToMerge.add(userToMerge.getId());
