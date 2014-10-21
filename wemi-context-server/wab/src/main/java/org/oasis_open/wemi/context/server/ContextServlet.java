@@ -209,6 +209,8 @@ public class ContextServlet extends HttpServlet {
             } else {
                 log("Couldn't find merged user" + visitorId + ", falling back to user " + userToDelete.getId());
                 user = userToDelete;
+                user.getProperties().remove("mergedWith");
+                userService.save(user);
             }
         }
         return user;
