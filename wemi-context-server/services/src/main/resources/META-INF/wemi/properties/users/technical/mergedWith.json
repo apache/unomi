@@ -1,0 +1,10 @@
+{
+    "id": "mergedWith",
+    "type": "string",
+    "tags": ["technicalUserProperties"],
+    "choiceListInitializerFilter": "",
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "2.0"
+}

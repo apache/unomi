@@ -136,6 +136,7 @@
     "USER_PROPERTIES_ID_LABEL": "Identifiant",
     "USER_PROPERTIES_LEADASSIGNEDTO_LABEL": "Assigné à",
     "USER_PROPERTIES_FIRSTVISIT_LABEL": "Première visite",
-    "USER_PROPERTIES_NBOFVISITS_LABEL": "Nombre de visites"
+    "USER_PROPERTIES_NBOFVISITS_LABEL": "Nombre de visites",
+    "USER_PROPERTIES_MERGEDWITH_LABEL": "Fusionné avec"
 
 }
