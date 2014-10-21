@@ -26,6 +26,7 @@ public class PluginsCorsFilter implements Filter {
 
         if ("options".equals(httpMethod.toLowerCase())) {
             HttpUtils.setupCORSHeaders(httpServletRequest, httpServletResponse);
+            httpServletResponse.flushBuffer();
             return;
         }
 

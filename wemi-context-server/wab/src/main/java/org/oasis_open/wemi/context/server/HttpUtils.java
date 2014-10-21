@@ -34,7 +34,7 @@ public class HttpUtils {
             httpServletResponse.setHeader("Access-Control-Allow-Methods", "OPTIONS, POST, GET");
             // httpServletResponse.setHeader("Access-Control-Max-Age", "600");
             // httpServletResponse.setHeader("Access-Control-Expose-Headers","Access-Control-Allow-Origin");
-            httpServletResponse.flushBuffer();
+            // httpServletResponse.flushBuffer();
         }
     }
 

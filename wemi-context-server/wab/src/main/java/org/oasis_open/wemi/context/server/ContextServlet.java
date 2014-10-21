@@ -62,6 +62,7 @@ public class ContextServlet extends HttpServlet {
 
         if ("options".equals(httpMethod.toLowerCase())) {
             HttpUtils.setupCORSHeaders(httpServletRequest, response);
+            response.flushBuffer();
             return;
         }
 

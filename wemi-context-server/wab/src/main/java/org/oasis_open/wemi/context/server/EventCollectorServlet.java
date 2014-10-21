@@ -57,6 +57,7 @@ public class EventCollectorServlet extends HttpServlet {
     protected void doOptions(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         log(HttpUtils.dumpBasicRequestInfo(request));
         HttpUtils.setupCORSHeaders(request, response);
+        response.flushBuffer();
     }
 
     private void doEvent(HttpServletRequest request, HttpServletResponse response) throws IOException {
