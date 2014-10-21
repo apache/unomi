@@ -60,7 +60,7 @@ public class EventServiceImpl implements EventService {
 
         boolean changed = false;
 
-        final User user = event.getUser();
+        User user = event.getUser();
         final Session session = event.getSession();
 
         if (user != null) {
@@ -71,6 +71,11 @@ public class EventServiceImpl implements EventService {
                 if (eventListenerService.canHandle(event)) {
                     changed |= eventListenerService.onEvent(event);
                 }
+            }
+
+            if (session.getUser() != null && !session.getUser().getId().equals(user.getId())) {
+                // this can happen when users are merged for example.
+                user = session.getUser();
             }
 
             if (changed && (!user.getProperties().equals(previousProperties) || !user.getSegments().equals(previousSegments))) {
