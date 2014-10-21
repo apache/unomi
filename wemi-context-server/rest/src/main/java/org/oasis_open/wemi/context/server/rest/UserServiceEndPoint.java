@@ -160,7 +160,7 @@ public class UserServiceEndPoint implements UserService {
 
     @GET
     @Path("/sessions/{sessionId}")
-    public Session loadSession(@PathParam("sessionId") String sessionId, Date dateHint) {
+    public Session loadSession(@PathParam("sessionId") String sessionId, @QueryParam("dateHint") Date dateHint) {
         return userService.loadSession(sessionId, dateHint);
     }
 
