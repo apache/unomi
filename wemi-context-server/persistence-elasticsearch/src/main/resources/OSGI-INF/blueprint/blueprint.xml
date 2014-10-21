@@ -98,13 +98,6 @@
 
     <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="geoLocationSessionConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.GeoLocationSessionConditionESQueryBuilder"/>
-    </service>
-
-    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
             <entry key="queryBuilderId" value="geoLocationByPointSessionConditionESQueryBuilder"/>
         </service-properties>
         <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.GeoLocationByPointSessionConditionESQueryBuilder"/>
@@ -151,6 +144,13 @@
             <entry key="conditionEvaluatorId" value="multipleValuesPropertyMatchConditionEvaluator"/>
         </service-properties>
         <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.MultipleValuesPropertyMatchConditionEvaluator"/>
+    </service>
+
+    <service interface="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionEvaluator">
+        <service-properties>
+            <entry key="conditionEvaluatorId" value="geoLocationByPointSessionConditionEvaluator"/>
+        </service-properties>
+        <bean class="org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.GeoLocationByPointSessionConditionEvaluator"/>
     </service>
 
     <bean id="conditionEvaluatorDispatcherImpl"

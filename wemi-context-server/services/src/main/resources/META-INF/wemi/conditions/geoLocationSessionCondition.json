@@ -1,6 +1,13 @@
 {
     "id": "geoLocationSessionCondition",
-    "queryBuilderFilter": "(queryBuilderId=geoLocationSessionConditionESQueryBuilder)",
+    "parentCondition" : {
+        "type": "multipleValuesPropertyMatchCondition",
+        "parameterValues": {
+            "propertyName": "properties.countryCode",
+            "propertyValues": "parameter::countries",
+            "matchType": "some"
+        }
+    },
     "tags": [ "geographic", "sessionCondition" ],
     "parameters": [
         {

@@ -1,5 +1,6 @@
 {
     "id": "geoLocationByPointSessionCondition",
+    "conditionEvaluator": "(conditionEvaluatorId=geoLocationByPointSessionConditionEvaluator)",
     "queryBuilderFilter": "(queryBuilderId=geoLocationByPointSessionConditionESQueryBuilder)",
     "tags": [ "geographic", "sessionCondition" ],
     "parameters": [
