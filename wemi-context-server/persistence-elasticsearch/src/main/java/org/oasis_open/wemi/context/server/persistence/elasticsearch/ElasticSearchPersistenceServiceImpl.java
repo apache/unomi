@@ -76,8 +76,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
     private Node node;
     private Client client;
-    private String clusterName = "wemiElasticSearch";
-    private String indexName = "wemi";
+    private String clusterName;
+    private String indexName;
     private String elasticSearchConfig = null;
     private BundleContext bundleContext;
     private Map<String,String> mappings = new HashMap<String, String>();
@@ -180,8 +180,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     CreateIndexResponse createIndexResponse = client.admin().indices().prepareCreate(indexName).execute().actionGet();
                 }
 
-                PutIndexTemplateResponse response = client.admin().indices().preparePutTemplate("wemi_dailyindex")
-                        .setTemplate("wemi-*")
+                PutIndexTemplateResponse response = client.admin().indices().preparePutTemplate(indexName + "_dailyindex")
+                        .setTemplate(indexName + "-*")
                         .setOrder(1)
                         .setSettings(ImmutableSettings.settingsBuilder().put("number_of_shards", 1).build())
                         .execute().actionGet();
@@ -768,7 +768,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         new InClassLoaderExecute<Object>() {
             @Override
             protected Object execute(Object... args) {
-                IndicesStatsResponse statsResponse = client.admin().indices().prepareStats("wemi-*")
+                IndicesStatsResponse statsResponse = client.admin().indices().prepareStats(indexName + "-*")
                         .setIndexing(false)
                         .setGet(false)
                         .setSearch(false)
@@ -786,7 +786,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 List<String> toDelete = new ArrayList<String>();
                 for (String indexName : statsResponse.getIndices().keySet()) {
-                    if (indexName.startsWith("wemi-")) {
+                    if (indexName.startsWith(indexName + "-")) {
                         try {
                             Date indexDate = d.parse(indexName.substring(5));
                             if (indexDate.before(date)) {

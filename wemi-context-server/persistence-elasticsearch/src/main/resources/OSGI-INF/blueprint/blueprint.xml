@@ -13,8 +13,8 @@
     <cm:property-placeholder persistent-id="org.oasis_open.wemi.context.server.persistence.elasticsearch"
                              update-strategy="reload">
         <cm:default-properties>
-            <cm:property name="cluster.name" value="wemiElasticSearch"/>
-            <cm:property name="index.name" value="wemi"/>
+            <cm:property name="cluster.name" value="contextElasticSearch"/>
+            <cm:property name="index.name" value="context"/>
             <cm:property name="elasticSearchConfig" value="file:${karaf.etc}/elasticsearch.yml"/>
         </cm:default-properties>
     </cm:property-placeholder>

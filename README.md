@@ -113,8 +113,8 @@ To change the cluster name, first create a file called
 with the following contents:
 
     # the cluster.name setting is ignored if the elasticSearchConfig points to a valid ElasticSearch configuration file.
-    cluster.name=wemiElasticSearch
-    index.name=wemi
+    cluster.name=contextElasticSearch
+    index.name=context
     elasticSearchConfig=file:${karaf.etc}/elasticsearch.yml
     
 then you can create the etc/elasticsearch.yml configuration file with the following configuration:
