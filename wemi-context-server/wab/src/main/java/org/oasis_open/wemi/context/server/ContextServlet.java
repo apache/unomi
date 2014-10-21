@@ -196,15 +196,20 @@ public class ContextServlet extends HttpServlet {
         String visitorId;
         if (user.getProperty("mergedWith") != null) {
             visitorId = (String) user.getProperty("mergedWith");
-            log("Session user was merged with user " + visitorId + ", replacing user in session");
             User userToDelete = user;
             user = userService.load(visitorId);
-            if (session != null) {
-                session.setUser(user);
-                userService.saveSession(session);
-                userService.delete(userToDelete);
+            if (user != null) {
+                log("Session user was merged with user " + visitorId + ", replacing user in session");
+                if (session != null) {
+                    session.setUser(user);
+                    userService.saveSession(session);
+                    userService.delete(userToDelete);
+                }
+                HttpUtils.sendProfileCookie(user, response, profileIdCookieName, personaIdCookieName);
+            } else {
+                log("Couldn't find merged user" + visitorId + ", falling back to user " + userToDelete.getId());
+                user = userToDelete;
             }
-            HttpUtils.sendProfileCookie(user, response, profileIdCookieName, personaIdCookieName);
         }
         return user;
     }
