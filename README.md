@@ -332,6 +332,22 @@ which should give you a result such as this:
     java version "1.7.0_51"
     Java(TM) SE Runtime Environment (build 1.7.0_51-b13)
     Java HotSpot(TM) 64-Bit Server VM (build 24.51-b03, mixed mode)
+        
+Automatic profile merging
+-------------------------
+
+The context server is capable of merging profiles based on a common property value. In order to use this, you must
+add the MergeProfileOnPropertyAction to a rule (such as a login rule for example), and configure it with the name
+ of the property that will be used to identify the profiles to be merged. An example could be the "email" property,
+ meaning that if two (or more) profiles are found to have the same value for the "email" property they will be merged
+ by this action.
+ 
+Upon merge, the old profiles are marked with a "mergedWith" property that will be used on next profile access to delete
+the original profile and replace it with the merged profile (aka "master" profile). Once this is done, all cookie tracking
+will use the merged profile.
+
+To test, simply configure the action in the "login" or "facebookLogin" rules and set it up on the "email" property. 
+Upon sending one of the events, all matching profiles will be merged.
 
 Todo
 ----
