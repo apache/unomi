@@ -1,0 +1,26 @@
+{
+    "metadata": {
+        "id": "sessionPageReferrer",
+        "name": "Detect page referrer on page view",
+        "description": "Set page referring URL property on session when a page is view",
+        "readOnly":true
+    },
+
+    "condition": {
+        "type": "pageViewEventCondition",
+        "parameterValues": {
+        }
+    },
+
+    "actions": [
+        {
+            "parameterValues": {
+                "setPropertyName": "pageReferringURL",
+                "setPropertyValue": "eventProperty::page.pageInfo.referringURL",
+                "storeInSession": true
+            },
+            "type": "setPropertyAction"
+        }
+    ]
+
+}

@@ -1,0 +1,39 @@
+{
+    "metadata": {
+        "id": "sessionReferrer",
+        "name": "Detect session referrer on page view",
+        "description": "Set session referring URL property on session when a page is view and the session does not have a referring URL",
+        "readOnly":true
+    },
+
+    "condition": {
+        "parameterValues": {
+            "subConditions": [
+                {
+                    "type": "pageViewEventCondition",
+                    "parameterValues": {
+                    }
+                },
+                {
+                    "type": "sessionPropertyCondition",
+                    "parameterValues": {
+                        "propertyName":"properties.referringURL",
+                        "comparisonOperator":"missing"
+                    }
+                }
+            ]
+        },
+        "type": "andCondition"
+    },
+
+    "actions": [
+        {
+            "parameterValues": {
+                "setPropertyName": "referringURL",
+                "setPropertyValue": "eventProperty::page.pageInfo.referringURL",
+                "storeInSession": true
+            },
+            "type": "setPropertyAction"
+        }
+    ]
+}
