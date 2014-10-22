@@ -133,18 +133,16 @@ if you use a custom elasticsearch.yml configuration file.
 REST API Security
 -----------------
 
-The Context Server REST API is protected using JAAS authentication and using Basic or Digest HTTP auth. It is recommended
-to setup SSL Transport to make sure that the transmission of the authentication data is not done in clear text.
-
+The Context Server REST API is protected using JAAS authentication and using Basic or Digest HTTP auth.
 By default, the login/password for the REST API full administrative access is "karaf/karaf".
 
-Here are the steps to setup SSL on Karaf:
+The generated package is also configured with a default SSL certificate. You can change it by following these steps :
 
-1. Follow the steps here to setup the keystore : 
+1. Replace the existing keystore in /etc/keystore by your own certificate :
  
     http://wiki.eclipse.org/Jetty/Howto/Configure_SSL
     
-2. Add the following to the /etc/custom.properties file : 
+2. Update the keystore and certificate password in /etc/custom.properties file :
  
     org.osgi.service.http.secure.enabled = true
     org.ops4j.pax.web.ssl.keystore=${karaf.etc}/keystore
@@ -152,12 +150,7 @@ Here are the steps to setup SSL on Karaf:
     org.ops4j.pax.web.ssl.keypassword=tomcat
     org.osgi.service.http.port.secure=9443
 
-3. Add the following lines to the /etc/elasticsearch.yml file : 
-
-    node.contextserver.secureAddress: localhost
-    node.contextserver.securePort: 9443
-    
-You should now have SSL setup on Karaf, and you can test it by trying to access it on port 9443.
+You should now have SSL setup on Karaf with your certificate, and you can test it by trying to access it on port 9443.
 
  
 Running the integration tests
