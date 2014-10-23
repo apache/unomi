@@ -4,20 +4,15 @@
 
     <parent>
         <groupId>org.oasis-open.wemi</groupId>
-        <artifactId>wemi-context-server</artifactId>
+        <artifactId>wemi-context-server-persistence-elasticsearch</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>wemi-context-server-persistence-elasticsearch</artifactId>
+    <artifactId>wemi-context-server-persistence-elasticsearch-plugins</artifactId>
     <packaging>pom</packaging>
 
-    <properties>
-        <elasticsearch.version>1.3.2</elasticsearch.version>
-    </properties>
-
     <modules>
-        <module>core</module>
-        <module>plugins</module>
+        <module>security</module>
     </modules>
 
 </project>

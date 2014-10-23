@@ -1,0 +1,31 @@
+{
+    "session": {
+        "dynamic_templates": [
+            {
+                "all": {
+                    "match": "*",
+                    "match_mapping_type": "string",
+                    "mapping": {
+                        "type": "string",
+                        "index": "not_analyzed"
+                    }
+                }
+            }
+        ],
+        "properties": {
+            "timeStamp": {
+                "type": "date"
+            },
+            "lastEventDate": {
+                "type": "date"
+            },
+            "properties": {
+                "properties": {
+                    "location": {
+                        "type": "geo_point"
+                    }
+                }
+            }
+        }
+    }
+}
