@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.actions;
 
+import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.mvel2.MVEL;
 import org.oasis_open.wemi.context.server.api.Event;
@@ -64,18 +65,24 @@ public class ActionExecutorDispatcher {
             Object value = entry.getValue();
             if (value instanceof String) {
                 String s = (String) value;
-                if (s.startsWith("userProperty::")) {
-                    value = event.getUser().getProperty(StringUtils.substringAfter(s, "userProperty::"));
-                } else if (s.startsWith("sessionProperty::")) {
-                    value = event.getSession().getProperty(StringUtils.substringAfter(s, "sessionProperty::"));
-                } else if (s.startsWith("eventProperty::")) {
-                    value = event.getProperty(StringUtils.substringAfter(s, "eventProperty::"));
-                } else if (s.startsWith("script::")) {
-                    Map<String, Object> ctx = new HashMap<String, Object>();
-                    ctx.put("event", event);
-                    ctx.put("session", event.getSession());
-                    ctx.put("user", event.getUser());
-                    value = MVEL.eval(StringUtils.substringAfter(s, "script::"), ctx);
+                try {
+                    if (s.startsWith("userProperty::")) {
+                        value = PropertyUtils.getProperty(event.getUser(), "properties." + StringUtils.substringAfter(s, "userProperty::"));
+                    } else if (s.startsWith("sessionProperty::")) {
+                        value = PropertyUtils.getProperty(event.getSession(), "properties." + StringUtils.substringAfter(s, "sessionProperty::"));
+                    } else if (s.startsWith("eventProperty::")) {
+                        value = PropertyUtils.getProperty(event, "properties." + StringUtils.substringAfter(s, "eventProperty::"));
+                    } else if (s.startsWith("script::")) {
+                        Map<String, Object> ctx = new HashMap<String, Object>();
+                        ctx.put("event", event);
+                        ctx.put("session", event.getSession());
+                        ctx.put("user", event.getUser());
+                        value = MVEL.eval(StringUtils.substringAfter(s, "script::"), ctx);
+                    }
+                } catch (UnsupportedOperationException e) {
+                    throw e;
+                } catch (Exception e) {
+                    throw new UnsupportedOperationException(e);
                 }
             } else if (value instanceof Map) {
                 value = parseMap(event, (Map<String, Object>) value);

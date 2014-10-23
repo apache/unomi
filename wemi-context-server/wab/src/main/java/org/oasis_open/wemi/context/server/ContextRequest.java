@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server;
 
+import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
 import java.util.List;
@@ -10,6 +11,7 @@ public class ContextRequest {
     private boolean requireSegments;
     private List<String> requiredUserProperties;
     private List<String> requiredSessionProperties;
+    private List<Event> events;
 
     private List<FilteredContent> filters;
 
@@ -51,6 +53,14 @@ public class ContextRequest {
 
     public void setFilters(List<FilteredContent> filters) {
         this.filters = filters;
+    }
+
+    public List<Event> getEvents() {
+        return events;
+    }
+
+    public void setEvents(List<Event> events) {
+        this.events = events;
     }
 
     static class FilteredContent {

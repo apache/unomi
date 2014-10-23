@@ -162,25 +162,14 @@ public class ContextServlet extends HttpServlet {
 
         Writer responseWriter = response.getWriter();
 
-        String baseRequestURL = HttpUtils.getBaseRequestURL(httpServletRequest);
-
         ContextResponse data = new ContextResponse();
 
         responseWriter.append("window.digitalData = window.digitalData || {};\n");
         responseWriter.append("var wemi = ");
 
-        if ("post".equals(httpMethod.toLowerCase())) {
-            StringBuilder buffer = new StringBuilder();
-            String line;
-            BufferedReader reader = request.getReader();
-            while ((line = reader.readLine()) != null) {
-                buffer.append(line);
-            }
-            if (buffer.length() > 0) {
-                handleRequest(buffer.toString(), user, session, data);
-            }
-        } else if ("get".equals(httpMethod.toLowerCase()) && request.getParameter("payload") != null) {
-            handleRequest(request.getParameter("payload"), user, session, data);
+        String payload = HttpUtils.getPayload(httpServletRequest);
+        if(payload != null){
+            handleRequest(payload, user, session, data, request, response, timestamp);
         }
         responseWriter.append(CustomObjectMapper.getObjectMapper().writeValueAsString(data));
 
@@ -217,36 +206,54 @@ public class ContextServlet extends HttpServlet {
         return user;
     }
 
-    private void handleRequest(String stringPayload, User user, Session session, ContextResponse data) throws IOException {
+    private void handleRequest(String stringPayload, User user, Session session, ContextResponse data, ServletRequest request, ServletResponse response, Date timestamp)
+            throws IOException {
         ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
         JsonFactory factory = mapper.getFactory();
-        ContextRequest request = mapper.readValue(factory.createParser(stringPayload), ContextRequest.class);
+        ContextRequest contextRequest = mapper.readValue(factory.createParser(stringPayload), ContextRequest.class);
+
+        // execute provided events if any
+        if(contextRequest.getEvents() != null) {
+            for (Event event : contextRequest.getEvents()){
+                if(event.getEventType() != null) {
+                    Event eventToSend;
+                    if(event.getProperties() != null){
+                        eventToSend = new Event(event.getEventType(), session, user, timestamp, event.getProperties());
+                    } else {
+                        eventToSend = new Event(event.getEventType(), session, user, timestamp);
+                    }
+                    event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
+                    event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
+                    eventService.send(eventToSend);
+                }
+            }
+        }
 
         data.setUserId(user.getId());
 
-        if (request.isRequireSegments()) {
+        if (contextRequest.isRequireSegments()) {
             data.setUserSegments(user.getSegments());
         }
 
-        if (request.getRequiredUserProperties() != null) {
+        if (contextRequest.getRequiredUserProperties() != null) {
             Map<String, Object> userProperties = new HashMap<String, Object>(user.getProperties());
-            if (!request.getRequiredUserProperties().contains("*")) {
-                userProperties.keySet().retainAll(request.getRequiredUserProperties());
+            if (!contextRequest.getRequiredUserProperties().contains("*")) {
+                userProperties.keySet().retainAll(contextRequest.getRequiredUserProperties());
             }
             data.setUserProperties(userProperties);
         }
         if (session != null) {
             data.setSessionId(session.getId());
-            if (request.getRequiredSessionProperties() != null) {
+            if (contextRequest.getRequiredSessionProperties() != null) {
                 Map<String, Object> sessionProperties = new HashMap<String, Object>(session.getProperties());
-                if (!request.getRequiredSessionProperties().contains("*")) {
-                    sessionProperties.keySet().retainAll(request.getRequiredSessionProperties());
+                if (!contextRequest.getRequiredSessionProperties().contains("*")) {
+                    sessionProperties.keySet().retainAll(contextRequest.getRequiredSessionProperties());
                 }
                 data.setSessionProperties(sessionProperties);
             }
         }
 
-        List<ContextRequest.FilteredContent> filterNodes = request.getFilters();
+        List<ContextRequest.FilteredContent> filterNodes = contextRequest.getFilters();
         if (filterNodes != null) {
             data.setFilteringResults(new HashMap<String, Boolean>());
             for (ContextRequest.FilteredContent filteredContent : filterNodes) {

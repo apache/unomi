@@ -7,6 +7,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
@@ -123,4 +124,20 @@ public class HttpUtils {
         return cookieMap;
     }
 
+    public static String getPayload(HttpServletRequest request) throws IOException {
+        if ("post".equals(request.getMethod().toLowerCase())) {
+            StringBuilder buffer = new StringBuilder();
+            String line;
+            BufferedReader reader = request.getReader();
+            while ((line = reader.readLine()) != null) {
+                buffer.append(line);
+            }
+            if (buffer.length() > 0) {
+                return buffer.toString();
+            }
+        } else if ("get".equals(request.getMethod().toLowerCase()) && request.getParameter("payload") != null) {
+            return request.getParameter("payload");
+        }
+        return null;
+    }
 }

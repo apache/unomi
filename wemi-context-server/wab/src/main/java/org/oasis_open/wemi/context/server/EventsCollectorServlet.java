@@ -1,5 +1,7 @@
 package org.oasis_open.wemi.context.server;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.Persona;
 import org.oasis_open.wemi.context.server.api.Session;
@@ -7,10 +9,10 @@ import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.EventService;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
 import org.oasis_open.wemi.context.server.api.services.UserService;
+import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
 import org.ops4j.pax.cdi.api.OsgiService;
 
 import javax.inject.Inject;
-import javax.json.*;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -18,14 +20,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.StringReader;
 import java.util.*;
 
 /**
  * Created by loom on 10.06.14.
  */
-@WebServlet(urlPatterns = {"/eventcollector/*"})
-public class EventCollectorServlet extends HttpServlet {
+@WebServlet(urlPatterns = {"/eventcollector"})
+public class EventsCollectorServlet extends HttpServlet {
 
     private static final List<String> reservedParameters = Arrays.asList("timestamp", "sessionId", "jsondata");
 
@@ -93,59 +94,37 @@ public class EventCollectorServlet extends HttpServlet {
             return;
         }
 
-        String eventType = request.getPathInfo();
-        if (eventType.startsWith("/")) {
-            eventType = eventType.substring(1);
-        }
-        if (eventType.endsWith("/")) {
-            eventType = eventType.substring(eventType.length() - 1);
-        }
-        if (eventType.contains("/")) {
-            eventType = eventType.substring(eventType.lastIndexOf("/"));
+        String payload = HttpUtils.getPayload(request);
+        if(payload == null){
+            return;
         }
 
-        Event event = new Event(eventType, session, user, timestamp);
-
-        if (request.getParameter("jsondata") != null) {
-            JsonReader reader = Json.createReader(new StringReader(request.getParameter("jsondata")));
-            JsonObject data = (JsonObject) reader.read();
-            addJsonProperties(event, data, "");
+        ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
+        JsonFactory factory = mapper.getFactory();
+        EventsCollectorRequest events = mapper.readValue(factory.createParser(payload), EventsCollectorRequest.class);
+        if (events == null || events.getEvents() == null) {
+            return;
         }
 
-        Enumeration<String> parameterNames = request.getParameterNames();
-        while (parameterNames.hasMoreElements()) {
-            String parameterName = parameterNames.nextElement();
-            if (!reservedParameters.contains(parameterName)) {
-                event.setProperty(parameterName, request.getParameter(parameterName));
+        boolean changed = false;
+        for (Event event : events.getEvents()){
+            if(event.getEventType() != null){
+                Event eventToSend;
+                if(event.getProperties() != null){
+                    eventToSend = new Event(event.getEventType(), session, user, timestamp, event.getProperties());
+                } else {
+                    eventToSend = new Event(event.getEventType(), session, user, timestamp);
+                }
+                event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
+                event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
+                boolean eventChanged = eventService.send(eventToSend);
+                changed = changed || eventChanged;
             }
         }
 
-        event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
-        event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-
-        boolean changed = eventService.send(event);
-
         PrintWriter responseWriter = response.getWriter();
-
         responseWriter.append("{\"updated\":" + changed + "}");
         responseWriter.flush();
     }
-
-    private void addJsonProperties(Event event, JsonObject data, String name) {
-        for (Map.Entry<String, JsonValue> entry : data.entrySet()) {
-            switch (entry.getValue().getValueType()) {
-                case STRING:
-                    event.setProperty(name + entry.getKey(), ((JsonString) entry.getValue()).getString());
-                    break;
-                case NUMBER:
-                    event.setProperty(name + entry.getKey(), ((JsonNumber) entry.getValue()).intValueExact());
-                    break;
-                case OBJECT:
-                    addJsonProperties(event, ((JsonObject) entry.getValue()), name + entry.getKey() + ".");
-                    break;
-            }
-        }
-    }
-
 
 }

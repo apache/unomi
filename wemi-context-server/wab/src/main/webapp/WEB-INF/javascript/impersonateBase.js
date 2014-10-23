@@ -64,7 +64,11 @@ wemi.loadXMLDoc = function (url, successCallBack) {
     xhr.send();
 };
 
-wemi.collectEvent = function (eventType, parameters, successCallBack) {
+wemi.collectEvent = function (event, successCallBack) {
+
+};
+
+wemi.collectEvents = function(events, successCallBack) {
 
 };
 

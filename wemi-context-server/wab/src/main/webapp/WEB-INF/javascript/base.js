@@ -64,19 +64,47 @@ wemi.loadXMLDoc = function (url, successCallBack) {
     xhr.send();
 };
 
-wemi.collectEvent = function (eventType, parameters, successCallBack) {
-    // @todo we should pass the parameters as an array or a map instead of a string
-    var xhr = this.createCORSRequest("GET", window.digitalData.contextServerPublicUrl + "/eventcollector/" + eventType + "?sessionId=" + wemi.sessionId + "&" + parameters);
-    if (!xhr) {
-        alert("CORS not supported by browser!");
+/**
+ *
+ * @param event JSONObject: {eventType:"", properties: {}}
+ * @param successCallBack
+ */
+wemi.collectEvent = function (event, successCallBack) {
+    this.collectEvents({events: [event]}, successCallBack);
+};
+
+/**
+ *
+ * @param events JSONObject: {events: [{eventType:"", properties: {}}, ...]}
+ * @param successCallBack
+ */
+wemi.collectEvents = function(events, successCallBack) {
+    data = JSON.stringify(events);
+    var url = window.digitalData.contextServerPublicUrl + "/eventcollector" + "?sessionId=" + wemi.sessionId;
+    var xhr = new XMLHttpRequest();
+    var isGet = data.length < 100;
+    if (isGet) {
+        xhr.withCredentials = true;
+        xhr.open("GET", url + "&payload=" + encodeURIComponent(data), true);
+    } else if ("withCredentials" in xhr) {
+        xhr.withCredentials = true;
+        xhr.open("POST", url, true);
+    } else if (typeof XDomainRequest != "undefined") {
+        xhr = new XDomainRequest();
+        xhr.open("POST", url);
     }
     xhr.onreadystatechange = function () {
         if (xhr.readyState == 4 && xhr.status == 200) {
             var jsonResponse = JSON.parse(xhr.responseText);
             successCallBack(xhr);
         }
+    };
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+    if (isGet) {
+        xhr.send();
+    } else {
+        xhr.send(data);
     }
-    xhr.send();
 };
 
 wemi.createCookie = function (name, value, days) {

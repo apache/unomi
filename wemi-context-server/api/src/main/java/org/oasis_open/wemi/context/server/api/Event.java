@@ -43,6 +43,13 @@ public class Event extends Item implements TimestampedItem {
         this.properties = new HashMap<String, Object>();
     }
 
+    public Event(String eventType, Session session, User user, Date timestamp, Map<String, Object> properties) {
+        this(eventType, session, user, timestamp);
+        if(properties != null) {
+            this.properties = properties;
+        }
+    }
+
     public String getSessionId() {
         return sessionId;
     }
