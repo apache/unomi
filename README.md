@@ -346,19 +346,35 @@ Securing a production environment
 ---------------------------------
 
 Before going live with a project, you should *absolutely* read the following section that will help you setup a proper 
-secure environment for running your context server.
+secure environment for running your context server.         
 
 Step 1: Install and configure a firewall 
 
-You should setup a firewall around your cluster of context servers and/or ElasticSearch nodes. If you have an application
--level firewall you should only allow the following connections open to the whole world : 
+You should setup a firewall around your cluster of context servers and/or ElasticSearch nodes. If you have an 
+application-level firewall you should only allow the following connections open to the whole world : 
 
-http://localhost:8181/context.js
-http://localhost:8181/eventcollector
+    http://localhost:8181/context.js
+    http://localhost:8181/eventcollector
 
 All other ports should not be accessible to the world.
 
-For your Jahia servers, you will need to make the following ports accessible : 8181 (http), 9443 (https)
+For your Context Server client applications (such as the Jahia CMS), you will need to make the following ports 
+accessible : 
+
+    8181 (Context Server HTTP port) 
+    9443 (Context Server HTTPS port)
+    
+The context server actually requires HTTP Basic Auth for access to the Context Server administration REST API, so it is
+highly recommended that you design your client applications to use the HTTPS port for accessing the REST API.
+
+The user accounts to access the REST API are actually routed through Karaf's JAAS support, which you may find the 
+documentation for here : 
+
+    http://karaf.apache.org/manual/latest/users-guide/security.html
+    
+The default username/password is 
+
+    karaf/karaf
 
 For your context servers, and for any standalone ElasticSearch nodes you will need to open the following ports for proper
 node-to-node communication : 9200 (ElasticSearch REST API), 9300 (ElasticSearch TCP transport)
