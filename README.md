@@ -353,8 +353,8 @@ Step 1: Install and configure a firewall
 You should setup a firewall around your cluster of context servers and/or ElasticSearch nodes. If you have an 
 application-level firewall you should only allow the following connections open to the whole world : 
 
-    http://localhost:8181/context.js
-    http://localhost:8181/eventcollector
+ - http://localhost:8181/context.js
+ - http://localhost:8181/eventcollector
 
 All other ports should not be accessible to the world.
 
@@ -370,7 +370,7 @@ highly recommended that you design your client applications to use the HTTPS por
 The user accounts to access the REST API are actually routed through Karaf's JAAS support, which you may find the 
 documentation for here : 
 
-    http://karaf.apache.org/manual/latest/users-guide/security.html
+ - http://karaf.apache.org/manual/latest/users-guide/security.html
     
 The default username/password is 
 
@@ -395,14 +395,14 @@ https://github.com/Jahia/wemi-sandbox/tree/master/wemi-context-server/persistenc
 
 You can adjust this setting by using the following setting in the etc/elasticsearch.yml file : 
 
-security.ipranges: localhost,127.0.0.1,::1,10.0.1.0-10.0.1.255
+    security.ipranges: localhost,127.0.0.1,::1,10.0.1.0-10.0.1.255
 
 Step 3 : Follow industry recommended best practices for securing ElasticSearch
 
 You may find more valuable recommendations here : 
 
-    https://www.found.no/foundation/elasticsearch-security/
-    http://www.elasticsearch.org/blog/scripting-security/
+- https://www.found.no/foundation/elasticsearch-security/
+- http://www.elasticsearch.org/blog/scripting-security/
     
 Step 4 : Setup a proxy in front of the context server
 
