@@ -342,6 +342,57 @@ will use the merged profile.
 To test, simply configure the action in the "login" or "facebookLogin" rules and set it up on the "email" property. 
 Upon sending one of the events, all matching profiles will be merged.
 
+Securing a production environment
+---------------------------------
+
+Before going live with a project, you should *absolutely* read the following section that will help you setup a proper 
+secure environment for running your context server.
+
+Step 1: Install and configure a firewall 
+
+You should setup a firewall around your cluster of context servers and/or ElasticSearch nodes. If you have an application
+-level firewall you should only allow the following connections open to the whole world : 
+
+http://localhost:8181/context.js
+http://localhost:8181/eventcollector
+
+All other ports should not be accessible to the world.
+
+For your Jahia servers, you will need to make the following ports accessible : 8181 (http), 9443 (https)
+
+For your context servers, and for any standalone ElasticSearch nodes you will need to open the following ports for proper
+node-to-node communication : 9200 (ElasticSearch REST API), 9300 (ElasticSearch TCP transport)
+
+Of course any ports listed here are the default ports configured in each server, you may adjust them if needed.
+
+Step 2 : Adjust the Context Server IP filtering
+
+By default the Context Server limits to connections to port 9200 and 9300 to the following IP ranges
+
+    - localhost
+    - 127.0.0.1
+    - ::1
+    - the current subnet (i.e., 192.168.1.0-192.168.1.255)
+    
+(this is done using a custom plugin for ElasticSearch, that you may find here : 
+https://github.com/Jahia/wemi-sandbox/tree/master/wemi-context-server/persistence-elasticsearch/plugins/security)
+
+You can adjust this setting by using the following setting in the etc/elasticsearch.yml file : 
+
+security.ipranges: localhost,127.0.0.1,::1,10.0.1.0-10.0.1.255
+
+Step 3 : Follow industry recommended best practices for securing ElasticSearch
+
+You may find more valuable recommendations here : 
+
+    https://www.found.no/foundation/elasticsearch-security/
+    http://www.elasticsearch.org/blog/scripting-security/
+    
+Step 4 : Setup a proxy in front of the context server
+
+As an alternative to an application-level firewall, you could also route all traffic to the context server through
+a proxy, and use it to filter any communication.
+
 Todo
 ----
 
