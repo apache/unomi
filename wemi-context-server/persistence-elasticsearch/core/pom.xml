@@ -65,6 +65,11 @@
           <version>1.2.17</version>
         </dependency>
         -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>log4j-over-slf4j</artifactId>
+            <version>1.7.7</version>
+        </dependency>
         <!--
         <dependency>
           <groupId>org.slf4j</groupId>
@@ -222,7 +227,7 @@
                             org.elasticsearch.*;version="${elasticsearch.version}",
                             org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions;version="${project.version}"
                         </Export-Package>
-                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
+                        <Embed-Dependency>*;scope=compile|runtime;artifactId=!log4j</Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>
                     </instructions>
                 </configuration>
