@@ -1,9 +1,12 @@
 package org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -18,6 +21,36 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         String op = (String) condition.getParameterValues().get("comparisonOperator");
         String name = (String) condition.getParameterValues().get("propertyName");
         Object value = condition.getParameterValues().get("propertyValue");
+
+        if(value instanceof Map) {
+            List<FilterBuilder> filters = getRecursiveFilters((Map<String, Object>) value, op, name);
+            if (CollectionUtils.isNotEmpty(filters)){
+                return FilterBuilders.andFilter(filters.toArray(new FilterBuilder[filters.size()]));
+            }
+        } else {
+            return getFilter(op, name, value);
+        }
+
+        return null;
+    }
+
+    private List<FilterBuilder> getRecursiveFilters(Map<String, Object> value, String op, String name) {
+        List<FilterBuilder> result = new ArrayList<FilterBuilder>();
+        for(Map.Entry<String, Object> entry : value.entrySet()) {
+            if(entry.getValue() instanceof Map) {
+                Map<String, Object> m = (Map<String, Object>) entry.getValue();
+                List<FilterBuilder> filters = getRecursiveFilters(m, op, name + "." + entry.getKey());
+                if (CollectionUtils.isNotEmpty(filters)){
+                    result.addAll(filters);
+                }
+            } else {
+                result.add(getFilter(op, name + "." + entry.getKey(), entry.getValue()));
+            }
+        }
+        return result;
+    }
+
+    private FilterBuilder getFilter(String op, String name, Object value) {
         if (op.equals("equals")) {
             return FilterBuilders.termFilter(name, value);
         } else if (op.equals("greaterThan")) {
