@@ -375,6 +375,11 @@ documentation for here :
 The default username/password is 
 
     karaf/karaf
+    
+You should really change this default username/password as soon as possible. To do so, simply modify the following
+file : 
+
+    etc/users.properties
 
 For your context servers, and for any standalone ElasticSearch nodes you will need to open the following ports for proper
 node-to-node communication : 9200 (ElasticSearch REST API), 9300 (ElasticSearch TCP transport)
