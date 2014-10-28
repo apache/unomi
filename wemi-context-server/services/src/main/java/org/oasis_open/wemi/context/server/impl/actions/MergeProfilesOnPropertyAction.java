@@ -45,7 +45,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
         Object currentMergePropertyValue = user.getProperty(mergeProfilePropertyName);
 
-        User masterUser = userService.mergeUsersOnProperty(user, event.getSession(), mergeProfilePropertyName, currentMergePropertyValue.toString());
+        User masterUser = userService.mergeUsersOnProperty(user, event.getSession(), mergeProfilePropertyName, (currentMergePropertyValue == null ? null : currentMergePropertyValue.toString()));
 
         if (masterUser == null) {
             return false;
