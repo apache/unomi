@@ -99,7 +99,7 @@ wemi.collectEvents = function(events, successCallBack) {
             successCallBack(xhr);
         }
     };
-    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+    xhr.setRequestHeader("Content-Type", "text/plain;charset=UTF-8"); // Use text/plain to avoid CORS preflight
     if (isGet) {
         xhr.send();
     } else {

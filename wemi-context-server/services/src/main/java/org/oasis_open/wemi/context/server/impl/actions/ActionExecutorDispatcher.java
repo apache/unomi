@@ -68,10 +68,16 @@ public class ActionExecutorDispatcher {
                 try {
                     if (s.startsWith("userProperty::")) {
                         value = PropertyUtils.getProperty(event.getUser(), "properties." + StringUtils.substringAfter(s, "userProperty::"));
+                    } else if (s.startsWith("simpleUserProperty::")) {
+                        value = event.getUser().getProperty(StringUtils.substringAfter(s, "simpleUserProperty::"));
                     } else if (s.startsWith("sessionProperty::")) {
                         value = PropertyUtils.getProperty(event.getSession(), "properties." + StringUtils.substringAfter(s, "sessionProperty::"));
+                    } else if (s.startsWith("simpleSessionProperty::")) {
+                        value = event.getSession().getProperty(StringUtils.substringAfter(s, "simpleSessionProperty::"));
                     } else if (s.startsWith("eventProperty::")) {
                         value = PropertyUtils.getProperty(event, "properties." + StringUtils.substringAfter(s, "eventProperty::"));
+                    } else if (s.startsWith("simpleEventProperty::")) {
+                        value = event.getProperty(StringUtils.substringAfter(s, "simpleEventProperty::"));
                     } else if (s.startsWith("script::")) {
                         Map<String, Object> ctx = new HashMap<String, Object>();
                         ctx.put("event", event);
