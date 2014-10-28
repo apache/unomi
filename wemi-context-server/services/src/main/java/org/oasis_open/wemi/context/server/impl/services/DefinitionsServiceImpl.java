@@ -9,6 +9,7 @@ import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.SynchronousBundleListener;
@@ -53,6 +54,13 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 
         processBundleStartup(bundleContext);
+
+        // process already started bundles
+        for (Bundle bundle : bundleContext.getBundles()) {
+            if (bundle.getBundleContext() != null) {
+                processBundleStartup(bundle.getBundleContext());
+            }
+        }
 
         bundleContext.addBundleListener(this);
     }
