@@ -19,7 +19,6 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
@@ -57,8 +56,7 @@ public class ContextServlet extends HttpServlet {
 
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
         String httpMethod = httpServletRequest.getMethod();
-        log(HttpUtils.dumpBasicRequestInfo(httpServletRequest));
-        log(HttpUtils.dumpRequestHeaders(httpServletRequest));
+        log(HttpUtils.dumpRequestInfo(httpServletRequest));
 
         if ("options".equals(httpMethod.toLowerCase())) {
             HttpUtils.setupCORSHeaders(httpServletRequest, response);
@@ -71,7 +69,6 @@ public class ContextServlet extends HttpServlet {
         String cookieProfileId = null;
         String cookiePersonaId = null;
         Cookie[] cookies = httpServletRequest.getCookies();
-        log(HttpUtils.dumpRequestCookies(cookies));
         for (Cookie cookie : cookies) {
             if (profileIdCookieName.equals(cookie.getName())) {
                 cookieProfileId = cookie.getValue();

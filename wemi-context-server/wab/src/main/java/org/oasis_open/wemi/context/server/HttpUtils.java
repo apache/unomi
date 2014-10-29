@@ -39,9 +39,19 @@ public class HttpUtils {
         }
     }
 
+    public static String dumpRequestInfo(HttpServletRequest httpServletRequest) {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("\n");
+        stringBuilder.append("======================================================================================\n");
+        stringBuilder.append(dumpBasicRequestInfo(httpServletRequest));
+        stringBuilder.append(dumpRequestHeaders(httpServletRequest));
+        stringBuilder.append(dumpRequestCookies(httpServletRequest.getCookies()));
+        stringBuilder.append("======================================================================================\n");
+        return stringBuilder.toString();
+    }
+
     public static String dumpBasicRequestInfo(HttpServletRequest httpServletRequest) {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("=== \n");
         String sessionId = null;
         if (httpServletRequest.getSession(false) != null) {
             sessionId = httpServletRequest.getSession(false).getId();
@@ -50,7 +60,7 @@ public class HttpUtils {
         if (httpServletRequest.getQueryString() != null) {
             stringBuilder.append("?").append(httpServletRequest.getQueryString());
         }
-        stringBuilder.append(" sessionId=").append(sessionId).append(" serverName=").append(httpServletRequest.getServerName()).append(" serverPort=").append(httpServletRequest.getServerPort()).append(" remoteAddr=").append(httpServletRequest.getRemoteAddr()).append(" remotePort=").append(httpServletRequest.getRemotePort());
+        stringBuilder.append(" sessionId=").append(sessionId).append(" serverName=").append(httpServletRequest.getServerName()).append(" serverPort=").append(httpServletRequest.getServerPort()).append(" remoteAddr=").append(httpServletRequest.getRemoteAddr()).append(" remotePort=").append(httpServletRequest.getRemotePort()).append("\n");
         return stringBuilder.toString();
     }
 
@@ -58,9 +68,8 @@ public class HttpUtils {
     public static String dumpRequestCookies(Cookie[] cookies) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("Cookies:\n");
-        stringBuilder.append("--------\n");
         for (Cookie cookie : cookies) {
-            stringBuilder.append("  name=").append(cookie.getName()).append(" value=").append(cookie.getValue()).append(" domain=").append(cookie.getDomain()).append(" path=").append(cookie.getPath()).append(" maxAge=").append(cookie.getMaxAge()).append(" httpOnly=").append(cookie.isHttpOnly()).append(" secure=").append(cookie.getSecure()).append(" version=").append(cookie.getVersion()).append(" comment=").append(cookie.getComment()).append("\n");
+            stringBuilder.append("  ").append(cookie.getName()).append("=").append(cookie.getValue()).append(" domain=").append(cookie.getDomain()).append(" path=").append(cookie.getPath()).append(" maxAge=").append(cookie.getMaxAge()).append(" httpOnly=").append(cookie.isHttpOnly()).append(" secure=").append(cookie.getSecure()).append(" version=").append(cookie.getVersion()).append(" comment=").append(cookie.getComment()).append("\n");
         }
         return stringBuilder.toString();
     }
@@ -68,11 +77,10 @@ public class HttpUtils {
     public static String dumpRequestHeaders(HttpServletRequest httpServletRequest) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("Headers:\n");
-        stringBuilder.append("--------\n");
         Enumeration<String> headerNameEnum = httpServletRequest.getHeaderNames();
         while (headerNameEnum.hasMoreElements()) {
             String headerName = headerNameEnum.nextElement();
-            stringBuilder.append(headerName).append(": ").append(httpServletRequest.getHeader(headerName)).append("\n");
+            stringBuilder.append("  ").append(headerName).append(": ").append(httpServletRequest.getHeader(headerName)).append("\n");
         }
         return stringBuilder.toString();
     }

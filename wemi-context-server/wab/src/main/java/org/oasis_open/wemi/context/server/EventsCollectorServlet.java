@@ -20,7 +20,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
 
 /**
  * Created by loom on 10.06.14.
@@ -56,7 +58,7 @@ public class EventsCollectorServlet extends HttpServlet {
 
     @Override
     protected void doOptions(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        log(HttpUtils.dumpBasicRequestInfo(request));
+        log(HttpUtils.dumpRequestInfo(request));
         HttpUtils.setupCORSHeaders(request, response);
         response.flushBuffer();
     }
@@ -67,8 +69,7 @@ public class EventsCollectorServlet extends HttpServlet {
             timestamp.setTime(Long.parseLong(request.getParameter("timestamp")));
         }
 
-        log(HttpUtils.dumpBasicRequestInfo(request));
-        log(HttpUtils.dumpRequestHeaders(request));
+        log(HttpUtils.dumpRequestInfo(request));
 
         HttpUtils.setupCORSHeaders(request, response);
 
