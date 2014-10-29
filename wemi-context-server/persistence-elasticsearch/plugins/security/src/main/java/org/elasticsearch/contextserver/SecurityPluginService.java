@@ -66,7 +66,7 @@ public class SecurityPluginService extends AbstractLifecycleComponent<SecurityPl
                 }
             }
         }
-        String defaultIpRanges = "localhost,127.0.0.1,::1";
+        String defaultIpRanges = "localhost,127.0.0.1,127.0.1.1,::1";
         if (hostAddressRange != null) {
             defaultIpRanges += "," + hostAddressRange;
         }

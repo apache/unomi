@@ -6,6 +6,7 @@
         <feature version="[2.7.11,3)">cxf</feature>
         <feature>openwebbeans</feature>
         <feature>pax-cdi-web-openwebbeans</feature>
+        <configfile finalname="/etc/org.oasis_open.wemi.context.server.web.cfg">mvn:org.oasis-open.wemi/wemi-context-server-wab/1.0-SNAPSHOT/cfg/contextservercfg</configfile>
         <configfile finalname="/etc/org.oasis_open.wemi.context.server.persistence.elasticsearch.cfg">mvn:org.oasis-open.wemi/wemi-context-server-persistence-elasticsearch-core/1.0-SNAPSHOT/cfg/elasticsearchcfg</configfile>
         <configfile finalname="/etc/org.oasis_open.wemi.context.server.plugins.request.cfg">mvn:org.oasis-open.wemi/wemi-context-server-plugins-request/1.0-SNAPSHOT/cfg/requestcfg</configfile>
         <configfile finalname="/etc/elasticsearch.yml">mvn:org.oasis-open.wemi/wemi-context-server-persistence-elasticsearch-core/1.0-SNAPSHOT/yml/elasticsearchconfig</configfile>
