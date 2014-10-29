@@ -22,38 +22,39 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         String op = (String) condition.getParameterValues().get("comparisonOperator");
         String name = (String) condition.getParameterValues().get("propertyName");
         Object expectedValue = condition.getParameterValues().get("propertyValue");
+        Object actualValue;
         try {
-            Object actualValue = BeanUtils.getProperty(item, name);
-            if (op.equals("equals")) {
-                return expectedValue.equals(actualValue);
-            } else if (op.equals("greaterThan")) {
-                return compare(actualValue, expectedValue) > 0;
-            } else if (op.equals("greaterThanOrEqualTo")) {
-                return compare(actualValue, expectedValue) >= 0;
-            } else if (op.equals("lessThan")) {
-                return compare(actualValue, expectedValue) < 0;
-            } else if (op.equals("lessThanOrEqualTo")) {
-                return compare(actualValue, expectedValue) >= 0;
-            } else if (op.equals("exists")) {
-                return actualValue != null;
-            } else if (op.equals("missing")) {
-                return actualValue == null;
-            } else if (op.equals("contains")) {
-                return actualValue.toString().contains(expectedValue.toString());
-            } else if (op.equals("startsWith")) {
-                return actualValue.toString().startsWith(expectedValue.toString());
-            } else if (op.equals("endsWith")) {
-                return actualValue.toString().endsWith(expectedValue.toString());
-            } else if (op.equals("matchesRegex")) {
-                return Pattern.compile(expectedValue.toString()).matcher(actualValue.toString()).matches();
-            }
-        } catch (UnsupportedOperationException e) {
-            throw e;
+            actualValue = BeanUtils.getProperty(item, name);
         } catch (Exception e) {
-            throw new UnsupportedOperationException(e);
+            // property not found
+            return op.equals("missing");
         }
-        return false;
 
+        if (op.equals("equals")) {
+            return expectedValue.equals(actualValue);
+        } else if (op.equals("greaterThan")) {
+            return compare(actualValue, expectedValue) > 0;
+        } else if (op.equals("greaterThanOrEqualTo")) {
+            return compare(actualValue, expectedValue) >= 0;
+        } else if (op.equals("lessThan")) {
+            return compare(actualValue, expectedValue) < 0;
+        } else if (op.equals("lessThanOrEqualTo")) {
+            return compare(actualValue, expectedValue) >= 0;
+        } else if (op.equals("exists")) {
+            return actualValue != null;
+        } else if (op.equals("missing")) {
+            return actualValue == null;
+        } else if (op.equals("contains")) {
+            return actualValue.toString().contains(expectedValue.toString());
+        } else if (op.equals("startsWith")) {
+            return actualValue.toString().startsWith(expectedValue.toString());
+        } else if (op.equals("endsWith")) {
+            return actualValue.toString().endsWith(expectedValue.toString());
+        } else if (op.equals("matchesRegex")) {
+            return Pattern.compile(expectedValue.toString()).matcher(actualValue.toString()).matches();
+        }
+
+        return false;
     }
 
 
