@@ -1,8 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
-import org.oasis_open.wemi.context.server.api.Event;
-import org.oasis_open.wemi.context.server.api.Metadata;
-import org.oasis_open.wemi.context.server.api.PluginType;
+import org.oasis_open.wemi.context.server.api.*;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.actions.ActionType;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
@@ -219,9 +217,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 changed |= actionExecutorDispatcher.execute(action, event);
             }
 
-            Event ruleFired = new Event("ruleFired", event.getSession(), event.getUser(), event.getTimeStamp());
+            Event ruleFired = new Event("ruleFired", event.getSession(), event.getUser(), new EventTarget(rule.getItemId(), Rule.ITEM_TYPE), event.getTimeStamp());
             ruleFired.getAttributes().putAll(event.getAttributes());
-            ruleFired.setProperty("ruleName", rule.getItemId());
             ruleFired.setPersistent(false);
             eventService.send(ruleFired);
         }

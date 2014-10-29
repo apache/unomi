@@ -18,7 +18,7 @@
                 {
                     "type": "eventPropertyCondition",
                     "parameterValues": {
-                        "propertyName":"properties.formname",
+                        "propertyName":"target.id",
                         "propertyValue":"searchForm",
                         "comparisonOperator":"equals"
                     }
@@ -33,6 +33,11 @@
             "type": "sendEventAction",
             "parameterValues": {
                 "eventType":"search",
+                "eventTarget": {
+                    "id": "searchForm",
+                    "type" : "form",
+                    "properties" : {}
+                },
                 "eventProperties": {
                     "origin": "simpleEventProperty::origin",
                     "originForm": "searchForm",

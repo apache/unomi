@@ -20,7 +20,7 @@ public class PageViewEventConditionESQueryBuilder implements ConditionESQueryBui
         List<FilterBuilder> l = new ArrayList<FilterBuilder>();
         l.add(FilterBuilders.termFilter("eventType", "view"));
         if (condition.getParameterValues().get("url") != null && !"".equals(condition.getParameterValues().get("url"))) {
-            l.add(FilterBuilders.termFilter("properties.page.pageInfo.destinationURL", (String) condition.getParameterValues().get("url")));
+            l.add(FilterBuilders.termFilter("target.properties.pageInfo.destinationURL", (String) condition.getParameterValues().get("url")));
         }
         if (l.size() > 1) {
             return FilterBuilders.andFilter(l.toArray(new FilterBuilder[l.size()]));

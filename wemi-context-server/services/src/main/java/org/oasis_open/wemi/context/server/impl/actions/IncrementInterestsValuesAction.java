@@ -19,7 +19,7 @@ public class IncrementInterestsValuesAction implements ActionExecutor {
         Map<String, Object> userProps = event.getUser().getProperties();
 
         try {
-            Map<String, Object> interests = (Map<String, Object>) PropertyUtils.getProperty(event, "properties.page.interests");
+            Map<String, Object> interests = (Map<String, Object>) PropertyUtils.getProperty(event, "target.properties.interests");
             if (interests != null) {
                 for (Map.Entry<String, Object> s : interests.entrySet()) {
                     int value = (Integer) s.getValue();
