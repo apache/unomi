@@ -57,7 +57,7 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         try {
             if (!httpServletRequest.getRemoteAddr().equals("127.0.0.1") && IPV4.matcher(httpServletRequest.getRemoteAddr()).matches()) {
                 ipLookup(httpServletRequest.getRemoteAddr(), session);
-            } else if (httpServletRequest.getParameter("remoteAddr") != null) {
+            } else if (httpServletRequest.getParameter("remoteAddr") != null && httpServletRequest.getParameter("remoteAddr").length() > 0) {
                 ipLookup(httpServletRequest.getParameter("remoteAddr"), session);
             } else {
                 session.setProperty("countryCode", "CH");
