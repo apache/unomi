@@ -27,10 +27,12 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             actualValue = BeanUtils.getProperty(item, name);
         } catch (Exception e) {
             // property not found
-            return op.equals("missing");
+            actualValue = null;
         }
 
-        if (op.equals("equals")) {
+        if(actualValue == null){
+            return op.equals("missing");
+        } else if (op.equals("equals")) {
             return expectedValue.equals(actualValue);
         } else if (op.equals("greaterThan")) {
             return compare(actualValue, expectedValue) > 0;
@@ -41,9 +43,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("lessThanOrEqualTo")) {
             return compare(actualValue, expectedValue) >= 0;
         } else if (op.equals("exists")) {
-            return actualValue != null;
-        } else if (op.equals("missing")) {
-            return actualValue == null;
+            return true;
         } else if (op.equals("contains")) {
             return actualValue.toString().contains(expectedValue.toString());
         } else if (op.equals("startsWith")) {
