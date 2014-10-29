@@ -121,6 +121,16 @@
                             <artifactItems>
                                 <artifactItem>
                                     <groupId>org.oasis-open.wemi</groupId>
+                                    <artifactId>wemi-context-server-wab</artifactId>
+                                    <version>1.0-SNAPSHOT</version>
+                                    <classifier>contextservercfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>
+                                        ${project.build.directory}/assembly/system/org/oasis-open/wemi/wemi-context-server-wab/1.0-SNAPSHOT
+                                    </outputDirectory>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.oasis-open.wemi</groupId>
                                     <artifactId>wemi-context-server-persistence-elasticsearch-core</artifactId>
                                     <version>1.0-SNAPSHOT</version>
                                     <classifier>elasticsearchcfg</classifier>

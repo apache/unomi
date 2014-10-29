@@ -106,6 +106,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.indexName = indexName;
     }
 
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public void setPort(String port) {
+        this.port = port;
+    }
+
+    public void setSecureAddress(String secureAddress) {
+        this.secureAddress = secureAddress;
+    }
+
+    public void setSecurePort(String securePort) {
+        this.securePort = securePort;
+    }
+
     public void setItemsDailyIndexed(List<String> itemsDailyIndexed) {
         this.itemsDailyIndexed = itemsDailyIndexed;
     }
@@ -127,15 +143,17 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public void start() {
+
         // on startup
         new InClassLoaderExecute<Object>() {
             public Object execute(Object... args) {
                 logger.info("Starting ElasticSearch persistence backend using cluster name " + clusterName + " and index name " + indexName + "...");
-                Settings.Builder settingsBuilder = null;
+                Map<String,String> settings = null;
                 if (elasticSearchConfig != null && elasticSearchConfig.length() > 0) {
                     try {
                         URL elasticSearchConfigURL = new URL(elasticSearchConfig);
-                        settingsBuilder = ImmutableSettings.builder().loadFromUrl(elasticSearchConfigURL);
+                        Settings.Builder settingsBuilder = ImmutableSettings.builder().loadFromUrl(elasticSearchConfigURL);
+                        settings = settingsBuilder.build().getAsMap();
                         logger.info("Successfully loaded ElasticSearch configuration from " + elasticSearchConfigURL);
                     } catch (MalformedURLException e) {
                         logger.error("Error in ElasticSearch configuration URL ", e);
@@ -147,19 +165,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                 }
 
-                address = System.getProperty("contextserver.address", "localhost");
-                port = System.getProperty("contextserver.port", "8181");
-                secureAddress = System.getProperty("contextserver.secureAddress", "localhost");
-                securePort = System.getProperty("contextserver.securePort", "9443");
+                address = System.getProperty("contextserver.address", address);
+                port = System.getProperty("contextserver.port", port);
+                secureAddress = System.getProperty("contextserver.secureAddress", secureAddress);
+                securePort = System.getProperty("contextserver.securePort", securePort);
 
-                if (settingsBuilder == null) {
-                    settingsBuilder = ImmutableSettings.builder()
-                            .put("cluster.name", clusterName)
-                            .put("node.contextserver.address", address)
-                            .put("node.contextserver.port", port)
-                            .put("node.contextserver.secureAddress", secureAddress)
-                            .put("node.contextserver.securePort", securePort);
+                ImmutableSettings.Builder settingsBuilder = ImmutableSettings.builder();
+                if (settings != null) {
+                    settingsBuilder.put(settings);
                 }
+
+                settingsBuilder.put("cluster.name", clusterName)
+                        .put("node.contextserver.address", address)
+                        .put("node.contextserver.port", port)
+                        .put("node.contextserver.secureAddress", secureAddress)
+                        .put("node.contextserver.securePort", securePort);
+
                 node = nodeBuilder().settings(settingsBuilder).node();
                 client = node.client();
                 // @todo is there a better way to detect index existence than to wait for it to startup ?
@@ -704,14 +725,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         .actionGet();
                 NodeInfo[] nodesInfoArray = nodesInfoResponse.getNodes();
                 for (NodeInfo nodeInfo : nodesInfoArray) {
-                    ClusterNode clusterNode = new ClusterNode();
-                    clusterNode.setHostName(nodeInfo.getHostname());
-                    clusterNode.setHostAddress(nodeInfo.getSettings().get("node.contextserver.address", address));
-                    clusterNode.setPublicPort(Integer.parseInt(nodeInfo.getSettings().get("node.contextserver.port", port)));
-                    clusterNode.setSecureHostAddress(nodeInfo.getSettings().get("node.contextserver.secureAddress", secureAddress));
-                    clusterNode.setSecurePort(Integer.parseInt(nodeInfo.getSettings().get("node.contextserver.securePort", securePort)));
-                    clusterNode.setMaster(nodeInfo.getNode().isMasterNode());
-                    clusterNodes.put(nodeInfo.getNode().getId(), clusterNode);
+                    if (nodeInfo.getSettings().get("node.contextserver.address") != null) {
+                        ClusterNode clusterNode = new ClusterNode();
+                        clusterNode.setHostName(nodeInfo.getHostname());
+                        clusterNode.setHostAddress(nodeInfo.getSettings().get("node.contextserver.address"));
+                        clusterNode.setPublicPort(Integer.parseInt(nodeInfo.getSettings().get("node.contextserver.port")));
+                        clusterNode.setSecureHostAddress(nodeInfo.getSettings().get("node.contextserver.secureAddress"));
+                        clusterNode.setSecurePort(Integer.parseInt(nodeInfo.getSettings().get("node.contextserver.securePort")));
+                        clusterNode.setMaster(nodeInfo.getNode().isMasterNode());
+                        clusterNodes.put(nodeInfo.getNode().getId(), clusterNode);
+                    }
                 }
 
                 NodesStatsResponse nodesStatsResponse = client.admin().cluster().prepareNodesStats(NodesOperationRequest.ALL_NODES)
@@ -722,16 +745,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 NodeStats[] nodeStatsArray = nodesStatsResponse.getNodes();
                 for (NodeStats nodeStats : nodeStatsArray) {
                     ClusterNode clusterNode = clusterNodes.get(nodeStats.getNode().getId());
-                    // the following may be null in the case where Sigar didn't initialize properly, for example
-                    // because the native libraries were not installed or if we redeployed the OSGi bundle in which
-                    // case Sigar cannot initialize properly since it tries to reload the native libraries, generates
-                    // an error and doesn't initialize properly.
-                    if (nodeStats.getProcess() != null && nodeStats.getProcess().getCpu() != null) {
-                        clusterNode.setCpuLoad(nodeStats.getProcess().getCpu().getPercent());
-                    }
-                    if (nodeStats.getOs() != null) {
-                        clusterNode.setLoadAverage(nodeStats.getOs().getLoadAverage());
-                        clusterNode.setUptime(nodeStats.getOs().getUptime().getMillis());
+                    if (clusterNode != null) {
+                        // the following may be null in the case where Sigar didn't initialize properly, for example
+                        // because the native libraries were not installed or if we redeployed the OSGi bundle in which
+                        // case Sigar cannot initialize properly since it tries to reload the native libraries, generates
+                        // an error and doesn't initialize properly.
+                        if (nodeStats.getProcess() != null && nodeStats.getProcess().getCpu() != null) {
+                            clusterNode.setCpuLoad(nodeStats.getProcess().getCpu().getPercent());
+                        }
+                        if (nodeStats.getOs() != null) {
+                            clusterNode.setLoadAverage(nodeStats.getOs().getLoadAverage());
+                            clusterNode.setUptime(nodeStats.getOs().getUptime().getMillis());
+                        }
                     }
                 }
 

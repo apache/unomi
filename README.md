@@ -103,6 +103,15 @@ Changing the default configuration
 ----------------------------------
 
 If you want to change the default configuration, you can perform any modification you want in the karaf/etc directory.
+
+The context server configuration is kept in the etc/org.oasis_open.wemi.context.server.web.cfg . It defines the
+addresses and port where it can be found :
+
+    contextserver.address=localhost
+    contextserver.port=8181
+    contextserver.secureAddress=localhost
+    contextserver.securePort=9443
+
 If you need to specify an ElasticSearch cluster name that is different than the default, it is recommended to do this
 BEFORE you start the server for the first time, or you will loose all the data you have stored previously.
 
@@ -112,23 +121,17 @@ To change the cluster name, first create a file called
 
 with the following contents:
 
-    # the cluster.name setting is ignored if the elasticSearchConfig points to a valid ElasticSearch configuration file.
     cluster.name=contextElasticSearch
     index.name=context
     elasticSearchConfig=file:${karaf.etc}/elasticsearch.yml
-    
-then you can create the etc/elasticsearch.yml configuration file with the following configuration:
 
-    cluster.name: myClusterName
-    
-You may of course put any standard ElasticSearch configuration options in this last file.
+And replace the cluster.name parameter here by your cluster name.
 
-You will also need to add the following settings : 
+You can also put an elasticsearch configuration file in etc/elasticsearch.yml ,
+and put any standard ElasticSearch configuration options in this last file.
 
-    node.contextserver.address: localhost
-    node.contextserver.port: 8181
-    
-if you use a custom elasticsearch.yml configuration file.
+If you want your context server to be a client only on a cluster of elasticsearch nodes, just set the node.data property
+to false.
 
 REST API Security
 -----------------
@@ -146,8 +149,8 @@ The generated package is also configured with a default SSL certificate. You can
  
     org.osgi.service.http.secure.enabled = true
     org.ops4j.pax.web.ssl.keystore=${karaf.etc}/keystore
-    org.ops4j.pax.web.ssl.password=tomcat
-    org.ops4j.pax.web.ssl.keypassword=tomcat
+    org.ops4j.pax.web.ssl.password=changeme
+    org.ops4j.pax.web.ssl.keypassword=changeme
     org.osgi.service.http.port.secure=9443
 
 You should now have SSL setup on Karaf with your certificate, and you can test it by trying to access it on port 9443.
