@@ -30,7 +30,7 @@
         {
             "parameterValues": {
                 "setPropertyName": "referringURL",
-                "setPropertyValue": "eventProperty::page.pageInfo.referringURL",
+                "setPropertyValue": "eventProperty::target.properties.pageInfo.referringURL",
                 "storeInSession": true
             },
             "type": "setPropertyAction"

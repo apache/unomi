@@ -1,9 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
-import org.oasis_open.wemi.context.server.api.Event;
-import org.oasis_open.wemi.context.server.api.PartialList;
-import org.oasis_open.wemi.context.server.api.Session;
-import org.oasis_open.wemi.context.server.api.User;
+import org.oasis_open.wemi.context.server.api.*;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.EventListenerService;
@@ -79,7 +76,7 @@ public class EventServiceImpl implements EventService {
             }
 
             if (changed && (!user.getProperties().equals(previousProperties) || !user.getSegments().equals(previousSegments))) {
-                Event userUpdated = new Event("userUpdated", session, user, event.getTimeStamp());
+                Event userUpdated = new Event("userUpdated", session, user, new EventTarget(user.getId(), User.ITEM_TYPE), event.getTimeStamp());
                 userUpdated.setPersistent(false);
                 userUpdated.getAttributes().putAll(event.getAttributes());
                 send(userUpdated);
@@ -126,13 +123,23 @@ public class EventServiceImpl implements EventService {
         userIdCondition.getParameterValues().put("comparisonOperator", "equals");
         conditions.add(userIdCondition);
 
-        for (Map.Entry<String, Object> entry : event.getProperties().entrySet()) {
-            Condition condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-            condition.getParameterValues().put("propertyName", "properties." + entry.getKey());
-            condition.getParameterValues().put("propertyValue", entry.getValue());
-            condition.getParameterValues().put("comparisonOperator", "equals");
-            conditions.add(condition);
-        }
+        Condition condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        condition.getParameterValues().put("propertyName", "eventType");
+        condition.getParameterValues().put("propertyValue", event.getEventType());
+        condition.getParameterValues().put("comparisonOperator", "equals");
+        conditions.add(condition);
+
+        condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        condition.getParameterValues().put("propertyName", "target.id");
+        condition.getParameterValues().put("propertyValue", event.getTarget().getId());
+        condition.getParameterValues().put("comparisonOperator", "equals");
+        conditions.add(condition);
+
+        condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        condition.getParameterValues().put("propertyName", "target.type");
+        condition.getParameterValues().put("propertyValue", event.getTarget().getType());
+        condition.getParameterValues().put("comparisonOperator", "equals");
+        conditions.add(condition);
 
         Condition andCondition = new Condition(definitionsService.getConditionType("andCondition"));
         andCondition.getParameterValues().put("subConditions", conditions);

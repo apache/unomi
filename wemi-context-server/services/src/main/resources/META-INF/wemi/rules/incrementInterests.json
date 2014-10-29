@@ -18,7 +18,7 @@
                 {
                     "type": "eventPropertyCondition",
                     "parameterValues":{
-                        "propertyName":"properties.page.interests",
+                        "propertyName":"target.properties.interests",
                         "comparisonOperator":"exists"
                     }
                 }

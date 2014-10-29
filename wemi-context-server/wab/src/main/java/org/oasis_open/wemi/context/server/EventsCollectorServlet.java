@@ -112,9 +112,9 @@ public class EventsCollectorServlet extends HttpServlet {
             if(event.getEventType() != null){
                 Event eventToSend;
                 if(event.getProperties() != null){
-                    eventToSend = new Event(event.getEventType(), session, user, timestamp, event.getProperties());
+                    eventToSend = new Event(event.getEventType(), session, user, event.getTarget(), event.getProperties(), timestamp);
                 } else {
-                    eventToSend = new Event(event.getEventType(), session, user, timestamp);
+                    eventToSend = new Event(event.getEventType(), session, user, event.getTarget(), timestamp);
                 }
                 event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                 event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);

@@ -20,6 +20,9 @@ public class Event extends Item implements TimestampedItem {
 
     private transient User user;
     private transient Session session;
+
+    private EventTarget target;
+
     private transient boolean persistent = true;
 
     // attributes are not serializable, and can be used to pass additional contextual object such as HTTP request
@@ -29,12 +32,14 @@ public class Event extends Item implements TimestampedItem {
     public Event() {
     }
 
-    public Event(String eventType, Session session, User user, Date timestamp) {
+    public Event(String eventType, Session session, User user, EventTarget target, Date timestamp) {
         super(UUID.randomUUID().toString());
         this.eventType = eventType;
         this.user = user;
         this.session = session;
         this.userId = user.getItemId();
+        this.target = target;
+
         if (session != null) {
             this.sessionId = session.getItemId();
         }
@@ -43,8 +48,8 @@ public class Event extends Item implements TimestampedItem {
         this.properties = new HashMap<String, Object>();
     }
 
-    public Event(String eventType, Session session, User user, Date timestamp, Map<String, Object> properties) {
-        this(eventType, session, user, timestamp);
+    public Event(String eventType, Session session, User user, EventTarget target, Map<String, Object> properties, Date timestamp) {
+        this(eventType, session, user, target, timestamp);
         if(properties != null) {
             this.properties = properties;
         }
@@ -114,4 +119,11 @@ public class Event extends Item implements TimestampedItem {
         return properties;
     }
 
+    public EventTarget getTarget() {
+        return target;
+    }
+
+    public void setTarget(EventTarget target) {
+        this.target = target;
+    }
 }
