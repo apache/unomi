@@ -3,9 +3,11 @@ package org.oasis_open.wemi.context.server.plugins.events.hover.querybuilders;
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
-import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
+import org.oasis_open.wemi.context.server.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -17,8 +19,16 @@ public class HoverEventConditionESQueryBuilder implements ConditionESQueryBuilde
     }
 
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        return FilterBuilders.andFilter(
-                FilterBuilders.termFilter("eventType", "hover"),
-                FilterBuilders.termFilter("properties.hoverContentName", ((String) condition.getParameterValues().get("contentName"))));
+        List<FilterBuilder> filters = new ArrayList<FilterBuilder>();
+        filters.add(FilterBuilders.termFilter("eventType", "hover"));
+        String targetId = (String) condition.getParameterValues().get("targetId");
+        String targetPath = (String) condition.getParameterValues().get("targetPath");
+
+        if (targetId != null && targetId.trim().length() > 0) {
+            filters.add(FilterBuilders.termFilter("target.id", targetId));
+        } else if (targetPath != null && targetPath.trim().length() > 0) {
+            filters.add(FilterBuilders.termFilter("target.properties.path", targetPath));
+        }
+        return FilterBuilders.andFilter(filters.toArray(new FilterBuilder[filters.size()]));
     }
 }

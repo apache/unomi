@@ -4,7 +4,13 @@
     "tags": [ "event", "eventCondition", "userEventCondition" ],
     "parameters": [
         {
-            "id": "contentName",
+            "id": "targetId",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
+        },
+        {
+            "id": "targetPath",
             "type": "string",
             "multivalued": false,
             "choicelistInitializerFilter": ""

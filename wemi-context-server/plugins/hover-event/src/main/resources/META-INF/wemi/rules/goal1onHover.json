@@ -8,7 +8,7 @@
     "condition" : {
         "type": "hoverEventCondition",
         "parameterValues": {
-            "contentName": "testHover"
+            "targetPath": "/sites/ACMESPACE/home/activities/main/acme-space-activities-in-brief"
         }
     },
 
