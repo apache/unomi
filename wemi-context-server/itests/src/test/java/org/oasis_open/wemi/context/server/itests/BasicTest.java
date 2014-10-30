@@ -53,7 +53,7 @@ public class BasicTest {
         MavenArtifactUrlReference karafUrl = maven()
                 .groupId("org.apache.karaf")
                 .artifactId("apache-karaf")
-                .version("3.0.1")
+                .version("3.0.2")
                 .type("tar.gz");
 
         MavenUrlReference karafStandardRepo = maven()
@@ -125,7 +125,7 @@ public class BasicTest {
     @Test
     public void testContext() throws IOException {
         CloseableHttpClient httpclient = HttpClients.createDefault();
-        HttpGet httpGet = new HttpGet("http://localhost:8181/context.js");
+        HttpGet httpGet = new HttpGet("http://localhost:8181/context.js?sessionId=aa3b04bd-8f4d-4a07-8e96-d33ffa04d3d9");
         CloseableHttpResponse response = httpclient.execute(httpGet);
         // The underlying HTTP connection is still held by the response object
         // to allow the response content to be streamed directly from the network socket.
@@ -144,7 +144,7 @@ public class BasicTest {
         } finally {
             response.close();
         }
-        Assert.assertTrue("Response should contain context object", responseContent.contains("wemiDigitalData"));
+        Assert.assertTrue("Response should contain context object", responseContent.contains("window.digitalData = window.digitalData || {};"));
         // @todo we should check the validity of the context object, but this is rather complex since it would
         // potentially require parsing the Javascript !
     }
