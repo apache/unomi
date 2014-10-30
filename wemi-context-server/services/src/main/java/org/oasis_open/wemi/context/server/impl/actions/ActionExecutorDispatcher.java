@@ -21,31 +21,8 @@ public class ActionExecutorDispatcher {
 
     private BundleContext bundleContext;
 
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
-
     public ActionExecutorDispatcher() {
 
-    }
-
-    public boolean execute(Action action, Event event) {
-        Collection<ServiceReference<ActionExecutor>> matchingActionExecutorReferences;
-        if (action.getActionType().getServiceFilter() == null) {
-            throw new UnsupportedOperationException("No service defined for : " + action.getActionType());
-        }
-        try {
-            matchingActionExecutorReferences = bundleContext.getServiceReferences(ActionExecutor.class, action.getActionType().getServiceFilter());
-        } catch (InvalidSyntaxException e) {
-            e.printStackTrace();
-            return false;
-        }
-        boolean changed = false;
-        for (ServiceReference<ActionExecutor> actionExecutorReference : matchingActionExecutorReferences) {
-            ActionExecutor actionExecutor = bundleContext.getService(actionExecutorReference);
-            changed |= actionExecutor.execute(getContextualAction(action, event), event);
-        }
-        return changed;
     }
 
     public static Action getContextualAction(Action action, Event event) {
@@ -75,7 +52,7 @@ public class ActionExecutorDispatcher {
                     } else if (s.startsWith("simpleSessionProperty::")) {
                         value = event.getSession().getProperty(StringUtils.substringAfter(s, "simpleSessionProperty::"));
                     } else if (s.startsWith("eventProperty::")) {
-                        value = PropertyUtils.getProperty(event, "properties." + StringUtils.substringAfter(s, "eventProperty::"));
+                        value = PropertyUtils.getProperty(event, StringUtils.substringAfter(s, "eventProperty::"));
                     } else if (s.startsWith("simpleEventProperty::")) {
                         value = event.getProperty(StringUtils.substringAfter(s, "simpleEventProperty::"));
                     } else if (s.startsWith("script::")) {
@@ -113,6 +90,29 @@ public class ActionExecutorDispatcher {
             }
         }
         return false;
+    }
+
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
+
+    public boolean execute(Action action, Event event) {
+        Collection<ServiceReference<ActionExecutor>> matchingActionExecutorReferences;
+        if (action.getActionType().getServiceFilter() == null) {
+            throw new UnsupportedOperationException("No service defined for : " + action.getActionType());
+        }
+        try {
+            matchingActionExecutorReferences = bundleContext.getServiceReferences(ActionExecutor.class, action.getActionType().getServiceFilter());
+        } catch (InvalidSyntaxException e) {
+            e.printStackTrace();
+            return false;
+        }
+        boolean changed = false;
+        for (ServiceReference<ActionExecutor> actionExecutorReference : matchingActionExecutorReferences) {
+            ActionExecutor actionExecutor = bundleContext.getService(actionExecutorReference);
+            changed |= actionExecutor.execute(getContextualAction(action, event), event);
+        }
+        return changed;
     }
 
 }

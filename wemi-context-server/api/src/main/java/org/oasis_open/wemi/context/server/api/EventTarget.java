@@ -8,11 +8,6 @@ import java.util.Map;
  */
 public class EventTarget implements Serializable {
     private static EventTarget ourInstance = new EventTarget();
-
-    public static EventTarget getInstance() {
-        return ourInstance;
-    }
-
     private String id;
     private String type;
     private Map<String, Object> properties;
@@ -23,6 +18,10 @@ public class EventTarget implements Serializable {
     public EventTarget(String id, String type) {
         this.id = id;
         this.type = type;
+    }
+
+    public static EventTarget getInstance() {
+        return ourInstance;
     }
 
     public String getId() {
@@ -47,5 +46,14 @@ public class EventTarget implements Serializable {
 
     public void setProperties(Map<String, Object> properties) {
         this.properties = properties;
+    }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("EventTarget{");
+        sb.append("id='").append(id).append('\'');
+        sb.append(", type='").append(type).append('\'');
+        sb.append('}');
+        return sb.toString();
     }
 }

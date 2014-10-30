@@ -142,6 +142,7 @@ public class ContextServlet extends HttpServlet {
 
                 event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                 event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
+                log("Received event " + event.getEventType() + " for user=" + user.getId() + " session=" + session.getId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
                 eventService.send(event);
             }
         }
@@ -152,6 +153,7 @@ public class ContextServlet extends HttpServlet {
             userUpdated.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
             userUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
 
+            log("Received event " + userUpdated.getEventType() + " for user=" + user.getId() + " session=" + session.getId() + " target=" + userUpdated.getTarget() + " timestamp=" + timestamp);
             eventService.send(userUpdated);
         }
 
@@ -221,6 +223,7 @@ public class ContextServlet extends HttpServlet {
                     }
                     event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
+                    log("Received event " + event.getEventType() + " for user=" + user.getId() + " session=" + session.getId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
                     eventService.send(eventToSend);
                 }
             }

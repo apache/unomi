@@ -118,6 +118,7 @@ public class EventsCollectorServlet extends HttpServlet {
                 }
                 event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                 event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
+                log("Received event " + event.getEventType() + " for user=" + user.getId() + " session=" + session.getId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
                 boolean eventChanged = eventService.send(eventToSend);
                 changed = changed || eventChanged;
             }
