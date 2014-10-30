@@ -168,7 +168,7 @@
             <plugin>
                 <groupId>org.apache.karaf.tooling</groupId>
                 <artifactId>karaf-maven-plugin</artifactId>
-                <version>${version.karaf}</version>
+                <version>3.0.2</version>
                 <executions>
                     <execution>
                         <id>install-kar</id>
@@ -193,7 +193,6 @@
                         <feature>management</feature>
                         <feature>ssh</feature>
                         <feature>config</feature>
-                        <feature>deployers</feature>
                         <feature>region</feature>
                         <feature>package</feature>
                         <feature>kar</feature>

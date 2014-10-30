@@ -18,7 +18,7 @@
         <dependency>
             <groupId>org.apache.karaf.features</groupId>
             <artifactId>standard</artifactId>
-            <version>3.0.1</version>
+            <version>3.0.2</version>
             <classifier>features</classifier>
             <type>xml</type>
         </dependency>
@@ -32,14 +32,14 @@
         <dependency>
             <groupId>org.apache.karaf.features</groupId>
             <artifactId>enterprise</artifactId>
-            <version>3.0.1</version>
+            <version>3.0.2</version>
             <classifier>features</classifier>
             <type>xml</type>
         </dependency>
         <dependency>
             <groupId>org.apache.karaf.features</groupId>
             <artifactId>spring</artifactId>
-            <version>3.0.1</version>
+            <version>3.0.2</version>
             <classifier>features</classifier>
             <type>xml</type>
         </dependency>

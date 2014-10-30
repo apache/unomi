@@ -15,8 +15,8 @@
    <properties>
       <version.jackson.core>2.4.0</version.jackson.core> <!-- version used by CXF -->
       <version.jackson.jaxb>2.4.0</version.jackson.jaxb> <!-- version used by CXF -->
-      <version.karaf>3.0.1</version.karaf>
-       <version.pax.exam>4.1.0</version.pax.exam>
+      <version.karaf>3.0.2</version.karaf>
+      <version.pax.exam>4.1.0</version.pax.exam>
    </properties>
 
   <profiles>
