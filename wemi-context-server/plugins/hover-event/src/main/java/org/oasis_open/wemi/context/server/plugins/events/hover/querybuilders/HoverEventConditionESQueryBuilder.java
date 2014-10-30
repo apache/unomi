@@ -28,6 +28,8 @@ public class HoverEventConditionESQueryBuilder implements ConditionESQueryBuilde
             filters.add(FilterBuilders.termFilter("target.id", targetId));
         } else if (targetPath != null && targetPath.trim().length() > 0) {
             filters.add(FilterBuilders.termFilter("target.properties.path", targetPath));
+        } else {
+            filters.add(FilterBuilders.termFilter("target.id", ""));
         }
         return FilterBuilders.andFilter(filters.toArray(new FilterBuilder[filters.size()]));
     }
