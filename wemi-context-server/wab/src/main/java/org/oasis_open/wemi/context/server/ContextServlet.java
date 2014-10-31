@@ -27,7 +27,7 @@ import java.util.*;
 /**
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
  */
-@WebServlet(urlPatterns = {"/context.js"})
+@WebServlet(urlPatterns = {"/context.js", "/context.json"})
 public class ContextServlet extends HttpServlet {
 
     public static final String BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/base.js";
@@ -159,26 +159,34 @@ public class ContextServlet extends HttpServlet {
 
         HttpUtils.setupCORSHeaders(httpServletRequest, response);
 
-        Writer responseWriter = response.getWriter();
-
         ContextResponse data = new ContextResponse();
-
-        responseWriter.append("window.digitalData = window.digitalData || {};\n");
-        responseWriter.append("var wemi = ");
-
         String payload = HttpUtils.getPayload(httpServletRequest);
         if(payload != null){
             handleRequest(payload, user, session, data, request, response, timestamp);
         }
-        responseWriter.append(CustomObjectMapper.getObjectMapper().writeValueAsString(data));
 
-        // now we copy the base script source code
-        InputStream baseScriptStream = getServletContext().getResourceAsStream(user instanceof Persona ? IMPERSONATE_BASE_SCRIPT_LOCATION : BASE_SCRIPT_LOCATION);
+        String extension = httpServletRequest.getRequestURI().substring(httpServletRequest.getRequestURI().lastIndexOf(".") + 1);
+        boolean noScript = "json".equals(extension);
+        String contextAsJSONString = CustomObjectMapper.getObjectMapper().writeValueAsString(data);
+        Writer responseWriter;
+        if(noScript){
+            response.setCharacterEncoding("UTF-8");
+            responseWriter = response.getWriter();
+            response.setContentType("application/json");
+            IOUtils.write(contextAsJSONString, responseWriter);
+        }else {
+            responseWriter = response.getWriter();
+            responseWriter.append("window.digitalData = window.digitalData || {};\n")
+                    .append("var wemi = ")
+                    .append(contextAsJSONString)
+                    .append(";\n");
 
-        IOUtils.copy(baseScriptStream, responseWriter);
+            // now we copy the base script source code
+            InputStream baseScriptStream = getServletContext().getResourceAsStream(user instanceof Persona ? IMPERSONATE_BASE_SCRIPT_LOCATION : BASE_SCRIPT_LOCATION);
+            IOUtils.copy(baseScriptStream, responseWriter);
+        }
 
         responseWriter.flush();
-
     }
 
     private User checkMergedUser(ServletResponse response, User user, Session session) {
