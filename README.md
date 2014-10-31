@@ -16,6 +16,10 @@ Simply type at the root of the project:
   mvn clean install
 ```
 
+The Maven build process will generate both a standalone package you can use directly to start the context server
+(see "Deploying the generated package") or a KAR file that you can then deploy using a manual deployment process into
+an already installed Apache Karaf server (see "Deploying into an existing Karaf server")
+
 If you want to build and run the integration tests, you should instead use : 
 
     mvn -P itests clean install
@@ -53,8 +57,11 @@ it should point to a file such as :
     
 (by default we reference the free city database).
 
-Deploying manually
-------------------
+Deploying into an existing Karaf server
+---------------------------------------
+
+This is only needed if you didn't use the generated package. Also, this is the preferred way to install a development
+environment if you intend to re-deploy the context server KAR iteratively.
 
 Additional requirements:
 * Apache Karaf 3.0.2+, http://karaf.apache.org
