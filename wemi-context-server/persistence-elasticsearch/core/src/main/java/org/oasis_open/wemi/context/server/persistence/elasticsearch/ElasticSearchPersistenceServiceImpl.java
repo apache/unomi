@@ -808,19 +808,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 SimpleDateFormat d = new SimpleDateFormat("yyyy-MM-dd");
 
                 List<String> toDelete = new ArrayList<String>();
-                for (String indexName : statsResponse.getIndices().keySet()) {
-                    if (indexName.startsWith(indexName + "-")) {
+                for (String currentIndexName : statsResponse.getIndices().keySet()) {
+                    if (currentIndexName.startsWith(indexName + "-")) {
                         try {
-                            Date indexDate = d.parse(indexName.substring(5));
+                            Date indexDate = d.parse(currentIndexName.substring(indexName.length() + 1));
                             if (indexDate.before(date)) {
-                                toDelete.add(indexName);
+                                toDelete.add(currentIndexName);
                             }
                         } catch (ParseException e) {
-                            logger.error("Cannot parse index name " + indexName, e);
+                            logger.error("Cannot parse index name " + currentIndexName, e);
                         }
                     }
                 }
-                ;
                 if (!toDelete.isEmpty()) {
                     DeleteIndexResponse response = client.admin().indices().prepareDelete(toDelete.toArray(new String[toDelete.size()])).execute().actionGet();
                 }
