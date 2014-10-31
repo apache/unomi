@@ -1,14 +1,12 @@
-WEMI Sandbox
-============
+Context Server
+==============
 
-A public sandbox project to test ideas for the WEMI specification
+A public project that implements the Context Server specification
 
 Requirements
 ------------
-* JDK 6 or later, http://www.oracle.com/technetwork/java/javase/downloads/index.html (JDK 7+ needed for tests execution)
-* Apache Karaf 3.0+, http://karaf.apache.org
+* JDK 7 or later, http://www.oracle.com/technetwork/java/javase/downloads/index.html
 * Maven 3.0+, http://maven.apache.org
-* Local copy of the ElasticSearch ZIP package, available here : http://www.elasticsearch.org
 
 Building
 --------
@@ -58,6 +56,10 @@ it should point to a file such as :
 Deploying manually
 ------------------
 
+Additional requirements:
+* Apache Karaf 3.0.2+, http://karaf.apache.org
+* Local copy of the ElasticSearch ZIP package, available here : http://www.elasticsearch.org
+
 1. Before deploying, make sure that you have Apache Karaf properly installed. You will also have to increase the
 default maximum memory size and perm gen size by adjusting the following environment values in the bin/setenv(.bat)
 files (at the end of the file):
@@ -96,7 +98,7 @@ on your disk and copy all the files from the lib/sigar directory into Karaf's li
       cp wemi-context-server/kar/target/wemi-context-server-kar-1.0-SNAPSHOT.kar ~/java/deployments/wemi-sandbox/apache-karaf-3.0.1/deploy/
     ```
    
-6. If all went smoothly, you should be able to access the WEMI context script here : http://localhost:8181/context.js
+6. If all went smoothly, you should be able to access the context script here : http://localhost:8181/context.js
  You should see a digitalData object populated with some values. If not something went wrong during the install.
  
 Changing the default configuration
@@ -179,14 +181,14 @@ A default test page is provided at the following URL:
    http://localhost:8181/index.html
 ```
 
-This test page will trigger the loading of the WEMI /context.js script, which will try to retrieving the user context
+This test page will trigger the loading of the /context.js script, which will try to retrieving the user context
 or create a new one if it doesn't exist yet. It also contains an experimental integration with Facebook Login, but it
-doesn't yet save the context pack to the WEMI server.
+doesn't yet save the context back to the context server.
 
 Integrating onto a page
 -----------------------
 
- Simply reference the WEMI script in your HTML as in the following example:
+ Simply reference the context script in your HTML as in the following example:
 
 ```javascript
 <script type="text/javascript">
@@ -292,7 +294,7 @@ file from 8181 to something else. In this example we have changed to port to 818
     ./instance start node2
     ```
     
-11. You can then finally copy the WEMI Context Server KAR into the KARAF_HOME/instances/node2/deploy directory and 
+11. You can then finally copy the Context Server KAR into the KARAF_HOME/instances/node2/deploy directory and 
 everything should be up and running.
 
 JDK Selection on Mac OS X
@@ -421,3 +423,4 @@ Todo
 ----
 
 - Look at possible integration with newsletter management systems such as MailChimp, for example to synchronize user data with collected info.
+- Integrate with machine learning implementations such as Prediction.io or Apache Mahout
