@@ -15,115 +15,21 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.oasis_open.wemi.context.server.ContextRequest;
 import org.oasis_open.wemi.context.server.ContextResponse;
-import org.oasis_open.wemi.context.server.api.Metadata;
-import org.oasis_open.wemi.context.server.api.services.SegmentService;
-import org.ops4j.pax.exam.Configuration;
-import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
-import org.ops4j.pax.exam.karaf.options.KarafDistributionOption;
-import org.ops4j.pax.exam.options.MavenArtifactUrlReference;
-import org.ops4j.pax.exam.options.MavenUrlReference;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
-import org.ops4j.pax.exam.spi.reactors.PerClass;
+import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-import java.io.File;
 import java.io.IOException;
-import java.util.*;
 
-import static org.ops4j.pax.exam.CoreOptions.*;
-import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.karafDistributionConfiguration;
-import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.keepRuntimeFolder;
-
-/**
- * Created by loom on 04.08.14.
- */
 @RunWith(PaxExam.class)
-@ExamReactorStrategy(PerClass.class)
-public class BasicTest {
+@ExamReactorStrategy(PerSuite.class)
+public class BasicTest extends BaseTest{
     private final static Logger LOGGER = LoggerFactory.getLogger(BasicTest.class);
     private static final String JSON_MYME_TYPE = "application/json";
 
-    @Inject
-    protected SegmentService segmentService;
-
     private ObjectMapper objectMapper = new ObjectMapper();
-
-    @Configuration
-    public Option[] config() {
-        MavenArtifactUrlReference karafUrl = maven()
-                .groupId("org.apache.karaf")
-                .artifactId("apache-karaf")
-                .version("3.0.2")
-                .type("tar.gz");
-
-        MavenUrlReference karafStandardRepo = maven()
-                .groupId("org.apache.karaf.features")
-                .artifactId("standard")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        MavenUrlReference karafPaxWebRepo = maven()
-                .groupId("org.ops4j.pax.web")
-                .artifactId("pax-web-features")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        MavenUrlReference karafSpringRepo = maven()
-                .groupId("org.apache.karaf.features")
-                .artifactId("spring")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        MavenUrlReference karafCxfRepo = maven()
-                .groupId("org.apache.cxf.karaf")
-                .artifactId("apache-cxf")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        MavenUrlReference karafEnterpriseRepo = maven()
-                .groupId("org.apache.karaf.features")
-                .artifactId("enterprise")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        MavenUrlReference wemiServerRepo = maven()
-                .groupId("org.oasis-open.wemi")
-                .artifactId("wemi-context-server-kar")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        return new Option[]{
-                KarafDistributionOption.debugConfiguration("5005", false),
-                karafDistributionConfiguration()
-                        .frameworkUrl(karafUrl)
-                        .unpackDirectory(new File("target/exam"))
-                        .useDeployFolder(false),
-                keepRuntimeFolder(),
-                KarafDistributionOption.features(karafPaxWebRepo, "war"),
-                KarafDistributionOption.features(karafCxfRepo, "cxf"),
-                KarafDistributionOption.features(karafStandardRepo, "openwebbeans"),
-                KarafDistributionOption.features(karafStandardRepo, "pax-cdi-web-openwebbeans"),
-                KarafDistributionOption.features(wemiServerRepo, "wemi-context-server-kar"),
-                // we need to wrap the HttpComponents libraries ourselves since the OSGi bundles provided by the project are incorrect
-                wrappedBundle(mavenBundle("org.apache.httpcomponents",
-                        "httpcore").versionAsInProject()),
-                wrappedBundle(mavenBundle("org.apache.httpcomponents",
-                        "httpmime").versionAsInProject()),
-                wrappedBundle(mavenBundle("org.apache.httpcomponents",
-                        "httpclient").versionAsInProject())
-        };
-    }
-
-    @Test
-    public void testSegments() {
-        Assert.assertNotNull("Segment service should be available", segmentService);
-        Set<Metadata> segmentMetadatas = segmentService.getSegmentMetadatas();
-        Assert.assertNotEquals("Segment metadata list should not be empty", 0, segmentMetadatas.size());
-        LOGGER.info("Retrieved " + segmentMetadatas.size() + " segment metadata entries");
-    }
 
     @Test
     public void testContextJS() throws IOException {
