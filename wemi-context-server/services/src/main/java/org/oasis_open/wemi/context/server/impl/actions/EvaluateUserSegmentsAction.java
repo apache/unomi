@@ -4,7 +4,9 @@ import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.actions.ActionExecutor;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
+import org.oasis_open.wemi.context.server.api.services.SegmentsAndScores;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -24,11 +26,18 @@ public class EvaluateUserSegmentsAction implements ActionExecutor {
 
     @Override
     public boolean execute(Action action, Event event) {
-        Set<String> segments = segmentService.getSegmentsForUser(event.getUser());
+        boolean updated = false;
+        SegmentsAndScores segmentsAndScoringForUser = segmentService.getSegmentsAndScoresForUser(event.getUser());
+        Set<String> segments = segmentsAndScoringForUser.getSegments();
         if (!segments.equals(event.getUser().getSegments())) {
             event.getUser().setSegments(segments);
-            return true;
+            updated = true;
         }
-        return false;
+        Map<String, Integer> scores = segmentsAndScoringForUser.getScores();
+        if (!scores.equals(event.getUser().getScores())) {
+            event.getUser().setScores(scores);
+            updated = true;
+        }
+        return updated;
     }
 }

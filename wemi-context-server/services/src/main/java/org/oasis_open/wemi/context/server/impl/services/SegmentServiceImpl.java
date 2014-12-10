@@ -1,10 +1,13 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.apache.commons.lang3.StringUtils;
 import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.PartialList;
 import org.oasis_open.wemi.context.server.api.PluginType;
 import org.oasis_open.wemi.context.server.api.conditions.ConditionType;
+import org.oasis_open.wemi.context.server.api.segments.Scoring;
+import org.oasis_open.wemi.context.server.api.segments.ScoringElement;
 import org.oasis_open.wemi.context.server.api.segments.Segment;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.actions.Action;
@@ -13,6 +16,7 @@ import org.oasis_open.wemi.context.server.api.rules.Rule;
 import org.oasis_open.wemi.context.server.api.services.DefinitionsService;
 import org.oasis_open.wemi.context.server.api.services.RulesService;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
+import org.oasis_open.wemi.context.server.api.services.SegmentsAndScores;
 import org.oasis_open.wemi.context.server.persistence.spi.CustomObjectMapper;
 import org.oasis_open.wemi.context.server.persistence.spi.PersistenceService;
 import org.osgi.framework.*;
@@ -95,9 +99,11 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
         loadPredefinedSegments(bundleContext);
+        loadPredefinedScorings(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
             if (bundle.getBundleContext() != null) {
                 loadPredefinedSegments(bundle.getBundleContext());
+                loadPredefinedScorings(bundle.getBundleContext());
             }
         }
         bundleContext.addBundleListener(this);
@@ -113,6 +119,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             return;
         }
         loadPredefinedSegments(bundleContext);
+        loadPredefinedScorings(bundleContext);
 
         List<PluginType> types = definitionsService.getTypesByPlugin().get(bundleContext.getBundle().getBundleId());
         List<String> addedConditions = new ArrayList<String>();
@@ -180,6 +187,26 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         }
     }
 
+    private void loadPredefinedScorings(BundleContext bundleContext) {
+        Enumeration<URL> predefinedScoringEntries = bundleContext.getBundle().findEntries("META-INF/wemi/scoring", "*.json", true);
+        if (predefinedScoringEntries == null) {
+            return;
+        }
+        while (predefinedScoringEntries.hasMoreElements()) {
+            URL predefinedScoringURL = predefinedScoringEntries.nextElement();
+            logger.debug("Found predefined scoring at " + predefinedScoringURL + ", loading... ");
+
+            try {
+                Scoring scoring = CustomObjectMapper.getObjectMapper().readValue(predefinedScoringURL, Scoring.class);
+                if (getScoringDefinition(scoring.getMetadata().getId()) == null) {
+                    setScoringDefinition(scoring.getMetadata().getId(), scoring);
+                }
+            } catch (IOException e) {
+                logger.error("Error while loading segment definition " + predefinedScoringURL, e);
+            }
+        }
+    }
+
     public PartialList<User> getMatchingIndividuals(String segmentID, int offset, int size, String sortBy) {
         if (getSegmentDefinition(segmentID) == null) {
             return new PartialList<User>();
@@ -195,13 +222,31 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     }
 
     public Boolean isUserInSegment(User user, String segmentId) {
-        Set<String> matchingSegments = getSegmentsForUser(user);
+        Set<String> matchingSegments = getSegmentsAndScoresForUser(user).getSegments();
 
         return matchingSegments.contains(segmentId);
     }
 
-    public Set<String> getSegmentsForUser(User user) {
-        return new HashSet<String>(persistenceService.getMatchingSavedQueries(user));
+    public SegmentsAndScores getSegmentsAndScoresForUser(User user) {
+        List<String> savedQueries = persistenceService.getMatchingSavedQueries(user);
+        Set<String> segments = new HashSet<String>();
+        Map<String,Integer> scores = new HashMap<String, Integer>();
+        new SegmentsAndScores(segments,scores);
+        for (String s : savedQueries) {
+            if (s.startsWith("segment_")) {
+                segments.add(s.substring("segment_".length()));
+            } else if (s.startsWith("scoring_")) {
+                String scoringId = s.substring("scoring_".length());
+                int index = Integer.parseInt(StringUtils.substringAfterLast(scoringId, "_"));
+                scoringId = StringUtils.substringBeforeLast(scoringId, "_");
+                Scoring sc = getScoringDefinition(scoringId);
+                if (!scores.containsKey(scoringId)) {
+                    scores.put(scoringId, 0);
+                }
+                scores.put(scoringId, scores.get(scoringId) + sc.getElements().get(index).getValue());
+            }
+        }
+        return new SegmentsAndScores(segments, scores);
     }
 
     public Set<Metadata> getSegmentMetadatas() {
@@ -224,9 +269,9 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         ParserHelper.resolveConditionType(definitionsService, segment.getCondition());
         if (segment.getMetadata().isEnabled() && !segment.getMetadata().isMissingPlugins()) {
             createAutoGeneratedRules(segment.getCondition());
-            persistenceService.saveQuery(segmentId, segment.getCondition());
+            persistenceService.saveQuery("segment_" + segmentId, segment.getCondition());
         } else {
-            persistenceService.removeQuery(segmentId);
+            persistenceService.removeQuery("segment_" + segmentId);
         }
         // make sure we update the name and description metadata that might not match, so first we remove the entry from the map
         persistenceService.save(segment);
@@ -244,8 +289,57 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     }
 
     public void removeSegmentDefinition(String segmentId) {
-        persistenceService.removeQuery(segmentId);
+        persistenceService.removeQuery("segment_" + segmentId);
         persistenceService.remove(segmentId, Segment.class);
+    }
+    
+    public Scoring getScoringDefinition(String scoringId) {
+        Scoring definition = persistenceService.load(scoringId, Scoring.class);
+        if (definition != null) {
+            for (ScoringElement element : definition.getElements()) {
+                ParserHelper.resolveConditionType(definitionsService, element.getCondition());
+            }
+        }
+        return definition;
+    }
+
+    public void setScoringDefinition(String scoringId, Scoring scoring) {
+        for (ScoringElement element : scoring.getElements()) {
+            ParserHelper.resolveConditionType(definitionsService, element.getCondition());
+        }
+        int i = 0;
+        for (ScoringElement element : scoring.getElements()) {
+            if (scoring.getMetadata().isEnabled() && !scoring.getMetadata().isMissingPlugins()) {
+                createAutoGeneratedRules(element.getCondition());
+                persistenceService.saveQuery("scoring_" + scoringId + "_" + i, element.getCondition());
+            } else {
+                persistenceService.removeQuery("scoring_" + scoringId + "_" + i);
+            }
+            i++;
+        }
+        // make sure we update the name and description metadata that might not match, so first we remove the entry from the map
+        persistenceService.save(scoring);
+    }
+
+    public void createScoringDefinition(String scoringId, String name, String description) {
+        Metadata metadata = new Metadata(scoringId, name, description);
+        Scoring scoring = new Scoring(metadata);
+        Condition rootCondition = new Condition();
+        rootCondition.setConditionType(definitionsService.getConditionType("andCondition"));
+        rootCondition.getParameterValues().put("subConditions", new ArrayList<Condition>());
+        scoring.setElements(new ArrayList<ScoringElement>());
+
+        setScoringDefinition(scoringId, scoring);
+    }
+
+    public void removeScoringDefinition(String scoringId) {
+        Scoring scoring = getScoringDefinition(scoringId);
+        int i = 0;
+        for (ScoringElement element : scoring.getElements()) {
+            persistenceService.removeQuery("scoring_" + scoringId + "_" + i);
+            i++;
+        }
+        persistenceService.remove(scoringId, Scoring.class);
     }
 
     public void createAutoGeneratedRules(Condition condition) {

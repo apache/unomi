@@ -6,6 +6,7 @@ import org.oasis_open.wemi.context.server.api.PartialList;
 import org.oasis_open.wemi.context.server.api.segments.Segment;
 import org.oasis_open.wemi.context.server.api.User;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
+import org.oasis_open.wemi.context.server.api.services.SegmentsAndScores;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -55,8 +56,8 @@ public class SegmentServiceEndPoint implements SegmentService {
 
     @GET
     @Path("/match/{userID}")
-    public Set<String> getSegmentsForUser(@PathParam("userID") User user) {
-        return segmentService.getSegmentsForUser(user);
+    public SegmentsAndScores getSegmentsAndScoresForUser(@PathParam("userID") User user) {
+        return segmentService.getSegmentsAndScoresForUser(user);
     }
 
     @GET

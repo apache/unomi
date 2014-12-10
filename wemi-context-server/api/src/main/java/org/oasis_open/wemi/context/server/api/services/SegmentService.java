@@ -18,7 +18,7 @@ public interface SegmentService {
 
     Boolean isUserInSegment(User user, String segmentDescription);
 
-    Set<String> getSegmentsForUser(User user);
+    SegmentsAndScores getSegmentsAndScoresForUser(User user);
 
     Set<Metadata> getSegmentMetadatas();
 

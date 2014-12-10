@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "id": "testScoring",
+    "name": "Test scoring",
+    "description": "Test scoring"
+  },
+  "elements": [
+    {
+      "condition": {
+        "parameterValues": {},
+        "type": "matchAllCondition"
+      },
+      "value": 50
+    },
+    {
+      "condition": {
+        "parameterValues": {
+          "propertyName": "properties.gender",
+          "propertyValue": "male",
+          "comparisonOperator": "equals"
+        },
+        "type": "userPropertyCondition"
+      },
+      "value": 100
+    },
+    {
+      "condition": {
+        "parameterValues": {
+          "subConditions": [
+            {
+              "parameterValues": {
+                "numberOfDays": 30,
+                "eventCondition": {
+                  "parameterValues": {
+                    "url": "http://localhost:8080/fr/sites/ACMESPACE/home.html"
+                  },
+                  "type": "pageViewEventCondition"
+                }
+              },
+              "type": "userEventCondition"
+            }
+          ]
+        },
+        "type": "andCondition"
+      },
+      "value": 200
+    }
+  ]
+}

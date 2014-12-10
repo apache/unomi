@@ -13,6 +13,7 @@ public class User extends Item {
     public static final String ITEM_TYPE = "user";
     private Map<String,Object> properties;
     private Set<String> segments;
+    private Map<String,Integer> scores;
 
     public User() {
     }
@@ -51,5 +52,11 @@ public class User extends Item {
         this.segments = segments;
     }
 
+    public Map<String, Integer> getScores() {
+        return scores;
+    }
 
+    public void setScores(Map<String, Integer> scores) {
+        this.scores = scores;
+    }
 }
