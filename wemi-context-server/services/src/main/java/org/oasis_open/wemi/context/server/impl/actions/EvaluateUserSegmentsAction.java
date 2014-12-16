@@ -4,7 +4,7 @@ import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.actions.ActionExecutor;
 import org.oasis_open.wemi.context.server.api.services.SegmentService;
-import org.oasis_open.wemi.context.server.api.services.SegmentsAndScores;
+import org.oasis_open.wemi.context.server.api.segments.SegmentsAndScores;
 
 import java.util.Map;
 import java.util.Set;

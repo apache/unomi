@@ -96,7 +96,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
                 if (!Collections.disjoint(conditions, removedConditions)) {
                     logger.info("Disable goal " + goal.getItemId());
                     goal.getMetadata().setEnabled(false);
-                    setGoal(goal.getItemId(), goal);
+                    setGoal(goal);
                 }
             }
         }
@@ -113,8 +113,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
             try {
                 Goal goal = CustomObjectMapper.getObjectMapper().readValue(predefinedGoalURL, Goal.class);
-                if (getGoal(goal.getMetadata().getId()) == null) {
-                    setGoal(goal.getMetadata().getId(), goal);
+                if (getGoal(goal.getMetadata().getScope(), goal.getMetadata().getId()) == null) {
+                    setGoal(goal);
                 }
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedGoalURL, e);
@@ -123,7 +123,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     private void createRule(Goal goal, Condition event, String id) {
-        Rule rule = new Rule(new Metadata(goal.getItemId() + "." + id + "Event", "Auto generated rule for goal " + goal.getMetadata().getName(), ""));
+        Rule rule = new Rule(new Metadata(goal.getMetadata().getScope(), goal.getMetadata().getId() + "." + id + "Event", "Auto generated rule for goal " + goal.getMetadata().getName(), ""));
         rule.setCondition(event);
         rule.getMetadata().setHidden(true);
         Action action1 = new Action();
@@ -132,19 +132,27 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         action1.getParameterValues().put("setPropertyValue", "now");
         action1.getParameterValues().put("storeInSession", true);
         rule.setActions(Arrays.asList(action1));
-        rulesService.setRule(rule.getItemId(), rule);
+        rulesService.setRule(rule);
     }
 
     public Set<Metadata> getGoalMetadatas() {
         Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Goal definition : persistenceService.getAllItems(Goal.class,0,50,null).getList()) {
+        for (Goal definition : persistenceService.getAllItems(Goal.class, 0, 50, null).getList()) {
             descriptions.add(definition.getMetadata());
         }
         return descriptions;
     }
 
-    public Goal getGoal(String goalId) {
-        Goal goal = persistenceService.load(goalId, Goal.class);
+    public Set<Metadata> getGoalMetadatas(String scope) {
+        Set<Metadata> descriptions = new HashSet<Metadata>();
+        for (Goal definition : persistenceService.query("scope", scope, null, Goal.class, 0, 50).getList()) {
+            descriptions.add(definition.getMetadata());
+        }
+        return descriptions;
+    }
+
+    public Goal getGoal(String scope, String goalId) {
+        Goal goal = persistenceService.load(scope + "_" + goalId, Goal.class);
         if (goal != null) {
             ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent());
             ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent());
@@ -153,7 +161,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     @Override
-    public void setGoal(String goalId, Goal goal) {
+    public void setGoal(Goal goal) {
         ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent());
         ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent());
 
@@ -166,26 +174,26 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     @Override
-    public void createGoal(String goalId, String name, String description) {
-        Metadata metadata = new Metadata(goalId, name, description);
+    public void createGoal(String scope, String goalId, String name, String description) {
+        Metadata metadata = new Metadata(scope, goalId, name, description);
         Goal goal = new Goal(metadata);
-        setGoal(goalId, goal);
+        setGoal(goal);
     }
 
     @Override
-    public void removeGoal(String goalId) {
+    public void removeGoal(String scope, String goalId) {
         persistenceService.remove(goalId, Goal.class);
     }
 
-    public GoalReport getGoalReport(String goalId) {
-        return getGoalReport(goalId, null, null);
+    public GoalReport getGoalReport(String scope, String goalId) {
+        return getGoalReport(scope, goalId, null, null);
     }
 
-    public GoalReport getGoalReport(String goalId, String split) {
-        return getGoalReport(goalId, split, null);
+    public GoalReport getGoalReport(String scope, String goalId, String split) {
+        return getGoalReport(scope, goalId, split, null);
     }
 
-    public GoalReport getGoalReport(String goalId, String split, Condition filter) {
+    public GoalReport getGoalReport(String scope, String goalId, String split, Condition filter) {
         Condition condition = new Condition(definitionsService.getConditionType("goalMatchCondition"));
         condition.getParameterValues().put("goalId", goalId);
         condition.getParameterValues().put("goalReached", false);

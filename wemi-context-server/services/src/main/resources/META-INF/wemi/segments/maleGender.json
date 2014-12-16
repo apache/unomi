@@ -2,6 +2,7 @@
     "metadata": {
         "id": "maleGender",
         "name": "Men",
+        "scope": "ACMESPACE",
         "description": "This segment includes all men"
     },
     "condition": {

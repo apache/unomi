@@ -19,7 +19,7 @@ import java.util.Set;
         allowAllOrigins = true,
         allowCredentials = true
 )
-public class GoalsServiceEndPoint implements GoalsService {
+public class GoalsServiceEndPoint {
 
     GoalsService goalsService;
 
@@ -35,46 +35,52 @@ public class GoalsServiceEndPoint implements GoalsService {
     }
 
     @GET
-    @Path("/{goalId}")
-    public Goal getGoal(@PathParam("goalId") String goalId) {
-        return goalsService.getGoal(goalId);
+    @Path("/{scope}/")
+    public Set<Metadata> getGoalMetadatas(@PathParam("scope") String scope) {
+        return goalsService.getGoalMetadatas(scope);
+    }
+
+    @GET
+    @Path("/{scope}/{goalId}")
+    public Goal getGoal(@PathParam("scope") String scope, @PathParam("goalId") String goalId) {
+        return goalsService.getGoal(scope, goalId);
     }
 
     @POST
-    @Path("/{goalId}")
-    public void setGoal(@PathParam("goalId") String goalId, Goal goal) {
-        goalsService.setGoal(goalId, goal);
+    @Path("/{scope}/{goalId}")
+    public void setGoal(@PathParam("scope") String scope, @PathParam("goalId") String goalId, Goal goal) {
+        goalsService.setGoal(goal);
     }
 
     @PUT
-    @Path("/{goalId}")
+    @Path("/{scope}/{goalId}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public void createGoal(@PathParam("goalId") String goalId, @FormParam("goalName") String name, @FormParam("goalDescription") String description) {
-        goalsService.createGoal(goalId, name, description);
+    public void createGoal(@PathParam("scope") String scope, @PathParam("goalId") String goalId, @FormParam("goalName") String name, @FormParam("goalDescription") String description) {
+        goalsService.createGoal(scope, goalId, name, description);
     }
 
     @DELETE
-    @Path("/{goalId}")
-    public void removeGoal(@PathParam("goalId") String goalId) {
-        goalsService.removeGoal(goalId);
+    @Path("/{scope}/{goalId}")
+    public void removeGoal(@PathParam("scope") String scope, @PathParam("goalId") String goalId) {
+        goalsService.removeGoal(scope, goalId);
     }
 
     @GET
-    @Path("/{goalID}/report")
-    public GoalReport getGoalReport(@PathParam("goalID") String goalId) {
-        return goalsService.getGoalReport(goalId);
+    @Path("/{scope}/{goalID}/report")
+    public GoalReport getGoalReport(@PathParam("scope") String scope, @PathParam("goalID") String goalId) {
+        return goalsService.getGoalReport(scope, goalId);
     }
 
     @GET
-    @Path("/{goalID}/report/{split}")
-    public GoalReport getGoalReport(@PathParam("goalID") String goalId, @PathParam("split") String split) {
-        return goalsService.getGoalReport(goalId, split);
+    @Path("/{scope}/{goalID}/report/{split}")
+    public GoalReport getGoalReport(@PathParam("scope") String scope, @PathParam("goalID") String goalId, @PathParam("split") String split) {
+        return goalsService.getGoalReport(scope, goalId, split);
     }
 
     @POST
-    @Path("/{goalID}/conditionalReport/{split}")
-    public GoalReport getGoalReport(@PathParam("goalID") String goalId, @PathParam("split") String split, Condition condition) {
-        return goalsService.getGoalReport(goalId, split, condition);
+    @Path("/{scope}/{goalID}/conditionalReport/{split}")
+    public GoalReport getGoalReport(@PathParam("scope") String scope, @PathParam("goalID") String goalId, @PathParam("split") String split, Condition condition) {
+        return goalsService.getGoalReport(scope, goalId, split, condition);
     }
 
 }

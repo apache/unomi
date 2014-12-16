@@ -52,6 +52,18 @@
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
+    <jaxrs:server address="/wemi/scoring" id="restScoringService">
+        <jaxrs:providers>
+            <ref component-id="jaxb-provider"/>
+            <ref component-id="cors-filter"/>
+            <ref component-id="jaas-filter"/>
+        </jaxrs:providers>
+
+        <jaxrs:serviceBeans>
+            <ref component-id="scoringServiceEndPoint"/>
+        </jaxrs:serviceBeans>
+    </jaxrs:server>
+
     <jaxrs:server address="/wemi/definitions" id="restDefinitionsService">
         <jaxrs:providers>
             <ref component-id="jaxb-provider"/>
@@ -133,6 +145,10 @@
     <reference id="queryService" interface="org.oasis_open.wemi.context.server.api.services.QueryService"/>
 
     <bean id="segmentServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.SegmentServiceEndPoint">
+        <property name="segmentService" ref="segmentService"/>
+    </bean>
+
+    <bean id="scoringServiceEndPoint" class="org.oasis_open.wemi.context.server.rest.ScoringServiceEndPoint">
         <property name="segmentService" ref="segmentService"/>
     </bean>
 

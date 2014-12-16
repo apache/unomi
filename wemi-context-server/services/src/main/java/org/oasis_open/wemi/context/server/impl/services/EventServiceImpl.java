@@ -76,7 +76,7 @@ public class EventServiceImpl implements EventService {
             }
 
             if (changed && (!user.getProperties().equals(previousProperties) || !user.getSegments().equals(previousSegments))) {
-                Event userUpdated = new Event("userUpdated", session, user, new EventTarget(user.getId(), User.ITEM_TYPE), event.getTimeStamp());
+                Event userUpdated = new Event("userUpdated", session, user, event.getSource(), new EventTarget(user.getId(), User.ITEM_TYPE), event.getTimeStamp());
                 userUpdated.setPersistent(false);
                 userUpdated.getAttributes().putAll(event.getAttributes());
                 send(userUpdated);

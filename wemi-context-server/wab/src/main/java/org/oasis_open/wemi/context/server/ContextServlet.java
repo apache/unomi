@@ -138,7 +138,7 @@ public class ContextServlet extends HttpServlet {
             if (sessionId != null && session == null) {
                 session = new Session(sessionId, user, timestamp);
                 userService.saveSession(session);
-                Event event = new Event("sessionCreated", session, user, new EventTarget(sessionId, Session.ITEM_TYPE), timestamp);
+                Event event = new Event("sessionCreated", session, user, null, new EventTarget(sessionId, Session.ITEM_TYPE), timestamp);
 
                 event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                 event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
@@ -148,7 +148,7 @@ public class ContextServlet extends HttpServlet {
         }
 
         if (userCreated) {
-            Event userUpdated = new Event("userUpdated", session, user, new EventTarget(user.getId(), User.ITEM_TYPE), timestamp);
+            Event userUpdated = new Event("userUpdated", session, user, null, new EventTarget(user.getId(), User.ITEM_TYPE), timestamp);
             userUpdated.setPersistent(false);
             userUpdated.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
             userUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
@@ -225,9 +225,9 @@ public class ContextServlet extends HttpServlet {
                 if(event.getEventType() != null) {
                     Event eventToSend;
                     if(event.getProperties() != null){
-                        eventToSend = new Event(event.getEventType(), session, user, event.getTarget(), event.getProperties(), timestamp);
+                        eventToSend = new Event(event.getEventType(), session, user, event.getSource(), event.getTarget(), event.getProperties(), timestamp);
                     } else {
-                        eventToSend = new Event(event.getEventType(), session, user, event.getTarget(), timestamp);
+                        eventToSend = new Event(event.getEventType(), session, user, event.getSource(), event.getTarget(), timestamp);
                     }
                     event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);

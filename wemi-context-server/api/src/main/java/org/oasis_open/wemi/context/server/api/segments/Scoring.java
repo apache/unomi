@@ -12,7 +12,7 @@ import java.util.List;
  */
 @XmlRootElement
 public class Scoring extends Item {
-    public static final String ITEM_TYPE = "segment";
+    public static final String ITEM_TYPE = "scoring";
 
     private Metadata metadata;
 
@@ -22,7 +22,7 @@ public class Scoring extends Item {
     }
 
     public Scoring(Metadata metadata) {
-        super(metadata.getId());
+        super(metadata.getIdWithScope());
         this.metadata = metadata;
     }
 
@@ -32,7 +32,7 @@ public class Scoring extends Item {
     }
 
     public void setMetadata(Metadata metadata) {
-        this.itemId = metadata.getId();
+        this.itemId = metadata.getIdWithScope();
         this.metadata = metadata;
     }
 

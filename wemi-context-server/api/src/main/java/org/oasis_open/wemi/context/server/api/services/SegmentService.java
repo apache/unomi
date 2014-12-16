@@ -2,8 +2,10 @@ package org.oasis_open.wemi.context.server.api.services;
 
 import org.oasis_open.wemi.context.server.api.Metadata;
 import org.oasis_open.wemi.context.server.api.PartialList;
+import org.oasis_open.wemi.context.server.api.segments.Scoring;
 import org.oasis_open.wemi.context.server.api.segments.Segment;
 import org.oasis_open.wemi.context.server.api.User;
+import org.oasis_open.wemi.context.server.api.segments.SegmentsAndScores;
 
 import java.util.Set;
 
@@ -12,22 +14,36 @@ import java.util.Set;
  */
 public interface SegmentService {
 
-    PartialList<User> getMatchingIndividuals(String segmentID, int offset, int size, String sortBy);
+    Set<Metadata> getSegmentMetadatas();
 
-    long getMatchingIndividualsCount(String segmentID);
+    Set<Metadata> getSegmentMetadatas(String scope);
 
-    Boolean isUserInSegment(User user, String segmentDescription);
+    Segment getSegmentDefinition(String scope, String segmentId);
+
+    void setSegmentDefinition(Segment segment);
+
+    void createSegmentDefinition(String scope, String segmentId, String name, String description);
+
+    void removeSegmentDefinition(String scope, String segmentId);
+
+    PartialList<User> getMatchingIndividuals(String scope, String segmentID, int offset, int size, String sortBy);
+
+    long getMatchingIndividualsCount(String scope, String segmentID);
+
+    Boolean isUserInSegment(User user, String scope, String segmentId);
 
     SegmentsAndScores getSegmentsAndScoresForUser(User user);
 
-    Set<Metadata> getSegmentMetadatas();
+    Set<Metadata> getScoringMetadatas();
 
-    Segment getSegmentDefinition(String segmentDescription);
+    Set<Metadata> getScoringMetadatas(String scope);
 
-    void setSegmentDefinition(String segmentId, Segment segment);
+    Scoring getScoringDefinition(String scope, String scoringId);
 
-    void createSegmentDefinition(String segmentId, String name, String description);
+    void setScoringDefinition(Scoring scoring);
 
-    void removeSegmentDefinition(String segmentDescription);
+    void createScoringDefinition(String scope, String scoringId, String name, String description);
+
+    void removeScoringDefinition(String scope, String scoringId);
 
 }

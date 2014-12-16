@@ -2,6 +2,7 @@
     "metadata": {
         "id": "goal3",
         "name": "goal3",
+        "scope": "ACMESPACE",
         "description": "Goal 3 : read  mars projects after going to forums"
     },
     "startEvent": {

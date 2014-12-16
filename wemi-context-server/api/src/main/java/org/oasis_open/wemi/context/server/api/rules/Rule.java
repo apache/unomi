@@ -28,7 +28,7 @@ public class Rule extends Item {
     }
 
     public Rule(Metadata metadata) {
-        super(metadata.getId());
+        super(metadata.getIdWithScope());
         this.metadata = metadata;
     }
 
@@ -37,7 +37,7 @@ public class Rule extends Item {
     }
 
     public void setMetadata(Metadata metadata) {
-        this.itemId = metadata.getId();
+        this.itemId = metadata.getIdWithScope();
         this.metadata = metadata;
     }
 

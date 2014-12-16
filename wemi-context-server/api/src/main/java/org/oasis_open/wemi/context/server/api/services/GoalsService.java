@@ -10,17 +10,19 @@ import java.util.Set;
 public interface GoalsService {
     Set<Metadata> getGoalMetadatas();
 
-    Goal getGoal(String goalId);
+    Set<Metadata> getGoalMetadatas(String scope);
 
-    void setGoal(String goalId, Goal goal);
+    Goal getGoal(String scope, String goalId);
 
-    void createGoal(String goalId, String name, String description);
+    void setGoal(Goal goal);
 
-    void removeGoal(String goalId);
+    void createGoal(String scope, String goalId, String name, String description);
 
-    GoalReport getGoalReport(String goalId);
+    void removeGoal(String scope, String goalId);
 
-    GoalReport getGoalReport(String goalId, String split);
+    GoalReport getGoalReport(String scope, String goalId);
 
-    GoalReport getGoalReport(String goalId, String split, Condition filter);
+    GoalReport getGoalReport(String scope, String goalId, String split);
+
+    GoalReport getGoalReport(String scope, String goalId, String split, Condition filter);
 }

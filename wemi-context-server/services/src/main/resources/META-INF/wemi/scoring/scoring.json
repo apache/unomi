@@ -2,6 +2,7 @@
   "metadata": {
     "id": "testScoring",
     "name": "Test scoring",
+    "scope": "ACMESPACE",
     "description": "Test scoring"
   },
   "elements": [

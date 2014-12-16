@@ -1,5 +1,6 @@
 package org.oasis_open.wemi.context.server.impl.services;
 
+import org.apache.commons.lang3.StringUtils;
 import org.oasis_open.wemi.context.server.api.*;
 import org.oasis_open.wemi.context.server.api.actions.Action;
 import org.oasis_open.wemi.context.server.api.actions.ActionType;
@@ -24,6 +25,7 @@ import java.util.*;
 public class RulesServiceImpl implements RulesService, EventListenerService, SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
+    public static final String RULE_QUERY_PREFIX = "rule_";
 
     private BundleContext bundleContext;
 
@@ -102,7 +104,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 if (succeed) {
                     logger.info("Enable rule " + rule.getItemId());
                     rule.getMetadata().setMissingPlugins(false);
-                    setRule(rule.getItemId(), rule);
+                    setRule(rule);
                 }
             }
         }
@@ -134,7 +136,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 if (!Collections.disjoint(conditions, removedConditions) || !Collections.disjoint(actions, removedActions)) {
                     logger.info("Disable rule " + rule.getItemId());
                     rule.getMetadata().setMissingPlugins(true);
-                    setRule(rule.getItemId(), rule);
+                    setRule(rule);
                 }
             }
         }
@@ -152,8 +154,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
             try {
                 Rule rule = CustomObjectMapper.getObjectMapper().readValue(predefinedSegmentURL, Rule.class);
-                if (getRule(rule.getMetadata().getId()) == null) {
-                    setRule(rule.getMetadata().getId(), rule);
+                if (getRule(rule.getMetadata().getScope(), rule.getMetadata().getId()) == null) {
+                    setRule(rule);
                 }
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
@@ -172,30 +174,35 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
         if (matchingQueries.size() > 0) {
             for (String matchingQuery : matchingQueries) {
-                Rule rule = getRule(matchingQuery);
-                if (rule != null) {
-                    if (rule.isRaiseEventOnlyOnceForUser()) {
-                        hasEventAlreadyBeenRaisedForUser = hasEventAlreadyBeenRaisedForUser != null ? hasEventAlreadyBeenRaisedForUser : eventService.hasEventAlreadyBeenRaised(event, false);
-                        if (hasEventAlreadyBeenRaisedForUser) {
+                if (matchingQuery.startsWith(RULE_QUERY_PREFIX)) {
+                    matchingQuery = matchingQuery.substring(RULE_QUERY_PREFIX.length());
+                    String scope = StringUtils.substringBefore(matchingQuery, "_");
+                    matchingQuery = StringUtils.substringAfter(matchingQuery, "_");
+                    Rule rule = getRule(scope, matchingQuery);
+                    if (rule != null) {
+                        if (rule.isRaiseEventOnlyOnceForUser()) {
+                            hasEventAlreadyBeenRaisedForUser = hasEventAlreadyBeenRaisedForUser != null ? hasEventAlreadyBeenRaisedForUser : eventService.hasEventAlreadyBeenRaised(event, false);
+                            if (hasEventAlreadyBeenRaisedForUser) {
+                                continue;
+                            }
+                        } else if (rule.isRaiseEventOnlyOnceForSession()) {
+                            hasEventAlreadyBeenRaisedForSession = hasEventAlreadyBeenRaisedForSession != null ? hasEventAlreadyBeenRaisedForSession : eventService.hasEventAlreadyBeenRaised(event, true);
+                            if (hasEventAlreadyBeenRaisedForSession) {
+                                continue;
+                            }
+                        }
+
+                        Condition userCondition = extractConditionByTag(rule.getCondition(), "userCondition");
+                        if (userCondition != null && !userService.matchCondition(userCondition, event.getUser(), event.getSession())) {
                             continue;
                         }
-                    } else if (rule.isRaiseEventOnlyOnceForSession()) {
-                        hasEventAlreadyBeenRaisedForSession = hasEventAlreadyBeenRaisedForSession != null ? hasEventAlreadyBeenRaisedForSession : eventService.hasEventAlreadyBeenRaised(event, true);
-                        if (hasEventAlreadyBeenRaisedForSession) {
+                        Condition sessionCondition = extractConditionByTag(rule.getCondition(), "sessionCondition");
+                        if (sessionCondition != null && !userService.matchCondition(sessionCondition, event.getUser(), event.getSession())) {
                             continue;
                         }
-                    }
 
-                    Condition userCondition = extractConditionByTag(rule.getCondition(), "userCondition");
-                    if (userCondition != null && !userService.matchCondition(userCondition, event.getUser(), event.getSession())) {
-                        continue;
+                        matchedRules.add(rule);
                     }
-                    Condition sessionCondition = extractConditionByTag(rule.getCondition(), "sessionCondition");
-                    if (sessionCondition != null && !userService.matchCondition(sessionCondition, event.getUser(), event.getSession())) {
-                        continue;
-                    }
-
-                    matchedRules.add(rule);
                 }
             }
         }
@@ -217,7 +224,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 changed |= actionExecutorDispatcher.execute(action, event);
             }
 
-            Event ruleFired = new Event("ruleFired", event.getSession(), event.getUser(), new EventTarget(rule.getItemId(), Rule.ITEM_TYPE), event.getTimeStamp());
+            Event ruleFired = new Event("ruleFired", event.getSession(), event.getUser(), event.getSource(), new EventTarget(rule.getItemId(), Rule.ITEM_TYPE), event.getTimeStamp());
             ruleFired.getAttributes().putAll(event.getAttributes());
             ruleFired.setPersistent(false);
             eventService.send(ruleFired);
@@ -227,14 +234,22 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public Set<Metadata> getRuleMetadatas() {
         Set<Metadata> metadatas = new HashSet<Metadata>();
-        for (Rule rule : persistenceService.getAllItems(Rule.class,0,50,null).getList()) {
+        for (Rule rule : persistenceService.getAllItems(Rule.class, 0, 50, null).getList()) {
             metadatas.add(rule.getMetadata());
         }
         return metadatas;
     }
 
-    public Rule getRule(String ruleId) {
-        Rule rule = persistenceService.load(ruleId, Rule.class);
+    public Set<Metadata> getRuleMetadatas(String scope) {
+        Set<Metadata> metadatas = new HashSet<Metadata>();
+        for (Rule rule : persistenceService.query("scope", scope, null, Rule.class, 0, 50).getList()) {
+            metadatas.add(rule.getMetadata());
+        }
+        return metadatas;
+    }
+
+    public Rule getRule(String scope, String ruleId) {
+        Rule rule = persistenceService.load(scope + "_" + ruleId, Rule.class);
         if (rule != null) {
             if (rule.getCondition() != null) {
                 ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
@@ -246,17 +261,17 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         return rule;
     }
 
-    public void setRule(String ruleId, Rule rule) {
+    public void setRule(Rule rule) {
         Condition condition = rule.getCondition();
         if (condition != null) {
             if (rule.getMetadata().isEnabled() && !rule.getMetadata().isMissingPlugins()) {
                 ParserHelper.resolveConditionType(definitionsService, condition);
                 Condition eventCondition = extractConditionByTag(condition, "eventCondition");
                 if (eventCondition != null) {
-                    persistenceService.saveQuery(ruleId, eventCondition);
+                    persistenceService.saveQuery(RULE_QUERY_PREFIX + rule.getMetadata().getIdWithScope(), eventCondition);
                 }
             } else {
-                persistenceService.removeQuery(ruleId);
+                persistenceService.removeQuery(RULE_QUERY_PREFIX + rule.getMetadata().getIdWithScope());
             }
         }
         persistenceService.save(rule);
@@ -295,21 +310,20 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
 
-    public void createRule(String ruleId, String name, String description) {
-        Metadata metadata = new Metadata(ruleId, name, description);
+    public void createRule(String scope, String ruleId, String name, String description) {
+        Metadata metadata = new Metadata(scope, ruleId, name, description);
         Rule rule = new Rule(metadata);
         Condition rootCondition = new Condition();
         rootCondition.setConditionType(definitionsService.getConditionType("andCondition"));
         rootCondition.getParameterValues().put("subConditions", new ArrayList<Condition>());
         rule.setCondition(rootCondition);
         rule.setActions(new ArrayList<Action>());
-        setRule(ruleId, rule);
-
+        setRule(rule);
     }
 
-    public void removeRule(String ruleId) {
-        persistenceService.removeQuery(ruleId);
-        persistenceService.remove(ruleId, Rule.class);
+    public void removeRule(String scope, String ruleId) {
+        persistenceService.removeQuery(RULE_QUERY_PREFIX + scope + "_" + ruleId);
+        persistenceService.remove(scope + "_" + ruleId, Rule.class);
     }
 
     public void bundleChanged(BundleEvent event) {

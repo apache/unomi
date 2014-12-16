@@ -21,7 +21,7 @@ import java.util.Set;
         allowAllOrigins = true,
         allowCredentials = true
 )
-public class RulesServiceEndPoint implements RulesService {
+public class RulesServiceEndPoint {
 
     RulesService rulesService;
 
@@ -41,28 +41,35 @@ public class RulesServiceEndPoint implements RulesService {
     }
 
     @GET
-    @Path("/{ruleId}")
-    public Rule getRule(@PathParam("ruleId") String ruleId) {
-        return rulesService.getRule(ruleId);
+    @Path("/{scope}")
+    public Set<Metadata> getRuleMetadatas(@PathParam("scope") String scope) {
+        return rulesService.getRuleMetadatas(scope);
+    }
+
+    @GET
+    @Path("/{scope}/{ruleId}")
+    public Rule getRule(@PathParam("scope") String scope, @PathParam("ruleId") String ruleId) {
+        return rulesService.getRule(scope, ruleId);
     }
 
     @POST
-    @Path("/{ruleId}")
-    public void setRule(@PathParam("ruleId") String ruleId, Rule rule) {
-        rulesService.setRule(ruleId, rule);
+    @Path("/{scope}/{ruleId}")
+    public void setRule(@PathParam("scope") String scope, @PathParam("ruleId") String ruleId, Rule rule) {
+        rulesService.setRule(rule);
     }
 
     @PUT
-    @Path("/{ruleId}")
+    @Path("/{scope}/{ruleId}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public void createRule(@PathParam("ruleId") String ruleId, @FormParam("ruleName") String name, @FormParam("ruleDescription") String description) {
-        rulesService.createRule(ruleId, name, description);
+    public void createRule(@PathParam("scope") String scope, @PathParam("ruleId") String ruleId, @FormParam("ruleName") String name, @FormParam("ruleDescription") String description) {
+        rulesService.createRule(scope, ruleId, name, description);
+
     }
 
     @DELETE
-    @Path("/{ruleId}")
-    public void removeRule(@PathParam("ruleId") String ruleId) {
-        rulesService.removeRule(ruleId);
+    @Path("/{scope}/{ruleId}")
+    public void removeRule(@PathParam("scope") String scope, @PathParam("ruleId") String ruleId) {
+        rulesService.removeRule(scope, ruleId);
     }
 
 }

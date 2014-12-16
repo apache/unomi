@@ -34,7 +34,7 @@ public class SendEventAction implements ActionExecutor {
             logger.error("Cannot fill event",e);
             return false;
         }
-        Event subEvent = new Event(eventType, event.getSession(), event.getUser(), eventTarget, event.getTimeStamp());
+        Event subEvent = new Event(eventType, event.getSession(), event.getUser(), event.getSource(), eventTarget, event.getTimeStamp());
         subEvent.getAttributes().putAll(event.getAttributes());
         for (Map.Entry<String, Object> entry : eventProperties.entrySet()) {
             Object propertyValue = entry.getValue();

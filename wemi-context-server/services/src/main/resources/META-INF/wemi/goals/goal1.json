@@ -2,6 +2,7 @@
     "metadata": {
         "id": "goal1",
         "name": "goal1",
+        "scope": "ACMESPACE",
         "description": "Goal 1 : reach forums after having seen about-us"
     },
     "startEvent": {

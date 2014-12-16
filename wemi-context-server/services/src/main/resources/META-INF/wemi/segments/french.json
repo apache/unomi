@@ -2,6 +2,7 @@
     "metadata": {
         "id": "french",
         "name": "French",
+        "scope": "ACMESPACE",
         "description": "User accessed the fr home page"
     },
     "condition": {

@@ -71,4 +71,12 @@ public class ContextResponse implements Serializable {
     public void setFilteringResults(Map<String, Boolean> filteringResults) {
         this.filteringResults = filteringResults;
     }
+
+    public List<String> getFormNames() {
+        return formNames;
+    }
+
+    public void setFormNames(List<String> formNames) {
+        this.formNames = formNames;
+    }
 }

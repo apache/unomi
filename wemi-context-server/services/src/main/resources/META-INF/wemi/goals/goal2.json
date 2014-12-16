@@ -2,6 +2,7 @@
     "metadata": {
         "id": "goal2",
         "name": "goal2",
+        "scope": "ACMESPACE",
         "description": "Goal 2 : reached space blogs"
     },
     "startEvent": {

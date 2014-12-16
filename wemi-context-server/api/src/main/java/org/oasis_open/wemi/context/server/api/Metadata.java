@@ -1,5 +1,7 @@
 package org.oasis_open.wemi.context.server.api;
 
+import javax.xml.bind.annotation.XmlTransient;
+
 /**
  * Created by loom on 24.04.14.
  */
@@ -8,6 +10,7 @@ public class Metadata implements Comparable<Metadata> {
     private String id;
     private String name;
     private String description;
+    private String scope;
     private boolean enabled = true;
     private boolean missingPlugins = false;
     private boolean hidden = false;
@@ -20,7 +23,8 @@ public class Metadata implements Comparable<Metadata> {
         this.id = id;
     }
 
-    public Metadata(String id, String name, String description) {
+    public Metadata(String scope, String id, String name, String description) {
+        this.scope = scope;
         this.id = id;
         this.name = name;
         this.description = description;
@@ -44,6 +48,19 @@ public class Metadata implements Comparable<Metadata> {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getScope() {
+        return scope;
+    }
+
+    public void setScope(String scope) {
+        this.scope = scope;
+    }
+
+    @XmlTransient
+    public String getIdWithScope() {
+        return getScope() + "_" + getId();
     }
 
     public boolean isEnabled() {
@@ -79,11 +96,7 @@ public class Metadata implements Comparable<Metadata> {
     }
 
     public int compareTo(Metadata o) {
-        if (id != null) {
-            return id.compareTo(o.id);
-        } else {
-            return -1;
-        }
+        return getIdWithScope().compareTo(o.getIdWithScope());
     }
 
     @Override
@@ -93,13 +106,18 @@ public class Metadata implements Comparable<Metadata> {
 
         Metadata metadata = (Metadata) o;
 
-        if (id != null ? !id.equals(metadata.id) : metadata.id != null) return false;
+        if (!id.equals(metadata.id)) return false;
+        if (scope != null ? !scope.equals(metadata.scope) : metadata.scope != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        return id != null ? id.hashCode() : 0;
+        int result = id.hashCode();
+        result = 31 * result + (scope != null ? scope.hashCode() : 0);
+        return result;
     }
+
+
 }

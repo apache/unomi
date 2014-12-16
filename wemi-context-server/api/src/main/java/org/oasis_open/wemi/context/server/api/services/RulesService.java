@@ -12,12 +12,14 @@ public interface RulesService {
 
     Set<Metadata> getRuleMetadatas();
 
-    Rule getRule(String ruleId);
+    Set<Metadata> getRuleMetadatas(String scope);
 
-    void setRule(String ruleId, Rule rule);
+    Rule getRule(String scope, String ruleId);
 
-    void createRule(String ruleId, String name, String description);
+    void setRule(Rule rule);
 
-    void removeRule(String ruleId);
+    void createRule(String scope, String ruleId, String name, String description);
+
+    void removeRule(String scope, String ruleId);
 
 }

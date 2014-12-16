@@ -1,4 +1,4 @@
-package org.oasis_open.wemi.context.server.api.services;
+package org.oasis_open.wemi.context.server.api.segments;
 
 import java.util.Map;
 import java.util.Set;

@@ -23,7 +23,7 @@ public class Segment extends Item {
     }
 
     public Segment(Metadata metadata) {
-        super(metadata.getId());
+        super(metadata.getIdWithScope());
         this.metadata = metadata;
     }
 
@@ -33,7 +33,7 @@ public class Segment extends Item {
     }
 
     public void setMetadata(Metadata metadata) {
-        this.itemId = metadata.getId();
+        this.itemId = metadata.getIdWithScope();
         this.metadata = metadata;
     }
 

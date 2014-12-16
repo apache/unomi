@@ -2,6 +2,7 @@
     "metadata": {
         "id": "goal1Reached",
         "name": "Goal 1 Reached",
+        "scope": "ACMESPACE",
         "description": "This segment includes all users that have reached goal 1"
     },
     "condition" : {
