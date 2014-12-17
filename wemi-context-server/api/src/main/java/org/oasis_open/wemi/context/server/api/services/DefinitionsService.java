@@ -17,7 +17,7 @@ public interface DefinitionsService {
 
     Set<Tag> getRootTags();
 
-    Tag getTag(Tag tag);
+    Tag getTag(String tagId);
 
     Collection<ConditionType> getAllConditionTypes();
 

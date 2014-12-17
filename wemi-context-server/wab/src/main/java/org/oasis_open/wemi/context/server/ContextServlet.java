@@ -273,6 +273,9 @@ public class ContextServlet extends HttpServlet {
                 data.getFilteringResults().put(filteredContent.getFilterid(), result);
             }
         }
+
+        // Todo get form names from applicable rules
+        data.setFormNames(Arrays.asList("searchForm"));
     }
 
     private User createNewUser(String existingVisitorId, ServletResponse response, Date timestamp) {

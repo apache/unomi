@@ -146,4 +146,21 @@ public class ConditionType implements TemplateablePluginType, Serializable {
     public void setAutoCreateRule(Rule autoCreateRule) {
         this.autoCreateRule = autoCreateRule;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ConditionType that = (ConditionType) o;
+
+        if (!id.equals(that.id)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
 }

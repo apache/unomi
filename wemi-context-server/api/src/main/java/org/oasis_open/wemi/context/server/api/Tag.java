@@ -28,10 +28,6 @@ public class Tag implements PluginType, Comparable<Tag> {
         this.parentId = parentId;
     }
 
-    public Tag(String id) {
-        this.id = id;
-    }
-
     public String getId() {
         return id;
     }

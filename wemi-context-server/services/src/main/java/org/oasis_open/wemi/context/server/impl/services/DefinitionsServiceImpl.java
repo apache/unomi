@@ -270,8 +270,8 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         return rootTags;
     }
 
-    public Tag getTag(Tag tag) {
-        Tag completeTag = tags.get(tag.getId());
+    public Tag getTag(String tagId) {
+        Tag completeTag = tags.get(tagId);
         if (completeTag == null) {
             return null;
         }
@@ -293,8 +293,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             conditionTypes.addAll(directConditionTypes);
         }
         if (recursive) {
-            Tag completeTag = getTag(tag);
-            for (Tag subTag : completeTag.getSubTags()) {
+            for (Tag subTag : tag.getSubTags()) {
                 Set<ConditionType> childConditionTypes = getConditionTypesByTag(subTag, true);
                 conditionTypes.addAll(childConditionTypes);
             }
@@ -317,8 +316,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             actionTypes.addAll(directActionTypes);
         }
         if (recursive) {
-            Tag completeTag = getTag(tag);
-            for (Tag subTag : completeTag.getSubTags()) {
+            for (Tag subTag : tag.getSubTags()) {
                 Set<ActionType> childActionTypes = getActionTypeByTag(subTag, true);
                 actionTypes.addAll(childActionTypes);
             }
@@ -341,8 +339,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             valueTypes.addAll(directValueTypes);
         }
         if (recursive) {
-            Tag completeTag = getTag(tag);
-            for (Tag subTag : completeTag.getSubTags()) {
+            for (Tag subTag : tag.getSubTags()) {
                 Set<ValueType> childValueTypes = getValueTypeByTag(subTag, true);
                 valueTypes.addAll(childValueTypes);
             }

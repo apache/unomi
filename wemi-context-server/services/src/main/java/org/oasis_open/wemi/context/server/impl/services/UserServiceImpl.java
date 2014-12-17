@@ -238,7 +238,7 @@ public class UserServiceImpl implements UserService, SynchronousBundleListener {
 
     private void collectSubTagIds(String tagId, Set<String> allTagIds) {
         allTagIds.add(tagId);
-        Tag rootTag = definitionsService.getTag(new Tag(tagId));
+        Tag rootTag = definitionsService.getTag(tagId);
         if (rootTag.getSubTags() != null && rootTag.getSubTags().size() > 0) {
             for (Tag subTag : rootTag.getSubTags()) {
                 collectSubTagIds(subTag.getId(), allTagIds);

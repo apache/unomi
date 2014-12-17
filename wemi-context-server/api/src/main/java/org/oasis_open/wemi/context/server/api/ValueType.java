@@ -100,4 +100,21 @@ public class ValueType implements TemplateablePluginType {
     public void setTagIds(Set<String> tagIds) {
         this.tagIds = tagIds;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ValueType valueType = (ValueType) o;
+
+        if (!id.equals(valueType.id)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
 }

@@ -14,10 +14,7 @@ import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
@@ -25,7 +22,7 @@ import java.util.Set;
         allowAllOrigins = true,
         allowCredentials = true
 )
-public class DefinitionsServiceEndPoint implements DefinitionsService {
+public class DefinitionsServiceEndPoint {
 
     DefinitionsService definitionsService;
     BundleContext bundleContext;
@@ -54,7 +51,7 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
 
     @GET
     @Path("/tags/{tagId}")
-    public Tag getTag(@PathParam("tagId") Tag tag) {
+    public Tag getTag(@PathParam("tagId") String tag) {
         return definitionsService.getTag(tag);
     }
 
@@ -69,10 +66,13 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
 
     @GET
     @Path("/conditions/tags/{tagId}")
-    public Set<ConditionType> getConditionTypesByTag(@PathParam("tagId") Tag tag, @QueryParam("recursive") @DefaultValue("false") boolean recursive) {
-        Set<ConditionType> conditionTypes = definitionsService.getConditionTypesByTag(tag, recursive);
-        generateConditionChoiceListValues(conditionTypes, null);
-        return conditionTypes;
+    public Set<ConditionType> getConditionTypesByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive) {
+        String[] tagsArray = tags.split(",");
+        HashSet<ConditionType> results = new HashSet<ConditionType>();
+        for (String s : tagsArray) {
+            results.addAll(definitionsService.getConditionTypesByTag(definitionsService.getTag(s), recursive));
+        }
+        return results;
     }
 
     @GET
@@ -93,10 +93,14 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
 
     @GET
     @Path("/actions/tags/{tagId}")
-    public Set<ActionType> getActionTypeByTag(@PathParam("tagId") Tag tag, @QueryParam("recursive") @DefaultValue("false") boolean recursive) {
-        Set<ActionType> actionTypes = definitionsService.getActionTypeByTag(tag, recursive);
-        generateActionChoiceListValues(actionTypes, null);
-        return actionTypes;
+    public Set<ActionType> getActionTypeByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive) {
+        String[] tagsArray = tags.split(",");
+        HashSet<ActionType> results = new HashSet<ActionType>();
+        for (String s : tagsArray) {
+            results.addAll(definitionsService.getActionTypeByTag(definitionsService.getTag(s), recursive));
+        }
+        generateActionChoiceListValues(results, null);
+        return results;
     }
 
     @GET
@@ -115,8 +119,13 @@ public class DefinitionsServiceEndPoint implements DefinitionsService {
 
     @GET
     @Path("/values/tags/{tagId}")
-    public Set<ValueType> getValueTypeByTag(@PathParam("tagId") Tag tag, @QueryParam("recursive") @DefaultValue("false") boolean recursive) {
-        return definitionsService.getValueTypeByTag(tag, recursive);
+    public Set<ValueType> getValueTypeByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive) {
+        String[] tagsArray = tags.split(",");
+        HashSet<ValueType> results = new HashSet<ValueType>();
+        for (String s : tagsArray) {
+            results.addAll(definitionsService.getValueTypeByTag(definitionsService.getTag(s), recursive));
+        }
+        return results;
     }
 
     @GET
