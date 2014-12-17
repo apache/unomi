@@ -1,4 +1,4 @@
-package org.oasis_open.wemi.context.server;
+package org.oasis_open.wemi.context.server.api;
 
 import org.oasis_open.wemi.context.server.api.Event;
 import org.oasis_open.wemi.context.server.api.conditions.Condition;
@@ -63,7 +63,7 @@ public class ContextRequest {
         this.events = events;
     }
 
-    static class FilteredContent {
+    public static class FilteredContent {
         private String filterid;
         private List<Filter> filters;
 
@@ -84,7 +84,7 @@ public class ContextRequest {
         }
     }
 
-    static class Filter {
+    public static class Filter {
         private List<Target> appliesOn;
         private Condition condition;
 
@@ -105,7 +105,7 @@ public class ContextRequest {
         }
     }
 
-    static class Target {
+    public static class Target {
         private String target;
         private List<String> values;
 

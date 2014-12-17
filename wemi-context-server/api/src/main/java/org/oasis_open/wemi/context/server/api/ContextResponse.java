@@ -1,4 +1,4 @@
-package org.oasis_open.wemi.context.server;
+package org.oasis_open.wemi.context.server.api;
 
 import org.oasis_open.wemi.context.server.api.Session;
 import org.oasis_open.wemi.context.server.api.User;
