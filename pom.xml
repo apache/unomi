@@ -1,64 +1,72 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.oasis-open.wemi</groupId>
-    <artifactId>wemi-sandbox</artifactId>
+    <artifactId>context-server</artifactId>
+    <name>Context Server root project</name>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>WEMI Sandbox Root project</name>
-    <url>https://www.oasis-open.org/wemi</url>
-
     <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <cxf.version>3.0.0</cxf.version>
+        <version.jackson.core>2.4.0</version.jackson.core> <!-- version used by CXF -->
+        <version.jackson.jaxb>2.4.0</version.jackson.jaxb> <!-- version used by CXF -->
+        <version.karaf>3.0.2</version.karaf>
+        <version.pax.exam>4.1.0</version.pax.exam>
     </properties>
 
-    <distributionManagement>
-        <repository>
-            <id>jahia-releases</id>
-            <url>https://devtools.jahia.com/nexus/content/repositories/jahia-releases</url>
-        </repository>
-        <snapshotRepository>
-            <id>jahia-snapshots</id>
-            <url>https://devtools.jahia.com/nexus/content/repositories/jahia-snapshots</url>
-        </snapshotRepository>
-    </distributionManagement>
+    <profiles>
+        <profile>
+            <id>integration-tests</id>
+            <modules>
+                <module>itests</module>
+            </modules>
+        </profile>
 
-
-    <repositories>
-        <repository>
-            <id>jahia-public</id>
-            <name>Jahia Public Repository</name>
-            <url>https://devtools.jahia.com/nexus/content/groups/public</url>
-            <releases>
-                <enabled>true</enabled>
-                <updatePolicy>never</updatePolicy>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
-
-    <pluginRepositories>
-        <pluginRepository>
-            <id>jahia-public</id>
-            <name>Jahia Public Repository</name>
-            <url>https://devtools.jahia.com/nexus/content/groups/public</url>
-            <releases>
-                <enabled>true</enabled>
-                <updatePolicy>never</updatePolicy>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </pluginRepository>
-    </pluginRepositories>
+        <profile>
+            <id>performance-tests</id>
+            <modules>
+                <module>performance-tests</module>
+            </modules>
+        </profile>
+    </profiles>
 
     <modules>
-        <module>wemi-context-server</module>
+        <module>api</module>
+        <module>persistence-spi</module>
+        <module>persistence-elasticsearch</module>
+        <module>services</module>
+        <module>rest</module>
+        <module>wab</module>
+        <module>plugins</module>
+        <module>kar</module>
+        <module>package</module>
     </modules>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.1</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <version>2.3.7</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
+                    </instructions>
+                </configuration>
+            </plugin>
+        </plugins>
+
+    </build>
 
 </project>

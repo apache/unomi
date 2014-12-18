@@ -28,8 +28,8 @@ Deploying the generated package
 -------------------------------
 
 The "package" sub-project generates a pre-configured Apache Karaf installation that is the simplest way to get started.
-Simply uncompress the package/target/wemi-context-server-package-VERSION.tar.gz (for Linux or Mac OS X) or 
- package/target/wemi-context-server-package-VERSION.tar.gz (for Windows) archive into the directory of your choice.
+Simply uncompress the package/target/context-server-package-VERSION.tar.gz (for Linux or Mac OS X) or
+ package/target/context-server-package-VERSION.tar.gz (for Windows) archive into the directory of your choice.
  
 You can then start the server simply by using the command on UNIX/Linux/MacOS X : 
 
@@ -49,7 +49,7 @@ http://dev.maxmind.com/geoip/geoip2/geolite2/
 
 Simply download the desired maps into the "etc" directory and then adjust the following configuration file : 
 
-    etc/org.oasis_open.wemi.context.server.plugins.request.cfg
+    etc/org.oasis_open.contextserver.plugins.request.cfg
     
 it should point to a file such as : 
 
@@ -84,15 +84,10 @@ go to the ElasticSearch website (http://www.elasticsearch.org)  and download the
 on your disk and copy all the files from the lib/sigar directory into Karaf's lib/sigar directory 
 (must be created first) EXCEPT THE SIGAR.JAR file.
 
-3. If you haven't done it yet, install the WAR support into Karaf by doing the following in the Karaf command line:
+3. Install the WAR support, CXF and CDI (OpenWebBeans) into Karaf by doing the following in the Karaf command line:
 
     ```
        feature:install -v war
-    ```
-
-4. You will also need to install CXF and CDI (OpenWebBeans) for the REST service support
-
-    ```
        feature:repo-add cxf 2.7.11
        feature:install -v cxf/2.7.11
        feature:install -v openwebbeans
@@ -102,7 +97,7 @@ on your disk and copy all the files from the lib/sigar directory into Karaf's li
 5. Copy the following KAR to the Karaf deploy directory, as in this example line:
 
     ```
-      cp wemi-context-server/kar/target/wemi-context-server-kar-1.0-SNAPSHOT.kar ~/java/deployments/wemi-sandbox/apache-karaf-3.0.1/deploy/
+      cp kar/target/context-server-kar-1.0-SNAPSHOT.kar ~/java/deployments/wemi-sandbox/apache-karaf-3.0.1/deploy/
     ```
    
 6. If all went smoothly, you should be able to access the context script here : http://localhost:8181/context.js
@@ -113,7 +108,7 @@ Changing the default configuration
 
 If you want to change the default configuration, you can perform any modification you want in the karaf/etc directory.
 
-The context server configuration is kept in the etc/org.oasis_open.wemi.context.server.web.cfg . It defines the
+The context server configuration is kept in the etc/org.oasis_open.contextserver.web.cfg . It defines the
 addresses and port where it can be found :
 
     contextserver.address=localhost
@@ -126,7 +121,7 @@ BEFORE you start the server for the first time, or you will loose all the data y
 
 To change the cluster name, first create a file called 
 
-    etc/org.oasis_open.wemi.context.server.persistence.elasticsearch.cfg
+    etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg
 
 with the following contents:
 
@@ -408,7 +403,7 @@ By default the Context Server limits to connections to port 9200 and 9300 to the
     - the current subnet (i.e., 192.168.1.0-192.168.1.255)
     
 (this is done using a custom plugin for ElasticSearch, that you may find here : 
-https://github.com/Jahia/wemi-sandbox/tree/master/wemi-context-server/persistence-elasticsearch/plugins/security)
+https://github.com/Jahia/wemi-sandbox/tree/master/context-server/persistence-elasticsearch/plugins/security)
 
 You can adjust this setting by using the following setting in the etc/elasticsearch.yml file : 
 

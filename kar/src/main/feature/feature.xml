@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<features xmlns="http://karaf.apache.org/xmlns/features/v1.2.0" name="context-server-kar">
+    <feature description="context-server-kar" version="1.0-SNAPSHOT" name="context-server-kar"
+             start-level="75">
+        <feature>war</feature>
+        <feature version="[2.7.11,3)">cxf</feature>
+        <feature>openwebbeans</feature>
+        <feature>pax-cdi-web-openwebbeans</feature>
+        <configfile finalname="/etc/org.oasis_open.contextserver.web.cfg">mvn:org.oasis-open.wemi/context-server-wab/1.0-SNAPSHOT/cfg/contextservercfg</configfile>
+        <configfile finalname="/etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg">mvn:org.oasis-open.wemi/context-server-persistence-elasticsearch-core/1.0-SNAPSHOT/cfg/elasticsearchcfg</configfile>
+        <configfile finalname="/etc/org.oasis_open.contextserver.plugins.request.cfg">mvn:org.oasis-open.wemi/context-server-plugins-request/1.0-SNAPSHOT/cfg/requestcfg</configfile>
+        <configfile finalname="/etc/elasticsearch.yml">mvn:org.oasis-open.wemi/context-server-persistence-elasticsearch-core/1.0-SNAPSHOT/yml/elasticsearchconfig</configfile>
+        <bundle start-level="75">mvn:commons-io/commons-io/2.4</bundle>
+        <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-core/2.4.0</bundle>
+        <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-databind/2.4.0</bundle>
+        <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-annotations/2.4.0</bundle>
+        <bundle start-level="75">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-base/2.4.0</bundle>
+        <bundle start-level="75">mvn:com.fasterxml.jackson.module/jackson-module-jaxb-annotations/2.4.0</bundle>
+        <bundle start-level="75">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider/2.4.0</bundle>
+        <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jakarta-regexp/1.4_1</bundle>
+        <bundle start-level="75">mvn:org.oasis-open.wemi/context-server-api/1.0-SNAPSHOT</bundle>
+        <bundle start-level="75">mvn:org.oasis-open.wemi/context-server-persistence-spi/1.0-SNAPSHOT</bundle>
+        <bundle start-level="75">mvn:org.oasis-open.wemi/context-server-persistence-elasticsearch-plugins-security/1.0-SNAPSHOT</bundle>
+        <bundle start-level="76">mvn:org.oasis-open.wemi/context-server-persistence-elasticsearch-core/1.0-SNAPSHOT</bundle>
+        <bundle start-level="77">mvn:org.oasis-open.wemi/context-server-services/1.0-SNAPSHOT</bundle>
+        <bundle start-level="78">mvn:org.oasis-open.wemi/context-server-rest/1.0-SNAPSHOT</bundle>
+        <bundle start-level="80">mvn:org.oasis-open.wemi/context-server-wab/1.0-SNAPSHOT</bundle>
+    </feature>
+</features>
