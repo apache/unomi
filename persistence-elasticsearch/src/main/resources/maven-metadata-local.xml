@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <metadata modelVersion="1.1.0">
-  <groupId>org.oasis-open.wemi</groupId>
+  <groupId>org.oasis-open.contextserver</groupId>
   <artifactId>context-server-persistence-elasticsearch</artifactId>
   <version>1.0-SNAPSHOT</version>
   <versioning>

@@ -103,7 +103,7 @@ public class BasicTest {
                 .type("xml")
                 .versionAsInProject();
         MavenUrlReference contextServerRepo = maven()
-                .groupId("org.oasis-open.wemi")
+                .groupId("org.oasis-open.contextserver")
                 .artifactId("context-server-kar")
                 .classifier("features")
                 .type("xml")
