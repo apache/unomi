@@ -7,6 +7,7 @@ import javax.xml.bind.annotation.XmlTransient;
  */
 public class Metadata implements Comparable<Metadata> {
 
+    public static final String SYSTEM_SCOPE = "systemscope";
     private String id;
     private String name;
     private String description;
@@ -60,7 +61,11 @@ public class Metadata implements Comparable<Metadata> {
 
     @XmlTransient
     public String getIdWithScope() {
-        return getScope() + "_" + getId();
+        return getIdWithScope(scope, id);
+    }
+
+    public static String getIdWithScope(String scope, String id) {
+        return (scope == null ? SYSTEM_SCOPE : scope) + "_" + id;
     }
 
     public boolean isEnabled() {

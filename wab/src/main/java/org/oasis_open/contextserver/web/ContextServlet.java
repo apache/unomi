@@ -102,6 +102,16 @@ public class ContextServlet extends HttpServlet {
 
         boolean userCreated = false;
 
+        ContextRequest contextRequest = null;
+        String scope = null;
+        String stringPayload = HttpUtils.getPayload(httpServletRequest);
+        if (stringPayload != null) {
+            ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
+            JsonFactory factory = mapper.getFactory();
+            contextRequest = mapper.readValue(factory.createParser(stringPayload), ContextRequest.class);
+            scope = contextRequest.getScope();
+        }
+
         if (user == null) {
             if (sessionId != null) {
                 session = userService.loadSession(sessionId, timestamp);
@@ -138,7 +148,7 @@ public class ContextServlet extends HttpServlet {
             if (sessionId != null && session == null) {
                 session = new Session(sessionId, user, timestamp);
                 userService.saveSession(session);
-                Event event = new Event("sessionCreated", session, user, null, new EventTarget(sessionId, Session.ITEM_TYPE), timestamp);
+                Event event = new Event("sessionCreated", session, user, scope, null, new EventTarget(sessionId, Session.ITEM_TYPE), timestamp);
 
                 event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                 event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
@@ -148,7 +158,7 @@ public class ContextServlet extends HttpServlet {
         }
 
         if (userCreated) {
-            Event userUpdated = new Event("userUpdated", session, user, null, new EventTarget(user.getId(), User.ITEM_TYPE), timestamp);
+            Event userUpdated = new Event("userUpdated", session, user, scope, null, new EventTarget(user.getId(), User.ITEM_TYPE), timestamp);
             userUpdated.setPersistent(false);
             userUpdated.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
             userUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
@@ -160,9 +170,9 @@ public class ContextServlet extends HttpServlet {
         HttpUtils.setupCORSHeaders(httpServletRequest, response);
 
         ContextResponse data = new ContextResponse();
-        String payload = HttpUtils.getPayload(httpServletRequest);
-        if(payload != null){
-            handleRequest(payload, user, session, data, request, response, timestamp);
+
+        if(contextRequest != null){
+            handleRequest(contextRequest, user, session, data, request, response, timestamp);
         }
 
         String extension = httpServletRequest.getRequestURI().substring(httpServletRequest.getRequestURI().lastIndexOf(".") + 1);
@@ -213,21 +223,17 @@ public class ContextServlet extends HttpServlet {
         return user;
     }
 
-    private void handleRequest(String stringPayload, User user, Session session, ContextResponse data, ServletRequest request, ServletResponse response, Date timestamp)
+    private void handleRequest(ContextRequest contextRequest, User user, Session session, ContextResponse data, ServletRequest request, ServletResponse response, Date timestamp)
             throws IOException {
-        ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
-        JsonFactory factory = mapper.getFactory();
-        ContextRequest contextRequest = mapper.readValue(factory.createParser(stringPayload), ContextRequest.class);
-
         // execute provided events if any
         if(contextRequest.getEvents() != null) {
             for (Event event : contextRequest.getEvents()){
                 if(event.getEventType() != null) {
                     Event eventToSend;
                     if(event.getProperties() != null){
-                        eventToSend = new Event(event.getEventType(), session, user, event.getSource(), event.getTarget(), event.getProperties(), timestamp);
+                        eventToSend = new Event(event.getEventType(), session, user, contextRequest.getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp);
                     } else {
-                        eventToSend = new Event(event.getEventType(), session, user, event.getSource(), event.getTarget(), timestamp);
+                        eventToSend = new Event(event.getEventType(), session, user, contextRequest.getScope(), event.getSource(), event.getTarget(), timestamp);
                     }
                     event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);

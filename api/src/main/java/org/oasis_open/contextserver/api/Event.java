@@ -21,6 +21,7 @@ public class Event extends Item implements TimestampedItem {
     private transient User user;
     private transient Session session;
 
+    private String scope;
     private EventSource source;
     private EventTarget target;
 
@@ -33,12 +34,13 @@ public class Event extends Item implements TimestampedItem {
     public Event() {
     }
 
-    public Event(String eventType, Session session, User user, EventSource source, EventTarget target, Date timestamp) {
+    public Event(String eventType, Session session, User user, String scope, EventSource source, EventTarget target, Date timestamp) {
         super(UUID.randomUUID().toString());
         this.eventType = eventType;
         this.user = user;
         this.session = session;
         this.userId = user.getItemId();
+        this.scope = scope;
         this.source = source;
         this.target = target;
 
@@ -50,8 +52,8 @@ public class Event extends Item implements TimestampedItem {
         this.properties = new HashMap<String, Object>();
     }
 
-    public Event(String eventType, Session session, User user, EventSource source, EventTarget target, Map<String, Object> properties, Date timestamp) {
-        this(eventType, session, user, source, target, timestamp);
+    public Event(String eventType, Session session, User user, String scope, EventSource source, EventTarget target, Map<String, Object> properties, Date timestamp) {
+        this(eventType, session, user, scope, source, target, timestamp);
         if(properties != null) {
             this.properties = properties;
         }
@@ -119,6 +121,14 @@ public class Event extends Item implements TimestampedItem {
 
     public Map<String, Object> getProperties() {
         return properties;
+    }
+
+    public String getScope() {
+        return scope;
+    }
+
+    public void setScope(String scope) {
+        this.scope = scope;
     }
 
     public EventSource getSource() {

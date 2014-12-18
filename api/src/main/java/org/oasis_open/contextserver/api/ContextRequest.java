@@ -5,6 +5,7 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 import java.util.List;
 
 public class ContextRequest {
+    private String scope;
     private String pageId;
 
     private boolean requireSegments;
@@ -13,6 +14,14 @@ public class ContextRequest {
     private List<Event> events;
 
     private List<FilteredContent> filters;
+
+    public String getScope() {
+        return scope;
+    }
+
+    public void setScope(String scope) {
+        this.scope = scope;
+    }
 
     public String getPageId() {
         return pageId;

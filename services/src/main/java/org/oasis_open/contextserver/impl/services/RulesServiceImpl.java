@@ -7,7 +7,6 @@ import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PluginType;
 import org.oasis_open.contextserver.api.services.*;
 import org.oasis_open.contextserver.impl.actions.ActionExecutorDispatcher;
-import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionType;
 import org.oasis_open.contextserver.api.conditions.Condition;
@@ -181,31 +180,33 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 if (matchingQuery.startsWith(RULE_QUERY_PREFIX)) {
                     matchingQuery = matchingQuery.substring(RULE_QUERY_PREFIX.length());
                     String scope = StringUtils.substringBefore(matchingQuery, "_");
-                    matchingQuery = StringUtils.substringAfter(matchingQuery, "_");
-                    Rule rule = getRule(scope, matchingQuery);
-                    if (rule != null) {
-                        if (rule.isRaiseEventOnlyOnceForUser()) {
-                            hasEventAlreadyBeenRaisedForUser = hasEventAlreadyBeenRaisedForUser != null ? hasEventAlreadyBeenRaisedForUser : eventService.hasEventAlreadyBeenRaised(event, false);
-                            if (hasEventAlreadyBeenRaisedForUser) {
+                    if (scope.equals(Metadata.SYSTEM_SCOPE) || scope.equals(event.getScope())) {
+                        matchingQuery = StringUtils.substringAfter(matchingQuery, "_");
+                        Rule rule = getRule(scope, matchingQuery);
+                        if (rule != null) {
+                            if (rule.isRaiseEventOnlyOnceForUser()) {
+                                hasEventAlreadyBeenRaisedForUser = hasEventAlreadyBeenRaisedForUser != null ? hasEventAlreadyBeenRaisedForUser : eventService.hasEventAlreadyBeenRaised(event, false);
+                                if (hasEventAlreadyBeenRaisedForUser) {
+                                    continue;
+                                }
+                            } else if (rule.isRaiseEventOnlyOnceForSession()) {
+                                hasEventAlreadyBeenRaisedForSession = hasEventAlreadyBeenRaisedForSession != null ? hasEventAlreadyBeenRaisedForSession : eventService.hasEventAlreadyBeenRaised(event, true);
+                                if (hasEventAlreadyBeenRaisedForSession) {
+                                    continue;
+                                }
+                            }
+
+                            Condition userCondition = extractConditionByTag(rule.getCondition(), "userCondition");
+                            if (userCondition != null && !userService.matchCondition(userCondition, event.getUser(), event.getSession())) {
                                 continue;
                             }
-                        } else if (rule.isRaiseEventOnlyOnceForSession()) {
-                            hasEventAlreadyBeenRaisedForSession = hasEventAlreadyBeenRaisedForSession != null ? hasEventAlreadyBeenRaisedForSession : eventService.hasEventAlreadyBeenRaised(event, true);
-                            if (hasEventAlreadyBeenRaisedForSession) {
+                            Condition sessionCondition = extractConditionByTag(rule.getCondition(), "sessionCondition");
+                            if (sessionCondition != null && !userService.matchCondition(sessionCondition, event.getUser(), event.getSession())) {
                                 continue;
                             }
-                        }
 
-                        Condition userCondition = extractConditionByTag(rule.getCondition(), "userCondition");
-                        if (userCondition != null && !userService.matchCondition(userCondition, event.getUser(), event.getSession())) {
-                            continue;
+                            matchedRules.add(rule);
                         }
-                        Condition sessionCondition = extractConditionByTag(rule.getCondition(), "sessionCondition");
-                        if (sessionCondition != null && !userService.matchCondition(sessionCondition, event.getUser(), event.getSession())) {
-                            continue;
-                        }
-
-                        matchedRules.add(rule);
                     }
                 }
             }
@@ -228,7 +229,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 changed |= actionExecutorDispatcher.execute(action, event);
             }
 
-            Event ruleFired = new Event("ruleFired", event.getSession(), event.getUser(), event.getSource(), new EventTarget(rule.getItemId(), Rule.ITEM_TYPE), event.getTimeStamp());
+            Event ruleFired = new Event("ruleFired", event.getSession(), event.getUser(), event.getScope(), event.getSource(), new EventTarget(rule.getItemId(), Rule.ITEM_TYPE), event.getTimeStamp());
             ruleFired.getAttributes().putAll(event.getAttributes());
             ruleFired.setPersistent(false);
             eventService.send(ruleFired);
@@ -253,7 +254,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     public Rule getRule(String scope, String ruleId) {
-        Rule rule = persistenceService.load(scope + "_" + ruleId, Rule.class);
+        Rule rule = persistenceService.load(Metadata.getIdWithScope(scope, ruleId), Rule.class);
         if (rule != null) {
             if (rule.getCondition() != null) {
                 ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
@@ -326,8 +327,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     public void removeRule(String scope, String ruleId) {
-        persistenceService.removeQuery(RULE_QUERY_PREFIX + scope + "_" + ruleId);
-        persistenceService.remove(scope + "_" + ruleId, Rule.class);
+        String idWithScope = Metadata.getIdWithScope(scope, ruleId);
+        persistenceService.removeQuery(RULE_QUERY_PREFIX + idWithScope);
+        persistenceService.remove(idWithScope, Rule.class);
     }
 
     public void bundleChanged(BundleEvent event) {

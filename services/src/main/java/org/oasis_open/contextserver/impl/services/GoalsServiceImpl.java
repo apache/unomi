@@ -151,7 +151,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public Goal getGoal(String scope, String goalId) {
-        Goal goal = persistenceService.load(scope + "_" + goalId, Goal.class);
+        Goal goal = persistenceService.load(Metadata.getIdWithScope(scope,goalId), Goal.class);
         if (goal != null) {
             ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent());
             ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent());

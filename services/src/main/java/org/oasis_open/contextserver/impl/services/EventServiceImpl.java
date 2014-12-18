@@ -1,7 +1,6 @@
 package org.oasis_open.contextserver.impl.services;
 
 import org.oasis_open.contextserver.api.*;
-import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.EventListenerService;
@@ -77,7 +76,7 @@ public class EventServiceImpl implements EventService {
             }
 
             if (changed && (!user.getProperties().equals(previousProperties) || !user.getSegments().equals(previousSegments))) {
-                Event userUpdated = new Event("userUpdated", session, user, event.getSource(), new EventTarget(user.getId(), User.ITEM_TYPE), event.getTimeStamp());
+                Event userUpdated = new Event("userUpdated", session, user, event.getScope(), event.getSource(), new EventTarget(user.getId(), User.ITEM_TYPE), event.getTimeStamp());
                 userUpdated.setPersistent(false);
                 userUpdated.getAttributes().putAll(event.getAttributes());
                 send(userUpdated);
