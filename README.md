@@ -374,7 +374,7 @@ accessible :
 The context server actually requires HTTP Basic Auth for access to the Context Server administration REST API, so it is
 highly recommended that you design your client applications to use the HTTPS port for accessing the REST API.
 
-The user accounts to access the REST API are actually routed through Karaf's JAAS support, which you may find the 
+The user accounts to access the REST API are actually routed through Karaf's JAAS support, which you may find the
 documentation for here : 
 
  - http://karaf.apache.org/manual/latest/users-guide/security.html
@@ -424,5 +424,5 @@ a proxy, and use it to filter any communication.
 Todo
 ----
 
-- Look at possible integration with newsletter management systems such as MailChimp, for example to synchronize user data with collected info.
+- Look at possible integration with newsletter management systems such as MailChimp, for example to synchronize profile data with collected info.
 - Integrate with machine learning implementations such as Prediction.io or Apache Mahout

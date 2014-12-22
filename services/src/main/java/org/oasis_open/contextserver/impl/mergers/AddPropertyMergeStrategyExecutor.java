@@ -2,7 +2,7 @@ package org.oasis_open.contextserver.impl.mergers;
 
 import org.oasis_open.contextserver.api.PropertyMergeStrategyExecutor;
 import org.oasis_open.contextserver.api.PropertyType;
-import org.oasis_open.contextserver.api.User;
+import org.oasis_open.contextserver.api.Profile;
 
 import java.util.List;
 
@@ -10,7 +10,7 @@ import java.util.List;
  * Created by loom on 16.10.14.
  */
 public class AddPropertyMergeStrategyExecutor implements PropertyMergeStrategyExecutor {
-    public User mergeProperty(String propertyName, PropertyType propertyType, List<User> usersToMerge, User targetUser) {
+    public Profile mergeProperty(String propertyName, PropertyType propertyType, List<Profile> profilesToMerge, Profile targetProfile) {
 
         Object result = null;
         if (propertyType.getValueTypeId() != null) {
@@ -29,32 +29,32 @@ public class AddPropertyMergeStrategyExecutor implements PropertyMergeStrategyEx
             result = new Long(0);
         }
 
-        for (User userToMerge : usersToMerge) {
+        for (Profile profileToMerge : profilesToMerge) {
 
-            if (userToMerge.getProperty(propertyName) == null) {
+            if (profileToMerge.getProperty(propertyName) == null) {
                 continue;
             }
 
             if (propertyType != null) {
-                if (propertyType.getValueTypeId().equals("integer") || (userToMerge.getProperty(propertyName) instanceof Integer)) {
-                    result = (Integer) result + (Integer) userToMerge.getProperty(propertyName);
-                } else if (propertyType.getValueTypeId().equals("long") || (userToMerge.getProperty(propertyName) instanceof Long)) {
-                    result = (Long) result + (Long) userToMerge.getProperty(propertyName);
-                } else if (propertyType.getValueTypeId().equals("double") || (userToMerge.getProperty(propertyName) instanceof Double)) {
-                    result = (Double) result + (Double) userToMerge.getProperty(propertyName);
-                } else if (propertyType.getValueTypeId().equals("float") || (userToMerge.getProperty(propertyName) instanceof Float)) {
-                    result = (Float) result + (Float) userToMerge.getProperty(propertyName);
+                if (propertyType.getValueTypeId().equals("integer") || (profileToMerge.getProperty(propertyName) instanceof Integer)) {
+                    result = (Integer) result + (Integer) profileToMerge.getProperty(propertyName);
+                } else if (propertyType.getValueTypeId().equals("long") || (profileToMerge.getProperty(propertyName) instanceof Long)) {
+                    result = (Long) result + (Long) profileToMerge.getProperty(propertyName);
+                } else if (propertyType.getValueTypeId().equals("double") || (profileToMerge.getProperty(propertyName) instanceof Double)) {
+                    result = (Double) result + (Double) profileToMerge.getProperty(propertyName);
+                } else if (propertyType.getValueTypeId().equals("float") || (profileToMerge.getProperty(propertyName) instanceof Float)) {
+                    result = (Float) result + (Float) profileToMerge.getProperty(propertyName);
                 } else {
-                    result = (Long) result + Long.parseLong(userToMerge.getProperty(propertyName).toString());
+                    result = (Long) result + Long.parseLong(profileToMerge.getProperty(propertyName).toString());
                 }
             } else {
-                result = (Long) result + Long.parseLong(userToMerge.getProperty(propertyName).toString());
+                result = (Long) result + Long.parseLong(profileToMerge.getProperty(propertyName).toString());
             }
 
         }
 
-        targetUser.setProperty(propertyName, result);
+        targetProfile.setProperty(propertyName, result);
 
-        return targetUser;
+        return targetProfile;
     }
 }

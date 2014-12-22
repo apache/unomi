@@ -1,7 +1,0 @@
-{
-    "id": "allEventToUserPropertiesAction",
-    "serviceFilter": "(actionExecutorId=allEventToUserProperties)",
-    "tags": [ "event" ],
-    "parameters": [
-    ]
-}

@@ -1,0 +1,19 @@
+{
+    "id": "eventToProfilePropertyAction",
+    "serviceFilter": "(actionExecutorId=eventToProfileProperty)",
+    "tags": [ "event" ],
+    "parameters": [
+        {
+            "id": "eventPropertyName",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": "(initializerId=eventProperty)"
+        },
+        {
+            "id": "profilePropertyName",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": "(initializerId=propertyType)"
+        }
+    ]
+}

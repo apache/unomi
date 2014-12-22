@@ -3,10 +3,10 @@ package org.oasis_open.contextserver.impl.actions;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.Persona;
 import org.oasis_open.contextserver.api.Session;
-import org.oasis_open.contextserver.api.User;
+import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
-import org.oasis_open.contextserver.api.services.UserService;
+import org.oasis_open.contextserver.api.services.ProfileService;
 
 import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
@@ -21,7 +21,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     private int cookieAgeInSeconds = MAX_COOKIE_AGE_IN_SECONDS;
     private String profileIdCookieName = "context-profile-id";
 
-    private UserService userService;
+    private ProfileService profileService;
 
     public void setCookieAgeInSeconds(int cookieAgeInSeconds) {
         this.cookieAgeInSeconds = cookieAgeInSeconds;
@@ -31,47 +31,47 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         this.profileIdCookieName = profileIdCookieName;
     }
 
-    public void setUserService(UserService userService) {
-        this.userService = userService;
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
     }
 
     public boolean execute(Action action, Event event) {
         String mergeProfilePropertyName = (String) action.getParameterValues().get("mergeProfilePropertyName");
-        User user = event.getUser();
+        Profile profile = event.getProfile();
 
-        if (user instanceof Persona) {
+        if (profile instanceof Persona) {
             return false;
         }
 
-        Object currentMergePropertyValue = user.getProperty(mergeProfilePropertyName);
+        Object currentMergePropertyValue = profile.getProperty(mergeProfilePropertyName);
 
-        User masterUser = userService.mergeUsersOnProperty(user, event.getSession(), mergeProfilePropertyName, (currentMergePropertyValue == null ? null : currentMergePropertyValue.toString()));
+        Profile masterProfile = profileService.mergeProfilesOnProperty(profile, event.getSession(), mergeProfilePropertyName, (currentMergePropertyValue == null ? null : currentMergePropertyValue.toString()));
 
-        if (masterUser == null) {
+        if (masterProfile == null) {
             return false;
         }
 
-        if (!masterUser.getId().equals(user.getId())) {
+        if (!masterProfile.getId().equals(profile.getId())) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
-            sendProfileCookie(masterUser, httpServletResponse);
+            sendProfileCookie(masterProfile, httpServletResponse);
             Session session = event.getSession();
-            if (!session.getUserId().equals(masterUser.getId())) {
-                session.setUser(masterUser);
-                userService.saveSession(session);
+            if (!session.getProfileId().equals(masterProfile.getId())) {
+                session.setProfile(masterProfile);
+                profileService.saveSession(session);
             }
-            userService.delete(user.getId(), false);
+            profileService.delete(profile.getId(), false);
         }
 
         return true;
     }
 
-    public void sendProfileCookie(User user, ServletResponse response) {
+    public void sendProfileCookie(Profile profile, ServletResponse response) {
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-            Cookie visitorIdCookie = new Cookie(profileIdCookieName, user.getItemId());
-            visitorIdCookie.setPath("/");
-            visitorIdCookie.setMaxAge(cookieAgeInSeconds);
-            httpServletResponse.addCookie(visitorIdCookie);
+            Cookie profileIdCookie = new Cookie(profileIdCookieName, profile.getItemId());
+            profileIdCookie.setPath("/");
+            profileIdCookie.setMaxAge(cookieAgeInSeconds);
+            httpServletResponse.addCookie(profileIdCookie);
         }
     }
 

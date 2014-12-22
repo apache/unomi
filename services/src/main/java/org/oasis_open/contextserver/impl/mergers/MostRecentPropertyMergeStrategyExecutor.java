@@ -2,7 +2,7 @@ package org.oasis_open.contextserver.impl.mergers;
 
 import org.oasis_open.contextserver.api.PropertyMergeStrategyExecutor;
 import org.oasis_open.contextserver.api.PropertyType;
-import org.oasis_open.contextserver.api.User;
+import org.oasis_open.contextserver.api.Profile;
 
 import java.util.List;
 
@@ -10,7 +10,7 @@ import java.util.List;
  * Created by loom on 16.10.14.
  */
 public class MostRecentPropertyMergeStrategyExecutor implements PropertyMergeStrategyExecutor {
-    public User mergeProperty(String propertyName, PropertyType propertyType, List<User> usersToMerge, User targetUser) {
-        return targetUser;
+    public Profile mergeProperty(String propertyName, PropertyType propertyType, List<Profile> profilesToMerge, Profile targetProfile) {
+        return targetProfile;
     }
 }

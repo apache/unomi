@@ -13,7 +13,7 @@
     "sessions": [
         {
             "id": "aa3b04bd-8f4d-4a07-8e96-d33ffa04d3d9",
-            "userId": "usVisitor",
+            "profileId": "usVisitor",
             "properties": {
                 "operatingSystemName": "OS X 10.9 Mavericks",
                 "countryName": "United States",

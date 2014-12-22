@@ -16,7 +16,7 @@ public class IncrementInterestsValuesAction implements ActionExecutor {
     @Override
     public boolean execute(Action action, Event event) {
         boolean modified = false;
-        Map<String, Object> userProps = event.getUser().getProperties();
+        Map<String, Object> profileProps = event.getProfile().getProperties();
 
         try {
             Map<String, Object> interests = (Map<String, Object>) PropertyUtils.getProperty(event, "target.properties.interests");
@@ -24,16 +24,16 @@ public class IncrementInterestsValuesAction implements ActionExecutor {
                 for (Map.Entry<String, Object> s : interests.entrySet()) {
                     int value = (Integer) s.getValue();
 
-                    HashMap<String, Object> userInterests = (HashMap<String, Object>) event.getUser().getProperty("interests");
-                    if(userInterests != null){
-                        userInterests = new HashMap<String, Object>(userInterests);
-                        int oldValue = (userInterests.containsKey(s.getKey())) ? (Integer) userInterests.get(s.getKey()) : 0;
-                        userInterests.put(s.getKey(), value + oldValue);
+                    HashMap<String, Object> profileInterests = (HashMap<String, Object>) event.getProfile().getProperty("interests");
+                    if(profileInterests != null){
+                        profileInterests = new HashMap<String, Object>(profileInterests);
+                        int oldValue = (profileInterests.containsKey(s.getKey())) ? (Integer) profileInterests.get(s.getKey()) : 0;
+                        profileInterests.put(s.getKey(), value + oldValue);
                     }else {
-                        userInterests = new HashMap<String, Object>();
-                        userInterests.put(s.getKey(), value);
+                        profileInterests = new HashMap<String, Object>();
+                        profileInterests.put(s.getKey(), value);
                     }
-                    event.getUser().setProperty("interests", userInterests);
+                    event.getProfile().setProperty("interests", profileInterests);
                     modified = true;
                 }
             }

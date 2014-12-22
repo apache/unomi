@@ -1,7 +1,7 @@
 {
     "id": "deviceType",
     "type": "string",
-    "tags": ["technicalUserProperties"],
+    "tags": ["technicalProfileProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",

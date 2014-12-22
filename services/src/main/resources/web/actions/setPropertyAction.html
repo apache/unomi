@@ -3,7 +3,7 @@
         <div class="remove-condition">
             <a href="#" ng-click="onRemove(parentValue,parentIndex)"><i class="icon-remove"></i></a>
         </div>
-        <span translate>SET_USER_PROPERTY_LABEL</span>
+        <span translate>SET_PROFILE_PROPERTY_LABEL</span>
         &nbsp;
         <select ng-model="ref.parameterValues.setPropertyName"
                 ng-options="parameter.id as parameter.name | translate for parameter in getActionParameterChoiceListValues(ref, 'setPropertyName')">

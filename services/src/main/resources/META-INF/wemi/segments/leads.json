@@ -13,7 +13,7 @@
                         "propertyName": "properties.leadAssignedTo",
                         "comparisonOperator": "exists"
                     },
-                    "type": "userPropertyCondition"
+                    "type": "profilePropertyCondition"
                 }
             ]
         },

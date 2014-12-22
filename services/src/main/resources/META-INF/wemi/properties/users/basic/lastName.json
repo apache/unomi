@@ -1,7 +1,7 @@
 {
     "id": "lastName",
     "type": "string",
-    "tags": ["basicUserProperties"],
+    "tags": ["basicProfileProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",

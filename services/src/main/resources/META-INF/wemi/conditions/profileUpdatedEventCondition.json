@@ -1,0 +1,14 @@
+{
+    "id": "profileUpdatedEventCondition",
+    "parentCondition" : {
+        "type": "eventPropertyCondition",
+        "parameterValues": {
+            "propertyName": "eventType",
+            "propertyValue": "profileUpdated",
+            "comparisonOperator": "equals"
+        }
+    },
+    "tags": [ "event", "eventCondition" ],
+    "parameters": [
+    ]
+}

@@ -2,7 +2,7 @@
     "id": "orCondition",
     "conditionEvaluator": "(conditionEvaluatorId=orConditionEvaluator)",
     "queryBuilderFilter": "(queryBuilderId=orConditionESQueryBuilder)",
-    "tags": [ "logical", "userCondition", "eventCondition", "sessionCondition" ],
+    "tags": [ "logical", "profileCondition", "eventCondition", "sessionCondition" ],
     "parameters": [
         {
             "id": "subConditions",

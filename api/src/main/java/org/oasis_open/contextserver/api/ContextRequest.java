@@ -9,7 +9,7 @@ public class ContextRequest {
     private String pageId;
 
     private boolean requireSegments;
-    private List<String> requiredUserProperties;
+    private List<String> requiredProfileProperties;
     private List<String> requiredSessionProperties;
     private List<Event> events;
 
@@ -39,12 +39,12 @@ public class ContextRequest {
         this.requireSegments = requireSegments;
     }
 
-    public List<String> getRequiredUserProperties() {
-        return requiredUserProperties;
+    public List<String> getRequiredProfileProperties() {
+        return requiredProfileProperties;
     }
 
-    public void setRequiredUserProperties(List<String> requiredUserProperties) {
-        this.requiredUserProperties = requiredUserProperties;
+    public void setRequiredProfileProperties(List<String> requiredProfileProperties) {
+        this.requiredProfileProperties = requiredProfileProperties;
     }
 
     public List<String> getRequiredSessionProperties() {

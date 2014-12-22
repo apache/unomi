@@ -1,7 +1,7 @@
 {
     "id": "age",
     "type": "integer",
-    "tags": ["demographicUserProperties"],
+    "tags": ["demographicProfileProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",

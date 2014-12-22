@@ -1,0 +1,17 @@
+<div class="perso">
+    <div class="block">
+        <div class="remove-condition">
+            <a href="#" ng-click="onRemove(parentValue,parentIndex)"><i class="icon-remove"></i></a>
+        </div>
+        <span translate>COPY_EVENT_PROPERTY_LABEL</span>
+        &nbsp;
+        <select ng-model="ref.parameterValues.eventPropertyName"
+                ng-options="parameter.id as parameter.name | translate for parameter in getActionParameterChoiceListValues(ref, 'eventPropertyName')">
+        </select>
+        <span translate>TO_PROFILE_PROPERTY_LABEL</span>
+        &nbsp;
+        <select ng-model="ref.parameterValues.profilePropertyName"
+                ng-options="parameter.id as parameter.name | translate for parameter in getActionParameterChoiceListValues(ref, 'profilePropertyName')">
+        </select>
+    </div>
+</div>

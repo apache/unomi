@@ -1,9 +1,9 @@
 {
     "id": "usageRate",
     "type": "string",
-    "tags": ["behavioralUserProperties"],
+    "tags": ["behavioralProfileProperties"],
     "choiceListInitializerFilter": "",
-    "defaultValue": "heavy,moderate,light,nonuser",
+    "defaultValue": "heavy,moderate,light,nonprofile",
     "selectorId": "",
     "automaticMappingsFrom": [ ],
     "rank": "3.0"

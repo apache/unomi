@@ -4,7 +4,7 @@ import org.oasis_open.contextserver.api.segments.Segment;
 import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.segments.Scoring;
-import org.oasis_open.contextserver.api.User;
+import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.segments.SegmentsAndScores;
 
 import java.util.Set;
@@ -26,13 +26,13 @@ public interface SegmentService {
 
     void removeSegmentDefinition(String scope, String segmentId);
 
-    PartialList<User> getMatchingIndividuals(String scope, String segmentID, int offset, int size, String sortBy);
+    PartialList<Profile> getMatchingIndividuals(String scope, String segmentID, int offset, int size, String sortBy);
 
     long getMatchingIndividualsCount(String scope, String segmentID);
 
-    Boolean isUserInSegment(User user, String scope, String segmentId);
+    Boolean isProfileInSegment(Profile profile, String scope, String segmentId);
 
-    SegmentsAndScores getSegmentsAndScoresForUser(User user);
+    SegmentsAndScores getSegmentsAndScoresForProfile(Profile profile);
 
     Set<Metadata> getScoringMetadatas();
 

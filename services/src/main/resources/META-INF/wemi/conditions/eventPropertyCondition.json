@@ -1,5 +1,6 @@
 {
     "id": "eventPropertyCondition",
+    "conditionEvaluator": "(conditionEvaluatorId=propertyConditionEvaluator)",
     "queryBuilderFilter": "(queryBuilderId=propertyConditionESQueryBuilder)",
     "tags": [ "demographic", "eventCondition" ],
     "parameters": [

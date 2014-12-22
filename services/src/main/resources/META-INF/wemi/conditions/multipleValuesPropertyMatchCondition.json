@@ -2,7 +2,7 @@
     "id": "multipleValuesPropertyMatchCondition",
     "conditionEvaluator": "(conditionEvaluatorId=multipleValuesPropertyMatchConditionEvaluator)",
     "queryBuilderFilter": "(queryBuilderId=multipleValuesPropertyMatchConditionESQueryBuilder)",
-    "tags": [ "demographic", "userCondition" ],
+    "tags": [ "demographic", "profileCondition" ],
     "parameters": [
         {
             "id": "propertyName",

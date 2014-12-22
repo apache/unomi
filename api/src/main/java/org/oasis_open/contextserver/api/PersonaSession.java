@@ -8,7 +8,7 @@ public class PersonaSession extends Session {
     public PersonaSession() {
     }
 
-    public PersonaSession(String itemId, User user, Date timeStamp) {
-        super(itemId, user, timeStamp);
+    public PersonaSession(String itemId, Profile profile, Date timeStamp) {
+        super(itemId, profile, timeStamp);
     }
 }

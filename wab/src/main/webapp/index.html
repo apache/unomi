@@ -97,14 +97,14 @@
                     response.name;
 
             // update digitalData W3 Customer Experience Digital Data structure
-            digitalData.user[0].profiles[0].profileInfo.userName = response.name;
-            digitalData.user[0].profiles[0].profileInfo.email = response.email;
-            digitalData.user[0].profiles[0].profileInfo.gender = response.gender;
-            digitalData.user[0].profiles[0].profileInfo.firstName = response.first_name;
-            digitalData.user[0].profiles[0].profileInfo.lastName = response.last_name;
+            digitalData.profile[0].profiles[0].profileInfo.profileName = response.name;
+            digitalData.profile[0].profiles[0].profileInfo.email = response.email;
+            digitalData.profile[0].profiles[0].profileInfo.gender = response.gender;
+            digitalData.profile[0].profiles[0].profileInfo.firstName = response.first_name;
+            digitalData.profile[0].profiles[0].profileInfo.lastName = response.last_name;
 
             wemi.saveContext("/context.js", digitalData, function (xhr) {
-                console.log("User context updated successfully.")
+                console.log("Profile context updated successfully.")
             });
         });
     }

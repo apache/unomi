@@ -1,0 +1,21 @@
+<div class="perso">
+    <div class="block">
+        <div class="remove-condition">
+            <a href="#" ng-click="onRemove(parentValue,parentIndex)"><i class="icon-remove"></i></a>
+        </div>
+        <span translate>PROFILE_LABEL</span>
+        &nbsp;
+        <select ng-model="ref.parameterValues.propertyName"
+                ng-options="parameter.id as parameter.name | translate for parameter in getConditionParameterChoiceListValues(ref, 'propertyName')"
+                >
+        </select>
+        &nbsp;<span translate>IS_LABEL</span>&nbsp;
+        <select ng-model="ref.parameterValues.comparisonOperator"
+                ng-options="parameter.id as parameter.name | translate for parameter in getConditionParameterChoiceListValues(ref, 'comparisonOperator')"
+                >
+        </select>
+    &nbsp;
+        <input ng-model="ref.parameterValues.propertyValue" ng-if="ref.parameterValues.comparisonOperator != 'exists' && ref.parameterValues.comparisonOperator != 'missing'"
+               type="text"/>
+    </div>
+</div>

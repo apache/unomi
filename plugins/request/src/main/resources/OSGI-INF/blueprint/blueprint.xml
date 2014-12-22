@@ -14,23 +14,23 @@
 
     <!-- Action executors -->
 
-    <bean id="requestHeaderToUserPropertyActionImpl"
-          class="org.oasis_open.contextserver.plugins.request.actions.RequestHeaderToUserPropertyAction">
+    <bean id="requestHeaderToProfilePropertyActionImpl"
+          class="org.oasis_open.contextserver.plugins.request.actions.RequestHeaderToProfilePropertyAction">
     </bean>
-    <service id="requestHeaderToUserPropertyAction" ref="requestHeaderToUserPropertyActionImpl"
+    <service id="requestHeaderToProfilePropertyAction" ref="requestHeaderToProfilePropertyActionImpl"
              auto-export="interfaces">
         <service-properties>
-            <entry key="actionExecutorId" value="requestHeaderToUserProperty"/>
+            <entry key="actionExecutorId" value="requestHeaderToProfileProperty"/>
         </service-properties>
     </service>
 
-    <bean id="requestParameterToUserPropertyActionImpl"
-          class="org.oasis_open.contextserver.plugins.request.actions.RequestParameterToUserPropertyAction">
+    <bean id="requestParameterToProfilePropertyActionImpl"
+          class="org.oasis_open.contextserver.plugins.request.actions.RequestParameterToProfilePropertyAction">
     </bean>
-    <service id="RequestParameterToUserPropertyAction" ref="requestParameterToUserPropertyActionImpl"
+    <service id="RequestParameterToProfilePropertyAction" ref="requestParameterToProfilePropertyActionImpl"
              auto-export="interfaces">
         <service-properties>
-            <entry key="actionExecutorId" value="requestParameterToUserProperty"/>
+            <entry key="actionExecutorId" value="requestParameterToProfileProperty"/>
         </service-properties>
     </service>
 

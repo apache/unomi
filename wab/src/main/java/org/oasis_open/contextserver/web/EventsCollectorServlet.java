@@ -5,10 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.Persona;
 import org.oasis_open.contextserver.api.Session;
-import org.oasis_open.contextserver.api.User;
+import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.api.services.SegmentService;
-import org.oasis_open.contextserver.api.services.UserService;
+import org.oasis_open.contextserver.api.services.ProfileService;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.ops4j.pax.cdi.api.OsgiService;
 
@@ -38,7 +38,7 @@ public class EventsCollectorServlet extends HttpServlet {
 
     @Inject
     @OsgiService
-    private UserService userService;
+    private ProfileService profileService;
 
     @Inject
     @OsgiService
@@ -73,25 +73,25 @@ public class EventsCollectorServlet extends HttpServlet {
 
         HttpUtils.setupCORSHeaders(request, response);
 
-        User user = null;
+        Profile profile = null;
 
         String sessionId = request.getParameter("sessionId");
         if (sessionId == null) {
             return;
         }
 
-        Session session = userService.loadSession(sessionId, timestamp);
+        Session session = profileService.loadSession(sessionId, timestamp);
         if (session == null) {
             return;
         }
 
-        String userId = session.getUserId();
-        if (userId == null) {
+        String profileId = session.getProfileId();
+        if (profileId == null) {
             return;
         }
 
-        user = userService.load(userId);
-        if (user == null || user instanceof Persona) {
+        profile = profileService.load(profileId);
+        if (profile == null || profile instanceof Persona) {
             return;
         }
 
@@ -112,13 +112,13 @@ public class EventsCollectorServlet extends HttpServlet {
             if(event.getEventType() != null){
                 Event eventToSend;
                 if(event.getProperties() != null){
-                    eventToSend = new Event(event.getEventType(), session, user, event.getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp);
+                    eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp);
                 } else {
-                    eventToSend = new Event(event.getEventType(), session, user, event.getScope(), event.getSource(), event.getTarget(), timestamp);
+                    eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(), event.getTarget(), timestamp);
                 }
                 event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                 event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                log("Received event " + event.getEventType() + " for user=" + user.getId() + " session=" + session.getId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
+                log("Received event " + event.getEventType() + " for profile=" + profile.getId() + " session=" + session.getId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
                 boolean eventChanged = eventService.send(eventToSend);
                 changed = changed || eventChanged;
             }

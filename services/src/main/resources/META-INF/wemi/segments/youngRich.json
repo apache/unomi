@@ -14,7 +14,7 @@
                         "propertyValue": 25,
                         "comparisonOperator": "lessThan"
                     },
-                    "type": "userPropertyCondition"
+                    "type": "profilePropertyCondition"
                 },
                 {
                     "parameterValues": {
@@ -22,7 +22,7 @@
                         "propertyValue": 10000000,
                         "comparisonOperator": "greaterThan"
                     },
-                    "type": "userPropertyCondition"
+                    "type": "profilePropertyCondition"
                 }
             ]
         },

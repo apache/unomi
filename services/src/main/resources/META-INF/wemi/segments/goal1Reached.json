@@ -3,10 +3,10 @@
         "id": "goal1Reached",
         "name": "Goal 1 Reached",
         "scope": "ACMESPACE",
-        "description": "This segment includes all users that have reached goal 1"
+        "description": "This segment includes all profiles that have reached goal 1"
     },
     "condition" : {
-        "type": "userPropertyCondition",
+        "type": "profilePropertyCondition",
         "parameterValues": {
             "comparisonOperator": "equals",
             "propertyName": "properties.goal1",

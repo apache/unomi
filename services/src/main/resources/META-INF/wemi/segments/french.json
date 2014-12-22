@@ -3,7 +3,7 @@
         "id": "french",
         "name": "French",
         "scope": "ACMESPACE",
-        "description": "User accessed the fr home page"
+        "description": "Profile accessed the fr home page"
     },
     "condition": {
         "parameterValues": {
@@ -18,7 +18,7 @@
                             "type": "pageViewEventCondition"
                         }
                     },
-                    "type": "userEventCondition"
+                    "type": "profileEventCondition"
                 }
             ]
         },

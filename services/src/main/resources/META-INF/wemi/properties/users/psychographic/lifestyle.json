@@ -1,7 +1,7 @@
 {
     "id": "lifestyle",
     "type": "string",
-    "tags": ["psychographicUserProperties"],
+    "tags": ["psychographicProfileProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",

@@ -13,35 +13,35 @@
                         "propertyName": "properties.email",
                         "comparisonOperator": "exists"
                     },
-                    "type": "userPropertyCondition"
+                    "type": "profilePropertyCondition"
                 },
                 {
                     "parameterValues": {
                         "propertyName": "properties.phoneNumber",
                         "comparisonOperator": "exists"
                     },
-                    "type": "userPropertyCondition"
+                    "type": "profilePropertyCondition"
                 },
                 {
                     "parameterValues": {
                         "propertyName": "properties.facebookId",
                         "comparisonOperator": "exists"
                     },
-                    "type": "userPropertyCondition"
+                    "type": "profilePropertyCondition"
                 },
                 {
                     "parameterValues": {
                         "propertyName": "properties.twitterId",
                         "comparisonOperator": "exists"
                     },
-                    "type": "userPropertyCondition"
+                    "type": "profilePropertyCondition"
                 },
                 {
                     "parameterValues": {
                         "propertyName": "properties.linkedInId",
                         "comparisonOperator": "exists"
                     },
-                    "type": "userPropertyCondition"
+                    "type": "profilePropertyCondition"
                 }
             ]
         },

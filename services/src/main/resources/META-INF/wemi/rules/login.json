@@ -2,7 +2,7 @@
     "metadata": {
         "id": "login",
         "name": "Login",
-        "description": "Copy event properties to user properties on login"
+        "description": "Copy event properties to profile properties on login"
     },
     "condition": {
         "parameterValues": {
@@ -22,7 +22,7 @@
             "parameterValues": {
 
             },
-            "type": "allEventToUserPropertiesAction"
+            "type": "allEventToProfilePropertiesAction"
         },
         {
             "parameterValues": {

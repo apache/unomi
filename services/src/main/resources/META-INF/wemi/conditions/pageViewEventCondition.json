@@ -1,7 +1,7 @@
 {
     "id": "pageViewEventCondition",
     "queryBuilderFilter": "(queryBuilderId=pageViewEventConditionESQueryBuilder)",
-    "tags": [ "event", "eventCondition", "userEventCondition" ],
+    "tags": [ "event", "eventCondition", "profileEventCondition" ],
     "parameters": [
         {
             "id": "url",

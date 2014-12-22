@@ -1,7 +1,7 @@
 package org.oasis_open.contextserver.web;
 
 import org.oasis_open.contextserver.api.Persona;
-import org.oasis_open.contextserver.api.User;
+import org.oasis_open.contextserver.api.Profile;
 
 import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
@@ -97,19 +97,19 @@ public class HttpUtils {
         return baseRequestURL;
     }
 
-    public static void sendProfileCookie(User user, ServletResponse response, String profileIdCookieName, String personaIdCookieName) {
+    public static void sendProfileCookie(Profile profile, ServletResponse response, String profileIdCookieName, String personaIdCookieName) {
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-            if (user instanceof Persona) {
-                Cookie personaIdCookie = new Cookie(personaIdCookieName, user.getItemId());
+            if (profile instanceof Persona) {
+                Cookie personaIdCookie = new Cookie(personaIdCookieName, profile.getItemId());
                 personaIdCookie.setPath("/");
                 personaIdCookie.setMaxAge(cookieAgeInSeconds);
                 httpServletResponse.addCookie(personaIdCookie);
             } else {
-                Cookie visitorIdCookie = new Cookie(profileIdCookieName, user.getItemId());
-                visitorIdCookie.setPath("/");
-                visitorIdCookie.setMaxAge(cookieAgeInSeconds);
-                httpServletResponse.addCookie(visitorIdCookie);
+                Cookie profileIdCookie = new Cookie(profileIdCookieName, profile.getItemId());
+                profileIdCookie.setPath("/");
+                profileIdCookie.setMaxAge(cookieAgeInSeconds);
+                httpServletResponse.addCookie(profileIdCookie);
             }
         }
     }

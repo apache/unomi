@@ -12,7 +12,7 @@
     },
     "sessions": [ {
         "id": "51c8e9a8-3db6-41f8-9569-057c339e3017",
-        "userId": "nonUsVisitor",
+        "profileId": "nonUsVisitor",
         "properties": {
             "operatingSystemName": "OS X 10.9 Mavericks",
             "countryName": "Switzerland",

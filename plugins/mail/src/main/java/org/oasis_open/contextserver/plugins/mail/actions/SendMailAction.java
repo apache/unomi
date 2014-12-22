@@ -52,7 +52,7 @@ public class SendMailAction implements ActionExecutor {
         String template = (String) action.getParameterValues().get("template");
 
         ST stringTemplate = new ST(template);
-        stringTemplate.add("user", event.getUser());
+        stringTemplate.add("profile", event.getProfile());
         stringTemplate.add("event", event);
         // load your HTML email template
         String htmlEmailTemplate = stringTemplate.render();

@@ -20,7 +20,7 @@
           "propertyValue": "male",
           "comparisonOperator": "equals"
         },
-        "type": "userPropertyCondition"
+        "type": "profilePropertyCondition"
       },
       "value": 100
     },
@@ -38,7 +38,7 @@
                   "type": "pageViewEventCondition"
                 }
               },
-              "type": "userEventCondition"
+              "type": "profileEventCondition"
             }
           ]
         },

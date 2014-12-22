@@ -1,16 +1,16 @@
 {
-    "REQUESTHEADERTOUSERPROPERTYACTION_NAME_LABEL": "Copy a request header to user property",
-    "REQUESTHEADERTOUSERPROPERTYACTION_DESCRIPTION_LABEL": "Copies request header to a user property",
+    "REQUESTHEADERTOPROFILEPROPERTYACTION_NAME_LABEL": "Copy a request header to profile property",
+    "REQUESTHEADERTOPROFILEPROPERTYACTION_DESCRIPTION_LABEL": "Copies request header to a profile property",
 
-    "REQUESTPARAMETERTOUSERPROPERTYACTION_NAME_LABEL": "Copy a request parameter to user property",
-    "REQUESTPARAMETERTOUSERPROPERTYACTION_DESCRIPTION_LABEL": "Copies request parameter to a user property",
+    "REQUESTPARAMETERTOPROFILEPROPERTYACTION_NAME_LABEL": "Copy a request parameter to profile property",
+    "REQUESTPARAMETERTOPROFILEPROPERTYACTION_DESCRIPTION_LABEL": "Copies request parameter to a profile property",
 
     "SETREMOTEHOSTINFOACTION_NAME_LABEL": "Copy client host/location to session",
     "SETREMOTEHOSTINFOACTION_DESCRIPTION_LABEL": "Copies the client's host name or ip address into the session",
 
     "COPY_REQUEST_PARAMETER_LABEL": "Copy request parameter",
     "COPY_REQUEST_HEADER_LABEL" : "Copy request header",
-    "TO_USER_PROPERTY_LABEL": "to user property",
+    "TO_PROFILE_PROPERTY_LABEL": "to profile property",
     "COPY_REMOTE_IP_AND_LOCATION_LABEL": "Copy remote host ip/location to session",
 
     "SESSION_PROPERTIES_CITY_LABEL": "City",

@@ -19,7 +19,7 @@
             }
         },
         {
-            "type": "requestHeaderToUserPropertyAction",
+            "type": "requestHeaderToProfilePropertyAction",
             "parameterValues": {
                 "requestHeaderName": "User-Agent",
                 "sessionPropertyName": "userAgent"
@@ -28,7 +28,7 @@
         {
             "parameterValues": {
                 "setPropertyName": "previousVisit",
-                "setPropertyValue": "userProperty::lastVisit",
+                "setPropertyValue": "profileProperty::lastVisit",
                 "storeInSession": null
             },
             "type": "setPropertyAction"
@@ -44,7 +44,7 @@
         {
             "parameterValues": {
                 "setPropertyName": "nbOfVisits",
-                "setPropertyValue": "script::user.properties.?nbOfVisits != null ? (user.properties.nbOfVisits + 1) : 1",
+                "setPropertyValue": "script::profile.properties.?nbOfVisits != null ? (profile.properties.nbOfVisits + 1) : 1",
                 "storeInSession": false
             },
             "type": "setPropertyAction"

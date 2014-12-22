@@ -1,7 +1,0 @@
-{
-    "id": "evaluateUserSegmentsAction",
-    "serviceFilter": "(actionExecutorId=evaluateUserSegments)",
-    "tags": [ "event" ],
-    "parameters": [
-    ]
-}

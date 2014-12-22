@@ -1,7 +1,7 @@
 {
     "id": "brandLoyalty",
     "type": "string",
-    "tags": ["behavioralUserProperties"],
+    "tags": ["behavioralProfileProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "totally,mostly,not at all",
     "selectorId": "",

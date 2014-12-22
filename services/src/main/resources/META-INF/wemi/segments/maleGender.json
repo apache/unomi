@@ -11,6 +11,6 @@
             "propertyValue": "male",
             "comparisonOperator": "equals"
         },
-        "type": "userPropertyCondition"
+        "type": "profilePropertyCondition"
     }
 }

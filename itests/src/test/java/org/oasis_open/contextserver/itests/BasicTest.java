@@ -38,7 +38,7 @@ public class BasicTest extends BaseTest{
         // The underlying HTTP connection is still held by the response object
         // to allow the response content to be streamed directly from the network socket.
         // In order to ensure correct deallocation of system resources
-        // the user MUST call CloseableHttpResponse#close() from a finally clause.
+        // the profile MUST call CloseableHttpResponse#close() from a finally clause.
         // Please note that if response content is not fully consumed the underlying
         // connection cannot be safely re-used and will be shut down and discarded
         // by the connection manager.
@@ -74,7 +74,7 @@ public class BasicTest extends BaseTest{
             // validate context
             ContextResponse context = TestUtils.retrieveResourceFromResponse(response, ContextResponse.class);
             Assert.assertNotNull("Context should not be null", context);
-            Assert.assertNotNull("Context userId should not be null", context.getUserId());
+            Assert.assertNotNull("Context profileId should not be null", context.getProfileId());
             Assert.assertEquals("Context sessionId should be the same as the sessionId used to request the context", sessionId, context.getSessionId());
         } finally {
             response.close();

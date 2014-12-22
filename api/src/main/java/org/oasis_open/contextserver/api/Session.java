@@ -8,9 +8,9 @@ public class Session extends Item implements TimestampedItem {
 
     public static final String ITEM_TYPE = "session";
 
-    private String userId;
+    private String profileId;
 
-    private User user;
+    private Profile profile;
 
     private Map<String,Object> properties;
 
@@ -23,10 +23,10 @@ public class Session extends Item implements TimestampedItem {
     public Session() {
     }
 
-    public Session(String itemId, User user, Date timeStamp) {
+    public Session(String itemId, Profile profile, Date timeStamp) {
         super(itemId);
-        this.user = user;
-        this.userId = user.getId();
+        this.profile = profile;
+        this.profileId = profile.getId();
         properties = new HashMap<String,Object>();
         this.timeStamp = timeStamp;
     }
@@ -39,17 +39,17 @@ public class Session extends Item implements TimestampedItem {
         this.itemId = id;
     }
 
-    public String getUserId() {
-        return userId;
+    public String getProfileId() {
+        return profileId;
     }
 
-    public User getUser() {
-        return user;
+    public Profile getProfile() {
+        return profile;
     }
 
-    public void setUser(User user) {
-        this.userId = user.getId();
-        this.user = user;
+    public void setProfile(Profile profile) {
+        this.profileId = profile.getId();
+        this.profile = profile;
     }
 
     public void setProperty(String name, Object value) {

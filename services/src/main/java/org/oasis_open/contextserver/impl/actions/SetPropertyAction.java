@@ -33,8 +33,8 @@ public class SetPropertyAction implements ActionExecutor {
                 modified = true;
             }
         } else {
-            if (propertyValue != null && !propertyValue.equals(event.getUser().getProperty(propertyName))) {
-                event.getUser().setProperty(propertyName, propertyValue);
+            if (propertyValue != null && !propertyValue.equals(event.getProfile().getProperty(propertyName))) {
+                event.getProfile().setProperty(propertyName, propertyValue);
                 modified = true;
             }
         }

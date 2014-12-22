@@ -43,10 +43,10 @@ public class ActionExecutorDispatcher {
             if (value instanceof String) {
                 String s = (String) value;
                 try {
-                    if (s.startsWith("userProperty::")) {
-                        value = PropertyUtils.getProperty(event.getUser(), "properties." + StringUtils.substringAfter(s, "userProperty::"));
-                    } else if (s.startsWith("simpleUserProperty::")) {
-                        value = event.getUser().getProperty(StringUtils.substringAfter(s, "simpleUserProperty::"));
+                    if (s.startsWith("profileProperty::")) {
+                        value = PropertyUtils.getProperty(event.getProfile(), "properties." + StringUtils.substringAfter(s, "profileProperty::"));
+                    } else if (s.startsWith("simpleProfileProperty::")) {
+                        value = event.getProfile().getProperty(StringUtils.substringAfter(s, "simpleProfileProperty::"));
                     } else if (s.startsWith("sessionProperty::")) {
                         value = PropertyUtils.getProperty(event.getSession(), "properties." + StringUtils.substringAfter(s, "sessionProperty::"));
                     } else if (s.startsWith("simpleSessionProperty::")) {
@@ -59,7 +59,7 @@ public class ActionExecutorDispatcher {
                         Map<String, Object> ctx = new HashMap<String, Object>();
                         ctx.put("event", event);
                         ctx.put("session", event.getSession());
-                        ctx.put("user", event.getUser());
+                        ctx.put("profile", event.getProfile());
                         value = MVEL.eval(StringUtils.substringAfter(s, "script::"), ctx);
                     }
                 } catch (UnsupportedOperationException e) {
@@ -80,7 +80,7 @@ public class ActionExecutorDispatcher {
             Object value = entry.getValue();
             if (value instanceof String) {
                 String s = (String) value;
-                if (s.startsWith("eventProperty::") || s.startsWith("userProperty::") || s.startsWith("sessionProperty::") || s.startsWith("script::")) {
+                if (s.startsWith("eventProperty::") || s.startsWith("profileProperty::") || s.startsWith("sessionProperty::") || s.startsWith("script::")) {
                     return true;
                 }
             } else if (value instanceof Map) {

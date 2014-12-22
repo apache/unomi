@@ -1,7 +1,7 @@
 {
     "id": "city",
     "type": "string",
-    "tags": ["geographicUserProperties"],
+    "tags": ["geographicProfileProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",

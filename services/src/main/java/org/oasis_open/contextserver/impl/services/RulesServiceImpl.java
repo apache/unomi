@@ -36,7 +36,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     private DefinitionsService definitionsService;
 
-    private UserService userService;
+    private ProfileService profileService;
 
     private EventService eventService;
 
@@ -54,8 +54,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         this.definitionsService = definitionsService;
     }
 
-    public void setUserService(UserService userService) {
-        this.userService = userService;
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
     }
 
     public void setEventService(EventService eventService) {
@@ -173,7 +173,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         List<String> matchingQueries = persistenceService.getMatchingSavedQueries(event);
 
         Boolean hasEventAlreadyBeenRaisedForSession = null;
-        Boolean hasEventAlreadyBeenRaisedForUser = null;
+        Boolean hasEventAlreadyBeenRaisedForProfile = null;
 
         if (matchingQueries.size() > 0) {
             for (String matchingQuery : matchingQueries) {
@@ -184,9 +184,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                         matchingQuery = StringUtils.substringAfter(matchingQuery, "_");
                         Rule rule = getRule(scope, matchingQuery);
                         if (rule != null) {
-                            if (rule.isRaiseEventOnlyOnceForUser()) {
-                                hasEventAlreadyBeenRaisedForUser = hasEventAlreadyBeenRaisedForUser != null ? hasEventAlreadyBeenRaisedForUser : eventService.hasEventAlreadyBeenRaised(event, false);
-                                if (hasEventAlreadyBeenRaisedForUser) {
+                            if (rule.isRaiseEventOnlyOnceForProfile()) {
+                                hasEventAlreadyBeenRaisedForProfile = hasEventAlreadyBeenRaisedForProfile != null ? hasEventAlreadyBeenRaisedForProfile : eventService.hasEventAlreadyBeenRaised(event, false);
+                                if (hasEventAlreadyBeenRaisedForProfile) {
                                     continue;
                                 }
                             } else if (rule.isRaiseEventOnlyOnceForSession()) {
@@ -196,12 +196,12 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                                 }
                             }
 
-                            Condition userCondition = extractConditionByTag(rule.getCondition(), "userCondition");
-                            if (userCondition != null && !userService.matchCondition(userCondition, event.getUser(), event.getSession())) {
+                            Condition profileCondition = extractConditionByTag(rule.getCondition(), "profileCondition");
+                            if (profileCondition != null && !profileService.matchCondition(profileCondition, event.getProfile(), event.getSession())) {
                                 continue;
                             }
                             Condition sessionCondition = extractConditionByTag(rule.getCondition(), "sessionCondition");
-                            if (sessionCondition != null && !userService.matchCondition(sessionCondition, event.getUser(), event.getSession())) {
+                            if (sessionCondition != null && !profileService.matchCondition(sessionCondition, event.getProfile(), event.getSession())) {
                                 continue;
                             }
 
@@ -229,7 +229,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 changed |= actionExecutorDispatcher.execute(action, event);
             }
 
-            Event ruleFired = new Event("ruleFired", event.getSession(), event.getUser(), event.getScope(), event.getSource(), new EventTarget(rule.getItemId(), Rule.ITEM_TYPE), event.getTimeStamp());
+            Event ruleFired = new Event("ruleFired", event.getSession(), event.getProfile(), event.getScope(), event.getSource(), new EventTarget(rule.getItemId(), Rule.ITEM_TYPE), event.getTimeStamp());
             ruleFired.getAttributes().putAll(event.getAttributes());
             ruleFired.setPersistent(false);
             eventService.send(ruleFired);

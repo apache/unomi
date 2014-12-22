@@ -5,7 +5,7 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.EventListenerService;
 import org.oasis_open.contextserver.api.services.EventService;
-import org.oasis_open.contextserver.api.services.UserService;
+import org.oasis_open.contextserver.api.services.ProfileService;
 import org.oasis_open.contextserver.persistence.spi.Aggregate;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
 import org.osgi.framework.BundleContext;
@@ -22,7 +22,7 @@ public class EventServiceImpl implements EventService {
 
     private PersistenceService persistenceService;
 
-    private UserService userService;
+    private ProfileService profileService;
 
     private DefinitionsService definitionsService;
 
@@ -38,8 +38,8 @@ public class EventServiceImpl implements EventService {
         this.persistenceService = persistenceService;
     }
 
-    public void setUserService(UserService userService) {
-        this.userService = userService;
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
     }
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
@@ -57,12 +57,12 @@ public class EventServiceImpl implements EventService {
 
         boolean changed = false;
 
-        User user = event.getUser();
+        Profile profile = event.getProfile();
         final Session session = event.getSession();
 
-        if (user != null) {
-            Map<String,Object> previousProperties = new HashMap<String, Object>(user.getProperties());
-            Set<String> previousSegments = new HashSet<String>(user.getSegments());
+        if (profile != null) {
+            Map<String,Object> previousProperties = new HashMap<String, Object>(profile.getProperties());
+            Set<String> previousSegments = new HashSet<String>(profile.getSegments());
 
             for (EventListenerService eventListenerService : eventListeners) {
                 if (eventListenerService.canHandle(event)) {
@@ -70,23 +70,23 @@ public class EventServiceImpl implements EventService {
                 }
             }
 
-            if (session.getUser() != null && !session.getUser().getId().equals(user.getId())) {
-                // this can happen when users are merged for example.
-                user = session.getUser();
+            if (session.getProfile() != null && !session.getProfile().getId().equals(profile.getId())) {
+                // this can happen when profiles are merged for example.
+                profile = session.getProfile();
             }
 
-            if (changed && (!user.getProperties().equals(previousProperties) || !user.getSegments().equals(previousSegments))) {
-                Event userUpdated = new Event("userUpdated", session, user, event.getScope(), event.getSource(), new EventTarget(user.getId(), User.ITEM_TYPE), event.getTimeStamp());
-                userUpdated.setPersistent(false);
-                userUpdated.getAttributes().putAll(event.getAttributes());
-                send(userUpdated);
+            if (changed && (!profile.getProperties().equals(previousProperties) || !profile.getSegments().equals(previousSegments))) {
+                Event profileUpdated = new Event("profileUpdated", session, profile, event.getScope(), event.getSource(), new EventTarget(profile.getId(), Profile.ITEM_TYPE), event.getTimeStamp());
+                profileUpdated.setPersistent(false);
+                profileUpdated.getAttributes().putAll(event.getAttributes());
+                send(profileUpdated);
 
-                userService.save(user);
+                profileService.save(profile);
             }
 
             if (session != null) {
                 session.setLastEventDate(event.getTimeStamp());
-                userService.saveSession(session);
+                profileService.saveSession(session);
             }
         }
         return changed;
@@ -112,16 +112,16 @@ public class EventServiceImpl implements EventService {
     public boolean hasEventAlreadyBeenRaised(Event event, boolean session) {
         List<Condition> conditions = new ArrayList<Condition>();
 
-        Condition userIdCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        Condition profileIdCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
         if (session) {
-            userIdCondition.getParameterValues().put("propertyName", "sessionId");
-            userIdCondition.getParameterValues().put("propertyValue", event.getSessionId());
+            profileIdCondition.getParameterValues().put("propertyName", "sessionId");
+            profileIdCondition.getParameterValues().put("propertyValue", event.getSessionId());
         } else {
-            userIdCondition.getParameterValues().put("propertyName", "userId");
-            userIdCondition.getParameterValues().put("propertyValue", event.getUserId());
+            profileIdCondition.getParameterValues().put("propertyName", "profileId");
+            profileIdCondition.getParameterValues().put("propertyValue", event.getProfileId());
         }
-        userIdCondition.getParameterValues().put("comparisonOperator", "equals");
-        conditions.add(userIdCondition);
+        profileIdCondition.getParameterValues().put("comparisonOperator", "equals");
+        conditions.add(profileIdCondition);
 
         Condition condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
         condition.getParameterValues().put("propertyName", "eventType");

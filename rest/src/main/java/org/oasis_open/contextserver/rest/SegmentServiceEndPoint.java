@@ -4,7 +4,7 @@ import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.segments.Segment;
-import org.oasis_open.contextserver.api.User;
+import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.services.SegmentService;
 
 import javax.jws.WebMethod;
@@ -37,7 +37,7 @@ public class SegmentServiceEndPoint {
 
     @GET
     @Path("/{scope}/{segmentID}/match")
-    public PartialList<User> getMatchingIndividuals(@PathParam("scope") String scope, @PathParam("segmentID") String segmentId, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
+    public PartialList<Profile> getMatchingIndividuals(@PathParam("scope") String scope, @PathParam("segmentID") String segmentId, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
         return segmentService.getMatchingIndividuals(scope, segmentId, offset, size, sortBy);
     }
 
@@ -48,9 +48,9 @@ public class SegmentServiceEndPoint {
     }
 
     @GET
-    @Path("/{scope}/{segmentID}/match/{user}")
-    public Boolean isUserInSegment(@PathParam("user") User user, @PathParam("scope") String scope, @PathParam("segmentID") String segmentId) {
-        return segmentService.isUserInSegment(user, scope, segmentId);
+    @Path("/{scope}/{segmentID}/match/{profile}")
+    public Boolean isProfileInSegment(@PathParam("profile") Profile profile, @PathParam("scope") String scope, @PathParam("segmentID") String segmentId) {
+        return segmentService.isProfileInSegment(profile, scope, segmentId);
     }
 
     @GET

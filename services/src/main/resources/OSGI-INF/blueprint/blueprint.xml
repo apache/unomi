@@ -17,7 +17,7 @@
 
     <bean id="eventServiceImpl" class="org.oasis_open.contextserver.impl.services.EventServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
-        <property name="userService" ref="userServiceImpl"/>
+        <property name="profileService" ref="profileServiceImpl"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="predefinedEventTypeIds">
@@ -26,7 +26,7 @@
                 <value>login</value>
                 <value>sessionCreated</value>
                 <value>facebookLogin</value>
-                <value>userUpdated</value>
+                <value>profileUpdated</value>
             </set>
         </property>
     </bean>
@@ -50,7 +50,7 @@
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
-        <property name="userService" ref="userServiceImpl"/>
+        <property name="profileService" ref="profileServiceImpl"/>
         <property name="eventService" ref="eventServiceImpl"/>
         <property name="actionExecutorDispatcher" ref="actionExecutorDispatcherImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
@@ -66,13 +66,13 @@
     </bean>
     <service id="segmentService" ref="segmentServiceImpl" auto-export="interfaces"/>
 
-    <bean id="userServiceImpl" class="org.oasis_open.contextserver.impl.services.UserServiceImpl"
+    <bean id="profileServiceImpl" class="org.oasis_open.contextserver.impl.services.ProfileServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="userService" ref="userServiceImpl" auto-export="interfaces"/>
+    <service id="profileService" ref="profileServiceImpl" auto-export="interfaces"/>
 
     <bean id="queryServiceImpl" class="org.oasis_open.contextserver.impl.services.QueryServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
@@ -104,8 +104,8 @@
         <service-properties>
             <entry key="initializerId" value="propertyType"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.conditions.initializers.UserPropertyTypeChoiceListInitializer">
-            <property name="userService" ref="userServiceImpl"/>
+        <bean class="org.oasis_open.contextserver.impl.conditions.initializers.ProfilePropertyTypeChoiceListInitializer">
+            <property name="profileService" ref="profileServiceImpl"/>
         </bean>
     </service>
 
@@ -131,18 +131,18 @@
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="actionExecutorId" value="allEventToUserProperties"/>
+            <entry key="actionExecutorId" value="allEventToProfileProperties"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.actions.AllEventToUserPropertiesAction">
-            <property name="userService" ref="userServiceImpl"/>
+        <bean class="org.oasis_open.contextserver.impl.actions.AllEventToProfilePropertiesAction">
+            <property name="profileService" ref="profileServiceImpl"/>
         </bean>
     </service>
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="actionExecutorId" value="eventToUserProperty"/>
+            <entry key="actionExecutorId" value="eventToProfileProperty"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.actions.EventToUserPropertyAction"/>
+        <bean class="org.oasis_open.contextserver.impl.actions.EventToProfilePropertyAction"/>
     </service>
 
     <service auto-export="interfaces">
@@ -154,9 +154,9 @@
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="actionExecutorId" value="evaluateUserSegments"/>
+            <entry key="actionExecutorId" value="evaluateProfileSegments"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.actions.EvaluateUserSegmentsAction">
+        <bean class="org.oasis_open.contextserver.impl.actions.EvaluateProfileSegmentsAction">
             <property name="segmentService" ref="segmentServiceImpl"/>
         </bean>
     </service>
@@ -192,7 +192,7 @@
             <entry key="actionExecutorId" value="mergeProfilesOnProperty"/>
         </service-properties>
         <bean class="org.oasis_open.contextserver.impl.actions.MergeProfilesOnPropertyAction">
-            <property name="userService" ref="userServiceImpl"/>
+            <property name="profileService" ref="profileServiceImpl"/>
         </bean>
     </service>
 

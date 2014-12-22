@@ -1,0 +1,23 @@
+{
+    "metadata" : {
+        "id": "evaluateProfileSegments",
+        "name": "Evaluate segments",
+        "description" : "Evaluate segments when a profile is modified",
+        "readOnly":true
+    },
+
+    "condition" : {
+        "type": "profileUpdatedEventCondition",
+        "parameterValues": {
+        }
+    },
+
+    "actions" : [
+        {
+            "type": "evaluateProfileSegmentsAction",
+            "parameterValues": {
+            }
+        }
+    ]
+
+}

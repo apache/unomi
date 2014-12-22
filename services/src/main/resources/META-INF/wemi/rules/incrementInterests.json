@@ -1,11 +1,11 @@
 {
     "metadata" : {
         "id": "incrementInterests",
-        "name": "Increment user interests",
+        "name": "Increment profile interests",
         "description" : "Evaluate segments when a profile is modified"
     },
 
-    "raiseEventOnlyOnceForUser":true,
+    "raiseEventOnlyOnceForProfile":true,
 
     "condition" : {
         "parameterValues": {

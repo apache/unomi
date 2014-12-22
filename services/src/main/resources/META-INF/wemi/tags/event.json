@@ -1,4 +1,4 @@
 {
     "id": "event",
-    "parent": "userTags"
+    "parent": "profileTags"
 }

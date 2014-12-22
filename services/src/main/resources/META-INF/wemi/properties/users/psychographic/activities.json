@@ -1,7 +1,7 @@
 {
     "id": "activities",
     "type": "string",
-    "tags": ["psychographicUserProperties"],
+    "tags": ["psychographicProfileProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",

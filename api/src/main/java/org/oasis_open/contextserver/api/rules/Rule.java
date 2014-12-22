@@ -20,7 +20,7 @@ public class Rule extends Item {
 
     private List<Action> actions;
 
-    private boolean raiseEventOnlyOnceForUser = false;
+    private boolean raiseEventOnlyOnceForProfile = false;
 
     private boolean raiseEventOnlyOnceForSession = false;
 
@@ -57,12 +57,12 @@ public class Rule extends Item {
         this.actions = actions;
     }
 
-    public boolean isRaiseEventOnlyOnceForUser() {
-        return raiseEventOnlyOnceForUser;
+    public boolean isRaiseEventOnlyOnceForProfile() {
+        return raiseEventOnlyOnceForProfile;
     }
 
-    public void setRaiseEventOnlyOnceForUser(boolean raiseEventOnlyOnceForUser) {
-        this.raiseEventOnlyOnceForUser = raiseEventOnlyOnceForUser;
+    public void setRaiseEventOnlyOnceForProfile(boolean raiseEventOnlyOnceForProfile) {
+        this.raiseEventOnlyOnceForProfile = raiseEventOnlyOnceForProfile;
     }
 
     public boolean isRaiseEventOnlyOnceForSession() {

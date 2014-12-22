@@ -1,0 +1,33 @@
+{
+    "id": "requestParameterToProfilePropertyAction",
+    "serviceFilter": "(actionExecutorId=requestParameterToProfileProperty)",
+    "tags": [ "event" ],
+    "template": "/plugins/org.oasis-open.contextserver-plugins-request/actions/requestParameterToProfilePropertyAction.html",
+    "resourceBundle": "/plugins/org.oasis-open.contextserver-plugins-request/messages",
+    "parameters": [
+        {
+            "id": "requestParameterName",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
+        },
+        {
+            "id": "profilePropertyName",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": "(initializerId=propertyType)"
+        },
+        {
+            "id": "sessionPropertyName",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
+        },
+        {
+            "id": "storeAsList",
+            "type": "boolean",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
+        }
+    ]
+}

@@ -7,26 +7,26 @@ import java.util.Set;
 
 public class ContextResponse implements Serializable {
 
-    private String userId;
+    private String profileId;
 
     private String sessionId;
 
-    private Map<String, Object> userProperties;
+    private Map<String, Object> profileProperties;
 
     private Map<String, Object> sessionProperties;
 
-    private Set<String> userSegments;
+    private Set<String> profileSegments;
 
     private Map<String, Boolean> filteringResults;
 
     private List<String> formNames;
 
-    public String getUserId() {
-        return userId;
+    public String getProfileId() {
+        return profileId;
     }
 
-    public void setUserId(String userId) {
-        this.userId = userId;
+    public void setProfileId(String profileId) {
+        this.profileId = profileId;
     }
 
     public String getSessionId() {
@@ -37,12 +37,12 @@ public class ContextResponse implements Serializable {
         this.sessionId = sessionId;
     }
 
-    public Map<String, Object> getUserProperties() {
-        return userProperties;
+    public Map<String, Object> getProfileProperties() {
+        return profileProperties;
     }
 
-    public void setUserProperties(Map<String, Object> userProperties) {
-        this.userProperties = userProperties;
+    public void setProfileProperties(Map<String, Object> profileProperties) {
+        this.profileProperties = profileProperties;
     }
 
     public Map<String, Object> getSessionProperties() {
@@ -53,12 +53,12 @@ public class ContextResponse implements Serializable {
         this.sessionProperties = sessionProperties;
     }
 
-    public Set<String> getUserSegments() {
-        return userSegments;
+    public Set<String> getProfileSegments() {
+        return profileSegments;
     }
 
-    public void setUserSegments(Set<String> userSegments) {
-        this.userSegments = userSegments;
+    public void setProfileSegments(Set<String> profileSegments) {
+        this.profileSegments = profileSegments;
     }
 
     public Map<String, Boolean> getFilteringResults() {

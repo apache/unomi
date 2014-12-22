@@ -73,6 +73,7 @@ public class DefinitionsServiceEndPoint {
         for (String s : tagsArray) {
             results.addAll(definitionsService.getConditionTypesByTag(definitionsService.getTag(s), recursive));
         }
+        generateConditionChoiceListValues(results, null);
         return results;
     }
 

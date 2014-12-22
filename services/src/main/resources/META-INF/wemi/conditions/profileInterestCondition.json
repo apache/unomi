@@ -1,0 +1,19 @@
+{
+    "id": "profileInterestCondition",
+    "queryBuilderFilter": "(queryBuilderId=profileInterestConditionESQueryBuilder)",
+    "tags": [ "demographic", "profileCondition" ],
+    "parameters": [
+        {
+            "id": "propertyName",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
+        },
+        {
+            "id": "propertyValue",
+            "type": "integer",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
+        }
+    ]
+}

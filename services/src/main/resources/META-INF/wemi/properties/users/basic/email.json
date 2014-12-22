@@ -1,7 +1,7 @@
 {
     "id": "email",
     "type": "email",
-    "tags": ["basicUserProperties"],
+    "tags": ["basicProfileProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",

@@ -100,7 +100,7 @@
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
-    <jaxrs:server address="/wemi/users" id="restUserService">
+    <jaxrs:server address="/wemi/profiles" id="restProfileService">
         <jaxrs:providers>
             <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter"/>
@@ -108,7 +108,7 @@
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
-            <ref component-id="userServiceEndPoint"/>
+            <ref component-id="profileServiceEndPoint"/>
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
@@ -140,7 +140,7 @@
     <reference id="definitionsService" interface="org.oasis_open.contextserver.api.services.DefinitionsService"/>
     <reference id="goalsService" interface="org.oasis_open.contextserver.api.services.GoalsService"/>
     <reference id="rulesService" interface="org.oasis_open.contextserver.api.services.RulesService"/>
-    <reference id="userService" interface="org.oasis_open.contextserver.api.services.UserService"/>
+    <reference id="profileService" interface="org.oasis_open.contextserver.api.services.ProfileService"/>
     <reference id="clusterService" interface="org.oasis_open.contextserver.api.services.ClusterService"/>
     <reference id="queryService" interface="org.oasis_open.contextserver.api.services.QueryService"/>
 
@@ -165,8 +165,8 @@
         <property name="rulesService" ref="rulesService"/>
     </bean>
 
-    <bean id="userServiceEndPoint" class="org.oasis_open.contextserver.rest.UserServiceEndPoint">
-        <property name="userService" ref="userService"/>
+    <bean id="profileServiceEndPoint" class="org.oasis_open.contextserver.rest.ProfileServiceEndPoint">
+        <property name="profileService" ref="profileService"/>
     </bean>
 
     <bean id="clusterServiceEndPoint" class="org.oasis_open.contextserver.rest.ClusterServiceEndPoint">

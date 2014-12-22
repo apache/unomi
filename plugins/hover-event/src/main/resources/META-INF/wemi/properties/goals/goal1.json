@@ -1,7 +1,7 @@
 {
     "id": "goal1",
     "type": "string",
-    "tags": [ "goalsUserProperties"],
+    "tags": [ "goalsProfileProperties"],
     "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
