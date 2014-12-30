@@ -70,4 +70,13 @@ public class ScoringServiceEndPoint {
         segmentService.removeScoringDefinition(scope, scoringId);
     }
 
+    @GET
+    @Path("/resetQueries")
+    public void resetQueries() {
+        for (Metadata metadata : segmentService.getScoringMetadatas()) {
+            Scoring s = segmentService.getScoringDefinition(metadata.getScope(), metadata.getId());
+            segmentService.setScoringDefinition(s);
+        }
+    }
+
 }

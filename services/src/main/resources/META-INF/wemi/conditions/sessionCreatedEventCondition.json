@@ -1,11 +1,9 @@
 {
     "id": "sessionCreatedEventCondition",
     "parentCondition" : {
-        "type": "eventPropertyCondition",
+        "type": "eventTypeCondition",
         "parameterValues": {
-            "propertyName": "eventType",
-            "propertyValue": "sessionCreated",
-            "comparisonOperator": "equals"
+            "eventTypeId": "sessionCreated"
         }
     },
     "tags": [ "event", "eventCondition" ],

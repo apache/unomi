@@ -1,11 +1,9 @@
 {
     "id": "loginEventCondition",
     "parentCondition" : {
-        "type": "eventPropertyCondition",
+        "type": "eventTypeCondition",
         "parameterValues": {
-            "propertyName": "eventType",
-            "propertyValue": "login",
-            "comparisonOperator": "equals"
+            "eventTypeId": "login"
         }
     },
     "tags": [ "event", "eventCondition" ],

@@ -11,7 +11,7 @@
                     "parameterValues": {
                         "eventTypeId": "facebookLogin"
                     },
-                    "type": "eventCondition"
+                    "type": "eventTypeCondition"
                 }
             ]
         },

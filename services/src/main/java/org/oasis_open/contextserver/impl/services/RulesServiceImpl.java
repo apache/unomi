@@ -172,6 +172,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
         List<String> matchingQueries = persistenceService.getMatchingSavedQueries(event);
 
+        logger.info("Found matching : " + matchingQueries);
+
         Boolean hasEventAlreadyBeenRaisedForSession = null;
         Boolean hasEventAlreadyBeenRaisedForProfile = null;
 

@@ -41,10 +41,7 @@ import org.elasticsearch.search.aggregations.bucket.global.Global;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogram;
 import org.elasticsearch.search.aggregations.bucket.missing.MissingBuilder;
 import org.elasticsearch.search.sort.SortOrder;
-import org.oasis_open.contextserver.api.ClusterNode;
-import org.oasis_open.contextserver.api.Item;
-import org.oasis_open.contextserver.api.PartialList;
-import org.oasis_open.contextserver.api.TimestampedItem;
+import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.ClusterService;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
@@ -419,6 +416,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) {
                 //Index the query = register it in the percolator
                 try {
+                    logger.info("Saving query : " + queryName);
                     client.prepareIndex(indexName, ".percolator", queryName)
                             .setSource(query)
                             .setRefresh(true) // Needed when the query shall be available immediately

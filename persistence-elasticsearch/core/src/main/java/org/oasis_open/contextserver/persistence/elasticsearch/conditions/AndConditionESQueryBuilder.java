@@ -23,6 +23,11 @@ public class AndConditionESQueryBuilder implements ConditionESQueryBuilder {
         for (Object sub : conditions) {
             l.add(dispatcher.buildFilter((Condition) sub, context));
         }
+
+        if (l.size() == 1) {
+            return l.get(0);
+        }
+
         return FilterBuilders.andFilter(l.toArray(new FilterBuilder[l.size()]));
     }
 }

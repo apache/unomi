@@ -1,8 +1,8 @@
 package org.oasis_open.contextserver.persistence.elasticsearch.conditions;
 
 import org.apache.commons.lang3.StringUtils;
-import org.elasticsearch.common.mvel2.MVEL;
 import org.oasis_open.contextserver.api.conditions.Condition;
+import org.mvel2.MVEL;
 
 import java.util.HashMap;
 import java.util.Map;

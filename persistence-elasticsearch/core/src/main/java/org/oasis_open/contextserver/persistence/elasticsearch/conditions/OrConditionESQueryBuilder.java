@@ -23,6 +23,11 @@ public class OrConditionESQueryBuilder implements ConditionESQueryBuilder {
         for (Object sub : conditions) {
             l.add(dispatcher.buildFilter((Condition) sub, context));
         }
+
+        if (l.size() == 1) {
+            return l.get(0);
+        }
+
         return FilterBuilders.orFilter(l.toArray(new FilterBuilder[l.size()]));
     }
 }

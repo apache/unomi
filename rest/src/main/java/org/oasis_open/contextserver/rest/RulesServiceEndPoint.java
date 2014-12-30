@@ -71,4 +71,14 @@ public class RulesServiceEndPoint {
         rulesService.removeRule(scope, ruleId);
     }
 
+
+    @GET
+    @Path("/resetQueries")
+    public void resetQueries() {
+        for (Metadata metadata : rulesService.getRuleMetadatas()) {
+            Rule r = rulesService.getRule(metadata.getScope(), metadata.getId());
+            rulesService.setRule(r);
+        }
+    }
+
 }

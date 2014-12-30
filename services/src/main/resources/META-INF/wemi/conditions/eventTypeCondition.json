@@ -1,5 +1,5 @@
 {
-    "id": "eventCondition",
+    "id": "eventTypeCondition",
     "tags": [ "event", "eventCondition" ],
     "parentCondition" : {
         "type": "eventPropertyCondition",

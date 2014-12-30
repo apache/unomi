@@ -90,4 +90,13 @@ public class SegmentServiceEndPoint {
         segmentService.removeSegmentDefinition(scope, segmentId);
     }
 
+    @GET
+    @Path("/resetQueries")
+    public void resetQueries() {
+        for (Metadata metadata : segmentService.getSegmentMetadatas()) {
+            Segment s = segmentService.getSegmentDefinition(metadata.getScope(), metadata.getId());
+            segmentService.setSegmentDefinition(s);
+        }
+    }
+
 }
