@@ -5,7 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
+import org.oasis_open.contextserver.api.rules.Rule;
 import org.oasis_open.contextserver.api.services.EventService;
+import org.oasis_open.contextserver.api.services.RulesService;
 import org.oasis_open.contextserver.api.services.SegmentService;
 import org.oasis_open.contextserver.api.services.ProfileService;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
@@ -32,14 +34,22 @@ public class ContextServlet extends HttpServlet {
 
     public static final String BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/base.js";
     public static final String IMPERSONATE_BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/impersonateBase.js";
+
     @Inject
     @OsgiService
-    ProfileService profileService;
+    private ProfileService profileService;
+
     @Inject
     @OsgiService
-    SegmentService segmentService;
+    private SegmentService segmentService;
+
+    @Inject
+    @OsgiService
+    private RulesService rulesService;
+
     private String profileIdCookieName = "context-profile-id";
     private String personaIdCookieName = "context-persona-id";
+
     @Inject
     @OsgiService
     private EventService eventService;
@@ -280,8 +290,17 @@ public class ContextServlet extends HttpServlet {
             }
         }
 
-        // Todo get form names from applicable rules
-        data.setFormNames(Arrays.asList("searchForm"));
+        //todo Find a better way to get all forms and keep the list in cache
+        List<String> formNames = new ArrayList<String>();
+        for (Metadata metadata : rulesService.getRuleMetadatas()) {
+            Rule r = rulesService.getRule(metadata.getScope(), metadata.getId());
+            Condition condition = r.getCondition();
+            if (condition != null && condition.getConditionTypeId().equals("formEventCondition")) {
+                formNames.add((String) condition.getParameterValues().get("formId"));
+            }
+        }
+
+        data.setFormNames(formNames);
     }
 
     private Profile createNewProfile(String existingProfileId, ServletResponse response, Date timestamp) {

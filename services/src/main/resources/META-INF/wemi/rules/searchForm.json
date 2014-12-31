@@ -8,24 +8,9 @@
 
     "condition" : {
         "parameterValues": {
-            "subConditions": [
-                {
-                    "type": "eventCondition",
-                    "parameterValues": {
-                        "eventTypeId":"form"
-                    }
-                },
-                {
-                    "type": "eventPropertyCondition",
-                    "parameterValues": {
-                        "propertyName":"target.id",
-                        "propertyValue":"searchForm",
-                        "comparisonOperator":"equals"
-                    }
-                }
-            ]
+            "formId":"searchForm"
         },
-        "type": "andCondition"
+        "type": "formEventCondition"
     },
 
     "actions" : [

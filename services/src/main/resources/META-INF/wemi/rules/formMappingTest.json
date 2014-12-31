@@ -1,0 +1,29 @@
+{
+  "metadata" : {
+    "id": "formMappingTest",
+    "name": "Form mapping test",
+    "description" : "Form mappong test"
+  },
+
+  "condition" : {
+    "parameterValues": {
+      "formId":"testForm"
+    },
+    "type": "formEventCondition"
+  },
+
+  "actions": [
+    {
+      "parameterValues": {
+      },
+      "type": "allEventToProfilePropertiesAction"
+    },
+    {
+      "parameterValues": {
+        "mergeProfilePropertyName": "email"
+      },
+      "type": "mergeProfilesOnPropertyAction"
+    }
+  ]
+
+}

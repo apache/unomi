@@ -1,0 +1,33 @@
+{
+  "id": "formEventCondition",
+  "parentCondition" : {
+    "type": "andCondition",
+    "parameterValues": {
+      "subConditions": [
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId":"form"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName":"target.id",
+            "propertyValue":"parameter::formId",
+            "comparisonOperator":"equals"
+          }
+        }
+      ]
+    }
+  },
+  "tags": [ "event", "eventCondition", "profileEventCondition" ],
+  "parameters": [
+    {
+      "id": "formId",
+      "type": "String",
+      "multivalued": false,
+      "choicelistInitializerFilter": ""
+    }
+  ]
+}
