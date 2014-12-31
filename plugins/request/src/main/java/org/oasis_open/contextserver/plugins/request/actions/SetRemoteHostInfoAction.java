@@ -98,12 +98,12 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         final URL url;
         InputStream inputStream = null;
         try {
-            url = new URL("http://freegeoip.net/json/" + remoteAddr);
+            url = new URL("http://www.telize.com/geoip/" + remoteAddr);
             inputStream = url.openConnection().getInputStream();
             JsonReader reader = Json.createReader(inputStream);
             JsonObject location = (JsonObject) reader.read();
             session.setProperty("countryCode", location.getString("country_code"));
-            session.setProperty("countryName", location.getString("country_name"));
+            session.setProperty("countryName", location.getString("country"));
             session.setProperty("city", location.getString("city"));
 
             Map<String, Double> locationMap = new HashMap<String, Double>();
