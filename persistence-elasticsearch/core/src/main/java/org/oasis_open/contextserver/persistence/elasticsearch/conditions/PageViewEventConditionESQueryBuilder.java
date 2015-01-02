@@ -22,6 +22,12 @@ public class PageViewEventConditionESQueryBuilder implements ConditionESQueryBui
         if (condition.getParameterValues().get("url") != null && !"".equals(condition.getParameterValues().get("url"))) {
             l.add(FilterBuilders.termFilter("target.properties.pageInfo.destinationURL", (String) condition.getParameterValues().get("url")));
         }
+        if (condition.getParameterValues().get("pagePath") != null && !"".equals(condition.getParameterValues().get("pagePath"))) {
+            l.add(FilterBuilders.termFilter("target.properties.pageInfo.pagePath", (String) condition.getParameterValues().get("pagePath")));
+        }
+        if (condition.getParameterValues().get("language") != null && !"".equals(condition.getParameterValues().get("language"))) {
+            l.add(FilterBuilders.termFilter("target.properties.pageInfo.language", (String) condition.getParameterValues().get("language")));
+        }
         if (l.size() > 1) {
             return FilterBuilders.andFilter(l.toArray(new FilterBuilder[l.size()]));
         } else {

@@ -24,6 +24,9 @@ public class ParserHelper {
     private static final Logger logger = LoggerFactory.getLogger(ParserHelper.class);
 
     public static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition) {
+        if (rootCondition == null) {
+            return false;
+        }
         final List<String> result = new ArrayList<String>();
         visitConditions(rootCondition, new ConditionVisitor() {
             @Override

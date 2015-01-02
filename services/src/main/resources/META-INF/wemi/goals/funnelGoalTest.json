@@ -1,0 +1,20 @@
+{
+    "metadata": {
+        "id": "funnelGoalTest",
+        "name": "Funnel Goal Test",
+        "scope": "ACMESPACE",
+        "description": "Funnel Goal : read mars projects after going to forums"
+    },
+    "startEvent": {
+        "parameterValues": {
+            "pagePath": "/sites/ACMESPACE/home/community/forums"
+        },
+        "type": "pageViewEventCondition"
+    },
+    "targetEvent": {
+        "parameterValues": {
+            "pagePath": "/sites/ACMESPACE/home/community/forums/mars-project"
+        },
+        "type": "pageViewEventCondition"
+    }
+}

@@ -1,0 +1,14 @@
+{
+    "metadata": {
+        "id": "pageGoalTest",
+        "name": "Page Goal Test",
+        "scope": "ACMESPACE",
+        "description": "Page goal : reach about-us"
+    },
+    "targetEvent": {
+        "parameterValues": {
+            "pagePath": "/sites/ACMESPACE/home/about-us"
+        },
+        "type": "pageViewEventCondition"
+    }
+}

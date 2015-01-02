@@ -13,7 +13,7 @@
                         "numberOfDays": 30,
                         "eventCondition": {
                             "parameterValues": {
-                                "url": "http://localhost:8080/fr/sites/ACMESPACE/home.html"
+                                "language": "fr"
                             },
                             "type": "pageViewEventCondition"
                         }

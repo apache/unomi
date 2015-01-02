@@ -8,6 +8,18 @@
             "type": "string",
             "multivalued": false,
             "choicelistInitializerFilter": ""
+        },
+        {
+            "id": "pagePath",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
+        },
+        {
+            "id": "language",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
         }
     ]
 }

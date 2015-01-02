@@ -199,11 +199,11 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                             }
 
                             Condition profileCondition = extractConditionByTag(rule.getCondition(), "profileCondition");
-                            if (profileCondition != null && !profileService.matchCondition(profileCondition, event.getProfile(), event.getSession())) {
+                            if (profileCondition != null && !persistenceService.testMatch(profileCondition, event.getProfile())) {
                                 continue;
                             }
                             Condition sessionCondition = extractConditionByTag(rule.getCondition(), "sessionCondition");
-                            if (sessionCondition != null && !profileService.matchCondition(sessionCondition, event.getProfile(), event.getSession())) {
+                            if (sessionCondition != null && !persistenceService.testMatch(sessionCondition, event.getSession())) {
                                 continue;
                             }
 

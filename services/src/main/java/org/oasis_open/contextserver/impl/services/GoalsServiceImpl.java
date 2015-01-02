@@ -120,14 +120,55 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             }
         }
     }
+//
+//    private void loadPredefinedCampaigns(BundleContext bundleContext) {
+//        Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/wemi/campaigns", "*.json", true);
+//        if (predefinedRuleEntries == null) {
+//            return;
+//        }
+//        while (predefinedRuleEntries.hasMoreElements()) {
+//            URL predefinedCampaignURL = predefinedRuleEntries.nextElement();
+//            logger.debug("Found predefined campaigns at " + predefinedCampaignURL + ", loading... ");
+//
+//            try {
+//                Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(predefinedCampaignURL, Campaign.class);
+//                if (getCampaign(campaign.getMetadata().getScope(), campaign.getMetadata().getId()) == null) {
+//                    setCampaign(campaign);
+//                }
+//            } catch (IOException e) {
+//                logger.error("Error while loading segment definition " + predefinedCampaignURL, e);
+//            }
+//        }
+//    }
 
-    private void createRule(Goal goal, Condition event, String id) {
-        Rule rule = new Rule(new Metadata(goal.getMetadata().getScope(), goal.getMetadata().getId() + "." + id + "Event", "Auto generated rule for goal " + goal.getMetadata().getName(), ""));
-        rule.setCondition(event);
+    private void createRule(Goal goal, Condition event, String id, boolean testStart) {
+        Rule rule = new Rule(new Metadata(goal.getMetadata().getScope(), goal.getMetadata().getId() + id + "Event", "Auto generated rule for goal " + goal.getMetadata().getName(), ""));
+        Condition res = new Condition();
+        List<Condition> subConditions = new ArrayList<Condition>();
+        res.setConditionType(definitionsService.getConditionType("andCondition"));
+        res.getParameterValues().put("subConditions", subConditions);
+
+        subConditions.add(event);
+
+        Condition notExist = new Condition();
+        notExist.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+        notExist.getParameterValues().put("propertyName", "properties." + goal.getMetadata().getId() + id + "Reached");
+        notExist.getParameterValues().put("comparisonOperator", "missing");
+        subConditions.add(notExist);
+
+        if (testStart) {
+            Condition startExists = new Condition();
+            startExists.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+            startExists.getParameterValues().put("propertyName", "properties." + goal.getMetadata().getId() + "StartReached");
+            startExists.getParameterValues().put("comparisonOperator", "exists");
+            subConditions.add(startExists);
+        }
+
+        rule.setCondition(res);
         rule.getMetadata().setHidden(true);
         Action action1 = new Action();
         action1.setActionType(definitionsService.getActionType("setPropertyAction"));
-        action1.getParameterValues().put("setPropertyName", goal.getMetadata().getId() + "." + id + ".reached");
+        action1.getParameterValues().put("setPropertyName", goal.getMetadata().getId() + id + "Reached");
         action1.getParameterValues().put("setPropertyValue", "now");
         action1.getParameterValues().put("storeInSession", true);
         rule.setActions(Arrays.asList(action1));
@@ -165,8 +206,10 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent());
 
         if (goal.getMetadata().isEnabled()) {
-            createRule(goal, goal.getStartEvent(), "start");
-            createRule(goal, goal.getTargetEvent(), "target");
+            if (goal.getStartEvent() != null) {
+                createRule(goal, goal.getStartEvent(), "Start", false);
+            }
+            createRule(goal, goal.getTargetEvent(), "Target", goal.getStartEvent() != null);
         }
 
         persistenceService.save(goal);
@@ -193,34 +236,53 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public GoalReport getGoalReport(String scope, String goalId, String split, Condition filter) {
-        Condition condition = new Condition(definitionsService.getConditionType("goalMatchCondition"));
-        condition.getParameterValues().put("goalId", goalId);
-        condition.getParameterValues().put("goalReached", false);
+        Condition condition = new Condition(definitionsService.getConditionType("andCondition"));
+        final ArrayList<Condition> list = new ArrayList<Condition>();
+        condition.getParameterValues().put("subConditions", list);
+
+        Goal g = getGoal(scope, goalId);
+
+        Condition goalTargetCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+        goalTargetCondition.getParameterValues().put("propertyName", goalId+ "TargetReached");
+        goalTargetCondition.getParameterValues().put("comparisonOperator", "exists");
+
+        Condition goalStartCondition;
+        if (g.getStartEvent() == null) {
+            goalStartCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
+        } else {
+            goalStartCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+            goalStartCondition.getParameterValues().put("propertyName", goalId + "StartReached");
+            goalStartCondition.getParameterValues().put("comparisonOperator", "exists");
+        }
 
         if (filter != null) {
-            Condition andCondition = new Condition(definitionsService.getConditionType("andCondition"));
-            final ArrayList<Condition> list = new ArrayList<Condition>();
-            andCondition.getParameterValues().put("subConditions", list);
-            list.add(condition);
             list.add(filter);
-            condition = andCondition;
         }
 
         Map<String, Long> all;
         Map<String, Long> match;
 
         if ("timeStamp".equals(split)) {
+            list.add(goalStartCondition);
             all = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.DATE, "timeStamp"), Session.ITEM_TYPE);
-            condition.getParameterValues().put("goalReached", true);
+
+            list.remove(goalStartCondition);
+            list.add(goalTargetCondition);
             match = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.DATE, "timeStamp"), Session.ITEM_TYPE);
         } else if (split != null) {
+            list.add(goalStartCondition);
             all = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.TERMS, split), Session.ITEM_TYPE);
-            condition.getParameterValues().put("goalReached", true);
+
+            list.remove(goalStartCondition);
+            list.add(goalTargetCondition);
             match = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.TERMS, split), Session.ITEM_TYPE);
         } else {
+            list.add(goalStartCondition);
             all = new HashMap<String, Long>();
             all.put("_filtered", persistenceService.queryCount(condition, Session.ITEM_TYPE));
-            condition.getParameterValues().put("goalReached", true);
+
+            list.remove(goalStartCondition);
+            list.add(goalTargetCondition);
             match = new HashMap<String, Long>();
             match.put("_filtered", persistenceService.queryCount(condition, Session.ITEM_TYPE));
         }
@@ -232,7 +294,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         stat.setTargetCount(match.remove("_filtered"));
         stat.setConversionRate((float) stat.getTargetCount() / (float) stat.getStartCount());
         report.setGlobalStats(stat);
-
+        all.remove("_all");
         report.setSplit(new LinkedHashMap<String, GoalReport.Stat>());
         for (Map.Entry<String, Long> entry : all.entrySet()) {
             GoalReport.Stat dateStat = new GoalReport.Stat();

@@ -1,0 +1,20 @@
+{
+    "metadata": {
+        "id": "formGoalTest",
+        "name": "Form Goal Test",
+        "scope": "ACMESPACE",
+        "description": "Form Goal : filled test form on home page"
+    },
+    "startEvent": {
+        "parameterValues": {
+            "pagePath": "/sites/ACMESPACE/home"
+        },
+        "type": "pageViewEventCondition"
+    },
+    "targetEvent" : {
+        "parameterValues": {
+            "formId":"testForm"
+        },
+        "type": "formEventCondition"
+    }
+}
