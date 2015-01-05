@@ -28,23 +28,23 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
     @Override
     public boolean execute(Action action, Event event) {
-        final Condition profileEventCondition = (Condition) action.getParameterValues().get("eventCondition");
+        final Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
 
         Condition andCondition = new Condition(definitionsService.getConditionType("andCondition"));
         ArrayList<Condition> conditions = new ArrayList<Condition>();
 
-        Condition eventCondition = (Condition) profileEventCondition.getParameterValues().get("eventCondition");
+        Condition eventCondition = (Condition) pastEventCondition.getParameterValues().get("eventCondition");
         ParserHelper.resolveConditionType(definitionsService, eventCondition);
         conditions.add(eventCondition);
 
         Condition c = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
         c.getParameterValues().put("propertyName","profileId");
-        c.getParameterValues().put("comparisonOperator","equals");
+        c.getParameterValues().put("comparisonOperator", "equals");
         c.getParameterValues().put("propertyValue",event.getProfileId());
         conditions.add(c);
 
-        if (profileEventCondition.getParameterValues().get("numberOfDays") != null) {
-            int i = (Integer) profileEventCondition.getParameterValues().get("numberOfDays");
+        if (pastEventCondition.getParameterValues().get("numberOfDays") != null) {
+            int i = (Integer) pastEventCondition.getParameterValues().get("numberOfDays");
 
             Condition timeCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
             timeCondition.getParameterValues().put("propertyName","timeStamp");
@@ -58,7 +58,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
         long count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
 
-        event.getProfile().setProperty((String) eventCondition.getParameterValues().get("generatedPropertyKey"), count+1);
+        event.getProfile().setProperty((String) pastEventCondition.getParameterValues().get("generatedPropertyKey"), count+1);
 
         return true;
     }

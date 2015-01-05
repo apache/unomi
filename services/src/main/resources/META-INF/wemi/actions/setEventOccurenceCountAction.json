@@ -6,7 +6,7 @@
     "resourceBundle": "/plugins/org.oasis-open.contextserver-services/messages",
     "parameters": [
         {
-            "id": "profileEventCondition",
+            "id": "pastEventCondition",
             "type": "condition",
             "multivalued": false,
             "choicelistInitializerFilter": ""

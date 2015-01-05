@@ -1,4 +1,4 @@
 {
-    "id": "profileEventCondition",
+    "id": "usableInPastEventCondition",
     "parent": "condition"
 }

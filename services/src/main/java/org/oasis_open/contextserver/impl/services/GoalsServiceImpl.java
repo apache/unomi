@@ -168,10 +168,16 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         rule.getMetadata().setHidden(true);
         Action action1 = new Action();
         action1.setActionType(definitionsService.getActionType("setPropertyAction"));
-        action1.getParameterValues().put("setPropertyName", goal.getMetadata().getId() + id + "Reached");
+        String name = goal.getMetadata().getId() + id + "Reached";
+        action1.getParameterValues().put("setPropertyName", name);
         action1.getParameterValues().put("setPropertyValue", "now");
         action1.getParameterValues().put("storeInSession", true);
-        rule.setActions(Arrays.asList(action1));
+        Action action2 = new Action();
+        action2.setActionType(definitionsService.getActionType("setPropertyAction"));
+        action2.getParameterValues().put("setPropertyName", name);
+        action2.getParameterValues().put("setPropertyValue", "script::profile.properties.?"+name+" != null ? (profile.properties."+name+") : 'now'");
+        action2.getParameterValues().put("storeInSession", false);
+        rule.setActions(Arrays.asList(action1,action2));
         rulesService.setRule(rule);
     }
 

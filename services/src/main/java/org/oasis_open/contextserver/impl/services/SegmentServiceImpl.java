@@ -299,7 +299,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                 String scope = StringUtils.substringBefore(scoringScopeAndId, "_");
                 String scoringId = StringUtils.substringAfter(scoringScopeAndId, "_");
                 Scoring sc = getScoringDefinition(scope, scoringId);
-                if (!scores.containsKey(scoringId)) {
+                if (!scores.containsKey(scoringScopeAndId)) {
                     scores.put(scoringScopeAndId, 0);
                 }
                 scores.put(scoringScopeAndId, scores.get(scoringScopeAndId) + sc.getElements().get(index).getValue());
@@ -389,14 +389,14 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             try {
                 String key = CustomObjectMapper.getObjectMapper().writeValueAsString(CustomObjectMapper.getObjectMapper().writeValueAsString(parentCondition));
                 key = "eventTriggered" + getMD5(key);
-                condition.getParameterValues().put("generatedPropertyKey", key);
+                parentCondition.getParameterValues().put("generatedPropertyKey", key);
                 if (rulesService.getRule(scope, key) == null) {
                     Rule rule = new Rule(new Metadata(scope, key, "Auto generated rule", ""));
                     rule.setCondition(condition);
                     rule.getMetadata().setHidden(true);
                     final Action action = new Action();
                     action.setActionType(definitionsService.getActionType("setEventOccurenceCountAction"));
-                    action.getParameterValues().put("eventCondition", parentCondition);
+                    action.getParameterValues().put("pastEventCondition", parentCondition);
                     rule.setActions(Arrays.asList(action));
                     rules.add(rule);
                 }

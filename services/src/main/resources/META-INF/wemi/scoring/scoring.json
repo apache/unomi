@@ -38,7 +38,7 @@
                   "type": "pageViewEventCondition"
                 }
               },
-              "type": "profileEventCondition"
+              "type": "pastEventCondition"
             }
           ]
         },

@@ -1,0 +1,38 @@
+{
+    "id": "pastEventCondition",
+    "conditionEvaluator": "(conditionEvaluatorId=pastEventConditionEvaluator)",
+    "queryBuilderFilter": "(queryBuilderId=pastEventConditionESQueryBuilder)",
+    "tags": [ "event", "profileCondition" ],
+    "parameters": [
+        {
+            "id": "numberOfDays",
+            "type": "integer",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
+        },
+        {
+            "id": "minimumEventCount",
+            "type": "integer",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
+        },
+        {
+            "id": "maximumEventCount",
+            "type": "integer",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
+        },
+        {
+            "id": "generatedPropertyKey",
+            "type": "string",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
+        },
+        {
+            "id": "eventCondition",
+            "type": "Condition",
+            "multivalued": false,
+            "choicelistInitializerFilter": "(initializerId=condition)"
+        }
+    ]
+}
