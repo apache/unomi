@@ -135,6 +135,7 @@
 # Use the Index Status API (<http://localhost:9200/A/_status>) to inspect
 # the index status.
 
+http.cors.enabled: true
 index.percolator.allow_unmapped_fields: true
 
 #################################### Paths ####################################
