@@ -80,7 +80,13 @@ public class ActionExecutorDispatcher {
             Object value = entry.getValue();
             if (value instanceof String) {
                 String s = (String) value;
-                if (s.startsWith("eventProperty::") || s.startsWith("profileProperty::") || s.startsWith("sessionProperty::") || s.startsWith("script::")) {
+                if (s.startsWith("eventProperty::") ||
+                        s.startsWith("profileProperty::") ||
+                        s.startsWith("sessionProperty::") ||
+                        s.startsWith("simpleEventProperty::") ||
+                        s.startsWith("simpleProfileProperty::") ||
+                        s.startsWith("simpleSessionProperty::") ||
+                        s.startsWith("script::")) {
                     return true;
                 }
             } else if (value instanceof Map) {
