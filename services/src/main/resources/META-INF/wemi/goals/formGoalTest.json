@@ -3,7 +3,8 @@
         "id": "formGoalTest",
         "name": "Form Goal Test",
         "scope": "ACMESPACE",
-        "description": "Form Goal : filled test form on home page"
+        "description": "Form Goal : filled test form on home page",
+        "tags":["formGoal"]
     },
     "startEvent": {
         "parameterValues": {

@@ -1,9 +1,10 @@
 {
     "metadata": {
         "id": "pageGoalTest",
-        "name": "Page Goal Test",
+        "name": "Page Goal Testd",
         "scope": "ACMESPACE",
-        "description": "Page goal : reach about-us"
+        "description": "Page goal : reach about-us",
+        "tags":["pageVisitGoal"]
     },
     "targetEvent": {
         "parameterValues": {

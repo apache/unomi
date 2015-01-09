@@ -1,6 +1,10 @@
 package org.oasis_open.contextserver.api;
 
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Created by loom on 24.04.14.
@@ -12,6 +16,8 @@ public class Metadata implements Comparable<Metadata> {
     private String name;
     private String description;
     private String scope;
+    Set<Tag> tags = new TreeSet<>();
+    Set<String> tagIDs = new LinkedHashSet<>();
     private boolean enabled = true;
     private boolean missingPlugins = false;
     private boolean hidden = false;
@@ -57,6 +63,24 @@ public class Metadata implements Comparable<Metadata> {
 
     public void setScope(String scope) {
         this.scope = scope;
+    }
+
+    @XmlElement(name = "tags")
+    public Set<String> getTagIDs() {
+        return tagIDs;
+    }
+
+    public void setTagIDs(Set<String> tagIDs) {
+        this.tagIDs = tagIDs;
+    }
+
+    @XmlTransient
+    public Set<Tag> getTags() {
+        return tags;
+    }
+
+    public void setTags(Set<Tag> tags) {
+        this.tags = tags;
     }
 
     @XmlTransient

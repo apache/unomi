@@ -3,7 +3,8 @@
         "id": "funnelGoalTest",
         "name": "Funnel Goal Test",
         "scope": "ACMESPACE",
-        "description": "Funnel Goal : read mars projects after going to forums"
+        "description": "Funnel Goal : read mars projects after going to forums",
+        "tags":["funnelGoal"]
     },
     "startEvent": {
         "parameterValues": {

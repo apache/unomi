@@ -1,8 +1,6 @@
 package org.oasis_open.contextserver.impl.services;
 
-import org.oasis_open.contextserver.api.Metadata;
-import org.oasis_open.contextserver.api.PluginType;
-import org.oasis_open.contextserver.api.Session;
+import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
@@ -34,6 +32,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     private DefinitionsService definitionsService;
 
     private RulesService rulesService;
+
+    private Map<Tag, Set<Goal>> goalByTag = new HashMap<>();
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -113,6 +113,22 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             try {
                 Goal goal = CustomObjectMapper.getObjectMapper().readValue(predefinedGoalURL, Goal.class);
                 if (getGoal(goal.getMetadata().getScope(), goal.getMetadata().getId()) == null) {
+                    for (String tagId : goal.getMetadata().getTagIDs()) {
+                        Tag tag = definitionsService.getTag(tagId);
+                        if (tag != null) {
+                            goal.getMetadata().getTags().add(tag);
+                            Set<Goal> goals = goalByTag.get(tag);
+                            if (goals == null) {
+                                goals = new LinkedHashSet<>();
+                            }
+                            goals.add(goal);
+                            goalByTag.put(tag, goals);
+                        } else {
+                            // we found a tag that is not defined, we will define it automatically
+                            logger.warn("Unknown tag " + tagId + " used in goal definition " + predefinedGoalURL);
+                        }
+                    }
+
                     setGoal(goal);
                 }
             } catch (IOException e) {
@@ -316,6 +332,21 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         }
 
         return report;
+    }
+
+    public Set<Goal> getGoalByTag(Tag tag, boolean recursive) {
+        Set<Goal> goals = new LinkedHashSet<>();
+        Set<Goal> directGoals = goalByTag.get(tag);
+        if (directGoals != null) {
+            goals.addAll(directGoals);
+        }
+        if (recursive) {
+            for (Tag subTag : tag.getSubTags()) {
+                Set<Goal> childGoals = getGoalByTag(subTag, true);
+                goals.addAll(childGoals);
+            }
+        }
+        return goals;
     }
 
     public void bundleChanged(BundleEvent event) {
