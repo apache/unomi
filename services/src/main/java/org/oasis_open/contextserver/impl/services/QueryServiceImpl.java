@@ -34,12 +34,12 @@ public class QueryServiceImpl implements QueryService {
 
     @Override
     public Map<String, Long> getAggregate(String itemType, String property) {
-        return persistenceService.aggregateQuery(null, new Aggregate(Aggregate.Type.TERMS, property), itemType);
+        return persistenceService.aggregateQuery(null, new Aggregate(("timeStamp".equals(property)) ? Aggregate.Type.DATE : Aggregate.Type.TERMS, property), itemType);
     }
 
     @Override
     public Map<String, Long> getAggregate(String type, String property, Condition filter) {
         ParserHelper.resolveConditionType(definitionsService,filter);
-        return persistenceService.aggregateQuery(filter, new Aggregate(Aggregate.Type.TERMS, property), type);
+        return persistenceService.aggregateQuery(filter, new Aggregate(("timeStamp".equals(property)) ? Aggregate.Type.DATE : Aggregate.Type.TERMS, property), type);
     }
 }
