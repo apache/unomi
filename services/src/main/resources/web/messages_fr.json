@@ -64,6 +64,13 @@
     "USABLEINPASTEVENTCONDITION_TAG_NAME_LABEL": "Conditions sur un événement utilisateur",
     "USABLEINPASTEVENTCONDITION_TAG_DESCRIPTION_LABEL": "Toutes les conditions sur un événement utilisateur",
 
+    "GOAL_TAG_NAME_LABEL": "Goal",
+    "DOWNLOADGOAL_TAG_NAME_LABEL": "Download",
+    "FORMGOAL_TAG_NAME_LABEL": "Form",
+    "FUNNELGOAL_TAG_NAME_LABEL": "Funnel",
+    "LANDINGPAGEGOAL_TAG_NAME_LABEL": "Landing page",
+    "PAGEVISITGOAL_TAG_NAME_LABEL": "Page visit",
+
     "EQUALS_LABEL": "est égal à ",
     "NOT_EQUALS_LABEL": "n'est pas égal à",
     "LESS_THAN_LABEL": "moins grand que",

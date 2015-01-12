@@ -67,6 +67,13 @@
     "GEOGRAPHICSESSIONPROPERTIES_TAG_NAME_LABEL": "Geographic",
     "TECHNICALSESSIONPROPERTIES_TAG_NAME_LABEL": "Technical",
 
+    "GOAL_TAG_NAME_LABEL": "Goal",
+    "DOWNLOADGOAL_TAG_NAME_LABEL": "Download",
+    "FORMGOAL_TAG_NAME_LABEL": "Form",
+    "FUNNELGOAL_TAG_NAME_LABEL": "Funnel",
+    "LANDINGPAGEGOAL_TAG_NAME_LABEL": "Landing page",
+    "PAGEVISITGOAL_TAG_NAME_LABEL": "Page visit",
+
     "EQUALS_LABEL": "equals",
     "NOT_EQUALS_LABEL": "doesn't equal",
     "LESS_THAN_LABEL": "less than",
