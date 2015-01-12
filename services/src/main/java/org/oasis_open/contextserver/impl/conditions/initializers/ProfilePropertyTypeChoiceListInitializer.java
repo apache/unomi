@@ -10,23 +10,26 @@ import java.util.List;
 import java.util.Set;
 
 /**
- *
+ * Initializer for the set of available profile properties.
  */
 public class ProfilePropertyTypeChoiceListInitializer implements ChoiceListInitializer {
 
     ProfileService profileService;
 
-    public void setProfileService(ProfileService profileService) {
-        this.profileService = profileService;
-    }
-
+    @Override
     public List<ChoiceListValue> getValues(Object context) {
-        List<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
         Set<PropertyType> profileProperties = profileService.getPropertyTypes("profileProperties", true);
+        List<ChoiceListValue> choiceListValues = new ArrayList<>(profileProperties.size());
         for (PropertyType propertyType : profileProperties) {
-            String resourceKey = "PROFILE_PROPERTIES_" + propertyType.getId().toUpperCase().replaceAll("\\.", "_") + "_LABEL";
-            choiceListValues.add(new ChoiceListValue("properties." + propertyType.getId(), resourceKey));
+            String resourceKey = "PROFILE_PROPERTIES_" + propertyType.getId().toUpperCase().replaceAll("\\.", "_")
+                    + "_LABEL";
+            choiceListValues.add(new PropertyTypeChoiceListValue("properties." + propertyType.getId(), resourceKey,
+                    propertyType.getValueTypeId()));
         }
         return choiceListValues;
+    }
+
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
     }
 }

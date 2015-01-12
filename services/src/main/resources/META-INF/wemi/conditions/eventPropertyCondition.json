@@ -8,7 +8,7 @@
             "id": "propertyName",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": ""
+            "choicelistInitializerFilter": "(initializerId=eventProperty)"
         },
         {
             "id": "comparisonOperator",
