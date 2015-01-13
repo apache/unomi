@@ -157,6 +157,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
             try {
                 Rule rule = CustomObjectMapper.getObjectMapper().readValue(predefinedSegmentURL, Rule.class);
+                if (rule.getMetadata().getScope() == null) {
+                    rule.getMetadata().setScope("systemscope");
+                }
                 if (getRule(rule.getMetadata().getScope(), rule.getMetadata().getId()) == null) {
                     setRule(rule);
                 }

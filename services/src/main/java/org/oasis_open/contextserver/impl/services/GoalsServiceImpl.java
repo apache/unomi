@@ -113,6 +113,9 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
             try {
                 Goal goal = CustomObjectMapper.getObjectMapper().readValue(predefinedGoalURL, Goal.class);
+                if (goal.getMetadata().getScope() == null) {
+                    goal.getMetadata().setScope("systemscope");
+                }
                 if (getGoal(goal.getMetadata().getScope(), goal.getMetadata().getId()) == null) {
                     for (String tagId : goal.getMetadata().getTagIDs()) {
                         Tag tag = definitionsService.getTag(tagId);

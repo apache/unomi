@@ -180,6 +180,9 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
             try {
                 Segment segment = CustomObjectMapper.getObjectMapper().readValue(predefinedSegmentURL, Segment.class);
+                if (segment.getMetadata().getScope() == null) {
+                    segment.getMetadata().setScope("systemscope");
+                }
                 if (getSegmentDefinition(segment.getMetadata().getScope(), segment.getMetadata().getId()) == null) {
                     setSegmentDefinition(segment);
                 }
@@ -200,6 +203,9 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
             try {
                 Scoring scoring = CustomObjectMapper.getObjectMapper().readValue(predefinedScoringURL, Scoring.class);
+                if (scoring.getMetadata().getScope() == null) {
+                    scoring.getMetadata().setScope("systemscope");
+                }
                 if (getScoringDefinition(scoring.getMetadata().getScope(), scoring.getMetadata().getId()) == null) {
                     setScoringDefinition(scoring);
                 }
