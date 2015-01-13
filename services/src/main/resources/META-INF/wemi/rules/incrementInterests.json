@@ -22,9 +22,10 @@
                         "comparisonOperator":"exists"
                     }
                 }
-            ]
+            ],
+            "operator" : "and"
         },
-        "type": "andCondition"
+        "type": "booleanCondition"
     },
 
     "actions" : [

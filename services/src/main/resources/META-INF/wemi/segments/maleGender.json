@@ -7,10 +7,18 @@
     },
     "condition": {
         "parameterValues": {
-            "propertyName": "properties.gender",
-            "propertyValue": "male",
-            "comparisonOperator": "equals"
+            "subConditions": [
+                {
+                    "parameterValues": {
+                        "propertyName": "properties.gender",
+                        "propertyValue": "male",
+                        "comparisonOperator": "equals"
+                    },
+                    "type": "profilePropertyCondition"
+                }
+            ],
+            "operator": "and"
         },
-        "type": "profilePropertyCondition"
+        "type": "booleanCondition"
     }
 }

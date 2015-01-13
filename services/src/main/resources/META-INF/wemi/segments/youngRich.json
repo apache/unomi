@@ -24,8 +24,9 @@
                     },
                     "type": "profilePropertyCondition"
                 }
-            ]
+            ],
+            "operator" : "and"
         },
-        "type": "andCondition"
+        "type": "booleanCondition"
     }
 }

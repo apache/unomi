@@ -30,7 +30,8 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
     public boolean execute(Action action, Event event) {
         final Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
 
-        Condition andCondition = new Condition(definitionsService.getConditionType("andCondition"));
+        Condition andCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+        andCondition.getParameterValues().put("operator", "and");
         ArrayList<Condition> conditions = new ArrayList<Condition>();
 
         Condition eventCondition = (Condition) pastEventCondition.getParameterValues().get("eventCondition");

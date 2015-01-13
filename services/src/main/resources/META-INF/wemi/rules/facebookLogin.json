@@ -1,33 +1,34 @@
 {
-    "metadata": {
-        "id": "facebookLogin",
-        "name": "Facebook login",
-        "description": "Upon Facebook login event, copy all event properties to profile properties"
-    },
-    "condition": {
-        "parameterValues": {
-            "subConditions": [
-                {
-                    "parameterValues": {
-                        "eventTypeId": "facebookLogin"
-                    },
-                    "type": "eventTypeCondition"
-                }
-            ]
-        },
-        "type": "andCondition"
-    },
-    "actions": [
+  "metadata": {
+    "id": "facebookLogin",
+    "name": "Facebook login",
+    "description": "Upon Facebook login event, copy all event properties to profile properties"
+  },
+  "condition": {
+    "parameterValues": {
+      "subConditions": [
         {
-            "parameterValues": {
-            },
-            "type": "allEventToProfilePropertiesAction"
-        },
-        {
-            "parameterValues": {
-                "mergeProfilePropertyName": "email"
-            },
-            "type": "mergeProfilesOnPropertyAction"
+          "parameterValues": {
+            "eventTypeId": "facebookLogin"
+          },
+          "type": "eventTypeCondition"
         }
-    ]
+      ],
+      "operator": "and"
+    },
+    "type": "booleanCondition"
+  },
+  "actions": [
+    {
+      "parameterValues": {
+      },
+      "type": "allEventToProfilePropertiesAction"
+    },
+    {
+      "parameterValues": {
+        "mergeProfilePropertyName": "email"
+      },
+      "type": "mergeProfilesOnPropertyAction"
+    }
+  ]
 }

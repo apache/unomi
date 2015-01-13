@@ -39,9 +39,9 @@
     <service
             interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="andConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="booleanConditionESQueryBuilder"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.AndConditionESQueryBuilder"/>
+        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.BooleanConditionESQueryBuilder"/>
     </service>
 
     <service
@@ -50,14 +50,6 @@
             <entry key="queryBuilderId" value="matchAllConditionESQueryBuilder"/>
         </service-properties>
         <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.MatchAllConditionESQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="orConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.OrConditionESQueryBuilder"/>
     </service>
 
     <service
@@ -133,16 +125,9 @@
     <!-- Condition evaluators -->
     <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
         <service-properties>
-            <entry key="conditionEvaluatorId" value="andConditionEvaluator"/>
+            <entry key="conditionEvaluatorId" value="booleanConditionEvaluator"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.AndConditionEvaluator"/>
-    </service>
-
-    <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
-        <service-properties>
-            <entry key="conditionEvaluatorId" value="orConditionEvaluator"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.OrConditionEvaluator"/>
+        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.BooleanConditionEvaluator"/>
     </service>
 
     <service

@@ -40,9 +40,10 @@
               },
               "type": "pastEventCondition"
             }
-          ]
+          ],
+          "operator" : "and"
         },
-        "type": "andCondition"
+        "type": "booleanCondition"
       },
       "value": 200
     }

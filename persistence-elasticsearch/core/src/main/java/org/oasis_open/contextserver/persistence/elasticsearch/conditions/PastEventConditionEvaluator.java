@@ -33,7 +33,8 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
 
         List<Condition> l = new ArrayList<Condition>();
         Condition andCondition = new Condition();
-        andCondition.setConditionType(definitionsService.getConditionType("andCondition"));
+        andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
+        andCondition.getParameterValues().put("operator", "and");
         andCondition.getParameterValues().put("subConditions", l);
 
         l.add(eventCondition);

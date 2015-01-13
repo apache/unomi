@@ -21,9 +21,10 @@
                         "comparisonOperator":"missing"
                     }
                 }
-            ]
+            ],
+            "operator" : "and"
         },
-        "type": "andCondition"
+        "type": "booleanCondition"
     },
 
     "actions": [

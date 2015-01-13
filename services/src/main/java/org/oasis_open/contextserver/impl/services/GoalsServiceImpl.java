@@ -165,7 +165,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         Rule rule = new Rule(new Metadata(goal.getMetadata().getScope(), goal.getMetadata().getId() + id + "Event", "Auto generated rule for goal " + goal.getMetadata().getName(), ""));
         Condition res = new Condition();
         List<Condition> subConditions = new ArrayList<Condition>();
-        res.setConditionType(definitionsService.getConditionType("andCondition"));
+        res.setConditionType(definitionsService.getConditionType("booleanCondition"));
+        res.getParameterValues().put("operator", "and");
         res.getParameterValues().put("subConditions", subConditions);
 
         subConditions.add(event);
@@ -265,8 +266,9 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public GoalReport getGoalReport(String scope, String goalId, String split, Condition filter) {
-        Condition condition = new Condition(definitionsService.getConditionType("andCondition"));
+        Condition condition = new Condition(definitionsService.getConditionType("booleanCondition"));
         final ArrayList<Condition> list = new ArrayList<Condition>();
+        condition.getParameterValues().put("operator", "and");
         condition.getParameterValues().put("subConditions", list);
 
         Goal g = getGoal(scope, goalId);

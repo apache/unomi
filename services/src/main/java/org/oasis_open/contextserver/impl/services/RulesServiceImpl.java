@@ -301,12 +301,13 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 return null;
             } else if (matchingConditions.equals(subConditions)) {
                 return rootCondition;
-            } else if (rootCondition.getConditionTypeId().equals("andCondition")) {
+            } else if (rootCondition.getConditionTypeId().equals("booleanCondition") && "and".equals(rootCondition.getParameterValues().get("operator"))) {
                 if (matchingConditions.size() == 1) {
                     return matchingConditions.get(0);
-                } else if (rootCondition.getConditionTypeId().equals("andCondition")) {
+                } else {
                     Condition res = new Condition();
-                    res.setConditionType(definitionsService.getConditionType("andCondition"));
+                    res.setConditionType(definitionsService.getConditionType("booleanCondition"));
+                    res.getParameterValues().put("operator", "and");
                     res.getParameterValues().put("subConditions", matchingConditions);
                     return res;
                 }
@@ -324,7 +325,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         Metadata metadata = new Metadata(scope, ruleId, name, description);
         Rule rule = new Rule(metadata);
         Condition rootCondition = new Condition();
-        rootCondition.setConditionType(definitionsService.getConditionType("andCondition"));
+        rootCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
+        rootCondition.getParameterValues().put("operator", "and");
         rootCondition.getParameterValues().put("subConditions", new ArrayList<Condition>());
         rule.setCondition(rootCondition);
         rule.setActions(new ArrayList<Action>());

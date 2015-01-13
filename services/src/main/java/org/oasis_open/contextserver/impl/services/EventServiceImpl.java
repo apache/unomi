@@ -146,7 +146,8 @@ public class EventServiceImpl implements EventService {
         condition.getParameterValues().put("comparisonOperator", "equals");
         conditions.add(condition);
 
-        Condition andCondition = new Condition(definitionsService.getConditionType("andCondition"));
+        Condition andCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+        andCondition.getParameterValues().put("operator", "and");
         andCondition.getParameterValues().put("subConditions", conditions);
         long size = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
         return size > 0;

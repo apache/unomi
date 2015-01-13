@@ -9,14 +9,20 @@ import java.util.Map;
 /**
  * Evaluator for AND condition
  */
-public class AndConditionEvaluator implements ConditionEvaluator {
+public class BooleanConditionEvaluator implements ConditionEvaluator {
 
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
+        boolean op = "and".equalsIgnoreCase((String) condition.getParameterValues().get("operator"));
         List<Condition> conditions = (List<Condition>) condition.getParameterValues().get("subConditions");
         for (Condition sub : conditions) {
-            if (!dispatcher.eval(sub, item, context)) {
+            boolean eval = dispatcher.eval(sub, item, context);
+            if (!eval && op) {
+                // And
                 return false;
+            } else if (eval && !op) {
+                // Or
+                return true;
             }
         }
         return true;

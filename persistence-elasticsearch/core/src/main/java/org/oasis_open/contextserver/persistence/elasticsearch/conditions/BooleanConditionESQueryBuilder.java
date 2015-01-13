@@ -9,14 +9,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by loom on 06.08.14.
+ * Created by toto on 27/06/14.
  */
-public class OrConditionESQueryBuilder implements ConditionESQueryBuilder {
+public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
 
-    public OrConditionESQueryBuilder() {
+    public BooleanConditionESQueryBuilder() {
     }
 
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+        boolean op = "and".equalsIgnoreCase((String) condition.getParameterValues().get("operator"));
         List<Condition> conditions = (List<Condition>) condition.getParameterValues().get("subConditions");
 
         List<FilterBuilder> l = new ArrayList<FilterBuilder>();
@@ -27,7 +28,10 @@ public class OrConditionESQueryBuilder implements ConditionESQueryBuilder {
         if (l.size() == 1) {
             return l.get(0);
         }
-
-        return FilterBuilders.orFilter(l.toArray(new FilterBuilder[l.size()]));
+        if (op) {
+            return FilterBuilders.andFilter(l.toArray(new FilterBuilder[l.size()]));
+        } else {
+            return FilterBuilders.orFilter(l.toArray(new FilterBuilder[l.size()]));
+        }
     }
 }

@@ -1,0 +1,20 @@
+{
+    "id": "booleanCondition",
+    "conditionEvaluator": "(conditionEvaluatorId=booleanConditionEvaluator)",
+    "queryBuilderFilter": "(queryBuilderId=booleanConditionESQueryBuilder)",
+    "tags": [ "logical", "profileCondition", "eventCondition", "sessionCondition" ],
+    "parameters": [
+        {
+            "id": "operator",
+            "type": "String",
+            "multivalued": false,
+            "choicelistInitializerFilter": ""
+        },
+        {
+            "id": "subConditions",
+            "type": "Condition",
+            "multivalued": true,
+            "choicelistInitializerFilter": "(initializerId=condition)"
+        }
+    ]
+}

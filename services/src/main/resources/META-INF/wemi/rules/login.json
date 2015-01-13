@@ -13,9 +13,10 @@
                     },
                     "type": "loginEventCondition"
                 }
-            ]
+            ],
+            "operator" : "and"
         },
-        "type": "andCondition"
+        "type": "booleanCondition"
     },
     "actions": [
         {

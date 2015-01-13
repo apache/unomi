@@ -255,7 +255,8 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         Metadata metadata = new Metadata(scope, segmentId, name, description);
         Segment segment = new Segment(metadata);
         Condition rootCondition = new Condition();
-        rootCondition.setConditionType(definitionsService.getConditionType("andCondition"));
+        rootCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
+        rootCondition.getParameterValues().put("operator", "and");
         rootCondition.getParameterValues().put("subConditions", new ArrayList<Condition>());
         segment.setCondition(rootCondition);
 
@@ -362,7 +363,8 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         Metadata metadata = new Metadata(scope, scoringId, name, description);
         Scoring scoring = new Scoring(metadata);
         Condition rootCondition = new Condition();
-        rootCondition.setConditionType(definitionsService.getConditionType("andCondition"));
+        rootCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
+        rootCondition.getParameterValues().put("operator", "and");
         rootCondition.getParameterValues().put("subConditions", new ArrayList<Condition>());
         scoring.setElements(new ArrayList<ScoringElement>());
 
