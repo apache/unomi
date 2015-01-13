@@ -46,9 +46,10 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.ClusterService;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
-import org.oasis_open.contextserver.persistence.spi.Aggregate;
+import org.oasis_open.contextserver.persistence.spi.aggregate.BaseAggregate;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
+import org.oasis_open.contextserver.persistence.spi.aggregate.DateAggregate;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -610,7 +611,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
-    public Map<String, Long> aggregateQuery(final Condition filter, final Aggregate aggregate, final String itemType) {
+    public Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType) {
         return new InClassLoaderExecute<Map<String, Long>>() {
 
             @Override
@@ -626,13 +627,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 if (aggregate != null) {
                     AggregationBuilder bucketsAggregation = null;
-                    switch (aggregate.getType()) {
-                        case TERMS:
-                            bucketsAggregation = AggregationBuilders.terms("buckets").field(aggregate.getField());
-                            break;
-                        case DATE:
-                            bucketsAggregation = AggregationBuilders.dateHistogram("buckets").field(aggregate.getField()).interval(new DateHistogram.Interval("1M"));
-                            break;
+                    if (aggregate instanceof DateAggregate) {
+                        bucketsAggregation = AggregationBuilders.dateHistogram("buckets").field(aggregate.getField()).interval(new DateHistogram.Interval(((DateAggregate) aggregate).getInterval()));
+                    } else {
+                        //default
+                        bucketsAggregation = AggregationBuilders.terms("buckets").field(aggregate.getField());
                     }
                     if (bucketsAggregation != null) {
                         final MissingBuilder missingBucketsAggregation = AggregationBuilders.missing("missing").field(aggregate.getField());

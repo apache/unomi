@@ -10,9 +10,10 @@ import org.oasis_open.contextserver.api.rules.Rule;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.GoalsService;
 import org.oasis_open.contextserver.api.services.RulesService;
-import org.oasis_open.contextserver.persistence.spi.Aggregate;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
+import org.oasis_open.contextserver.persistence.spi.aggregate.DateAggregate;
+import org.oasis_open.contextserver.persistence.spi.aggregate.TermsAggregate;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -289,18 +290,18 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
         if ("timeStamp".equals(split)) {
             list.add(goalStartCondition);
-            all = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.DATE, "timeStamp"), Session.ITEM_TYPE);
+            all = persistenceService.aggregateQuery(condition, new DateAggregate("timeStamp"), Session.ITEM_TYPE);
 
             list.remove(goalStartCondition);
             list.add(goalTargetCondition);
-            match = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.DATE, "timeStamp"), Session.ITEM_TYPE);
+            match = persistenceService.aggregateQuery(condition, new DateAggregate("timeStamp"), Session.ITEM_TYPE);
         } else if (split != null) {
             list.add(goalStartCondition);
-            all = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.TERMS, split), Session.ITEM_TYPE);
+            all = persistenceService.aggregateQuery(condition, new TermsAggregate(split), Session.ITEM_TYPE);
 
             list.remove(goalStartCondition);
             list.add(goalTargetCondition);
-            match = persistenceService.aggregateQuery(condition, new Aggregate(Aggregate.Type.TERMS, split), Session.ITEM_TYPE);
+            match = persistenceService.aggregateQuery(condition, new TermsAggregate(split), Session.ITEM_TYPE);
         } else {
             list.add(goalStartCondition);
             all = new HashMap<String, Long>();

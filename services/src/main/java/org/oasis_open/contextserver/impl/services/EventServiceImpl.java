@@ -6,8 +6,8 @@ import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.EventListenerService;
 import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.api.services.ProfileService;
-import org.oasis_open.contextserver.persistence.spi.Aggregate;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
+import org.oasis_open.contextserver.persistence.spi.aggregate.TermsAggregate;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 
@@ -103,7 +103,7 @@ public class EventServiceImpl implements EventService {
     }
 
     public Set<String> getEventTypeIds() {
-        Map<String, Long> dynamicEventTypeIds = persistenceService.aggregateQuery(null, new Aggregate(Aggregate.Type.TERMS, "eventType"), Event.ITEM_TYPE);
+        Map<String, Long> dynamicEventTypeIds = persistenceService.aggregateQuery(null, new TermsAggregate("eventType"), Event.ITEM_TYPE);
         Set<String> eventTypeIds = new LinkedHashSet<String>(predefinedEventTypeIds);
         eventTypeIds.addAll(dynamicEventTypeIds.keySet());
         return eventTypeIds;

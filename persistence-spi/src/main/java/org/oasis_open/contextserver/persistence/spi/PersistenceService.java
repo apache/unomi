@@ -3,6 +3,7 @@ package org.oasis_open.contextserver.persistence.spi;
 import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.conditions.Condition;
+import org.oasis_open.contextserver.persistence.spi.aggregate.BaseAggregate;
 
 import java.util.Date;
 import java.util.List;
@@ -49,7 +50,7 @@ public interface PersistenceService {
 
     public long queryCount(Condition query, String itemType);
 
-    public Map<String, Long> aggregateQuery(Condition filter, Aggregate aggregate, String itemType);
+    public Map<String, Long> aggregateQuery(Condition filter, BaseAggregate aggregate, String itemType);
 
     public void purge(Date date);
 }

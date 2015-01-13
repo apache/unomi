@@ -1,10 +1,11 @@
 package org.oasis_open.contextserver.impl.services;
 
-import org.oasis_open.contextserver.api.conditions.Condition;
+import org.oasis_open.contextserver.api.query.AggregateQuery;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.QueryService;
-import org.oasis_open.contextserver.persistence.spi.Aggregate;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
+import org.oasis_open.contextserver.persistence.spi.aggregate.DateAggregate;
+import org.oasis_open.contextserver.persistence.spi.aggregate.TermsAggregate;
 
 import java.util.Map;
 
@@ -30,16 +31,34 @@ public class QueryServiceImpl implements QueryService {
     public void preDestroy() {
     }
 
-
-
     @Override
-    public Map<String, Long> getAggregate(String itemType, String property) {
-        return persistenceService.aggregateQuery(null, new Aggregate(("timeStamp".equals(property)) ? Aggregate.Type.DATE : Aggregate.Type.TERMS, property), itemType);
+    public Map<String, Long> getAggregate(String type, String property) {
+        return persistenceService.aggregateQuery(null, new TermsAggregate(property), type);
     }
 
     @Override
-    public Map<String, Long> getAggregate(String type, String property, Condition filter) {
-        ParserHelper.resolveConditionType(definitionsService,filter);
-        return persistenceService.aggregateQuery(filter, new Aggregate(("timeStamp".equals(property)) ? Aggregate.Type.DATE : Aggregate.Type.TERMS, property), type);
+    public Map<String, Long> getAggregate(String type, String property, AggregateQuery query) {
+        if(query != null) {
+            // resolve condition
+            if(query.getCondition() != null){
+                ParserHelper.resolveConditionType(definitionsService, query.getCondition());
+            }
+
+            // resolve aggregate
+            if(query.getAggregate() != null) {
+                if (query.getAggregate().getType() != null){
+                    // try to guess the aggregate type
+                    if(query.getAggregate().getType().equals("date")){
+                        String interval = (String) query.getAggregate().getParameters().get("interval");
+                        return persistenceService.aggregateQuery(query.getCondition(), new DateAggregate(property, interval), type);
+                    }
+                }
+            }
+
+            // fall back on terms aggregate
+            return persistenceService.aggregateQuery(query.getCondition(), new TermsAggregate(property), type);
+        }
+
+        return getAggregate(type, property);
     }
 }
