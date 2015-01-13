@@ -1,18 +1,23 @@
 <div class="perso">
     <div class="block">
-        <div class="remove-condition">
-            <a href="#" ng-click="onRemove(parentValue,parentIndex)"><i class="glyphicon glyphicon-remove"></i></a>
-        </div>
         <span translate>SESSION_LABEL</span>
         &nbsp;
-        <select ng-model="ref.parameterValues.propertyName" type="text">
+        <select ng-model="ref.parameterValues.propertyName"
+                ng-options="parameter.id as parameter.name | translate for parameter in getConditionParameterChoiceListValues(ref, 'propertyName')"
+                >
         </select>
         &nbsp;<span translate>IS_LABEL</span>&nbsp;
         <select ng-model="ref.parameterValues.comparisonOperator"
                 ng-options="parameter.id as parameter.name | translate for parameter in getConditionParameterChoiceListValues(ref, 'comparisonOperator')"
                 >
         </select>
-    &nbsp;
-        <input ng-model="ref.parameterValues.propertyValue" type="text"/>
+        &nbsp;
+        <span ng-switch on="getPropertyValueFieldType()">
+            <span ng-switch-when="none"></span>
+            <span ng-switch-when="integer"><input ng-model="ref.parameterValues.propertyValue" type="number"/></span>
+            <span ng-switch-when="date"><input ng-model="ref.parameterValues.propertyValue" type="date" placeholder="yyyy-MM-dd" label="yyyy-MM-dd"/></span>
+            <span ng-switch-when="email"><input ng-model="ref.parameterValues.propertyValue" type="email"/></span>
+            <span ng-switch-default><input ng-model="ref.parameterValues.propertyValue" type="text"/></span>
+        </span>
     </div>
 </div>
