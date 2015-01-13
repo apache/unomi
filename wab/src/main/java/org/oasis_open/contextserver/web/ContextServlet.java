@@ -156,7 +156,7 @@ public class ContextServlet extends HttpServlet {
             }
             // associate profile with session
             if (sessionId != null && session == null) {
-                session = new Session(sessionId, profile, timestamp);
+                session = new Session(sessionId, profile, timestamp, scope);
                 profileService.saveSession(session);
                 Event event = new Event("sessionCreated", session, profile, scope, null, new EventTarget(sessionId, Session.ITEM_TYPE), timestamp);
 

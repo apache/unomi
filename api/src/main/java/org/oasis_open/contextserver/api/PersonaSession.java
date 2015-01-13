@@ -9,6 +9,6 @@ public class PersonaSession extends Session {
     }
 
     public PersonaSession(String itemId, Profile profile, Date timeStamp) {
-        super(itemId, profile, timeStamp);
+        super(itemId, profile, timeStamp, "systemScope");
     }
 }

@@ -16,6 +16,8 @@ public class Session extends Item implements TimestampedItem {
 
     private Date timeStamp;
 
+    private String scope;
+
     private Date lastEventDate;
 
     private long duration = 0;
@@ -23,12 +25,13 @@ public class Session extends Item implements TimestampedItem {
     public Session() {
     }
 
-    public Session(String itemId, Profile profile, Date timeStamp) {
+    public Session(String itemId, Profile profile, Date timeStamp, String scope) {
         super(itemId);
         this.profile = profile;
         this.profileId = profile.getId();
         properties = new HashMap<String,Object>();
         this.timeStamp = timeStamp;
+        this.scope = scope;
     }
 
     public String getId() {
@@ -81,5 +84,13 @@ public class Session extends Item implements TimestampedItem {
 
     public long getDuration() {
         return duration;
+    }
+
+    public String getScope() {
+        return scope;
+    }
+
+    public void setScope(String scope) {
+        this.scope = scope;
     }
 }
