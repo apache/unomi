@@ -19,7 +19,7 @@ public class EventPropertyChoiceListInitializer implements ChoiceListInitializer
         List<EventProperty> eventProperties = eventService.getEventProperties();
         List<ChoiceListValue> choiceListValues = new ArrayList<>(eventProperties.size());
         for (EventProperty eventProperty : eventProperties) {
-            String resourceKey = "PROFILE_" + eventProperty.getId().toUpperCase().replaceAll("\\.", "_") + "_LABEL";
+            String resourceKey = "EVENT_" + eventProperty.getId().toUpperCase().replaceAll("\\.", "_") + "_LABEL";
             choiceListValues.add(new PropertyTypeChoiceListValue(eventProperty.getId(), resourceKey, eventProperty.getValueType()));
         }
         return choiceListValues;
