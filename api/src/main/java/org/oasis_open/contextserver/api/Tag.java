@@ -1,6 +1,7 @@
 package org.oasis_open.contextserver.api;
 
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlTransient;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -15,7 +16,7 @@ public class Tag implements PluginType, Comparable<Tag> {
     private String descriptionKey;
     private String parentId;
     private double rank = 0.0;
-    private String pluginId;
+    private long pluginId;
     private String resourceBundle;
 
     public Tag() {
@@ -67,11 +68,12 @@ public class Tag implements PluginType, Comparable<Tag> {
         this.rank = rank;
     }
 
-    public String getPluginId() {
+    @XmlTransient
+    public long getPluginId() {
         return pluginId;
     }
 
-    public void setPluginId(String pluginId) {
+    public void setPluginId(long pluginId) {
         this.pluginId = pluginId;
     }
 

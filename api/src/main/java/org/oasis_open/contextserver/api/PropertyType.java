@@ -21,7 +21,7 @@ public class PropertyType extends Item implements Comparable<PropertyType>, Plug
     private String selectorId;
     private Set<String> automaticMappingsFrom;
     private double rank;
-    private String pluginId;
+    private long pluginId;
     private String resourceBundle;
     private String mergeStrategy;
 
@@ -108,11 +108,12 @@ public class PropertyType extends Item implements Comparable<PropertyType>, Plug
         this.rank = rank;
     }
 
-    public String getPluginId() {
+    @XmlTransient
+    public long getPluginId() {
         return pluginId;
     }
 
-    public void setPluginId(String pluginId) {
+    public void setPluginId(long pluginId) {
         this.pluginId = pluginId;
     }
 
@@ -141,11 +142,7 @@ public class PropertyType extends Item implements Comparable<PropertyType>, Plug
         if (idCompare != 0) {
             return idCompare;
         }
-        if (pluginId != null && o.pluginId != null) {
-            return pluginId.compareTo(o.pluginId);
-        } else {
-            return idCompare;
-        }
+        return idCompare;
     }
 
     @Override
@@ -157,7 +154,7 @@ public class PropertyType extends Item implements Comparable<PropertyType>, Plug
 
         if (Double.compare(that.rank, rank) != 0) return false;
         if (!id.equals(that.id)) return false;
-        if (pluginId != null ? !pluginId.equals(that.pluginId) : that.pluginId != null) return false;
+        if (pluginId != that.pluginId) return false;
 
         return true;
     }
@@ -169,7 +166,7 @@ public class PropertyType extends Item implements Comparable<PropertyType>, Plug
         result = id.hashCode();
         temp = Double.doubleToLongBits(rank);
         result = 31 * result + (int) (temp ^ (temp >>> 32));
-        result = 31 * result + (pluginId != null ? pluginId.hashCode() : 0);
+        result = 31 * result + (int) (pluginId ^ (pluginId >>> 32));
         return result;
     }
 }

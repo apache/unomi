@@ -2,14 +2,16 @@ package org.oasis_open.contextserver.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.*;
-import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.ActionType;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListInitializer;
+import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
+import org.osgi.framework.wiring.BundleWiring;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -18,7 +20,7 @@ import javax.ws.rs.core.MediaType;
 import java.util.*;
 
 @WebService
-@Produces(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
         allowCredentials = true
@@ -58,82 +60,77 @@ public class DefinitionsServiceEndPoint {
 
     @GET
     @Path("/conditions")
-    public Collection<ConditionType> getAllConditionTypes() {
+    public Collection<RESTConditionType> getAllConditionTypes(@HeaderParam("Accept-Language") String language) {
         Collection<ConditionType> conditionTypes = definitionsService.getAllConditionTypes();
-        generateConditionChoiceListValues(conditionTypes, null);
-        return conditionTypes;
+        return generateConditions(conditionTypes, null, language);
     }
 
 
     @GET
     @Path("/conditions/tags/{tagId}")
-    public Set<ConditionType> getConditionTypesByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive) {
+    public Collection<RESTConditionType> getConditionTypesByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
         String[] tagsArray = tags.split(",");
         HashSet<ConditionType> results = new HashSet<ConditionType>();
         for (String s : tagsArray) {
             results.addAll(definitionsService.getConditionTypesByTag(definitionsService.getTag(s), recursive));
         }
-        generateConditionChoiceListValues(results, null);
-        return results;
+        return generateConditions(results, null, language);
     }
 
     @GET
     @Path("/conditions/{conditionId}")
-    public ConditionType getConditionType(@PathParam("conditionId") String id) {
+    public RESTConditionType getConditionType(@PathParam("conditionId") String id, @HeaderParam("Accept-Language") String language) {
         ConditionType conditionType = definitionsService.getConditionType(id);
-        generateChoiceListValues(conditionType, null);
-        return conditionType;
+        return generateCondition(conditionType, null, language);
     }
 
     @GET
     @Path("/actions")
-    public Collection<ActionType> getAllActionTypes() {
+    public Collection<RESTActionType> getAllActionTypes(@HeaderParam("Accept-Language") String language) {
         Collection<ActionType> actionTypes = definitionsService.getAllActionTypes();
-        generateActionChoiceListValues(actionTypes, null);
-        return actionTypes;
+        return generateActions(actionTypes, null, language);
     }
 
     @GET
     @Path("/actions/tags/{tagId}")
-    public Set<ActionType> getActionTypeByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive) {
+    public Collection<RESTActionType> getActionTypeByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
         String[] tagsArray = tags.split(",");
         HashSet<ActionType> results = new HashSet<ActionType>();
         for (String s : tagsArray) {
             results.addAll(definitionsService.getActionTypeByTag(definitionsService.getTag(s), recursive));
         }
-        generateActionChoiceListValues(results, null);
-        return results;
+        return generateActions(results, null, language);
     }
 
     @GET
     @Path("/actions/{actionId}")
-    public ActionType getActionType(@PathParam("actionId") String id) {
+    public RESTActionType getActionType(@PathParam("actionId") String id, @HeaderParam("Accept-Language") String language) {
         ActionType actionType = definitionsService.getActionType(id);
-        generateChoiceListValues(actionType, null);
-        return actionType;
+        return generateAction(actionType, null, language);
     }
 
     @GET
     @Path("/values")
-    public Collection<ValueType> getAllValueTypes() {
-        return definitionsService.getAllValueTypes();
+    public Collection<RESTValueType> getAllValueTypes(@HeaderParam("Accept-Language") String language) {
+        return generateValueTypes(definitionsService.getAllValueTypes(), language);
     }
 
     @GET
     @Path("/values/tags/{tagId}")
-    public Set<ValueType> getValueTypeByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive) {
+    public Collection<RESTValueType> getValueTypeByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
         String[] tagsArray = tags.split(",");
         HashSet<ValueType> results = new HashSet<ValueType>();
         for (String s : tagsArray) {
             results.addAll(definitionsService.getValueTypeByTag(definitionsService.getTag(s), recursive));
         }
-        return results;
+        return generateValueTypes(results, language);
     }
 
     @GET
     @Path("/values/{valueTypeId}")
-    public ValueType getValueType(@PathParam("valueTypeId") String id) {
-        return definitionsService.getValueType(id);
+    public RESTValueType getValueType(@PathParam("valueTypeId") String id, @HeaderParam("Accept-Language") String language) {
+        ValueType valueType = definitionsService.getValueType(id);
+        return generateValueType(valueType, language);
     }
 
     @GET
@@ -147,48 +144,164 @@ public class DefinitionsServiceEndPoint {
         return definitionsService.getPropertyMergeStrategyType(id);
     }
 
-    private void generateConditionChoiceListValues(Collection<ConditionType> conditionTypes, Object context) {
+    private Collection<RESTConditionType> generateConditions(Collection<ConditionType> conditionTypes, Object context, String language) {
+        List<RESTConditionType> result = new ArrayList<RESTConditionType>();
         if (conditionTypes == null) {
-            return;
+            return result;
         }
+        Collection<RESTConditionType> c;
         for (ConditionType conditionType : conditionTypes) {
-            generateChoiceListValues(conditionType, null);
+            result.add(generateCondition(conditionType, context, language));
         }
+        return result;
     }
 
-    private void generateActionChoiceListValues(Collection<ActionType> actionTypes, Object context) {
+    private Collection<RESTActionType> generateActions(Collection<ActionType> actionTypes, Object context, String language) {
+        List<RESTActionType> result = new ArrayList<RESTActionType>();
         if (actionTypes == null) {
-            return;
+            return result;
         }
         for (ActionType actionType : actionTypes) {
-            generateChoiceListValues(actionType, null);
+            result.add(generateAction(actionType, context, language));
         }
+        return result;
     }
 
-    private void generateChoiceListValues(ConditionType conditionType, Object context) {
+    private RESTConditionType generateCondition(ConditionType conditionType, Object context, String language) {
+        RESTConditionType result = new RESTConditionType();
+        result.setId(conditionType.getId());
+
+        ResourceBundle bundle = getResourceBundle(conditionType, language);
+        result.setName(getResourceBundleValue(bundle, conditionType.getNameKey()));
+        result.setDescription(getResourceBundleValue(bundle, conditionType.getDescriptionKey()));
+
+        result.setTemplate(conditionType.getTemplate());
+        result.setTags(conditionType.getTagIDs());
+
+        List<RESTParameter> parameters = new ArrayList<RESTParameter>();
         for (Parameter parameter : conditionType.getParameters()) {
-            generateChoiceListValues(parameter, context);
+            parameters.add(generateParameter(parameter, context, bundle));
         }
+        result.setParameters(parameters);
+
+        return result;
     }
 
-    private void generateChoiceListValues(ActionType actionType, Object context) {
+    private RESTActionType generateAction(ActionType actionType, Object context, String language) {
+        RESTActionType result = new RESTActionType();
+        result.setId(actionType.getId());
+
+        ResourceBundle bundle = getResourceBundle(actionType, language);
+        result.setName(getResourceBundleValue(bundle, actionType.getNameKey()));
+        result.setDescription(getResourceBundleValue(bundle, actionType.getDescriptionKey()));
+
+        result.setTemplate(actionType.getTemplate());
+        result.setTags(actionType.getTagIds());
+
+        List<RESTParameter> parameters = new ArrayList<RESTParameter>();
         for (Parameter parameter : actionType.getParameters()) {
-            generateChoiceListValues(parameter, context);
+            parameters.add(generateParameter(parameter, context, bundle));
         }
+        result.setParameters(parameters);
+
+        return result;
     }
 
-    private void generateChoiceListValues(Parameter parameter, Object context) {
+    private RESTParameter generateParameter(Parameter parameter, Object context, ResourceBundle bundle) {
+        RESTParameter result = new RESTParameter();
+        result.setId(parameter.getId());
+        result.setDefaultValue(parameter.getDefaultValue());
+        result.setMultivalued(parameter.isMultivalued());
+        result.setType(parameter.getType());
+        ArrayList<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
+        result.setChoiceListValues(choiceListValues);
         if (parameter.getChoicelistInitializerFilter() != null && parameter.getChoicelistInitializerFilter().length() > 0) {
             try {
                 Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, parameter.getChoicelistInitializerFilter());
                 for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
                     ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
-                    parameter.setChoiceListValues(choiceListInitializer.getValues(context));
+                    for (ChoiceListValue value : choiceListInitializer.getValues(context)) {
+                        choiceListValues.add(new ChoiceListValue(value.getId(), getResourceBundleValue(bundle, value.getName())));
+                    }
                 }
             } catch (InvalidSyntaxException e) {
                 e.printStackTrace();
             }
         }
+        return result;
     }
+
+    private Collection<RESTValueType> generateValueTypes(Collection<ValueType> valueTypes, String language) {
+        List<RESTValueType> result = new ArrayList<RESTValueType>();
+        if (valueTypes == null) {
+            return result;
+        }
+        for (ValueType valueType : valueTypes) {
+            result.add(generateValueType(valueType, language));
+        }
+        return result;
+    }
+
+    private RESTValueType generateValueType(ValueType valueType, String language) {
+        RESTValueType result = new RESTValueType();
+        result.setId(valueType.getId());
+
+        ResourceBundle bundle = getResourceBundle(valueType, language);
+        result.setName(getResourceBundleValue(bundle, valueType.getNameKey()));
+        result.setDescription(getResourceBundleValue(bundle, valueType.getDescriptionKey()));
+        result.setTemplate(valueType.getTemplate());
+        result.setTags(generateTags(valueType.getTags(), language));
+        return result;
+    }
+
+    private Collection<RESTTag> generateTags(Collection<Tag> tags, String language) {
+        List<RESTTag> result = new ArrayList<RESTTag>();
+        for (Tag tag : tags) {
+            result.add(generateTag(tag, language));
+        }
+        return result;
+    }
+
+    private RESTTag generateTag(Tag tag, String language) {
+        RESTTag result = new RESTTag();
+        result.setId(tag.getId());
+        ResourceBundle bundle = getResourceBundle(tag, language);
+        result.setName(getResourceBundleValue(bundle, tag.getNameKey()));
+        result.setDescription(getResourceBundleValue(bundle, tag.getDescriptionKey()));
+        result.setParentId(tag.getParentId());
+        result.setRank(tag.getRank());
+        result.setSubTags(generateTags(tag.getSubTags(), language));
+        return result;
+    }
+
+    private ResourceBundle getResourceBundle(PluginType object, String language) {
+        Bundle bundle = bundleContext.getBundle(object.getPluginId());
+        ClassLoader loader = bundle.adapt(BundleWiring.class).getClassLoader();
+
+        if (language != null) {
+            String[] langs = language.split(",");
+            for (String lang : langs) {
+                int i = lang.indexOf(';');
+                if (i > -1) {
+                    lang = lang.substring(0, i);
+                }
+                Locale locale = Locale.forLanguageTag(lang);
+                ResourceBundle resourceBundle = ResourceBundle.getBundle("messages", locale, loader);
+                if (resourceBundle != null && locale.equals(resourceBundle.getLocale())) {
+                    return resourceBundle;
+                }
+            }
+        }
+        return ResourceBundle.getBundle("messages", Locale.ENGLISH, loader);
+    }
+
+    private String getResourceBundleValue(ResourceBundle bundle, String nameKey) {
+        try {
+            return bundle.getString(nameKey);
+        } catch (MissingResourceException e) {
+            return "???" + nameKey + "???";
+        }
+    }
+
 
 }

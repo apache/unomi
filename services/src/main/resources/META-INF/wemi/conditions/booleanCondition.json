@@ -8,6 +8,7 @@
             "id": "operator",
             "type": "String",
             "multivalued": false,
+            "defaultValue": "and",
             "choicelistInitializerFilter": ""
         },
         {

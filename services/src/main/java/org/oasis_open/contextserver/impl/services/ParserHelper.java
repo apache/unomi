@@ -112,16 +112,7 @@ public class ParserHelper {
     }
 
     public static void populatePluginType(PluginType pluginType, Bundle bundle, String path, String typeId) {
-        if (pluginType.getPluginId() == null) {
-            pluginType.setPluginId(bundle.getSymbolicName());
-        }
-        if (pluginType.getResourceBundle() == null) {
-            Enumeration<URL> resourceBundles = bundle.findEntries("/web", "messages*.json", false);
-            if (resourceBundles != null) {
-                String resourceBundle = "/plugins/" + bundle.getSymbolicName() + "/messages";
-                pluginType.setResourceBundle(resourceBundle);
-            }
-        }
+        pluginType.setPluginId(bundle.getBundleId());
         if (pluginType instanceof TemplateablePluginType) {
             TemplateablePluginType templateablePluginType = (TemplateablePluginType) pluginType;
             if (templateablePluginType.getTemplate() == null && path != null && typeId != null) {

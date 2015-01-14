@@ -18,7 +18,7 @@ public class ValueType implements TemplateablePluginType {
     String descriptionKey;
     String template;
     String resourceBundle;
-    String pluginId;
+    long pluginId;
     Set<Tag> tags = new TreeSet<Tag>();
     Set<String> tagIds = new LinkedHashSet<String>();
 
@@ -75,11 +75,12 @@ public class ValueType implements TemplateablePluginType {
         this.resourceBundle = resourceBundle;
     }
 
-    public String getPluginId() {
+    @XmlTransient
+    public long getPluginId() {
         return pluginId;
     }
 
-    public void setPluginId(String pluginId) {
+    public void setPluginId(long pluginId) {
         this.pluginId = pluginId;
     }
 

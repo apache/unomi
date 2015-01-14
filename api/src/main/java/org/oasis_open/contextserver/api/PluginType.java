@@ -5,12 +5,8 @@ package org.oasis_open.contextserver.api;
  */
 public interface PluginType {
 
-    public String getResourceBundle();
+    public long getPluginId();
 
-    public void setResourceBundle(String resourceBundle);
-
-    public String getPluginId();
-
-    public void setPluginId(String pluginId);
+    public void setPluginId(long pluginId);
 
 }

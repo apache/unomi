@@ -1,5 +1,7 @@
 package org.oasis_open.contextserver.api;
 
+import javax.xml.bind.annotation.XmlTransient;
+
 /**
  * Created by loom on 28.08.14.
  */
@@ -9,7 +11,7 @@ public class PropertyTypeGroup extends Item implements Comparable<PropertyTypeGr
     private String id;
     private double rank;
     private String resourceBundle;
-    private String pluginId;
+    private long pluginId;
 
     public PropertyTypeGroup() {
     }
@@ -44,11 +46,12 @@ public class PropertyTypeGroup extends Item implements Comparable<PropertyTypeGr
         this.resourceBundle = resourceBundle;
     }
 
-    public String getPluginId() {
+    @XmlTransient
+    public long getPluginId() {
         return pluginId;
     }
 
-    public void setPluginId(String pluginId) {
+    public void setPluginId(long pluginId) {
         this.pluginId = pluginId;
     }
 
