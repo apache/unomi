@@ -3,9 +3,16 @@ package org.oasis_open.contextserver.api.conditions.initializers;
 import java.util.List;
 
 /**
- * Created by loom on 25.06.14.
+ * Defines an initializer for a list of options.
  */
 public interface ChoiceListInitializer {
 
-    public List<ChoiceListValue> getValues(Object context);
+    /**
+     * Returns a list of options for this choice list.
+     * 
+     * @param context
+     *            a context object containing supporting information
+     * @return a list of options for this choice list
+     */
+    List<ChoiceListValue> getValues(Object context);
 }

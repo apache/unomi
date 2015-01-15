@@ -1,7 +1,5 @@
 package org.oasis_open.contextserver.rest;
 
-import org.oasis_open.contextserver.api.conditions.ConditionType;
-
 import java.util.*;
 
 public class RESTConditionType {

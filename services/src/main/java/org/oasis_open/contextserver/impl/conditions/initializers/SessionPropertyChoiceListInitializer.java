@@ -76,6 +76,7 @@ import java.util.Map;
 import org.oasis_open.contextserver.api.Session;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
+import org.oasis_open.contextserver.api.conditions.initializers.I18nSupport;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
 
 /**
@@ -83,7 +84,7 @@ import org.oasis_open.contextserver.persistence.spi.PersistenceService;
  * 
  * @author Sergiy Shyrkov
  */
-public class SessionPropertyChoiceListInitializer implements ChoiceListInitializer {
+public class SessionPropertyChoiceListInitializer implements ChoiceListInitializer, I18nSupport {
 
     private PersistenceService persistenceService;
 

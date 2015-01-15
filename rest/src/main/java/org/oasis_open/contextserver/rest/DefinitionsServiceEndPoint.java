@@ -7,6 +7,7 @@ import org.oasis_open.contextserver.api.actions.ActionType;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
+import org.oasis_open.contextserver.api.conditions.initializers.I18nSupport;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -17,7 +18,7 @@ import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import java.io.ByteArrayOutputStream;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -33,7 +34,7 @@ import java.util.regex.Pattern;
 )
 public class DefinitionsServiceEndPoint {
 
-    private static final Pattern I18N_PATTERN = Pattern.compile("#\\{([a-zA-Z_]+)\\}");
+    private static final Pattern I18N_PATTERN = Pattern.compile("#\\{([a-zA-Z_\\.]+)\\}");
 
     private DefinitionsService definitionsService;
     private BundleContext bundleContext;
@@ -229,11 +230,9 @@ public class DefinitionsServiceEndPoint {
 
         result.setTags(conditionType.getTagIDs());
 
-        List<RESTParameter> parameters = new ArrayList<RESTParameter>();
         for (Parameter parameter : conditionType.getParameters()) {
-            parameters.add(generateParameter(parameter, context, bundle));
+            result.getParameters().add(generateParameter(parameter, context, bundle));
         }
-        result.setParameters(parameters);
 
         return result;
     }
@@ -263,21 +262,9 @@ public class DefinitionsServiceEndPoint {
         result.setDefaultValue(parameter.getDefaultValue());
         result.setMultivalued(parameter.isMultivalued());
         result.setType(parameter.getType());
-        ArrayList<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
-        result.setChoiceListValues(choiceListValues);
-        if (parameter.getChoiceListInitializerFilter() != null && parameter.getChoiceListInitializerFilter().length() > 0) {
-            try {
-                Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, parameter.getChoiceListInitializerFilter());
-                for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
-                    ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
-                    for (ChoiceListValue value : choiceListInitializer.getValues(context)) {
-                        choiceListValues.add(value.localizedCopy(resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
-                    }
-                }
-            } catch (InvalidSyntaxException e) {
-                e.printStackTrace();
-            }
-        }
+        
+        localizeChoiceListValues(bundle, result.getChoiceListValues(), parameter.getChoiceListInitializerFilter());
+
         return result;
     }
 
@@ -301,23 +288,30 @@ public class DefinitionsServiceEndPoint {
         result.setMergeStrategy(type.getMergeStrategy());
         result.setSelectorId(type.getSelectorId());
 
-        ArrayList<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
-        result.setChoiceListValues(choiceListValues);
-        if (type.getChoiceListInitializerFilter() != null && type.getChoiceListInitializerFilter().length() > 0) {
+        localizeChoiceListValues(bundle, result.getChoiceListValues(), type.getChoiceListInitializerFilter());
+
+        return result;
+    }
+
+    private void localizeChoiceListValues(ResourceBundle bundle, List<ChoiceListValue> result, String choiceListInitializerFilter) {
+        if (choiceListInitializerFilter != null && choiceListInitializerFilter.length() > 0) {
             try {
-                Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, type.getChoiceListInitializerFilter());
+                Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, choiceListInitializerFilter);
                 for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
                     ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
-                    for (ChoiceListValue value : choiceListInitializer.getValues(null)) {
-                        choiceListValues.add(value.localizedCopy(resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
+                    List<ChoiceListValue> options = choiceListInitializer.getValues(null);
+                    if (choiceListInitializer instanceof I18nSupport) {
+                        for (ChoiceListValue value : options) {
+                            result.add(value.localizedCopy(resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
+                        }
+                    } else {
+                        result.addAll(options);
                     }
                 }
             } catch (InvalidSyntaxException e) {
                 e.printStackTrace();
             }
         }
-
-        return result;
     }
 
     private Collection<RESTValueType> generateValueTypes(Collection<ValueType> valueTypes, String language) {
@@ -368,17 +362,13 @@ public class DefinitionsServiceEndPoint {
 
         URL templateURL = bundle.getEntry(template);
         if (templateURL != null) {
+            InputStream inputStream = null;
             try {
-                Object o = templateURL.getContent();
-                InputStream inputStream = (InputStream) o;
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                IOUtils.copy(inputStream, baos);
-                inputStream.close();
-
+                inputStream = (InputStream) templateURL.getContent();
+                String content = IOUtils.toString(inputStream);
+                
                 ResourceBundle resourceBundle = resourceBundleHelper.getResourceBundle(type, language);
-
-                String content = new String(baos.toByteArray(), "UTF-8");
-
+                
                 Matcher matcher = I18N_PATTERN.matcher(content);
                 while (matcher.find()) {
                     content = matcher.replaceFirst(resourceBundle.getString(matcher.group(1)));
@@ -389,6 +379,14 @@ public class DefinitionsServiceEndPoint {
             } catch (IOException e) {
                 e.printStackTrace();
                 return "";
+            } finally {
+                if (inputStream != null) {
+                    try {
+                        inputStream.close();
+                    } catch (IOException e) {
+                        // ignore it
+                    }
+                }
             }
         }
         return "";

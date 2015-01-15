@@ -5,11 +5,12 @@ import java.util.List;
 
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
+import org.oasis_open.contextserver.api.conditions.initializers.I18nSupport;
 
 /**
  * Initializer for the set of available comparison operators.
  */
-public class ComparisonOperatorChoiceListInitializer implements ChoiceListInitializer {
+public class ComparisonOperatorChoiceListInitializer implements ChoiceListInitializer, I18nSupport {
 
     private static final List<ChoiceListValue> OPERATORS;
 

@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- *
+ * Initializer for segment choice list.
  */
 public class SegmentsChoiceListInitializer implements ChoiceListInitializer {
 

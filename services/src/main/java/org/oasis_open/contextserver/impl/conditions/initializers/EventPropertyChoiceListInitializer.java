@@ -3,6 +3,7 @@ package org.oasis_open.contextserver.impl.conditions.initializers;
 import org.oasis_open.contextserver.api.EventProperty;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
+import org.oasis_open.contextserver.api.conditions.initializers.I18nSupport;
 import org.oasis_open.contextserver.api.services.EventService;
 
 import java.util.ArrayList;
@@ -11,7 +12,7 @@ import java.util.List;
 /**
  * Initializer for the set of available event properties.
  */
-public class EventPropertyChoiceListInitializer implements ChoiceListInitializer {
+public class EventPropertyChoiceListInitializer implements ChoiceListInitializer, I18nSupport {
 
     EventService eventService;
 

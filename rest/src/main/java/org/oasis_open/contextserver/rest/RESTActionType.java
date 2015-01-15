@@ -1,8 +1,5 @@
 package org.oasis_open.contextserver.rest;
 
-import org.oasis_open.contextserver.api.Parameter;
-import org.oasis_open.contextserver.api.Tag;
-
 import java.util.*;
 
 /**
