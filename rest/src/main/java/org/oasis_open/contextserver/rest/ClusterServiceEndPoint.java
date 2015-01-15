@@ -28,9 +28,9 @@ import java.util.List;
 public class ClusterServiceEndPoint {
 
     @Context
-    MessageContext messageContext;
+    private MessageContext messageContext;
 
-    ClusterService clusterService;
+    private ClusterService clusterService;
 
     public ClusterServiceEndPoint() {
         System.out.println("Initializing cluster service endpoint...");

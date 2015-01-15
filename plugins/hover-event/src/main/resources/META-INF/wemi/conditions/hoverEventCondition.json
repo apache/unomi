@@ -7,13 +7,13 @@
             "id": "targetId",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         },
         {
             "id": "targetPath",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         }
     ]
 }

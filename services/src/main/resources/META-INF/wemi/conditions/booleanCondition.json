@@ -9,13 +9,13 @@
             "type": "String",
             "multivalued": false,
             "defaultValue": "and",
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         },
         {
             "id": "subConditions",
             "type": "Condition",
             "multivalued": true,
-            "choicelistInitializerFilter": "(initializerId=condition)"
+            "choiceListInitializerFilter": "(initializerId=condition)"
         }
     ]
 }

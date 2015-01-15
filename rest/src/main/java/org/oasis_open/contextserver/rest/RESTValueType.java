@@ -8,11 +8,11 @@ import java.util.Set;
  */
 public class RESTValueType {
 
-    String id;
-    String name;
-    String description;
-    String template;
-    Collection<RESTTag> tags;
+    private String id;
+    private String name;
+    private String description;
+    private String template;
+    private Collection<RESTTag> tags;
 
     public RESTValueType() {
     }

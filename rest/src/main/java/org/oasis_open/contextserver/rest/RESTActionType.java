@@ -9,12 +9,12 @@ import java.util.*;
  * Created by toto on 14/01/15.
  */
 public class RESTActionType {
-    String id;
-    String name;
-    String description;
-    Collection<String> tags;
-    String template;
-    List<RESTParameter> parameters;
+    private String id;
+    private String name;
+    private String description;
+    private Collection<String> tags;
+    private String template;
+    private List<RESTParameter> parameters;
 
     public String getId() {
         return id;

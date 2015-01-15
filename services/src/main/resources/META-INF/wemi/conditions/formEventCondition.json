@@ -32,7 +32,7 @@
       "id": "formId",
       "type": "String",
       "multivalued": false,
-      "choicelistInitializerFilter": ""
+      "choiceListInitializerFilter": ""
     }
   ]
 }

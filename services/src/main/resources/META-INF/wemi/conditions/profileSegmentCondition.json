@@ -14,13 +14,13 @@
             "id": "segments",
             "type": "string",
             "multivalued": true,
-            "choicelistInitializerFilter": "(initializerId=segments)"
+            "choiceListInitializerFilter": "(initializerId=segments)"
         },
         {
             "id": "matchType",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         }
     ]
 }

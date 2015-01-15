@@ -7,13 +7,13 @@
             "id": "eventPropertyName",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": "(initializerId=eventProperty)"
+            "choiceListInitializerFilter": "(initializerId=eventProperty)"
         },
         {
             "id": "profilePropertyName",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": "(initializerId=propertyType)"
+            "choiceListInitializerFilter": "(initializerId=propertyType)"
         }
     ]
 }

@@ -7,7 +7,7 @@
             "id": "mergeProfilePropertyName",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": "(initializerId=propertyType)"
+            "choiceListInitializerFilter": "(initializerId=propertyType)"
         }
     ]
 }

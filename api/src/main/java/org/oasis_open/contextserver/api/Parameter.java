@@ -1,10 +1,6 @@
 package org.oasis_open.contextserver.api;
 
-import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
-
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Represents a condition parameter, that will be used in the segment building UI to either select parameters from a
@@ -16,7 +12,7 @@ public class Parameter {
     String id;
     String type;
     boolean multivalued = false;
-    String choicelistInitializerFilter;
+    String choiceListInitializerFilter;
     String defaultValue = null;
 
     public Parameter() {
@@ -34,8 +30,8 @@ public class Parameter {
         return multivalued;
     }
 
-    public String getChoicelistInitializerFilter() {
-        return choicelistInitializerFilter;
+    public String getChoiceListInitializerFilter() {
+        return choiceListInitializerFilter;
     }
 
     public String getDefaultValue() {

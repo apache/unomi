@@ -2,8 +2,6 @@
     "id": "setRemoteHostInfoAction",
     "serviceFilter": "(actionExecutorId=setRemoteHostInfo)",
     "tags": [ "event" ],
-    "template": "/plugins/org.oasis-open.contextserver-plugins-request/actions/setRemoteHostInfoAction.html",
-    "resourceBundle": "/plugins/org.oasis-open.contextserver-plugins-request/messages",
     "parameters": [
     ]
 }

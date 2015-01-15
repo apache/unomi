@@ -8,31 +8,31 @@
             "id": "numberOfDays",
             "type": "integer",
             "multivalued": false,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         },
         {
             "id": "minimumEventCount",
             "type": "integer",
             "multivalued": false,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         },
         {
             "id": "maximumEventCount",
             "type": "integer",
             "multivalued": false,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         },
         {
             "id": "generatedPropertyKey",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         },
         {
             "id": "eventCondition",
             "type": "Condition",
             "multivalued": false,
-            "choicelistInitializerFilter": "(initializerId=condition)"
+            "choiceListInitializerFilter": "(initializerId=condition)"
         }
     ]
 }

@@ -7,13 +7,13 @@
             "id": "propertyName",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         },
         {
             "id": "propertyValue",
             "type": "integer",
             "multivalued": false,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         }
     ]
 }

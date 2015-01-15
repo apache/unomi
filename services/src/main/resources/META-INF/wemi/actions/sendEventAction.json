@@ -7,13 +7,13 @@
             "id": "eventType",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         },
         {
             "id": "eventProperties",
             "type": "properties",
             "multivalued": false,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         }
     ]
 }

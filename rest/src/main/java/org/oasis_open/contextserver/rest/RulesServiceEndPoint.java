@@ -22,7 +22,7 @@ import java.util.Set;
 )
 public class RulesServiceEndPoint {
 
-    RulesService rulesService;
+    private RulesService rulesService;
 
     public RulesServiceEndPoint() {
         System.out.println("Initializing rule service endpoint...");

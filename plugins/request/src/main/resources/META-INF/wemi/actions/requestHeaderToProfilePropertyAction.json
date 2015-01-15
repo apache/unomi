@@ -2,32 +2,30 @@
     "id": "requestHeaderToProfilePropertyAction",
     "serviceFilter": "(actionExecutorId=requestHeaderToProfileProperty)",
     "tags": [ "event" ],
-    "template": "/plugins/org.oasis-open.contextserver-plugins-request/actions/requestHeaderToProfilePropertyAction.html",
-    "resourceBundle": "/plugins/org.oasis-open.contextserver-plugins-request/messages",
     "parameters": [
         {
             "id": "requestHeaderName",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         },
         {
             "id": "profilePropertyName",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": "(initializerId=propertyType)"
+            "choiceListInitializerFilter": "(initializerId=propertyType)"
         },
         {
             "id": "sessionPropertyName",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         },
         {
             "id": "storeAsList",
             "type": "boolean",
             "multivalued": false,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         }
     ]
 }

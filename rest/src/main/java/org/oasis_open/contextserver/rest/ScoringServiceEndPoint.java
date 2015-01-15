@@ -22,7 +22,7 @@ import java.util.Set;
 )
 public class ScoringServiceEndPoint {
 
-    SegmentService segmentService;
+    private SegmentService segmentService;
 
     public ScoringServiceEndPoint() {
         System.out.println("Initializing scoring service endpoint...");

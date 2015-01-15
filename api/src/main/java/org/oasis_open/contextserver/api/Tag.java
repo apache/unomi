@@ -17,7 +17,6 @@ public class Tag implements PluginType, Comparable<Tag> {
     private String parentId;
     private double rank = 0.0;
     private long pluginId;
-    private String resourceBundle;
 
     public Tag() {
     }
@@ -75,14 +74,6 @@ public class Tag implements PluginType, Comparable<Tag> {
 
     public void setPluginId(long pluginId) {
         this.pluginId = pluginId;
-    }
-
-    public String getResourceBundle() {
-        return resourceBundle;
-    }
-
-    public void setResourceBundle(String resourceBundle) {
-        this.resourceBundle = resourceBundle;
     }
 
     @Override

@@ -34,8 +34,11 @@ import java.util.regex.Pattern;
 )
 public class DefinitionsServiceEndPoint {
 
-    DefinitionsService definitionsService;
-    BundleContext bundleContext;
+    private static final Pattern I18N_PATTERN = Pattern.compile("#\\{([a-zA-Z_]+)\\}");
+
+    private DefinitionsService definitionsService;
+    private BundleContext bundleContext;
+    private ResourceBundleHelper resourceBundleHelper;
 
     @WebMethod(exclude = true)
     public void setDefinitionsService(DefinitionsService definitionsService) {
@@ -45,6 +48,11 @@ public class DefinitionsServiceEndPoint {
     @WebMethod(exclude = true)
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
+    }
+
+    @WebMethod(exclude = true)
+    public void setResourceBundleHelper(ResourceBundleHelper resourceBundleHelper) {
+        this.resourceBundleHelper = resourceBundleHelper;
     }
 
     @GET
@@ -202,9 +210,9 @@ public class DefinitionsServiceEndPoint {
         RESTConditionType result = new RESTConditionType();
         result.setId(conditionType.getId());
 
-        ResourceBundle bundle = getResourceBundle(conditionType, language);
-        result.setName(getResourceBundleValue(bundle, conditionType.getNameKey()));
-        result.setDescription(getResourceBundleValue(bundle, conditionType.getDescriptionKey()));
+        ResourceBundle bundle = resourceBundleHelper.getResourceBundle(conditionType, language);
+        result.setName(resourceBundleHelper.getResourceBundleValue(bundle, conditionType.getNameKey()));
+        result.setDescription(resourceBundleHelper.getResourceBundleValue(bundle, conditionType.getDescriptionKey()));
 
         result.setTemplate(conditionType.getTemplate());
         result.setTags(conditionType.getTagIDs());
@@ -222,9 +230,9 @@ public class DefinitionsServiceEndPoint {
         RESTActionType result = new RESTActionType();
         result.setId(actionType.getId());
 
-        ResourceBundle bundle = getResourceBundle(actionType, language);
-        result.setName(getResourceBundleValue(bundle, actionType.getNameKey()));
-        result.setDescription(getResourceBundleValue(bundle, actionType.getDescriptionKey()));
+        ResourceBundle bundle = resourceBundleHelper.getResourceBundle(actionType, language);
+        result.setName(resourceBundleHelper.getResourceBundleValue(bundle, actionType.getNameKey()));
+        result.setDescription(resourceBundleHelper.getResourceBundleValue(bundle, actionType.getDescriptionKey()));
 
         result.setTemplate(actionType.getTemplate());
         result.setTags(actionType.getTagIds());
@@ -246,13 +254,13 @@ public class DefinitionsServiceEndPoint {
         result.setType(parameter.getType());
         ArrayList<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
         result.setChoiceListValues(choiceListValues);
-        if (parameter.getChoicelistInitializerFilter() != null && parameter.getChoicelistInitializerFilter().length() > 0) {
+        if (parameter.getChoiceListInitializerFilter() != null && parameter.getChoiceListInitializerFilter().length() > 0) {
             try {
-                Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, parameter.getChoicelistInitializerFilter());
+                Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, parameter.getChoiceListInitializerFilter());
                 for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
                     ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
                     for (ChoiceListValue value : choiceListInitializer.getValues(context)) {
-                        choiceListValues.add(new ChoiceListValue(value.getId(), getResourceBundleValue(bundle, value.getName())));
+                        choiceListValues.add(new ChoiceListValue(value.getId(), resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
                     }
                 }
             } catch (InvalidSyntaxException e) {
@@ -277,9 +285,9 @@ public class DefinitionsServiceEndPoint {
         RESTValueType result = new RESTValueType();
         result.setId(valueType.getId());
 
-        ResourceBundle bundle = getResourceBundle(valueType, language);
-        result.setName(getResourceBundleValue(bundle, valueType.getNameKey()));
-        result.setDescription(getResourceBundleValue(bundle, valueType.getDescriptionKey()));
+        ResourceBundle bundle = resourceBundleHelper.getResourceBundle(valueType, language);
+        result.setName(resourceBundleHelper.getResourceBundleValue(bundle, valueType.getNameKey()));
+        result.setDescription(resourceBundleHelper.getResourceBundleValue(bundle, valueType.getDescriptionKey()));
         result.setTemplate(valueType.getTemplate());
         result.setTags(generateTags(valueType.getTags(), language));
         return result;
@@ -296,9 +304,9 @@ public class DefinitionsServiceEndPoint {
     private RESTTag generateTag(Tag tag, String language) {
         RESTTag result = new RESTTag();
         result.setId(tag.getId());
-        ResourceBundle bundle = getResourceBundle(tag, language);
-        result.setName(getResourceBundleValue(bundle, tag.getNameKey()));
-        result.setDescription(getResourceBundleValue(bundle, tag.getDescriptionKey()));
+        ResourceBundle bundle = resourceBundleHelper.getResourceBundle(tag, language);
+        result.setName(resourceBundleHelper.getResourceBundleValue(bundle, tag.getNameKey()));
+        result.setDescription(resourceBundleHelper.getResourceBundleValue(bundle, tag.getDescriptionKey()));
         result.setParentId(tag.getParentId());
         result.setRank(tag.getRank());
         result.setSubTags(generateTags(tag.getSubTags(), language));
@@ -316,15 +324,14 @@ public class DefinitionsServiceEndPoint {
                 IOUtils.copy(inputStream, baos);
                 inputStream.close();
 
-                ResourceBundle resourceBundle = getResourceBundle(type, language);
+                ResourceBundle resourceBundle = resourceBundleHelper.getResourceBundle(type, language);
 
                 String content = new String(baos.toByteArray(), "UTF-8");
 
-                Pattern i18n = Pattern.compile("#\\{([a-zA-Z_]+)\\}");
-                Matcher matcher = i18n.matcher(content);
+                Matcher matcher = I18N_PATTERN.matcher(content);
                 while (matcher.find()) {
                     content = matcher.replaceFirst(resourceBundle.getString(matcher.group(1)));
-                    matcher = i18n.matcher(content);
+                    matcher = I18N_PATTERN.matcher(content);
                 }
 
                 return content;
@@ -334,35 +341,6 @@ public class DefinitionsServiceEndPoint {
             }
         }
         return "";
-    }
-
-    private ResourceBundle getResourceBundle(PluginType object, String language) {
-        Bundle bundle = bundleContext.getBundle(object.getPluginId());
-        ClassLoader loader = bundle.adapt(BundleWiring.class).getClassLoader();
-
-        if (language != null) {
-            String[] langs = language.split(",");
-            for (String lang : langs) {
-                int i = lang.indexOf(';');
-                if (i > -1) {
-                    lang = lang.substring(0, i);
-                }
-                Locale locale = Locale.forLanguageTag(lang);
-                ResourceBundle resourceBundle = ResourceBundle.getBundle("messages", locale, loader);
-                if (resourceBundle != null && locale.equals(resourceBundle.getLocale())) {
-                    return resourceBundle;
-                }
-            }
-        }
-        return ResourceBundle.getBundle("messages", Locale.ENGLISH, loader);
-    }
-
-    private String getResourceBundleValue(ResourceBundle bundle, String nameKey) {
-        try {
-            return bundle.getString(nameKey);
-        } catch (MissingResourceException e) {
-            return "???" + nameKey + "???";
-        }
     }
 
 

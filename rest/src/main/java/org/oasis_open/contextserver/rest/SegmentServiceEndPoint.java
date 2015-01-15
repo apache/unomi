@@ -24,7 +24,7 @@ import java.util.Set;
 )
 public class SegmentServiceEndPoint {
 
-    SegmentService segmentService;
+    private SegmentService segmentService;
 
     public SegmentServiceEndPoint() {
         System.out.println("Initializing segment service endpoint...");

@@ -8,19 +8,19 @@
             "id": "latitude",
             "type": "string",
             "multivalued": true,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         },
         {
             "id": "longitude",
             "type": "string",
             "multivalued": true,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         },
         {
             "id": "distance",
             "type": "string",
             "multivalued": true,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         }
     ]
 }

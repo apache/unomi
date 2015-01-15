@@ -18,7 +18,6 @@ public class ActionType implements TemplateablePluginType, Serializable {
     Set<Tag> tags = new TreeSet<Tag>();
     Set<String> tagIds = new LinkedHashSet<String>();
     String template;
-    String resourceBundle;
     long pluginId;
     List<Parameter> parameters = new ArrayList<Parameter>();
 
@@ -62,14 +61,6 @@ public class ActionType implements TemplateablePluginType, Serializable {
 
     public void setTemplate(String template) {
         this.template = template;
-    }
-
-    public String getResourceBundle() {
-        return resourceBundle;
-    }
-
-    public void setResourceBundle(String resourceBundle) {
-        this.resourceBundle = resourceBundle;
     }
 
     @XmlTransient

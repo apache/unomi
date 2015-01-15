@@ -9,11 +9,11 @@ import java.util.List;
  * Created by toto on 14/01/15.
  */
 public class RESTParameter {
-    String id;
-    String type;
-    boolean multivalued = false;
-    String defaultValue = null;
-    List<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
+    private String id;
+    private String type;
+    private boolean multivalued = false;
+    private String defaultValue = null;
+    private List<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
 
 
     public String getId() {

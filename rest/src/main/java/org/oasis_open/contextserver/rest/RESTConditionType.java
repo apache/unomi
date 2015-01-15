@@ -5,12 +5,12 @@ import org.oasis_open.contextserver.api.conditions.ConditionType;
 import java.util.*;
 
 public class RESTConditionType {
-    String id;
-    String name;
-    String description;
-    String template;
-    Collection<String> tags = new TreeSet<String>();
-    List<RESTParameter> parameters = new ArrayList<RESTParameter>();
+    private String id;
+    private String name;
+    private String description;
+    private String template;
+    private Collection<String> tags = new TreeSet<String>();
+    private List<RESTParameter> parameters = new ArrayList<RESTParameter>();
 
     public RESTConditionType() {
     }

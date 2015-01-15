@@ -20,7 +20,6 @@ public class ConditionType implements TemplateablePluginType, Serializable {
     String nameKey;
     String descriptionKey;
     String template;
-    String resourceBundle;
     long pluginId;
     String conditionEvaluator;
     String queryBuilderFilter;

@@ -11,7 +11,6 @@ public class PropertyMergeStrategyType implements PluginType {
     private String filter;
 
     private long pluginId;
-    private String resourceBundle;
 
     public String getId() {
         return id;
@@ -38,11 +37,4 @@ public class PropertyMergeStrategyType implements PluginType {
         this.pluginId = pluginId;
     }
 
-    public String getResourceBundle() {
-        return resourceBundle;
-    }
-
-    public void setResourceBundle(String resourceBundle) {
-        this.resourceBundle = resourceBundle;
-    }
 }

@@ -8,19 +8,19 @@
             "id": "propertyName",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": "(initializerId=propertyType)"
+            "choiceListInitializerFilter": "(initializerId=propertyType)"
         },
         {
             "id": "propertyValues",
             "type": "string",
             "multivalued": true,
-            "choicelistInitializerFilter": "(initializerId=segments)"
+            "choiceListInitializerFilter": "(initializerId=segments)"
         },
         {
             "id": "matchType",
             "type": "string",
             "multivalued": false,
-            "choicelistInitializerFilter": ""
+            "choiceListInitializerFilter": ""
         }
     ]
 }

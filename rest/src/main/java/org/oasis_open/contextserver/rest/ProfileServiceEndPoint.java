@@ -3,14 +3,19 @@ package org.oasis_open.contextserver.rest;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
+import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListInitializer;
+import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
+import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.ProfileService;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceReference;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import java.util.Date;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by loom on 27.08.14.
@@ -21,9 +26,11 @@ import java.util.Set;
         allowAllOrigins = true,
         allowCredentials = true
 )
-public class ProfileServiceEndPoint implements ProfileService {
+public class ProfileServiceEndPoint {
 
-    public ProfileService profileService;
+    private ProfileService profileService;
+    private BundleContext bundleContext;
+    private ResourceBundleHelper resourceBundleHelper;
 
     public ProfileServiceEndPoint() {
         System.out.println("Initializing profile service endpoint...");
@@ -32,6 +39,16 @@ public class ProfileServiceEndPoint implements ProfileService {
     @WebMethod(exclude = true)
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;
+    }
+
+    @WebMethod(exclude = true)
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
+
+    @WebMethod(exclude = true)
+    public void setResourceBundleHelper(ResourceBundleHelper resourceBundleHelper) {
+        this.resourceBundleHelper = resourceBundleHelper;
     }
 
     @GET
@@ -94,14 +111,14 @@ public class ProfileServiceEndPoint implements ProfileService {
 
     @GET
     @Path("/properties")
-    public Set<PropertyType> getAllPropertyTypes() {
-        return profileService.getAllPropertyTypes();
+    public Collection<RESTPropertyType> getAllPropertyTypes(@HeaderParam("Accept-Language") String language) {
+        return generatePropertyTypes(profileService.getAllPropertyTypes(), language);
     }
 
     @GET
     @Path("/properties/tags/{tagId}")
-    public Set<PropertyType> getPropertyTypes(@PathParam("tagId") String tagId, @QueryParam("recursive") @DefaultValue("false") boolean recursive) {
-        return profileService.getPropertyTypes(tagId, recursive);
+    public Collection<RESTPropertyType> getPropertyTypes(@PathParam("tagId") String tagId, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
+        return generatePropertyTypes(profileService.getPropertyTypes(tagId, recursive), language);
     }
 
     @GET
@@ -178,6 +195,45 @@ public class ProfileServiceEndPoint implements ProfileService {
     @WebMethod(exclude = true)
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
         return profileService.matchCondition(condition, profile, session);
+    }
+
+    private Collection<RESTPropertyType> generatePropertyTypes(Collection<PropertyType> type, String language) {
+        Set<RESTPropertyType> result = new LinkedHashSet<>();
+        for (PropertyType propertyType : type) {
+            result.add(generatePropertyType(propertyType, resourceBundleHelper.getResourceBundle(propertyType, language)));
+        }
+        return result;
+    }
+
+    private RESTPropertyType generatePropertyType(PropertyType type, ResourceBundle bundle) {
+        RESTPropertyType result = new RESTPropertyType();
+        result.setId(type.getId());
+        result.setName(resourceBundleHelper.getResourceBundleValue(bundle, type.getId()));
+        result.setValueTypeId(type.getValueTypeId());
+        result.setDefaultValue(type.getDefaultValue());
+        result.setRank(type.getRank());
+        result.setTags(type.getTagIds());
+        result.setAutomaticMappingsFrom(type.getAutomaticMappingsFrom());
+        result.setMergeStrategy(type.getMergeStrategy());
+        result.setSelectorId(type.getSelectorId());
+
+        ArrayList<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
+        result.setChoiceListValues(choiceListValues);
+        if (type.getChoiceListInitializerFilter() != null && type.getChoiceListInitializerFilter().length() > 0) {
+            try {
+                Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, type.getChoiceListInitializerFilter());
+                for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
+                    ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
+                    for (ChoiceListValue value : choiceListInitializer.getValues(null)) {
+                        choiceListValues.add(new ChoiceListValue(value.getId(), resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
+                    }
+                }
+            } catch (InvalidSyntaxException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return result;
     }
 
 }

@@ -21,7 +21,7 @@ import java.util.Set;
 )
 public class GoalsServiceEndPoint {
 
-    GoalsService goalsService;
+    private GoalsService goalsService;
 
     @WebMethod(exclude = true)
     public void setGoalsService(GoalsService goalsService) {

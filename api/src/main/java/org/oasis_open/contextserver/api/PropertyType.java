@@ -22,7 +22,6 @@ public class PropertyType extends Item implements Comparable<PropertyType>, Plug
     private Set<String> automaticMappingsFrom;
     private double rank;
     private long pluginId;
-    private String resourceBundle;
     private String mergeStrategy;
 
     public PropertyType() {
@@ -115,14 +114,6 @@ public class PropertyType extends Item implements Comparable<PropertyType>, Plug
 
     public void setPluginId(long pluginId) {
         this.pluginId = pluginId;
-    }
-
-    public String getResourceBundle() {
-        return resourceBundle;
-    }
-
-    public void setResourceBundle(String resourceBundle) {
-        this.resourceBundle = resourceBundle;
     }
 
     public String getMergeStrategy() {
