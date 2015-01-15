@@ -15,7 +15,7 @@
             "id": "subConditions",
             "type": "Condition",
             "multivalued": true,
-            "choiceListInitializerFilter": "(initializerId=condition)"
+            "choiceListInitializerFilter": ""
         }
     ]
 }
