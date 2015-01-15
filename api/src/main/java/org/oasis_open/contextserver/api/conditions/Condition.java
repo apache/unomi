@@ -30,7 +30,7 @@ public class Condition {
 
     public void setConditionType(ConditionType conditionType) {
         this.conditionType = conditionType;
-        this.conditionTypeId = conditionType.id;
+        this.conditionTypeId = conditionType.getId();
     }
 
     @XmlElement(name="type")

@@ -8,7 +8,6 @@ public class RESTConditionType {
     private String id;
     private String name;
     private String description;
-    private String template;
     private Collection<String> tags = new TreeSet<String>();
     private List<RESTParameter> parameters = new ArrayList<RESTParameter>();
 
@@ -37,14 +36,6 @@ public class RESTConditionType {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public String getTemplate() {
-        return template;
-    }
-
-    public void setTemplate(String template) {
-        this.template = template;
     }
 
     public Collection<String> getTags() {

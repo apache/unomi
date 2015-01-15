@@ -13,7 +13,6 @@ public class RESTActionType {
     private String name;
     private String description;
     private Collection<String> tags;
-    private String template;
     private List<RESTParameter> parameters;
 
     public String getId() {
@@ -46,14 +45,6 @@ public class RESTActionType {
 
     public void setTags(Collection<String> tags) {
         this.tags = tags;
-    }
-
-    public String getTemplate() {
-        return template;
-    }
-
-    public void setTemplate(String template) {
-        this.template = template;
     }
 
     public List<RESTParameter> getParameters() {

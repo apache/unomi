@@ -2,7 +2,6 @@ package org.oasis_open.contextserver.impl.services;
 
 import org.oasis_open.contextserver.api.PluginType;
 import org.oasis_open.contextserver.api.PropertyType;
-import org.oasis_open.contextserver.api.TemplateablePluginType;
 import org.oasis_open.contextserver.api.ValueType;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionType;
@@ -13,10 +12,8 @@ import org.osgi.framework.Bundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Enumeration;
 import java.util.List;
 
 public class ParserHelper {
@@ -103,24 +100,6 @@ public class ParserHelper {
             ValueType valueType = definitionsService.getValueType(propertyType.getValueTypeId());
             if (valueType != null) {
                 propertyType.setValueType(valueType);
-            }
-        }
-    }
-
-    public static void populatePluginType(PluginType pluginType, Bundle bundle) {
-        populatePluginType(pluginType, bundle, null, null);
-    }
-
-    public static void populatePluginType(PluginType pluginType, Bundle bundle, String path, String typeId) {
-        pluginType.setPluginId(bundle.getBundleId());
-        if (pluginType instanceof TemplateablePluginType) {
-            TemplateablePluginType templateablePluginType = (TemplateablePluginType) pluginType;
-            if (templateablePluginType.getTemplate() == null && path != null && typeId != null) {
-                String template = "/web/" + path + "/" + typeId + ".html";
-                URL templateURL = bundle.getEntry(template);
-                if (templateURL != null) {
-                    templateablePluginType.setTemplate(template);
-                }
             }
         }
     }

@@ -102,7 +102,7 @@ public class DefinitionsServiceEndPoint {
     @Path("/template/condition/{conditionId}")
     @Produces(MediaType.TEXT_HTML)
     public String getConditionTemplate(@PathParam("conditionId") String id, @HeaderParam("Accept-Language") String language) {
-        return getTemplate(definitionsService.getConditionType(id), language);
+        return getTemplate(definitionsService.getConditionType(id), language, "conditions", id);
     }
 
     @GET
@@ -134,7 +134,7 @@ public class DefinitionsServiceEndPoint {
     @Path("/template/action/{actionId}")
     @Produces(MediaType.TEXT_HTML)
     public String getActionTemplate(@PathParam("actionId") String id, @HeaderParam("Accept-Language") String language) {
-        return getTemplate(definitionsService.getActionType(id), language);
+        return getTemplate(definitionsService.getActionType(id), language, "actions", id);
     }
 
 
@@ -166,10 +166,25 @@ public class DefinitionsServiceEndPoint {
     @Path("/template/value/{valueTypeId}")
     @Produces(MediaType.TEXT_HTML)
     public String getValueTemplate(@PathParam("valueTypeId") String id, @HeaderParam("Accept-Language") String language) {
-        return getTemplate(definitionsService.getValueType(id), language);
+        return getTemplate(definitionsService.getValueType(id), language, "values", id);
     }
 
+    @GET
+    @Path("/properties/{target}")
+    public Collection<RESTPropertyType> getAllPropertyTypes(@PathParam("target") String target, @HeaderParam("Accept-Language") String language) {
+        return generatePropertyTypes(definitionsService.getAllPropertyTypes(target), language);
+    }
 
+    @GET
+    @Path("/properties/tags/{tagId}")
+    public Collection<RESTPropertyType> getPropertyTypeByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
+        String[] tagsArray = tags.split(",");
+        HashSet<PropertyType> results = new HashSet<PropertyType>();
+        for (String s : tagsArray) {
+            results.addAll(definitionsService.getPropertyTypeByTag(definitionsService.getTag(s), recursive));
+        }
+        return generatePropertyTypes(results, language);
+    }
 
     @GET
     @Path("/typesByPlugin")
@@ -212,7 +227,6 @@ public class DefinitionsServiceEndPoint {
         result.setName(resourceBundleHelper.getResourceBundleValue(bundle, conditionType.getNameKey()));
         result.setDescription(resourceBundleHelper.getResourceBundleValue(bundle, conditionType.getDescriptionKey()));
 
-        result.setTemplate(conditionType.getTemplate());
         result.setTags(conditionType.getTagIDs());
 
         List<RESTParameter> parameters = new ArrayList<RESTParameter>();
@@ -232,7 +246,6 @@ public class DefinitionsServiceEndPoint {
         result.setName(resourceBundleHelper.getResourceBundleValue(bundle, actionType.getNameKey()));
         result.setDescription(resourceBundleHelper.getResourceBundleValue(bundle, actionType.getDescriptionKey()));
 
-        result.setTemplate(actionType.getTemplate());
         result.setTags(actionType.getTagIds());
 
         List<RESTParameter> parameters = new ArrayList<RESTParameter>();
@@ -268,6 +281,45 @@ public class DefinitionsServiceEndPoint {
         return result;
     }
 
+    private Collection<RESTPropertyType> generatePropertyTypes(Collection<PropertyType> type, String language) {
+        Set<RESTPropertyType> result = new LinkedHashSet<>();
+        for (PropertyType propertyType : type) {
+            result.add(generatePropertyType(propertyType, resourceBundleHelper.getResourceBundle(propertyType, language)));
+        }
+        return result;
+    }
+
+    private RESTPropertyType generatePropertyType(PropertyType type, ResourceBundle bundle) {
+        RESTPropertyType result = new RESTPropertyType();
+        result.setId(type.getId());
+        result.setName(resourceBundleHelper.getResourceBundleValue(bundle, type.getNameKey()));
+        result.setType(type.getValueTypeId());
+        result.setDefaultValue(type.getDefaultValue());
+        result.setRank(type.getRank());
+        result.setTags(type.getTagIds());
+        result.setAutomaticMappingsFrom(type.getAutomaticMappingsFrom());
+        result.setMergeStrategy(type.getMergeStrategy());
+        result.setSelectorId(type.getSelectorId());
+
+        ArrayList<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
+        result.setChoiceListValues(choiceListValues);
+        if (type.getChoiceListInitializerFilter() != null && type.getChoiceListInitializerFilter().length() > 0) {
+            try {
+                Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, type.getChoiceListInitializerFilter());
+                for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
+                    ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
+                    for (ChoiceListValue value : choiceListInitializer.getValues(null)) {
+                        choiceListValues.add(new ChoiceListValue(value.getId(), resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
+                    }
+                }
+            } catch (InvalidSyntaxException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return result;
+    }
+
     private Collection<RESTValueType> generateValueTypes(Collection<ValueType> valueTypes, String language) {
         List<RESTValueType> result = new ArrayList<RESTValueType>();
         if (valueTypes == null) {
@@ -286,7 +338,6 @@ public class DefinitionsServiceEndPoint {
         ResourceBundle bundle = resourceBundleHelper.getResourceBundle(valueType, language);
         result.setName(resourceBundleHelper.getResourceBundleValue(bundle, valueType.getNameKey()));
         result.setDescription(resourceBundleHelper.getResourceBundleValue(bundle, valueType.getDescriptionKey()));
-        result.setTemplate(valueType.getTemplate());
         result.setTags(generateTags(valueType.getTags(), language));
         return result;
     }
@@ -311,10 +362,12 @@ public class DefinitionsServiceEndPoint {
         return result;
     }
 
-    private String getTemplate(TemplateablePluginType type, String language) {
+    private String getTemplate(PluginType type, String language, String path, String typeId) {
         Bundle bundle = bundleContext.getBundle(type.getPluginId());
-        if (type.getTemplate() != null) {
-            URL templateURL = bundle.getEntry(type.getTemplate());
+        String template = "/web/" + path + "/" + typeId + ".html";
+
+        URL templateURL = bundle.getEntry(template);
+        if (templateURL != null) {
             try {
                 Object o = templateURL.getContent();
                 InputStream inputStream = (InputStream) o;

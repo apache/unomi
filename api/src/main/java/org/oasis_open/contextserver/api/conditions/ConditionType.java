@@ -1,9 +1,9 @@
 package org.oasis_open.contextserver.api.conditions;
 
+import org.oasis_open.contextserver.api.Parameter;
+import org.oasis_open.contextserver.api.PluginType;
 import org.oasis_open.contextserver.api.Tag;
 import org.oasis_open.contextserver.api.rules.Rule;
-import org.oasis_open.contextserver.api.Parameter;
-import org.oasis_open.contextserver.api.TemplateablePluginType;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -15,19 +15,18 @@ import java.util.*;
  * Represents a node in the segment definition expression tree
  */
 @XmlRootElement
-public class ConditionType implements TemplateablePluginType, Serializable {
-    String id;
-    String nameKey;
-    String descriptionKey;
-    String template;
-    long pluginId;
-    String conditionEvaluator;
-    String queryBuilderFilter;
-    Condition parentCondition;
-    Set<Tag> tags = new TreeSet<Tag>();
-    Set<String> tagIDs = new LinkedHashSet<String>();
-    List<Parameter> parameters = new ArrayList<Parameter>();
-    Rule autoCreateRule;
+public class ConditionType implements PluginType, Serializable {
+    private String id;
+    private String nameKey;
+    private String descriptionKey;
+    private long pluginId;
+    private String conditionEvaluator;
+    private String queryBuilderFilter;
+    private Condition parentCondition;
+    private Set<Tag> tags = new TreeSet<Tag>();
+    private Set<String> tagIDs = new LinkedHashSet<String>();
+    private List<Parameter> parameters = new ArrayList<Parameter>();
+    private Rule autoCreateRule;
 
     public ConditionType() {
     }
@@ -61,14 +60,6 @@ public class ConditionType implements TemplateablePluginType, Serializable {
 
     public void setDescriptionKey(String descriptionKey) {
         this.descriptionKey = descriptionKey;
-    }
-
-    public String getTemplate() {
-        return template;
-    }
-
-    public void setTemplate(String template) {
-        this.template = template;
     }
 
     @XmlTransient

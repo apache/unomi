@@ -3,8 +3,8 @@ package org.oasis_open.contextserver.rest;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
-import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListInitializer;
-import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
+import org.oasis_open.contextserver.api.services.DefinitionsService;
+import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.api.services.ProfileService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
@@ -25,8 +25,8 @@ import java.util.*;
 public class ProfileServiceEndPoint {
 
     private ProfileService profileService;
-    private BundleContext bundleContext;
-    private ResourceBundleHelper resourceBundleHelper;
+
+    private EventService eventService;
 
     public ProfileServiceEndPoint() {
         System.out.println("Initializing profile service endpoint...");
@@ -38,13 +38,8 @@ public class ProfileServiceEndPoint {
     }
 
     @WebMethod(exclude = true)
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
-
-    @WebMethod(exclude = true)
-    public void setResourceBundleHelper(ResourceBundleHelper resourceBundleHelper) {
-        this.resourceBundleHelper = resourceBundleHelper;
+    public void setEventService(EventService eventService) {
+        this.eventService = eventService;
     }
 
     @GET
@@ -87,6 +82,9 @@ public class ProfileServiceEndPoint {
     @POST
     @Path("/{profileId}")
     public void save(Profile profile) {
+        Event profileUpdated = new Event("profileUpdated", null, profile, null, null, new EventTarget(profile.getId(), Profile.ITEM_TYPE), new Date());
+        profileUpdated.setPersistent(false);
+        eventService.send(profileUpdated);
         profileService.save(profile);
     }
 
@@ -103,18 +101,6 @@ public class ProfileServiceEndPoint {
                                                    @QueryParam("size") @DefaultValue("50") int size,
                                                    @QueryParam("sort") String sortBy) {
         return profileService.getProfileSessions(profileId, offset, size, sortBy);
-    }
-
-    @GET
-    @Path("/properties")
-    public Collection<RESTPropertyType> getAllPropertyTypes(@HeaderParam("Accept-Language") String language) {
-        return generatePropertyTypes(profileService.getAllPropertyTypes(), language);
-    }
-
-    @GET
-    @Path("/properties/tags/{tagId}")
-    public Collection<RESTPropertyType> getPropertyTypes(@PathParam("tagId") String tagId, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
-        return generatePropertyTypes(profileService.getPropertyTypes(tagId, recursive), language);
     }
 
     @GET
@@ -192,44 +178,4 @@ public class ProfileServiceEndPoint {
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
         return profileService.matchCondition(condition, profile, session);
     }
-
-    private Collection<RESTPropertyType> generatePropertyTypes(Collection<PropertyType> type, String language) {
-        Set<RESTPropertyType> result = new LinkedHashSet<>();
-        for (PropertyType propertyType : type) {
-            result.add(generatePropertyType(propertyType, resourceBundleHelper.getResourceBundle(propertyType, language)));
-        }
-        return result;
-    }
-
-    private RESTPropertyType generatePropertyType(PropertyType type, ResourceBundle bundle) {
-        RESTPropertyType result = new RESTPropertyType();
-        result.setId(type.getId());
-        result.setName(resourceBundleHelper.getResourceBundleValue(bundle, type.getId()));
-        result.setValueTypeId(type.getValueTypeId());
-        result.setDefaultValue(type.getDefaultValue());
-        result.setRank(type.getRank());
-        result.setTags(type.getTagIds());
-        result.setAutomaticMappingsFrom(type.getAutomaticMappingsFrom());
-        result.setMergeStrategy(type.getMergeStrategy());
-        result.setSelectorId(type.getSelectorId());
-
-        ArrayList<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
-        result.setChoiceListValues(choiceListValues);
-        if (type.getChoiceListInitializerFilter() != null && type.getChoiceListInitializerFilter().length() > 0) {
-            try {
-                Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, type.getChoiceListInitializerFilter());
-                for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
-                    ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
-                    for (ChoiceListValue value : choiceListInitializer.getValues(null)) {
-                        choiceListValues.add(value.localizedCopy(resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
-                    }
-                }
-            } catch (InvalidSyntaxException e) {
-                e.printStackTrace();
-            }
-        }
-
-        return result;
-    }
-
 }

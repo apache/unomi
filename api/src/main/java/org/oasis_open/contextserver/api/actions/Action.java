@@ -30,7 +30,7 @@ public class Action {
 
     public void setActionType(ActionType actionType) {
         this.actionType = actionType;
-        this.actionTypeId = actionType.id;
+        this.actionTypeId = actionType.getId();
     }
 
     @XmlElement(name="type")

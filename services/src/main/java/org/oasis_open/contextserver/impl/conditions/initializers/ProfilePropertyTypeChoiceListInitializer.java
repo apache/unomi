@@ -3,7 +3,7 @@ package org.oasis_open.contextserver.impl.conditions.initializers;
 import org.oasis_open.contextserver.api.PropertyType;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
-import org.oasis_open.contextserver.api.services.ProfileService;
+import org.oasis_open.contextserver.api.services.DefinitionsService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,22 +14,21 @@ import java.util.Set;
  */
 public class ProfilePropertyTypeChoiceListInitializer implements ChoiceListInitializer {
 
-    ProfileService profileService;
+    DefinitionsService definitionsService;
 
     @Override
     public List<ChoiceListValue> getValues(Object context) {
-        Set<PropertyType> profileProperties = profileService.getPropertyTypes("profileProperties", true);
+        Set<PropertyType> profileProperties = definitionsService.getPropertyTypeByTag(definitionsService.getTag("profileProperties"), true);
         List<ChoiceListValue> choiceListValues = new ArrayList<>(profileProperties.size());
         for (PropertyType propertyType : profileProperties) {
-            String resourceKey = "PROFILE_PROPERTIES_" + propertyType.getId().toUpperCase().replaceAll("\\.", "_")
-                    + "_LABEL";
+            String resourceKey = propertyType.getNameKey();
             choiceListValues.add(new PropertyTypeChoiceListValue("properties." + propertyType.getId(), resourceKey,
                     propertyType.getValueTypeId()));
         }
         return choiceListValues;
     }
 
-    public void setProfileService(ProfileService profileService) {
-        this.profileService = profileService;
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
     }
 }

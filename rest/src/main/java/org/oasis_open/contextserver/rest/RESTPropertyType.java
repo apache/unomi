@@ -12,7 +12,7 @@ import java.util.Set;
 public class RESTPropertyType {
     private String id;
     private String name;
-    private String valueTypeId;
+    private String type;
     private List<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
     private String defaultValue;
     private String selectorId;
@@ -40,12 +40,12 @@ public class RESTPropertyType {
         this.name = name;
     }
 
-    public String getValueTypeId() {
-        return valueTypeId;
+    public String getType() {
+        return type;
     }
 
-    public void setValueTypeId(String valueTypeId) {
-        this.valueTypeId = valueTypeId;
+    public void setType(String type) {
+        this.type = type;
     }
 
     public List<ChoiceListValue> getChoiceListValues() {

@@ -3,6 +3,7 @@ package org.oasis_open.contextserver.impl.services;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
+import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.api.services.ProfileService;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
@@ -46,11 +47,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 
-        loadPredefinedPropertyTypes(bundleContext);
         loadPredefinedPersonas(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
             if (bundle.getBundleContext() != null) {
-                loadPredefinedPropertyTypes(bundle.getBundleContext());
                 loadPredefinedPersonas(bundle.getBundleContext());
             }
         }
@@ -65,7 +64,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         if (bundleContext == null) {
             return;
         }
-        loadPredefinedPropertyTypes(bundleContext);
         loadPredefinedPersonas(bundleContext);
     }
 
@@ -140,7 +138,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             allProfileProperties.addAll(profile.getProperties().keySet());
         }
 
-        Set<PropertyType> profilePropertyTypes = getPropertyTypes("profileProperties", true);
+        Set<PropertyType> profilePropertyTypes = definitionsService.getPropertyTypeByTag(definitionsService.getTag("profileProperties"), true);
         Map<String, PropertyType> profilePropertyTypeById = new HashMap<String, PropertyType>();
         for (PropertyType propertyType : profilePropertyTypes) {
             profilePropertyTypeById.put(propertyType.getId(), propertyType);
@@ -222,34 +220,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return persistenceService.query("profileId", profileId, sortBy, Session.class, offset, size);
     }
 
-    public Set<PropertyType> getAllPropertyTypes() {
-        return new LinkedHashSet<PropertyType>(persistenceService.getAllItems(PropertyType.class));
-    }
-
-    public Set<PropertyType> getPropertyTypes(String tagId, boolean recursive) {
-        if (recursive) {
-            Set<String> allTagIds = new HashSet<String>();
-            collectSubTagIds(tagId, allTagIds);
-            return new TreeSet<PropertyType>(persistenceService.query("tags", allTagIds.toArray(new String[allTagIds.size()]), null, PropertyType.class));
-        } else {
-            return new TreeSet<PropertyType>(persistenceService.query("tags", tagId, null, PropertyType.class));
-        }
-    }
-
-    private void collectSubTagIds(String tagId, Set<String> allTagIds) {
-        allTagIds.add(tagId);
-        Tag rootTag = definitionsService.getTag(tagId);
-        if (rootTag.getSubTags() != null && rootTag.getSubTags().size() > 0) {
-            for (Tag subTag : rootTag.getSubTags()) {
-                collectSubTagIds(subTag.getId(), allTagIds);
-            }
-        }
-    }
-
     public String getPropertyTypeMapping(String fromPropertyTypeId) {
-        PartialList<PropertyType> types = persistenceService.query("automaticMappingsFrom", fromPropertyTypeId, null, PropertyType.class, 0, 1);
+        Collection<PropertyType> types = definitionsService.getPropertyTypeByMapping(fromPropertyTypeId);
         if (types.size() > 0) {
-            return types.get(0).getId();
+            return types.iterator().next().getId();
         }
         return null;
     }
@@ -311,35 +285,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     public PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy) {
         return persistenceService.query("profileId", personaId, sortBy, Session.class, offset, size);
-    }
-
-    private void loadPredefinedPropertyTypes(BundleContext bundleContext) {
-        if (bundleContext == null) {
-            return;
-        }
-        Enumeration<URL> predefinedPropertyTypeEntries = bundleContext.getBundle().findEntries("META-INF/wemi/properties", "*.json", true);
-        if (predefinedPropertyTypeEntries == null) {
-            return;
-        }
-
-        while (predefinedPropertyTypeEntries.hasMoreElements()) {
-            URL predefinedPropertyTypeURL = predefinedPropertyTypeEntries.nextElement();
-            logger.debug("Found predefined property type at " + predefinedPropertyTypeURL + ", loading... ");
-
-            try {
-                if (!predefinedPropertyTypeURL.toExternalForm().endsWith("PropertyGroup.json")) {
-                    PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeURL, PropertyType.class);
-                    ParserHelper.resolveValueType(definitionsService, propertyType);
-                    ParserHelper.populatePluginType(propertyType, bundleContext.getBundle());
-
-                    persistenceService.save(propertyType);
-
-                }
-            } catch (IOException e) {
-                logger.error("Error while loading properties " + predefinedPropertyTypeURL, e);
-            }
-
-        }
     }
 
     private void loadPredefinedPersonas(BundleContext bundleContext) {

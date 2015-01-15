@@ -1,9 +1,6 @@
 package org.oasis_open.contextserver.impl.services;
 
-import org.oasis_open.contextserver.api.PluginType;
-import org.oasis_open.contextserver.api.PropertyMergeStrategyType;
-import org.oasis_open.contextserver.api.Tag;
-import org.oasis_open.contextserver.api.ValueType;
+import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.ActionType;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
@@ -24,16 +21,19 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     private static final Logger logger = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
 
-    private Map<String, Tag> tags = new HashMap<String, Tag>();
-    private Set<Tag> rootTags = new LinkedHashSet<Tag>();
-    private Map<String, ConditionType> conditionTypeById = new HashMap<String, ConditionType>();
-    private Map<String, ActionType> actionTypeById = new HashMap<String, ActionType>();
-    private Map<String, ValueType> valueTypeById = new HashMap<String, ValueType>();
-    private Map<Tag, Set<ConditionType>> conditionTypeByTag = new HashMap<Tag, Set<ConditionType>>();
-    private Map<Tag, Set<ActionType>> actionTypeByTag = new HashMap<Tag, Set<ActionType>>();
-    private Map<Tag, Set<ValueType>> valueTypeByTag = new HashMap<Tag, Set<ValueType>>();
-    private Map<Long, List<PluginType>> pluginTypes = new HashMap<Long, List<PluginType>>();
-    private Map<String, PropertyMergeStrategyType> propertyMergeStrategyTypeById = new HashMap<String, PropertyMergeStrategyType>();
+    private Map<String, Tag> tags = new HashMap<>();
+    private Set<Tag> rootTags = new LinkedHashSet<>();
+    private Map<String, ConditionType> conditionTypeById = new HashMap<>();
+    private Map<String, ActionType> actionTypeById = new HashMap<>();
+    private Map<String, Map<String, PropertyType>> propertyTypeById = new HashMap<>();
+    private Map<String, ValueType> valueTypeById = new HashMap<>();
+    private Map<Tag, Set<ConditionType>> conditionTypeByTag = new HashMap<>();
+    private Map<Tag, Set<ActionType>> actionTypeByTag = new HashMap<>();
+    private Map<Tag, Set<PropertyType>> propertyTypeByTag = new HashMap<>();
+    private Map<Tag, Set<ValueType>> valueTypeByTag = new HashMap<>();
+    private Map<Long, List<PluginType>> pluginTypes = new HashMap<>();
+    private Map<String, Set<PropertyType>> propertyTypeByMapping = new HashMap<>();
+    private Map<String, PropertyMergeStrategyType> propertyMergeStrategyTypeById = new HashMap<>();
 
     private BundleContext bundleContext;
     private PersistenceService persistenceService;
@@ -76,6 +76,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
         loadPredefinedConditionTypes(bundleContext);
         loadPredefinedActionTypes(bundleContext);
+        loadPredefinedPropertyTypes(bundleContext);
         loadPredefinedValueTypes(bundleContext);
         loadPredefinedPropertyMergeStrategies(bundleContext);
 
@@ -106,6 +107,15 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                     for (Tag tag : valueType.getTags()) {
                         valueTypeByTag.get(tag).remove(valueType);
                     }
+                } else if (type instanceof PropertyType) {
+                    PropertyType propertyType = (PropertyType) type;
+                    propertyTypeById.get(propertyType.getTarget()).remove(propertyType.getId());
+                    for (Tag tag : propertyType.getTags()) {
+                        propertyTypeByTag.get(tag).remove(propertyType);
+                    }
+                    for (String propertyName : propertyType.getAutomaticMappingsFrom()) {
+                        propertyTypeByMapping.get(propertyName).remove(propertyType);
+                    }
                 }
             }
         }
@@ -127,7 +137,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
             try {
                 Tag tag = CustomObjectMapper.getObjectMapper().readValue(predefinedTagURL, Tag.class);
-                ParserHelper.populatePluginType(tag, bundleContext.getBundle(), "tags", tag.getId());
+                tag.setPluginId(bundleContext.getBundle().getBundleId());
                 tags.put(tag.getId(), tag);
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedTagEntries, e);
@@ -159,7 +169,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
             try {
                 ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(predefinedConditionURL, ConditionType.class);
-                ParserHelper.populatePluginType(conditionType, bundleContext.getBundle(), "conditions", conditionType.getId());
+                conditionType.setPluginId(bundleContext.getBundle().getBundleId());
                 conditionTypeById.put(conditionType.getId(), conditionType);
                 pluginTypeArrayList.add(conditionType);
                 for (String tagId : conditionType.getTagIDs()) {
@@ -200,7 +210,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
             try {
                 ActionType actionType = CustomObjectMapper.getObjectMapper().readValue(predefinedActionURL, ActionType.class);
-                ParserHelper.populatePluginType(actionType, bundleContext.getBundle(), "actions", actionType.getId());
+                actionType.setPluginId(bundleContext.getBundle().getBundleId());
                 actionTypeById.put(actionType.getId(), actionType);
                 pluginTypeArrayList.add(actionType);
                 for (String tagId : actionType.getTagIds()) {
@@ -209,7 +219,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                         actionType.getTags().add(tag);
                         Set<ActionType> actionTypes = actionTypeByTag.get(tag);
                         if (actionTypes == null) {
-                            actionTypes = new LinkedHashSet<ActionType>();
+                            actionTypes = new LinkedHashSet<>();
                         }
                         actionTypes.add(actionType);
                         actionTypeByTag.put(tag, actionTypes);
@@ -225,6 +235,57 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     }
 
+    private void loadPredefinedPropertyTypes(BundleContext bundleContext) {
+        Enumeration<URL> predefinedPropertyTypeEntries = bundleContext.getBundle().findEntries("META-INF/wemi/properties", "*.json", true);
+        if (predefinedPropertyTypeEntries == null) {
+            return;
+        }
+        ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
+        while (predefinedPropertyTypeEntries.hasMoreElements()) {
+            URL predefinedPropertyTypeURL = predefinedPropertyTypeEntries.nextElement();
+            logger.debug("Found predefined property type at " + predefinedPropertyTypeURL + ", loading... ");
+
+            try {
+                PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeURL, PropertyType.class);
+                ParserHelper.resolveValueType(this, propertyType);
+                propertyType.setPluginId(bundleContext.getBundle().getBundleId());
+                String[] splitPath = predefinedPropertyTypeURL.getPath().split("/");
+                String target = splitPath[4];
+                propertyType.setTarget(target);
+                if (!propertyTypeById.containsKey(target)) {
+                    propertyTypeById.put(target, new HashMap<String, PropertyType>());
+                }
+                propertyTypeById.get(target).put(propertyType.getId(), propertyType);
+                pluginTypeArrayList.add(propertyType);
+                for (String tagId : propertyType.getTagIds()) {
+                    Tag tag = tags.get(tagId);
+                    if (tag != null) {
+                        propertyType.getTags().add(tag);
+                        Set<PropertyType> propertyTypes = propertyTypeByTag.get(tag);
+                        if (propertyTypes == null) {
+                            propertyTypes = new LinkedHashSet<>();
+                        }
+                        propertyTypes.add(propertyType);
+                        propertyTypeByTag.put(tag, propertyTypes);
+                    } else {
+                        // we found a tag that is not defined, we will define it automatically
+                        logger.warn("Unknown tag " + tagId + " used in action definition " + predefinedPropertyTypeURL);
+                    }
+                }
+                for (String propertyName : propertyType.getAutomaticMappingsFrom()) {
+                    Set<PropertyType> propertyTypes = propertyTypeByMapping.get(propertyName);
+                    if (propertyTypes == null) {
+                        propertyTypes = new LinkedHashSet<>();
+                    }
+                    propertyTypes.add(propertyType);
+                    propertyTypeByMapping.put(propertyName, propertyTypes);
+                }
+            } catch (IOException e) {
+                logger.error("Error while loading properties " + predefinedPropertyTypeURL, e);
+            }
+        }
+    }
+
     private void loadPredefinedValueTypes(BundleContext bundleContext) {
         Enumeration<URL> predefinedPropertiesEntries = bundleContext.getBundle().findEntries("META-INF/wemi/values", "*.json", true);
         if (predefinedPropertiesEntries == null) {
@@ -237,7 +298,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
             try {
                 ValueType valueType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyURL, ValueType.class);
-                ParserHelper.populatePluginType(valueType, bundleContext.getBundle(), "values", valueType.getId());
+                valueType.setPluginId(bundleContext.getBundle().getBundleId());
                 valueTypeById.put(valueType.getId(), valueType);
                 pluginTypeArrayList.add(valueType);
                 for (String tagId : valueType.getTagIds()) {
@@ -351,6 +412,33 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         return valueTypeById.get(id);
     }
 
+    public Collection<PropertyType> getAllPropertyTypes(String target) {
+        return propertyTypeById.get(target).values();
+    }
+
+    public Set<PropertyType> getPropertyTypeByTag(Tag tag, boolean recursive) {
+        Set<PropertyType> propertyTypes = new LinkedHashSet<PropertyType>();
+        Set<PropertyType> directPropertyTypes = propertyTypeByTag.get(tag);
+        if (directPropertyTypes != null) {
+            propertyTypes.addAll(directPropertyTypes);
+        }
+        if (recursive) {
+            for (Tag subTag : tag.getSubTags()) {
+                Set<PropertyType> childPropertyTypes = getPropertyTypeByTag(subTag, true);
+                propertyTypes.addAll(childPropertyTypes);
+            }
+        }
+        return propertyTypes;
+    }
+
+    public Set<PropertyType> getPropertyTypeByMapping(String propertyName) {
+        return propertyTypeByMapping.get(propertyName);
+    }
+
+    public PropertyType getPropertyType(String target, String id) {
+        return propertyTypeById.get(target).get(id);
+    }
+
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {
             case BundleEvent.STARTED:
@@ -374,7 +462,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
             try {
                 PropertyMergeStrategyType propertyMergeStrategyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyMergeStrategyURL, PropertyMergeStrategyType.class);
-                ParserHelper.populatePluginType(propertyMergeStrategyType, bundleContext.getBundle(), "values", propertyMergeStrategyType.getId());
+                propertyMergeStrategyType.setPluginId(bundleContext.getBundle().getBundleId());
                 propertyMergeStrategyTypeById.put(propertyMergeStrategyType.getId(), propertyMergeStrategyType);
                 pluginTypeArrayList.add(propertyMergeStrategyType);
             } catch (Exception e) {

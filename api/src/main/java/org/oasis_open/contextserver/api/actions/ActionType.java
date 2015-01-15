@@ -1,25 +1,24 @@
 package org.oasis_open.contextserver.api.actions;
 
 import org.oasis_open.contextserver.api.Parameter;
+import org.oasis_open.contextserver.api.PluginType;
 import org.oasis_open.contextserver.api.Tag;
-import org.oasis_open.contextserver.api.TemplateablePluginType;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 import java.util.*;
 
-public class ActionType implements TemplateablePluginType, Serializable {
+public class ActionType implements PluginType, Serializable {
 
-    String id;
-    String nameKey;
-    String descriptionKey;
-    String serviceFilter;
-    Set<Tag> tags = new TreeSet<Tag>();
-    Set<String> tagIds = new LinkedHashSet<String>();
-    String template;
-    long pluginId;
-    List<Parameter> parameters = new ArrayList<Parameter>();
+    private String id;
+    private String nameKey;
+    private String descriptionKey;
+    private String serviceFilter;
+    private Set<Tag> tags = new TreeSet<Tag>();
+    private Set<String> tagIds = new LinkedHashSet<String>();
+    private long pluginId;
+    private List<Parameter> parameters = new ArrayList<Parameter>();
 
     public ActionType() {
     }
@@ -53,14 +52,6 @@ public class ActionType implements TemplateablePluginType, Serializable {
 
     public void setDescriptionKey(String descriptionKey) {
         this.descriptionKey = descriptionKey;
-    }
-
-    public String getTemplate() {
-        return template;
-    }
-
-    public void setTemplate(String template) {
-        this.template = template;
     }
 
     @XmlTransient

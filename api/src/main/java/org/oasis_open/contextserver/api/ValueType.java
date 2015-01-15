@@ -11,15 +11,14 @@ import java.util.TreeSet;
  * Created by loom on 02.09.14.
  */
 @XmlRootElement
-public class ValueType implements TemplateablePluginType {
+public class ValueType implements PluginType {
 
-    String id;
-    String nameKey;
-    String descriptionKey;
-    String template;
-    long pluginId;
-    Set<Tag> tags = new TreeSet<Tag>();
-    Set<String> tagIds = new LinkedHashSet<String>();
+    private String id;
+    private String nameKey;
+    private String descriptionKey;
+    private long pluginId;
+    private Set<Tag> tags = new TreeSet<Tag>();
+    private Set<String> tagIds = new LinkedHashSet<String>();
 
     public ValueType() {
     }
@@ -56,14 +55,6 @@ public class ValueType implements TemplateablePluginType {
 
     public void setDescriptionKey(String descriptionKey) {
         this.descriptionKey = descriptionKey;
-    }
-
-    public String getTemplate() {
-        return template;
-    }
-
-    public void setTemplate(String template) {
-        this.template = template;
     }
 
     @XmlTransient

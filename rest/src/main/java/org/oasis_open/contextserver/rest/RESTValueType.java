@@ -11,7 +11,6 @@ public class RESTValueType {
     private String id;
     private String name;
     private String description;
-    private String template;
     private Collection<RESTTag> tags;
 
     public RESTValueType() {
@@ -39,14 +38,6 @@ public class RESTValueType {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public String getTemplate() {
-        return template;
-    }
-
-    public void setTemplate(String template) {
-        this.template = template;
     }
 
     public Collection<RESTTag> getTags() {

@@ -5,15 +5,17 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Created by loom on 27.08.14.
  */
 @XmlRootElement
-public class PropertyType extends Item implements Comparable<PropertyType>, PluginType {
+public class PropertyType implements Comparable<PropertyType>, PluginType {
     public static final String ITEM_TYPE = "propertyType";
-    Set<String> tagIds = new LinkedHashSet<String>();
     private String id;
+    private String target;
+    private String nameKey;
     private String valueTypeId;
     private ValueType valueType;
     private String choiceListInitializerFilter;
@@ -23,6 +25,8 @@ public class PropertyType extends Item implements Comparable<PropertyType>, Plug
     private double rank;
     private long pluginId;
     private String mergeStrategy;
+    private Set<Tag> tags = new TreeSet<Tag>();
+    private Set<String> tagIds = new LinkedHashSet<String>();
 
     public PropertyType() {
     }
@@ -36,8 +40,27 @@ public class PropertyType extends Item implements Comparable<PropertyType>, Plug
     }
 
     public void setId(String id) {
-        this.itemId = id;
         this.id = id;
+    }
+
+    @XmlTransient
+    public String getTarget() {
+        return target;
+    }
+
+    public void setTarget(String target) {
+        this.target = target;
+    }
+
+    public String getNameKey() {
+        if (nameKey == null) {
+            nameKey = "PROPERTIES_" + id.toUpperCase().replaceAll("\\.", "_") + "_LABEL";
+        }
+        return nameKey;
+    }
+
+    public void setNameKey(String nameKey) {
+        this.nameKey = nameKey;
     }
 
     @XmlElement(name = "type")
@@ -56,6 +79,15 @@ public class PropertyType extends Item implements Comparable<PropertyType>, Plug
 
     public void setValueType(ValueType valueType) {
         this.valueType = valueType;
+    }
+
+    @XmlTransient
+    public Set<Tag> getTags() {
+        return tags;
+    }
+
+    public void setTags(Set<Tag> tags) {
+        this.tags = tags;
     }
 
     @XmlElement(name = "tags")

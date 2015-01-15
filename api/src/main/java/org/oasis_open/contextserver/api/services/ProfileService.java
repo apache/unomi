@@ -29,10 +29,6 @@ public interface ProfileService {
 
     PartialList<Session> getProfileSessions(String profileId, int offset, int size, String sortBy);
 
-    Set<PropertyType> getAllPropertyTypes();
-
-    Set<PropertyType> getPropertyTypes(String tagId, boolean recursive);
-
     String getPropertyTypeMapping(String fromPropertyTypeId);
 
     Session loadSession(String sessionId, Date dateHint);

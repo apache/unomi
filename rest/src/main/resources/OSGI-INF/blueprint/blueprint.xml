@@ -143,6 +143,7 @@
     <reference id="profileService" interface="org.oasis_open.contextserver.api.services.ProfileService"/>
     <reference id="clusterService" interface="org.oasis_open.contextserver.api.services.ClusterService"/>
     <reference id="queryService" interface="org.oasis_open.contextserver.api.services.QueryService"/>
+    <reference id="eventService" interface="org.oasis_open.contextserver.api.services.EventService"/>
 
     <bean id="segmentServiceEndPoint" class="org.oasis_open.contextserver.rest.SegmentServiceEndPoint">
         <property name="segmentService" ref="segmentService"/>
@@ -168,8 +169,7 @@
 
     <bean id="profileServiceEndPoint" class="org.oasis_open.contextserver.rest.ProfileServiceEndPoint">
         <property name="profileService" ref="profileService"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="resourceBundleHelper" ref="resourceBundleHelper"/>
+        <property name="eventService" ref="eventService"/>
     </bean>
 
     <bean id="clusterServiceEndPoint" class="org.oasis_open.contextserver.rest.ClusterServiceEndPoint">

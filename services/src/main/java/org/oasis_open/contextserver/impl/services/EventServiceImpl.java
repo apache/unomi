@@ -70,7 +70,7 @@ public class EventServiceImpl implements EventService {
                 }
             }
 
-            if (session.getProfile() != null && !session.getProfile().getId().equals(profile.getId())) {
+            if (session != null && session.getProfile() != null && !session.getProfile().getId().equals(profile.getId())) {
                 // this can happen when profiles are merged for example.
                 profile = session.getProfile();
             }
@@ -81,7 +81,9 @@ public class EventServiceImpl implements EventService {
                 profileUpdated.getAttributes().putAll(event.getAttributes());
                 send(profileUpdated);
                 profileService.save(profile);
-                session.setProfile(profile);
+                if (session != null) {
+                    session.setProfile(profile);
+                }
             }
 
             if (session != null) {

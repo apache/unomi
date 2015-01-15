@@ -1,9 +1,6 @@
 package org.oasis_open.contextserver.api.services;
 
-import org.oasis_open.contextserver.api.PluginType;
-import org.oasis_open.contextserver.api.PropertyMergeStrategyType;
-import org.oasis_open.contextserver.api.Tag;
-import org.oasis_open.contextserver.api.ValueType;
+import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.ActionType;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 
@@ -36,6 +33,14 @@ public interface DefinitionsService {
     Set<ValueType> getValueTypeByTag(Tag tag, boolean recursive);
 
     ValueType getValueType(String id);
+
+    Collection<PropertyType> getAllPropertyTypes(String target);
+
+    Set<PropertyType> getPropertyTypeByTag(Tag tag, boolean recursive);
+
+    Set<PropertyType> getPropertyTypeByMapping(String propertyName);
+
+    PropertyType getPropertyType(String target, String id);
 
     Map<Long, List<PluginType>> getTypesByPlugin();
 
