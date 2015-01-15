@@ -30,6 +30,10 @@ public class ComparisonOperatorChoiceListInitializer implements ChoiceListInitia
         OPERATORS.add(new ComparisonOperatorChoiceListValue("contains", "CONTAINS_LABEL", "string", "email"));
         OPERATORS.add(new ComparisonOperatorChoiceListValue("exists", "EXISTS_LABEL"));
         OPERATORS.add(new ComparisonOperatorChoiceListValue("missing", "MISSING_LABEL"));
+        
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("in", "IN_LABEL"));
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("notIn", "NOT_IN_LABEL"));
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("all", "ALL_LABEL"));
     }
 
     @Override

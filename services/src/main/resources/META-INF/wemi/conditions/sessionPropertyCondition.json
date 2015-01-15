@@ -21,6 +21,12 @@
             "type": "string",
             "multivalued": false,
             "choiceListInitializerFilter": ""
+        },
+        {
+            "id": "propertyValues",
+            "type": "string",
+            "multivalued": true,
+            "choiceListInitializerFilter": ""
         }
     ]
 }
