@@ -1,14 +1,11 @@
 <div class="perso">
     <div class="block">
-        <div class="remove-condition">
-            <a href="#" ng-click="onRemove(parentValue,parentIndex)"><i class="glyphicon glyphicon-remove"></i></a>
-        </div>
-        <span translate>PROFILE_SEGMENTS_LABEL</span>
+        <span>#{PROFILE_SEGMENTS_LABEL}</span>
         &nbsp;
         <select ng-model="ref.parameterValues.matchType" class="form-control">
-            <option value="all"><span translate>ALL_SEGMENTS_MATCH_LABEL</span></option>
-            <option value="some"><span translate>SOME_SEGMENTS_MATCH_LABEL</span></option>
-            <option value="none"><span translate>NONE_SEGMENTS_MATCH_LABEL</span></option>
+            <option value="all"><span>#{ALL_SEGMENTS_MATCH_LABEL}</span></option>
+            <option value="some"><span>#{SOME_SEGMENTS_MATCH_LABEL}</span></option>
+            <option value="none"><span>#{NONE_SEGMENTS_MATCH_LABEL}</span></option>
         </select>
         &nbsp;
         <select ng-model="ref.parameterValues.segments" multiple="true"

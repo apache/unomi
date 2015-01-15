@@ -116,9 +116,10 @@ public class ParserHelper {
         if (pluginType instanceof TemplateablePluginType) {
             TemplateablePluginType templateablePluginType = (TemplateablePluginType) pluginType;
             if (templateablePluginType.getTemplate() == null && path != null && typeId != null) {
-                URL templateURL = bundle.getEntry("/web/" + path + "/" + typeId + ".html");
+                String template = "/web/" + path + "/" + typeId + ".html";
+                URL templateURL = bundle.getEntry(template);
                 if (templateURL != null) {
-                    templateablePluginType.setTemplate("/plugins/" + bundle.getSymbolicName() + "/" + path + "/" + typeId + ".html");
+                    templateablePluginType.setTemplate(template);
                 }
             }
         }

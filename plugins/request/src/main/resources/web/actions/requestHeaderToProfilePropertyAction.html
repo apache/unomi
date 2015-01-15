@@ -3,13 +3,13 @@
         <div class="remove-condition">
             <a href="#" ng-click="onRemove(parentValue,parentIndex)"><i class="glyphicon glyphicon-remove"></i></a>
         </div>
-        <span translate>COPY_REQUEST_HEADER_LABEL</span>
+        <span>#{COPY_REQUEST_HEADER_LABEL}</span>
         &nbsp;
         <input ng-model="ref.parameterValues.requestHeaderName" type="text"/>
-        <span translate>TO_PROFILE_PROPERTY_LABEL</span>
+        <span>#{TO_PROFILE_PROPERTY_LABEL}</span>
         &nbsp;
         <select ng-model="ref.parameterValues.profilePropertyName"
-                ng-options="parameter.id as parameter.name | translate for parameter in getActionParameterChoiceListValues(ref, 'profilePropertyName')">
+                ng-options="parameter.id as parameter.name for parameter in getActionParameterChoiceListValues(ref, 'profilePropertyName')">
         </select>
     </div>
 </div>

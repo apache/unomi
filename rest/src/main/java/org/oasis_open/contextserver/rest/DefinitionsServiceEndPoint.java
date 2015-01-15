@@ -1,5 +1,6 @@
 package org.oasis_open.contextserver.rest;
 
+import org.apache.cxf.helpers.IOUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.ActionType;
@@ -17,7 +18,13 @@ import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
@@ -85,6 +92,13 @@ public class DefinitionsServiceEndPoint {
     }
 
     @GET
+    @Path("/template/condition/{conditionId}")
+    @Produces(MediaType.TEXT_HTML)
+    public String getConditionTemplate(@PathParam("conditionId") String id, @HeaderParam("Accept-Language") String language) {
+        return getTemplate(definitionsService.getConditionType(id), language);
+    }
+
+    @GET
     @Path("/actions")
     public Collection<RESTActionType> getAllActionTypes(@HeaderParam("Accept-Language") String language) {
         Collection<ActionType> actionTypes = definitionsService.getAllActionTypes();
@@ -110,6 +124,14 @@ public class DefinitionsServiceEndPoint {
     }
 
     @GET
+    @Path("/template/action/{actionId}")
+    @Produces(MediaType.TEXT_HTML)
+    public String getActionTemplate(@PathParam("actionId") String id, @HeaderParam("Accept-Language") String language) {
+        return getTemplate(definitionsService.getActionType(id), language);
+    }
+
+
+    @GET
     @Path("/values")
     public Collection<RESTValueType> getAllValueTypes(@HeaderParam("Accept-Language") String language) {
         return generateValueTypes(definitionsService.getAllValueTypes(), language);
@@ -132,6 +154,15 @@ public class DefinitionsServiceEndPoint {
         ValueType valueType = definitionsService.getValueType(id);
         return generateValueType(valueType, language);
     }
+
+    @GET
+    @Path("/template/value/{valueTypeId}")
+    @Produces(MediaType.TEXT_HTML)
+    public String getValueTemplate(@PathParam("valueTypeId") String id, @HeaderParam("Accept-Language") String language) {
+        return getTemplate(definitionsService.getValueType(id), language);
+    }
+
+
 
     @GET
     @Path("/typesByPlugin")
@@ -272,6 +303,37 @@ public class DefinitionsServiceEndPoint {
         result.setRank(tag.getRank());
         result.setSubTags(generateTags(tag.getSubTags(), language));
         return result;
+    }
+
+    private String getTemplate(TemplateablePluginType type, String language) {
+        Bundle bundle = bundleContext.getBundle(type.getPluginId());
+        if (type.getTemplate() != null) {
+            URL templateURL = bundle.getEntry(type.getTemplate());
+            try {
+                Object o = templateURL.getContent();
+                InputStream inputStream = (InputStream) o;
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                IOUtils.copy(inputStream, baos);
+                inputStream.close();
+
+                ResourceBundle resourceBundle = getResourceBundle(type, language);
+
+                String content = new String(baos.toByteArray(), "UTF-8");
+
+                Pattern i18n = Pattern.compile("#\\{([a-zA-Z_]+)\\}");
+                Matcher matcher = i18n.matcher(content);
+                while (matcher.find()) {
+                    content = matcher.replaceFirst(resourceBundle.getString(matcher.group(1)));
+                    matcher = i18n.matcher(content);
+                }
+
+                return content;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return "";
+            }
+        }
+        return "";
     }
 
     private ResourceBundle getResourceBundle(PluginType object, String language) {

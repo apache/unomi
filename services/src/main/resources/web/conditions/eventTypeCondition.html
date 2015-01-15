@@ -1,15 +1,12 @@
 <div class="perso">
     <div class="block">
-        <div class="remove-condition">
-            <a href="#" ng-click="onRemove(parentValue,parentIndex)"><i class="glyphicon glyphicon-remove"></i></a>
-        </div>
-        <span translate>EVENT_NAMED_LABEL</span>
+        <span>#{EVENT_NAMED_LABEL}</span>
         &nbsp;
         <select ng-model="ref.parameterValues.eventTypeId"
-                ng-options="parameter.id as parameter.name | translate for parameter in getConditionParameterChoiceListValues(ref, 'eventTypeId')"
+                ng-options="parameter.id as parameter.name for parameter in getConditionParameterChoiceListValues(ref, 'eventTypeId')"
                 >
         </select>
         &nbsp;
-        <span translate>HAS_OCCURRED_LABEL</span>
+        <span>#{HAS_OCCURRED_LABEL}</span>
     </div>
 </div>
