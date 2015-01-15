@@ -1,0 +1,14 @@
+{
+  "id": "notCondition",
+  "conditionEvaluator": "(conditionEvaluatorId=notConditionEvaluator)",
+  "queryBuilderFilter": "(queryBuilderId=notConditionESQueryBuilder)",
+  "tags": [ "logical", "profileCondition", "eventCondition", "sessionCondition" ],
+  "parameters": [
+    {
+      "id": "subCondition",
+      "type": "Condition",
+      "multivalued": false,
+      "choiceListInitializerFilter": ""
+    }
+  ]
+}

@@ -381,7 +381,7 @@ public class DefinitionsServiceEndPoint {
 
                 Matcher matcher = I18N_PATTERN.matcher(content);
                 while (matcher.find()) {
-                    content = matcher.replaceFirst(resourceBundle.getString(matcher.group(1)));
+                    content = matcher.replaceFirst(resourceBundleHelper.getResourceBundleValue(resourceBundle, matcher.group(1)));
                     matcher = I18N_PATTERN.matcher(content);
                 }
 

@@ -32,7 +32,7 @@
             "id": "eventCondition",
             "type": "Condition",
             "multivalued": false,
-            "choiceListInitializerFilter": "(initializerId=condition)"
+            "choiceListInitializerFilter": ""
         }
     ]
 }
