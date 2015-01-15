@@ -42,20 +42,20 @@ public class DefinitionsServiceEndPoint {
 
     @GET
     @Path("/tags")
-    public Set<Tag> getAllTags() {
-        return definitionsService.getAllTags();
+    public Collection<RESTTag> getAllTags(@HeaderParam("Accept-Language") String language) {
+        return generateTags(definitionsService.getAllTags(), language);
     }
 
     @GET
     @Path("/rootTags")
-    public Set<Tag> getRootTags() {
-        return definitionsService.getRootTags();
+    public Collection<RESTTag> getRootTags(@HeaderParam("Accept-Language") String language) {
+        return generateTags(definitionsService.getRootTags(), language);
     }
 
     @GET
     @Path("/tags/{tagId}")
-    public Tag getTag(@PathParam("tagId") String tag) {
-        return definitionsService.getTag(tag);
+    public RESTTag getTag(@PathParam("tagId") String tag, @HeaderParam("Accept-Language") String language) {
+        return generateTag(definitionsService.getTag(tag), language);
     }
 
     @GET
