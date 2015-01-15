@@ -5,7 +5,6 @@ import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
-import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.ProfileService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
@@ -17,9 +16,6 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.*;
 
-/**
- * Created by loom on 27.08.14.
- */
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
@@ -225,7 +221,7 @@ public class ProfileServiceEndPoint {
                 for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
                     ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
                     for (ChoiceListValue value : choiceListInitializer.getValues(null)) {
-                        choiceListValues.add(new ChoiceListValue(value.getId(), resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
+                        choiceListValues.add(value.localizedCopy(resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
                     }
                 }
             } catch (InvalidSyntaxException e) {

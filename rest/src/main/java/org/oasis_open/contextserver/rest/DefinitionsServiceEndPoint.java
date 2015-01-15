@@ -12,7 +12,6 @@ import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
-import org.osgi.framework.wiring.BundleWiring;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -188,7 +187,6 @@ public class DefinitionsServiceEndPoint {
         if (conditionTypes == null) {
             return result;
         }
-        Collection<RESTConditionType> c;
         for (ConditionType conditionType : conditionTypes) {
             result.add(generateCondition(conditionType, context, language));
         }
@@ -260,7 +258,7 @@ public class DefinitionsServiceEndPoint {
                 for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
                     ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
                     for (ChoiceListValue value : choiceListInitializer.getValues(context)) {
-                        choiceListValues.add(new ChoiceListValue(value.getId(), resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
+                        choiceListValues.add(value.localizedCopy(resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
                     }
                 }
             } catch (InvalidSyntaxException e) {
