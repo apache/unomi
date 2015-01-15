@@ -1,11 +1,11 @@
 {
     "id": "geoLocationSessionCondition",
     "parentCondition" : {
-        "type": "multipleValuesPropertyMatchCondition",
+        "type": "profilePropertyCondition",
         "parameterValues": {
             "propertyName": "properties.countryCode",
             "propertyValues": "parameter::countries",
-            "matchType": "some"
+            "comparisonOperator": "in"
         }
     },
     "tags": [ "geographic", "sessionCondition" ],

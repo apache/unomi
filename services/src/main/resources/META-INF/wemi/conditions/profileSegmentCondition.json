@@ -1,11 +1,11 @@
 {
     "id": "profileSegmentCondition",
     "parentCondition" : {
-        "type": "multipleValuesPropertyMatchCondition",
+        "type": "profilePropertyCondition",
         "parameterValues": {
             "propertyName": "segments",
             "propertyValues": "parameter::segments",
-            "matchType": "parameter::matchType"
+            "comparisonOperator": "parameter::matchType"
         }
     },
     "tags": [ "demographic", "profileCondition" ],
