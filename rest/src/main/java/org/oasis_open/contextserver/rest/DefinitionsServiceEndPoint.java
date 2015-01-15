@@ -309,7 +309,7 @@ public class DefinitionsServiceEndPoint {
                 for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
                     ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
                     for (ChoiceListValue value : choiceListInitializer.getValues(null)) {
-                        choiceListValues.add(new ChoiceListValue(value.getId(), resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
+                        choiceListValues.add(value.localizedCopy(resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
                     }
                 }
             } catch (InvalidSyntaxException e) {
