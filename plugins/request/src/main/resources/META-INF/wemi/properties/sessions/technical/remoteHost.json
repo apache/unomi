@@ -2,7 +2,6 @@
     "id": "remoteHost",
     "type": "string",
     "tags": ["technicalSessionProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ ],

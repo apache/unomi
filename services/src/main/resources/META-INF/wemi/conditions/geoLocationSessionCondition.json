@@ -13,8 +13,7 @@
         {
             "id": "countries",
             "type": "string",
-            "multivalued": true,
-            "choiceListInitializerFilter": ""
+            "multivalued": true
         }
     ]
 }

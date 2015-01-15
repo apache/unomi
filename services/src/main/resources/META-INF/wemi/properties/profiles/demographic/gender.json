@@ -2,7 +2,6 @@
     "id": "gender",
     "type": "string",
     "tags": ["demographicProfileProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ "j:gender" ],

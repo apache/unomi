@@ -6,8 +6,7 @@
         {
             "id": "goalId",
             "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         }
     ]
 }

@@ -2,7 +2,6 @@
     "id": "city",
     "type": "string",
     "tags": ["geographicProfileProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ "j:city" ],

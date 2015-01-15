@@ -6,14 +6,12 @@
         {
             "id": "minimumDuration",
             "type": "integer",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         },
         {
             "id": "maximumDuration",
             "type": "integer",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         }
     ]
 }

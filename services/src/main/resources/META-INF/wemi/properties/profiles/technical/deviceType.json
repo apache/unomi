@@ -2,7 +2,6 @@
     "id": "deviceType",
     "type": "string",
     "tags": ["technicalProfileProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ ],

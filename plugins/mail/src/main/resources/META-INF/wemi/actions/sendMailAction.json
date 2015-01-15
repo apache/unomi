@@ -6,39 +6,33 @@
         {
             "id": "from",
             "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         },
         {
             "id": "to",
             "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         },
         {
             "id": "cc",
             "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         },
         {
             "id": "bcc",
             "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         },
         {
             "id": "subject",
             "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         },
         {
             "id": "template",
             "type": "string",
             "multivalued": false,
-            "choiceListInitializerFilter": "",
-            "defaultValue": "Hello $profile.properties.(\"j:firstName\")$ $profile.properties.(\"j:lastName\")$,\nHow are you doing today ?"
+                    "defaultValue": "Hello $profile.properties.(\"j:firstName\")$ $profile.properties.(\"j:lastName\")$,\nHow are you doing today ?"
         }
 
     ]

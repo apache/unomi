@@ -6,14 +6,12 @@
         {
             "id": "targetId",
             "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         },
         {
             "id": "targetPath",
             "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         }
     ]
 }

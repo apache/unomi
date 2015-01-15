@@ -2,7 +2,6 @@
     "id": "email",
     "type": "email",
     "tags": ["basicProfileProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ "j:email" ],

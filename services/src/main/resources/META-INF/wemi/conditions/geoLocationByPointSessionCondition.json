@@ -7,20 +7,17 @@
         {
             "id": "latitude",
             "type": "string",
-            "multivalued": true,
-            "choiceListInitializerFilter": ""
+            "multivalued": true
         },
         {
             "id": "longitude",
             "type": "string",
-            "multivalued": true,
-            "choiceListInitializerFilter": ""
+            "multivalued": true
         },
         {
             "id": "distance",
             "type": "string",
-            "multivalued": true,
-            "choiceListInitializerFilter": ""
+            "multivalued": true
         }
     ]
 }

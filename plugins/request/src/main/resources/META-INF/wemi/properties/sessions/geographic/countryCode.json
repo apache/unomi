@@ -2,7 +2,6 @@
     "id": "countryCode",
     "type": "string",
     "tags": ["geographicSessionProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ "j:country" ],

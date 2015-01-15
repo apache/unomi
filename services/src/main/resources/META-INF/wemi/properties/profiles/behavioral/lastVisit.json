@@ -2,7 +2,6 @@
     "id": "lastVisit",
     "type": "date",
     "tags": ["behavioralProfileProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ ],

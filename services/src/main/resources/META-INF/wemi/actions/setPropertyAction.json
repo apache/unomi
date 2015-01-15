@@ -12,14 +12,12 @@
         {
             "id": "setPropertyValue",
             "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         },
         {
             "id": "storeInSession",
             "type": "boolean",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         }
     ]
 }

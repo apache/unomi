@@ -2,7 +2,6 @@
     "id": "name",
     "type": "string",
     "tags": ["basicProfileProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ ],

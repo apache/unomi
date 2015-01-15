@@ -2,7 +2,6 @@
     "id": "linkedInId",
     "type": "string",
     "tags": ["basicProfileProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ "j:linkedInID" ],

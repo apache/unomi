@@ -8,14 +8,12 @@
             "id": "operator",
             "type": "String",
             "multivalued": false,
-            "defaultValue": "and",
-            "choiceListInitializerFilter": ""
+            "defaultValue": "and"
         },
         {
             "id": "subConditions",
             "type": "Condition",
-            "multivalued": true,
-            "choiceListInitializerFilter": ""
+            "multivalued": true
         }
     ]
 }

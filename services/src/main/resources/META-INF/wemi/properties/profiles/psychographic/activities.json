@@ -2,7 +2,6 @@
     "id": "activities",
     "type": "string",
     "tags": ["psychographicProfileProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ "j:activities" ],

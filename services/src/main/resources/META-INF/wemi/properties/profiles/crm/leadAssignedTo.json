@@ -2,7 +2,6 @@
     "id": "leadAssignedTo",
     "type": "string",
     "tags": ["crmProfileProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ ],

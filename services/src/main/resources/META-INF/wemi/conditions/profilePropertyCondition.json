@@ -19,14 +19,12 @@
         {
             "id": "propertyValue",
             "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         },
         {
             "id": "propertyValues",
             "type": "string",
-            "multivalued": true,
-            "choiceListInitializerFilter": ""
+            "multivalued": true
         }
     ]
 }

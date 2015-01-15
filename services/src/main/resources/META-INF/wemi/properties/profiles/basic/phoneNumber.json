@@ -2,7 +2,6 @@
     "id": "phoneNumber",
     "type": "string",
     "tags": ["basicProfileProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ "j:facebookID" ],

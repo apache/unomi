@@ -6,8 +6,7 @@
         {
             "id": "pastEventCondition",
             "type": "condition",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         }
     ]
 }

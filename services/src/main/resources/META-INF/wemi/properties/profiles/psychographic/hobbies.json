@@ -2,7 +2,6 @@
     "id": "hobbies",
     "type": "string",
     "tags": ["psychographicProfileProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ ],

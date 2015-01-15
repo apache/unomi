@@ -2,7 +2,6 @@
     "id": "mergedWith",
     "type": "string",
     "tags": ["technicalProfileProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ ],

@@ -2,7 +2,6 @@
     "id": "income",
     "type": "integer",
     "tags": ["demographicProfileProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ "j:income" ],

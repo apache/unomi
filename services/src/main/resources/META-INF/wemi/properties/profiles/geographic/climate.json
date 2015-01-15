@@ -2,7 +2,6 @@
     "id": "climate",
     "type": "string",
     "tags": ["geographicProfileProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ ],

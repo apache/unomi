@@ -19,8 +19,7 @@
         {
             "id": "matchType",
             "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         }
     ]
 }

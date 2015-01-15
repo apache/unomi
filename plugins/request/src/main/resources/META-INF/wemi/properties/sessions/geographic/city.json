@@ -2,7 +2,6 @@
     "id": "city",
     "type": "string",
     "tags": ["geographicSessionProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ ],

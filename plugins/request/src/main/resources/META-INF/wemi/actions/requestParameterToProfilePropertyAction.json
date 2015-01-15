@@ -6,8 +6,7 @@
         {
             "id": "requestParameterName",
             "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         },
         {
             "id": "profilePropertyName",
@@ -18,14 +17,12 @@
         {
             "id": "sessionPropertyName",
             "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         },
         {
             "id": "storeAsList",
             "type": "boolean",
-            "multivalued": false,
-            "choiceListInitializerFilter": ""
+            "multivalued": false
         }
     ]
 }

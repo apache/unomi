@@ -2,7 +2,6 @@
     "id": "nbOfVisits",
     "type": "integer",
     "tags": ["behavioralProfileProperties"],
-    "choiceListInitializerFilter": "",
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ ],

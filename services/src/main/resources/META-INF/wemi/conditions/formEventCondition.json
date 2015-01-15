@@ -31,8 +31,7 @@
     {
       "id": "formId",
       "type": "String",
-      "multivalued": false,
-      "choiceListInitializerFilter": ""
+      "multivalued": false
     }
   ]
 }
