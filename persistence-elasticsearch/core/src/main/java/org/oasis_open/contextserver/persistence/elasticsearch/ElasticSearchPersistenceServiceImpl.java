@@ -662,24 +662,25 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 SearchResponse response = builder.execute().actionGet();
 
                 Aggregations aggregations = response.getAggregations();
+                if (aggregations != null) {
+                    Global globalAgg = aggregations.get("global");
+                    results.put("_all", globalAgg.getDocCount());
+                    aggregations = globalAgg.getAggregations();
 
-                Global globalAgg = aggregations.get("global");
-                results.put("_all", globalAgg.getDocCount());
-                aggregations = globalAgg.getAggregations();
-
-                if (aggregations.get("filter") != null) {
-                    Filter filterAgg = aggregations.get("filter");
-                    results.put("_filtered", filterAgg.getDocCount());
-                    aggregations = filterAgg.getAggregations();
-                }
-                if (aggregations.get("buckets") != null) {
-                    MultiBucketsAggregation terms = aggregations.get("buckets");
-                    for (MultiBucketsAggregation.Bucket bucket : terms.getBuckets()) {
-                        results.put(bucket.getKey(), bucket.getDocCount());
+                    if (aggregations.get("filter") != null) {
+                        Filter filterAgg = aggregations.get("filter");
+                        results.put("_filtered", filterAgg.getDocCount());
+                        aggregations = filterAgg.getAggregations();
                     }
-                    SingleBucketAggregation missing = aggregations.get("missing");
-                    if (missing.getDocCount() > 0) {
-                        results.put("_missing", missing.getDocCount());
+                    if (aggregations.get("buckets") != null) {
+                        MultiBucketsAggregation terms = aggregations.get("buckets");
+                        for (MultiBucketsAggregation.Bucket bucket : terms.getBuckets()) {
+                            results.put(bucket.getKey(), bucket.getDocCount());
+                        }
+                        SingleBucketAggregation missing = aggregations.get("missing");
+                        if (missing.getDocCount() > 0) {
+                            results.put("_missing", missing.getDocCount());
+                        }
                     }
                 }
 

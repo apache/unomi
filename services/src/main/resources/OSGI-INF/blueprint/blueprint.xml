@@ -104,8 +104,19 @@
         <service-properties>
             <entry key="initializerId" value="propertyType"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.conditions.initializers.ProfilePropertyTypeChoiceListInitializer">
+        <bean class="org.oasis_open.contextserver.impl.conditions.initializers.PropertyTypeChoiceListInitializer">
             <property name="definitionsService" ref="definitionsServiceImpl"/>
+            <property name="tagId" value="profileProperties"/>
+        </bean>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="initializerId" value="sessionPropertyType"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.impl.conditions.initializers.PropertyTypeChoiceListInitializer">
+            <property name="definitionsService" ref="definitionsServiceImpl"/>
+            <property name="tagId" value="sessionProperties"/>
         </bean>
     </service>
 
