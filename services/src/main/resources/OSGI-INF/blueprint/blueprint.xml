@@ -122,15 +122,6 @@
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="initializerId" value="sessionProperty"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.conditions.initializers.SessionPropertyChoiceListInitializer">
-            <property name="persistenceService" ref="persistenceService"/>
-        </bean>
-    </service>
-
-    <service auto-export="interfaces">
-        <service-properties>
             <entry key="initializerId" value="segments"/>
         </service-properties>
         <bean class="org.oasis_open.contextserver.impl.conditions.initializers.SegmentsChoiceListInitializer">
