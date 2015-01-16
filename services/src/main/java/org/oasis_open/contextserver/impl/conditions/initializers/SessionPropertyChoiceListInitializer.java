@@ -84,7 +84,7 @@ import org.oasis_open.contextserver.persistence.spi.PersistenceService;
  * 
  * @author Sergiy Shyrkov
  */
-public class SessionPropertyChoiceListInitializer implements ChoiceListInitializer, I18nSupport {
+public class SessionPropertyChoiceListInitializer implements ChoiceListInitializer {
 
     private PersistenceService persistenceService;
 
@@ -94,8 +94,7 @@ public class SessionPropertyChoiceListInitializer implements ChoiceListInitializ
         List<ChoiceListValue> choiceListValues = new ArrayList<>(mapping.size());
         for (Map.Entry<String, Map<String, String>> e : mapping.entrySet()) {
             String id = e.getKey();
-            String resourceKey = "SESSION_" + id.toUpperCase().replaceAll("\\.", "_") + "_LABEL";
-            choiceListValues.add(new PropertyTypeChoiceListValue(id, resourceKey, e.getValue() != null ? e.getValue()
+            choiceListValues.add(new PropertyTypeChoiceListValue(id, id, e.getValue() != null ? e.getValue()
                     .get("type") : null));
         }
         return choiceListValues;

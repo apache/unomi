@@ -34,7 +34,7 @@ public class ActionType implements PluginType, Serializable {
 
     public String getNameKey() {
         if (nameKey == null) {
-            nameKey = id.toUpperCase().replaceAll("\\.", "_") + "_NAME_LABEL";
+            nameKey = "action." +  id + ".name";
         }
         return nameKey;
     }
@@ -45,7 +45,7 @@ public class ActionType implements PluginType, Serializable {
 
     public String getDescriptionKey() {
         if (descriptionKey == null) {
-            descriptionKey = id.toUpperCase().replaceAll("\\.", "_") + "_DESCRIPTION_LABEL";
+            descriptionKey = "action." + id + ".description";
         }
         return descriptionKey;
     }

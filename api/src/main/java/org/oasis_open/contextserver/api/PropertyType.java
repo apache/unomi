@@ -54,7 +54,7 @@ public class PropertyType implements Comparable<PropertyType>, PluginType {
 
     public String getNameKey() {
         if (nameKey == null) {
-            nameKey = "PROPERTIES_" + id.toUpperCase().replaceAll("\\.", "_") + "_LABEL";
+            nameKey = target + "Property." + id;
         }
         return nameKey;
     }

@@ -1,12 +1,12 @@
 <div class="perso">
     <div class="block">
-        <span>#{SESSION_DURATION_MIN_LABEL}</span>
+        <span>#{condition.sessionDurationCondition.min}</span>
         &nbsp;
-        <input ng-model="ref.parameterValues.minimumDuration" type="number"/>
+        <input ng-model="ref.parameterValues.minimumDuration" type="number" min="0"/>
         &nbsp;
-        <span>#{SESSION_DURATION_MAX_LABEL}</span>
+        <span>#{condition.sessionDurationCondition.max}</span>
         &nbsp;
-        <input ng-model="ref.parameterValues.maximumDuration" type="number"/>
+        <input ng-model="ref.parameterValues.maximumDuration" type="number" min="0"/>
         &nbsp;
     </div>
 </div>

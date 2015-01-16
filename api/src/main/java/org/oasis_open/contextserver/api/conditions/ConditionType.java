@@ -42,7 +42,7 @@ public class ConditionType implements PluginType, Serializable {
 
     public String getNameKey() {
         if (nameKey == null) {
-            nameKey = id.toUpperCase().replaceAll("\\.", "_") + "_NAME_LABEL";
+            nameKey = "condition." + id + ".name";
         }
         return nameKey;
     }
@@ -53,7 +53,7 @@ public class ConditionType implements PluginType, Serializable {
 
     public String getDescriptionKey() {
         if (descriptionKey == null) {
-            descriptionKey = id.toUpperCase().replaceAll("\\.", "_") + "_DESCRIPTION_LABEL";
+            descriptionKey = "condition." + id + ".label";
         }
         return descriptionKey;
     }

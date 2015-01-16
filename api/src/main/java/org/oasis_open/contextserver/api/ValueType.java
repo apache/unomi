@@ -37,7 +37,7 @@ public class ValueType implements PluginType {
 
     public String getNameKey() {
         if (nameKey == null) {
-            nameKey = id.toUpperCase().replaceAll("\\.", "_") + "_NAME_LABEL";
+            nameKey = "type." + id;
         }
         return nameKey;
     }
@@ -48,7 +48,7 @@ public class ValueType implements PluginType {
 
     public String getDescriptionKey() {
         if (descriptionKey == null) {
-            descriptionKey = id.toUpperCase().replaceAll("\\.", "_") + "_DESCRIPTION_LABEL";
+            descriptionKey = "type." + id + ".description";
         }
         return descriptionKey;
     }

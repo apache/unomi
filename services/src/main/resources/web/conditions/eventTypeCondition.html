@@ -1,12 +1,12 @@
 <div class="perso">
     <div class="block">
-        <span>#{EVENT_NAMED_LABEL}</span>
+        <span>#{condition.eventTypeCondition.eventNamed}</span>
         &nbsp;
         <select ng-model="ref.parameterValues.eventTypeId"
                 ng-options="parameter.id as parameter.name for parameter in getConditionParameterChoiceListValues(ref, 'eventTypeId')"
                 >
         </select>
         &nbsp;
-        <span>#{HAS_OCCURRED_LABEL}</span>
+        <span>#{condition.eventTypeCondition.hasOccurred}</span>
     </div>
 </div>

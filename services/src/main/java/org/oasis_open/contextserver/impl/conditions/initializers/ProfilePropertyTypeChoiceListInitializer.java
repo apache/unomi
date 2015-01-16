@@ -22,8 +22,7 @@ public class ProfilePropertyTypeChoiceListInitializer implements ChoiceListIniti
         Set<PropertyType> profileProperties = definitionsService.getPropertyTypeByTag(definitionsService.getTag("profileProperties"), true);
         List<ChoiceListValue> choiceListValues = new ArrayList<>(profileProperties.size());
         for (PropertyType propertyType : profileProperties) {
-            String resourceKey = propertyType.getNameKey();
-            choiceListValues.add(new PropertyTypeChoiceListValue("properties." + propertyType.getId(), resourceKey,
+            choiceListValues.add(new PropertyTypeChoiceListValue("properties." + propertyType.getId(), propertyType.getNameKey(),
                     propertyType.getValueTypeId()));
         }
         return choiceListValues;

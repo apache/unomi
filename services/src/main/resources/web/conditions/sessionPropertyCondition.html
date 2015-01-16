@@ -1,12 +1,12 @@
 <div class="perso">
     <div class="block">
-        <span>#{SESSION_LABEL}</span>
+        <span>#{condition.propertyCondition.session}</span>
         &nbsp;
         <select ng-model="ref.parameterValues.propertyName"
                 ng-options="parameter.id as parameter.name for parameter in getConditionParameterChoiceListValues(ref, 'propertyName')"
                 >
         </select>
-        &nbsp;<span>#{IS_LABEL}</span>&nbsp;
+        &nbsp;<span>#{comparisonOperator.is}</span>&nbsp;
         <select ng-model="ref.parameterValues.comparisonOperator"
                 ng-options="parameter.id as parameter.name for parameter in getConditionParameterChoiceListValues(ref, 'comparisonOperator')"
                 >

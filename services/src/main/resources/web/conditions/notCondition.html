@@ -1,6 +1,6 @@
 <div class="perso">
     <div class="block">
-        #{NOT_LABEL} :
+        #{condition.notCondition.not} :
         <div ng-if="!ref.parameterValues.subCondition">
             <select name="selectedProperty" ng-model="added.subCondition" ng-change="addCondition('subCondition')"
                     ng-options="value as value.name for value in types">

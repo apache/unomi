@@ -1,5 +1,5 @@
 <div class="block">
-    #{pastEventCondition.userRaisedEvent} :
+    #{condition.pastEventCondition.userRaisedEvent} :
 
     <div class="block" width="100%">
         <div ng-if="!ref.parameterValues.eventCondition">
@@ -16,12 +16,12 @@
 
     <div class="block">
         <div class="input-group">
-            #{pastEventCondition.numberOfDays} : <input ng-model="ref.parameterValues.numberOfDays" min="1" type="number"/> #{pastEventCondition.days}
+            #{condition.pastEventCondition.numberOfDays} : <input ng-model="ref.parameterValues.numberOfDays" min="1" type="number"/> #{condition.pastEventCondition.days}
         </div>
 
         <div class="input-group">
-            #{pastEventCondition.minimumCount} : <input ng-model="ref.parameterValues.minimumEventCount" min="1" type="number"/> #{pastEventCondition.times} /
-            #{pastEventCondition.maximumCount} : <input ng-model="ref.parameterValues.maximumEventCount" min="1" type="number"/> #{pastEventCondition.times}
+            #{condition.pastEventCondition.minimumCount} : <input ng-model="ref.parameterValues.minimumEventCount" min="1" type="number"/> #{condition.pastEventCondition.times} /
+            #{condition.pastEventCondition.maximumCount} : <input ng-model="ref.parameterValues.maximumEventCount" min="1" type="number"/> #{condition.pastEventCondition.times}
         </div>
     </div>
 </div>
