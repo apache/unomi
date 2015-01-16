@@ -136,6 +136,14 @@
         </bean>
     </service>
 
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="initializerId" value="country"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.impl.conditions.initializers.CountryChoiceListInitializer"/>
+    </service>
+
+
     <!-- Action executors -->
 
     <service auto-export="interfaces">

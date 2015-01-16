@@ -13,7 +13,8 @@
         {
             "id": "countries",
             "type": "string",
-            "multivalued": true
+            "multivalued": true,
+            "choiceListInitializerFilter": "(initializerId=country)"
         }
     ]
 }

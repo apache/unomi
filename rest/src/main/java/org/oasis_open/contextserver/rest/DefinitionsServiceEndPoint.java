@@ -299,7 +299,7 @@ public class DefinitionsServiceEndPoint {
                 Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, choiceListInitializerFilter);
                 for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
                     ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
-                    List<ChoiceListValue> options = choiceListInitializer.getValues(null);
+                    List<ChoiceListValue> options = choiceListInitializer.getValues(bundle.getLocale());
                     if (choiceListInitializer instanceof I18nSupport) {
                         for (ChoiceListValue value : options) {
                             result.add(value.localizedCopy(resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
