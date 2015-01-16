@@ -1,9 +1,11 @@
-package org.oasis_open.contextserver.persistence.elasticsearch.conditions;
+package org.oasis_open.contextserver.plugins.pastevent.conditions;
 
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.oasis_open.contextserver.api.Session;
 import org.oasis_open.contextserver.api.conditions.Condition;
+import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
+import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,8 +21,8 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         Map<String, Object> parameters = condition.getParameterValues();
 
-        Integer minimumEventCount = !parameters.containsKey("minimumEventCount") || "".equals(parameters.get("minimumEventCount")) ? 0 : Integer.parseInt((String) parameters.get("minimumEventCount"));
-        Integer maximumEventCount = !parameters.containsKey("maximumEventCount") || "".equals(parameters.get("maximumEventCount")) ? Integer.MAX_VALUE : Integer.parseInt((String) parameters.get("maximumEventCount"));
+        Integer minimumEventCount = !parameters.containsKey("minimumEventCount") ? 0 : (Integer) parameters.get("minimumEventCount");
+        Integer maximumEventCount = !parameters.containsKey("maximumEventCount") ? Integer.MAX_VALUE : (Integer) parameters.get("maximumEventCount");
 
         if (minimumEventCount  > 0 && maximumEventCount < Integer.MAX_VALUE) {
             return FilterBuilders.rangeFilter("properties." + parameters.get("generatedPropertyKey"))

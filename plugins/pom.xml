@@ -15,6 +15,7 @@
         <module>request</module>
         <module>hover-event</module>
         <module>mail</module>
+        <module>past-event</module>
     </modules>
 
     <dependencies>

@@ -23,29 +23,6 @@
         "type": "profilePropertyCondition"
       },
       "value": 100
-    },
-    {
-      "condition": {
-        "parameterValues": {
-          "subConditions": [
-            {
-              "parameterValues": {
-                "numberOfDays": 30,
-                "eventCondition": {
-                  "parameterValues": {
-                    "pagePath": "/sites/ACMESPACE/home"
-                  },
-                  "type": "pageViewEventCondition"
-                }
-              },
-              "type": "pastEventCondition"
-            }
-          ],
-          "operator" : "and"
-        },
-        "type": "booleanCondition"
-      },
-      "value": 200
     }
   ]
 }
