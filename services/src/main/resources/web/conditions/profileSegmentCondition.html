@@ -1,16 +1,18 @@
-<div class="perso">
-    <div class="block">
-        <span>#{condition.profileSegmentCondition.profileMatches}</span>
-        &nbsp;
-        <select ng-model="ref.parameterValues.matchType" class="form-control">
-            <option value="all"><span>#{condition.profileSegmentCondition.profileMatches.all}</span></option>
-            <option value="in"><span>#{condition.profileSegmentCondition.profileMatches.some}</span></option>
-            <option value="notIn"><span>#{condition.profileSegmentCondition.profileMatches.none}</span></option>
-        </select>
-        &nbsp;
-        <select ng-model="ref.parameterValues.segments" multiple="true"
-                ng-options="parameter.id as parameter.name for parameter in getConditionParameterChoiceListValues(ref, 'segments')"
-                >
-        </select>
+<div class="perso clearfix">
+    <div class="block clearfix form-inline">
+        <div class="form-group">
+            <label>#{condition.profileSegmentCondition.profileMatches}</label>
+            <select class="form-control" ng-model="ref.parameterValues.matchType" class="form-control">
+                <option value="all"><span>#{condition.profileSegmentCondition.profileMatches.all}</span></option>
+                <option value="in"><span>#{condition.profileSegmentCondition.profileMatches.some}</span></option>
+                <option value="notIn"><span>#{condition.profileSegmentCondition.profileMatches.none}</span></option>
+            </select>
+        </div>
+        <div class="form-group">
+            <select class="form-control" ng-model="ref.parameterValues.segments" multiple="true"
+                    ng-options="parameter.id as parameter.name for parameter in getConditionParameterChoiceListValues(ref, 'segments')"
+                    >
+            </select>
+        </div>
     </div>
 </div>

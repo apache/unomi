@@ -1,12 +1,12 @@
-<div class="perso">
-    <div class="block">
-        <span>#{condition.sessionDurationCondition.min}</span>
-        &nbsp;
-        <input ng-model="ref.parameterValues.minimumDuration" type="number" min="0"/>
-        &nbsp;
-        <span>#{condition.sessionDurationCondition.max}</span>
-        &nbsp;
-        <input ng-model="ref.parameterValues.maximumDuration" type="number" min="0"/>
-        &nbsp;
+<div class="perso clearfix">
+    <div class="block clearfix form-inline">
+        <div class="form-group">
+            <label>#{condition.sessionDurationCondition.min}</label>
+            <input ng-model="ref.parameterValues.minimumDuration" class="form-control" type="number" min="0"/>
+        </div>
+        <div class="form-group">
+            <label>#{condition.sessionDurationCondition.max}</label>
+            <input ng-model="ref.parameterValues.maximumDuration" class="form-control" type="number" min="0"/>
+        </div>
     </div>
 </div>
