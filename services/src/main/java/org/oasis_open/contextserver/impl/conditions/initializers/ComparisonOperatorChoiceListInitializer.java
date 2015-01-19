@@ -16,25 +16,25 @@ public class ComparisonOperatorChoiceListInitializer implements ChoiceListInitia
 
     static {
         OPERATORS = new ArrayList<ChoiceListValue>(12);
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("equals", "EQUALS_LABEL"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("notEquals", "NOT_EQUALS_LABEL"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("lessThan", "LESS_THAN_LABEL", "integer", "date"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("greaterThan", "GREATER_THAN_LABEL", "integer", "date"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("lessThanOrEqualTo", "LESS_THAN_OR_EQUAL_TO_LABEL",
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("equals", "comparisonOperator.equals"));
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("notEquals", "comparisonOperator.notEquals"));
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("lessThan", "comparisonOperator.lessThan", "integer", "date"));
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("greaterThan", "comparisonOperator.greaterThan", "integer", "date"));
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("lessThanOrEqualTo", "comparisonOperator.lessThanOrEqualTo",
                 "integer", "date"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("greaterThanOrEqualTo", "GREATER_THAN_OR_EQUAL_TO_LABEL",
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("greaterThanOrEqualTo", "comparisonOperator.greaterThanOrEqualTo",
                 "integer", "date"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("startsWith", "STARTS_WITH_LABEL", "string", "email"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("endsWith", "ENDS_WITH_LABEL", "string", "email"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("matchesRegex", "MATCHES_REGULAR_EXPRESSION_LABEL",
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("startsWith", "comparisonOperator.startsWith", "string", "email"));
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("endsWith", "comparisonOperator.endsWith", "string", "email"));
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("matchesRegex", "comparisonOperator.matchesRegularExpression",
                 "string", "email"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("contains", "CONTAINS_LABEL", "string", "email"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("exists", "EXISTS_LABEL"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("missing", "MISSING_LABEL"));
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("contains", "comparisonOperator.contains", "string", "email"));
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("exists", "comparisonOperator.exists"));
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("missing", "comparisonOperator.missing"));
         
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("in", "IN_LABEL"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("notIn", "NOT_IN_LABEL"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("all", "ALL_LABEL"));
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("in", "comparisonOperator.in"));
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("notIn", "comparisonOperator.notIn"));
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("all", "comparisonOperator.all"));
     }
 
     @Override

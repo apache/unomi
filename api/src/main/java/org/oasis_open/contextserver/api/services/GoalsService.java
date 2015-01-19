@@ -16,8 +16,6 @@ public interface GoalsService {
 
     void setGoal(Goal goal);
 
-    void createGoal(String scope, String goalId, String name, String description);
-
     void removeGoal(String scope, String goalId);
 
     GoalReport getGoalReport(String scope, String goalId);

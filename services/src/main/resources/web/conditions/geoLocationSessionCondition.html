@@ -1,10 +1,12 @@
-<div class="perso">
-    <div class="block">
-        <span>#{country}</span>
-        &nbsp;<span>#{oneOf}</span>&nbsp;
-        <select ng-model="ref.parameterValues.countries" multiple="true" size="7" title="{{ref.parameterValues.countries}}"
-                ng-options="parameter.id as parameter.name for parameter in getConditionParameterChoiceListValues(ref, 'countries')"
-                >
-        </select>
+<div class="perso clearfix">
+    <div class="block clearfix">
+        <div class="form-group">
+            <label>#{country}</label>
+            <label>#{oneOf}</label>
+            <select class="form-control" ng-model="ref.parameterValues.countries" multiple="true" size="7" title="{{ref.parameterValues.countries}}"
+                    ng-options="parameter.id as parameter.name for parameter in getConditionParameterChoiceListValues(ref, 'countries')"
+                    >
+            </select>
+        </div>
     </div>
 </div>

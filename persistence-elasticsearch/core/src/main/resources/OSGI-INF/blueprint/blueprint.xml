@@ -63,14 +63,6 @@
     <service
             interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="pastEventConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.PastEventConditionESQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
             <entry key="queryBuilderId" value="pageViewEventConditionESQueryBuilder"/>
         </service-properties>
         <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.PageViewEventConditionESQueryBuilder"/>
@@ -143,17 +135,6 @@
             <entry key="conditionEvaluatorId" value="notConditionEvaluator"/>
         </service-properties>
         <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.NotConditionEvaluator"/>
-    </service>
-
-    <service
-            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
-        <service-properties>
-            <entry key="conditionEvaluatorId" value="pastEventConditionEvaluator"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.PastEventConditionEvaluator">
-            <property name="persistenceService" ref="elasticSearchPersistenceServiceImpl"/>
-            <!--<property name="definitionsService" ref="definitionsService"/>-->
-        </bean>
     </service>
 
     <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">

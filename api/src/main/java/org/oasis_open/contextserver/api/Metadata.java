@@ -37,6 +37,10 @@ public class Metadata implements Comparable<Metadata> {
         this.description = description;
     }
 
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public String getId() {
         return id;
     }

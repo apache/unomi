@@ -1,19 +1,19 @@
-<div class="perso">
+<div class="perso clearfix form-inline">
     <div ng-repeat="child in ref.parameterValues.subConditions">
-        <div class="block">
+        <div class="block clearfix form-inline">
             <condition ref="child" parent-ref="ref" parent-name="'subConditions'"
                        parent-value="ref.parameterValues.subConditions" parent-index="$index" types="types" />
         </div>
-        <div class="operator">
-            <select name="operator" ng-model="ref.parameterValues.operator">
-                <option value="and">#{AND_LABEL}</option>
-                <option value="or">#{OR_LABEL}</option>
+        <div class="operator clearfix form-inline">
+            <select class="form-control" name="operator" ng-model="ref.parameterValues.operator">
+                <option value="and">#{condition.booleanCondition.and}</option>
+                <option value="or">#{condition.booleanCondition.or}</option>
             </select>
         </div>
     </div>
 
-    <div class="block">
-        <select name="selectedProperty" ng-model="added.subConditions" ng-change="addCondition('subConditions')"
+    <div class="block clearfix form-inline">
+        <select class="form-control" name="selectedProperty" ng-model="added.subConditions" ng-change="addCondition('subConditions')"
                 ng-options="value as value.name for value in conditionTypes">
         </select>
 

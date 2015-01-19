@@ -1,14 +1,16 @@
-<div class="perso">
-    <div class="block">
-        <span>#{LATITUDE_LABEL}</span>
-        &nbsp;
-        <input ng-model="ref.parameterValues.latitude" type="text"/>
-        <span>#{LONGITUDE_LABEL}</span>
-        &nbsp;
-        <input ng-model="ref.parameterValues.longitude" type="text"/>
-        <span>#{DISTANCE_LABEL}</span>
-        &nbsp;
-        <input ng-model="ref.parameterValues.distance" type="text"/>
-        &nbsp;
+<div class="perso clearfix">
+    <div class="block clearfix form-inline">
+        <div class="form-group">
+            <label>#{LATITUDE_LABEL}</label>
+            <input ng-model="ref.parameterValues.latitude" class="form-control" type="text"/>
+        </div>
+        <div class="form-group">
+            <label>#{LONGITUDE_LABEL}</label>
+            <input ng-model="ref.parameterValues.longitude" class="form-control" type="text"/>
+        </div>
+        <div class="form-group">
+            <label>#{DISTANCE_LABEL}</label>
+            <input ng-model="ref.parameterValues.distance" class="form-control" type="text"/>
+        </div>
     </div>
 </div>

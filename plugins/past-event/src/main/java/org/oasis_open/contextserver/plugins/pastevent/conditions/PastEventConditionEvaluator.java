@@ -1,9 +1,11 @@
-package org.oasis_open.contextserver.persistence.elasticsearch.conditions;
+package org.oasis_open.contextserver.plugins.pastevent.conditions;
 
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
+import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator;
+import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
 
 import java.util.ArrayList;
@@ -49,15 +51,15 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
         Integer numberOfDays = (Integer) condition.getParameterValues().get("numberOfDays");
         if (numberOfDays != null) {
             Condition numberOfDaysCondition = new Condition();
-            profileCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-            profileCondition.getParameterValues().put("propertyName", "timeStamp");
-            profileCondition.getParameterValues().put("comparisonOperator", "greaterThan");
-            profileCondition.getParameterValues().put("propertyValue", "now-"+numberOfDays+"d");
+            numberOfDaysCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+            numberOfDaysCondition.getParameterValues().put("propertyName", "timeStamp");
+            numberOfDaysCondition.getParameterValues().put("comparisonOperator", "greaterThan");
+            numberOfDaysCondition.getParameterValues().put("propertyValue", "now-"+numberOfDays+"d");
             l.add(numberOfDaysCondition);
         }
 
-        Integer minimumEventCount = !parameters.containsKey("minimumEventCount") || "".equals(parameters.get("minimumEventCount")) ? 0 : Integer.parseInt((String) parameters.get("minimumEventCount"));
-        Integer maximumEventCount = !parameters.containsKey("maximumEventCount") || "".equals(parameters.get("maximumEventCount")) ? Integer.MAX_VALUE : Integer.parseInt((String) parameters.get("maximumEventCount"));
+        Integer minimumEventCount = !parameters.containsKey("minimumEventCount")  ? 0 : (Integer) parameters.get("minimumEventCount");
+        Integer maximumEventCount = !parameters.containsKey("maximumEventCount")  ? Integer.MAX_VALUE : (Integer) parameters.get("maximumEventCount");
 
         long count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
         return (minimumEventCount == 0 && maximumEventCount == Integer.MAX_VALUE && count > 0) ||

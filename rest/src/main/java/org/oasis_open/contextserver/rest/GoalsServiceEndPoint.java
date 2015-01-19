@@ -34,6 +34,12 @@ public class GoalsServiceEndPoint {
         return goalsService.getGoalMetadatas();
     }
 
+    @POST
+    @Path("/")
+    public void setGoal(Goal goal) {
+        goalsService.setGoal(goal);
+    }
+
     @GET
     @Path("/{scope}/")
     public Set<Metadata> getGoalMetadatas(@PathParam("scope") String scope) {
@@ -44,19 +50,6 @@ public class GoalsServiceEndPoint {
     @Path("/{scope}/{goalId}")
     public Goal getGoal(@PathParam("scope") String scope, @PathParam("goalId") String goalId) {
         return goalsService.getGoal(scope, goalId);
-    }
-
-    @POST
-    @Path("/{scope}/{goalId}")
-    public void setGoal(@PathParam("scope") String scope, @PathParam("goalId") String goalId, Goal goal) {
-        goalsService.setGoal(goal);
-    }
-
-    @PUT
-    @Path("/{scope}/{goalId}")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public void createGoal(@PathParam("scope") String scope, @PathParam("goalId") String goalId, @FormParam("goalName") String name, @FormParam("goalDescription") String description) {
-        goalsService.createGoal(scope, goalId, name, description);
     }
 
     @DELETE

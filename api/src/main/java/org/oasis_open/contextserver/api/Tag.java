@@ -34,14 +34,14 @@ public class Tag implements PluginType, Comparable<Tag> {
 
     public String getNameKey() {
         if (nameKey == null) {
-            nameKey = id.toUpperCase().replaceAll("\\.", "_") + "_TAG_NAME_LABEL";
+            nameKey = "tag." + id + ".name";
         }
         return nameKey;
     }
 
     public String getDescriptionKey() {
         if (descriptionKey == null) {
-            descriptionKey = id.toUpperCase().replaceAll("\\.", "_") + "_TAG_DESCRIPTION_LABEL";
+            descriptionKey = "tag." + id + ".description";
         }
         return descriptionKey;
     }

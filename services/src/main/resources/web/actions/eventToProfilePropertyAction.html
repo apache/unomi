@@ -1,11 +1,11 @@
 <div class="perso">
     <div class="block">
-        <span>#{COPY_EVENT_PROPERTY_LABEL}</span>
+        <span>#{action.setPropertyAction.setProperty}</span>
         &nbsp;
         <select ng-model="ref.parameterValues.eventPropertyName"
                 ng-options="parameter.id as parameter.name for parameter in getActionParameterChoiceListValues(ref, 'eventPropertyName')">
         </select>
-        <span>#{TO_PROFILE_PROPERTY_LABEL}</span>
+        <span>#{action.setPropertyAction.to}</span>
         &nbsp;
         <select ng-model="ref.parameterValues.profilePropertyName"
                 ng-options="parameter.id as parameter.name for parameter in getActionParameterChoiceListValues(ref, 'profilePropertyName')">

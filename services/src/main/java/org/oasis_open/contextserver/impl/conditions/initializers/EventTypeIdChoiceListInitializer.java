@@ -24,7 +24,7 @@ public class EventTypeIdChoiceListInitializer implements ChoiceListInitializer, 
         List<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
         Set<String> eventTypeIds = eventService.getEventTypeIds();
         for (String eventProperty : eventTypeIds) {
-            String resourceKey = "EVENT_TYPE_" + eventProperty.toUpperCase().replaceAll("\\.", "_") + "_LABEL";
+            String resourceKey = "eventType." + eventProperty;
             choiceListValues.add(new ChoiceListValue(eventProperty, resourceKey));
         }
         return choiceListValues;

@@ -228,6 +228,12 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     @Override
+    public void removeGoal(String scope, String goalId) {
+        String idWithScope = Metadata.getIdWithScope(scope, goalId);
+        persistenceService.remove(idWithScope, Goal.class);
+    }
+
+    @Override
     public void setGoal(Goal goal) {
         ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent());
         ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent());
@@ -242,19 +248,6 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         }
 
         persistenceService.save(goal);
-    }
-
-    @Override
-    public void createGoal(String scope, String goalId, String name, String description) {
-        Metadata metadata = new Metadata(scope, goalId, name, description);
-        Goal goal = new Goal(metadata);
-        setGoal(goal);
-    }
-
-    @Override
-    public void removeGoal(String scope, String goalId) {
-        String idWithScope = Metadata.getIdWithScope(scope, goalId);
-        persistenceService.remove(idWithScope, Goal.class);
     }
 
     public GoalReport getGoalReport(String scope, String goalId) {

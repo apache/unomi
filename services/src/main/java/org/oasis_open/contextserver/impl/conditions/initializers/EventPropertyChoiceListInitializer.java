@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * Initializer for the set of available event properties.
  */
-public class EventPropertyChoiceListInitializer implements ChoiceListInitializer, I18nSupport {
+public class EventPropertyChoiceListInitializer implements ChoiceListInitializer {
 
     EventService eventService;
 
@@ -20,8 +20,7 @@ public class EventPropertyChoiceListInitializer implements ChoiceListInitializer
         List<EventProperty> eventProperties = eventService.getEventProperties();
         List<ChoiceListValue> choiceListValues = new ArrayList<>(eventProperties.size());
         for (EventProperty eventProperty : eventProperties) {
-            String resourceKey = "EVENT_" + eventProperty.getId().toUpperCase().replaceAll("\\.", "_") + "_LABEL";
-            choiceListValues.add(new PropertyTypeChoiceListValue(eventProperty.getId(), resourceKey, eventProperty.getValueType()));
+            choiceListValues.add(new PropertyTypeChoiceListValue(eventProperty.getId(), eventProperty.getId(), eventProperty.getValueType()));
         }
         return choiceListValues;
     }

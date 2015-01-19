@@ -13,20 +13,24 @@ import java.util.Set;
 /**
  * Initializer for the set of available profile properties.
  */
-public class ProfilePropertyTypeChoiceListInitializer implements ChoiceListInitializer, I18nSupport {
+public class PropertyTypeChoiceListInitializer implements ChoiceListInitializer, I18nSupport {
 
     DefinitionsService definitionsService;
+    private String tagId;
 
     @Override
     public List<ChoiceListValue> getValues(Object context) {
-        Set<PropertyType> profileProperties = definitionsService.getPropertyTypeByTag(definitionsService.getTag("profileProperties"), true);
+        Set<PropertyType> profileProperties = definitionsService.getPropertyTypeByTag(definitionsService.getTag(tagId), true);
         List<ChoiceListValue> choiceListValues = new ArrayList<>(profileProperties.size());
         for (PropertyType propertyType : profileProperties) {
-            String resourceKey = propertyType.getNameKey();
-            choiceListValues.add(new PropertyTypeChoiceListValue("properties." + propertyType.getId(), resourceKey,
+            choiceListValues.add(new PropertyTypeChoiceListValue("properties." + propertyType.getId(), propertyType.getNameKey(),
                     propertyType.getValueTypeId()));
         }
         return choiceListValues;
+    }
+
+    public void setTagId(String tagId) {
+        this.tagId = tagId;
     }
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
