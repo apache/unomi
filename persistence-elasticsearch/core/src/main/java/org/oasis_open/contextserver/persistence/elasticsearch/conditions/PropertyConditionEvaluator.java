@@ -1,14 +1,19 @@
 package org.oasis_open.contextserver.persistence.elasticsearch.conditions;
 
-import org.apache.commons.beanutils.BeanUtils;
+import org.apache.commons.beanutils.BeanUtilsBean;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.joda.DateMathParser;
 import org.elasticsearch.index.mapper.core.DateFieldMapper;
 import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.conditions.Condition;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -17,14 +22,78 @@ import java.util.regex.Pattern;
  */
 public class PropertyConditionEvaluator implements ConditionEvaluator {
 
+    private int compare(Object value1, Object value2) {
+        if (value2 == null) {
+            return value1 == null ? 0 : 1;
+        } else if (value1 == null) {
+            return -1;
+        }
+        if (value2 instanceof Float || value2 instanceof Double) {
+            return getDouble(value1).compareTo(getDouble(value2));
+        } else if (value2 instanceof Integer || value2 instanceof Long) {
+            return getLong(value1).compareTo(getLong(value2));
+        } else if (value2 instanceof Date) {
+            return getDate(value1).compareTo(getDate(value2));
+        }
+
+        throw new UnsupportedOperationException("Cannot compare " + value1 + " and " + value2);
+    }
+
+    private boolean compareMultivalue(Object actualValue, Object expectedValue, String op) {
+        if (actualValue == null) {
+            return expectedValue == null;
+        } else if (expectedValue == null) {
+            return false;
+        }
+        
+        Set<Object> actual = getValueSet(actualValue);
+        Set<Object> expected = getValueSet(expectedValue);
+        
+        boolean result = true;
+        
+        switch (op) {
+            case "in":
+                result = false;
+                for (Object a : actual) {
+                    if (expected.contains(a)) {
+                        result = true;
+                        break;
+                    }
+                }
+                break;
+            case "notIn":
+                for (Object a : actual) {
+                    if (expected.contains(a)) {
+                        result = false;
+                        break;
+                    }
+                }
+                break;
+            case "all":
+                for (Object a : actual) {
+                    if (!expected.contains(a)) {
+                        result = false;
+                        break;
+                    }
+                }
+                break;
+                
+            default:
+                throw new IllegalArgumentException("Unknown comparison operator " + op);
+        }
+        
+        return result;
+    }
+
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
         String op = (String) condition.getParameterValues().get("comparisonOperator");
         String name = (String) condition.getParameterValues().get("propertyName");
         Object expectedValue = condition.getParameterValues().get("propertyValue");
+        Object expectedValues = condition.getParameterValues().get("propertyValues");
         Object actualValue;
         try {
-            actualValue = BeanUtils.getProperty(item, name);
+            actualValue = BeanUtilsBean.getInstance().getPropertyUtils().getProperty(item, name);
         } catch (Exception e) {
             // property not found
             actualValue = null;
@@ -52,47 +121,11 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             return actualValue.toString().endsWith(expectedValue.toString());
         } else if (op.equals("matchesRegex")) {
             return Pattern.compile(expectedValue.toString()).matcher(actualValue.toString()).matches();
+        } else if (op.equals("in") || op.equals("notIn") || op.equals("all")) {
+            return compareMultivalue(actualValue, expectedValues, op);
         }
-
+        
         return false;
-    }
-
-
-    private int compare(Object value1, Object value2) {
-        Long date1 = getDate(value1);
-        Long date2 = getDate(value2);
-        if (date1 != null && date2 != null) {
-            return date1.compareTo(date2);
-        }
-        Long long1 = getLong(value1);
-        Long long2 = getLong(value2);
-        if (long1 != null && long2 != null) {
-            return long1.compareTo(long2);
-        }
-        Double double1 = getDouble(value1);
-        Double double2 = getDouble(value2);
-        if (double1 != null && double2 != null) {
-            return double1.compareTo(double2);
-        }
-        throw new UnsupportedOperationException("Cannot compare " + value1 + " and " + value2);
-    }
-
-    private Double getDouble(Object value) {
-        try {
-            return Double.parseDouble(value.toString());
-        } catch (NumberFormatException e) {
-            // Not a number
-        }
-        return null;
-    }
-
-    private Long getLong(Object value) {
-        try {
-            return Long.parseLong(value.toString());
-        } catch (NumberFormatException e) {
-            // Not a number
-        }
-        return null;
     }
 
     private Long getDate(Object value) {
@@ -107,5 +140,38 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             }
         }
         return null;
+    }
+
+    private Double getDouble(Object value) {
+        try {
+            return Double.parseDouble(value.toString());
+        } catch (NumberFormatException e) {
+            // Not a number
+        }
+        return null;
+    }
+
+    private Long getLong(Object value) {
+        if (value instanceof Number) {
+            return ((Number)value).longValue();
+        } else {
+            try {
+                return Long.parseLong(value.toString());
+            } catch (NumberFormatException e) {
+                // Not a number
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Set<Object> getValueSet(Object expectedValue) {
+        if (expectedValue instanceof Set) {
+            return (Set<Object>) expectedValue;
+        } else if (expectedValue instanceof Collection) {
+            return new HashSet<Object>((Collection<?>) expectedValue);
+        } else {
+            return Collections.singleton(expectedValue);
+        }
     }
 }

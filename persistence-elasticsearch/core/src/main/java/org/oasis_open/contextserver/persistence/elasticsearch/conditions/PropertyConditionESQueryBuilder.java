@@ -17,10 +17,12 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
     public PropertyConditionESQueryBuilder() {
     }
 
+    @Override
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         String op = (String) condition.getParameterValues().get("comparisonOperator");
         String name = (String) condition.getParameterValues().get("propertyName");
         Object value = condition.getParameterValues().get("propertyValue");
+        Object values = condition.getParameterValues().get("propertyValues");
 
         if(value instanceof Map) {
             List<FilterBuilder> filters = getRecursiveFilters((Map<String, Object>) value, op, name);
@@ -28,7 +30,7 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
                 return FilterBuilders.andFilter(filters.toArray(new FilterBuilder[filters.size()]));
             }
         } else {
-            return getFilter(op, name, value);
+            return getFilter(op, name, value, values);
         }
 
         return null;
@@ -44,13 +46,16 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
                     result.addAll(filters);
                 }
             } else {
-                result.add(getFilter(op, name + "." + entry.getKey(), entry.getValue()));
+                FilterBuilder filter = getFilter(op, name + "." + entry.getKey(), entry.getValue(), entry.getValue());
+                if (filter != null) {
+                    result.add(filter);
+                }
             }
         }
         return result;
     }
 
-    private FilterBuilder getFilter(String op, String name, Object value) {
+    private FilterBuilder getFilter(String op, String name, Object value, Object values) {
         if (op.equals("equals")) {
             return FilterBuilders.termFilter(name, value);
         } else if (op.equals("greaterThan")) {
@@ -73,7 +78,20 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
             return FilterBuilders.regexpFilter(name, ".*" + value);
         } else if (op.equals("matchesRegex")) {
             return FilterBuilders.regexpFilter(name, value.toString());
+        } else if (op.equals("in")) {
+            if (values != null || values instanceof List) {
+                return FilterBuilders.inFilter(name, (List<?>) values);
+            }
+        } else if (op.equals("notIn")) {
+            if (values != null || values instanceof List) {
+                return FilterBuilders.notFilter(FilterBuilders.inFilter(name, (List<?>) values));
+            }
+        } else if (op.equals("all")) {
+            if (values != null || values instanceof List) {
+                return FilterBuilders.termsFilter(name, (List<?>) values).execution("and");
+            }
         }
+
         return null;
     }
 }
