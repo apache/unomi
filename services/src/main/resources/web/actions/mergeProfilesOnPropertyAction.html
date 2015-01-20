@@ -1,9 +1,10 @@
-<div class="perso">
-    <div class="block">
-        <span>#{action.mergeProfilesOnPropertyAction.mergeProfilesOnProperty}</span>
-        &nbsp;
-        <select ng-model="ref.parameterValues.mergeProfilePropertyName"
-                ng-options="parameter.id as parameter.name for parameter in getActionParameterChoiceListValues(ref, 'mergeProfilePropertyName')">
-        </select>
+<div class="perso clearfix">
+    <div class="block form-inline">
+        <div class="form-group">
+            <label>#{action.mergeProfilesOnPropertyAction.mergeProfilesOnProperty}</label>
+            <select class="form-control" ng-model="ref.parameterValues.mergeProfilePropertyName"
+                    ng-options="parameter.id as parameter.name for parameter in getActionParameterChoiceListValues(ref, 'mergeProfilePropertyName')">
+            </select>
+        </div>
     </div>
 </div>
