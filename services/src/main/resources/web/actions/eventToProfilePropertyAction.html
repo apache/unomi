@@ -1,14 +1,16 @@
-<div class="perso">
-    <div class="block">
-        <span>#{action.setPropertyAction.setProperty}</span>
-        &nbsp;
-        <select ng-model="ref.parameterValues.eventPropertyName"
-                ng-options="parameter.id as parameter.name for parameter in getActionParameterChoiceListValues(ref, 'eventPropertyName')">
-        </select>
-        <span>#{action.setPropertyAction.to}</span>
-        &nbsp;
-        <select ng-model="ref.parameterValues.profilePropertyName"
-                ng-options="parameter.id as parameter.name for parameter in getActionParameterChoiceListValues(ref, 'profilePropertyName')">
-        </select>
+<div class="perso clearfix">
+    <div class="block form-inline">
+        <div class="form-group">
+            <label>#{action.setPropertyAction.setProperty}</label>
+            <select class="form-control" ng-model="ref.parameterValues.eventPropertyName"
+                    ng-options="parameter.id as parameter.name for parameter in getActionParameterChoiceListValues(ref, 'eventPropertyName')">
+            </select>
+        </div>
+        <div class="form-group">
+            <label>#{action.setPropertyAction.to}</label>
+            <select class="form-control" ng-model="ref.parameterValues.profilePropertyName"
+                    ng-options="parameter.id as parameter.name for parameter in getActionParameterChoiceListValues(ref, 'profilePropertyName')">
+            </select>
+        </div>
     </div>
 </div>
