@@ -1,11 +1,12 @@
-<div class="perso">
-    <div class="block">
-        <span>#{EVENT_HOVER_FOR_CONTENT_WITH_ID_LABEL}</span>
-        &nbsp;
-        <input ng-model="ref.parameterValues.targetId" type="text"/>
-        &nbsp;
-        <span>#{EVENT_HOVER_FOR_CONTENT_WITH_PATH_LABEL}</span>
-        &nbsp;
-        <input ng-model="ref.parameterValues.targetPath" type="text"/>
+<div class="perso clearfix">
+    <div class="block clearfix form-inline">
+        <div class="form-group">
+            <label>#{EVENT_HOVER_FOR_CONTENT_WITH_ID_LABEL}</label>
+            <input class="form-control" ng-model="ref.parameterValues.targetId" type="text"/>
+        </div>
+        <div class="form-group">
+            <span>#{EVENT_HOVER_FOR_CONTENT_WITH_PATH_LABEL}</span>
+            <input class="form-control" ng-model="ref.parameterValues.targetPath" type="text"/>
+        </div>
     </div>
 </div>
