@@ -10,9 +10,14 @@ import java.util.Set;
  */
 public class Profile extends Item {
 
+    private static final long serialVersionUID = -7409439322939712238L;
+    
     public static final String ITEM_TYPE = "profile";
+    
     private Map<String,Object> properties;
+    
     private Set<String> segments;
+    
     private Map<String,Integer> scores;
 
     public Profile() {
@@ -58,5 +63,12 @@ public class Profile extends Item {
 
     public void setScores(Map<String, Integer> scores) {
         this.scores = scores;
+    }
+    
+    @Override
+    public String toString() {
+        return new StringBuilder(512).append("{id: \"").append(getId()).append("\", segments: ")
+                .append(getSegments()).append(", scores: ").append(getScores()).append(", properties: ")
+                .append(getProperties()).append("}").toString();
     }
 }
