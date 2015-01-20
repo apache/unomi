@@ -10,11 +10,11 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <cxf.version>3.0.0</cxf.version>
+        <cxf.version>2.7.11</cxf.version>
         <version.jackson.core>2.4.0</version.jackson.core> <!-- version used by CXF -->
         <version.jackson.jaxb>2.4.0</version.jackson.jaxb> <!-- version used by CXF -->
         <version.karaf>3.0.2</version.karaf>
-        <version.pax.exam>4.1.0</version.pax.exam>
+        <version.pax.exam>4.4.0</version.pax.exam>
 		<jahia.plugin.version>4.3-SNAPSHOT</jahia.plugin.version>
     </properties>
 

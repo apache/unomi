@@ -55,7 +55,7 @@
             <!-- scope is runtime so the feature repo is listed in the features service config file, and features may be installed using the karaf-maven-plugin configuration -->
             <groupId>org.apache.cxf.karaf</groupId>
             <artifactId>apache-cxf</artifactId>
-            <version>2.7.11</version>
+            <version>${cxf.version}</version>
             <classifier>features</classifier>
             <type>xml</type>
             <scope>runtime</scope>
