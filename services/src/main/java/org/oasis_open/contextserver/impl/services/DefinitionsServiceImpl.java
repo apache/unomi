@@ -39,7 +39,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     private PersistenceService persistenceService;
 
     public DefinitionsServiceImpl() {
-        System.out.println("Instantiating definitions service...");
+        logger.info("Instantiating definitions service...");
     }
 
     public void setPersistenceService(PersistenceService persistenceService) {

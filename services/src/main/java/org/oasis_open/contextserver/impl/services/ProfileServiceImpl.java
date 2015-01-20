@@ -29,7 +29,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private DefinitionsService definitionsService;
 
     public ProfileServiceImpl() {
-        System.out.println("Initializing profile service...");
+        logger.info("Initializing profile service...");
     }
 
     public void setBundleContext(BundleContext bundleContext) {
