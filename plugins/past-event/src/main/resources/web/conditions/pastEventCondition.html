@@ -1,9 +1,9 @@
-<div class="block">
-    #{condition.pastEventCondition.userRaisedEvent} :
+<div class="block clearfix">
+    <label>#{condition.pastEventCondition.userRaisedEvent} :</label>
 
-    <div class="block" width="100%">
+    <div class="block clearfix" width="100%">
         <div ng-if="!ref.parameterValues.eventCondition">
-            <select name="selectedProperty" ng-model="added.eventCondition" ng-change="addCondition('eventCondition')"
+            <select class="form-control" name="selectedProperty" ng-model="added.eventCondition" ng-change="addCondition('eventCondition')"
                     ng-options="value as value.name for value in eventConditionTypes">
             </select>
         </div>
@@ -14,14 +14,14 @@
         </div>
     </div>
 
-    <div class="block">
-        <div class="input-group">
-            #{condition.pastEventCondition.numberOfDays} : <input ng-model="ref.parameterValues.numberOfDays" min="1" type="number"/> #{condition.pastEventCondition.days}
+    <div class="block clearfix form-inline">
+        <div class="form-group">
+            <label>#{condition.pastEventCondition.numberOfDays} :</label> <input class="form-control" ng-model="ref.parameterValues.numberOfDays" min="1" type="number"/><label> #{condition.pastEventCondition.days}</label>
         </div>
 
-        <div class="input-group">
-            #{condition.pastEventCondition.minimumCount} : <input ng-model="ref.parameterValues.minimumEventCount" min="1" type="number"/> #{condition.pastEventCondition.times} /
-            #{condition.pastEventCondition.maximumCount} : <input ng-model="ref.parameterValues.maximumEventCount" min="1" type="number"/> #{condition.pastEventCondition.times}
+        <div class="form-group">
+            <label>#{condition.pastEventCondition.minimumCount} :</label> <input class="form-control" ng-model="ref.parameterValues.minimumEventCount" min="1" type="number"/> <label>#{condition.pastEventCondition.times} /</label>
+            <label>#{condition.pastEventCondition.maximumCount} :</label> <input class="form-control" ng-model="ref.parameterValues.maximumEventCount" min="1" type="number"/> <label>#{condition.pastEventCondition.times}</label>
         </div>
     </div>
 </div>
