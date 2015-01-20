@@ -11,7 +11,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -101,8 +100,12 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
 
         if(actualValue == null){
             return op.equals("missing");
+        } else if (op.equals("exists")) {
+            return true;
         } else if (op.equals("equals")) {
             return expectedValue.equals(actualValue);
+        } else if (op.equals("notEquals")) {
+            return !expectedValue.equals(actualValue);
         } else if (op.equals("greaterThan")) {
             return compare(actualValue, expectedValue) > 0;
         } else if (op.equals("greaterThanOrEqualTo")) {
@@ -111,8 +114,6 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             return compare(actualValue, expectedValue) < 0;
         } else if (op.equals("lessThanOrEqualTo")) {
             return compare(actualValue, expectedValue) >= 0;
-        } else if (op.equals("exists")) {
-            return true;
         } else if (op.equals("contains")) {
             return actualValue.toString().contains(expectedValue.toString());
         } else if (op.equals("startsWith")) {
