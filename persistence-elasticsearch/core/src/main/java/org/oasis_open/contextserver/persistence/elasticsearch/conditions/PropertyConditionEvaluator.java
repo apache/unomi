@@ -69,8 +69,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 }
                 break;
             case "all":
-                for (Object a : actual) {
-                    if (!expected.contains(a)) {
+                for (Object e : expected) {
+                    if (!actual.contains(e)) {
                         result = false;
                         break;
                     }
