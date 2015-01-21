@@ -59,6 +59,9 @@ public class EventServiceImpl implements EventService {
 
         Profile profile = event.getProfile();
         final Session session = event.getSession();
+        if(session != null) {
+            session.setLastEventDate(event.getTimeStamp());
+        }
 
         if (profile != null) {
             Map<String,Object> previousProperties = new LinkedHashMap<String, Object>(profile.getProperties());
@@ -87,7 +90,6 @@ public class EventServiceImpl implements EventService {
             }
 
             if (session != null) {
-                session.setLastEventDate(event.getTimeStamp());
                 profileService.saveSession(session);
             }
         }
