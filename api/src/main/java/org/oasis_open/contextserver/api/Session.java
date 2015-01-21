@@ -20,7 +20,7 @@ public class Session extends Item implements TimestampedItem {
 
     private Date lastEventDate;
 
-    private long duration = 0;
+    private int duration = 0;
 
     public Session() {
     }
@@ -78,11 +78,11 @@ public class Session extends Item implements TimestampedItem {
     public void setLastEventDate(Date lastEventDate) {
         this.lastEventDate = lastEventDate;
         if (lastEventDate != null) {
-            duration = lastEventDate.getTime() - timeStamp.getTime();
+            duration = (int) (lastEventDate.getTime() - timeStamp.getTime());
         }
     }
 
-    public long getDuration() {
+    public int getDuration() {
         return duration;
     }
 
