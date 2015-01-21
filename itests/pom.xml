@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.oasis-open.contextserver</groupId>
@@ -11,14 +12,28 @@
     <dependencies>
         <dependency>
             <groupId>org.oasis-open.contextserver</groupId>
+            <artifactId>context-server-kar</artifactId>
+            <classifier>features</classifier>
+            <version>1.0-SNAPSHOT</version>
+            <type>xml</type>
+        </dependency>
+        <dependency>
+            <groupId>org.oasis-open.contextserver</groupId>
+            <artifactId>context-server-persistence-spi</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.oasis-open.contextserver</groupId>
             <artifactId>context-server-wab</artifactId>
             <version>1.0-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
+        
         <dependency>
             <groupId>org.apache.karaf.features</groupId>
             <artifactId>standard</artifactId>
-            <version>3.0.2</version>
+            <version>${version.karaf}</version>
             <classifier>features</classifier>
             <type>xml</type>
         </dependency>
@@ -30,31 +45,10 @@
             <type>xml</type>
         </dependency>
         <dependency>
-            <groupId>org.apache.karaf.features</groupId>
-            <artifactId>enterprise</artifactId>
-            <version>3.0.2</version>
-            <classifier>features</classifier>
-            <type>xml</type>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.karaf.features</groupId>
-            <artifactId>spring</artifactId>
-            <version>3.0.2</version>
-            <classifier>features</classifier>
-            <type>xml</type>
-        </dependency>
-        <dependency>
             <groupId>org.apache.cxf.karaf</groupId>
             <artifactId>apache-cxf</artifactId>
             <version>${cxf.version}</version>
             <classifier>features</classifier>
-            <type>xml</type>
-        </dependency>
-        <dependency>
-            <groupId>org.oasis-open.contextserver</groupId>
-            <artifactId>context-server-kar</artifactId>
-            <classifier>features</classifier>
-            <version>${project.version}</version>
             <type>xml</type>
         </dependency>
         <dependency>
@@ -64,15 +58,15 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-          <groupId>org.apache.httpcomponents</groupId>
-          <artifactId>httpclient-osgi</artifactId>
-          <version>4.3.6</version>
-          <type>bundle</type>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient-osgi</artifactId>
+            <version>4.3.6</version>
+            <type>bundle</type>
         </dependency>
         <dependency>
-        	<groupId>org.apache.httpcomponents</groupId>
-        	<artifactId>httpcore-osgi</artifactId>
-        	<version>4.3.3</version>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore-osgi</artifactId>
+            <version>4.3.3</version>
         </dependency>
 
         <!-- Dependencies for pax exam karaf container -->
