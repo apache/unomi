@@ -12,7 +12,7 @@ import org.junit.runners.Suite.SuiteClasses;
 @RunWith(Suite.class)
 @SuiteClasses({ 
     //BasicTest.class, 
-    ConditionTest.class,
+    ConditionEvaluatorTest.class,
     SegmentTest.class })
 public class AllTests {
 }

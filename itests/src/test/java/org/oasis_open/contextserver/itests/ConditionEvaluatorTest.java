@@ -7,7 +7,6 @@ import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.UUID;
 
 import javax.inject.Inject;
@@ -15,19 +14,12 @@ import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.Profile;
-import org.oasis_open.contextserver.api.conditions.Condition;
-import org.oasis_open.contextserver.api.segments.Segment;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
-import org.oasis_open.contextserver.api.services.ProfileService;
-import org.oasis_open.contextserver.api.services.SegmentService;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Integration tests for various condition types.
@@ -36,9 +28,7 @@ import org.slf4j.LoggerFactory;
  */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
-public class ConditionTest extends BaseTest {
-
-    private final static Logger logger = LoggerFactory.getLogger(ConditionTest.class);
+public class ConditionEvaluatorTest extends BaseTest {
 
     @Inject
     private DefinitionsService definitionsService;
@@ -46,86 +36,14 @@ public class ConditionTest extends BaseTest {
     @Inject
     private PersistenceService persistenceService;
 
-    private String profileId1;
-
-    private String profileId2;
-
-    @Inject
-    private ProfileService profileService;
-
-    @Inject
-    private SegmentService segmentService;
-
-    private void createProfiles() {
-        profileId1 = "p1-" + UUID.randomUUID().toString();
-        Profile profile1 = new Profile(profileId1);
-        profile1.setProperty("firstVisit", new Date());
-        profile1.setProperty("age", Integer.valueOf(30));
-        profile1.setProperty("gender", "female");
-        profileService.save(profile1);
-
-        logger.info("Created profile: {}", profile1);
-
-        profileId2 = "p2-" + UUID.randomUUID().toString();
-        Profile profile2 = new Profile(profileId2);
-        profile2.setProperty("firstVisit", new Date());
-        profile2.setProperty("age", Integer.valueOf(35));
-        profile2.setProperty("gender", "male");
-        profileService.save(profile2);
-
-        logger.info("Created profile: {}", profile2);
-    }
-
     @Before
     public void setUp() {
         assertNotNull("Definition service should be available", definitionsService);
         assertNotNull("Persistence service should be available", persistenceService);
-        assertNotNull("Profile service should be available", profileService);
-        assertNotNull("Segment service should be available", segmentService);
-    }
-
-    // @Test
-    public void testCreateProfiles() {
-        createProfiles();
-    }
-
-    // @Test
-    @SuppressWarnings("unchecked")
-    public void testCreateSegments() {
-        createProfiles();
-
-        segmentService.createSegmentDefinition(Metadata.SYSTEM_SCOPE, "segment-1-females", "Segment 1 - Females", "");
-
-        Segment segment1 = segmentService.getSegmentDefinition(Metadata.SYSTEM_SCOPE, "segment-1-females");
-
-        assertNotNull("Segment has not been created", segment1);
-        logger.info("Created segment: {}", segment1);
-
-        Condition cond = new Condition();
-        cond.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
-        cond.getParameterValues().put("propertyName", "properties.gender");
-        cond.getParameterValues().put("comparisonOperator", "equals");
-        cond.getParameterValues().put("propertyValue", "female");
-        ((List<Condition>) segment1.getCondition().getParameterValues().get("subConditions")).add(cond);
-
-        // save segment
-        segmentService.setSegmentDefinition(segment1);
-
-        // reload segment
-        segment1 = segmentService.getSegmentDefinition(Metadata.SYSTEM_SCOPE, "segment-1-females");
-
-        logger.info("Sub-conditions: {}", segment1.getCondition().getParameterValues().get("subConditions"));
-
-        Profile p = profileService.load(profileId1);
-
-        // assertTrue("Profile 1 should match the segment 1",
-        // segmentService.isProfileInSegment(p, segment1.getMetadata().getScope(), segment1.getItemId()));
-
-        logger.info("Profile 1 matches condition", persistenceService.testMatch(cond, p));
     }
 
     @Test
-    public void testPropertyEvaluatorCompound() {
+    public void testCompound() {
         Date lastVisit = new Date();
         Profile female = new Profile("profile-" + UUID.randomUUID().toString());
         female.setProperty("lastVisit", lastVisit);
@@ -165,7 +83,7 @@ public class ConditionTest extends BaseTest {
     }
 
     @Test
-    public void testPropertyEvaluatorDate() {
+    public void testDate() {
         Date lastVisit = new Date();
         Profile female = new Profile("profile-" + UUID.randomUUID().toString());
         female.setProperty("lastVisit", lastVisit);
@@ -202,7 +120,7 @@ public class ConditionTest extends BaseTest {
     }
 
     @Test
-    public void testPropertyEvaluatorExistence() {
+    public void testExistence() {
         Date lastVisit = new Date();
         Profile female = new Profile("profile-" + UUID.randomUUID().toString());
         female.setProperty("lastVisit", lastVisit);
@@ -223,7 +141,7 @@ public class ConditionTest extends BaseTest {
     }
 
     @Test
-    public void testPropertyEvaluatorInteger() {
+    public void testInteger() {
         Profile female = new Profile("profile-" + UUID.randomUUID().toString());
         female.setProperty("age", Integer.valueOf(30));
         female.setProperty("gender", "female");
@@ -265,7 +183,7 @@ public class ConditionTest extends BaseTest {
     }
 
     @Test
-    public void testPropertyEvaluatorMultiValue() {
+    public void testMultiValue() {
         Profile female = new Profile("profile-" + UUID.randomUUID().toString());
         female.setProperty("age", Integer.valueOf(30));
         female.setProperty("gender", "female");
@@ -294,7 +212,7 @@ public class ConditionTest extends BaseTest {
     }
 
     @Test
-    public void testPropertyEvaluatorString() {
+    public void testString() {
         Date lastVisit = new Date();
         Profile female = new Profile("profile-" + UUID.randomUUID().toString());
         female.setProperty("lastVisit", lastVisit);
