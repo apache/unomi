@@ -2,22 +2,26 @@ package org.oasis_open.contextserver.itests;
 
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.Option;
-import org.ops4j.pax.exam.karaf.options.KarafDistributionOption;
+import org.ops4j.pax.exam.karaf.options.LogLevelOption.LogLevel;
 import org.ops4j.pax.exam.options.MavenArtifactUrlReference;
 import org.ops4j.pax.exam.options.MavenUrlReference;
 
 import java.io.File;
 
-import static org.ops4j.pax.exam.CoreOptions.maven;
-import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
-import static org.ops4j.pax.exam.CoreOptions.wrappedBundle;
-import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.karafDistributionConfiguration;
-import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.keepRuntimeFolder;
+import static org.ops4j.pax.exam.CoreOptions.*;
+import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.*;
 
 /**
- * Created by kevan on 31/10/14.
+ * Base class for integration tests.
+ * 
+ * @author kevan
  */
-public class BaseTest {
+public abstract class BaseTest {
+    
+    protected static final String HTTP_PORT = "8181";
+    
+    protected static final String URL = "http://localhost:" + HTTP_PORT;
+
     @Configuration
     public Option[] config() {
         MavenArtifactUrlReference karafUrl = maven()
@@ -38,21 +42,9 @@ public class BaseTest {
                 .classifier("features")
                 .type("xml")
                 .versionAsInProject();
-        MavenUrlReference karafSpringRepo = maven()
-                .groupId("org.apache.karaf.features")
-                .artifactId("spring")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
         MavenUrlReference karafCxfRepo = maven()
                 .groupId("org.apache.cxf.karaf")
                 .artifactId("apache-cxf")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        MavenUrlReference karafEnterpriseRepo = maven()
-                .groupId("org.apache.karaf.features")
-                .artifactId("enterprise")
                 .classifier("features")
                 .type("xml")
                 .versionAsInProject();
@@ -62,18 +54,23 @@ public class BaseTest {
                 .classifier("features")
                 .type("xml")
                 .versionAsInProject();
+        
         return new Option[]{
-                KarafDistributionOption.debugConfiguration("5005", false),
+                debugConfiguration("5005", false),
                 karafDistributionConfiguration()
                         .frameworkUrl(karafUrl)
                         .unpackDirectory(new File("target/exam"))
                         .useDeployFolder(false),
-                keepRuntimeFolder(),
-                KarafDistributionOption.features(karafPaxWebRepo, "war"),
-                KarafDistributionOption.features(karafCxfRepo, "cxf"),
-                KarafDistributionOption.features(karafStandardRepo, "openwebbeans"),
-                KarafDistributionOption.features(karafStandardRepo, "pax-cdi-web-openwebbeans"),
-                KarafDistributionOption.features(contextServerRepo, "context-server-kar"),
+//                keepRuntimeFolder(),
+                configureConsole().ignoreLocalConsole().ignoreRemoteShell(),
+                logLevel(LogLevel.INFO),
+//                editConfigurationFilePut("etc/org.ops4j.pax.web.cfg", "org.osgi.service.http.port", HTTP_PORT),
+//                systemProperty("org.osgi.service.http.port").value(HTTP_PORT),
+                features(karafPaxWebRepo, "war"),
+                features(karafCxfRepo, "cxf"),
+                features(karafStandardRepo, "openwebbeans"),
+                features(karafStandardRepo, "pax-cdi-web-openwebbeans"),
+                features(contextServerRepo, "context-server-kar"),
                 // we need to wrap the HttpComponents libraries ourselves since the OSGi bundles provided by the project are incorrect
                 wrappedBundle(mavenBundle("org.apache.httpcomponents",
                         "httpcore").versionAsInProject()),

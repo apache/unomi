@@ -86,10 +86,10 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
 
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
-        String op = (String) condition.getParameterValues().get("comparisonOperator");
-        String name = (String) condition.getParameterValues().get("propertyName");
-        Object expectedValue = condition.getParameterValues().get("propertyValue");
-        Object expectedValues = condition.getParameterValues().get("propertyValues");
+        String op = (String) condition.getParameter("comparisonOperator");
+        String name = (String) condition.getParameter("propertyName");
+        Object expectedValue = condition.getParameter("propertyValue");
+        Object expectedValues = condition.getParameter("propertyValues");
         Object actualValue;
         try {
             actualValue = BeanUtilsBean.getInstance().getPropertyUtils().getProperty(item, name);

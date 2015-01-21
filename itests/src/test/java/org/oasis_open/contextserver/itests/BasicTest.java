@@ -1,6 +1,7 @@
 package org.oasis_open.contextserver.itests;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -33,7 +34,7 @@ public class BasicTest extends BaseTest{
 
     @Test
     public void testContextJS() throws IOException {
-        HttpUriRequest request = new HttpGet("http://localhost:8181/context.js?sessionId=aa3b04bd-8f4d-4a07-8e96-d33ffa04d3d9");
+        HttpUriRequest request = new HttpGet(URL + "/context.js?sessionId=aa3b04bd-8f4d-4a07-8e96-d33ffa04d3d9");
         CloseableHttpResponse response = HttpClientBuilder.create().build().execute(request);
         // The underlying HTTP connection is still held by the response object
         // to allow the response content to be streamed directly from the network socket.
@@ -62,7 +63,7 @@ public class BasicTest extends BaseTest{
         String sessionId = "aa3b04bd-8f4d-4a07-8e96-d33ffa04d3d9";
         ContextRequest contextRequest = new ContextRequest();
         contextRequest.setPageId("af6f393a-a537-4586-991b-8521b9c7b05b");
-        HttpPost request = new HttpPost("http://localhost:8181/context.json?sessionId=" + sessionId);
+        HttpPost request = new HttpPost(URL + "/context.json?sessionId=" + sessionId);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
         CloseableHttpResponse response = HttpClientBuilder.create().build().execute(request);
 
