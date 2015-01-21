@@ -53,7 +53,7 @@ public class ConditionType implements PluginType, Serializable {
 
     public String getDescriptionKey() {
         if (descriptionKey == null) {
-            descriptionKey = "condition." + id + ".label";
+            descriptionKey = "condition." + id + ".description";
         }
         return descriptionKey;
     }
