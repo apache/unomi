@@ -79,14 +79,6 @@
     <service
             interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="multipleValuesPropertyMatchConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.MultipleValuesPropertyMatchConditionESQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
             <entry key="queryBuilderId" value="sessionDurationConditionESQueryBuilder"/>
         </service-properties>
         <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.SessionDurationConditionESQueryBuilder"/>
@@ -149,13 +141,6 @@
             <entry key="conditionEvaluatorId" value="matchAllConditionEvaluator"/>
         </service-properties>
         <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.MatchAllConditionEvaluator"/>
-    </service>
-
-    <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
-        <service-properties>
-            <entry key="conditionEvaluatorId" value="multipleValuesPropertyMatchConditionEvaluator"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.MultipleValuesPropertyMatchConditionEvaluator"/>
     </service>
 
     <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
