@@ -46,6 +46,14 @@ public class Condition {
         return parameterValues;
     }
 
+    public Object getParameter(String name) {
+        return parameterValues.get(name);
+    }
+
+    public void setParameter(String name, Object value) {
+        parameterValues.put(name, value);
+    }
+
     public void setParameterValues(Map<String, Object> parameterValues) {
         this.parameterValues = parameterValues;
     }
