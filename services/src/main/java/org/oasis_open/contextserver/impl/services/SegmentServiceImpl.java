@@ -295,7 +295,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         List<String> savedQueries = persistenceService.getMatchingSavedQueries(profile);
         Set<String> segments = new HashSet<String>();
         Map<String,Integer> scores = new HashMap<String, Integer>();
-        new SegmentsAndScores(segments,scores);
+
         for (String s : savedQueries) {
             if (s.startsWith(SEGMENT_QUERY_PREFIX)) {
                 segments.add(s.substring(SEGMENT_QUERY_PREFIX.length()));
