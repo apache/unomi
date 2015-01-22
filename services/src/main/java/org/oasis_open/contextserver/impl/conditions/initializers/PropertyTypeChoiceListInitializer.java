@@ -24,7 +24,7 @@ public class PropertyTypeChoiceListInitializer implements ChoiceListInitializer,
         List<ChoiceListValue> choiceListValues = new ArrayList<>(profileProperties.size());
         for (PropertyType propertyType : profileProperties) {
             choiceListValues.add(new PropertyTypeChoiceListValue("properties." + propertyType.getId(), propertyType.getNameKey(),
-                    propertyType.getValueTypeId()));
+                    propertyType.getValueTypeId(), propertyType.isMultivalued()));
         }
         return choiceListValues;
     }

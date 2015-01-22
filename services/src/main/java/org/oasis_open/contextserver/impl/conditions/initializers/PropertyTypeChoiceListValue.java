@@ -78,6 +78,8 @@ import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
  */
 public class PropertyTypeChoiceListValue extends ChoiceListValue {
 
+    private boolean multivalued;
+
     private String valueType = "string";
 
     /**
@@ -91,8 +93,25 @@ public class PropertyTypeChoiceListValue extends ChoiceListValue {
      *            the required property value type
      */
     public PropertyTypeChoiceListValue(String id, String name, String valueType) {
+        this(id, name, valueType, false);
+    }
+
+    /**
+     * Initializes an instance of this class.
+     * 
+     * @param id
+     *            the ID of the property
+     * @param name
+     *            the display name
+     * @param valueType
+     *            the required property value type
+     * @param multivalued
+     *            <code>true</code> if the property supports multiple values; <code>false</code> - in case it is a single value property
+     */
+    public PropertyTypeChoiceListValue(String id, String name, String valueType, boolean multivalued) {
         super(id, name);
         this.valueType = valueType;
+        this.multivalued = multivalued;
     }
 
     /**
@@ -102,6 +121,25 @@ public class PropertyTypeChoiceListValue extends ChoiceListValue {
      */
     public String getValueType() {
         return valueType;
+    }
+
+    /**
+     * Indicates if the property supports multiple values.
+     * 
+     * @return <code>true</code> if the property supports multiple values; <code>false</code> - in case it is a single value property
+     */
+    public boolean isMultivalued() {
+        return multivalued;
+    }
+
+    /**
+     * Sets the indicator if the property supports multiple values.
+     * 
+     * @param multivalued
+     *            <code>true</code> if the property supports multiple values; <code>false</code> - in case it is a single value property
+     */
+    public void setMultivalued(boolean multivalued) {
+        this.multivalued = multivalued;
     }
 
     /**

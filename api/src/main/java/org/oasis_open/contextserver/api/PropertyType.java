@@ -27,6 +27,7 @@ public class PropertyType implements Comparable<PropertyType>, PluginType {
     private String mergeStrategy;
     private Set<Tag> tags = new TreeSet<Tag>();
     private Set<String> tagIds = new LinkedHashSet<String>();
+    private boolean multivalued;
 
     public PropertyType() {
     }
@@ -191,5 +192,13 @@ public class PropertyType implements Comparable<PropertyType>, PluginType {
         result = 31 * result + (int) (temp ^ (temp >>> 32));
         result = 31 * result + (int) (pluginId ^ (pluginId >>> 32));
         return result;
+    }
+
+    public boolean isMultivalued() {
+        return multivalued;
+    }
+
+    public void setMultivalued(boolean multvalued) {
+        this.multivalued = multvalued;
     }
 }
