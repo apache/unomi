@@ -320,19 +320,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         }
     }
 
-
-    public void createRule(String scope, String ruleId, String name, String description) {
-        Metadata metadata = new Metadata(scope, ruleId, name, description);
-        Rule rule = new Rule(metadata);
-        Condition rootCondition = new Condition();
-        rootCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
-        rootCondition.getParameterValues().put("operator", "and");
-        rootCondition.getParameterValues().put("subConditions", new ArrayList<Condition>());
-        rule.setCondition(rootCondition);
-        rule.setActions(new ArrayList<Action>());
-        setRule(rule);
-    }
-
     public void removeRule(String scope, String ruleId) {
         String idWithScope = Metadata.getIdWithScope(scope, ruleId);
         persistenceService.removeQuery(RULE_QUERY_PREFIX + idWithScope);
