@@ -22,8 +22,6 @@ public interface SegmentService {
 
     void setSegmentDefinition(Segment segment);
 
-    void createSegmentDefinition(String scope, String segmentId, String name, String description);
-
     void removeSegmentDefinition(String scope, String segmentId);
 
     PartialList<Profile> getMatchingIndividuals(String scope, String segmentID, int offset, int size, String sortBy);

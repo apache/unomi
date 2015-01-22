@@ -251,18 +251,6 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         persistenceService.save(segment);
     }
 
-    public void createSegmentDefinition(String scope, String segmentId, String name, String description) {
-        Metadata metadata = new Metadata(scope, segmentId, name, description);
-        Segment segment = new Segment(metadata);
-        Condition rootCondition = new Condition();
-        rootCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
-        rootCondition.getParameterValues().put("operator", "and");
-        rootCondition.getParameterValues().put("subConditions", new ArrayList<Condition>());
-        segment.setCondition(rootCondition);
-
-        setSegmentDefinition(segment);
-    }
-
     public void removeSegmentDefinition(String scope, String segmentId) {
         String idWithScope = Metadata.getIdWithScope(scope, segmentId);
         persistenceService.removeQuery(SEGMENT_QUERY_PREFIX + idWithScope);

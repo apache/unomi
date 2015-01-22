@@ -59,6 +59,12 @@ public class SegmentServiceEndPoint {
         return segmentService.getSegmentMetadatas();
     }
 
+    @POST
+    @Path("/")
+    public void setSegmentDefinition(Segment segment) {
+        segmentService.setSegmentDefinition(segment);
+    }
+
     @GET
     @Path("/{scope}")
     public Set<Metadata> getSegmentMetadatas(@PathParam("scope") String scope) {
@@ -69,19 +75,6 @@ public class SegmentServiceEndPoint {
     @Path("/{scope}/{segmentID}")
     public Segment getSegmentDefinition(@PathParam("scope") String scope, @PathParam("segmentID") String segmentId) {
         return segmentService.getSegmentDefinition(scope, segmentId);
-    }
-
-    @POST
-    @Path("/{scope}/{segmentID}")
-    public void setSegmentDefinition(@PathParam("scope") String scope, @PathParam("segmentID") String segmentId, Segment segment) {
-        segmentService.setSegmentDefinition(segment);
-    }
-
-    @PUT
-    @Path("/{scope}/{segmentID}")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public void createSegmentDefinition(@PathParam("scope") String scope, @PathParam("segmentID") String segmentId, @FormParam("segmentName") String segmentName, @FormParam("segmentDescription") String segmentDescription) {
-        segmentService.createSegmentDefinition(scope, segmentId, segmentName, segmentDescription);
     }
 
     @DELETE
