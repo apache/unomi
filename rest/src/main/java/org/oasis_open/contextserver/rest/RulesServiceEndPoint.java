@@ -39,6 +39,12 @@ public class RulesServiceEndPoint {
         return rulesService.getRuleMetadatas();
     }
 
+    @POST
+    @Path("/")
+    public void setRule(Rule rule) {
+        rulesService.setRule(rule);
+    }
+
     @GET
     @Path("/{scope}")
     public Set<Metadata> getRuleMetadatas(@PathParam("scope") String scope) {
@@ -51,26 +57,11 @@ public class RulesServiceEndPoint {
         return rulesService.getRule(scope, ruleId);
     }
 
-    @POST
-    @Path("/{scope}/{ruleId}")
-    public void setRule(@PathParam("scope") String scope, @PathParam("ruleId") String ruleId, Rule rule) {
-        rulesService.setRule(rule);
-    }
-
-    @PUT
-    @Path("/{scope}/{ruleId}")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public void createRule(@PathParam("scope") String scope, @PathParam("ruleId") String ruleId, @FormParam("ruleName") String name, @FormParam("ruleDescription") String description) {
-        rulesService.createRule(scope, ruleId, name, description);
-
-    }
-
     @DELETE
     @Path("/{scope}/{ruleId}")
     public void removeRule(@PathParam("scope") String scope, @PathParam("ruleId") String ruleId) {
         rulesService.removeRule(scope, ruleId);
     }
-
 
     @GET
     @Path("/resetQueries")

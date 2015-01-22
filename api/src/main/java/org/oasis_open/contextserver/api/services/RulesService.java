@@ -18,8 +18,6 @@ public interface RulesService {
 
     void setRule(Rule rule);
 
-    void createRule(String scope, String ruleId, String name, String description);
-
     void removeRule(String scope, String ruleId);
 
 }
