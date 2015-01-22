@@ -13,6 +13,8 @@ import org.junit.runners.Suite.SuiteClasses;
 @SuiteClasses({ 
     //BasicTest.class, 
     ConditionEvaluatorTest.class,
-    SegmentTest.class })
+    ConditionESQueryBuilderTest.class,
+    SegmentTest.class
+    })
 public class AllTests {
 }

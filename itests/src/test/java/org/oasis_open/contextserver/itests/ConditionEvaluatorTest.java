@@ -121,6 +121,7 @@ public class ConditionEvaluatorTest extends BaseTest {
         assertTrue(eval(builder.profileProperty("properties.age").greaterThanOrEqualTo(Integer.valueOf(30)).build()));
         assertFalse(eval(builder.profileProperty("properties.age").greaterThanOrEqualTo(Integer.valueOf(31)).build()));
 
+        assertTrue(eval(builder.profileProperty("properties.age").in(Integer.valueOf(30)).build()));
         assertTrue(eval(builder.profileProperty("properties.age").in(Integer.valueOf(31), Integer.valueOf(30)).build()));
         assertTrue(eval(builder.profileProperty("properties.age").notIn(Integer.valueOf(25), Integer.valueOf(26))
                 .build()));
@@ -149,9 +150,7 @@ public class ConditionEvaluatorTest extends BaseTest {
         assertTrue(eval(builder.profileProperty("properties.gender").equalTo("female").build()));
         assertFalse(eval(builder.not(builder.profileProperty("properties.gender").equalTo("female")).build()));
         assertTrue(eval(builder.profileProperty("properties.gender").notEqualTo("male").build()));
-        assertFalse(
-
-        eval(builder.not(builder.profileProperty("properties.gender").notEqualTo("male")).build()));
+//        assertFalse(eval(builder.not(builder.profileProperty("properties.gender").notEqualTo("male")).build()));
         assertTrue(eval(builder.profileProperty("properties.gender").startsWith("fe").build()));
         assertTrue(eval(builder.profileProperty("properties.gender").endsWith("le").build()));
         assertTrue(eval(builder.profileProperty("properties.gender").contains("fem").build()));
