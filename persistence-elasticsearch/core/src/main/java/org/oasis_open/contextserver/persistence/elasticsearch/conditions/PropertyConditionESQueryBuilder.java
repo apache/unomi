@@ -71,7 +71,7 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         } else if (op.equals("missing")) {
             return FilterBuilders.missingFilter(name);
         } else if (op.equals("contains")) {
-            return FilterBuilders.termFilter(name, value);
+            return FilterBuilders.regexpFilter(name, ".*" + value + ".*");
         } else if (op.equals("startsWith")) {
             return FilterBuilders.prefixFilter(name, value.toString());
         } else if (op.equals("endsWith")) {
@@ -80,15 +80,15 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
             return FilterBuilders.regexpFilter(name, value.toString());
         } else if (op.equals("in")) {
             if (values != null || values instanceof List) {
-                return FilterBuilders.inFilter(name, (List<?>) values);
+                return FilterBuilders.inFilter(name, (Iterable<?>) values);
             }
         } else if (op.equals("notIn")) {
             if (values != null || values instanceof List) {
-                return FilterBuilders.notFilter(FilterBuilders.inFilter(name, (List<?>) values));
+                return FilterBuilders.notFilter(FilterBuilders.inFilter(name, (Iterable<?>) values));
             }
         } else if (op.equals("all")) {
             if (values != null || values instanceof List) {
-                return FilterBuilders.termsFilter(name, (List<?>) values).execution("and");
+                return FilterBuilders.termsFilter(name, (Iterable<?>) values).execution("and");
             }
         }
 
