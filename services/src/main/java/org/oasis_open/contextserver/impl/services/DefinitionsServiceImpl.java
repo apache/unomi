@@ -432,7 +432,11 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     public Set<PropertyType> getPropertyTypeByMapping(String propertyName) {
-        return propertyTypeByMapping.get(propertyName);
+        if (propertyTypeByMapping.containsKey(propertyName)) {
+            return propertyTypeByMapping.get(propertyName);
+        } else {
+            return Collections.EMPTY_SET;
+        }
     }
 
     public PropertyType getPropertyType(String target, String id) {
