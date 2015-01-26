@@ -34,4 +34,10 @@ public class QueryServiceEndPoint implements QueryService {
     public Map<String, Long> getAggregate(@PathParam("type") String type, @PathParam("property") String property, AggregateQuery aggregateQuery) {
         return queryService.getAggregate(type, property, aggregateQuery);
     }
+
+    @POST
+    @Path("/{type}/count")
+    public long getQueryCount(@PathParam("type") String type, Condition condition) {
+        return queryService.getQueryCount(type, condition);
+    }
 }

@@ -1,5 +1,6 @@
 package org.oasis_open.contextserver.impl.services;
 
+import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.AggregateQuery;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.QueryService;
@@ -60,5 +61,13 @@ public class QueryServiceImpl implements QueryService {
         }
 
         return getAggregate(type, property);
+    }
+
+    @Override
+    public long getQueryCount(String type, Condition condition) {
+        if (condition.getConditionType() == null) {
+            ParserHelper.resolveConditionType(definitionsService, condition);
+        }
+        return persistenceService.queryCount(condition, type);
     }
 }
