@@ -40,17 +40,18 @@ public class ConditionESQueryBuilderDispatcher {
     }
 
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context) {
-        if (condition.getConditionType().getParentCondition() != null) {
+        String queryBuilderFilter = condition.getConditionType().getQueryBuilderFilter();
+        if (queryBuilderFilter == null && condition.getConditionType().getParentCondition() != null) {
             context.putAll(condition.getParameterValues());
             return buildFilter(condition.getConditionType().getParentCondition(), context);
         }
 
-        Collection<ServiceReference<ConditionESQueryBuilder>> matchingQueryBuilderReferences = null;
-        if (condition.getConditionType().getQueryBuilderFilter() == null) {
+        if (queryBuilderFilter == null) {
             throw new UnsupportedOperationException("No query builder defined for : " + condition.getConditionTypeId());
         }
+        Collection<ServiceReference<ConditionESQueryBuilder>> matchingQueryBuilderReferences = null;
         try {
-            matchingQueryBuilderReferences = bundleContext.getServiceReferences(ConditionESQueryBuilder.class, condition.getConditionType().getQueryBuilderFilter());
+            matchingQueryBuilderReferences = bundleContext.getServiceReferences(ConditionESQueryBuilder.class, queryBuilderFilter);
         } catch (InvalidSyntaxException e) {
             e.printStackTrace();
         }

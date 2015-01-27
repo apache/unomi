@@ -1,17 +1,11 @@
 {
     "id": "profileInterestCondition",
-    "queryBuilderFilter": "(queryBuilderId=profileInterestConditionESQueryBuilder)",
-    "tags": [ "demographic", "profileCondition" ],
-    "parameters": [
-        {
-            "id": "propertyName",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "propertyValue",
-            "type": "integer",
-            "multivalued": false
+    "parentCondition" : {
+        "type": "profilePropertyCondition",
+        "parameterValues": {
+            "comparisonOperator": "greaterThan"
         }
-    ]
+    },
+    "queryBuilderFilter": "(queryBuilderId=profileInterestConditionESQueryBuilder)",
+    "tags": [ "demographic", "profileCondition" ]
 }
