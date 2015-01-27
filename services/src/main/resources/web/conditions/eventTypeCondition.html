@@ -1,7 +1,7 @@
 <div class="perso clearfix">
     <div class="block clearfix form-inline">
         <div class="form-group">
-            <label>>#{condition.eventTypeCondition.eventNamed}</label>
+            <label>#{condition.eventTypeCondition.eventNamed}</label>
             <select class="form-control" ng-model="ref.parameterValues.eventTypeId"
                     ng-options="parameter.id as parameter.name for parameter in getConditionParameterChoiceListValues(ref, 'eventTypeId')"
                     >
