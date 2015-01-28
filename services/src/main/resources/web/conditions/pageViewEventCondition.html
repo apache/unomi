@@ -1,9 +1,15 @@
 <div class="perso clearfix">
     <div class="block clearfix form-inline">
         <div class="form-group">
-            <label>#{PAGE_WITH_URL_LABEL}</label>
-            <input ng-model="ref.parameterValues.pagePath" class="form-control" type="text"/>
-            <label>#{HAS_BEEN_VIEWED_LABEL}</label>
+            <label>#{condition.pageViewEventCondition.viewed}</label>
+            <site-language-picker ng-model="ref.parameterValues.language"/>
+        </div>
+    </div>
+    <div class="block clearfix form-inline">
+        <div class="form-group">
+            <label>#{condition.pageViewEventCondition.pagePath}</label>
+            <input ng-model="ref.parameterValues.pagePath" type="text" class="form-control"/>
+            <page-picker ng-model="ref.parameterValues.pagePath"/>
         </div>
     </div>
 </div>
