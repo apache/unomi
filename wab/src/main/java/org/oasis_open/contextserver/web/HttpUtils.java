@@ -53,14 +53,11 @@ public class HttpUtils {
     public static String dumpBasicRequestInfo(HttpServletRequest httpServletRequest) {
         StringBuilder stringBuilder = new StringBuilder();
         String sessionId = null;
-        if (httpServletRequest.getSession(false) != null) {
-            sessionId = httpServletRequest.getSession(false).getId();
-        }
         stringBuilder.append(httpServletRequest.getMethod()).append(" ").append(httpServletRequest.getRequestURI());
         if (httpServletRequest.getQueryString() != null) {
             stringBuilder.append("?").append(httpServletRequest.getQueryString());
         }
-        stringBuilder.append(" sessionId=").append(sessionId).append(" serverName=").append(httpServletRequest.getServerName()).append(" serverPort=").append(httpServletRequest.getServerPort()).append(" remoteAddr=").append(httpServletRequest.getRemoteAddr()).append(" remotePort=").append(httpServletRequest.getRemotePort()).append("\n");
+        stringBuilder.append(" serverName=").append(httpServletRequest.getServerName()).append(" serverPort=").append(httpServletRequest.getServerPort()).append(" remoteAddr=").append(httpServletRequest.getRemoteAddr()).append(" remotePort=").append(httpServletRequest.getRemotePort()).append("\n");
         return stringBuilder.toString();
     }
 

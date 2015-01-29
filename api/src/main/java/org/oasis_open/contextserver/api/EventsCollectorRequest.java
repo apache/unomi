@@ -1,4 +1,4 @@
-package org.oasis_open.contextserver.web;
+package org.oasis_open.contextserver.api;
 
 import org.oasis_open.contextserver.api.Event;
 

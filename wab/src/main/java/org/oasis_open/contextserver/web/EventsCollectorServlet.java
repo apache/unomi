@@ -2,10 +2,7 @@ package org.oasis_open.contextserver.web;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.oasis_open.contextserver.api.Event;
-import org.oasis_open.contextserver.api.Persona;
-import org.oasis_open.contextserver.api.Session;
-import org.oasis_open.contextserver.api.Profile;
+import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.api.services.SegmentService;
 import org.oasis_open.contextserver.api.services.ProfileService;
