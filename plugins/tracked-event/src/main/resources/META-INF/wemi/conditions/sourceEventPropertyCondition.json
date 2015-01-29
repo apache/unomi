@@ -1,0 +1,28 @@
+{
+    "id": "sourceEventPropertyCondition",
+    "conditionEvaluator": "(conditionEvaluatorId=sourceEventPropertyConditionEvaluator)",
+    "queryBuilderFilter": "(queryBuilderId=sourceEventPropertyConditionESQueryBuilder)",
+    "tags": [ "event", "eventCondition"],
+    "parameters": [
+        {
+            "id": "id",
+            "type": "string",
+            "multivalued": false
+        },
+        {
+            "id": "path",
+            "type": "string",
+            "multivalued": false
+        },
+        {
+            "id": "scope",
+            "type": "string",
+            "multivalued": false
+        },
+        {
+            "id": "type",
+            "type": "string",
+            "multivalued": false
+        }
+    ]
+}

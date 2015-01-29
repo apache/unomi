@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
-import org.oasis_open.contextserver.api.rules.Rule;
 import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.api.services.RulesService;
 import org.oasis_open.contextserver.api.services.SegmentService;
@@ -119,7 +118,7 @@ public class ContextServlet extends HttpServlet {
             ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
             JsonFactory factory = mapper.getFactory();
             contextRequest = mapper.readValue(factory.createParser(stringPayload), ContextRequest.class);
-            scope = contextRequest.getScope();
+            scope = contextRequest.getSource().getScope();
         }
 
         if (profile == null) {
@@ -236,19 +235,23 @@ public class ContextServlet extends HttpServlet {
     private void handleRequest(ContextRequest contextRequest, Profile profile, Session session, ContextResponse data, ServletRequest request, ServletResponse response, Date timestamp)
             throws IOException {
         // execute provided events if any
+        Event viewEvent = null;
         if(contextRequest.getEvents() != null) {
             for (Event event : contextRequest.getEvents()){
                 if(event.getEventType() != null) {
                     Event eventToSend;
                     if(event.getProperties() != null){
-                        eventToSend = new Event(event.getEventType(), session, profile, contextRequest.getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp);
+                        eventToSend = new Event(event.getEventType(), session, profile, contextRequest.getSource().getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp);
                     } else {
-                        eventToSend = new Event(event.getEventType(), session, profile, contextRequest.getScope(), event.getSource(), event.getTarget(), timestamp);
+                        eventToSend = new Event(event.getEventType(), session, profile, contextRequest.getSource().getScope(), event.getSource(), event.getTarget(), timestamp);
                     }
                     event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                     log("Received event " + event.getEventType() + " for profile=" + profile.getId() + " session=" + session.getId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
                     eventService.send(eventToSend);
+                    if("view".equals(eventToSend.getEventType())){
+                        viewEvent = eventToSend;
+                    }
                 }
             }
         }
@@ -290,17 +293,7 @@ public class ContextServlet extends HttpServlet {
             }
         }
 
-        //todo Find a better way to get all forms and keep the list in cache
-        List<String> formNames = new ArrayList<String>();
-        for (Metadata metadata : rulesService.getRuleMetadatas()) {
-            Rule r = rulesService.getRule(metadata.getScope(), metadata.getId());
-            Condition condition = r.getCondition();
-            if (condition != null && condition.getConditionTypeId().equals("formEventCondition")) {
-                formNames.add((String) condition.getParameterValues().get("formId"));
-            }
-        }
-
-        data.setFormNames(formNames);
+        data.setTrackedConditions(rulesService.getTrackedConditions(contextRequest));
     }
 
     private Profile createNewProfile(String existingProfileId, ServletResponse response, Date timestamp) {

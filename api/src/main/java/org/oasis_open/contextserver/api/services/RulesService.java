@@ -1,5 +1,7 @@
 package org.oasis_open.contextserver.api.services;
 
+import org.oasis_open.contextserver.api.Item;
+import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.rules.Rule;
 import org.oasis_open.contextserver.api.Metadata;
 
@@ -20,4 +22,5 @@ public interface RulesService {
 
     void removeRule(String scope, String ruleId);
 
+    Set<Condition> getTrackedConditions(Item item);
 }

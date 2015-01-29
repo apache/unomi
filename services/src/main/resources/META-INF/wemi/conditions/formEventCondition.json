@@ -25,7 +25,8 @@
   "tags": [
     "event",
     "eventCondition",
-    "usableInPastEventCondition"
+    "usableInPastEventCondition",
+    "trackedCondition"
   ],
   "parameters": [
     {

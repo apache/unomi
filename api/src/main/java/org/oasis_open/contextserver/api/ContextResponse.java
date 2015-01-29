@@ -1,7 +1,8 @@
 package org.oasis_open.contextserver.api;
 
+import org.oasis_open.contextserver.api.conditions.Condition;
+
 import java.io.Serializable;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -19,7 +20,7 @@ public class ContextResponse implements Serializable {
 
     private Map<String, Boolean> filteringResults;
 
-    private List<String> formNames;
+    private Set<Condition> trackedConditions;
 
     public String getProfileId() {
         return profileId;
@@ -69,11 +70,11 @@ public class ContextResponse implements Serializable {
         this.filteringResults = filteringResults;
     }
 
-    public List<String> getFormNames() {
-        return formNames;
+    public Set<Condition> getTrackedConditions() {
+        return trackedConditions;
     }
 
-    public void setFormNames(List<String> formNames) {
-        this.formNames = formNames;
+    public void setTrackedConditions(Set<Condition> trackedConditions) {
+        this.trackedConditions = trackedConditions;
     }
 }

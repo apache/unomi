@@ -114,6 +114,7 @@
                             org.oasis_open.contextserver.api,
                             org.oasis_open.contextserver.api.conditions,
                             org.oasis_open.contextserver.api.segments,
+                            org.oasis_open.contextserver.api.rules,
                             *
                         </Import-Package>
                         <Web-ContextPath>/</Web-ContextPath>

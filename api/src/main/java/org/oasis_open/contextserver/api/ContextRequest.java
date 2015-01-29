@@ -4,31 +4,21 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 
 import java.util.List;
 
-public class ContextRequest {
-    private String scope;
-    private String pageId;
+public class ContextRequest extends Item{
 
+    private EventSource source;
     private boolean requireSegments;
     private List<String> requiredProfileProperties;
     private List<String> requiredSessionProperties;
     private List<Event> events;
-
     private List<FilteredContent> filters;
 
-    public String getScope() {
-        return scope;
+    public EventSource getSource() {
+        return source;
     }
 
-    public void setScope(String scope) {
-        this.scope = scope;
-    }
-
-    public String getPageId() {
-        return pageId;
-    }
-
-    public void setPageId(String pageId) {
-        this.pageId = pageId;
+    public void setSource(EventSource source) {
+        this.source = source;
     }
 
     public boolean isRequireSegments() {

@@ -1,10 +1,7 @@
 package org.oasis_open.contextserver.impl.services;
 
 import org.apache.commons.lang3.StringUtils;
-import org.oasis_open.contextserver.api.Event;
-import org.oasis_open.contextserver.api.EventTarget;
-import org.oasis_open.contextserver.api.Metadata;
-import org.oasis_open.contextserver.api.PluginType;
+import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.services.*;
 import org.oasis_open.contextserver.impl.actions.ActionExecutorDispatcher;
 import org.oasis_open.contextserver.api.actions.Action;
@@ -285,6 +282,44 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             }
         }
         persistenceService.save(rule);
+    }
+
+    public Set<Condition> getTrackedConditions(Item item){
+        Set<Condition> trackedConditions = new HashSet<>();
+        for (Metadata metadata : getRuleMetadatas()) {
+            Rule r = getRule(metadata.getScope(), metadata.getId());
+            Condition trackedCondition = extractConditionByTag(r.getCondition(), "trackedCondition");
+            if(trackedCondition != null){
+                Set<Condition> sourceEventPropertyConditions = extractConditionsByType(r.getCondition(), "sourceEventPropertyCondition");
+                boolean match = (!(item == null && sourceEventPropertyConditions.size() > 0));
+                for (Condition sourceEventPropertyCondition : sourceEventPropertyConditions){
+                    ParserHelper.resolveConditionType(definitionsService, sourceEventPropertyCondition);
+                    match = persistenceService.testMatch(sourceEventPropertyCondition, item);
+                    if(!match){
+                        break;
+                    }
+                }
+                if(match){
+                    trackedConditions.add(trackedCondition);
+                }
+            }
+        }
+        return trackedConditions;
+    }
+
+    private Set<Condition> extractConditionsByType(Condition rootCondition, String typeId) {
+        if (rootCondition.getParameterValues().containsKey("subConditions")) {
+            List<Condition> subConditions = (List<Condition>) rootCondition.getParameterValues().get("subConditions");
+            Set<Condition> matchingConditions = new HashSet<>();
+            for (Condition condition : subConditions) {
+                matchingConditions.addAll(extractConditionsByType(condition, typeId));
+            }
+            return matchingConditions;
+        } else if (rootCondition.getConditionTypeId() != null && rootCondition.getConditionTypeId().equals(typeId)) {
+            return Collections.singleton(rootCondition);
+        } else {
+            return Collections.emptySet();
+        }
     }
 
     private Condition extractConditionByTag(Condition rootCondition, String tagId) {

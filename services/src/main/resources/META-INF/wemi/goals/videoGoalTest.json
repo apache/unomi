@@ -1,10 +1,10 @@
 {
     "metadata": {
-        "id": "formGoalTest",
-        "name": "Form Goal Test",
+        "id": "videoGoalTest",
+        "name": "Video Goal Test",
         "scope": "ACMESPACE",
-        "description": "Form Goal : filled test form on home page",
-        "tags":["formGoal"]
+        "description": "Video Goal : watch test video on ACMESPACE home page",
+        "tags":["videoGoal"]
     },
     "startEvent": {
         "parameterValues": {
@@ -14,8 +14,8 @@
     },
     "targetEvent" : {
         "parameterValues": {
-            "formId":"testForm"
+            "video":"testVideo"
         },
-        "type": "formEventCondition"
+        "type": "videoViewEventCondition"
     }
 }

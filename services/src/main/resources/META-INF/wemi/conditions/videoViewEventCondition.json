@@ -1,0 +1,38 @@
+{
+    "id": "videoViewCondition",
+    "parentCondition": {
+        "type": "booleanCondition",
+        "parameterValues": {
+            "subConditions": [
+                {
+                    "type": "eventTypeCondition",
+                    "parameterValues": {
+                        "eventTypeId": "video"
+                    }
+                },
+                {
+                    "type": "eventPropertyCondition",
+                    "parameterValues": {
+                        "propertyName": "target.id",
+                        "propertyValue": "parameter::videoId",
+                        "comparisonOperator": "equals"
+                    }
+                }
+            ],
+            "operator" : "and"
+        }
+    },
+    "tags": [
+        "event",
+        "eventCondition",
+        "usableInPastEventCondition",
+        "trackedCondition"
+    ],
+    "parameters": [
+        {
+            "id": "videoId",
+            "type": "String",
+            "multivalued": false
+        }
+    ]
+}

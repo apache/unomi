@@ -3,6 +3,7 @@ package org.oasis_open.contextserver.api;
 public class EventSource {
     private String scope;
     private String id;
+    private String path;
     private String type;
 
     public EventSource() {
@@ -22,6 +23,14 @@ public class EventSource {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public String getPath() {
+        return path;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
     }
 
     public String getType() {
