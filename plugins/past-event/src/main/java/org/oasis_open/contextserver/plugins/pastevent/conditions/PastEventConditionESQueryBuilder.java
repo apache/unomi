@@ -21,8 +21,8 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         Map<String, Object> parameters = condition.getParameterValues();
 
-        Integer minimumEventCount = !parameters.containsKey("minimumEventCount") ? 0 : (Integer) parameters.get("minimumEventCount");
-        Integer maximumEventCount = !parameters.containsKey("maximumEventCount") ? Integer.MAX_VALUE : (Integer) parameters.get("maximumEventCount");
+        Integer minimumEventCount = parameters.get("minimumEventCount") == null ? 0 : (Integer) parameters.get("minimumEventCount");
+        Integer maximumEventCount = parameters.get("maximumEventCount") == null  ? Integer.MAX_VALUE : (Integer) parameters.get("maximumEventCount");
 
         if (minimumEventCount  > 0 && maximumEventCount < Integer.MAX_VALUE) {
             return FilterBuilders.rangeFilter("properties." + parameters.get("generatedPropertyKey"))
