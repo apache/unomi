@@ -56,16 +56,15 @@ public class ConditionESQueryBuilderTest extends ConditionEvaluatorTest {
         }
 
         Metadata metadata = new Metadata(Metadata.SYSTEM_SCOPE, segmentId, segmentId + " Segment", "");
-        Segment segment = new Segment(metadata);
+        Segment recreateSegment = new Segment(metadata);
         Condition rootCondition = new Condition();
         rootCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
         rootCondition.getParameterValues().put("operator", "and");
         rootCondition.getParameterValues().put("subConditions", new ArrayList<Condition>());
-        segment.setCondition(rootCondition);
-        segmentService.setSegmentDefinition(segment);
+        recreateSegment.setCondition(rootCondition);
+        segmentService.setSegmentDefinition(recreateSegment);
 
         segment = segmentService.getSegmentDefinition(Metadata.SYSTEM_SCOPE, segmentId);
-
         assertNotNull("Segment has not been created", segment);
     }
 
