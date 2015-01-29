@@ -316,7 +316,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         GoalReport.Stat stat = new GoalReport.Stat();
         stat.setStartCount(all.remove("_filtered"));
         stat.setTargetCount(match.remove("_filtered"));
-        stat.setConversionRate((float) stat.getTargetCount() / (float) stat.getStartCount());
+        stat.setConversionRate(stat.getStartCount() > 0 ? (float) stat.getTargetCount() / (float) stat.getStartCount() : 0);
         report.setGlobalStats(stat);
         all.remove("_all");
         report.setSplit(new LinkedHashMap<String, GoalReport.Stat>());
@@ -325,8 +325,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             dateStat.setKey(entry.getKey());
             dateStat.setStartCount(entry.getValue());
             dateStat.setTargetCount(match.containsKey(entry.getKey()) ? match.get(entry.getKey()) : 0);
-            dateStat.setConversionRate((float) dateStat.getTargetCount() / (float) dateStat.getStartCount());
-            dateStat.setPercentage((float) dateStat.getTargetCount() / (float) stat.getTargetCount());
+            dateStat.setConversionRate(dateStat.getStartCount() > 0 ? (float) dateStat.getTargetCount() / (float) dateStat.getStartCount() : 0);
+            dateStat.setPercentage(stat.getTargetCount() > 0 ? (float) dateStat.getTargetCount() / (float) stat.getTargetCount() : 0);
             report.getSplit().put(entry.getKey(), dateStat);
         }
 
