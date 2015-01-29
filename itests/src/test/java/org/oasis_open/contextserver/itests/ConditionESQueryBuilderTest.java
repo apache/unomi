@@ -2,6 +2,7 @@ package org.oasis_open.contextserver.itests;
 
 import static org.junit.Assert.assertNotNull;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -12,6 +13,7 @@ import org.junit.runner.RunWith;
 import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.segments.Segment;
+import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.SegmentService;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
@@ -33,6 +35,9 @@ public class ConditionESQueryBuilderTest extends ConditionEvaluatorTest {
     @Inject
     private SegmentService segmentService;
 
+    @Inject
+    private DefinitionsService definitionsService;
+
     @Override
     protected boolean eval(Condition c) {
         updateSegmentCondition(c);
@@ -49,7 +54,15 @@ public class ConditionESQueryBuilderTest extends ConditionEvaluatorTest {
         if (segment != null) {
             segmentService.removeSegmentDefinition(Metadata.SYSTEM_SCOPE, segmentId);
         }
-        segmentService.createSegmentDefinition(Metadata.SYSTEM_SCOPE, segmentId, segmentId + " Segment", "");
+
+        Metadata metadata = new Metadata(Metadata.SYSTEM_SCOPE, segmentId, segmentId + " Segment", "");
+        Segment segment = new Segment(metadata);
+        Condition rootCondition = new Condition();
+        rootCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
+        rootCondition.getParameterValues().put("operator", "and");
+        rootCondition.getParameterValues().put("subConditions", new ArrayList<Condition>());
+        segment.setCondition(rootCondition);
+        segmentService.setSegmentDefinition(segment);
 
         segment = segmentService.getSegmentDefinition(Metadata.SYSTEM_SCOPE, segmentId);
 

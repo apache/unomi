@@ -16,6 +16,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.oasis_open.contextserver.api.ContextRequest;
 import org.oasis_open.contextserver.api.ContextResponse;
+import org.oasis_open.contextserver.api.EventSource;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
@@ -62,7 +63,8 @@ public class BasicTest extends BaseTest{
     public void testContextJSON() throws IOException {
         String sessionId = "aa3b04bd-8f4d-4a07-8e96-d33ffa04d3d9";
         ContextRequest contextRequest = new ContextRequest();
-        contextRequest.setPageId("af6f393a-a537-4586-991b-8521b9c7b05b");
+        contextRequest.setSource(new EventSource());
+        contextRequest.getSource().setId("af6f393a-a537-4586-991b-8521b9c7b05b");
         HttpPost request = new HttpPost(URL + "/context.json?sessionId=" + sessionId);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
         CloseableHttpResponse response = HttpClientBuilder.create().build().execute(request);
