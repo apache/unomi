@@ -122,6 +122,15 @@
         <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.BooleanConditionEvaluator"/>
     </service>
 
+    <service
+            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
+        <service-properties>
+            <entry key="conditionEvaluatorId" value="pageViewEventConditionEvaluator"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.PageViewEventConditionEvaluator"/>
+    </service>
+
+
     <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="notConditionEvaluator"/>

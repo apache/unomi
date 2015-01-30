@@ -1,5 +1,6 @@
 {
     "id": "pageViewEventCondition",
+    "conditionEvaluator": "(conditionEvaluatorId=pageViewEventConditionEvaluator)",
     "queryBuilderFilter": "(queryBuilderId=pageViewEventConditionESQueryBuilder)",
     "tags": [ "event", "eventCondition", "usableInPastEventCondition" ],
     "parameters": [

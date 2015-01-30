@@ -170,51 +170,62 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     public Set<Rule> getMatchingRules(Event event) {
         Set<Rule> matchedRules = new LinkedHashSet<Rule>();
 
-        List<String> matchingQueries = persistenceService.getMatchingSavedQueries(event);
-
-        logger.info("Found matching : " + matchingQueries);
-
         Boolean hasEventAlreadyBeenRaisedForSession = null;
         Boolean hasEventAlreadyBeenRaisedForProfile = null;
 
-        if (matchingQueries.size() > 0) {
-            for (String matchingQuery : matchingQueries) {
-                if (matchingQuery.startsWith(RULE_QUERY_PREFIX)) {
-                    matchingQuery = matchingQuery.substring(RULE_QUERY_PREFIX.length());
-                    String scope = StringUtils.substringBefore(matchingQuery, "_");
-                    if (scope.equals(Metadata.SYSTEM_SCOPE) || scope.equals(event.getScope())) {
-                        matchingQuery = StringUtils.substringAfter(matchingQuery, "_");
-                        Rule rule = getRule(scope, matchingQuery);
-                        if (rule != null) {
-                            if (rule.isRaiseEventOnlyOnceForProfile()) {
-                                hasEventAlreadyBeenRaisedForProfile = hasEventAlreadyBeenRaisedForProfile != null ? hasEventAlreadyBeenRaisedForProfile : eventService.hasEventAlreadyBeenRaised(event, false);
-                                if (hasEventAlreadyBeenRaisedForProfile) {
-                                    continue;
-                                }
-                            } else if (rule.isRaiseEventOnlyOnceForSession()) {
-                                hasEventAlreadyBeenRaisedForSession = hasEventAlreadyBeenRaisedForSession != null ? hasEventAlreadyBeenRaisedForSession : eventService.hasEventAlreadyBeenRaised(event, true);
-                                if (hasEventAlreadyBeenRaisedForSession) {
-                                    continue;
-                                }
-                            }
+        List<Rule> allItems = getAllRules();
 
-                            Condition profileCondition = extractConditionByTag(rule.getCondition(), "profileCondition");
-                            if (profileCondition != null && !persistenceService.testMatch(profileCondition, event.getProfile())) {
-                                continue;
-                            }
-                            Condition sessionCondition = extractConditionByTag(rule.getCondition(), "sessionCondition");
-                            if (sessionCondition != null && !persistenceService.testMatch(sessionCondition, event.getSession())) {
-                                continue;
-                            }
+        long l = System.currentTimeMillis();
+        for (Rule rule : allItems) {
+            String scope = rule.getMetadata().getScope();
+            if (scope.equals(Metadata.SYSTEM_SCOPE) || scope.equals(event.getScope())) {
+                ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
+                Condition eventCondition = extractConditionByTag(rule.getCondition(), "eventCondition");
 
-                            matchedRules.add(rule);
-                        }
+                if (eventCondition == null) {
+                    continue;
+                }
+
+                if (!persistenceService.testMatch(eventCondition, event)) {
+                    continue;
+                }
+
+                if (rule.isRaiseEventOnlyOnceForProfile()) {
+                    hasEventAlreadyBeenRaisedForProfile = hasEventAlreadyBeenRaisedForProfile != null ? hasEventAlreadyBeenRaisedForProfile : eventService.hasEventAlreadyBeenRaised(event, false);
+                    if (hasEventAlreadyBeenRaisedForProfile) {
+                        continue;
+                    }
+                } else if (rule.isRaiseEventOnlyOnceForSession()) {
+                    hasEventAlreadyBeenRaisedForSession = hasEventAlreadyBeenRaisedForSession != null ? hasEventAlreadyBeenRaisedForSession : eventService.hasEventAlreadyBeenRaised(event, true);
+                    if (hasEventAlreadyBeenRaisedForSession) {
+                        continue;
                     }
                 }
+
+                Condition profileCondition = extractConditionByTag(rule.getCondition(), "profileCondition");
+                if (profileCondition != null && !persistenceService.testMatch(profileCondition, event.getProfile())) {
+                    continue;
+                }
+                Condition sessionCondition = extractConditionByTag(rule.getCondition(), "sessionCondition");
+                if (sessionCondition != null && !persistenceService.testMatch(sessionCondition, event.getSession())) {
+                    continue;
+                }
+                matchedRules.add(rule);
             }
         }
+        logger.info("Rules matched with evaluator in " + (System.currentTimeMillis()-l));
 
         return matchedRules;
+    }
+
+    private List<Rule> getAllRules() {
+        // todo : must use cache here
+        List<Rule> allItems = persistenceService.getAllItems(Rule.class);
+        for (Rule rule : allItems) {
+            ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
+            ParserHelper.resolveActionTypes(definitionsService, rule.getActions());
+        }
+        return allItems;
     }
 
 
