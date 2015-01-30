@@ -107,7 +107,6 @@
                             sun.misc;resolution:=optional,
                             *
                         </Import-Package>
-                        <Wemi-Http-Resources>/=web</Wemi-Http-Resources>
                     </instructions>
                 </configuration>
             </plugin>

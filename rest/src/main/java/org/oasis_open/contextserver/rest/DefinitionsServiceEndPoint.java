@@ -100,13 +100,6 @@ public class DefinitionsServiceEndPoint {
     }
 
     @GET
-    @Path("/template/condition/{conditionId}")
-    @Produces(MediaType.TEXT_HTML)
-    public String getConditionTemplate(@PathParam("conditionId") String id, @HeaderParam("Accept-Language") String language) {
-        return getTemplate(definitionsService.getConditionType(id), language, "conditions", id);
-    }
-
-    @GET
     @Path("/actions")
     public Collection<RESTActionType> getAllActionTypes(@HeaderParam("Accept-Language") String language) {
         Collection<ActionType> actionTypes = definitionsService.getAllActionTypes();
@@ -132,14 +125,6 @@ public class DefinitionsServiceEndPoint {
     }
 
     @GET
-    @Path("/template/action/{actionId}")
-    @Produces(MediaType.TEXT_HTML)
-    public String getActionTemplate(@PathParam("actionId") String id, @HeaderParam("Accept-Language") String language) {
-        return getTemplate(definitionsService.getActionType(id), language, "actions", id);
-    }
-
-
-    @GET
     @Path("/values")
     public Collection<RESTValueType> getAllValueTypes(@HeaderParam("Accept-Language") String language) {
         return generateValueTypes(definitionsService.getAllValueTypes(), language);
@@ -161,13 +146,6 @@ public class DefinitionsServiceEndPoint {
     public RESTValueType getValueType(@PathParam("valueTypeId") String id, @HeaderParam("Accept-Language") String language) {
         ValueType valueType = definitionsService.getValueType(id);
         return generateValueType(valueType, language);
-    }
-
-    @GET
-    @Path("/template/value/{valueTypeId}")
-    @Produces(MediaType.TEXT_HTML)
-    public String getValueTemplate(@PathParam("valueTypeId") String id, @HeaderParam("Accept-Language") String language) {
-        return getTemplate(definitionsService.getValueType(id), language, "values", id);
     }
 
     @GET
@@ -355,42 +333,4 @@ public class DefinitionsServiceEndPoint {
         result.setSubTags(generateTags(tag.getSubTags(), language));
         return result;
     }
-
-    private String getTemplate(PluginType type, String language, String path, String typeId) {
-        Bundle bundle = bundleContext.getBundle(type.getPluginId());
-        String template = "/web/" + path + "/" + typeId + ".html";
-
-        URL templateURL = bundle.getEntry(template);
-        if (templateURL != null) {
-            InputStream inputStream = null;
-            try {
-                inputStream = (InputStream) templateURL.getContent();
-                String content = IOUtils.toString(inputStream);
-                
-                ResourceBundle resourceBundle = resourceBundleHelper.getResourceBundle(type, language);
-                
-                Matcher matcher = I18N_PATTERN.matcher(content);
-                while (matcher.find()) {
-                    content = matcher.replaceFirst(resourceBundleHelper.getResourceBundleValue(resourceBundle, matcher.group(1)));
-                    matcher = I18N_PATTERN.matcher(content);
-                }
-
-                return content;
-            } catch (IOException e) {
-                e.printStackTrace();
-                return "";
-            } finally {
-                if (inputStream != null) {
-                    try {
-                        inputStream.close();
-                    } catch (IOException e) {
-                        // ignore it
-                    }
-                }
-            }
-        }
-        return "";
-    }
-
-
 }
