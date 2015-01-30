@@ -20,11 +20,6 @@
             "multivalued": false
         },
         {
-            "id": "generatedPropertyKey",
-            "type": "string",
-            "multivalued": false
-        },
-        {
             "id": "eventCondition",
             "type": "Condition",
             "multivalued": false

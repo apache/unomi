@@ -21,7 +21,10 @@
         <service-properties>
             <entry key="queryBuilderId" value="pastEventConditionESQueryBuilder"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.plugins.pastevent.conditions.PastEventConditionESQueryBuilder"/>
+        <bean class="org.oasis_open.contextserver.plugins.pastevent.conditions.PastEventConditionESQueryBuilder">
+            <property name="definitionsService" ref="definitionsService"/>
+            <property name="persistenceService" ref="persistenceService"/>
+        </bean>
     </service>
 
 </blueprint>

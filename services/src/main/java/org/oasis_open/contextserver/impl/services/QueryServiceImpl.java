@@ -7,6 +7,8 @@ import org.oasis_open.contextserver.api.services.QueryService;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
 import org.oasis_open.contextserver.persistence.spi.aggregate.DateAggregate;
 import org.oasis_open.contextserver.persistence.spi.aggregate.TermsAggregate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
@@ -14,6 +16,8 @@ import java.util.Map;
  * Created by toto on 23/09/14.
  */
 public class QueryServiceImpl implements QueryService {
+    private static final Logger logger = LoggerFactory.getLogger(QueryServiceImpl.class.getName());
+
     private PersistenceService persistenceService;
 
     private DefinitionsService definitionsService;
@@ -65,9 +69,14 @@ public class QueryServiceImpl implements QueryService {
 
     @Override
     public long getQueryCount(String type, Condition condition) {
-        if (condition.getConditionType() == null) {
-            ParserHelper.resolveConditionType(definitionsService, condition);
+        try {
+            if (condition.getConditionType() == null) {
+                ParserHelper.resolveConditionType(definitionsService, condition);
+            }
+            return persistenceService.queryCount(condition, type);
+        } catch (Exception e) {
+            logger.warn("Invalid query");
+            return 0;
         }
-        return persistenceService.queryCount(condition, type);
     }
 }

@@ -22,6 +22,8 @@ public interface PersistenceService {
 
     public boolean save(Item item);
 
+    public boolean update(final String itemId, final Date dateHint, final Class clazz, final String propertyName, final Object propertyValue);
+
     public <T extends Item> T load(String itemId, Class<T> clazz);
 
     public <T extends Item> T load(String itemId, Date dateHint, Class<T> clazz);

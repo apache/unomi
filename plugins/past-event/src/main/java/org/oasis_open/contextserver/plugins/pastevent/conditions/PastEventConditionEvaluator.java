@@ -33,6 +33,10 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
 
         Condition eventCondition = (Condition) parameters.get("eventCondition");
 
+        if (eventCondition == null) {
+            throw new IllegalArgumentException("No eventCondition");
+        }
+
         List<Condition> l = new ArrayList<Condition>();
         Condition andCondition = new Condition();
         andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));

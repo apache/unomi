@@ -364,6 +364,31 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     }
 
+    public boolean update(final String itemId, final Date dateHint, final Class clazz, final String propertyName, final Object propertyValue) {
+        return new InClassLoaderExecute<Boolean>() {
+            protected Boolean execute(Object... args) {
+                try {
+                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
+                    String dailyIndexName = indexName;
+                    if (itemsDailyIndexed.contains(itemType) && dateHint != null) {
+                        dailyIndexName = getDailyIndex(dateHint);
+                    }
+
+                    client.prepareUpdate(dailyIndexName, itemType, itemId).setDoc(propertyName, propertyValue)
+                            .execute()
+                            .actionGet();
+                    return true;
+                } catch (NoSuchFieldException e) {
+                    logger.error("Error updating item " + itemId, e);
+                } catch (IllegalAccessException e) {
+                    logger.error("Error updating item " + itemId, e);
+                }
+                return false;
+            }
+        }.executeInClassLoader();
+    }
+
+
     @Override
     public <T extends Item> boolean remove(final String itemId, final Class<T> clazz) {
         return new InClassLoaderExecute<Boolean>() {
@@ -631,7 +656,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         bucketsAggregation = AggregationBuilders.dateHistogram("buckets").field(aggregate.getField()).interval(new DateHistogram.Interval(((DateAggregate) aggregate).getInterval()));
                     } else {
                         //default
-                        bucketsAggregation = AggregationBuilders.terms("buckets").field(aggregate.getField());
+                        bucketsAggregation = AggregationBuilders.terms("buckets").field(aggregate.getField()).size(Integer.MAX_VALUE);
                     }
                     if (bucketsAggregation != null) {
                         final MissingBuilder missingBucketsAggregation = AggregationBuilders.missing("missing").field(aggregate.getField());

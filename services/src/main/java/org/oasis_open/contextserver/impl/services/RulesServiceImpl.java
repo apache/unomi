@@ -285,11 +285,11 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             if (rule.getMetadata().isEnabled() && !rule.getMetadata().isMissingPlugins()) {
                 ParserHelper.resolveConditionType(definitionsService, condition);
                 Condition eventCondition = extractConditionByTag(condition, "eventCondition");
-                if (eventCondition != null) {
-                    persistenceService.saveQuery(RULE_QUERY_PREFIX + rule.getMetadata().getIdWithScope(), eventCondition);
-                }
-            } else {
-                persistenceService.removeQuery(RULE_QUERY_PREFIX + rule.getMetadata().getIdWithScope());
+//                if (eventCondition != null) {
+//                    persistenceService.saveQuery(RULE_QUERY_PREFIX + rule.getMetadata().getIdWithScope(), eventCondition);
+//                }
+//            } else {
+//                persistenceService.removeQuery(RULE_QUERY_PREFIX + rule.getMetadata().getIdWithScope());
             }
         }
         persistenceService.save(rule);
@@ -368,7 +368,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public void removeRule(String scope, String ruleId) {
         String idWithScope = Metadata.getIdWithScope(scope, ruleId);
-        persistenceService.removeQuery(RULE_QUERY_PREFIX + idWithScope);
+//        persistenceService.removeQuery(RULE_QUERY_PREFIX + idWithScope);
         persistenceService.remove(idWithScope, Rule.class);
     }
 
