@@ -13,9 +13,23 @@
         "type": "pageViewEventCondition"
     },
     "targetEvent" : {
+        "type": "booleanCondition",
         "parameterValues": {
-            "video":"testVideo"
-        },
-        "type": "videoViewEventCondition"
+            "operator": "and",
+            "subConditions": [
+                {
+                    "parameterValues": {
+                        "videoId":"testVideo"
+                    },
+                    "type": "videoViewEventCondition"
+                },
+                {
+                    "parameterValues": {
+                        "path": "/sites/ACMESPACE/home"
+                    },
+                    "type": "sourceEventPropertyCondition"
+                }
+            ]
+        }
     }
 }
