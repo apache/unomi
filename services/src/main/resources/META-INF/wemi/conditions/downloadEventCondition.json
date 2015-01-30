@@ -1,0 +1,37 @@
+{
+    "id": "downloadEventCondition",
+    "parentCondition": {
+        "type": "booleanCondition",
+        "parameterValues": {
+            "subConditions": [
+                {
+                    "type": "eventTypeCondition",
+                    "parameterValues": {
+                        "eventTypeId": "download"
+                    }
+                },
+                {
+                    "type": "eventPropertyCondition",
+                    "parameterValues": {
+                        "propertyName": "properties.path",
+                        "propertyValue": "parameter::filePath",
+                        "comparisonOperator": "equals"
+                    }
+                }
+            ],
+            "operator" : "and"
+        }
+    },
+    "tags": [
+        "event",
+        "eventCondition",
+        "usableInPastEventCondition"
+    ],
+    "parameters": [
+        {
+            "id": "filePath",
+            "type": "String",
+            "multivalued": false
+        }
+    ]
+}
