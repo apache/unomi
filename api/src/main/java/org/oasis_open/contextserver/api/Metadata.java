@@ -4,7 +4,6 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.TreeSet;
 
 /**
  * Created by loom on 24.04.14.
@@ -16,8 +15,7 @@ public class Metadata implements Comparable<Metadata> {
     private String name;
     private String description;
     private String scope;
-    Set<Tag> tags = new TreeSet<>();
-    Set<String> tagIDs = new LinkedHashSet<>();
+    private Set<String> tags = new LinkedHashSet<>();
     private boolean enabled = true;
     private boolean missingPlugins = false;
     private boolean hidden = false;
@@ -69,22 +67,12 @@ public class Metadata implements Comparable<Metadata> {
         this.scope = scope;
     }
 
-    @XmlElement(name = "tags")
-    public Set<String> getTagIDs() {
-        return tagIDs;
-    }
-
-    public void setTagIDs(Set<String> tagIDs) {
-        this.tagIDs = tagIDs;
-    }
-
-    @XmlTransient
-    public Set<Tag> getTags() {
+    public Set<String> getTags() {
         return tags;
     }
 
-    public void setTags(Set<Tag> tags) {
-        this.tags = tags;
+    public void setTags(Set<String> tagIDs) {
+        this.tags = tagIDs;
     }
 
     @XmlTransient

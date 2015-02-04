@@ -117,10 +117,9 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
                     goal.getMetadata().setScope("systemscope");
                 }
                 if (getGoal(goal.getMetadata().getScope(), goal.getMetadata().getId()) == null) {
-                    for (String tagId : goal.getMetadata().getTagIDs()) {
+                    for (String tagId : goal.getMetadata().getTags()) {
                         Tag tag = definitionsService.getTag(tagId);
                         if (tag != null) {
-                            goal.getMetadata().getTags().add(tag);
                             Set<Goal> goals = goalByTag.get(tag);
                             if (goals == null) {
                                 goals = new LinkedHashSet<>();
