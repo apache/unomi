@@ -79,16 +79,16 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         } else if (op.equals("matchesRegex")) {
             return FilterBuilders.regexpFilter(name, value.toString());
         } else if (op.equals("in")) {
-            if (values != null || values instanceof List) {
-                return FilterBuilders.inFilter(name, (Iterable<?>) values);
+            if (values instanceof List) {
+                return FilterBuilders.inFilter(name, ((List) values).toArray());
             }
         } else if (op.equals("notIn")) {
-            if (values != null || values instanceof List) {
-                return FilterBuilders.notFilter(FilterBuilders.inFilter(name, (Iterable<?>) values));
+            if (values instanceof List) {
+                return FilterBuilders.notFilter(FilterBuilders.inFilter(name, ((List) values).toArray()));
             }
         } else if (op.equals("all")) {
-            if (values != null || values instanceof List) {
-                return FilterBuilders.termsFilter(name, (Iterable<?>) values).execution("and");
+            if (values instanceof List) {
+                return FilterBuilders.termsFilter(name, ((List) values).toArray()).execution("and");
             }
         }
 
