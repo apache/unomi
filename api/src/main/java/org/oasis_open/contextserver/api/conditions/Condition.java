@@ -58,4 +58,23 @@ public class Condition {
         this.parameterValues = parameterValues;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Condition condition = (Condition) o;
+
+        if (!conditionTypeId.equals(condition.conditionTypeId)) return false;
+        if (!parameterValues.equals(condition.parameterValues)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = conditionTypeId.hashCode();
+        result = 31 * result + parameterValues.hashCode();
+        return result;
+    }
 }
