@@ -21,6 +21,7 @@ import org.elasticsearch.action.support.nodes.NodesOperationRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
+import org.elasticsearch.common.collect.UnmodifiableIterator;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsException;
@@ -421,18 +422,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
-    public Map<String, Map<String, String>> getMapping(final String itemType) {
-        return new InClassLoaderExecute<Map<String, Map<String, String>>>() {
-            protected Map<String, Map<String, String>> execute(Object... args) {
-                GetMappingsResponse getMappingsResponse = client.admin().indices().prepareGetMappings(indexName).setTypes(itemType).execute().actionGet();
+    public Map<String, Map<String, Object>> getMapping(final String itemType) {
+        return new InClassLoaderExecute<Map<String, Map<String, Object>>>() {
+            protected Map<String, Map<String, Object>> execute(Object... args) {
+                GetMappingsResponse getMappingsResponse = client.admin().indices().prepareGetMappings().setTypes(itemType).execute().actionGet();
                 ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> mappings = getMappingsResponse.getMappings();
-                Map<String, Map<String, String>> propertyMap = null;
+                Map<String, Map<String, Object>> propertyMap = new HashMap<>();
                 try {
-                    propertyMap = (Map<String, Map<String, String>>) mappings.get(indexName).get(itemType).getSourceAsMap().get("properties");
+                    UnmodifiableIterator<ImmutableOpenMap<String, MappingMetaData>> it = mappings.valuesIt();
+                    while (it.hasNext()) {
+                        ImmutableOpenMap<String, MappingMetaData> next = it.next();
+                        propertyMap.putAll((Map<String, Map<String,Object>>) next.get(itemType).getSourceAsMap().get("properties"));
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                return new HashMap<String, Map<String, String>>(propertyMap);
+                return propertyMap;
             }
         }.executeInClassLoader();
     }

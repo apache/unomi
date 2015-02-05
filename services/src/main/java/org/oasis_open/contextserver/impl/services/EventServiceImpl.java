@@ -98,12 +98,20 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public List<EventProperty> getEventProperties() {
-        Map<String, Map<String, String>> mappings = persistenceService.getMapping(Event.ITEM_TYPE);
+        Map<String, Map<String, Object>> mappings = persistenceService.getMapping(Event.ITEM_TYPE);
         List<EventProperty> props = new ArrayList<>(mappings.size());
-        for (Map.Entry<String, Map<String, String>> e : mappings.entrySet()) {
-            props.add(new EventProperty(e.getKey(), e.getValue() != null ? e.getValue().get("type") : null));
-        }
+        getEventProperties(mappings, props, "");
         return props;
+    }
+
+    private void getEventProperties(Map<String, Map<String, Object>> mappings, List<EventProperty> props, String prefix) {
+        for (Map.Entry<String, Map<String, Object>> e : mappings.entrySet()) {
+            if (e.getValue().get("properties") != null) {
+                getEventProperties((Map<String, Map<String, Object>>) e.getValue().get("properties"), props, prefix + e.getKey() + ".");
+            } else {
+                props.add(new EventProperty(prefix + e.getKey(), (String) e.getValue().get("type")));
+            }
+        }
     }
 
     public Set<String> getEventTypeIds() {
