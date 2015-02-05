@@ -95,14 +95,6 @@
     <service
             interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="profileInterestConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ProfileInterestConditionESQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
             <entry key="queryBuilderId" value="geoLocationByPointSessionConditionESQueryBuilder"/>
         </service-properties>
         <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.GeoLocationByPointSessionConditionESQueryBuilder"/>

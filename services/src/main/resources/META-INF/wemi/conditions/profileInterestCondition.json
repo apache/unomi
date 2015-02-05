@@ -3,9 +3,22 @@
     "parentCondition" : {
         "type": "profilePropertyCondition",
         "parameterValues": {
+            "propertyName": "script::'properties.interests.'+interestName",
+            "propertyValue": "parameter::value",
             "comparisonOperator": "greaterThan"
         }
     },
-    "queryBuilderFilter": "(queryBuilderId=profileInterestConditionESQueryBuilder)",
-    "tags": [ "demographic", "profileCondition" ]
+    "tags": [ "demographic", "profileCondition" ],
+    "parameters": [
+        {
+            "id": "interestName",
+            "type": "string",
+            "multivalued": false
+        },
+        {
+            "id": "value",
+            "type": "integer",
+            "multivalued": false
+        }
+    ]
 }
