@@ -2,6 +2,7 @@ package org.oasis_open.contextserver.impl.actions;
 
 import org.apache.commons.beanutils.BeanUtils;
 import org.oasis_open.contextserver.api.Event;
+import org.oasis_open.contextserver.api.EventSource;
 import org.oasis_open.contextserver.api.EventTarget;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
@@ -33,7 +34,12 @@ public class SendEventAction implements ActionExecutor {
             logger.error("Cannot fill event",e);
             return false;
         }
-        Event subEvent = new Event(eventType, event.getSession(), event.getProfile(), event.getScope(), event.getSource(), eventTarget, event.getTimeStamp());
+        EventSource eventSource = new EventSource();
+        eventSource.setType("event");
+        eventSource.setScope(event.getScope());
+        eventSource.setId(event.getItemId());
+
+        Event subEvent = new Event(eventType, event.getSession(), event.getProfile(), event.getScope(), eventSource, eventTarget, event.getTimeStamp());
         subEvent.getAttributes().putAll(event.getAttributes());
         for (Map.Entry<String, Object> entry : eventProperties.entrySet()) {
             Object propertyValue = entry.getValue();
