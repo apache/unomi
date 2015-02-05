@@ -22,7 +22,7 @@ an already installed Apache Karaf server (see "Deploying into an existing Karaf 
 
 If you want to build and run the integration tests, you should instead use : 
 
-    mvn -P itests clean install
+    mvn -P integration-tests clean install
 
 Deploying the generated package
 -------------------------------
