@@ -24,9 +24,9 @@
                     "properties" : {}
                 },
                 "eventProperties": {
-                    "origin": "simpleEventProperty::origin",
-                    "originForm": "searchForm",
-                    "keyword": "simpleEventProperty::src_terms[0].term"
+                    "origin": "eventProperty::source.path",
+                    "originForm": "eventProperty::target.id",
+                    "keyword": "script::event.properties['src_terms[0].term'].toLowerCase()"
                 }
             }
         }
