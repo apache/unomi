@@ -54,5 +54,7 @@ public interface PersistenceService {
 
     public Map<String, Long> aggregateQuery(Condition filter, BaseAggregate aggregate, String itemType);
 
+    public void refresh();
+
     public void purge(Date date);
 }

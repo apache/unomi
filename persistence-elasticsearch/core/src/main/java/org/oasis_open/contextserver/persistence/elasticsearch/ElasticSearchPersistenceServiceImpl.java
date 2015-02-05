@@ -19,6 +19,7 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.action.support.nodes.NodesOperationRequest;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.client.Requests;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.collect.UnmodifiableIterator;
@@ -812,6 +813,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         gc = new GregorianCalendar(gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), gc.get(Calendar.DAY_OF_MONTH));
         gc.add(Calendar.DAY_OF_MONTH, offset);
         return gc;
+    }
+
+    public void refresh() {
+        new InClassLoaderExecute<Boolean>() {
+            protected Boolean execute(Object... args) {
+                client.admin().indices().refresh(Requests.refreshRequest()).actionGet();
+                return true;
+            }
+        }.executeInClassLoader();
+
     }
 
 

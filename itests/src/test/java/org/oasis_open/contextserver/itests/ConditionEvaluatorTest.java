@@ -4,16 +4,14 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.UUID;
+import java.util.*;
 
 import javax.inject.Inject;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
@@ -37,12 +35,13 @@ public class ConditionEvaluatorTest extends BaseTest {
     private DefinitionsService definitionsService;
 
     @Inject
-    private PersistenceService persistenceService;
+    protected PersistenceService persistenceService;
 
-    protected Profile profile;
+    protected Item item;
+    protected Date lastVisit;
 
     protected boolean eval(Condition c) {
-        return persistenceService.testMatch(c, profile);
+        return persistenceService.testMatch(c, item);
     }
 
     @Before
@@ -50,12 +49,14 @@ public class ConditionEvaluatorTest extends BaseTest {
         assertNotNull("Definition service should be available", definitionsService);
         assertNotNull("Persistence service should be available", persistenceService);
 
-        profile = new Profile("profile-" + UUID.randomUUID().toString());
+        lastVisit = new GregorianCalendar(2015,1,1,20,30,0).getTime();
+
+        Profile profile = new Profile("profile-" + UUID.randomUUID().toString());
         profile.setProperty("age", Integer.valueOf(30));
         profile.setProperty("gender", "female");
-        profile.setProperty("lastVisit", new Date());
+        profile.setProperty("lastVisit", lastVisit);
         profile.setSegments(new HashSet<String>(Arrays.asList("s1", "s2", "s3")));
-
+        this.item = profile;
         builder = new ConditionBuilder(definitionsService);
     }
 
@@ -85,7 +86,6 @@ public class ConditionEvaluatorTest extends BaseTest {
 
     @Test
     public void testDate() {
-        Date lastVisit = (Date) profile.getProperty("lastVisit");
         assertTrue(eval(builder.profileProperty("properties.lastVisit").equalTo(lastVisit).build()));
         assertTrue(eval(builder.profileProperty("properties.lastVisit")
                 .greaterThan(new Date(lastVisit.getTime() - 10000)).build()));
