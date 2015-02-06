@@ -9,25 +9,45 @@ import java.io.Serializable;
 public abstract class Item implements Serializable {
 
     protected String itemId;
+    protected String itemType;
+    protected String scope;
 
     public Item() {
+        try {
+            this.itemType = (String) this.getClass().getField("ITEM_TYPE").get(null);
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            e.printStackTrace();
+        }
     }
 
     public Item(String itemId) {
-        this(itemId, null);
-    }
-
-    public Item(String itemId, String parentId) {
+        this();
         this.itemId = itemId;
     }
 
-    @XmlTransient
+
     public String getItemId() {
         return itemId;
     }
 
     public void setItemId(String itemId) {
         this.itemId = itemId;
+    }
+
+    public String getItemType() {
+        return itemType;
+    }
+
+    public void setItemType(String itemType) {
+        this.itemType = itemType;
+    }
+
+    public String getScope() {
+        return scope;
+    }
+
+    public void setScope(String scope) {
+        this.scope = scope;
     }
 
     @Override

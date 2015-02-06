@@ -117,7 +117,12 @@ public class ContextServlet extends HttpServlet {
         if (stringPayload != null) {
             ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
             JsonFactory factory = mapper.getFactory();
-            contextRequest = mapper.readValue(factory.createParser(stringPayload), ContextRequest.class);
+            try {
+                contextRequest = mapper.readValue(factory.createParser(stringPayload), ContextRequest.class);
+            } catch (Exception e) {
+                log("Cannot read payload " +stringPayload,e);
+                return;
+            }
             scope = contextRequest.getSource().getScope();
         }
 
@@ -157,22 +162,22 @@ public class ContextServlet extends HttpServlet {
             if (sessionId != null && session == null) {
                 session = new Session(sessionId, profile, timestamp, scope);
                 profileService.saveSession(session);
-                Event event = new Event("sessionCreated", session, profile, scope, null, new EventTarget(sessionId, Session.ITEM_TYPE), timestamp);
+                Event event = new Event("sessionCreated", session, profile, scope, null, session, timestamp);
 
                 event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                 event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                log("Received event " + event.getEventType() + " for profile=" + profile.getId() + " session=" + session.getId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
+                log("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
                 eventService.send(event);
             }
         }
 
         if (profileCreated) {
-            Event profileUpdated = new Event("profileUpdated", session, profile, scope, null, new EventTarget(profile.getId(), Profile.ITEM_TYPE), timestamp);
+            Event profileUpdated = new Event("profileUpdated", session, profile, scope, null, profile, timestamp);
             profileUpdated.setPersistent(false);
             profileUpdated.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
             profileUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
 
-            log("Received event " + profileUpdated.getEventType() + " for profile=" + profile.getId() + " session=" + session.getId() + " target=" + profileUpdated.getTarget() + " timestamp=" + timestamp);
+            log("Received event " + profileUpdated.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + profileUpdated.getTarget() + " timestamp=" + timestamp);
             eventService.send(profileUpdated);
         }
 
@@ -219,11 +224,11 @@ public class ContextServlet extends HttpServlet {
                 if (session != null) {
                     session.setProfile(profile);
                     profileService.saveSession(session);
-                    profileService.delete(profileToDelete.getId(), false);
+                    profileService.delete(profileToDelete.getItemId(), false);
                 }
                 HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, personaIdCookieName);
             } else {
-                log("Couldn't find merged profile" + profileId + ", falling back to profile " + profileToDelete.getId());
+                log("Couldn't find merged profile" + profileId + ", falling back to profile " + profileToDelete.getItemId());
                 profile = profileToDelete;
                 profile.getProperties().remove("mergedWith");
                 profileService.save(profile);
@@ -247,7 +252,7 @@ public class ContextServlet extends HttpServlet {
                     }
                     event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                    log("Received event " + event.getEventType() + " for profile=" + profile.getId() + " session=" + session.getId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
+                    log("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
                     eventService.send(eventToSend);
                     if("view".equals(eventToSend.getEventType())){
                         viewEvent = eventToSend;
@@ -256,7 +261,7 @@ public class ContextServlet extends HttpServlet {
             }
         }
 
-        data.setProfileId(profile.getId());
+        data.setProfileId(profile.getItemId());
 
         if (contextRequest.isRequireSegments()) {
             data.setProfileSegments(profile.getSegments());
@@ -270,7 +275,7 @@ public class ContextServlet extends HttpServlet {
             data.setProfileProperties(profileProperties);
         }
         if (session != null) {
-            data.setSessionId(session.getId());
+            data.setSessionId(session.getItemId());
             if (contextRequest.getRequiredSessionProperties() != null) {
                 Map<String, Object> sessionProperties = new HashMap<String, Object>(session.getProperties());
                 if (!contextRequest.getRequiredSessionProperties().contains("*")) {
@@ -293,7 +298,7 @@ public class ContextServlet extends HttpServlet {
             }
         }
 
-        data.setTrackedConditions(rulesService.getTrackedConditions(contextRequest));
+        data.setTrackedConditions(rulesService.getTrackedConditions(contextRequest.getSource()));
     }
 
     private Profile createNewProfile(String existingProfileId, ServletResponse response, Date timestamp) {

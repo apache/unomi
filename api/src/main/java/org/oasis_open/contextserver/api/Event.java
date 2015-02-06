@@ -11,7 +11,7 @@ public class Event extends Item implements TimestampedItem {
     public static final String ITEM_TYPE = "event";
     public static final String HTTP_REQUEST_ATTRIBUTE = "http_request";
     public static final String HTTP_RESPONSE_ATTRIBUTE = "http_response";
-    //    public static final String PARENT_ITEM_TYPE = "session";
+
     private String eventType;
     private String sessionId = null;
     private String profileId = null;
@@ -22,8 +22,9 @@ public class Event extends Item implements TimestampedItem {
     private transient Session session;
 
     private String scope;
-    private EventSource source;
-    private EventTarget target;
+
+    private Item source;
+    private Item target;
 
     private transient boolean persistent = true;
 
@@ -34,7 +35,7 @@ public class Event extends Item implements TimestampedItem {
     public Event() {
     }
 
-    public Event(String eventType, Session session, Profile profile, String scope, EventSource source, EventTarget target, Date timestamp) {
+    public Event(String eventType, Session session, Profile profile, String scope, Item source, Item target, Date timestamp) {
         super(UUID.randomUUID().toString());
         this.eventType = eventType;
         this.profile = profile;
@@ -52,7 +53,7 @@ public class Event extends Item implements TimestampedItem {
         this.properties = new HashMap<String, Object>();
     }
 
-    public Event(String eventType, Session session, Profile profile, String scope, EventSource source, EventTarget target, Map<String, Object> properties, Date timestamp) {
+    public Event(String eventType, Session session, Profile profile, String scope, Item source, Item target, Map<String, Object> properties, Date timestamp) {
         this(eventType, session, profile, scope, source, target, timestamp);
         if(properties != null) {
             this.properties = properties;
@@ -131,19 +132,19 @@ public class Event extends Item implements TimestampedItem {
         this.scope = scope;
     }
 
-    public EventSource getSource() {
+    public Item getSource() {
         return source;
     }
 
-    public void setSource(EventSource source) {
+    public void setSource(Item source) {
         this.source = source;
     }
 
-    public EventTarget getTarget() {
+    public Item getTarget() {
         return target;
     }
 
-    public void setTarget(EventTarget target) {
+    public void setTarget(Item target) {
         this.target = target;
     }
 }

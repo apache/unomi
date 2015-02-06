@@ -1,7 +1,7 @@
 package org.oasis_open.contextserver.api.rules;
 
-import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.Metadata;
+import org.oasis_open.contextserver.api.MetadataItem;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.conditions.Condition;
 
@@ -10,11 +10,9 @@ import java.util.List;
 /**
 * Created by toto on 26/06/14.
 */
-public class Rule extends Item {
+public class Rule extends MetadataItem {
 
     public static final String ITEM_TYPE = "rule";
-
-    private Metadata metadata;
 
     private Condition condition;
 
@@ -28,17 +26,7 @@ public class Rule extends Item {
     }
 
     public Rule(Metadata metadata) {
-        super(metadata.getIdWithScope());
-        this.metadata = metadata;
-    }
-
-    public Metadata getMetadata() {
-        return metadata;
-    }
-
-    public void setMetadata(Metadata metadata) {
-        this.itemId = metadata.getIdWithScope();
-        this.metadata = metadata;
+        super(metadata);
     }
 
     public Condition getCondition() {

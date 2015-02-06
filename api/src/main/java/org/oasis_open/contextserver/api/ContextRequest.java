@@ -4,20 +4,20 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 
 import java.util.List;
 
-public class ContextRequest extends Item{
+public class ContextRequest {
 
-    private EventSource source;
+    private Item source;
     private boolean requireSegments;
     private List<String> requiredProfileProperties;
     private List<String> requiredSessionProperties;
     private List<Event> events;
     private List<FilteredContent> filters;
 
-    public EventSource getSource() {
+    public Item getSource() {
         return source;
     }
 
-    public void setSource(EventSource source) {
+    public void setSource(Item source) {
         this.source = source;
     }
 

@@ -1,15 +1,13 @@
 package org.oasis_open.contextserver.api.campaigns;
 
-import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.Metadata;
+import org.oasis_open.contextserver.api.MetadataItem;
 import org.oasis_open.contextserver.api.conditions.Condition;
 
 import java.util.Date;
 
-public class Campaign extends Item {
+public class Campaign extends MetadataItem {
     public static final String ITEM_TYPE = "campaign";
-
-    private Metadata metadata;
 
     private Date startDate;
 
@@ -21,17 +19,7 @@ public class Campaign extends Item {
     }
 
     public Campaign(Metadata metadata) {
-        super(metadata.getIdWithScope());
-        this.metadata = metadata;
-    }
-
-    public Metadata getMetadata() {
-        return metadata;
-    }
-
-    public void setMetadata(Metadata metadata) {
-        this.itemId = metadata.getIdWithScope();
-        this.metadata = metadata;
+        super(metadata);
     }
 
     public Date getStartDate() {

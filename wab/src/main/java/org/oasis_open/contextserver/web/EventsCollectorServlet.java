@@ -99,7 +99,13 @@ public class EventsCollectorServlet extends HttpServlet {
 
         ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
         JsonFactory factory = mapper.getFactory();
-        EventsCollectorRequest events = mapper.readValue(factory.createParser(payload), EventsCollectorRequest.class);
+        EventsCollectorRequest events = null;
+        try {
+            events = mapper.readValue(factory.createParser(payload), EventsCollectorRequest.class);
+        } catch (Exception e) {
+            log("Cannot read payload " + payload,e);
+            return;
+        }
         if (events == null || events.getEvents() == null) {
             return;
         }
@@ -115,7 +121,7 @@ public class EventsCollectorServlet extends HttpServlet {
                 }
                 event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                 event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                log("Received event " + event.getEventType() + " for profile=" + profile.getId() + " session=" + session.getId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
+                log("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
                 boolean eventChanged = eventService.send(eventToSend);
                 changed = changed || eventChanged;
             }

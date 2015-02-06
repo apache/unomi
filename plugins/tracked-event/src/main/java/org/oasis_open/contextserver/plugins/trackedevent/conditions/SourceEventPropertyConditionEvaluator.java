@@ -8,6 +8,7 @@ import org.oasis_open.contextserver.persistence.elasticsearch.conditions.Conditi
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,13 +18,20 @@ import java.util.Map;
 public class SourceEventPropertyConditionEvaluator implements ConditionEvaluator {
     private DefinitionsService definitionsService;
 
+    private Map<String,String> mappedProperties;
+
     public SourceEventPropertyConditionEvaluator() {
+        mappedProperties = new HashMap<>();
+        mappedProperties.put("id", "itemId");
+        mappedProperties.put("path", "properties.pageInfo.pagePath");
+        mappedProperties.put("type", "itemType");
+        mappedProperties.put("scope", "scope");
     }
 
     private void appendConditionIfPropExist(List<Condition> conditions, Condition condition, String prop, ConditionType propConditionType) {
         if (condition.getParameterValues().get(prop) != null && !"".equals(condition.getParameterValues().get(prop))) {
             Condition propCondition = new Condition(propConditionType);
-            propCondition.getParameterValues().put("propertyName","source." + prop);
+            propCondition.getParameterValues().put("propertyName",mappedProperties.get(prop));
             propCondition.getParameterValues().put("comparisonOperator", "equals");
             propCondition.getParameterValues().put("propertyValue", condition.getParameterValues().get(prop));
             conditions.add(propCondition);
@@ -36,7 +44,7 @@ public class SourceEventPropertyConditionEvaluator implements ConditionEvaluator
         andCondition.getParameterValues().put("operator", "and");
         ArrayList<Condition> conditions = new ArrayList<Condition>();
 
-        for (String prop : new String[]{"id", "path", "scope", "type"}){
+        for (String prop : mappedProperties.keySet()){
             appendConditionIfPropExist(conditions, condition, prop, definitionsService.getConditionType("eventPropertyCondition"));
         }
 

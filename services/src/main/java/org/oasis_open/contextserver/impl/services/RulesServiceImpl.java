@@ -190,6 +190,16 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                     continue;
                 }
 
+                Set<Condition> sourceConditions = extractConditionsByType(rule.getCondition(), "sourceEventPropertyCondition");
+
+                boolean unmatchedSource = false;
+                for (Condition sourceCondition : sourceConditions) {
+                    unmatchedSource = unmatchedSource || !persistenceService.testMatch(sourceCondition, event.getSource());
+                }
+                if (unmatchedSource) {
+                    continue;
+                }
+
                 if (rule.isRaiseEventOnlyOnceForProfile()) {
                     hasEventAlreadyBeenRaisedForProfile = hasEventAlreadyBeenRaisedForProfile != null ? hasEventAlreadyBeenRaisedForProfile : eventService.hasEventAlreadyBeenRaised(event, false);
                     if (hasEventAlreadyBeenRaisedForProfile) {
@@ -242,7 +252,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 changed |= actionExecutorDispatcher.execute(action, event);
             }
 
-            Event ruleFired = new Event("ruleFired", event.getSession(), event.getProfile(), event.getScope(), event.getSource(), new EventTarget(rule.getItemId(), Rule.ITEM_TYPE), event.getTimeStamp());
+            Event ruleFired = new Event("ruleFired", event.getSession(), event.getProfile(), event.getScope(), event, rule, event.getTimeStamp());
             ruleFired.getAttributes().putAll(event.getAttributes());
             ruleFired.setPersistent(false);
             eventService.send(ruleFired);
@@ -295,17 +305,17 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         persistenceService.save(rule);
     }
 
-    public Set<Condition> getTrackedConditions(Item item){
+    public Set<Condition> getTrackedConditions(Item source){
         Set<Condition> trackedConditions = new HashSet<>();
         for (Metadata metadata : getRuleMetadatas()) {
             Rule r = getRule(metadata.getScope(), metadata.getId());
             Condition trackedCondition = extractConditionByTag(r.getCondition(), "trackedCondition");
             if(trackedCondition != null){
                 Set<Condition> sourceEventPropertyConditions = extractConditionsByType(r.getCondition(), "sourceEventPropertyCondition");
-                boolean match = (!(item == null && sourceEventPropertyConditions.size() > 0));
+                boolean match = !(source == null && sourceEventPropertyConditions.size() > 0);
                 for (Condition sourceEventPropertyCondition : sourceEventPropertyConditions){
                     ParserHelper.resolveConditionType(definitionsService, sourceEventPropertyCondition);
-                    match = persistenceService.testMatch(sourceEventPropertyCondition, item);
+                    match = persistenceService.testMatch(sourceEventPropertyCondition, source);
                     if(!match){
                         break;
                     }

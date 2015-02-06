@@ -85,7 +85,7 @@
         <module>wab</module>
         <module>plugins</module>
         <module>kar</module>
-        <module>package</module>
+        <!--  <module>package</module>-->
     </modules>
 
     <dependencies>

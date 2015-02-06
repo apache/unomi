@@ -38,9 +38,9 @@ public class PropertyTypedObjectDeserializer extends UntypedObjectDeserializer {
     }
 
     private Map<String, Class<? extends Object>> registry =
-            new HashMap<String, Class<? extends Object>>();
+            new LinkedHashMap<String, Class<? extends Object>>();
 
-    private Map<String,Set<String>> fieldValuesToMatch = new HashMap<String,Set<String>>();
+    private Map<String,Set<String>> fieldValuesToMatch = new LinkedHashMap<String,Set<String>>();
 
     public void registerMapping(String matchExpression,
                                 Class<? extends Object> mappedClass) {
@@ -48,7 +48,7 @@ public class PropertyTypedObjectDeserializer extends UntypedObjectDeserializer {
         String[] fieldParts = matchExpression.split("=");
         Set<String> valuesToMatch = fieldValuesToMatch.get(fieldParts[0]);
         if (valuesToMatch == null) {
-            valuesToMatch = new HashSet<String>();
+            valuesToMatch = new LinkedHashSet<String>();
         }
         valuesToMatch.add(fieldParts[1]);
         fieldValuesToMatch.put(fieldParts[0], valuesToMatch);

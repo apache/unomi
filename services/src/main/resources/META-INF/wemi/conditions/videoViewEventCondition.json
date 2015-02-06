@@ -13,7 +13,7 @@
                 {
                     "type": "eventPropertyCondition",
                     "parameterValues": {
-                        "propertyName": "target.id",
+                        "propertyName": "target.itemId",
                         "propertyValue": "parameter::videoId",
                         "comparisonOperator": "equals"
                     }

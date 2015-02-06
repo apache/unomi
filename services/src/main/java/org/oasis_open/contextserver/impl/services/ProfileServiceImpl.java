@@ -3,7 +3,6 @@ package org.oasis_open.contextserver.impl.services;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
-import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.api.services.ProfileService;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
@@ -118,9 +117,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         // now let's remove all the already merged profiles from the list.
         PartialList<Profile> filteredProfilesToMerge = new PartialList<Profile>(new ArrayList<Profile>(), 0, 0, 0);
         for (Profile filteredProfile : profilesToMerge.getList()) {
-            if (!filteredProfile.getId().equals(masterProfile.getId()) &&
+            if (!filteredProfile.getItemId().equals(masterProfile.getItemId()) &&
                     filteredProfile.getProperty("mergedWith") != null &&
-                    filteredProfile.getProperty("mergedWith").equals(masterProfile.getId())) {
+                    filteredProfile.getProperty("mergedWith").equals(masterProfile.getItemId())) {
                 // profile was already merged with the master profile, we will not merge him again.
                 continue;
             }
@@ -145,9 +144,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
         Set<String> profileIdsToMerge = new TreeSet<String>();
         for (Profile profileToMerge : profilesToMerge.getList()) {
-            profileIdsToMerge.add(profileToMerge.getId());
+            profileIdsToMerge.add(profileToMerge.getItemId());
         }
-        logger.info("Merging profiles " + profileIdsToMerge + " into profile " + masterProfile.getId());
+        logger.info("Merging profiles " + profileIdsToMerge + " into profile " + masterProfile.getItemId());
         for (String profileProperty : allProfileProperties) {
             PropertyType propertyType = profilePropertyTypeById.get(profileProperty);
             String propertyMergeStrategyId = "defaultMergeStrategy";
@@ -189,11 +188,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
         // we must now retrieve all the session associated with all the profiles and associate them with the master profile
         for (Profile profile : profilesToMerge.getList()) {
-            if (profile.getId().equals(masterProfile.getId())) {
+            if (profile.getItemId().equals(masterProfile.getItemId())) {
                 continue;
             }
-            PartialList<Session> profileSessions = getProfileSessions(profile.getId(), 0, -1, null);
-            if (currentSession.getProfileId().equals(profile.getId()) && !profileSessions.getList().contains(currentSession)) {
+            PartialList<Session> profileSessions = getProfileSessions(profile.getItemId(), 0, -1, null);
+            if (currentSession.getProfileId().equals(profile.getItemId()) && !profileSessions.getList().contains(currentSession)) {
                 profileSessions.getList().add(currentSession);
                 profileSessions.setTotalSize(profileSessions.getList().size());
             }
@@ -207,10 +206,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         // we must mark all the profiles that we merged into the master as merged with the master, and they will
         // be deleted upon next load
         for (Profile profile : profilesToMerge.getList()) {
-            if (profile.getId().equals(masterProfile.getId())) {
+            if (profile.getItemId().equals(masterProfile.getItemId())) {
                 continue;
             }
-            profile.setProperty("mergedWith", masterProfile.getId());
+            profile.setProperty("mergedWith", masterProfile.getItemId());
         }
 
         return masterProfile;
@@ -266,7 +265,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     public PersonaWithSessions loadPersonaWithSessions(String personaId) {
         Persona persona = persistenceService.load(personaId, Persona.class);
-        List<PersonaSession> sessions = persistenceService.query("profileId", persona.getId(), "timeStamp:desc", PersonaSession.class);
+        List<PersonaSession> sessions = persistenceService.query("profileId", persona.getItemId(), "timeStamp:desc", PersonaSession.class);
         return new PersonaWithSessions(persona, sessions);
     }
 

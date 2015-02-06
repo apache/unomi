@@ -343,7 +343,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) {
                 try {
                     String source = CustomObjectMapper.getObjectMapper().writeValueAsString(item);
-                    String itemType = (String) item.getClass().getField("ITEM_TYPE").get(null);
+                    String itemType = (String) item.getItemType();
                     IndexRequestBuilder indexBuilder = client.prepareIndex(itemsDailyIndexed.contains(itemType) ? getDailyIndex(((TimestampedItem) item).getTimeStamp()) : indexName, itemType, item.getItemId())
                             .setSource(source);
                     if (routingByType.containsKey(itemType)) {
@@ -353,10 +353,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             .execute()
                             .actionGet();
                     return true;
-                } catch (NoSuchFieldException e) {
-                    logger.error("Error saving item " + item, e);
-                } catch (IllegalAccessException e) {
-                    logger.error("Error saving item " + item, e);
                 } catch (IOException e) {
                     logger.error("Error saving item " + item, e);
                 }
@@ -494,7 +490,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String source = CustomObjectMapper.getObjectMapper().writeValueAsString(item);
 
-                    String itemType = (String) item.getClass().getField("ITEM_TYPE").get(null);
+                    String itemType = (String) item.getItemType();
 
                     //Percolate
                     PercolateResponse response = client.preparePercolate()
@@ -507,10 +503,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         //the query in the percolator
                         matchingQueries.add(match.getId().string());
                     }
-                } catch (NoSuchFieldException e) {
-                    logger.error("Error getting matching saved queries for item=" + item, e);
-                } catch (IllegalAccessException e) {
-                    logger.error("Error getting matching saved queries for item=" + item, e);
                 } catch (IOException e) {
                     logger.error("Error getting matching saved queries for item=" + item, e);
                 }

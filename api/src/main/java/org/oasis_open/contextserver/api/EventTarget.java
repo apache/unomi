@@ -7,7 +7,6 @@ import java.util.Map;
  * Created by toto on 29/10/14.
  */
 public class EventTarget implements Serializable {
-    private static EventTarget ourInstance = new EventTarget();
     private String id;
     private String type;
     private Map<String, Object> properties;
@@ -18,10 +17,6 @@ public class EventTarget implements Serializable {
     public EventTarget(String id, String type) {
         this.id = id;
         this.type = type;
-    }
-
-    public static EventTarget getInstance() {
-        return ourInstance;
     }
 
     public String getId() {

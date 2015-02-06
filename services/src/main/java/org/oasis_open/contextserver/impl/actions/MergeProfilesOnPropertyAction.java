@@ -51,15 +51,15 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             return false;
         }
 
-        if (!masterProfile.getId().equals(profile.getId())) {
+        if (!masterProfile.getItemId().equals(profile.getItemId())) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
             sendProfileCookie(masterProfile, httpServletResponse);
             Session session = event.getSession();
-            if (!session.getProfileId().equals(masterProfile.getId())) {
+            if (!session.getProfileId().equals(masterProfile.getItemId())) {
                 session.setProfile(masterProfile);
                 profileService.saveSession(session);
             }
-            profileService.delete(profile.getId(), false);
+            profileService.delete(profile.getItemId(), false);
         }
 
         return true;

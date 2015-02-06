@@ -19,13 +19,14 @@
             "parameterValues": {
                 "eventType":"search",
                 "eventTarget": {
-                    "id": "searchForm",
-                    "type" : "form",
+                    "itemId": "searchForm",
+                    "itemType" : "form",
+                    "scope":"eventProperty::target.scope",
                     "properties" : {}
                 },
                 "eventProperties": {
-                    "origin": "eventProperty::source.path",
-                    "originForm": "eventProperty::target.id",
+                    "origin": "eventProperty::source.properties.pageInfo.pagePath",
+                    "originForm": "eventProperty::target.itemId",
                     "keyword": "script::event.properties['src_terms[0].term'].toLowerCase()"
                 }
             }

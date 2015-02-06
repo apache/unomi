@@ -1,6 +1,6 @@
 {
     "persona": {
-        "id": "googleBot",
+        "itemId": "googleBot",
         "properties": {
             "name": "Google Bot",
             "description": "Represents a Google bot",
@@ -11,7 +11,7 @@
         "segments": []
     },
     "sessions": [ {
-        "id": "6bb362d8-d094-44b4-ba2e-012163286825",
+        "itemId": "6bb362d8-d094-44b4-ba2e-012163286825",
         "profileId": "googleBot",
         "properties": {
             "operatingSystemName": "unknown",

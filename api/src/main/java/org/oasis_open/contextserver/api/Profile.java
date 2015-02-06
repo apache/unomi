@@ -1,5 +1,6 @@
 package org.oasis_open.contextserver.api;
 
+import javax.xml.bind.annotation.XmlTransient;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -29,14 +30,6 @@ public class Profile extends Item {
         segments = new HashSet<String>();
     }
 
-    public String getId() {
-        return itemId;
-    }
-
-    public void setId(String id) {
-        this.itemId = id;
-    }
-
     public void setProperty(String name, Object value) {
         properties.put(name, value);
     }
@@ -47,6 +40,11 @@ public class Profile extends Item {
 
     public Map<String,Object> getProperties() {
         return properties;
+    }
+
+    @XmlTransient
+    public String getScope() {
+        return "systemscope";
     }
 
     public Set<String> getSegments() {
@@ -67,7 +65,7 @@ public class Profile extends Item {
     
     @Override
     public String toString() {
-        return new StringBuilder(512).append("{id: \"").append(getId()).append("\", segments: ")
+        return new StringBuilder(512).append("{id: \"").append(getItemId()).append("\", segments: ")
                 .append(getSegments()).append(", scores: ").append(getScores()).append(", properties: ")
                 .append(getProperties()).append("}").toString();
     }

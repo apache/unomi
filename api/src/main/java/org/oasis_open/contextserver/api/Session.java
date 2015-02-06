@@ -28,18 +28,10 @@ public class Session extends Item implements TimestampedItem {
     public Session(String itemId, Profile profile, Date timeStamp, String scope) {
         super(itemId);
         this.profile = profile;
-        this.profileId = profile.getId();
-        properties = new HashMap<String,Object>();
+        this.profileId = profile.getItemId();
+        properties = new HashMap<String, Object>();
         this.timeStamp = timeStamp;
         this.scope = scope;
-    }
-
-    public String getId() {
-        return itemId;
-    }
-
-    public void setId(String id) {
-        this.itemId = id;
     }
 
     public String getProfileId() {
@@ -51,7 +43,7 @@ public class Session extends Item implements TimestampedItem {
     }
 
     public void setProfile(Profile profile) {
-        this.profileId = profile.getId();
+        this.profileId = profile.getItemId();
         this.profile = profile;
     }
 

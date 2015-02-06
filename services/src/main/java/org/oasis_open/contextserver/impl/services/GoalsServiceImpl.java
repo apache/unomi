@@ -151,7 +151,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 //
 //            try {
 //                Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(predefinedCampaignURL, Campaign.class);
-//                if (getCampaign(campaign.getMetadata().getScope(), campaign.getMetadata().getId()) == null) {
+//                if (getCampaign(campaign.getMetadata().getScope(), campaign.getMetadata().getItemId()) == null) {
 //                    setCampaign(campaign);
 //                }
 //            } catch (IOException e) {

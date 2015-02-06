@@ -3,12 +3,8 @@ package org.oasis_open.contextserver.rest;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
-import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.api.services.ProfileService;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.InvalidSyntaxException;
-import org.osgi.framework.ServiceReference;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -82,7 +78,7 @@ public class ProfileServiceEndPoint {
     @POST
     @Path("/{profileId}")
     public void save(Profile profile) {
-        Event profileUpdated = new Event("profileUpdated", null, profile, null, null, new EventTarget(profile.getId(), Profile.ITEM_TYPE), new Date());
+        Event profileUpdated = new Event("profileUpdated", null, profile, null, null, profile, new Date());
         profileUpdated.setPersistent(false);
         eventService.send(profileUpdated);
         profileService.save(profile);
@@ -138,7 +134,7 @@ public class ProfileServiceEndPoint {
     @DELETE
     @Path("/personas/{personaId}")
     public void deletePersona(Persona persona) {
-        profileService.delete(persona.getId(), true);
+        profileService.delete(persona.getItemId(), true);
     }
 
     @PUT

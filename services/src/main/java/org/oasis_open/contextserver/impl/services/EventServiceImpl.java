@@ -59,12 +59,12 @@ public class EventServiceImpl implements EventService {
 
         Profile profile = event.getProfile();
         final Session session = event.getSession();
-        if(session != null) {
+        if (session != null) {
             session.setLastEventDate(event.getTimeStamp());
         }
 
         if (profile != null) {
-            Map<String,Object> previousProperties = new LinkedHashMap<String, Object>(profile.getProperties());
+            Map<String, Object> previousProperties = new LinkedHashMap<String, Object>(profile.getProperties());
             Set<String> previousSegments = new HashSet<String>(profile.getSegments());
 
             for (EventListenerService eventListenerService : eventListeners) {
@@ -73,13 +73,13 @@ public class EventServiceImpl implements EventService {
                 }
             }
 
-            if (session != null && session.getProfile() != null && !session.getProfile().getId().equals(profile.getId())) {
+            if (session != null && session.getProfile() != null && !session.getProfile().getItemId().equals(profile.getItemId())) {
                 // this can happen when profiles are merged for example.
                 profile = session.getProfile();
             }
 
             if (changed && (!profile.getProperties().equals(previousProperties) || !profile.getSegments().equals(previousSegments))) {
-                Event profileUpdated = new Event("profileUpdated", session, profile, event.getScope(), event.getSource(), new EventTarget(profile.getId(), Profile.ITEM_TYPE), event.getTimeStamp());
+                Event profileUpdated = new Event("profileUpdated", session, profile, event.getScope(), event.getSource(), profile, event.getTimeStamp());
                 profileUpdated.setPersistent(false);
                 profileUpdated.getAttributes().putAll(event.getAttributes());
                 send(profileUpdated);
@@ -147,14 +147,14 @@ public class EventServiceImpl implements EventService {
         conditions.add(condition);
 
         condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        condition.getParameterValues().put("propertyName", "target.id");
-        condition.getParameterValues().put("propertyValue", event.getTarget().getId());
+        condition.getParameterValues().put("propertyName", "target.itemId");
+        condition.getParameterValues().put("propertyValue", event.getTarget().getItemId());
         condition.getParameterValues().put("comparisonOperator", "equals");
         conditions.add(condition);
 
         condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
         condition.getParameterValues().put("propertyName", "target.type");
-        condition.getParameterValues().put("propertyValue", event.getTarget().getType());
+        condition.getParameterValues().put("propertyValue", event.getTarget().getItemType());
         condition.getParameterValues().put("comparisonOperator", "equals");
         conditions.add(condition);
 

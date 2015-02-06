@@ -25,11 +25,11 @@ public class HoverEventConditionESQueryBuilder implements ConditionESQueryBuilde
         String targetPath = (String) condition.getParameterValues().get("targetPath");
 
         if (targetId != null && targetId.trim().length() > 0) {
-            filters.add(FilterBuilders.termFilter("target.id", targetId));
+            filters.add(FilterBuilders.termFilter("target.itemId", targetId));
         } else if (targetPath != null && targetPath.trim().length() > 0) {
-            filters.add(FilterBuilders.termFilter("target.properties.path", targetPath));
+            filters.add(FilterBuilders.termFilter("target.properties.pageInfo.pagePath", targetPath));
         } else {
-            filters.add(FilterBuilders.termFilter("target.id", ""));
+            filters.add(FilterBuilders.termFilter("target.itemId", ""));
         }
         return FilterBuilders.andFilter(filters.toArray(new FilterBuilder[filters.size()]));
     }

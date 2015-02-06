@@ -1,6 +1,6 @@
 {
     "persona": {
-        "id": "nonUsVisitor",
+        "itemId": "nonUsVisitor",
         "properties": {
             "name": "Non U.S. Visitor",
             "description": "Represents a visitor browsing from somewhere outside the US",
@@ -11,7 +11,7 @@
         "segments": []
     },
     "sessions": [ {
-        "id": "51c8e9a8-3db6-41f8-9569-057c339e3017",
+        "itemId": "51c8e9a8-3db6-41f8-9569-057c339e3017",
         "profileId": "nonUsVisitor",
         "properties": {
             "operatingSystemName": "OS X 10.9 Mavericks",
