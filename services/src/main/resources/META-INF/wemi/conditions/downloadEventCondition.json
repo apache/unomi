@@ -13,7 +13,7 @@
                 {
                     "type": "eventPropertyCondition",
                     "parameterValues": {
-                        "propertyName": "properties.path",
+                        "propertyName": "target.properties.path",
                         "propertyValue": "parameter::filePath",
                         "comparisonOperator": "equals"
                     }
