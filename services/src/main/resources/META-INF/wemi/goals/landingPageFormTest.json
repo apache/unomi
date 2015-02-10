@@ -1,0 +1,51 @@
+{
+    "metadata": {
+        "id": "landingPageFormGoalTest",
+        "name": "Landing page form Goal Test",
+        "scope": "ACMESPACE",
+        "description": "Landing page Goal : Home page is the entry point, the final step is form test submition",
+        "tags": ["landingPageGoal"]
+    },
+    "startEvent": {
+        "type": "booleanCondition",
+        "parameterValues": {
+            "operator": "and",
+            "subConditions": [
+                {
+                    "parameterValues": {
+                        "pagePath": "/sites/ACMESPACE/home"
+                    },
+                    "type": "pageViewEventCondition"
+                },
+                {
+                    "type": "sessionPropertyCondition",
+                    "parameterValues": {
+                        "propertyName": "duration",
+                        "comparisonOperator": "equals",
+                        "propertyValue": 0
+                    }
+                }
+            ]
+        }
+    },
+    "targetEvent" : {
+        "type": "booleanCondition",
+        "parameterValues": {
+            "operator": "and",
+            "subConditions": [
+                {
+                    "parameterValues": {
+                        "formId": "testForm"
+                    },
+                    "type": "formEventCondition"
+                },
+                {
+                    "parameterValues": {
+                        "path": "/sites/ACMESPACE/home"
+                    },
+                    "type": "sourceEventPropertyCondition"
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,37 @@
+{
+    "metadata": {
+        "id": "landingPageViewGoalTest",
+        "name": "Landing page view Goal Test",
+        "scope": "ACMESPACE",
+        "description": "Landing page Goal : Home page is the entry point, the final step is the community page",
+        "tags": ["landingPageGoal"]
+    },
+    "startEvent": {
+        "type": "booleanCondition",
+        "parameterValues": {
+            "operator": "and",
+            "subConditions": [
+                {
+                    "parameterValues": {
+                        "pagePath": "/sites/ACMESPACE/home"
+                    },
+                    "type": "pageViewEventCondition"
+                },
+                {
+                    "type": "sessionPropertyCondition",
+                    "parameterValues": {
+                        "propertyName": "duration",
+                        "comparisonOperator": "equals",
+                        "propertyValue": 0
+                    }
+                }
+            ]
+        }
+    },
+    "targetEvent": {
+        "parameterValues": {
+            "pagePath": "/sites/ACMESPACE/home/community"
+        },
+        "type": "pageViewEventCondition"
+    }
+}
