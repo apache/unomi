@@ -285,20 +285,24 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         Map<String, Long> all;
         Map<String, Long> match;
 
-        if ("timeStamp".equals(split)) {
-            list.add(goalStartCondition);
-            all = persistenceService.aggregateQuery(condition, new DateAggregate("timeStamp"), Session.ITEM_TYPE);
+        if (split != null) {
+            if(split.startsWith("timeStamp")){
+                int intervalIndex = split.indexOf("_");
+                DateAggregate dateAggregate = intervalIndex != -1 ? new DateAggregate("timeStamp", split.substring(intervalIndex + 1)) : new DateAggregate("timeStamp");
+                list.add(goalStartCondition);
+                all = persistenceService.aggregateQuery(condition, dateAggregate, Session.ITEM_TYPE);
 
-            list.remove(goalStartCondition);
-            list.add(goalTargetCondition);
-            match = persistenceService.aggregateQuery(condition, new DateAggregate("timeStamp"), Session.ITEM_TYPE);
-        } else if (split != null) {
-            list.add(goalStartCondition);
-            all = persistenceService.aggregateQuery(condition, new TermsAggregate(split), Session.ITEM_TYPE);
+                list.remove(goalStartCondition);
+                list.add(goalTargetCondition);
+                match = persistenceService.aggregateQuery(condition, dateAggregate, Session.ITEM_TYPE);
+            } else {
+                list.add(goalStartCondition);
+                all = persistenceService.aggregateQuery(condition, new TermsAggregate(split), Session.ITEM_TYPE);
 
-            list.remove(goalStartCondition);
-            list.add(goalTargetCondition);
-            match = persistenceService.aggregateQuery(condition, new TermsAggregate(split), Session.ITEM_TYPE);
+                list.remove(goalStartCondition);
+                list.add(goalTargetCondition);
+                match = persistenceService.aggregateQuery(condition, new TermsAggregate(split), Session.ITEM_TYPE);
+            }
         } else {
             list.add(goalStartCondition);
             all = new HashMap<String, Long>();
