@@ -322,7 +322,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         stat.setConversionRate(stat.getStartCount() > 0 ? (float) stat.getTargetCount() / (float) stat.getStartCount() : 0);
         report.setGlobalStats(stat);
         all.remove("_all");
-        report.setSplit(new LinkedHashMap<String, GoalReport.Stat>());
+        report.setSplit(new LinkedList<GoalReport.Stat>());
         for (Map.Entry<String, Long> entry : all.entrySet()) {
             GoalReport.Stat dateStat = new GoalReport.Stat();
             dateStat.setKey(entry.getKey());
@@ -330,7 +330,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             dateStat.setTargetCount(match.containsKey(entry.getKey()) ? match.get(entry.getKey()) : 0);
             dateStat.setConversionRate(dateStat.getStartCount() > 0 ? (float) dateStat.getTargetCount() / (float) dateStat.getStartCount() : 0);
             dateStat.setPercentage(stat.getTargetCount() > 0 ? (float) dateStat.getTargetCount() / (float) stat.getTargetCount() : 0);
-            report.getSplit().put(entry.getKey(), dateStat);
+            report.getSplit().add(dateStat);
         }
 
         return report;

@@ -1,14 +1,14 @@
 package org.oasis_open.contextserver.api.goals;
 
 import java.io.Serializable;
-import java.util.Map;
+import java.util.List;
 
 /**
  * Created by toto on 21/08/14.
  */
 public class GoalReport implements Serializable {
     private Stat globalStats;
-    private Map<String,Stat> split;
+    private List<Stat> split;
 
     public GoalReport() {
     }
@@ -21,11 +21,11 @@ public class GoalReport implements Serializable {
         this.globalStats = globalStats;
     }
 
-    public Map<String,Stat> getSplit() {
+    public List<Stat> getSplit() {
         return split;
     }
 
-    public void setSplit(Map<String, Stat> split) {
+    public void setSplit(List<Stat> split) {
         this.split = split;
     }
 
