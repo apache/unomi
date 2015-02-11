@@ -74,6 +74,13 @@
                 <module>performance-tests</module>
             </modules>
         </profile>
+
+        <profile>
+            <id>generate-package</id>
+            <modules>
+                <module>package</module>
+            </modules>
+        </profile>
     </profiles>
 
     <modules>
@@ -85,7 +92,6 @@
         <module>wab</module>
         <module>plugins</module>
         <module>kar</module>
-        <!--  <module>package</module>-->
     </modules>
 
     <dependencies>
