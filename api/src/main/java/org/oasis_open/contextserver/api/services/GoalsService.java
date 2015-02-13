@@ -1,9 +1,9 @@
 package org.oasis_open.contextserver.api.services;
 
 import org.oasis_open.contextserver.api.Metadata;
-import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.goals.Goal;
 import org.oasis_open.contextserver.api.goals.GoalReport;
+import org.oasis_open.contextserver.api.query.AggregateQuery;
 
 import java.util.Set;
 
@@ -20,7 +20,5 @@ public interface GoalsService {
 
     GoalReport getGoalReport(String scope, String goalId);
 
-    GoalReport getGoalReport(String scope, String goalId, String split);
-
-    GoalReport getGoalReport(String scope, String goalId, String split, Condition filter);
+    GoalReport getGoalReport(String scope, String goalId, AggregateQuery query);
 }

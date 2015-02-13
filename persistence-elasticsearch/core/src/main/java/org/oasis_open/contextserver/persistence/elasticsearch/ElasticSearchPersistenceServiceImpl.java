@@ -42,16 +42,19 @@ import org.elasticsearch.search.aggregations.bucket.filter.Filter;
 import org.elasticsearch.search.aggregations.bucket.global.Global;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogram;
 import org.elasticsearch.search.aggregations.bucket.missing.MissingBuilder;
+import org.elasticsearch.search.aggregations.bucket.range.RangeBuilder;
+import org.elasticsearch.search.aggregations.bucket.range.date.DateRangeBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
+import org.oasis_open.contextserver.api.query.GenericRange;
+import org.oasis_open.contextserver.api.query.NumericRange;
 import org.oasis_open.contextserver.api.services.ClusterService;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
-import org.oasis_open.contextserver.persistence.spi.aggregate.BaseAggregate;
+import org.oasis_open.contextserver.persistence.spi.aggregate.*;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
-import org.oasis_open.contextserver.persistence.spi.aggregate.DateAggregate;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -652,7 +655,23 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     AggregationBuilder bucketsAggregation = null;
                     if (aggregate instanceof DateAggregate) {
                         bucketsAggregation = AggregationBuilders.dateHistogram("buckets").field(aggregate.getField()).interval(new DateHistogram.Interval(((DateAggregate) aggregate).getInterval()));
-                    } else {
+                    } else if (aggregate instanceof NumericRangeAggregate){
+                        RangeBuilder rangebuilder = AggregationBuilders.range("buckets").field(aggregate.getField());
+                        for (NumericRange range : ((NumericRangeAggregate) aggregate).getRanges()){
+                            if(range != null){
+                                rangebuilder.addRange(range.getKey(), range.getFrom(), range.getTo());
+                            }
+                        }
+                        bucketsAggregation = rangebuilder;
+                    } else if (aggregate instanceof DateRangeAggregate){
+                        DateRangeBuilder rangebuilder = AggregationBuilders.dateRange("buckets").field(aggregate.getField());
+                        for (GenericRange range : ((DateRangeAggregate) aggregate).getRanges()){
+                            if(range != null){
+                                rangebuilder.addRange(range.getKey(), range.getFrom(), range.getTo());
+                            }
+                        }
+                        bucketsAggregation = rangebuilder;
+                    }  else {
                         //default
                         bucketsAggregation = AggregationBuilders.terms("buckets").field(aggregate.getField()).size(Integer.MAX_VALUE);
                     }

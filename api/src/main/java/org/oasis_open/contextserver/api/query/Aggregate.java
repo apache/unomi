@@ -1,6 +1,8 @@
 package org.oasis_open.contextserver.api.query;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -8,7 +10,10 @@ import java.util.Map;
  */
 public class Aggregate {
     private String type;
-    Map<String, Object> parameters = new HashMap<>();
+    private String property;
+    private Map<String, Object> parameters = new HashMap<>();
+    private List<NumericRange> numericRanges = new ArrayList<>();
+    private List<GenericRange> genericRanges = new ArrayList<>();
 
     public Aggregate() {
     }
@@ -27,5 +32,29 @@ public class Aggregate {
 
     public void setParameters(Map<String, Object> parameters) {
         this.parameters = parameters;
+    }
+
+    public String getProperty() {
+        return property;
+    }
+
+    public void setProperty(String property) {
+        this.property = property;
+    }
+
+    public List<NumericRange> getNumericRanges() {
+        return numericRanges;
+    }
+
+    public void setNumericRanges(List<NumericRange> numericRanges) {
+        this.numericRanges = numericRanges;
+    }
+
+    public List<GenericRange> getGenericRanges() {
+        return genericRanges;
+    }
+
+    public void setGenericRanges(List<GenericRange> genericRanges) {
+        this.genericRanges = genericRanges;
     }
 }

@@ -6,14 +6,14 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.goals.Goal;
 import org.oasis_open.contextserver.api.goals.GoalReport;
+import org.oasis_open.contextserver.api.query.AggregateQuery;
 import org.oasis_open.contextserver.api.rules.Rule;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.GoalsService;
 import org.oasis_open.contextserver.api.services.RulesService;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
-import org.oasis_open.contextserver.persistence.spi.aggregate.DateAggregate;
-import org.oasis_open.contextserver.persistence.spi.aggregate.TermsAggregate;
+import org.oasis_open.contextserver.persistence.spi.aggregate.*;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -250,14 +250,10 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public GoalReport getGoalReport(String scope, String goalId) {
-        return getGoalReport(scope, goalId, null, null);
+        return getGoalReport(scope, goalId, null);
     }
 
-    public GoalReport getGoalReport(String scope, String goalId, String split) {
-        return getGoalReport(scope, goalId, split, null);
-    }
-
-    public GoalReport getGoalReport(String scope, String goalId, String split, Condition filter) {
+    public GoalReport getGoalReport(String scope, String goalId, AggregateQuery query) {
         Condition condition = new Condition(definitionsService.getConditionType("booleanCondition"));
         final ArrayList<Condition> list = new ArrayList<Condition>();
         condition.getParameterValues().put("operator", "and");
@@ -278,31 +274,40 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             goalStartCondition.getParameterValues().put("comparisonOperator", "exists");
         }
 
-        if (filter != null) {
-            list.add(filter);
+        if (query != null && query.getCondition() != null) {
+            list.add(query.getCondition());
         }
 
         Map<String, Long> all;
         Map<String, Long> match;
 
-        if (split != null) {
-            if(split.startsWith("timeStamp")){
-                int intervalIndex = split.indexOf("_");
-                DateAggregate dateAggregate = intervalIndex != -1 ? new DateAggregate("timeStamp", split.substring(intervalIndex + 1)) : new DateAggregate("timeStamp");
-                list.add(goalStartCondition);
-                all = persistenceService.aggregateQuery(condition, dateAggregate, Session.ITEM_TYPE);
-
-                list.remove(goalStartCondition);
-                list.add(goalTargetCondition);
-                match = persistenceService.aggregateQuery(condition, dateAggregate, Session.ITEM_TYPE);
-            } else {
-                list.add(goalStartCondition);
-                all = persistenceService.aggregateQuery(condition, new TermsAggregate(split), Session.ITEM_TYPE);
-
-                list.remove(goalStartCondition);
-                list.add(goalTargetCondition);
-                match = persistenceService.aggregateQuery(condition, new TermsAggregate(split), Session.ITEM_TYPE);
+        // resolve aggregate
+        BaseAggregate aggregate = null;
+        if(query != null && query.getAggregate() != null && query.getAggregate().getProperty() != null) {
+            if (query.getAggregate().getType() != null){
+                // try to guess the aggregate type
+                if(query.getAggregate().getType().equals("date")) {
+                    String interval = (String) query.getAggregate().getParameters().get("interval");
+                    aggregate = new DateAggregate(query.getAggregate().getProperty(), interval);
+                } else if (query.getAggregate().getType().equals("dateRange") && query.getAggregate().getGenericRanges() != null && query.getAggregate().getGenericRanges().size() > 0) {
+                    aggregate = new DateRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().getGenericRanges());
+                } else if (query.getAggregate().getType().equals("range") && query.getAggregate().getNumericRanges() != null && query.getAggregate().getNumericRanges().size() > 0) {
+                    aggregate = new NumericRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().getNumericRanges());
+                }
             }
+
+            if(aggregate == null){
+                aggregate = new TermsAggregate(query.getAggregate().getProperty());
+            }
+        }
+
+        if (aggregate != null) {
+            list.add(goalStartCondition);
+            all = persistenceService.aggregateQuery(condition, aggregate, Session.ITEM_TYPE);
+
+            list.remove(goalStartCondition);
+            list.add(goalTargetCondition);
+            match = persistenceService.aggregateQuery(condition, aggregate, Session.ITEM_TYPE);
         } else {
             list.add(goalStartCondition);
             all = new HashMap<String, Long>();

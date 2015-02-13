@@ -6,6 +6,8 @@ import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.QueryService;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
 import org.oasis_open.contextserver.persistence.spi.aggregate.DateAggregate;
+import org.oasis_open.contextserver.persistence.spi.aggregate.DateRangeAggregate;
+import org.oasis_open.contextserver.persistence.spi.aggregate.NumericRangeAggregate;
 import org.oasis_open.contextserver.persistence.spi.aggregate.TermsAggregate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +58,10 @@ public class QueryServiceImpl implements QueryService {
                     if(query.getAggregate().getType().equals("date")){
                         String interval = (String) query.getAggregate().getParameters().get("interval");
                         return persistenceService.aggregateQuery(query.getCondition(), new DateAggregate(property, interval), type);
+                    }else if (query.getAggregate().getType().equals("dateRange") && query.getAggregate().getGenericRanges() != null && query.getAggregate().getGenericRanges().size() > 0) {
+                        return persistenceService.aggregateQuery(query.getCondition(), new DateRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().getGenericRanges()), type);
+                    } else if (query.getAggregate().getType().equals("range") && query.getAggregate().getNumericRanges() != null && query.getAggregate().getNumericRanges().size() > 0) {
+                        return persistenceService.aggregateQuery(query.getCondition(), new NumericRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().getNumericRanges()), type);
                     }
                 }
             }

@@ -2,9 +2,9 @@ package org.oasis_open.contextserver.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.Metadata;
-import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.goals.Goal;
 import org.oasis_open.contextserver.api.goals.GoalReport;
+import org.oasis_open.contextserver.api.query.AggregateQuery;
 import org.oasis_open.contextserver.api.services.GoalsService;
 
 import javax.jws.WebMethod;
@@ -64,16 +64,10 @@ public class GoalsServiceEndPoint {
         return goalsService.getGoalReport(scope, goalId);
     }
 
-    @GET
-    @Path("/{scope}/{goalID}/report/{split}")
-    public GoalReport getGoalReport(@PathParam("scope") String scope, @PathParam("goalID") String goalId, @PathParam("split") String split) {
-        return goalsService.getGoalReport(scope, goalId, split);
-    }
-
     @POST
-    @Path("/{scope}/{goalID}/conditionalReport/{split}")
-    public GoalReport getGoalReport(@PathParam("scope") String scope, @PathParam("goalID") String goalId, @PathParam("split") String split, Condition condition) {
-        return goalsService.getGoalReport(scope, goalId, split, condition);
+    @Path("/{scope}/{goalID}/report")
+    public GoalReport getGoalReport(@PathParam("scope") String scope, @PathParam("goalID") String goalId, AggregateQuery query) {
+        return goalsService.getGoalReport(scope, goalId, query);
     }
 
 }
