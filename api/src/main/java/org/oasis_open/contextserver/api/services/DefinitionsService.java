@@ -2,6 +2,7 @@ package org.oasis_open.contextserver.api.services;
 
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.ActionType;
+import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 
 import java.util.Collection;
@@ -45,5 +46,9 @@ public interface DefinitionsService {
     Map<Long, List<PluginType>> getTypesByPlugin();
 
     PropertyMergeStrategyType getPropertyMergeStrategyType(String id);
+
+    Set<Condition> extractConditionsByType(Condition rootCondition, String typeId);
+
+    Condition extractConditionByTag(Condition rootCondition, String tagId);
 
 }

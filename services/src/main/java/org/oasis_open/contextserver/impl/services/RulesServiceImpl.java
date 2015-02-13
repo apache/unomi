@@ -180,7 +180,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             String scope = rule.getMetadata().getScope();
             if (scope.equals(Metadata.SYSTEM_SCOPE) || scope.equals(event.getScope())) {
                 ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
-                Condition eventCondition = extractConditionByTag(rule.getCondition(), "eventCondition");
+                Condition eventCondition = definitionsService.extractConditionByTag(rule.getCondition(), "eventCondition");
 
                 if (eventCondition == null) {
                     continue;
@@ -190,7 +190,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                     continue;
                 }
 
-                Set<Condition> sourceConditions = extractConditionsByType(rule.getCondition(), "sourceEventPropertyCondition");
+                Set<Condition> sourceConditions = definitionsService.extractConditionsByType(rule.getCondition(), "sourceEventPropertyCondition");
 
                 boolean unmatchedSource = false;
                 for (Condition sourceCondition : sourceConditions) {
@@ -212,11 +212,11 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                     }
                 }
 
-                Condition profileCondition = extractConditionByTag(rule.getCondition(), "profileCondition");
+                Condition profileCondition = definitionsService.extractConditionByTag(rule.getCondition(), "profileCondition");
                 if (profileCondition != null && !persistenceService.testMatch(profileCondition, event.getProfile())) {
                     continue;
                 }
-                Condition sessionCondition = extractConditionByTag(rule.getCondition(), "sessionCondition");
+                Condition sessionCondition = definitionsService.extractConditionByTag(rule.getCondition(), "sessionCondition");
                 if (sessionCondition != null && !persistenceService.testMatch(sessionCondition, event.getSession())) {
                     continue;
                 }
@@ -294,7 +294,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         if (condition != null) {
             if (rule.getMetadata().isEnabled() && !rule.getMetadata().isMissingPlugins()) {
                 ParserHelper.resolveConditionType(definitionsService, condition);
-                Condition eventCondition = extractConditionByTag(condition, "eventCondition");
+                Condition eventCondition = definitionsService.extractConditionByTag(condition, "eventCondition");
 //                if (eventCondition != null) {
 //                    persistenceService.saveQuery(RULE_QUERY_PREFIX + rule.getMetadata().getIdWithScope(), eventCondition);
 //                }
@@ -309,9 +309,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         Set<Condition> trackedConditions = new HashSet<>();
         for (Metadata metadata : getRuleMetadatas()) {
             Rule r = getRule(metadata.getScope(), metadata.getId());
-            Condition trackedCondition = extractConditionByTag(r.getCondition(), "trackedCondition");
+            Condition trackedCondition = definitionsService.extractConditionByTag(r.getCondition(), "trackedCondition");
             if(trackedCondition != null){
-                Set<Condition> sourceEventPropertyConditions = extractConditionsByType(r.getCondition(), "sourceEventPropertyCondition");
+                Set<Condition> sourceEventPropertyConditions = definitionsService.extractConditionsByType(r.getCondition(), "sourceEventPropertyCondition");
                 boolean match = !(source == null && sourceEventPropertyConditions.size() > 0);
                 for (Condition sourceEventPropertyCondition : sourceEventPropertyConditions){
                     ParserHelper.resolveConditionType(definitionsService, sourceEventPropertyCondition);
@@ -326,54 +326,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             }
         }
         return trackedConditions;
-    }
-
-    private Set<Condition> extractConditionsByType(Condition rootCondition, String typeId) {
-        if (rootCondition.getParameterValues().containsKey("subConditions")) {
-            List<Condition> subConditions = (List<Condition>) rootCondition.getParameterValues().get("subConditions");
-            Set<Condition> matchingConditions = new HashSet<>();
-            for (Condition condition : subConditions) {
-                matchingConditions.addAll(extractConditionsByType(condition, typeId));
-            }
-            return matchingConditions;
-        } else if (rootCondition.getConditionTypeId() != null && rootCondition.getConditionTypeId().equals(typeId)) {
-            return Collections.singleton(rootCondition);
-        } else {
-            return Collections.emptySet();
-        }
-    }
-
-    private Condition extractConditionByTag(Condition rootCondition, String tagId) {
-        if (rootCondition.getParameterValues().containsKey("subConditions")) {
-            List<Condition> subConditions = (List<Condition>) rootCondition.getParameterValues().get("subConditions");
-            List<Condition> matchingConditions = new ArrayList<Condition>();
-            for (Condition condition : subConditions) {
-                Condition c = extractConditionByTag(condition, tagId);
-                if (c != null) {
-                    matchingConditions.add(c);
-                }
-            }
-            if (matchingConditions.size() == 0) {
-                return null;
-            } else if (matchingConditions.equals(subConditions)) {
-                return rootCondition;
-            } else if (rootCondition.getConditionTypeId().equals("booleanCondition") && "and".equals(rootCondition.getParameterValues().get("operator"))) {
-                if (matchingConditions.size() == 1) {
-                    return matchingConditions.get(0);
-                } else {
-                    Condition res = new Condition();
-                    res.setConditionType(definitionsService.getConditionType("booleanCondition"));
-                    res.getParameterValues().put("operator", "and");
-                    res.getParameterValues().put("subConditions", matchingConditions);
-                    return res;
-                }
-            }
-            throw new IllegalArgumentException();
-        } else if (rootCondition.getConditionType() != null && rootCondition.getConditionType().getTagIDs().contains(tagId)) {
-            return rootCondition;
-        } else {
-            return null;
-        }
     }
 
     public void removeRule(String scope, String ruleId) {

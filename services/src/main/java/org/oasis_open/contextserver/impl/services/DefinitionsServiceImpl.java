@@ -2,6 +2,7 @@ package org.oasis_open.contextserver.impl.services;
 
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.ActionType;
+import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
@@ -479,5 +480,55 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     public PropertyMergeStrategyType getPropertyMergeStrategyType(String id) {
         return propertyMergeStrategyTypeById.get(id);
     }
+
+    public Set<Condition> extractConditionsByType(Condition rootCondition, String typeId) {
+        if (rootCondition.getParameterValues().containsKey("subConditions")) {
+            List<Condition> subConditions = (List<Condition>) rootCondition.getParameterValues().get("subConditions");
+            Set<Condition> matchingConditions = new HashSet<>();
+            for (Condition condition : subConditions) {
+                matchingConditions.addAll(extractConditionsByType(condition, typeId));
+            }
+            return matchingConditions;
+        } else if (rootCondition.getConditionTypeId() != null && rootCondition.getConditionTypeId().equals(typeId)) {
+            return Collections.singleton(rootCondition);
+        } else {
+            return Collections.emptySet();
+        }
+    }
+
+    public Condition extractConditionByTag(Condition rootCondition, String tagId) {
+        if (rootCondition.getParameterValues().containsKey("subConditions")) {
+            List<Condition> subConditions = (List<Condition>) rootCondition.getParameterValues().get("subConditions");
+            List<Condition> matchingConditions = new ArrayList<Condition>();
+            for (Condition condition : subConditions) {
+                Condition c = extractConditionByTag(condition, tagId);
+                if (c != null) {
+                    matchingConditions.add(c);
+                }
+            }
+            if (matchingConditions.size() == 0) {
+                return null;
+            } else if (matchingConditions.equals(subConditions)) {
+                return rootCondition;
+            } else if (rootCondition.getConditionTypeId().equals("booleanCondition") && "and".equals(rootCondition.getParameterValues().get("operator"))) {
+                if (matchingConditions.size() == 1) {
+                    return matchingConditions.get(0);
+                } else {
+                    Condition res = new Condition();
+                    res.setConditionType(getConditionType("booleanCondition"));
+                    res.getParameterValues().put("operator", "and");
+                    res.getParameterValues().put("subConditions", matchingConditions);
+                    return res;
+                }
+            }
+            throw new IllegalArgumentException();
+        } else if (rootCondition.getConditionType() != null && rootCondition.getConditionType().getTagIDs().contains(tagId)) {
+            return rootCondition;
+        } else {
+            return null;
+        }
+    }
+
+
 
 }

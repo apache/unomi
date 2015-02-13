@@ -1,6 +1,16 @@
 {
     "id": "sessionDurationCondition",
-    "queryBuilderFilter": "(queryBuilderId=sessionDurationConditionESQueryBuilder)",
+    "parentCondition" : {
+        "type": "sessionPropertyCondition",
+        "parameterValues": {
+            "propertyName": "duration",
+            "comparisonOperator": "between",
+            "propertyValuesInteger": [
+                "script::minimumDuration*1000",
+                "script::maximumDuration*1000"
+            ]
+        }
+    },
     "tags": [ "demographic", "sessionCondition" ],
     "parameters": [
         {

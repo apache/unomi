@@ -251,12 +251,15 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     @Override
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
         ParserHelper.resolveConditionType(definitionsService, condition);
-        if (condition.getConditionType() != null && condition.getConditionType().getTagIDs().contains("profileCondition")) {
-            return persistenceService.testMatch(condition, profile);
-        } else if (condition.getConditionType() != null && condition.getConditionType().getTagIDs().contains("sessionCondition")) {
-            return persistenceService.testMatch(condition, session);
+        Condition profileCondition = definitionsService.extractConditionByTag(condition, "profileCondition");
+        Condition sessionCondition = definitionsService.extractConditionByTag(condition, "sessionCondition");
+        if (profileCondition != null && !persistenceService.testMatch(profileCondition, profile)) {
+            return false;
         }
-        return false;
+        if (sessionCondition != null && !persistenceService.testMatch(sessionCondition, session)) {
+            return false;
+        }
+        return true;
     }
 
     public Persona loadPersona(String personaId) {

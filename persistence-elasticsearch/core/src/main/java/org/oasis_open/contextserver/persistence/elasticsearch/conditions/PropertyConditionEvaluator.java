@@ -17,25 +17,22 @@ import java.util.regex.Pattern;
  */
 public class PropertyConditionEvaluator implements ConditionEvaluator {
 
-    private int compare(Object actualValue, String expectedValue, Date expectedValueDate, Number expectedValueNumber, String expectedValueDateExpr) {
-        if (expectedValue == null && expectedValueDate == null && expectedValueNumber == null && expectedValueDateExpr == null) {
+    private int compare(Object actualValue, String expectedValue, Date expectedValueDate, Integer expectedValueInteger, String expectedValueDateExpr) {
+        if (expectedValue == null && expectedValueDate == null && expectedValueInteger == null && expectedValueDateExpr == null) {
             return actualValue == null ? 0 : 1;
         } else if (actualValue == null) {
             return -1;
         }
-        if (expectedValueNumber instanceof Float || expectedValueNumber instanceof Double) {
-            return getDouble(actualValue).compareTo(getDouble(expectedValueNumber));
-        } else if (expectedValueNumber instanceof Integer || expectedValueNumber instanceof Long) {
-            return getLong(actualValue).compareTo(getLong(expectedValueNumber));
+
+        if (expectedValueInteger != null) {
+            return getInteger(actualValue).compareTo(expectedValueInteger);
         } else if (expectedValueDate != null) {
-            return getDate(actualValue).compareTo(getDate(expectedValueDate));
+            return getDate(actualValue).compareTo(expectedValueDate);
         } else if (expectedValueDateExpr != null) {
             return getDate(actualValue).compareTo(getDate(expectedValueDateExpr));
-        } else if (expectedValue != null) {
+        } else {
             return actualValue.toString().compareTo(expectedValue);
         }
-
-        throw new UnsupportedOperationException("Cannot compare " + actualValue + " and " + expectedValue);
     }
 
     private boolean compareMultivalue(Object actualValue, List expectedValues, List expectedValuesDate, List expectedValuesNumber, List expectedValuesDateExpr, String op) {
@@ -124,8 +121,10 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("lessThanOrEqualTo")) {
             return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) >= 0;
         } else if (op.equals("between")) {
-            return compare(actualValue, null, (Date) condition.getParameter("lowerBoundDate"), (Number) condition.getParameter("lowerBoundNumber"), (String) condition.getParameter("lowerBoundDateExpr")) >= 0
-             && compare(actualValue, null, (Date) condition.getParameter("upperBoundDate"), (Number) condition.getParameter("upperBoundNumber"), (String) condition.getParameter("upperBoundDateExpr")) < 0;
+            return
+                    compare(actualValue, null, expectedValuesDate != null ? (Date) expectedValuesDate.get(0) : null, expectedValuesInteger != null ? (Integer) expectedValuesInteger.get(0) : null, expectedValuesDateExpr != null ? (String) expectedValuesDateExpr.get(0) : null) >= 0
+                            &&
+                            compare(actualValue, null, expectedValuesDate != null ? (Date) expectedValuesDate.get(1) : null, expectedValuesInteger != null ? (Integer) expectedValuesInteger.get(1) : null, expectedValuesDateExpr != null ? (String) expectedValuesDateExpr.get(1) : null) < 0;
         } else if (op.equals("contains")) {
             return actualValue.toString().contains(expectedValue);
         } else if (op.equals("startsWith")) {
@@ -141,13 +140,13 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         return false;
     }
 
-    private Long getDate(Object value) {
+    private Date getDate(Object value) {
         if (value instanceof Date) {
-            return ((Date) value).getTime();
+            return ((Date) value);
         } else {
             DateMathParser parser = new DateMathParser(DateFieldMapper.Defaults.DATE_TIME_FORMATTER, TimeUnit.MILLISECONDS);
             try {
-                return parser.parse(value.toString(), System.currentTimeMillis());
+                return new Date(parser.parse(value.toString(), System.currentTimeMillis()));
             } catch (ElasticsearchParseException e) {
                 // Not a date
             }
@@ -164,12 +163,12 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         return null;
     }
 
-    private Long getLong(Object value) {
+    private Integer getInteger(Object value) {
         if (value instanceof Number) {
-            return ((Number)value).longValue();
+            return ((Number)value).intValue();
         } else {
             try {
-                return Long.parseLong(value.toString());
+                return Integer.parseInt(value.toString());
             } catch (NumberFormatException e) {
                 // Not a number
             }
