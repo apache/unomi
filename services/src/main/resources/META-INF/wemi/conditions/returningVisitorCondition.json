@@ -1,0 +1,34 @@
+{
+  "id": "returningVisitorCondition",
+  "parentCondition" : {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "operator":"and",
+      "subConditions":[
+        {
+          "type": "sessionPropertyCondition",
+          "parameterValues": {
+            "propertyName": "profile.properties.previousVisit",
+            "comparisonOperator": "exists"
+          }
+        },
+        {
+          "type": "sessionPropertyCondition",
+          "parameterValues": {
+            "propertyName": "profile.properties.previousVisit",
+            "comparisonOperator": "greaterThan",
+            "propertyValueDateExpr": "script::'now-'+since+'d'"
+          }
+        }
+      ]
+    }
+  },
+  "tags": [ "demographic", "sessionCondition" ],
+  "parameters": [
+    {
+      "id": "since",
+      "type": "integer",
+      "multivalued": false
+    }
+  ]
+}

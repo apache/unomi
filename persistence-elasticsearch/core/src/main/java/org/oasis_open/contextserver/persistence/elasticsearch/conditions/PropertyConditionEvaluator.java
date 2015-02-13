@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 public class PropertyConditionEvaluator implements ConditionEvaluator {
 
     private int compare(Object actualValue, String expectedValue, Date expectedValueDate, Integer expectedValueInteger, String expectedValueDateExpr) {
-        if (expectedValue == null && expectedValueDate == null && expectedValueInteger == null && expectedValueDateExpr == null) {
+        if (expectedValue == null && expectedValueDate == null && expectedValueInteger == null && getDate(expectedValueDateExpr) == null) {
             return actualValue == null ? 0 : 1;
         } else if (actualValue == null) {
             return -1;
@@ -36,7 +36,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     }
 
     private boolean compareMultivalue(Object actualValue, List expectedValues, List expectedValuesDate, List expectedValuesNumber, List expectedValuesDateExpr, String op) {
-        List expected = ObjectUtils.firstNonNull(expectedValues, expectedValuesDate, expectedValuesNumber, expectedValuesDateExpr);
+        List expected = ObjectUtils.firstNonNull(expectedValues, expectedValuesDate, expectedValuesNumber);
         if (actualValue == null) {
             return expected == null;
         } else if (expected == null) {
@@ -141,6 +141,9 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     }
 
     private Date getDate(Object value) {
+        if (value == null) {
+            return null;
+        }
         if (value instanceof Date) {
             return ((Date) value);
         } else {
