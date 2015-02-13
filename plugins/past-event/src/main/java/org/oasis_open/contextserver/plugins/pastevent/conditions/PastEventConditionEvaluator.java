@@ -58,7 +58,7 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
             numberOfDaysCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
             numberOfDaysCondition.getParameterValues().put("propertyName", "timeStamp");
             numberOfDaysCondition.getParameterValues().put("comparisonOperator", "greaterThan");
-            numberOfDaysCondition.getParameterValues().put("propertyValue", "now-"+numberOfDays+"d");
+            numberOfDaysCondition.getParameterValues().put("propertyValueDateExpr", "now-"+numberOfDays+"d");
             l.add(numberOfDaysCondition);
         }
 

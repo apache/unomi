@@ -51,7 +51,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
             numberOfDaysCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
             numberOfDaysCondition.getParameterValues().put("propertyName", "timeStamp");
             numberOfDaysCondition.getParameterValues().put("comparisonOperator", "greaterThan");
-            numberOfDaysCondition.getParameterValues().put("propertyValue", "now-" + numberOfDays + "d");
+            numberOfDaysCondition.getParameterValues().put("propertyValueDateExpr", "now-" + numberOfDays + "d");
             l.add(numberOfDaysCondition);
         }
         //todo : Check behaviour with important number of profiles

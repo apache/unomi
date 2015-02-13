@@ -21,24 +21,36 @@ public class ConditionBuilder {
             super(conditionTypeId, definitionsService);
         }
 
-        public ComparisonCondition all(List<?> values) {
-            return op("all").values(values);
+        public ComparisonCondition all(String... values) {
+            return op("all").stringValues(values);
         }
 
-        public ComparisonCondition all(Object... values) {
-            return op("all").values(values);
+        public ComparisonCondition all(Date... values) {
+            return op("all").dateValues(values);
+        }
+
+        public ComparisonCondition all(Integer... values) {
+            return op("all").integerValues(values);
         }
 
         public ComparisonCondition contains(String value) {
-            return op("contains").value(value);
+            return op("contains").stringValue(value);
         }
 
         public ComparisonCondition endsWith(String value) {
-            return op("endsWith").value(value);
+            return op("endsWith").endsWith(value);
         }
 
-        public ComparisonCondition equalTo(Object value) {
-            return op("equals").value(value);
+        public ComparisonCondition equalTo(String value) {
+            return op("equals").stringValue(value);
+        }
+
+        public ComparisonCondition equalTo(Date value) {
+            return op("equals").dateValue(value);
+        }
+
+        public ComparisonCondition equalTo(Integer value) {
+            return op("equals").integerValue(value);
         }
 
         public ComparisonCondition exists() {
@@ -46,95 +58,87 @@ public class ConditionBuilder {
         }
 
         public ComparisonCondition greaterThan(Date value) {
-            return op("greaterThan").value(value);
-        }
-
-        public ComparisonCondition greaterThan(Double value) {
-            return op("greaterThan").value(value);
+            return op("greaterThan").dateValue(value);
         }
 
         public ComparisonCondition greaterThan(Integer value) {
-            return op("greaterThan").value(value);
-        }
-
-        public ComparisonCondition greaterThan(Long value) {
-            return op("greaterThan").value(value);
+            return op("greaterThan").integerValue(value);
         }
 
         public ComparisonCondition greaterThanOrEqualTo(Date value) {
-            return op("greaterThanOrEqualTo").value(value);
-        }
-
-        public ComparisonCondition greaterThanOrEqualTo(Double value) {
-            return op("greaterThanOrEqualTo").value(value);
+            return op("greaterThanOrEqualTo").dateValue(value);
         }
 
         public ComparisonCondition greaterThanOrEqualTo(Integer value) {
-            return op("greaterThanOrEqualTo").value(value);
+            return op("greaterThanOrEqualTo").integerValue(value);
         }
 
-        public ComparisonCondition greaterThanOrEqualTo(Long value) {
-            return op("greaterThanOrEqualTo").value(value);
+        public ComparisonCondition in(String... values) {
+            return op("in").stringValues(values);
         }
 
-        public ComparisonCondition in(List<?> values) {
-            return op("in").values(values);
+        public ComparisonCondition in(Date... values) {
+            return op("in").dateValues(values);
         }
 
-        public ComparisonCondition in(Object... values) {
-            return op("in").values(values);
+        public ComparisonCondition in(Integer... values) {
+            return op("in").integerValues(values);
         }
 
         public ComparisonCondition lessThan(Date value) {
-            return op("lessThan").value(value);
-        }
-
-        public ComparisonCondition lessThan(Double value) {
-            return op("lessThan").value(value);
+            return op("lessThan").dateValue(value);
         }
 
         public ComparisonCondition lessThan(Integer value) {
-            return op("lessThan").value(value);
-        }
-
-        public ComparisonCondition lessThan(Long value) {
-            return op("lessThan").value(value);
+            return op("lessThan").integerValue(value);
         }
 
         public ComparisonCondition lessThanOrEqualTo(Date value) {
-            return op("lessThanOrEqualTo").value(value);
-        }
-
-        public ComparisonCondition lessThanOrEqualTo(Double value) {
-            return op("lessThanOrEqualTo").value(value);
+            return op("lessThanOrEqualTo").dateValue(value);
         }
 
         public ComparisonCondition lessThanOrEqualTo(Integer value) {
-            return op("lessThanOrEqualTo").value(value);
+            return op("lessThanOrEqualTo").integerValue(value);
         }
 
-        public ComparisonCondition lessThanOrEqualTo(Long value) {
-            return op("lessThanOrEqualTo").value(value);
+        public ComparisonCondition between(Date lowerBound, Date upperBound) {
+            return op("between").dateValues(lowerBound, upperBound);
+        }
+
+        public ComparisonCondition between(Integer lowerBound, Integer upperBound) {
+            return op("between").integerValues(lowerBound, upperBound);
         }
 
         public ComparisonCondition matchesRegex(String value) {
-            return op("matchesRegex").value(value);
+            return op("matchesRegex").stringValue(value);
         }
 
         public ComparisonCondition missing() {
             return op("missing");
         }
 
-        public ComparisonCondition notEqualTo(Object value) {
-            return op("notEquals").value(value);
+        public ComparisonCondition notEqualTo(String value) {
+            return op("notEquals").stringValue(value);
         }
 
-        public ComparisonCondition notIn(List<?> values) {
-            return op("notIn").values(values);
+        public ComparisonCondition notEqualTo(Date value) {
+            return op("notEquals").dateValue(value);
         }
 
-        public ComparisonCondition notIn(Object... values) {
-            return op("notIn").values(values);
+        public ComparisonCondition notEqualTo(Integer value) {
+            return op("notEquals").integerValue(value);
+        }
+
+        public ComparisonCondition notIn(String... values) {
+            return op("notIn").stringValues(values);
+        }
+
+        public ComparisonCondition notIn(Date... values) {
+            return op("notIn").dateValues(values);
+        }
+
+        public ComparisonCondition notIn(Integer... values) {
+            return op("notIn").integerValues(values);
         }
 
         private ComparisonCondition op(String op) {
@@ -151,19 +155,35 @@ public class ConditionBuilder {
         }
 
         public ComparisonCondition startsWith(String value) {
-            return op("startsWith").value(value);
+            return op("startsWith").stringValue(value);
         }
 
-        private ComparisonCondition value(Object value) {
-            return parameter("propertyValue", value);
+        private ComparisonCondition stringValue(String value) {
+            return parameter("propertyValueString", value);
         }
 
-        private ComparisonCondition values(List<?> values) {
+        private ComparisonCondition integerValue(Integer value) {
+            return parameter("propertyValueInteger", value);
+        }
+
+        private ComparisonCondition dateValue(Date value) {
+            return parameter("propertyValueDate", value);
+        }
+
+        private ComparisonCondition stringValues(List<String> values) {
             return parameter("propertyValues", values);
         }
 
-        private ComparisonCondition values(Object... values) {
+        private ComparisonCondition stringValues(String... values) {
             return parameter("propertyValues", values != null ? Arrays.asList(values) : null);
+        }
+
+        private ComparisonCondition integerValues(Integer... values) {
+            return parameter("propertyValuesInteger", values != null ? Arrays.asList(values) : null);
+        }
+
+        private ComparisonCondition dateValues(Date... values) {
+            return parameter("propertyValuesDate", values != null ? Arrays.asList(values) : null);
         }
     }
 

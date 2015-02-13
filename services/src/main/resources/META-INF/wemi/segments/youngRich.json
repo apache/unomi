@@ -11,7 +11,7 @@
                 {
                     "parameterValues": {
                         "propertyName": "properties.age",
-                        "propertyValue": 25,
+                        "propertyValueInteger": 25,
                         "comparisonOperator": "lessThan"
                     },
                     "type": "profilePropertyCondition"
@@ -19,7 +19,7 @@
                 {
                     "parameterValues": {
                         "propertyName": "properties.income",
-                        "propertyValue": 10000000,
+                        "propertyValueInteger": 10000000,
                         "comparisonOperator": "greaterThan"
                     },
                     "type": "profilePropertyCondition"

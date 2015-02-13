@@ -24,6 +24,8 @@ public class ComparisonOperatorChoiceListInitializer implements ChoiceListInitia
                 "integer", "date"));
         OPERATORS.add(new ComparisonOperatorChoiceListValue("greaterThanOrEqualTo", "comparisonOperator.greaterThanOrEqualTo",
                 "integer", "date"));
+        OPERATORS.add(new ComparisonOperatorChoiceListValue("between", "comparisonOperator.between",
+                "integer", "date"));
         OPERATORS.add(new ComparisonOperatorChoiceListValue("startsWith", "comparisonOperator.startsWith", "string", "email"));
         OPERATORS.add(new ComparisonOperatorChoiceListValue("endsWith", "comparisonOperator.endsWith", "string", "email"));
         OPERATORS.add(new ComparisonOperatorChoiceListValue("matchesRegex", "comparisonOperator.matchesRegularExpression",

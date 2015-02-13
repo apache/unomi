@@ -1,18 +1,14 @@
 package org.oasis_open.contextserver.persistence.elasticsearch.conditions;
 
 import org.apache.commons.beanutils.BeanUtilsBean;
+import org.apache.commons.lang3.ObjectUtils;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.joda.DateMathParser;
 import org.elasticsearch.index.mapper.core.DateFieldMapper;
 import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.conditions.Condition;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -21,33 +17,37 @@ import java.util.regex.Pattern;
  */
 public class PropertyConditionEvaluator implements ConditionEvaluator {
 
-    private int compare(Object value1, Object value2) {
-        if (value2 == null) {
-            return value1 == null ? 0 : 1;
-        } else if (value1 == null) {
+    private int compare(Object actualValue, String expectedValue, Date expectedValueDate, Number expectedValueNumber, String expectedValueDateExpr) {
+        if (expectedValue == null && expectedValueDate == null && expectedValueNumber == null && expectedValueDateExpr == null) {
+            return actualValue == null ? 0 : 1;
+        } else if (actualValue == null) {
             return -1;
         }
-        if (value2 instanceof Float || value2 instanceof Double) {
-            return getDouble(value1).compareTo(getDouble(value2));
-        } else if (value2 instanceof Integer || value2 instanceof Long) {
-            return getLong(value1).compareTo(getLong(value2));
-        } else if (value2 instanceof Date) {
-            return getDate(value1).compareTo(getDate(value2));
+        if (expectedValueNumber instanceof Float || expectedValueNumber instanceof Double) {
+            return getDouble(actualValue).compareTo(getDouble(expectedValueNumber));
+        } else if (expectedValueNumber instanceof Integer || expectedValueNumber instanceof Long) {
+            return getLong(actualValue).compareTo(getLong(expectedValueNumber));
+        } else if (expectedValueDate != null) {
+            return getDate(actualValue).compareTo(getDate(expectedValueDate));
+        } else if (expectedValueDateExpr != null) {
+            return getDate(actualValue).compareTo(getDate(expectedValueDateExpr));
+        } else if (expectedValue != null) {
+            return actualValue.toString().compareTo(expectedValue);
         }
 
-        throw new UnsupportedOperationException("Cannot compare " + value1 + " and " + value2);
+        throw new UnsupportedOperationException("Cannot compare " + actualValue + " and " + expectedValue);
     }
 
-    private boolean compareMultivalue(Object actualValue, Object expectedValue, String op) {
+    private boolean compareMultivalue(Object actualValue, List expectedValues, List expectedValuesDate, List expectedValuesNumber, List expectedValuesDateExpr, String op) {
+        List expected = ObjectUtils.firstNonNull(expectedValues, expectedValuesDate, expectedValuesNumber, expectedValuesDateExpr);
         if (actualValue == null) {
-            return expectedValue == null;
-        } else if (expectedValue == null) {
+            return expected == null;
+        } else if (expected == null) {
             return false;
         }
         
         Set<Object> actual = getValueSet(actualValue);
-        Set<Object> expected = getValueSet(expectedValue);
-        
+
         boolean result = true;
         
         switch (op) {
@@ -88,8 +88,17 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
         String op = (String) condition.getParameter("comparisonOperator");
         String name = (String) condition.getParameter("propertyName");
-        Object expectedValue = condition.getParameter("propertyValue");
-        Object expectedValues = condition.getParameter("propertyValues");
+
+        String expectedValue = (String) condition.getParameter("propertyValue");
+        Integer expectedValueInteger = (Integer) condition.getParameter("propertyValueInteger");
+        Date expectedValueDate = (Date) condition.getParameter("propertyValueDate");
+        String expectedValueDateExpr = (String) condition.getParameter("propertyValueDateExpr");
+
+        List expectedValues = (List) condition.getParameter("propertyValues");
+        List expectedValuesInteger = (List) condition.getParameter("propertyValuesInteger");
+        List expectedValuesDate = (List) condition.getParameter("propertyValuesDate");
+        List expectedValuesDateExpr = (List) condition.getParameter("propertyValuesDateExpr");
+
         Object actualValue;
         try {
             actualValue = BeanUtilsBean.getInstance().getPropertyUtils().getProperty(item, name);
@@ -103,27 +112,30 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("exists")) {
             return true;
         } else if (op.equals("equals")) {
-            return expectedValue.equals(actualValue);
+            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) == 0;
         } else if (op.equals("notEquals")) {
-            return !expectedValue.equals(actualValue);
+            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) != 0;
         } else if (op.equals("greaterThan")) {
-            return compare(actualValue, expectedValue) > 0;
+            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) > 0;
         } else if (op.equals("greaterThanOrEqualTo")) {
-            return compare(actualValue, expectedValue) >= 0;
+            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) >= 0;
         } else if (op.equals("lessThan")) {
-            return compare(actualValue, expectedValue) < 0;
+            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) < 0;
         } else if (op.equals("lessThanOrEqualTo")) {
-            return compare(actualValue, expectedValue) >= 0;
+            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) >= 0;
+        } else if (op.equals("between")) {
+            return compare(actualValue, null, (Date) condition.getParameter("lowerBoundDate"), (Number) condition.getParameter("lowerBoundNumber"), (String) condition.getParameter("lowerBoundDateExpr")) >= 0
+             && compare(actualValue, null, (Date) condition.getParameter("upperBoundDate"), (Number) condition.getParameter("upperBoundNumber"), (String) condition.getParameter("upperBoundDateExpr")) < 0;
         } else if (op.equals("contains")) {
-            return actualValue.toString().contains(expectedValue.toString());
+            return actualValue.toString().contains(expectedValue);
         } else if (op.equals("startsWith")) {
-            return actualValue.toString().startsWith(expectedValue.toString());
+            return actualValue.toString().startsWith(expectedValue);
         } else if (op.equals("endsWith")) {
-            return actualValue.toString().endsWith(expectedValue.toString());
+            return actualValue.toString().endsWith(expectedValue);
         } else if (op.equals("matchesRegex")) {
-            return Pattern.compile(expectedValue.toString()).matcher(actualValue.toString()).matches();
+            return Pattern.compile(expectedValue).matcher(actualValue.toString()).matches();
         } else if (op.equals("in") || op.equals("notIn") || op.equals("all")) {
-            return compareMultivalue(actualValue, expectedValues, op);
+            return compareMultivalue(actualValue, expectedValues, expectedValuesDate, expectedValuesInteger, expectedValuesDateExpr, op);
         }
         
         return false;

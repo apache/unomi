@@ -50,7 +50,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             Condition timeCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
             timeCondition.getParameterValues().put("propertyName","timeStamp");
             timeCondition.getParameterValues().put("comparisonOperator","greaterThan");
-            timeCondition.getParameterValues().put("propertyValue","now-"+i+"d");
+            timeCondition.getParameterValues().put("propertyValueDateExpr","now-"+i+"d");
 
             conditions.add(timeCondition);
         }

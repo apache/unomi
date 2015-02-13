@@ -22,7 +22,7 @@
                     "parameterValues": {
                         "propertyName": "duration",
                         "comparisonOperator": "equals",
-                        "propertyValue": 0
+                        "propertyValueInteger": 0
                     }
                 }
             ]

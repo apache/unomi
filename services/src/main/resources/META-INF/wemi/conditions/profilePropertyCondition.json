@@ -22,9 +22,40 @@
             "multivalued": false
         },
         {
+            "id": "propertyValueInteger",
+            "type": "integer",
+            "multivalued": false
+        },
+        {
+            "id": "propertyValueDate",
+            "type": "date",
+            "multivalued": false
+        },
+        {
+            "id": "propertyValueDateExpr",
+            "type": "string",
+            "multivalued": false
+        },
+        {
             "id": "propertyValues",
             "type": "string",
             "multivalued": true
+        },
+        {
+            "id": "propertyValuesInteger",
+            "type": "integer",
+            "multivalued": true
+        },
+        {
+            "id": "propertyValuesDate",
+            "type": "date",
+            "multivalued": true
+        },
+        {
+            "id": "propertyValuesDateExpr",
+            "type": "string",
+            "multivalued": true
         }
+
     ]
 }

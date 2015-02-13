@@ -4,7 +4,7 @@
         "type": "profilePropertyCondition",
         "parameterValues": {
             "propertyName": "script::'properties.interests.'+interestName",
-            "propertyValue": "parameter::value",
+            "propertyValueInteger": "parameter::value",
             "comparisonOperator": "greaterThan"
         }
     },
