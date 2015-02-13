@@ -38,7 +38,7 @@ public class ConditionBuilder {
         }
 
         public ComparisonCondition endsWith(String value) {
-            return op("endsWith").endsWith(value);
+            return op("endsWith").stringValue(value);
         }
 
         public ComparisonCondition equalTo(String value) {
@@ -159,7 +159,7 @@ public class ConditionBuilder {
         }
 
         private ComparisonCondition stringValue(String value) {
-            return parameter("propertyValueString", value);
+            return parameter("propertyValue", value);
         }
 
         private ComparisonCondition integerValue(Integer value) {
