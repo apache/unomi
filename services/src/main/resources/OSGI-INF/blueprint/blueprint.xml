@@ -145,6 +145,14 @@
         <bean class="org.oasis_open.contextserver.impl.conditions.initializers.CountryChoiceListInitializer"/>
     </service>
 
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="initializerId" value="goals"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.impl.conditions.initializers.GoalsChoiceListInitializer">
+            <property name="goalsService" ref="goalsServiceImpl"/>
+        </bean>
+    </service>
 
     <!-- Action executors -->
 

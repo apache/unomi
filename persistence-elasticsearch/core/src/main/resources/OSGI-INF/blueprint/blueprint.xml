@@ -87,14 +87,6 @@
     <service
             interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="goalMatchConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.GoalMatchConditionESQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
             <entry key="queryBuilderId" value="geoLocationByPointSessionConditionESQueryBuilder"/>
         </service-properties>
         <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.GeoLocationByPointSessionConditionESQueryBuilder"/>

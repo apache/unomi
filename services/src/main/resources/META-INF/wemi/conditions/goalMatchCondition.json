@@ -1,12 +1,19 @@
 {
     "id": "goalMatchCondition",
-    "queryBuilderFilter": "(queryBuilderId=goalMatchConditionESQueryBuilder)",
-    "tags": [ "sessionCondition" ],
+    "parentCondition" : {
+        "type": "profilePropertyCondition",
+        "parameterValues": {
+            "propertyName": "script::'properties.'+goalId+'TargetReached'",
+            "comparisonOperator": "exists"
+        }
+    },
+    "tags": [ "sessionCondition", "profileCondition" ],
     "parameters": [
         {
             "id": "goalId",
             "type": "string",
-            "multivalued": false
+            "multivalued": false,
+            "choiceListInitializerFilter": "(initializerId=goals)"
         }
     ]
 }
