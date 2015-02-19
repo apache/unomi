@@ -21,6 +21,8 @@ public class Profile extends Item {
     
     private Map<String,Integer> scores;
 
+    private String mergedWith;
+
     public Profile() {
     }
 
@@ -53,6 +55,14 @@ public class Profile extends Item {
 
     public void setSegments(Set<String> segments) {
         this.segments = segments;
+    }
+
+    public String getMergedWith() {
+        return mergedWith;
+    }
+
+    public void setMergedWith(String mergedWith) {
+        this.mergedWith = mergedWith;
     }
 
     public Map<String, Integer> getScores() {

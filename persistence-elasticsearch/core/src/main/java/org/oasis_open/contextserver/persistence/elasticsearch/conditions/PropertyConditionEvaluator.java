@@ -109,6 +109,14 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("exists")) {
             return true;
         } else if (op.equals("equals")) {
+            if (actualValue instanceof Collection) {
+                for (Object o : ((Collection)actualValue)) {
+                    if (compare(o, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) == 0) {
+                        return true;
+                    }
+                }
+                return false;
+            }
             return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) == 0;
         } else if (op.equals("notEquals")) {
             return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) != 0;

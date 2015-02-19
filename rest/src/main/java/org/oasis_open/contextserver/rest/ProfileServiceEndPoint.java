@@ -64,11 +64,6 @@ public class ProfileServiceEndPoint {
         return profileService.findProfilesByPropertyValue(propertyName, propertyValue);
     }
 
-    @WebMethod(exclude = true)
-    public Profile mergeProfilesOnProperty(Profile currentProfile, Session currentSession, String propertyName, String propertyValue) {
-        return profileService.mergeProfilesOnProperty(currentProfile, currentSession, propertyName, propertyValue);
-    }
-
     @GET
     @Path("/{profileId}")
     public Profile load(@PathParam("profileId") String profileId) {

@@ -65,7 +65,7 @@ public class ContextServlet extends HttpServlet {
 
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
         String httpMethod = httpServletRequest.getMethod();
-        log(HttpUtils.dumpRequestInfo(httpServletRequest));
+//        log(HttpUtils.dumpRequestInfo(httpServletRequest));
 
         if ("options".equals(httpMethod.toLowerCase())) {
             HttpUtils.setupCORSHeaders(httpServletRequest, response);
@@ -215,8 +215,8 @@ public class ContextServlet extends HttpServlet {
 
     private Profile checkMergedProfile(ServletResponse response, Profile profile, Session session) {
         String profileId;
-        if (profile.getProperty("mergedWith") != null) {
-            profileId = (String) profile.getProperty("mergedWith");
+        if (profile.getMergedWith() != null) {
+            profileId = profile.getMergedWith();
             Profile profileToDelete = profile;
             profile = profileService.load(profileId);
             if (profile != null) {
@@ -230,7 +230,7 @@ public class ContextServlet extends HttpServlet {
             } else {
                 log("Couldn't find merged profile" + profileId + ", falling back to profile " + profileToDelete.getItemId());
                 profile = profileToDelete;
-                profile.getProperties().remove("mergedWith");
+                profile.setMergedWith(null);
                 profileService.save(profile);
             }
         }

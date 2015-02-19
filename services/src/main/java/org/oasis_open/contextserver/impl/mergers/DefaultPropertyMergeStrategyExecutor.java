@@ -10,12 +10,16 @@ import java.util.List;
  * Created by loom on 16.10.14.
  */
 public class DefaultPropertyMergeStrategyExecutor implements PropertyMergeStrategyExecutor {
-    public Profile mergeProperty(String propertyName, PropertyType propertyType, List<Profile> profilesToMerge, Profile targetProfile) {
+    public boolean mergeProperty(String propertyName, PropertyType propertyType, List<Profile> profilesToMerge, Profile targetProfile) {
+        boolean modified = false;
         for (Profile profileToMerge : profilesToMerge) {
-            if (profileToMerge.getProperty(propertyName) != null && profileToMerge.getProperty(propertyName).toString().length() > 0 && targetProfile.getProperty(propertyName) == null) {
+            if (profileToMerge.getProperty(propertyName) != null &&
+                    profileToMerge.getProperty(propertyName).toString().length() > 0 &&
+                    targetProfile.getProperty(propertyName) == null) {
                 targetProfile.setProperty(propertyName, profileToMerge.getProperty(propertyName));
+                modified = true;
             }
         }
-        return targetProfile;
+        return modified;
     }
 }

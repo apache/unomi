@@ -10,8 +10,7 @@ import java.util.List;
  * Created by loom on 16.10.14.
  */
 public class AddPropertyMergeStrategyExecutor implements PropertyMergeStrategyExecutor {
-    public Profile mergeProperty(String propertyName, PropertyType propertyType, List<Profile> profilesToMerge, Profile targetProfile) {
-
+    public boolean mergeProperty(String propertyName, PropertyType propertyType, List<Profile> profilesToMerge, Profile targetProfile) {
         Object result = null;
         if (propertyType.getValueTypeId() != null) {
             if (propertyType.getValueTypeId().equals("integer")) {
@@ -52,9 +51,10 @@ public class AddPropertyMergeStrategyExecutor implements PropertyMergeStrategyEx
             }
 
         }
-
-        targetProfile.setProperty(propertyName, result);
-
-        return targetProfile;
+        if (targetProfile.getProperty(propertyName) == null || !targetProfile.getProperty(propertyName).equals(result)) {
+            targetProfile.setProperty(propertyName, result);
+            return true;
+        }
+        return false;
     }
 }

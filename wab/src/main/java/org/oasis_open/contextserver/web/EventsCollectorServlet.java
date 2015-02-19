@@ -55,7 +55,7 @@ public class EventsCollectorServlet extends HttpServlet {
 
     @Override
     protected void doOptions(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        log(HttpUtils.dumpRequestInfo(request));
+//        log(HttpUtils.dumpRequestInfo(request));
         HttpUtils.setupCORSHeaders(request, response);
         response.flushBuffer();
     }
@@ -66,7 +66,7 @@ public class EventsCollectorServlet extends HttpServlet {
             timestamp.setTime(Long.parseLong(request.getParameter("timestamp")));
         }
 
-        log(HttpUtils.dumpRequestInfo(request));
+//        log(HttpUtils.dumpRequestInfo(request));
 
         HttpUtils.setupCORSHeaders(request, response);
 
@@ -119,8 +119,8 @@ public class EventsCollectorServlet extends HttpServlet {
                 } else {
                     eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(), event.getTarget(), timestamp);
                 }
-                event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
-                event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
+                eventToSend.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
+                eventToSend.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                 log("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
                 boolean eventChanged = eventService.send(eventToSend);
                 changed = changed || eventChanged;

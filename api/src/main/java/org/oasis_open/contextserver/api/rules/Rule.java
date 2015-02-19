@@ -18,6 +18,8 @@ public class Rule extends MetadataItem {
 
     private List<Action> actions;
 
+    private List<String> linkedItems;
+
     private boolean raiseEventOnlyOnceForProfile = false;
 
     private boolean raiseEventOnlyOnceForSession = false;
@@ -43,6 +45,14 @@ public class Rule extends MetadataItem {
 
     public void setActions(List<Action> actions) {
         this.actions = actions;
+    }
+
+    public List<String> getLinkedItems() {
+        return linkedItems;
+    }
+
+    public void setLinkedItems(List<String> linkedItems) {
+        this.linkedItems = linkedItems;
     }
 
     public boolean isRaiseEventOnlyOnceForProfile() {

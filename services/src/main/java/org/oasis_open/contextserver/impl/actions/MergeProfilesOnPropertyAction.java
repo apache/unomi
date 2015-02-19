@@ -45,24 +45,18 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
         Object currentMergePropertyValue = profile.getProperty(mergeProfilePropertyName);
 
-        Profile masterProfile = profileService.mergeProfilesOnProperty(profile, event.getSession(), mergeProfilePropertyName, (currentMergePropertyValue == null ? null : currentMergePropertyValue.toString()));
-
-        if (masterProfile == null) {
+        if (currentMergePropertyValue == null) {
             return false;
         }
+        String profileId = profile.getItemId();
+        boolean updated = profileService.mergeProfilesOnProperty(profile, event.getSession(), mergeProfilePropertyName, (currentMergePropertyValue == null ? null : currentMergePropertyValue.toString()));
 
-        if (!masterProfile.getItemId().equals(profile.getItemId())) {
+        if (!event.getSession().getProfileId().equals(profileId)) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
-            sendProfileCookie(masterProfile, httpServletResponse);
-            Session session = event.getSession();
-            if (!session.getProfileId().equals(masterProfile.getItemId())) {
-                session.setProfile(masterProfile);
-                profileService.saveSession(session);
-            }
-            profileService.delete(profile.getItemId(), false);
+            sendProfileCookie(event.getSession().getProfile(), httpServletResponse);
         }
 
-        return true;
+        return updated;
     }
 
     public void sendProfileCookie(Profile profile, ServletResponse response) {

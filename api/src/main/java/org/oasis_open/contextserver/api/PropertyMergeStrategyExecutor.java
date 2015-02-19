@@ -8,6 +8,6 @@ import java.util.List;
  */
 public interface PropertyMergeStrategyExecutor {
 
-    public Profile mergeProperty(String propertyName, PropertyType propertyType, List<Profile> profilesToMerge, Profile targetProfile);
+    public boolean mergeProperty(String propertyName, PropertyType propertyType, List<Profile> profilesToMerge, Profile targetProfile);
 
 }

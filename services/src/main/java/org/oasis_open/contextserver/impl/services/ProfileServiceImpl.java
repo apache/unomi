@@ -101,39 +101,33 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
     }
 
-    public Profile mergeProfilesOnProperty(Profile currentProfile, Session currentSession, String propertyName, String propertyValue) {
-        PartialList<Profile> profilesToMerge = findProfilesByPropertyValue(propertyName, propertyValue);
-        if (!profilesToMerge.getList().contains(currentProfile)) {
-            profilesToMerge.getList().add(currentProfile);
-            profilesToMerge.setTotalSize(profilesToMerge.getList().size());
+    public boolean mergeProfilesOnProperty(Profile currentProfile, Session currentSession, String propertyName, String propertyValue) {
+        List<Profile> profilesToMerge = persistenceService.query(propertyName, propertyValue, "properties.firstVisit", Profile.class);
+
+        if (!profilesToMerge.contains(currentProfile)) {
+            profilesToMerge.add(currentProfile);
         }
 
-        if (profilesToMerge.getTotalSize() == 0) {
-            return null;
+        if (profilesToMerge.size() == 1) {
+            return false;
         }
 
         Profile masterProfile = profilesToMerge.get(0);
 
         // now let's remove all the already merged profiles from the list.
-        PartialList<Profile> filteredProfilesToMerge = new PartialList<Profile>(new ArrayList<Profile>(), 0, 0, 0);
-        for (Profile filteredProfile : profilesToMerge.getList()) {
-            if (!filteredProfile.getItemId().equals(masterProfile.getItemId()) &&
-                    filteredProfile.getProperty("mergedWith") != null &&
-                    filteredProfile.getProperty("mergedWith").equals(masterProfile.getItemId())) {
-                // profile was already merged with the master profile, we will not merge him again.
-                continue;
+        List<Profile> filteredProfilesToMerge = new ArrayList<Profile>();
+
+        for (Profile filteredProfile : profilesToMerge) {
+            if (!filteredProfile.getItemId().equals(masterProfile.getItemId()) && (
+                    filteredProfile.getMergedWith() == null || !filteredProfile.getMergedWith().equals(masterProfile.getItemId()))) {
+                filteredProfilesToMerge.add(filteredProfile);
             }
-            filteredProfilesToMerge.getList().add(filteredProfile);
         }
-        filteredProfilesToMerge.setTotalSize(filteredProfilesToMerge.getList().size());
+
         profilesToMerge = filteredProfilesToMerge;
 
-        if (profilesToMerge.getTotalSize() == 1) {
-            return profilesToMerge.get(0);
-        }
-
         Set<String> allProfileProperties = new LinkedHashSet<String>();
-        for (Profile profile : profilesToMerge.getList()) {
+        for (Profile profile : profilesToMerge) {
             allProfileProperties.addAll(profile.getProperties().keySet());
         }
 
@@ -143,10 +137,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             profilePropertyTypeById.put(propertyType.getId(), propertyType);
         }
         Set<String> profileIdsToMerge = new TreeSet<String>();
-        for (Profile profileToMerge : profilesToMerge.getList()) {
+        for (Profile profileToMerge : profilesToMerge) {
             profileIdsToMerge.add(profileToMerge.getItemId());
         }
         logger.info("Merging profiles " + profileIdsToMerge + " into profile " + masterProfile.getItemId());
+        boolean updated = false;
+
         for (String profileProperty : allProfileProperties) {
             PropertyType propertyType = profilePropertyTypeById.get(profileProperty);
             String propertyMergeStrategyId = "defaultMergeStrategy";
@@ -171,48 +167,53 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             Collection<ServiceReference<PropertyMergeStrategyExecutor>> matchingPropertyMergeStrategyExecutors;
             try {
                 matchingPropertyMergeStrategyExecutors = bundleContext.getServiceReferences(PropertyMergeStrategyExecutor.class, propertyMergeStrategyType.getFilter());
+                for (ServiceReference<PropertyMergeStrategyExecutor> propertyMergeStrategyExecutorReference : matchingPropertyMergeStrategyExecutors) {
+                    PropertyMergeStrategyExecutor propertyMergeStrategyExecutor = bundleContext.getService(propertyMergeStrategyExecutorReference);
+                    updated |= propertyMergeStrategyExecutor.mergeProperty(profileProperty, propertyType, profilesToMerge, masterProfile);
+                }
             } catch (InvalidSyntaxException e) {
                 logger.error("Error retrieving strategy implementation", e);
-                return null;
             }
-            for (ServiceReference<PropertyMergeStrategyExecutor> propertyMergeStrategyExecutorReference : matchingPropertyMergeStrategyExecutors) {
-                PropertyMergeStrategyExecutor propertyMergeStrategyExecutor = bundleContext.getService(propertyMergeStrategyExecutorReference);
-                masterProfile = propertyMergeStrategyExecutor.mergeProperty(profileProperty, propertyType, profilesToMerge.getList(), masterProfile);
-            }
+
         }
 
         // we now have to merge the profile's segments
-        for (Profile profile : profilesToMerge.getList()) {
-            masterProfile.getSegments().addAll(profile.getSegments());
+        for (Profile profile : profilesToMerge) {
+            updated |= masterProfile.getSegments().addAll(profile.getSegments());
         }
 
+        // Refresh index now to ensure we find all sessions/events
+        persistenceService.refresh();
         // we must now retrieve all the session associated with all the profiles and associate them with the master profile
-        for (Profile profile : profilesToMerge.getList()) {
-            if (profile.getItemId().equals(masterProfile.getItemId())) {
-                continue;
+        for (Profile profile : profilesToMerge) {
+            List<Session> sessions = persistenceService.query("profileId", profile.getItemId(), null, Session.class);
+            if (currentSession.getProfileId().equals(profile.getItemId()) && !sessions.contains(currentSession)) {
+                sessions.add(currentSession);
             }
-            PartialList<Session> profileSessions = getProfileSessions(profile.getItemId(), 0, -1, null);
-            if (currentSession.getProfileId().equals(profile.getItemId()) && !profileSessions.getList().contains(currentSession)) {
-                profileSessions.getList().add(currentSession);
-                profileSessions.setTotalSize(profileSessions.getList().size());
+            for (Session session : sessions) {
+                persistenceService.update(session.getItemId(), session.getTimeStamp(), Session.class, "profileId", masterProfile.getItemId());
             }
-            for (Session profileSession : profileSessions.getList()) {
-                profileSession.setProfile(masterProfile);
-                saveSession(profileSession);
+
+            List<Event> events = persistenceService.query("profileId", profile.getItemId(), null, Event.class);
+            for (Event event : events) {
+                persistenceService.update(event.getItemId(), event.getTimeStamp(), Event.class, "profileId", masterProfile.getItemId());
             }
-            // delete(profile);
         }
 
         // we must mark all the profiles that we merged into the master as merged with the master, and they will
         // be deleted upon next load
-        for (Profile profile : profilesToMerge.getList()) {
-            if (profile.getItemId().equals(masterProfile.getItemId())) {
-                continue;
-            }
-            profile.setProperty("mergedWith", masterProfile.getItemId());
+        for (Profile profile : profilesToMerge) {
+            profile.setMergedWith(masterProfile.getItemId());
+            persistenceService.update(profile.getItemId(), null, Profile.class, "mergedWith", masterProfile.getItemId());
         }
 
-        return masterProfile;
+        if (!currentProfile.getItemId().equals(masterProfile.getItemId())) {
+            currentSession.setProfile(masterProfile);
+            saveSession(currentSession);
+            delete(currentProfile.getItemId(), false);
+        }
+
+        return updated;
     }
 
     public PartialList<Session> getProfileSessions(String profileId, int offset, int size, String sortBy) {

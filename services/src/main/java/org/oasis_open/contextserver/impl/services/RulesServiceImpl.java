@@ -223,7 +223,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 matchedRules.add(rule);
             }
         }
-        logger.info("Rules matched with evaluator in " + (System.currentTimeMillis()-l));
 
         return matchedRules;
     }

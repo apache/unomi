@@ -19,7 +19,7 @@ public interface ProfileService {
 
     PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue);
 
-    Profile mergeProfilesOnProperty(Profile currentProfile, Session currentSession, String propertyName, String propertyValue);
+    boolean mergeProfilesOnProperty(Profile currentProfile, Session currentSession, String propertyName, String propertyValue);
 
     Profile load(String profileId);
 

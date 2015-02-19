@@ -22,7 +22,9 @@ public interface PersistenceService {
 
     public boolean save(Item item);
 
-    public boolean update(final String itemId, final Date dateHint, final Class clazz, final String propertyName, final Object propertyValue);
+    public boolean update(String itemId, Date dateHint, Class clazz, Map source);
+
+    public boolean update(String itemId, Date dateHint, Class clazz, String propertyName, Object propertyValue);
 
     public <T extends Item> T load(String itemId, Class<T> clazz);
 

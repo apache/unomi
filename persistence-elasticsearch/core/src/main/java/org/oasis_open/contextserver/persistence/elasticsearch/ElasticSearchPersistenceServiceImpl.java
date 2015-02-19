@@ -366,6 +366,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public boolean update(final String itemId, final Date dateHint, final Class clazz, final String propertyName, final Object propertyValue) {
+        return update(itemId, dateHint, clazz, Collections.singletonMap(propertyName, propertyValue));
+    }
+
+    public boolean update(final String itemId, final Date dateHint, final Class clazz, final Map source) {
         return new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {
                 try {
@@ -375,7 +379,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         dailyIndexName = getDailyIndex(dateHint);
                     }
 
-                    client.prepareUpdate(dailyIndexName, itemType, itemId).setDoc(propertyName, propertyValue)
+                    client.prepareUpdate(dailyIndexName, itemType, itemId).setDoc(source)
                             .execute()
                             .actionGet();
                     return true;

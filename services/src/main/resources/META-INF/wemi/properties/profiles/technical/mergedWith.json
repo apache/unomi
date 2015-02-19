@@ -1,9 +1,0 @@
-{
-    "id": "mergedWith",
-    "type": "string",
-    "tags": ["technicalProfileProperties"],
-    "defaultValue": "",
-    "selectorId": "",
-    "automaticMappingsFrom": [ ],
-    "rank": "2.0"
-}
