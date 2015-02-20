@@ -39,6 +39,8 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
 
         if (op.equals("equals")) {
             return FilterBuilders.termFilter(name, value);
+        } else if (op.equals("notEquals")) {
+            return FilterBuilders.notFilter(FilterBuilders.termFilter(name, value));
         } else if (op.equals("greaterThan")) {
             return FilterBuilders.rangeFilter(name).gt(value);
         } else if (op.equals("greaterThanOrEqualTo")) {
