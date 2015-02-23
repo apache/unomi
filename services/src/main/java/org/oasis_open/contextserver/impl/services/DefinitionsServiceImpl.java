@@ -417,6 +417,14 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         return propertyTypeById.get(target).values();
     }
 
+    public HashMap<String, Collection<PropertyType>> getAllPropertyTypes() {
+        HashMap<String, Collection<PropertyType>> propertyTypes = new HashMap<>();
+        for (String id : propertyTypeById.keySet()){
+            propertyTypes.put(id, getAllPropertyTypes(id));
+        }
+        return propertyTypes;
+    }
+
     public Set<PropertyType> getPropertyTypeByTag(Tag tag, boolean recursive) {
         Set<PropertyType> propertyTypes = new LinkedHashSet<PropertyType>();
         Set<PropertyType> directPropertyTypes = propertyTypeByTag.get(tag);

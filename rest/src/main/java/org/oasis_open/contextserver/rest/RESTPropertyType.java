@@ -20,8 +20,26 @@ public class RESTPropertyType {
     private double rank;
     private String mergeStrategy;
     private Set<String> tags;
+    private boolean multivalued;
+    private Set<RESTRange> ranges;
 
     public RESTPropertyType() {
+    }
+
+    public Set<RESTRange> getRanges() {
+        return ranges;
+    }
+
+    public void setRanges(Set<RESTRange> ranges) {
+        this.ranges = ranges;
+    }
+
+    public boolean isMultivalued() {
+        return multivalued;
+    }
+
+    public void setMultivalued(boolean multivalued) {
+        this.multivalued = multivalued;
     }
 
     public String getId() {

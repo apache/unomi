@@ -3,6 +3,14 @@
     "type": "integer",
     "tags": ["demographicProfileProperties"],
     "defaultValue": "",
+    "ranges": {
+      "less10" : {"to" : 10 },
+      "between10_20" : {"from" : 10, "to" : 20 },
+      "between20_30" : {"from" : 20, "to" : 30 },
+      "between30_40" : {"from" : 30, "to" : 40 },
+      "between40_50" : {"from" : 40, "to" : 50 },
+      "more50" : {"from" : 50 }
+    },
     "selectorId": "",
     "automaticMappingsFrom": [ "j:age" ],
     "rank": "1.0"

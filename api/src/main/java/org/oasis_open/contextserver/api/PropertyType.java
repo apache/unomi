@@ -1,11 +1,11 @@
 package org.oasis_open.contextserver.api;
 
+import org.oasis_open.contextserver.api.query.GenericRange;
+
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
  * Created by loom on 27.08.14.
@@ -20,6 +20,7 @@ public class PropertyType implements Comparable<PropertyType>, PluginType {
     private ValueType valueType;
     private String choiceListInitializerFilter;
     private String defaultValue;
+    private Map<String, GenericRange> ranges = new TreeMap<>();
     private String selectorId;
     private Set<String> automaticMappingsFrom;
     private double rank;
@@ -30,6 +31,14 @@ public class PropertyType implements Comparable<PropertyType>, PluginType {
     private boolean multivalued;
 
     public PropertyType() {
+    }
+
+    public Map<String, GenericRange> getRanges() {
+        return ranges;
+    }
+
+    public void setRanges(Map<String, GenericRange> ranges) {
+        this.ranges = ranges;
     }
 
     public PropertyType(String id) {

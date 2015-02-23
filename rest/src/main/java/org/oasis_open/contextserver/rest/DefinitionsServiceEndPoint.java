@@ -1,6 +1,5 @@
 package org.oasis_open.contextserver.rest;
 
-import org.apache.cxf.helpers.IOUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.ActionType;
@@ -8,8 +7,8 @@ import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
 import org.oasis_open.contextserver.api.conditions.initializers.I18nSupport;
+import org.oasis_open.contextserver.api.query.GenericRange;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
@@ -19,11 +18,8 @@ import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
+
 import java.util.*;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @WebService
@@ -149,8 +145,21 @@ public class DefinitionsServiceEndPoint {
     }
 
     @GET
+    @Path("/properties")
+    public Map<String, Collection<RESTPropertyType>> getPropertyTypes(@HeaderParam("Accept-Language") String language) {
+        Map<String, Collection<PropertyType>> propertyTypes = definitionsService.getAllPropertyTypes();
+        Map<String, Collection<RESTPropertyType>> result = new HashMap<>();
+
+        for (String id : propertyTypes.keySet()){
+            result.put(id, generatePropertyTypes(propertyTypes.get(id), language));
+        }
+
+        return result;
+    }
+
+    @GET
     @Path("/properties/{target}")
-    public Collection<RESTPropertyType> getAllPropertyTypes(@PathParam("target") String target, @HeaderParam("Accept-Language") String language) {
+    public Collection<RESTPropertyType> getPropertyTypesByTarget(@PathParam("target") String target, @HeaderParam("Accept-Language") String language) {
         return generatePropertyTypes(definitionsService.getAllPropertyTypes(target), language);
     }
 
@@ -265,6 +274,18 @@ public class DefinitionsServiceEndPoint {
         result.setAutomaticMappingsFrom(type.getAutomaticMappingsFrom());
         result.setMergeStrategy(type.getMergeStrategy());
         result.setSelectorId(type.getSelectorId());
+        result.setMultivalued(type.isMultivalued());
+
+        if(type.getRanges() != null && type.getRanges().size() > 0) {
+            result.setRanges(new LinkedHashSet<RESTRange>());
+            for (Map.Entry<String, GenericRange> range : type.getRanges().entrySet()) {
+                RESTRange restRange = new RESTRange();
+                restRange.setKey(range.getKey());
+                restRange.setTo(range.getValue().getTo());
+                restRange.setFrom(range.getValue().getFrom());
+                result.getRanges().add(restRange);
+            }
+        }
 
         localizeChoiceListValues(bundle, result.getChoiceListValues(), type.getChoiceListInitializerFilter());
 

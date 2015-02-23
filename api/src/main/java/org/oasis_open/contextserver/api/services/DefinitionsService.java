@@ -5,10 +5,7 @@ import org.oasis_open.contextserver.api.actions.ActionType;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public interface DefinitionsService {
     Set<Tag> getAllTags();
@@ -36,6 +33,8 @@ public interface DefinitionsService {
     ValueType getValueType(String id);
 
     Collection<PropertyType> getAllPropertyTypes(String target);
+
+    HashMap<String, Collection<PropertyType>> getAllPropertyTypes();
 
     Set<PropertyType> getPropertyTypeByTag(Tag tag, boolean recursive);
 
