@@ -13,6 +13,14 @@ public class DateRangeAggregate extends BaseAggregate{
         this.ranges = ranges;
     }
 
+    public DateRangeAggregate(String field, String format, List<GenericRange> ranges) {
+        super(field);
+        this.format = format;
+        this.ranges = ranges;
+    }
+
+    private String format;
+
     private List<GenericRange> ranges;
 
     public List<GenericRange> getRanges() {
@@ -21,5 +29,13 @@ public class DateRangeAggregate extends BaseAggregate{
 
     public void setRanges(List<GenericRange> ranges) {
         this.ranges = ranges;
+    }
+
+    public String getFormat() {
+        return format;
+    }
+
+    public void setFormat(String format) {
+        this.format = format;
     }
 }

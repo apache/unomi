@@ -290,7 +290,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
                     String interval = (String) query.getAggregate().getParameters().get("interval");
                     aggregate = new DateAggregate(query.getAggregate().getProperty(), interval);
                 } else if (query.getAggregate().getType().equals("dateRange") && query.getAggregate().getGenericRanges() != null && query.getAggregate().getGenericRanges().size() > 0) {
-                    aggregate = new DateRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().getGenericRanges());
+                    String format = (String) query.getAggregate().getParameters().get("format");
+                    aggregate = new DateRangeAggregate(query.getAggregate().getProperty(), format, query.getAggregate().getGenericRanges());
                 } else if (query.getAggregate().getType().equals("range") && query.getAggregate().getNumericRanges() != null && query.getAggregate().getNumericRanges().size() > 0) {
                     aggregate = new NumericRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().getNumericRanges());
                 }

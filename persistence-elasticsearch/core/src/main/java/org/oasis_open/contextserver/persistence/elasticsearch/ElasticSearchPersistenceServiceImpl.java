@@ -668,8 +668,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                         bucketsAggregation = rangebuilder;
                     } else if (aggregate instanceof DateRangeAggregate){
+                        DateRangeAggregate dateRangeAggregate = (DateRangeAggregate) aggregate;
                         DateRangeBuilder rangebuilder = AggregationBuilders.dateRange("buckets").field(aggregate.getField());
-                        for (GenericRange range : ((DateRangeAggregate) aggregate).getRanges()){
+                        if(dateRangeAggregate.getFormat() != null){
+                            rangebuilder.format(dateRangeAggregate.getFormat());
+                        }
+                        for (GenericRange range : dateRangeAggregate.getRanges()){
                             if(range != null){
                                 rangebuilder.addRange(range.getKey(), range.getFrom(), range.getTo());
                             }
