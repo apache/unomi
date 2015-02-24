@@ -275,6 +275,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         }
 
         if (query != null && query.getCondition() != null) {
+            ParserHelper.resolveConditionType(definitionsService, query.getCondition());
             list.add(query.getCondition());
         }
 
