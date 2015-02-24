@@ -57,7 +57,8 @@ public class QueryServiceImpl implements QueryService {
                     // try to guess the aggregate type
                     if(query.getAggregate().getType().equals("date")){
                         String interval = (String) query.getAggregate().getParameters().get("interval");
-                        return persistenceService.aggregateQuery(query.getCondition(), new DateAggregate(property, interval), type);
+                        String format = (String) query.getAggregate().getParameters().get("format");
+                        return persistenceService.aggregateQuery(query.getCondition(), new DateAggregate(property, interval, format), type);
                     }else if (query.getAggregate().getType().equals("dateRange") && query.getAggregate().getGenericRanges() != null && query.getAggregate().getGenericRanges().size() > 0) {
                         String format = (String) query.getAggregate().getParameters().get("format");
                         return persistenceService.aggregateQuery(query.getCondition(), new DateRangeAggregate(query.getAggregate().getProperty(), format, query.getAggregate().getGenericRanges()), type);

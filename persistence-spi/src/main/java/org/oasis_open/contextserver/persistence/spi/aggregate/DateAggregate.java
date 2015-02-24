@@ -31,6 +31,8 @@ public class DateAggregate extends BaseAggregate{
 
     private String interval;
 
+    private String format;
+
     public DateAggregate(String field) {
         super(field);
         this.interval = DEFAULT_INTERVAL;
@@ -41,7 +43,21 @@ public class DateAggregate extends BaseAggregate{
         this.interval = (interval != null && interval.length() > 0) ? interval : DEFAULT_INTERVAL;
     }
 
+    public DateAggregate(String field, String interval, String format) {
+        super(field);
+        this.interval = (interval != null && interval.length() > 0) ? interval : DEFAULT_INTERVAL;
+        this.format = format;
+    }
+
     public String getInterval() {
         return interval;
+    }
+
+    public String getFormat() {
+        return format;
+    }
+
+    public void setFormat(String format) {
+        this.format = format;
     }
 }

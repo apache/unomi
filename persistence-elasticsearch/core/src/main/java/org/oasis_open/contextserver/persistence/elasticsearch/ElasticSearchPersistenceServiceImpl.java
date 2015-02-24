@@ -41,6 +41,7 @@ import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregation;
 import org.elasticsearch.search.aggregations.bucket.filter.Filter;
 import org.elasticsearch.search.aggregations.bucket.global.Global;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogram;
+import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramBuilder;
 import org.elasticsearch.search.aggregations.bucket.missing.MissingBuilder;
 import org.elasticsearch.search.aggregations.bucket.range.RangeBuilder;
 import org.elasticsearch.search.aggregations.bucket.range.date.DateRangeBuilder;
@@ -658,7 +659,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 if (aggregate != null) {
                     AggregationBuilder bucketsAggregation = null;
                     if (aggregate instanceof DateAggregate) {
-                        bucketsAggregation = AggregationBuilders.dateHistogram("buckets").field(aggregate.getField()).interval(new DateHistogram.Interval(((DateAggregate) aggregate).getInterval()));
+                        DateAggregate dateAggregate = (DateAggregate) aggregate;
+                        DateHistogramBuilder dateHistogramBuilder = AggregationBuilders.dateHistogram("buckets").field(aggregate.getField()).interval(new DateHistogram.Interval((dateAggregate.getInterval())));
+                        if (dateAggregate.getFormat() != null){
+                            dateHistogramBuilder.format(dateAggregate.getFormat());
+                        }
+                        bucketsAggregation = dateHistogramBuilder;
                     } else if (aggregate instanceof NumericRangeAggregate){
                         RangeBuilder rangebuilder = AggregationBuilders.range("buckets").field(aggregate.getField());
                         for (NumericRange range : ((NumericRangeAggregate) aggregate).getRanges()){
