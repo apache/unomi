@@ -3,19 +3,6 @@
     "type": "date",
     "tags": ["behavioralProfileProperties"],
     "defaultValue": "",
-    "ranges": {
-      "1" : {"to" : "now-10M/M" },
-      "2" : {"from" : "now-10M/M", "to" : "now-9M/M" },
-      "3" : {"from" : "now-9M/M", "to" : "now-8M/M" },
-      "4" : {"from" : "now-8M/M", "to" : "now-7M/M" },
-      "5" : {"from" : "now-7M/M", "to" : "now-6M/M" },
-      "6" : {"from" : "now-6M/M", "to" : "now-5M/M" },
-      "7" : {"from" : "now-5M/M", "to" : "now-4M/M" },
-      "8" : {"from" : "now-4M/M", "to" : "now-3M/M" },
-      "9" : {"from" : "now-3M/M", "to" : "now-2M/M" },
-      "10" : {"from" : "now-2M/M", "to" : "now-1M/M" },
-      "11" : {"from" : "now-1M/M" }
-    },
     "selectorId": "",
     "automaticMappingsFrom": [ ],
     "rank": "1.0"

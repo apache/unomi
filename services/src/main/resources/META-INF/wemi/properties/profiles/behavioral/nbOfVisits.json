@@ -5,6 +5,14 @@
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ ],
+    "ranges": {
+      "*_5" : {"to" : 5 },
+      "5_10" : {"from" : 5, "to" : 10 },
+      "10_20" : {"from" : 10, "to" : 20 },
+      "20_40" : {"from" : 20, "to" : 40 },
+      "40_80" : {"from" : 40, "to" : 80 },
+      "100_*" : {"from" : 100 }
+    },
     "mergeStrategy": "addMergeStrategy",
     "rank": "2.0"
 }
