@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
  */
 public class PropertyConditionEvaluator implements ConditionEvaluator {
 
-    private int compare(Object actualValue, String expectedValue, Date expectedValueDate, Integer expectedValueInteger, String expectedValueDateExpr) {
+    private int compare(Object actualValue, String expectedValue, Object expectedValueDate, Object expectedValueInteger, Object expectedValueDateExpr) {
         if (expectedValue == null && expectedValueDate == null && expectedValueInteger == null && getDate(expectedValueDateExpr) == null) {
             return actualValue == null ? 0 : 1;
         } else if (actualValue == null) {
@@ -25,9 +25,9 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         }
 
         if (expectedValueInteger != null) {
-            return getInteger(actualValue).compareTo(expectedValueInteger);
+            return getInteger(actualValue).compareTo(getInteger(expectedValueInteger));
         } else if (expectedValueDate != null) {
-            return getDate(actualValue).compareTo(expectedValueDate);
+            return getDate(actualValue).compareTo(getDate(expectedValueDate));
         } else if (expectedValueDateExpr != null) {
             return getDate(actualValue).compareTo(getDate(expectedValueDateExpr));
         } else {
@@ -87,9 +87,9 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         String name = (String) condition.getParameter("propertyName");
 
         String expectedValue = (String) condition.getParameter("propertyValue");
-        Integer expectedValueInteger = (Integer) condition.getParameter("propertyValueInteger");
-        Date expectedValueDate = (Date) condition.getParameter("propertyValueDate");
-        String expectedValueDateExpr = (String) condition.getParameter("propertyValueDateExpr");
+        Object expectedValueInteger = condition.getParameter("propertyValueInteger");
+        Object expectedValueDate = condition.getParameter("propertyValueDate");
+        Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
 
         List expectedValues = (List) condition.getParameter("propertyValues");
         List expectedValuesInteger = (List) condition.getParameter("propertyValuesInteger");

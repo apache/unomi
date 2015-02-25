@@ -24,6 +24,8 @@ public class Rule extends MetadataItem {
 
     private boolean raiseEventOnlyOnceForSession = false;
 
+    private int priority;
+
     public Rule() {
     }
 
@@ -69,5 +71,13 @@ public class Rule extends MetadataItem {
 
     public void setRaiseEventOnlyOnceForSession(boolean raiseEventOnlyOnceForSession) {
         this.raiseEventOnlyOnceForSession = raiseEventOnlyOnceForSession;
+    }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    public void setPriority(int priority) {
+        this.priority = priority;
     }
 }

@@ -2,6 +2,7 @@ package org.oasis_open.contextserver.impl.services;
 
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.Action;
+import org.oasis_open.contextserver.api.campaigns.Campaign;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.goals.Goal;
@@ -56,9 +57,11 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 
         loadPredefinedGoals(bundleContext);
+        loadPredefinedCampaigns(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
             if (bundle.getBundleContext() != null) {
                 loadPredefinedGoals(bundle.getBundleContext());
+                loadPredefinedCampaigns(bundle.getBundleContext());
             }
         }
         bundleContext.addBundleListener(this);
@@ -73,6 +76,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             return;
         }
         loadPredefinedGoals(bundleContext);
+        loadPredefinedCampaigns(bundleContext);
     }
 
     private void processBundleStop(BundleContext bundleContext) {
@@ -139,26 +143,6 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             }
         }
     }
-//
-//    private void loadPredefinedCampaigns(BundleContext bundleContext) {
-//        Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/wemi/campaigns", "*.json", true);
-//        if (predefinedRuleEntries == null) {
-//            return;
-//        }
-//        while (predefinedRuleEntries.hasMoreElements()) {
-//            URL predefinedCampaignURL = predefinedRuleEntries.nextElement();
-//            logger.debug("Found predefined campaigns at " + predefinedCampaignURL + ", loading... ");
-//
-//            try {
-//                Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(predefinedCampaignURL, Campaign.class);
-//                if (getCampaign(campaign.getMetadata().getScope(), campaign.getMetadata().getItemId()) == null) {
-//                    setCampaign(campaign);
-//                }
-//            } catch (IOException e) {
-//                logger.error("Error while loading segment definition " + predefinedCampaignURL, e);
-//            }
-//        }
-//    }
 
     private void createRule(Goal goal, Condition event, String id, boolean testStart) {
         Rule rule = new Rule(new Metadata(goal.getMetadata().getScope(), goal.getMetadata().getId() + id + "Event", "Auto generated rule for goal " + goal.getMetadata().getName(), ""));
@@ -182,6 +166,14 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             startExists.getParameterValues().put("propertyName", "properties." + goal.getMetadata().getId() + "StartReached");
             startExists.getParameterValues().put("comparisonOperator", "exists");
             subConditions.add(startExists);
+        }
+
+        if (goal.getCampaignId() != null) {
+            Condition engagedInCampaign = new Condition();
+            engagedInCampaign.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+            engagedInCampaign.getParameterValues().put("propertyName", "properties." + goal.getCampaignId() + "Engaged");
+            engagedInCampaign.getParameterValues().put("comparisonOperator", "exists");
+            subConditions.add(engagedInCampaign);
         }
 
         rule.setCondition(res);
@@ -248,6 +240,125 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
         persistenceService.save(goal);
     }
+
+
+    private void loadPredefinedCampaigns(BundleContext bundleContext) {
+        Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/wemi/campaigns", "*.json", true);
+        if (predefinedRuleEntries == null) {
+            return;
+        }
+        while (predefinedRuleEntries.hasMoreElements()) {
+            URL predefinedCampaignURL = predefinedRuleEntries.nextElement();
+            logger.debug("Found predefined campaigns at " + predefinedCampaignURL + ", loading... ");
+
+            try {
+                Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(predefinedCampaignURL, Campaign.class);
+                if (getCampaign(campaign.getMetadata().getScope(), campaign.getMetadata().getId()) == null) {
+                    setCampaign(campaign);
+                }
+            } catch (IOException e) {
+                logger.error("Error while loading segment definition " + predefinedCampaignURL, e);
+            }
+        }
+    }
+
+    private void createRule(Campaign campaign, Condition event) {
+        Rule rule = new Rule(new Metadata(campaign.getMetadata().getScope(), campaign.getMetadata().getId() + "EntryEvent", "Auto generated rule for campaign " + campaign.getMetadata().getName(), ""));
+        Condition res = new Condition();
+        List<Condition> subConditions = new ArrayList<Condition>();
+        res.setConditionType(definitionsService.getConditionType("booleanCondition"));
+        res.getParameterValues().put("operator", "and");
+        res.getParameterValues().put("subConditions", subConditions);
+
+        Condition ruleCondition = new Condition();
+        ruleCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+        ruleCondition.getParameterValues().put("propertyName", "duration");
+        ruleCondition.getParameterValues().put("comparisonOperator", "equals");
+        ruleCondition.getParameterValues().put("propertyValueInteger", 0);
+        subConditions.add(ruleCondition);
+
+        if (campaign.getStartDate() != null) {
+            Condition startCondition = new Condition();
+            startCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+            startCondition.getParameterValues().put("propertyName", "timeStamp");
+            startCondition.getParameterValues().put("comparisonOperator", "greaterThan");
+            startCondition.getParameterValues().put("propertyValueDate", campaign.getStartDate());
+            subConditions.add(startCondition);
+        }
+
+        if (campaign.getEndDate() != null) {
+            Condition endCondition = new Condition();
+            endCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+            endCondition.getParameterValues().put("propertyName", "timeStamp");
+            endCondition.getParameterValues().put("comparisonOperator", "lessThan");
+            endCondition.getParameterValues().put("propertyValueDate", campaign.getEndDate());
+            subConditions.add(endCondition);
+        }
+
+        rule.setPriority(-5);
+
+        subConditions.add(event);
+
+        rule.setCondition(res);
+        rule.getMetadata().setHidden(true);
+        Action action1 = new Action();
+        action1.setActionType(definitionsService.getActionType("setPropertyAction"));
+        String name = campaign.getMetadata().getId() + "Engaged";
+        action1.getParameterValues().put("setPropertyName", name);
+        action1.getParameterValues().put("setPropertyValue", "now");
+        action1.getParameterValues().put("storeInSession", true);
+        Action action2 = new Action();
+        action2.setActionType(definitionsService.getActionType("setPropertyAction"));
+        action2.getParameterValues().put("setPropertyName", name);
+        action2.getParameterValues().put("setPropertyValue", "script::profile.properties.?"+name+" != null ? (profile.properties."+name+") : 'now'");
+        action2.getParameterValues().put("storeInSession", false);
+        rule.setActions(Arrays.asList(action1,action2));
+        rulesService.setRule(rule);
+    }
+
+
+    public Set<Metadata> getCampaignMetadatas() {
+        Set<Metadata> descriptions = new HashSet<Metadata>();
+        for (Campaign definition : persistenceService.getAllItems(Campaign.class, 0, 50, null).getList()) {
+            descriptions.add(definition.getMetadata());
+        }
+        return descriptions;
+    }
+
+    public Set<Metadata> getCampaignMetadatas(String scope) {
+        Set<Metadata> descriptions = new HashSet<Metadata>();
+        for (Campaign definition : persistenceService.query("scope", scope, null, Campaign.class, 0, 50).getList()) {
+            descriptions.add(definition.getMetadata());
+        }
+        return descriptions;
+    }
+
+    public Campaign getCampaign(String scope, String id) {
+        Campaign campaign = persistenceService.load(Metadata.getIdWithScope(scope,id), Campaign.class);
+        if (campaign != null) {
+            ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition());
+        }
+        return campaign;
+    }
+
+    public void removeCampaign(String scope, String id) {
+        String idWithScope = Metadata.getIdWithScope(scope, id);
+        persistenceService.remove(idWithScope, Campaign.class);
+    }
+
+    public void setCampaign(Campaign campaign) {
+        ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition());
+
+        if (campaign.getMetadata().isEnabled()) {
+            if (campaign.getEntryCondition() != null) {
+                createRule(campaign, campaign.getEntryCondition());
+            }
+        }
+
+        persistenceService.save(campaign);
+    }
+
+
 
     public GoalReport getGoalReport(String scope, String goalId) {
         return getGoalReport(scope, goalId, null);

@@ -14,6 +14,8 @@ public class Goal extends MetadataItem {
 
     private Condition targetEvent;
 
+    private String campaignId;
+
     public Goal() {
     }
 
@@ -36,5 +38,13 @@ public class Goal extends MetadataItem {
 
     public void setTargetEvent(Condition targetEvent) {
         this.targetEvent = targetEvent;
+    }
+
+    public String getCampaignId() {
+        return campaignId;
+    }
+
+    public void setCampaignId(String campaignId) {
+        this.campaignId = campaignId;
     }
 }

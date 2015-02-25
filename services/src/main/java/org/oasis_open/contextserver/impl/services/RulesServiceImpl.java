@@ -229,7 +229,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     private List<Rule> getAllRules() {
         // todo : must use cache here
-        List<Rule> allItems = persistenceService.getAllItems(Rule.class);
+        List<Rule> allItems = persistenceService.getAllItems(Rule.class, 0, -1, "priority").getList();
         for (Rule rule : allItems) {
             ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
             ParserHelper.resolveActionTypes(definitionsService, rule.getActions());
@@ -247,6 +247,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
         boolean changed = false;
         for (Rule rule : rules) {
+            logger.info("Fired rule "+rule.getMetadata().getId() + " for "+event.getEventType() + " - " + event.getItemId());
             for (Action action : rule.getActions()) {
                 changed |= actionExecutorDispatcher.execute(action, event);
             }

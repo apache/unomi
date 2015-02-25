@@ -6,6 +6,8 @@
         "readOnly":true
     },
 
+    "priority": -10,
+
     "condition": {
         "parameterValues": {
             "subConditions": [

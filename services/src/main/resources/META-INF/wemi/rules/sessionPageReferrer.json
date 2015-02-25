@@ -6,6 +6,8 @@
         "readOnly":true
     },
 
+    "priority": -9,
+
     "condition": {
         "type": "pageViewEventCondition",
         "parameterValues": {
