@@ -25,9 +25,9 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         String name = (String) condition.getParameterValues().get("propertyName");
 
         String expectedValue = (String) condition.getParameter("propertyValue");
-        Integer expectedValueInteger = (Integer) condition.getParameter("propertyValueInteger");
-        Date expectedValueDate = (Date) condition.getParameter("propertyValueDate");
-        String expectedValueDateExpr = (String) condition.getParameter("propertyValueDateExpr");
+        Object expectedValueInteger = condition.getParameter("propertyValueInteger");
+        Object expectedValueDate = condition.getParameter("propertyValueDate");
+        Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
 
         List expectedValues = (List) condition.getParameter("propertyValues");
         List expectedValuesInteger = (List) condition.getParameter("propertyValuesInteger");
