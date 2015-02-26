@@ -59,11 +59,6 @@ public class ProfileServiceEndPoint {
         return profileService.getProfiles(query, offset, size, sortBy);
     }
 
-    @WebMethod(exclude = true)
-    public PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue) {
-        return profileService.findProfilesByPropertyValue(propertyName, propertyValue);
-    }
-
     @GET
     @Path("/{profileId}")
     public Profile load(@PathParam("profileId") String profileId) {

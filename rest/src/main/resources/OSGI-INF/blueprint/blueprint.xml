@@ -76,7 +76,7 @@
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
-    <jaxrs:server address="/wemi/goals" id="goalsDefinitionsService">
+    <jaxrs:server address="/wemi/goals" id="restGoalsService">
         <jaxrs:providers>
             <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter"/>
@@ -85,6 +85,18 @@
 
         <jaxrs:serviceBeans>
             <ref component-id="goalsServiceEndPoint"/>
+        </jaxrs:serviceBeans>
+    </jaxrs:server>
+
+    <jaxrs:server address="/wemi/campaigns" id="restCampaignsService">
+        <jaxrs:providers>
+            <ref component-id="jaxb-provider"/>
+            <ref component-id="cors-filter"/>
+            <ref component-id="jaas-filter"/>
+        </jaxrs:providers>
+
+        <jaxrs:serviceBeans>
+            <ref component-id="campaignServiceEndPoint"/>
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
@@ -160,6 +172,10 @@
     </bean>
 
     <bean id="goalsServiceEndPoint" class="org.oasis_open.contextserver.rest.GoalsServiceEndPoint">
+        <property name="goalsService" ref="goalsService"/>
+    </bean>
+
+    <bean id="campaignServiceEndPoint" class="org.oasis_open.contextserver.rest.CampaignsServiceEndPoint">
         <property name="goalsService" ref="goalsService"/>
     </bean>
 

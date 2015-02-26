@@ -1,0 +1,40 @@
+{
+  "metadata": {
+    "id": "testUrlParameterCampaign",
+    "name": "Test campaign",
+    "scope": "ACMESPACE",
+    "description": "Test campaign",
+    "tags": []
+  },
+  "entryCondition": {
+    "parameterValues": {
+      "subConditions":[
+        {
+          "parameterValues": {
+            "propertyName": "duration",
+            "propertyValueInteger": 0,
+            "comparisonOperator": "equals"
+          },
+          "type": "sessionPropertyCondition"
+        },
+        {
+          "parameterValues": {
+          },
+          "type": "pageViewEventCondition"
+        },
+        {
+          "parameterValues": {
+            "propertyName":"target.properties.pageInfo.destinationURL",
+            "propertyValue":".*\\?campaign=test",
+            "comparisonOperator":"matchesRegex"
+          },
+          "type": "eventPropertyCondition"
+        }
+      ],
+      "operator":"and"
+    },
+    "type":"booleanCondition"
+  },
+  "startDate": "2014-01-01T00:00:00Z",
+  "endDate": "2015-12-31T00:00:00Z"
+}

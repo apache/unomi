@@ -1,6 +1,7 @@
 package org.oasis_open.contextserver.api.services;
 
 import org.oasis_open.contextserver.api.Metadata;
+import org.oasis_open.contextserver.api.campaigns.Campaign;
 import org.oasis_open.contextserver.api.goals.Goal;
 import org.oasis_open.contextserver.api.goals.GoalReport;
 import org.oasis_open.contextserver.api.query.AggregateQuery;
@@ -21,4 +22,16 @@ public interface GoalsService {
     GoalReport getGoalReport(String scope, String goalId);
 
     GoalReport getGoalReport(String scope, String goalId, AggregateQuery query);
+
+    Set<Metadata> getCampaignMetadatas();
+
+    Set<Metadata> getCampaignMetadatas(String scope);
+
+    Campaign getCampaign(String scope, String campaignId);
+
+    void setCampaign(Campaign campaign);
+
+    void removeCampaign(String scope, String campaignId);
+
+
 }

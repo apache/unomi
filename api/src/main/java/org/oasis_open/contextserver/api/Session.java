@@ -20,6 +20,8 @@ public class Session extends Item implements TimestampedItem {
 
     private Date lastEventDate;
 
+    private int size = 0;
+
     private int duration = 0;
 
     public Session() {
@@ -76,6 +78,14 @@ public class Session extends Item implements TimestampedItem {
 
     public int getDuration() {
         return duration;
+    }
+
+    public int getSize() {
+        return size;
+    }
+
+    public void setSize(int size) {
+        this.size = size;
     }
 
     public String getScope() {
