@@ -81,8 +81,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return persistenceService.getAllItems(Profile.class, offset, size, sortBy);
     }
 
-    public PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue) {
-        return persistenceService.query(propertyName, propertyValue, null, Profile.class, 0, -1);
+    public PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue, int offset, int size, String sortBy) {
+        return persistenceService.query(propertyName, propertyValue, sortBy, Profile.class, offset, size);
     }
 
     public Profile load(String profileId) {

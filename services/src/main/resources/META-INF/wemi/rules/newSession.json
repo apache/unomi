@@ -27,23 +27,23 @@
         },
         {
             "parameterValues": {
-                "setPropertyName": "previousVisit",
+                "setPropertyName": "properties.previousVisit",
                 "setPropertyValue": "profileProperty::lastVisit",
-                "storeInSession": null
+                "storeInSession": false
             },
             "type": "setPropertyAction"
         },
         {
             "parameterValues": {
-                "setPropertyName": "lastVisit",
+                "setPropertyName": "properties.lastVisit",
                 "setPropertyValue": "now",
-                "storeInSession": null
+                "storeInSession": false
             },
             "type": "setPropertyAction"
         },
         {
             "parameterValues": {
-                "setPropertyName": "nbOfVisits",
+                "setPropertyName": "properties.nbOfVisits",
                 "setPropertyValue": "script::profile.properties.?nbOfVisits != null ? (profile.properties.nbOfVisits + 1) : 1",
                 "storeInSession": false
             },

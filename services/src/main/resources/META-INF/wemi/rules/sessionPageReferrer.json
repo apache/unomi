@@ -17,8 +17,16 @@
     "actions": [
         {
             "parameterValues": {
-                "setPropertyName": "pageReferringURL",
+                "setPropertyName": "properties.pageReferringURL",
                 "setPropertyValue": "eventProperty::target.properties.pageInfo.referringURL",
+                "storeInSession": true
+            },
+            "type": "setPropertyAction"
+        },
+        {
+            "parameterValues": {
+                "setPropertyName": "size",
+                "setPropertyValue": "script::session.size + 1",
                 "storeInSession": true
             },
             "type": "setPropertyAction"

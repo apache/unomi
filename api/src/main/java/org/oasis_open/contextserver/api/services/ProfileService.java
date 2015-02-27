@@ -17,7 +17,7 @@ public interface ProfileService {
 
     PartialList<Profile> getProfiles(String query, int offset, int size, String sortBy);
 
-    PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue);
+    PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue, int offset, int size, String sortBy);
 
     boolean mergeProfilesOnProperty(Profile currentProfile, Session currentSession, String propertyName, String propertyValue);
 

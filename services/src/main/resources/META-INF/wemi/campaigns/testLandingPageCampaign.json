@@ -1,0 +1,33 @@
+{
+  "metadata": {
+    "id": "testLandingPageCampaign",
+    "name": "Test campaign",
+    "scope": "ACMESPACE",
+    "description": "Test campaign",
+    "tags": []
+  },
+  "entryCondition": {
+    "parameterValues": {
+      "subConditions":[
+        {
+          "parameterValues": {
+            "propertyName": "duration",
+            "propertyValueInteger": 0,
+            "comparisonOperator": "equals"
+          },
+          "type": "sessionPropertyCondition"
+        },
+        {
+          "parameterValues": {
+            "pagePath": "/sites/ACMESPACE/home/about-us"
+          },
+          "type": "pageViewEventCondition"
+        }
+      ],
+      "operator":"and"
+    },
+    "type":"booleanCondition"
+  },
+  "startDate": "2014-01-01T00:00:00Z",
+  "endDate": "2015-12-31T00:00:00Z"
+}

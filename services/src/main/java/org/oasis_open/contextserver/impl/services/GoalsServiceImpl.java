@@ -180,7 +180,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         rule.getMetadata().setHidden(true);
         Action action1 = new Action();
         action1.setActionType(definitionsService.getActionType("setPropertyAction"));
-        String name = goal.getMetadata().getId() + id + "Reached";
+        String name = "properties." + goal.getMetadata().getId() + id + "Reached";
         action1.getParameterValues().put("setPropertyName", name);
         action1.getParameterValues().put("setPropertyValue", "now");
         action1.getParameterValues().put("storeInSession", true);
@@ -270,13 +270,6 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         res.getParameterValues().put("operator", "and");
         res.getParameterValues().put("subConditions", subConditions);
 
-        Condition ruleCondition = new Condition();
-        ruleCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-        ruleCondition.getParameterValues().put("propertyName", "duration");
-        ruleCondition.getParameterValues().put("comparisonOperator", "equals");
-        ruleCondition.getParameterValues().put("propertyValueInteger", 0);
-        subConditions.add(ruleCondition);
-
         if (campaign.getStartDate() != null) {
             Condition startCondition = new Condition();
             startCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
@@ -303,7 +296,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         rule.getMetadata().setHidden(true);
         Action action1 = new Action();
         action1.setActionType(definitionsService.getActionType("setPropertyAction"));
-        String name = campaign.getMetadata().getId() + "Engaged";
+        String name = "properties." + campaign.getMetadata().getId() + "Engaged";
         action1.getParameterValues().put("setPropertyName", name);
         action1.getParameterValues().put("setPropertyValue", "now");
         action1.getParameterValues().put("storeInSession", true);

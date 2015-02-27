@@ -1,9 +1,11 @@
 package org.oasis_open.contextserver.impl.actions;
 
+import org.apache.commons.beanutils.BeanUtils;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
 
+import java.lang.reflect.InvocationTargetException;
 import java.text.SimpleDateFormat;
 import java.util.TimeZone;
 
@@ -27,16 +29,24 @@ public class SetPropertyAction implements ActionExecutor {
         }
         boolean modified = false;
         String propertyName = (String) action.getParameterValues().get("setPropertyName");
-        if (Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"))) {
-            if (propertyValue != null && !propertyValue.equals(event.getSession().getProperty(propertyName))) {
-                event.getSession().setProperty(propertyName, propertyValue);
-                modified = true;
+        try {
+            if (Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"))) {
+                if (propertyValue != null && !propertyValue.equals(BeanUtils.getProperty(event.getSession(), propertyName))) {
+                    BeanUtils.setProperty(event.getSession(), propertyName, propertyValue);
+                    modified = true;
+                }
+            } else {
+                if (propertyValue != null && !propertyValue.equals(BeanUtils.getProperty(event.getProfile(), propertyName))) {
+                    BeanUtils.setProperty(event.getProfile(), propertyName, propertyValue);
+                    modified = true;
+                }
             }
-        } else {
-            if (propertyValue != null && !propertyValue.equals(event.getProfile().getProperty(propertyName))) {
-                event.getProfile().setProperty(propertyName, propertyValue);
-                modified = true;
-            }
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
         }
         return modified;
     }
