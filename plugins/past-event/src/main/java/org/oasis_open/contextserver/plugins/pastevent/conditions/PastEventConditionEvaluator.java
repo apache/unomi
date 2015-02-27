@@ -39,8 +39,8 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
         if (parameters.containsKey("generatedPropertyKey")) {
             String key = (String) parameters.get("generatedPropertyKey");
             Profile profile = (Profile) item;
-            Long l = (Long) profile.getProperty(key);
-            count = l != null ? l : 0L;
+            Number l = (Number) profile.getProperty(key);
+            count = l != null ? l.longValue() : 0L;
         } else {
             if (eventCondition == null) {
                 throw new IllegalArgumentException("No eventCondition");
