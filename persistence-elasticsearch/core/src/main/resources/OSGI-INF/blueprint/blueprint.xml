@@ -63,14 +63,6 @@
     <service
             interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="pageViewEventConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.PageViewEventConditionESQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
             <entry key="queryBuilderId" value="propertyConditionESQueryBuilder"/>
         </service-properties>
         <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.PropertyConditionESQueryBuilder"/>
@@ -97,15 +89,6 @@
         </service-properties>
         <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.BooleanConditionEvaluator"/>
     </service>
-
-    <service
-            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
-        <service-properties>
-            <entry key="conditionEvaluatorId" value="pageViewEventConditionEvaluator"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.PageViewEventConditionEvaluator"/>
-    </service>
-
 
     <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
         <service-properties>

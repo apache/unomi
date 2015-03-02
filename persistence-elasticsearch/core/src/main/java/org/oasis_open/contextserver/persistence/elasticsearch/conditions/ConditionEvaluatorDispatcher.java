@@ -42,7 +42,10 @@ public class ConditionEvaluatorDispatcher {
         // despite multiple references possible, we will only execute the first one
         for (ServiceReference<ConditionEvaluator> evaluatorServiceReference : matchConditionEvaluators) {
             ConditionEvaluator evaluator = bundleContext.getService(evaluatorServiceReference);
-            return evaluator.eval(ConditionContextHelper.getContextualCondition(condition, context), item, context, this);
+            Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context);
+            if (contextualCondition != null) {
+                return evaluator.eval(contextualCondition, item, context, this);
+            }
         }
         // if no matching
         return true;

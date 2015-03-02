@@ -58,7 +58,10 @@ public class ConditionESQueryBuilderDispatcher {
         // despite multiple references possible, we will only execute the first one
         for (ServiceReference<ConditionESQueryBuilder> queryBuilderServiceReference : matchingQueryBuilderReferences) {
             ConditionESQueryBuilder queryBuilder = bundleContext.getService(queryBuilderServiceReference);
-            return queryBuilder.buildFilter(ConditionContextHelper.getContextualCondition(condition, context), context, this);
+            Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context);
+            if (contextualCondition != null) {
+                return queryBuilder.buildFilter(contextualCondition, context, this);
+            }
         }
         // if no matching
         return FilterBuilders.matchAllFilter();

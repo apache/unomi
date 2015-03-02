@@ -15,6 +15,9 @@ public class ConditionContextHelper {
             return condition;
         }
         Map<String, Object> values = (Map<String, Object>) parseParameter(context, condition.getParameterValues());
+        if (values == null) {
+            return null;
+        }
         Condition n = new Condition(condition.getConditionType());
         n.setParameterValues(values);
         return n;
@@ -33,13 +36,20 @@ public class ConditionContextHelper {
         } else if (value instanceof Map) {
             Map<String, Object> values = new HashMap<String, Object>();
             for (Map.Entry<String, Object> entry : ((Map<String, Object>) value).entrySet()) {
-                values.put(entry.getKey(), parseParameter(context, entry.getValue()));
+                Object parameter = parseParameter(context, entry.getValue());
+                if (parameter == null) {
+                    return null;
+                }
+                values.put(entry.getKey(), parameter);
             }
             return values;
         } else if (value instanceof List) {
             List values = new ArrayList();
             for (Object o : ((List) value)) {
-                values.add(parseParameter(context, o));
+                Object parameter = parseParameter(context, o);
+                if (parameter != null) {
+                    values.add(parameter);
+                }
             }
             return values;
         }

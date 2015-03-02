@@ -1,7 +1,35 @@
 {
     "id": "pageViewEventCondition",
-    "conditionEvaluator": "(conditionEvaluatorId=pageViewEventConditionEvaluator)",
-    "queryBuilderFilter": "(queryBuilderId=pageViewEventConditionESQueryBuilder)",
+    "parentCondition": {
+        "type": "booleanCondition",
+        "parameterValues": {
+            "subConditions": [
+                {
+                    "type": "eventTypeCondition",
+                    "parameterValues": {
+                        "eventTypeId": "view"
+                    }
+                },
+                {
+                    "type": "eventPropertyCondition",
+                    "parameterValues": {
+                        "propertyName": "target.properties.pageInfo.pagePath",
+                        "propertyValue": "parameter::pagePath",
+                        "comparisonOperator": "equals"
+                    }
+                },
+                {
+                    "type": "eventPropertyCondition",
+                    "parameterValues": {
+                        "propertyName": "target.properties.pageInfo.language",
+                        "propertyValue": "parameter::language",
+                        "comparisonOperator": "equals"
+                    }
+                }
+            ],
+            "operator" : "and"
+        }
+    },
     "tags": [ "event", "eventCondition", "usableInPastEventCondition" ],
     "parameters": [
         {
