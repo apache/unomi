@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
+
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.campaigns.Campaign;
 import org.oasis_open.contextserver.api.conditions.Condition;
@@ -19,11 +20,15 @@ import java.util.Map;
 import java.util.TimeZone;
 
 /**
- * Custom object mapper to be able to configure Jackson to our needs
+ * Custom object mapper to be able to configure Jackson to our needs.
  */
 public class CustomObjectMapper extends ObjectMapper {
 
-    private static ObjectMapper objectMapper = null;
+    private static final long serialVersionUID = 4578277612897061535L;
+
+    private static class Holder {
+        static final CustomObjectMapper INSTANCE = new CustomObjectMapper();
+    }
 
     public CustomObjectMapper() {
         super();
@@ -63,10 +68,7 @@ public class CustomObjectMapper extends ObjectMapper {
        super.registerModule(deserializerModule);
     }
 
-    public synchronized static ObjectMapper getObjectMapper() {
-        if (objectMapper == null) {
-            objectMapper = new CustomObjectMapper();
-        }
-        return objectMapper;
+    public static ObjectMapper getObjectMapper() {
+        return Holder.INSTANCE;
     }
 }
