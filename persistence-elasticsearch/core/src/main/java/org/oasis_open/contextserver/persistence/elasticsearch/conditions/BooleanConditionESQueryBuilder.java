@@ -4,31 +4,32 @@ import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.oasis_open.contextserver.api.conditions.Condition;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * ES query builder for boolean conditions.
+ */
 public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
 
-    public BooleanConditionESQueryBuilder() {
-    }
-
-    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        boolean op = "and".equalsIgnoreCase((String) condition.getParameterValues().get("operator"));
+    @Override
+    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context,
+            ConditionESQueryBuilderDispatcher dispatcher) {
+        boolean isAndOperator = "and".equalsIgnoreCase((String) condition.getParameterValues().get("operator"));
+        @SuppressWarnings("unchecked")
         List<Condition> conditions = (List<Condition>) condition.getParameterValues().get("subConditions");
 
-        List<FilterBuilder> l = new ArrayList<FilterBuilder>();
-        for (Object sub : conditions) {
-            l.add(dispatcher.buildFilter((Condition) sub, context));
+        int conditionCount = conditions.size();
+
+        if (conditionCount == 1) {
+            return dispatcher.buildFilter(conditions.get(0), context);
         }
 
-        if (l.size() == 1) {
-            return l.get(0);
+        FilterBuilder[] l = new FilterBuilder[conditionCount];
+        for (int i = 0; i < conditionCount; i++) {
+            l[i] = dispatcher.buildFilter(conditions.get(i), context);
         }
-        if (op) {
-            return FilterBuilders.andFilter(l.toArray(new FilterBuilder[l.size()]));
-        } else {
-            return FilterBuilders.orFilter(l.toArray(new FilterBuilder[l.size()]));
-        }
+
+        return isAndOperator ? FilterBuilders.andFilter(l) : FilterBuilders.orFilter(l);
     }
 }

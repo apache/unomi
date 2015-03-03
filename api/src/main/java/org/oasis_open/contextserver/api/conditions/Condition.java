@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Represents a node in the segment definition expression tree
+ * Represents a node in the segment definition expression tree.
  */
 @XmlRootElement
 public class Condition {
