@@ -10,7 +10,6 @@
 
     <bean id="definitionsServiceImpl" class="org.oasis_open.contextserver.impl.services.DefinitionsServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
-        <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
     <service id="definitionsService" ref="definitionsServiceImpl" auto-export="interfaces"/>

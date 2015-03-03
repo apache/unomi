@@ -6,7 +6,6 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
-import org.oasis_open.contextserver.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -37,14 +36,8 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     private Map<String, PropertyMergeStrategyType> propertyMergeStrategyTypeById = new HashMap<>();
 
     private BundleContext bundleContext;
-    private PersistenceService persistenceService;
-
     public DefinitionsServiceImpl() {
         logger.info("Instantiating definitions service...");
-    }
-
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
     }
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -444,7 +437,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         if (propertyTypeByMapping.containsKey(propertyName)) {
             return propertyTypeByMapping.get(propertyName);
         } else {
-            return Collections.EMPTY_SET;
+            return Collections.emptySet();
         }
     }
 
@@ -491,6 +484,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     public Set<Condition> extractConditionsByType(Condition rootCondition, String typeId) {
         if (rootCondition.getParameterValues().containsKey("subConditions")) {
+            @SuppressWarnings("unchecked")
             List<Condition> subConditions = (List<Condition>) rootCondition.getParameterValues().get("subConditions");
             Set<Condition> matchingConditions = new HashSet<>();
             for (Condition condition : subConditions) {
@@ -506,6 +500,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     public Condition extractConditionByTag(Condition rootCondition, String tagId) {
         if (rootCondition.getParameterValues().containsKey("subConditions")) {
+            @SuppressWarnings("unchecked")
             List<Condition> subConditions = (List<Condition>) rootCondition.getParameterValues().get("subConditions");
             List<Condition> matchingConditions = new ArrayList<Condition>();
             for (Condition condition : subConditions) {
