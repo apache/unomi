@@ -128,36 +128,36 @@ public class EventServiceImpl implements EventService {
 
         Condition profileIdCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
         if (session) {
-            profileIdCondition.getParameterValues().put("propertyName", "sessionId");
-            profileIdCondition.getParameterValues().put("propertyValue", event.getSessionId());
+            profileIdCondition.setParameter("propertyName", "sessionId");
+            profileIdCondition.setParameter("propertyValue", event.getSessionId());
         } else {
-            profileIdCondition.getParameterValues().put("propertyName", "profileId");
-            profileIdCondition.getParameterValues().put("propertyValue", event.getProfileId());
+            profileIdCondition.setParameter("propertyName", "profileId");
+            profileIdCondition.setParameter("propertyValue", event.getProfileId());
         }
-        profileIdCondition.getParameterValues().put("comparisonOperator", "equals");
+        profileIdCondition.setParameter("comparisonOperator", "equals");
         conditions.add(profileIdCondition);
 
         Condition condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        condition.getParameterValues().put("propertyName", "eventType");
-        condition.getParameterValues().put("propertyValue", event.getEventType());
-        condition.getParameterValues().put("comparisonOperator", "equals");
+        condition.setParameter("propertyName", "eventType");
+        condition.setParameter("propertyValue", event.getEventType());
+        condition.setParameter("comparisonOperator", "equals");
         conditions.add(condition);
 
         condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        condition.getParameterValues().put("propertyName", "target.itemId");
-        condition.getParameterValues().put("propertyValue", event.getTarget().getItemId());
-        condition.getParameterValues().put("comparisonOperator", "equals");
+        condition.setParameter("propertyName", "target.itemId");
+        condition.setParameter("propertyValue", event.getTarget().getItemId());
+        condition.setParameter("comparisonOperator", "equals");
         conditions.add(condition);
 
         condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        condition.getParameterValues().put("propertyName", "target.type");
-        condition.getParameterValues().put("propertyValue", event.getTarget().getItemType());
-        condition.getParameterValues().put("comparisonOperator", "equals");
+        condition.setParameter("propertyName", "target.type");
+        condition.setParameter("propertyValue", event.getTarget().getItemType());
+        condition.setParameter("comparisonOperator", "equals");
         conditions.add(condition);
 
         Condition andCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-        andCondition.getParameterValues().put("operator", "and");
-        andCondition.getParameterValues().put("subConditions", conditions);
+        andCondition.setParameter("operator", "and");
+        andCondition.setParameter("subConditions", conditions);
         long size = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
         return size > 0;
     }

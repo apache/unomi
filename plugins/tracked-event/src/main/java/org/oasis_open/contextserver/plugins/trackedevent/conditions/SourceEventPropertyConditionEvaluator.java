@@ -28,9 +28,9 @@ public class SourceEventPropertyConditionEvaluator implements ConditionEvaluator
     private void appendConditionIfPropExist(List<Condition> conditions, Condition condition, String prop, ConditionType propConditionType) {
         if (condition.getParameterValues().get(prop) != null && !"".equals(condition.getParameterValues().get(prop))) {
             Condition propCondition = new Condition(propConditionType);
-            propCondition.getParameterValues().put("propertyName",mappedProperties.get(prop));
-            propCondition.getParameterValues().put("comparisonOperator", "equals");
-            propCondition.getParameterValues().put("propertyValue", condition.getParameterValues().get(prop));
+            propCondition.setParameter("comparisonOperator", "equals");
+            propCondition.setParameter("propertyName",mappedProperties.get(prop));
+            propCondition.setParameter("propertyValue", condition.getParameterValues().get(prop));
             conditions.add(propCondition);
         }
     }
@@ -38,7 +38,7 @@ public class SourceEventPropertyConditionEvaluator implements ConditionEvaluator
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
         Condition andCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-        andCondition.getParameterValues().put("operator", "and");
+        andCondition.setParameter("operator", "and");
         ArrayList<Condition> conditions = new ArrayList<Condition>();
 
         for (String prop : mappedProperties.keySet()){
@@ -46,7 +46,7 @@ public class SourceEventPropertyConditionEvaluator implements ConditionEvaluator
         }
 
         if(conditions.size() > 0){
-            andCondition.getParameterValues().put("subConditions", conditions);
+            andCondition.setParameter("subConditions", conditions);
             return dispatcher.eval(andCondition, item);
         } else {
             return true;

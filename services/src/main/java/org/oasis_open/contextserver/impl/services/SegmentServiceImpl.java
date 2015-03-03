@@ -361,8 +361,8 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         Scoring scoring = new Scoring(metadata);
         Condition rootCondition = new Condition();
         rootCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
-        rootCondition.getParameterValues().put("operator", "and");
-        rootCondition.getParameterValues().put("subConditions", new ArrayList<Condition>());
+        rootCondition.setParameter("operator", "and");
+        rootCondition.setParameter("subConditions", new ArrayList<Condition>());
         scoring.setElements(new ArrayList<ScoringElement>());
 
         setScoringDefinition(scoring);
@@ -415,7 +415,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                 System.out.println(key);
                 key = "eventTriggered" + getMD5(key);
                 System.out.println(key);
-                parentCondition.getParameterValues().put("generatedPropertyKey", key);
+                parentCondition.setParameter("generatedPropertyKey", key);
                 Rule rule = rulesService.getRule(metadata.getScope(), key);
                 if (rule == null) {
                     rule = new Rule(new Metadata(metadata.getScope(), key, "Auto generated rule for "+metadata.getName(), ""));
@@ -423,7 +423,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                     rule.getMetadata().setHidden(true);
                     final Action action = new Action();
                     action.setActionType(definitionsService.getActionType("setEventOccurenceCountAction"));
-                    action.getParameterValues().put("pastEventCondition", parentCondition);
+                    action.setParameter("pastEventCondition", parentCondition);
 
                     rule.setActions(Arrays.asList(action));
                     rule.setLinkedItems(Arrays.asList(metadata.getIdWithScope()));
@@ -458,8 +458,8 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         List<Condition> l = new ArrayList<Condition>();
         Condition andCondition = new Condition();
         andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
-        andCondition.getParameterValues().put("operator", "and");
-        andCondition.getParameterValues().put("subConditions", l);
+        andCondition.setParameter("operator", "and");
+        andCondition.setParameter("subConditions", l);
 
         l.add(eventCondition);
 
@@ -467,9 +467,9 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         if (numberOfDays != null) {
             Condition numberOfDaysCondition = new Condition();
             numberOfDaysCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-            numberOfDaysCondition.getParameterValues().put("propertyName", "timeStamp");
-            numberOfDaysCondition.getParameterValues().put("comparisonOperator", "greaterThan");
-            numberOfDaysCondition.getParameterValues().put("propertyValue", "now-" + numberOfDays + "d");
+            numberOfDaysCondition.setParameter("propertyName", "timeStamp");
+            numberOfDaysCondition.setParameter("comparisonOperator", "greaterThan");
+            numberOfDaysCondition.setParameter("propertyValue", "now-" + numberOfDays + "d");
             l.add(numberOfDaysCondition);
         }
         String propertyKey = (String) parentCondition.getParameter("generatedPropertyKey");
@@ -494,9 +494,9 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         Condition segmentCondition = new Condition();
 
         segmentCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
-        segmentCondition.getParameterValues().put("propertyName", "segments");
-        segmentCondition.getParameterValues().put("comparisonOperator", "equals");
-        segmentCondition.getParameterValues().put("propertyValue", segment.getItemId());
+        segmentCondition.setParameter("propertyName", "segments");
+        segmentCondition.setParameter("comparisonOperator", "equals");
+        segmentCondition.setParameter("propertyValue", segment.getItemId());
 
         List<Profile> previousProfiles = persistenceService.query(segmentCondition, null, Profile.class);
         List<Profile> newProfiles = persistenceService.query(segment.getCondition(), null, Profile.class);

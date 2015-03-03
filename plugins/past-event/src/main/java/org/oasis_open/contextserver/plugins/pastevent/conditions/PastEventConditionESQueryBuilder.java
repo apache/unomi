@@ -4,7 +4,6 @@ import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.Profile;
-import org.oasis_open.contextserver.api.Session;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
@@ -26,9 +25,6 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
         this.persistenceService = persistenceService;
     }
 
-    public PastEventConditionESQueryBuilder() {
-    }
-
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         Condition eventCondition = (Condition) condition.getParameter("eventCondition");
         if (eventCondition == null) {
@@ -37,8 +33,8 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
         List<Condition> l = new ArrayList<Condition>();
         Condition andCondition = new Condition();
         andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
-        andCondition.getParameterValues().put("operator", "and");
-        andCondition.getParameterValues().put("subConditions", l);
+        andCondition.setParameter("operator", "and");
+        andCondition.setParameter("subConditions", l);
 
         l.add(eventCondition);
 
@@ -46,9 +42,9 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
         if (numberOfDays != null) {
             Condition numberOfDaysCondition = new Condition();
             numberOfDaysCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-            numberOfDaysCondition.getParameterValues().put("propertyName", "timeStamp");
-            numberOfDaysCondition.getParameterValues().put("comparisonOperator", "greaterThan");
-            numberOfDaysCondition.getParameterValues().put("propertyValueDateExpr", "now-" + numberOfDays + "d");
+            numberOfDaysCondition.setParameter("propertyName", "timeStamp");
+            numberOfDaysCondition.setParameter("comparisonOperator", "greaterThan");
+            numberOfDaysCondition.setParameter("propertyValueDateExpr", "now-" + numberOfDays + "d");
             l.add(numberOfDaysCondition);
         }
         //todo : Check behaviour with important number of profiles

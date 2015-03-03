@@ -149,30 +149,30 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         Condition res = new Condition();
         List<Condition> subConditions = new ArrayList<Condition>();
         res.setConditionType(definitionsService.getConditionType("booleanCondition"));
-        res.getParameterValues().put("operator", "and");
-        res.getParameterValues().put("subConditions", subConditions);
+        res.setParameter("operator", "and");
+        res.setParameter("subConditions", subConditions);
 
         subConditions.add(event);
 
         Condition notExist = new Condition();
         notExist.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-        notExist.getParameterValues().put("propertyName", "properties." + goal.getMetadata().getId() + id + "Reached");
-        notExist.getParameterValues().put("comparisonOperator", "missing");
+        notExist.setParameter("propertyName", "properties." + goal.getMetadata().getId() + id + "Reached");
+        notExist.setParameter("comparisonOperator", "missing");
         subConditions.add(notExist);
 
         if (testStart) {
             Condition startExists = new Condition();
             startExists.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-            startExists.getParameterValues().put("propertyName", "properties." + goal.getMetadata().getId() + "StartReached");
-            startExists.getParameterValues().put("comparisonOperator", "exists");
+            startExists.setParameter("propertyName", "properties." + goal.getMetadata().getId() + "StartReached");
+            startExists.setParameter("comparisonOperator", "exists");
             subConditions.add(startExists);
         }
 
         if (goal.getCampaignId() != null) {
             Condition engagedInCampaign = new Condition();
             engagedInCampaign.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-            engagedInCampaign.getParameterValues().put("propertyName", "properties." + goal.getCampaignId() + "Engaged");
-            engagedInCampaign.getParameterValues().put("comparisonOperator", "exists");
+            engagedInCampaign.setParameter("propertyName", "properties." + goal.getCampaignId() + "Engaged");
+            engagedInCampaign.setParameter("comparisonOperator", "exists");
             subConditions.add(engagedInCampaign);
         }
 
@@ -181,14 +181,14 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         Action action1 = new Action();
         action1.setActionType(definitionsService.getActionType("setPropertyAction"));
         String name = "properties." + goal.getMetadata().getId() + id + "Reached";
-        action1.getParameterValues().put("setPropertyName", name);
-        action1.getParameterValues().put("setPropertyValue", "now");
-        action1.getParameterValues().put("storeInSession", true);
+        action1.setParameter("setPropertyName", name);
+        action1.setParameter("setPropertyValue", "now");
+        action1.setParameter("storeInSession", true);
         Action action2 = new Action();
         action2.setActionType(definitionsService.getActionType("setPropertyAction"));
-        action2.getParameterValues().put("setPropertyName", name);
-        action2.getParameterValues().put("setPropertyValue", "script::profile.properties.?"+name+" != null ? (profile.properties."+name+") : 'now'");
-        action2.getParameterValues().put("storeInSession", false);
+        action2.setParameter("setPropertyName", name);
+        action2.setParameter("setPropertyValue", "script::profile.properties.?"+name+" != null ? (profile.properties."+name+") : 'now'");
+        action2.setParameter("storeInSession", false);
         rule.setActions(Arrays.asList(action1,action2));
         rulesService.setRule(rule);
     }
@@ -267,24 +267,24 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         Condition res = new Condition();
         List<Condition> subConditions = new ArrayList<Condition>();
         res.setConditionType(definitionsService.getConditionType("booleanCondition"));
-        res.getParameterValues().put("operator", "and");
-        res.getParameterValues().put("subConditions", subConditions);
+        res.setParameter("operator", "and");
+        res.setParameter("subConditions", subConditions);
 
         if (campaign.getStartDate() != null) {
             Condition startCondition = new Condition();
             startCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-            startCondition.getParameterValues().put("propertyName", "timeStamp");
-            startCondition.getParameterValues().put("comparisonOperator", "greaterThan");
-            startCondition.getParameterValues().put("propertyValueDate", campaign.getStartDate());
+            startCondition.setParameter("propertyName", "timeStamp");
+            startCondition.setParameter("comparisonOperator", "greaterThan");
+            startCondition.setParameter("propertyValueDate", campaign.getStartDate());
             subConditions.add(startCondition);
         }
 
         if (campaign.getEndDate() != null) {
             Condition endCondition = new Condition();
             endCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-            endCondition.getParameterValues().put("propertyName", "timeStamp");
-            endCondition.getParameterValues().put("comparisonOperator", "lessThan");
-            endCondition.getParameterValues().put("propertyValueDate", campaign.getEndDate());
+            endCondition.setParameter("propertyName", "timeStamp");
+            endCondition.setParameter("comparisonOperator", "lessThan");
+            endCondition.setParameter("propertyValueDate", campaign.getEndDate());
             subConditions.add(endCondition);
         }
 
@@ -297,14 +297,14 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         Action action1 = new Action();
         action1.setActionType(definitionsService.getActionType("setPropertyAction"));
         String name = "properties." + campaign.getMetadata().getId() + "Engaged";
-        action1.getParameterValues().put("setPropertyName", name);
-        action1.getParameterValues().put("setPropertyValue", "now");
-        action1.getParameterValues().put("storeInSession", true);
+        action1.setParameter("setPropertyName", name);
+        action1.setParameter("setPropertyValue", "now");
+        action1.setParameter("storeInSession", true);
         Action action2 = new Action();
         action2.setActionType(definitionsService.getActionType("setPropertyAction"));
-        action2.getParameterValues().put("setPropertyName", name);
-        action2.getParameterValues().put("setPropertyValue", "script::profile.properties.?"+name+" != null ? (profile.properties."+name+") : 'now'");
-        action2.getParameterValues().put("storeInSession", false);
+        action2.setParameter("setPropertyName", name);
+        action2.setParameter("setPropertyValue", "script::profile.properties.?"+name+" != null ? (profile.properties."+name+") : 'now'");
+        action2.setParameter("storeInSession", false);
         rule.setActions(Arrays.asList(action1,action2));
         rulesService.setRule(rule);
     }
@@ -360,22 +360,22 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     public GoalReport getGoalReport(String scope, String goalId, AggregateQuery query) {
         Condition condition = new Condition(definitionsService.getConditionType("booleanCondition"));
         final ArrayList<Condition> list = new ArrayList<Condition>();
-        condition.getParameterValues().put("operator", "and");
-        condition.getParameterValues().put("subConditions", list);
+        condition.setParameter("operator", "and");
+        condition.setParameter("subConditions", list);
 
         Goal g = getGoal(scope, goalId);
 
         Condition goalTargetCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-        goalTargetCondition.getParameterValues().put("propertyName", goalId+ "TargetReached");
-        goalTargetCondition.getParameterValues().put("comparisonOperator", "exists");
+        goalTargetCondition.setParameter("propertyName", goalId+ "TargetReached");
+        goalTargetCondition.setParameter("comparisonOperator", "exists");
 
         Condition goalStartCondition;
         if (g.getStartEvent() == null) {
             goalStartCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
         } else {
             goalStartCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-            goalStartCondition.getParameterValues().put("propertyName", goalId + "StartReached");
-            goalStartCondition.getParameterValues().put("comparisonOperator", "exists");
+            goalStartCondition.setParameter("propertyName", goalId + "StartReached");
+            goalStartCondition.setParameter("comparisonOperator", "exists");
         }
 
         if (query != null && query.getCondition() != null) {

@@ -519,8 +519,8 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 } else {
                     Condition res = new Condition();
                     res.setConditionType(getConditionType("booleanCondition"));
-                    res.getParameterValues().put("operator", "and");
-                    res.getParameterValues().put("subConditions", matchingConditions);
+                    res.setParameter("operator", "and");
+                    res.setParameter("subConditions", matchingConditions);
                     return res;
                 }
             }

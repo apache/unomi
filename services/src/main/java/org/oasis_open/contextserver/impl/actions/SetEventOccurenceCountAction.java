@@ -28,7 +28,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         final Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
 
         Condition andCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-        andCondition.getParameterValues().put("operator", "and");
+        andCondition.setParameter("operator", "and");
         ArrayList<Condition> conditions = new ArrayList<Condition>();
 
         Condition eventCondition = (Condition) pastEventCondition.getParameterValues().get("eventCondition");
@@ -36,23 +36,23 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         conditions.add(eventCondition);
 
         Condition c = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        c.getParameterValues().put("propertyName","profileId");
-        c.getParameterValues().put("comparisonOperator", "equals");
-        c.getParameterValues().put("propertyValue",event.getProfileId());
+        c.setParameter("propertyName","profileId");
+        c.setParameter("comparisonOperator", "equals");
+        c.setParameter("propertyValue",event.getProfileId());
         conditions.add(c);
 
         if (pastEventCondition.getParameterValues().get("numberOfDays") != null) {
             int i = (Integer) pastEventCondition.getParameterValues().get("numberOfDays");
 
             Condition timeCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-            timeCondition.getParameterValues().put("propertyName","timeStamp");
-            timeCondition.getParameterValues().put("comparisonOperator","greaterThan");
-            timeCondition.getParameterValues().put("propertyValueDateExpr","now-"+i+"d");
+            timeCondition.setParameter("propertyName","timeStamp");
+            timeCondition.setParameter("comparisonOperator","greaterThan");
+            timeCondition.setParameter("propertyValueDateExpr","now-"+i+"d");
 
             conditions.add(timeCondition);
         }
 
-        andCondition.getParameterValues().put("subConditions", conditions);
+        andCondition.setParameter("subConditions", conditions);
 
         long count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
 

@@ -49,25 +49,25 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
             List<Condition> l = new ArrayList<Condition>();
             Condition andCondition = new Condition();
             andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
-            andCondition.getParameterValues().put("operator", "and");
-            andCondition.getParameterValues().put("subConditions", l);
+            andCondition.setParameter("operator", "and");
+            andCondition.setParameter("subConditions", l);
 
             l.add(eventCondition);
 
             Condition profileCondition = new Condition();
             profileCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-            profileCondition.getParameterValues().put("propertyName", "profileId");
-            profileCondition.getParameterValues().put("comparisonOperator", "equals");
-            profileCondition.getParameterValues().put("propertyValue", item.getItemId());
+            profileCondition.setParameter("propertyName", "profileId");
+            profileCondition.setParameter("comparisonOperator", "equals");
+            profileCondition.setParameter("propertyValue", item.getItemId());
             l.add(profileCondition);
 
             Integer numberOfDays = (Integer) condition.getParameterValues().get("numberOfDays");
             if (numberOfDays != null) {
                 Condition numberOfDaysCondition = new Condition();
                 numberOfDaysCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-                numberOfDaysCondition.getParameterValues().put("propertyName", "timeStamp");
-                numberOfDaysCondition.getParameterValues().put("comparisonOperator", "greaterThan");
-                numberOfDaysCondition.getParameterValues().put("propertyValueDateExpr", "now-" + numberOfDays + "d");
+                numberOfDaysCondition.setParameter("propertyName", "timeStamp");
+                numberOfDaysCondition.setParameter("comparisonOperator", "greaterThan");
+                numberOfDaysCondition.setParameter("propertyValueDateExpr", "now-" + numberOfDays + "d");
                 l.add(numberOfDaysCondition);
             }
             count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
