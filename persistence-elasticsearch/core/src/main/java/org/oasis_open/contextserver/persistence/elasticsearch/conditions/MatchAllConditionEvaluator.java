@@ -5,9 +5,6 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 
 import java.util.Map;
 
-/**
- * Created by toto on 27/06/14.
- */
 public class MatchAllConditionEvaluator implements ConditionEvaluator {
 
     @Override

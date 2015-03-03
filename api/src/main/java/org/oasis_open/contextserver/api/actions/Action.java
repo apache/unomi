@@ -6,9 +6,6 @@ import javax.xml.bind.annotation.XmlTransient;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Created by toto on 26/06/14.
- */
 @XmlRootElement
 public class Action {
     protected ActionType actionType;

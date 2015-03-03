@@ -6,9 +6,6 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 
 import java.util.Map;
 
-/**
- * Created by loom on 12.09.14.
- */
 public class GeoLocationByPointSessionConditionESQueryBuilder implements ConditionESQueryBuilder {
     @Override
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {

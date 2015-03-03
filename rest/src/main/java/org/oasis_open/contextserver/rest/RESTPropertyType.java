@@ -6,9 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Created by toto on 15/01/15.
- */
 public class RESTPropertyType {
     private String id;
     private String name;

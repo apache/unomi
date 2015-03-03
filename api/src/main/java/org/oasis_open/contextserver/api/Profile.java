@@ -6,9 +6,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Created by loom on 24.04.14.
- */
 public class Profile extends Item {
 
     private static final long serialVersionUID = -7409439322939712238L;

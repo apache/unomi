@@ -14,9 +14,6 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import java.util.Set;
 
-/**
- * Created by kevan on 31/10/14.
- */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class SegmentTest extends BaseTest{

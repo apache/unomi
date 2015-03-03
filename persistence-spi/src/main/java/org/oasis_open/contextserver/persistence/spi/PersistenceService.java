@@ -9,9 +9,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Created by loom on 02.05.14.
- */
 public interface PersistenceService {
 
     public <T extends Item> List<T> getAllItems(Class<T> clazz);

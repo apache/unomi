@@ -7,9 +7,6 @@ import org.apache.http.util.EntityUtils;
 
 import java.io.IOException;
 
-/**
- * Created by kevan on 31/10/14.
- */
 public class TestUtils {
     public static <T> T retrieveResourceFromResponse(HttpResponse response, Class<T> clazz)
             throws IOException {

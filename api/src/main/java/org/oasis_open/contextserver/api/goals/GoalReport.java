@@ -3,9 +3,6 @@ package org.oasis_open.contextserver.api.goals;
 import java.io.Serializable;
 import java.util.List;
 
-/**
- * Created by toto on 21/08/14.
- */
 public class GoalReport implements Serializable {
     private Stat globalStats;
     private List<Stat> split;

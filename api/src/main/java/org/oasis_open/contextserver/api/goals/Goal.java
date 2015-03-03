@@ -4,9 +4,6 @@ import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.MetadataItem;
 import org.oasis_open.contextserver.api.conditions.Condition;
 
-/**
- * Created by toto on 08/08/14.
- */
 public class Goal extends MetadataItem {
     public static final String ITEM_TYPE = "goal";
 

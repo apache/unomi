@@ -13,9 +13,6 @@ import org.osgi.framework.ServiceReference;
 
 import java.util.*;
 
-/**
- * Created by loom on 10.06.14.
- */
 public class EventServiceImpl implements EventService {
 
     private List<EventListenerService> eventListeners = new ArrayList<EventListenerService>();

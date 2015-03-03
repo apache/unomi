@@ -2,9 +2,6 @@ package org.oasis_open.contextserver.api;
 
 import javax.xml.bind.annotation.XmlTransient;
 
-/**
- * Created by loom on 16.10.14.
- */
 public class PropertyMergeStrategyType implements PluginType {
 
     private String id;

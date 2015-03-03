@@ -14,9 +14,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 
-/**
- * Created by loom on 24.04.14.
- */
 public class ProfileServiceImpl implements ProfileService, SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(RulesServiceImpl.class.getName());

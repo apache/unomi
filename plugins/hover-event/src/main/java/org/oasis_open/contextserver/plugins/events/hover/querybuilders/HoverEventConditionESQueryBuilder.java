@@ -10,9 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/**
-* Created by toto on 27/06/14.
-*/
 public class HoverEventConditionESQueryBuilder implements ConditionESQueryBuilder {
 
     public HoverEventConditionESQueryBuilder() {

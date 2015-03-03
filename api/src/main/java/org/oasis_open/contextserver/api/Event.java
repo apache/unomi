@@ -3,9 +3,6 @@ package org.oasis_open.contextserver.api;
 import javax.xml.bind.annotation.XmlTransient;
 import java.util.*;
 
-/**
- * Created by loom on 24.04.14.
- */
 public class Event extends Item implements TimestampedItem {
 
     public static final String ITEM_TYPE = "event";

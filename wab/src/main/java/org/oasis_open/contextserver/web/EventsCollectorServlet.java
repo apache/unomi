@@ -21,9 +21,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
-/**
- * Created by loom on 10.06.14.
- */
 @WebServlet(urlPatterns = {"/eventcollector"})
 public class EventsCollectorServlet extends HttpServlet {
 

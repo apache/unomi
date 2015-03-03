@@ -6,9 +6,6 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
-/**
- * Created by loom on 24.04.14.
- */
 @XmlRootElement
 public class Segment extends MetadataItem {
 

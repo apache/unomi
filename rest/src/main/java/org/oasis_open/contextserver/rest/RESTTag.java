@@ -4,9 +4,6 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.TreeSet;
 
-/**
- * Created by toto on 14/01/15.
- */
 public class RESTTag {
     private String id;
     private String name;

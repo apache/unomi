@@ -71,9 +71,6 @@ import java.util.*;
 
 import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 
-/**
- * Created by loom on 02.05.14.
- */
 public class ElasticSearchPersistenceServiceImpl implements PersistenceService, ClusterService {
 
     public static final long MILLIS_PER_DAY = 24L * 60L * 60L * 1000L;

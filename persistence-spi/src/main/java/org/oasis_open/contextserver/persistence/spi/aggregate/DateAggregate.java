@@ -1,8 +1,5 @@
 package org.oasis_open.contextserver.persistence.spi.aggregate;
 
-/**
- * Created by kevan on 12/01/15.
- */
 public class DateAggregate extends BaseAggregate{
     private static final String DEFAULT_INTERVAL = "1M";
     public static final DateAggregate SECOND = new DateAggregate("1s");

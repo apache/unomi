@@ -7,9 +7,6 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 
 import java.util.List;
 
-/**
-* Created by toto on 26/06/14.
-*/
 public class Rule extends MetadataItem {
 
     public static final String ITEM_TYPE = "rule";

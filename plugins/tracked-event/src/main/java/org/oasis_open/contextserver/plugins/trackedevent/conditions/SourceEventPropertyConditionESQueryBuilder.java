@@ -10,9 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Created by kevan on 28/01/15.
- */
 public class SourceEventPropertyConditionESQueryBuilder implements ConditionESQueryBuilder {
 
     public SourceEventPropertyConditionESQueryBuilder() {

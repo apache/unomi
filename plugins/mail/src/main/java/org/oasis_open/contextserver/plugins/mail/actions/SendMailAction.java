@@ -12,9 +12,6 @@ import org.stringtemplate.v4.ST;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-/**
- * Created by loom on 14.08.14.
- */
 public class SendMailAction implements ActionExecutor {
 
     private String mailServerHostName;

@@ -14,9 +14,6 @@ import org.oasis_open.contextserver.persistence.spi.aggregate.TermsAggregate;
 
 import java.util.*;
 
-/**
- * Created by toto on 11/08/14.
- */
 public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder {
     private DefinitionsService definitionsService;
     private PersistenceService persistenceService;

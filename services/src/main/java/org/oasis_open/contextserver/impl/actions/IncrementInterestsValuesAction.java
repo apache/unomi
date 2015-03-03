@@ -8,9 +8,6 @@ import org.oasis_open.contextserver.api.actions.ActionExecutor;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Created by toto on 29/08/14.
- */
 public class IncrementInterestsValuesAction implements ActionExecutor {
 
     @Override

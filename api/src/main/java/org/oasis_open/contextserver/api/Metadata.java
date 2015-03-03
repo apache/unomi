@@ -5,9 +5,6 @@ import javax.xml.bind.annotation.XmlTransient;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-/**
- * Created by loom on 24.04.14.
- */
 public class Metadata implements Comparable<Metadata> {
 
     public static final String SYSTEM_SCOPE = "systemscope";

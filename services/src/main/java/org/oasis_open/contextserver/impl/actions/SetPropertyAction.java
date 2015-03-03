@@ -9,9 +9,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.text.SimpleDateFormat;
 import java.util.TimeZone;
 
-/**
- * Created by toto on 26/06/14.
- */
 public class SetPropertyAction implements ActionExecutor {
     public SetPropertyAction() {
     }

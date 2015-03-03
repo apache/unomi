@@ -3,9 +3,6 @@ package org.oasis_open.contextserver.api;
 import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 
-/**
- * Created by loom on 24.04.14.
- */
 public abstract class Item implements Serializable {
 
     protected String itemId;

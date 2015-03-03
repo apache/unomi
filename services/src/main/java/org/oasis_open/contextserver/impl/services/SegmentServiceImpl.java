@@ -26,9 +26,6 @@ import java.net.URL;
 import java.security.MessageDigest;
 import java.util.*;
 
-/**
- * Created by loom on 26.04.14.
- */
 public class SegmentServiceImpl implements SegmentService, SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());

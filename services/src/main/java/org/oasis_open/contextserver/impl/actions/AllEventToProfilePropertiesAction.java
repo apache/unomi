@@ -10,9 +10,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Created by loom on 08.08.14.
- */
 public class AllEventToProfilePropertiesAction implements ActionExecutor {
 
     private ProfileService profileService;

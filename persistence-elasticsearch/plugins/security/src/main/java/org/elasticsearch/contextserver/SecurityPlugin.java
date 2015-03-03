@@ -9,9 +9,6 @@ import java.util.Collection;
 
 import static org.elasticsearch.common.collect.Lists.newArrayList;
 
-/**
- * Created by loom on 23.10.14.
- */
 public class SecurityPlugin extends AbstractPlugin {
 
     private final Settings settings;

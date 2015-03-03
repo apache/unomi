@@ -12,9 +12,6 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
-/**
- * Created by loom on 16.10.14.
- */
 public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
     private final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365 * 10; // 10-years

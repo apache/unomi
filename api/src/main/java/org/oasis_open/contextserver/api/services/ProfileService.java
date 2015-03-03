@@ -6,9 +6,6 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 import java.util.Date;
 import java.util.Set;
 
-/**
- * Created by loom on 24.04.14.
- */
 public interface ProfileService {
 
     PartialList<Profile> getAllProfiles();

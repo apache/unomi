@@ -6,9 +6,6 @@ import org.oasis_open.contextserver.api.Profile;
 
 import java.util.List;
 
-/**
- * Created by loom on 16.10.14.
- */
 public class NonEmptyPropertyMergeStrategyExecutor implements PropertyMergeStrategyExecutor {
     public boolean mergeProperty(String propertyName, PropertyType propertyType, List<Profile> profilesToMerge, Profile targetProfile) {
         return false;

@@ -7,9 +7,6 @@ import org.oasis_open.contextserver.api.Metadata;
 
 import java.util.Set;
 
-/**
- * Created by toto on 26/06/14.
- */
 public interface RulesService {
 
     Set<Metadata> getRuleMetadatas();

@@ -13,9 +13,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Created by loom on 26.06.14.
- */
 public class ConditionESQueryBuilderDispatcher {
 
     private BundleContext bundleContext;

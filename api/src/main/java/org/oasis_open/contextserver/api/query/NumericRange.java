@@ -1,8 +1,5 @@
 package org.oasis_open.contextserver.api.query;
 
-/**
- * Created by kevan on 13/02/15.
- */
 public class NumericRange {
     public NumericRange() {
     }

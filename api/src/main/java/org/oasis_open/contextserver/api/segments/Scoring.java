@@ -6,9 +6,6 @@ import org.oasis_open.contextserver.api.MetadataItem;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.List;
 
-/**
- * Created by toto on 10/12/14.
- */
 @XmlRootElement
 public class Scoring extends MetadataItem {
     public static final String ITEM_TYPE = "scoring";

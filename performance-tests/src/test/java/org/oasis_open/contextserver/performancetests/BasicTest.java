@@ -37,9 +37,6 @@ import static org.ops4j.pax.exam.CoreOptions.*;
 import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.karafDistributionConfiguration;
 import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.keepRuntimeFolder;
 
-/**
- * Created by loom on 04.08.14.
- */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerClass.class)
 public class BasicTest {

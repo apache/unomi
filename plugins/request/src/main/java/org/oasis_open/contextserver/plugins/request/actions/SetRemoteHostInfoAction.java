@@ -26,9 +26,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-/**
- * Created by toto on 18/08/14.
- */
 public class SetRemoteHostInfoAction implements ActionExecutor {
 
     public static final Pattern IPV4 = Pattern.compile("[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}");

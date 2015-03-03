@@ -5,9 +5,6 @@ import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by toto on 14/01/15.
- */
 public class RESTParameter {
     private String id;
     private String type;

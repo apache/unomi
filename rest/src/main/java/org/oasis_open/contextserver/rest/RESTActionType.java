@@ -2,9 +2,6 @@ package org.oasis_open.contextserver.rest;
 
 import java.util.*;
 
-/**
- * Created by toto on 14/01/15.
- */
 public class RESTActionType {
     private String id;
     private String name;

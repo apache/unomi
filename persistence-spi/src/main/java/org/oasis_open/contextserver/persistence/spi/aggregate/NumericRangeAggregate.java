@@ -4,9 +4,6 @@ import org.oasis_open.contextserver.api.query.NumericRange;
 
 import java.util.List;
 
-/**
- * Created by kevan on 13/02/15.
- */
 public class NumericRangeAggregate extends BaseAggregate{
     public NumericRangeAggregate(String field, List<NumericRange> ranges) {
         super(field);

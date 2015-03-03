@@ -9,9 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Created by loom on 21.08.14.
- */
 public class EventTypeIdChoiceListInitializer implements ChoiceListInitializer, I18nSupport {
 
     EventService eventService;

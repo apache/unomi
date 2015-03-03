@@ -10,9 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
-/**
- * Created by loom on 12.09.14.
- */
 public class GeoLocationByPointSessionConditionEvaluator implements ConditionEvaluator {
 
     private static final Logger logger = LoggerFactory.getLogger(GeoLocationByPointSessionConditionEvaluator.class.getName());

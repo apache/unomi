@@ -4,9 +4,6 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
-/**
-* Created by toto on 10/12/14.
-*/
 @XmlRootElement
 public class ScoringElement {
     private Condition condition;

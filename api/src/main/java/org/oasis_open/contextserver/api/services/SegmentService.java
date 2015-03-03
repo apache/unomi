@@ -9,9 +9,6 @@ import org.oasis_open.contextserver.api.segments.SegmentsAndScores;
 
 import java.util.Set;
 
-/**
- * Created by loom on 24.04.14.
- */
 public interface SegmentService {
 
     Set<Metadata> getSegmentMetadatas();

@@ -7,9 +7,6 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.TreeSet;
 
-/**
- * Created by loom on 02.09.14.
- */
 @XmlRootElement
 public class ValueType implements PluginType {
 

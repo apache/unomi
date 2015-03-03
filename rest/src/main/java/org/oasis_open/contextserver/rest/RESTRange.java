@@ -1,8 +1,5 @@
 package org.oasis_open.contextserver.rest;
 
-/**
- * Created by kevan on 23/02/15.
- */
 public class RESTRange {
     private String key;
     private Object to;

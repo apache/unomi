@@ -10,9 +10,6 @@ import org.oasis_open.contextserver.persistence.spi.PersistenceService;
 
 import java.util.ArrayList;
 
-/**
- * Created by toto on 02/09/14.
- */
 public class SetEventOccurenceCountAction implements ActionExecutor {
     private DefinitionsService definitionsService;
 

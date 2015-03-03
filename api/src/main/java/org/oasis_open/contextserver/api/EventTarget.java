@@ -3,9 +3,6 @@ package org.oasis_open.contextserver.api;
 import java.io.Serializable;
 import java.util.Map;
 
-/**
- * Created by toto on 29/10/14.
- */
 public class EventTarget implements Serializable {
     private String id;
     private String type;

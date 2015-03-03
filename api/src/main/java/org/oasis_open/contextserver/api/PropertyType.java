@@ -7,9 +7,6 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.util.*;
 
-/**
- * Created by loom on 27.08.14.
- */
 @XmlRootElement
 public class PropertyType implements Comparable<PropertyType>, PluginType {
     public static final String ITEM_TYPE = "propertyType";

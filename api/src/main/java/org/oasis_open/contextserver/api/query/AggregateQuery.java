@@ -2,9 +2,6 @@ package org.oasis_open.contextserver.api.query;
 
 import org.oasis_open.contextserver.api.conditions.Condition;
 
-/**
- * Created by kevan on 12/01/15.
- */
 public class AggregateQuery {
     private Aggregate aggregate;
     private Condition condition;

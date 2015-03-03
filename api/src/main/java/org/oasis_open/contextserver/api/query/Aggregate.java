@@ -5,9 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Created by kevan on 12/01/15.
- */
 public class Aggregate {
     private String type;
     private String property;

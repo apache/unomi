@@ -3,9 +3,6 @@ package org.oasis_open.contextserver.rest;
 import java.util.Collection;
 import java.util.Set;
 
-/**
- * Created by toto on 14/01/15.
- */
 public class RESTValueType {
 
     private String id;

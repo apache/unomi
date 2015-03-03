@@ -9,9 +9,6 @@ import org.oasis_open.contextserver.api.segments.SegmentsAndScores;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Created by toto on 14/08/14.
- */
 public class EvaluateProfileSegmentsAction implements ActionExecutor {
 
     private SegmentService segmentService;
