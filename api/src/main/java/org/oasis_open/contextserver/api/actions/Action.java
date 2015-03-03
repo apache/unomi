@@ -3,6 +3,7 @@ package org.oasis_open.contextserver.api.actions;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,6 +42,10 @@ public class Action {
 
     public Map<String, Object> getParameterValues() {
         return parameterValues;
+    }
+
+    public void setParameter(String name, Object value) {
+        parameterValues.put(name, value);
     }
 
     public void setParameterValues(Map<String, Object> parameterValues) {
