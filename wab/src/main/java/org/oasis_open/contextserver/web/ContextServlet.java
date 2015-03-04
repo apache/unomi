@@ -1,17 +1,13 @@
 package org.oasis_open.contextserver.web;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.io.IOUtils;
-import org.oasis_open.contextserver.api.*;
-import org.oasis_open.contextserver.api.conditions.Condition;
-import org.oasis_open.contextserver.api.services.EventService;
-import org.oasis_open.contextserver.api.services.RulesService;
-import org.oasis_open.contextserver.api.services.SegmentService;
-import org.oasis_open.contextserver.api.services.ProfileService;
-import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
-import org.ops4j.pax.cdi.api.OsgiService;
-
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Writer;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
@@ -20,10 +16,24 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Writer;
-import java.util.*;
+
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.io.IOUtils;
+import org.oasis_open.contextserver.api.ContextRequest;
+import org.oasis_open.contextserver.api.ContextResponse;
+import org.oasis_open.contextserver.api.Event;
+import org.oasis_open.contextserver.api.Persona;
+import org.oasis_open.contextserver.api.PersonaWithSessions;
+import org.oasis_open.contextserver.api.Profile;
+import org.oasis_open.contextserver.api.Session;
+import org.oasis_open.contextserver.api.conditions.Condition;
+import org.oasis_open.contextserver.api.services.EventService;
+import org.oasis_open.contextserver.api.services.ProfileService;
+import org.oasis_open.contextserver.api.services.RulesService;
+import org.oasis_open.contextserver.api.services.SegmentService;
+import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
+import org.ops4j.pax.cdi.api.OsgiService;
 
 /**
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
@@ -61,14 +71,16 @@ public class ContextServlet extends HttpServlet {
         }
         // first we must retrieve the context for the current visitor, and build a Javascript object to attach to the
         // script output.
-        String profileId = null;
+        String profileId;
 
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
         String httpMethod = httpServletRequest.getMethod();
 //        log(HttpUtils.dumpRequestInfo(httpServletRequest));
 
+        // set up CORS headers as soon as possible so that errors are not misconstrued on the client for CORS errors
+        HttpUtils.setupCORSHeaders(httpServletRequest, response);
+
         if ("options".equals(httpMethod.toLowerCase())) {
-            HttpUtils.setupCORSHeaders(httpServletRequest, response);
             response.flushBuffer();
             return;
         }
@@ -180,8 +192,6 @@ public class ContextServlet extends HttpServlet {
             log("Received event " + profileUpdated.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + profileUpdated.getTarget() + " timestamp=" + timestamp);
             eventService.send(profileUpdated);
         }
-
-        HttpUtils.setupCORSHeaders(httpServletRequest, response);
 
         ContextResponse data = new ContextResponse();
 
