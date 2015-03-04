@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.util.ISO8601DateFormat;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 
 import org.oasis_open.contextserver.api.*;
@@ -34,7 +35,7 @@ public class CustomObjectMapper extends ObjectMapper {
         super();
         super.registerModule(new JaxbAnnotationModule());
         configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        ISO8601DateFormat dateFormat = new ISO8601DateFormat();
         dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
         setDateFormat(dateFormat);
         SimpleModule deserializerModule =
