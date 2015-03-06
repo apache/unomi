@@ -47,6 +47,12 @@ public class GoalsServiceEndPoint {
     }
 
     @GET
+    @Path("/{campaignId}/campaign")
+    public Set<Metadata> getCampaignGoalMetadatas(@PathParam("campaignId") String campaignId) {
+        return goalsService.getCampaignGoalMetadatas(campaignId);
+    }
+
+    @GET
     @Path("/{scope}/{goalId}")
     public Goal getGoal(@PathParam("scope") String scope, @PathParam("goalId") String goalId) {
         return goalsService.getGoal(scope, goalId);

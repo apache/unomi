@@ -15,6 +15,8 @@ public interface GoalsService {
 
     Goal getGoal(String scope, String goalId);
 
+    Set<Metadata> getCampaignGoalMetadatas(String campaignId);
+
     void setGoal(Goal goal);
 
     void removeGoal(String scope, String goalId);

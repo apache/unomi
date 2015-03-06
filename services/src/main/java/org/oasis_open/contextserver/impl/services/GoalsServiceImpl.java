@@ -241,6 +241,13 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         persistenceService.save(goal);
     }
 
+    public Set<Metadata> getCampaignGoalMetadatas(String campaignId) {
+        Set<Metadata> descriptions = new HashSet<Metadata>();
+        for (Goal definition : persistenceService.query("campaignId", campaignId, null, Goal.class,0,50).getList()) {
+            descriptions.add(definition.getMetadata());
+        }
+        return descriptions;
+    }
 
     private void loadPredefinedCampaigns(BundleContext bundleContext) {
         Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/wemi/campaigns", "*.json", true);
