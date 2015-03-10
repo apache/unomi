@@ -15,6 +15,10 @@ public class Campaign extends MetadataItem {
 
     private Condition entryCondition;
 
+    private Double cost;
+
+    private String currency;
+
     public Campaign() {
     }
 
@@ -44,5 +48,21 @@ public class Campaign extends MetadataItem {
 
     public void setEntryCondition(Condition entryCondition) {
         this.entryCondition = entryCondition;
+    }
+
+    public Double getCost() {
+        return cost;
+    }
+
+    public void setCost(Double cost) {
+        this.cost = cost;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
     }
 }
