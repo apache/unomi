@@ -19,6 +19,8 @@ public class Campaign extends MetadataItem {
 
     private String currency;
 
+    private String primaryGoal;
+
     public Campaign() {
     }
 
@@ -64,5 +66,13 @@ public class Campaign extends MetadataItem {
 
     public void setCurrency(String currency) {
         this.currency = currency;
+    }
+
+    public String getPrimaryGoal() {
+        return primaryGoal;
+    }
+
+    public void setPrimaryGoal(String primaryGoal) {
+        this.primaryGoal = primaryGoal;
     }
 }
