@@ -2,6 +2,7 @@ package org.oasis_open.contextserver.persistence.spi;
 
 import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.PartialList;
+import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.persistence.spi.aggregate.BaseAggregate;
 
@@ -56,4 +57,6 @@ public interface PersistenceService {
     public void refresh();
 
     public void purge(Date date);
+
+    public <T extends Item> PartialList<T>  rangeQuery(String s, String from, String to, String sortBy, Class<T> clazz, int offset, int size);
 }

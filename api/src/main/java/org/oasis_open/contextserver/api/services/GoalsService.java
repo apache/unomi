@@ -1,6 +1,8 @@
 package org.oasis_open.contextserver.api.services;
 
 import org.oasis_open.contextserver.api.Metadata;
+import org.oasis_open.contextserver.api.PartialList;
+import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.campaigns.Campaign;
 import org.oasis_open.contextserver.api.goals.Goal;
 import org.oasis_open.contextserver.api.goals.GoalReport;
@@ -36,4 +38,7 @@ public interface GoalsService {
     void removeCampaign(String scope, String campaignId);
 
 
+    PartialList<Profile> getMatchingIndividuals(String scope, String campaignId, int offset, int size, String sortBy);
+
+    long getMatchingIndividualsCount(String scope, String campaignId);
 }

@@ -1,5 +1,6 @@
 package org.oasis_open.contextserver.impl.services;
 
+import com.fasterxml.jackson.databind.util.ISO8601DateFormat;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.campaigns.Campaign;
@@ -472,6 +473,21 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             }
         }
         return goals;
+    }
+
+    //Campaign profile matching methods
+
+
+    @Override
+    public PartialList<Profile> getMatchingIndividuals(String scope, String campaignId, int offset, int size, String sortBy) {
+        Campaign campaign = getCampaign(scope,campaignId);
+        ISO8601DateFormat iso8601DateFormat = new ISO8601DateFormat();
+        return persistenceService.rangeQuery(campaignId + "Engaged", iso8601DateFormat.format(campaign.getStartDate()), iso8601DateFormat.format(campaign.getEndDate()), sortBy, Profile.class,offset,size);
+    }
+
+    @Override
+    public long getMatchingIndividualsCount(String scope, String campaignId) {
+        return 0;
     }
 
     public void bundleChanged(BundleEvent event) {

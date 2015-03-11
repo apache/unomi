@@ -8,6 +8,7 @@ import org.oasis_open.contextserver.api.campaigns.Campaign;
 import org.oasis_open.contextserver.api.segments.Segment;
 import org.oasis_open.contextserver.api.services.GoalsService;
 import org.oasis_open.contextserver.api.services.ProfileService;
+import org.oasis_open.contextserver.api.services.QueryService;
 import org.oasis_open.contextserver.api.services.SegmentService;
 
 import javax.jws.WebMethod;
@@ -65,5 +66,16 @@ public class CampaignsServiceEndPoint {
         goalsService.removeCampaign(scope, campaignID);
     }
 
+    @GET
+    @Path("/{scope}/{campaignID}/match")
+    public PartialList<Profile> getMatchingIndividuals(@PathParam("scope") String scope, @PathParam("campaignID") String campaignId, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
+        return goalsService.getMatchingIndividuals(scope, campaignId, offset, size, sortBy);
+    }
+
+    @GET
+    @Path("/{scope}/{campaignID}/count")
+    public long getMatchingIndividualsCount(@PathParam("scope") String scope, @PathParam("campaignID") String campaignId) {
+        return goalsService.getMatchingIndividualsCount(scope, campaignId);
+    }
 
 }

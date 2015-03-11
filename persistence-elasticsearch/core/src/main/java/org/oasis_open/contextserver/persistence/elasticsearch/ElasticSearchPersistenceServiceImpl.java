@@ -26,10 +26,7 @@ import org.elasticsearch.common.collect.UnmodifiableIterator;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsException;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.FilterBuilders;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
@@ -559,6 +556,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     @Override
     public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz, int offset, int size) {
         return query(QueryBuilders.termQuery(fieldName, fieldValue), sortBy, clazz, offset, size, getRouting(fieldName, new String[]{fieldValue}, clazz));
+    }
+
+    @Override
+    public <T extends Item> PartialList<T> rangeQuery(String fieldName, String from, String to, String sortBy, Class<T> clazz, int offset, int size) {
+        RangeQueryBuilder builder = QueryBuilders.rangeQuery(fieldName);
+        builder.from(from);
+        builder.to(to);
+        return query(builder, sortBy, clazz, offset, size, null);
     }
 
     @Override
