@@ -377,7 +377,11 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         goalTargetCondition.setParameter("comparisonOperator", "exists");
 
         Condition goalStartCondition;
-        if (g.getStartEvent() == null) {
+        if (g.getStartEvent() == null && g.getCampaignId() != null) {
+            goalStartCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+            goalStartCondition.setParameter("propertyName", "properties." + g.getCampaignId() + "Engaged");
+            goalStartCondition.setParameter("comparisonOperator", "exists");
+        } else if (g.getStartEvent() == null) {
             goalStartCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
         } else {
             goalStartCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
