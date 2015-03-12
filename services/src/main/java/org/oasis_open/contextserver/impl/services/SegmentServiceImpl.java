@@ -508,7 +508,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             }
         }
 
-        logger.info("Profiles past condition updated in "+(System.currentTimeMillis()-t));
+        logger.info("Profiles past condition updated in {}", System.currentTimeMillis()-t);
     }
 
     private void updateExistingProfilesForSegment(Segment segment) {
@@ -535,7 +535,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             profileToRemove.getSegments().remove(segment.getItemId());
             persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
         }
-        logger.info("Segments updated in "+(System.currentTimeMillis()-t));
+        logger.info("Segments updated in {}", System.currentTimeMillis()-t);
     }
 
 
