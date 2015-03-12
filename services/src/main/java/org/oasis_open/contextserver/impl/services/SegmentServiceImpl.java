@@ -459,7 +459,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                     rules.add(rule);
                 }
             } catch (JsonProcessingException e) {
-                e.printStackTrace();
+                logger.error(e.getMessage(), e);
             }
         } else {
             Collection<Object> values = new ArrayList<>(condition.getParameterValues().values());
@@ -505,7 +505,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                 try {
                     persistenceService.update(entry.getKey(), null, Profile.class, "properties", p);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    logger.error(e.getMessage(), e);
                 }
             }
         }
