@@ -187,7 +187,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     }
 
     private void loadPredefinedSegments(BundleContext bundleContext) {
-        Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/wemi/segments", "*.json", true);
+        Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/cxs/segments", "*.json", true);
         if (predefinedSegmentEntries == null) {
             return;
         }
@@ -210,7 +210,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     }
 
     private void loadPredefinedScorings(BundleContext bundleContext) {
-        Enumeration<URL> predefinedScoringEntries = bundleContext.getBundle().findEntries("META-INF/wemi/scoring", "*.json", true);
+        Enumeration<URL> predefinedScoringEntries = bundleContext.getBundle().findEntries("META-INF/cxs/scoring", "*.json", true);
         if (predefinedScoringEntries == null) {
             return;
         }

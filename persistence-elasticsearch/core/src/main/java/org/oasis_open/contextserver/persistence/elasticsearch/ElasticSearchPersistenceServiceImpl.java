@@ -273,7 +273,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private void loadPredefinedMappings(BundleContext bundleContext) {
-        Enumeration<URL> predefinedMappings = bundleContext.getBundle().findEntries("META-INF/wemi/mappings", "*.json", true);
+        Enumeration<URL> predefinedMappings = bundleContext.getBundle().findEntries("META-INF/cxs/mappings", "*.json", true);
         if (predefinedMappings == null) {
             return;
         }

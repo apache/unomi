@@ -130,7 +130,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     private void loadPredefinedGoals(BundleContext bundleContext) {
-        Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/wemi/goals", "*.json", true);
+        Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/cxs/goals", "*.json", true);
         if (predefinedRuleEntries == null) {
             return;
         }
@@ -273,7 +273,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     private void loadPredefinedCampaigns(BundleContext bundleContext) {
-        Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/wemi/campaigns", "*.json", true);
+        Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/cxs/campaigns", "*.json", true);
         if (predefinedRuleEntries == null) {
             return;
         }

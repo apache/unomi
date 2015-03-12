@@ -33,7 +33,7 @@
                              update-strategy="reload">
     </cm:property-placeholder>
 
-    <cxf:bus id="wemiServiceBus">
+    <cxf:bus id="cxsServiceBus">
         <cxf:features>
             <cxf:logging/>
         </cxf:features>

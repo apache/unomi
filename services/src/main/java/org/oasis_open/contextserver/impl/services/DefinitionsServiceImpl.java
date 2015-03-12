@@ -143,7 +143,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     private void loadPredefinedTags(BundleContext bundleContext) {
-        Enumeration<URL> predefinedTagEntries = bundleContext.getBundle().findEntries("META-INF/wemi/tags", "*.json", true);
+        Enumeration<URL> predefinedTagEntries = bundleContext.getBundle().findEntries("META-INF/cxs/tags", "*.json", true);
         if (predefinedTagEntries == null) {
             return;
         }
@@ -174,7 +174,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     private void loadPredefinedConditionTypes(BundleContext bundleContext) {
-        Enumeration<URL> predefinedConditionEntries = bundleContext.getBundle().findEntries("META-INF/wemi/conditions", "*.json", true);
+        Enumeration<URL> predefinedConditionEntries = bundleContext.getBundle().findEntries("META-INF/cxs/conditions", "*.json", true);
         if (predefinedConditionEntries == null) {
             return;
         }
@@ -215,7 +215,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     private void loadPredefinedActionTypes(BundleContext bundleContext) {
-        Enumeration<URL> predefinedActionsEntries = bundleContext.getBundle().findEntries("META-INF/wemi/actions", "*.json", true);
+        Enumeration<URL> predefinedActionsEntries = bundleContext.getBundle().findEntries("META-INF/cxs/actions", "*.json", true);
         if (predefinedActionsEntries == null) {
             return;
         }
@@ -252,7 +252,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     private void loadPredefinedPropertyTypes(BundleContext bundleContext) {
-        Enumeration<URL> predefinedPropertyTypeEntries = bundleContext.getBundle().findEntries("META-INF/wemi/properties", "*.json", true);
+        Enumeration<URL> predefinedPropertyTypeEntries = bundleContext.getBundle().findEntries("META-INF/cxs/properties", "*.json", true);
         if (predefinedPropertyTypeEntries == null) {
             return;
         }
@@ -303,7 +303,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     private void loadPredefinedValueTypes(BundleContext bundleContext) {
-        Enumeration<URL> predefinedPropertiesEntries = bundleContext.getBundle().findEntries("META-INF/wemi/values", "*.json", true);
+        Enumeration<URL> predefinedPropertiesEntries = bundleContext.getBundle().findEntries("META-INF/cxs/values", "*.json", true);
         if (predefinedPropertiesEntries == null) {
             return;
         }
@@ -479,7 +479,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     private void loadPredefinedPropertyMergeStrategies(BundleContext bundleContext) {
-        Enumeration<URL> predefinedPropertyMergeStrategyEntries = bundleContext.getBundle().findEntries("META-INF/wemi/mergers", "*.json", true);
+        Enumeration<URL> predefinedPropertyMergeStrategyEntries = bundleContext.getBundle().findEntries("META-INF/cxs/mergers", "*.json", true);
         if (predefinedPropertyMergeStrategyEntries == null) {
             return;
         }

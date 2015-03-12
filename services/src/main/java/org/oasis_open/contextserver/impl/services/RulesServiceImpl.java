@@ -165,7 +165,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     private void loadPredefinedRules(BundleContext bundleContext) {
-        Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/wemi/rules", "*.json", true);
+        Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/cxs/rules", "*.json", true);
         if (predefinedRuleEntries == null) {
             return;
         }

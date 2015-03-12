@@ -313,7 +313,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         if (bundleContext == null) {
             return;
         }
-        Enumeration<URL> predefinedPersonaEntries = bundleContext.getBundle().findEntries("META-INF/wemi/personas", "*.json", true);
+        Enumeration<URL> predefinedPersonaEntries = bundleContext.getBundle().findEntries("META-INF/cxs/personas", "*.json", true);
         if (predefinedPersonaEntries == null) {
             return;
         }
