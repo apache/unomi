@@ -97,7 +97,7 @@ on your disk and copy all the files from the lib/sigar directory into Karaf's li
 5. Copy the following KAR to the Karaf deploy directory, as in this example line:
 
     ```
-      cp kar/target/context-server-kar-1.0-SNAPSHOT.kar ~/java/deployments/wemi-sandbox/apache-karaf-3.0.1/deploy/
+      cp kar/target/context-server-kar-1.0-SNAPSHOT.kar ~/java/deployments/unomi/apache-karaf-3.0.1/deploy/
     ```
    
 6. If all went smoothly, you should be able to access the context script here : http://localhost:8181/context.js
@@ -403,7 +403,7 @@ By default the Context Server limits to connections to port 9200 and 9300 to the
     - the current subnet (i.e., 192.168.1.0-192.168.1.255)
     
 (this is done using a custom plugin for ElasticSearch, that you may find here : 
-https://github.com/Jahia/wemi-sandbox/tree/master/context-server/persistence-elasticsearch/plugins/security)
+https://github.com/Jahia/unomi/tree/master/context-server/persistence-elasticsearch/plugins/security)
 
 You can adjust this setting by using the following setting in the etc/elasticsearch.yml file : 
 

@@ -7,6 +7,11 @@
     <name>Context Server root project</name>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
+    <inceptionYear>2014</inceptionYear>
+    <organization>
+        <name>Jahia Solutions</name>
+        <url>http://www.jahia.com</url>
+    </organization>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -136,6 +141,38 @@
                                 </module>
                             </checkstyleRules>
                         </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>update-licenses</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>license-maven-plugin</artifactId>
+                        <version>1.8</version>
+                        <configuration>
+                            <verbose>false</verbose>
+                            <addSvnKeyWords>true</addSvnKeyWords>
+                            <licenseName>apache_v2</licenseName>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>first</id>
+                                <goals>
+                                    <goal>update-file-header</goal>
+                                </goals>
+                                <phase>process-sources</phase>
+                                <configuration>
+                                    <excludes>
+                                        <exclude>**/*.json</exclude>
+                                        <exclude>**/beans.xml</exclude>
+                                    </excludes>
+                                </configuration>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>
