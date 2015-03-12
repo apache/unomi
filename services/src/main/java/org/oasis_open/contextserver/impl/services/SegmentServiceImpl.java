@@ -582,8 +582,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                 }
             }
         };
-//        timer.scheduleAtFixedRate(task, 1000L, 60000L);
-        timer.scheduleAtFixedRate(task, getDay(1).getTime(), taskExecutionPeriod );
+        timer.scheduleAtFixedRate(task, getDay(1).getTime(), taskExecutionPeriod);
     }
 
     private GregorianCalendar getDay(int offset) {
