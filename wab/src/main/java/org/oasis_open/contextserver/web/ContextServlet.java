@@ -233,7 +233,7 @@ public class ContextServlet extends HttpServlet {
         }else {
             responseWriter = response.getWriter();
             responseWriter.append("window.digitalData = window.digitalData || {};\n")
-                    .append("var wemi = ")
+                    .append("var cxs = ")
                     .append(contextAsJSONString)
                     .append(";\n");
 

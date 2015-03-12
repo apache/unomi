@@ -124,7 +124,7 @@
             digitalData.profile[0].profiles[0].profileInfo.firstName = response.first_name;
             digitalData.profile[0].profiles[0].profileInfo.lastName = response.last_name;
 
-            wemi.saveContext("/context.js", digitalData, function (xhr) {
+            cxs.saveContext("/context.js", digitalData, function (xhr) {
                 console.log("Profile context updated successfully.")
             });
         });

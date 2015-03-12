@@ -24,7 +24,7 @@
 /*
  * Recursively merge properties of two objects
  */
-wemi.merge = function (obj1, obj2) {
+cxs.merge = function (obj1, obj2) {
 
     for (var obj2Property in obj2) {
         try {
@@ -47,7 +47,7 @@ wemi.merge = function (obj1, obj2) {
     return obj1;
 };
 
-wemi.createCORSRequest = function (method, url) {
+cxs.createCORSRequest = function (method, url) {
     var xhr = new XMLHttpRequest();
     if ("withCredentials" in xhr) {
 
@@ -72,7 +72,7 @@ wemi.createCORSRequest = function (method, url) {
     return xhr;
 };
 
-wemi.loadXMLDoc = function (url, successCallBack) {
+cxs.loadXMLDoc = function (url, successCallBack) {
     var xhr = this.createCORSRequest("GET", url);
     if (!xhr) {
         alert("CORS not supported by browser!");
@@ -85,15 +85,15 @@ wemi.loadXMLDoc = function (url, successCallBack) {
     xhr.send();
 };
 
-wemi.collectEvent = function (event, successCallBack) {
+cxs.collectEvent = function (event, successCallBack) {
 
 };
 
-wemi.collectEvents = function(events, successCallBack) {
+cxs.collectEvents = function(events, successCallBack) {
 
 };
 
-wemi.createCookie = function (name, value, days) {
+cxs.createCookie = function (name, value, days) {
     if (days) {
         var date = new Date();
         date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
@@ -103,7 +103,7 @@ wemi.createCookie = function (name, value, days) {
     document.cookie = name + "=" + value + expires + "; path=/";
 };
 
-wemi.readCookie = function (name) {
+cxs.readCookie = function (name) {
     var nameEQ = name + "=";
     var ca = document.cookie.split(';');
     for (var i = 0; i < ca.length; i++) {
@@ -114,13 +114,13 @@ wemi.readCookie = function (name) {
     return null;
 };
 
-wemi.eraseCookie = function (name) {
+cxs.eraseCookie = function (name) {
     createCookie(name, "", -1);
 };
 
 
 if (window.digitalData.loadCallbacks && window.digitalData.loadCallbacks.length > 0) {
-    console.log("wemi: Found context server load callbacks, calling now...");
+    console.log("cxs: Found context server load callbacks, calling now...");
     if ( window.digitalData.loadCallbacks) {
         for (var i = 0; i < window.digitalData.loadCallbacks.length; i++) {
             window.digitalData.loadCallbacks[i](digitalData);
@@ -128,9 +128,9 @@ if (window.digitalData.loadCallbacks && window.digitalData.loadCallbacks.length 
     }
     if ( window.digitalData.filterCallback) {
         for (var i = 0; i < window.digitalData.filterCallback.length; i++) {
-            window.digitalData.filterCallback[i].callback(wemi.filteringResults[window.digitalData.filterCallback[i].filter.filterid]);
+            window.digitalData.filterCallback[i].callback(cxs.filteringResults[window.digitalData.filterCallback[i].filter.filterid]);
         }
     }
 }
 
-console.log("wemi: context server script successfully initialized");
+console.log("cxs: context server script successfully initialized");

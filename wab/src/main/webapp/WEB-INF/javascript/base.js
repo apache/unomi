@@ -24,7 +24,7 @@
 /*
  * Recursively merge properties of two objects
  */
-wemi.merge = function (obj1, obj2) {
+cxs.merge = function (obj1, obj2) {
 
     for (var obj2Property in obj2) {
         try {
@@ -47,7 +47,7 @@ wemi.merge = function (obj1, obj2) {
     return obj1;
 };
 
-wemi.createCORSRequest = function (method, url) {
+cxs.createCORSRequest = function (method, url) {
     var xhr = new XMLHttpRequest();
     if ("withCredentials" in xhr) {
 
@@ -72,7 +72,7 @@ wemi.createCORSRequest = function (method, url) {
     return xhr;
 };
 
-wemi.loadXMLDoc = function (url, successCallBack) {
+cxs.loadXMLDoc = function (url, successCallBack) {
     var xhr = this.createCORSRequest("GET", url);
     if (!xhr) {
         alert("CORS not supported by browser!");
@@ -90,7 +90,7 @@ wemi.loadXMLDoc = function (url, successCallBack) {
  * @param event JSONObject: {eventType:"", properties: {}}
  * @param successCallBack
  */
-wemi.collectEvent = function (event, successCallBack) {
+cxs.collectEvent = function (event, successCallBack) {
     this.collectEvents({events: [event]}, successCallBack);
 };
 
@@ -99,9 +99,9 @@ wemi.collectEvent = function (event, successCallBack) {
  * @param events JSONObject: {events: [{eventType:"", properties: {}}, ...]}
  * @param successCallBack
  */
-wemi.collectEvents = function(events, successCallBack) {
+cxs.collectEvents = function(events, successCallBack) {
     data = JSON.stringify(events);
-    var url = window.digitalData.contextServerPublicUrl + "/eventcollector" + "?sessionId=" + wemi.sessionId;
+    var url = window.digitalData.contextServerPublicUrl + "/eventcollector" + "?sessionId=" + cxs.sessionId;
     var xhr = new XMLHttpRequest();
     var isGet = data.length < 100;
     if (isGet) {
@@ -128,7 +128,7 @@ wemi.collectEvents = function(events, successCallBack) {
     }
 };
 
-wemi.createCookie = function (name, value, days) {
+cxs.createCookie = function (name, value, days) {
     if (days) {
         var date = new Date();
         date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
@@ -138,7 +138,7 @@ wemi.createCookie = function (name, value, days) {
     document.cookie = name + "=" + value + expires + "; path=/";
 };
 
-wemi.readCookie = function (name) {
+cxs.readCookie = function (name) {
     var nameEQ = name + "=";
     var ca = document.cookie.split(';');
     for (var i = 0; i < ca.length; i++) {
@@ -149,7 +149,7 @@ wemi.readCookie = function (name) {
     return null;
 };
 
-wemi.eraseCookie = function (name) {
+cxs.eraseCookie = function (name) {
     createCookie(name, "", -1);
 };
 
@@ -163,7 +163,7 @@ if (window.digitalData.loadCallbacks && window.digitalData.loadCallbacks.length 
     }
     if ( window.digitalData.filterCallback) {
         for (var i = 0; i < window.digitalData.filterCallback.length; i++) {
-            window.digitalData.filterCallback[i].callback(wemi.filteringResults[window.digitalData.filterCallback[i].filter.filterid]);
+            window.digitalData.filterCallback[i].callback(cxs.filteringResults[window.digitalData.filterCallback[i].filter.filterid]);
         }
     }
 }
