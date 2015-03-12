@@ -3,6 +3,10 @@ Context Server
 
 A public project that implements the Context Server specification
 
+License
+-------
+The source code is available under the Apache License V2 and is copyrighted 2014-2015 Jahia Solutions
+
 Requirements
 ------------
 * JDK 7 or later, http://www.oracle.com/technetwork/java/javase/downloads/index.html
@@ -13,7 +17,7 @@ Building
 
 Simply type at the root of the project:
 ```
-  mvn clean install
+  mvn clean install -P generate-package
 ```
 
 The Maven build process will generate both a standalone package you can use directly to start the context server
@@ -92,6 +96,12 @@ on your disk and copy all the files from the lib/sigar directory into Karaf's li
        feature:install -v cxf/2.7.11
        feature:install -v openwebbeans
        feature:install -v pax-cdi-web-openwebbeans
+    ```
+
+4. Create a new etc/org.apache.cfx.osgi.cfg file and put the following property inside :
+
+    ```
+       org.apache.cxf.servlet.context=/cxs
     ```
 
 5. Copy the following KAR to the Karaf deploy directory, as in this example line:
