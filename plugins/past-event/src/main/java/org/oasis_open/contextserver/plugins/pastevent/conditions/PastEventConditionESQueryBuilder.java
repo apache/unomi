@@ -84,17 +84,5 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
         }
 
         return FilterBuilders.idsFilter(Profile.ITEM_TYPE).addIds(ids.toArray(new String[ids.size()]));
-
-//        Map<String, Object> parameters = condition.getParameterValues();
-//
-//        Integer minimumEventCount = parameters.get("minimumEventCount") == null ? 0 : (Integer) parameters.get("minimumEventCount");
-//        Integer maximumEventCount = parameters.get("maximumEventCount") == null  ? Integer.MAX_VALUE : (Integer) parameters.get("maximumEventCount");
-//
-//        if (minimumEventCount  > 0 && maximumEventCount < Integer.MAX_VALUE) {
-//            return FilterBuilders.rangeFilter("properties." + parameters.get("generatedPropertyKey"))
-//                    .gte(minimumEventCount).lte(maximumEventCount);
-//        } else {
-//            return FilterBuilders.existsFilter("properties." + parameters.get("generatedPropertyKey"));
-//        }
     }
 }
