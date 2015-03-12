@@ -436,9 +436,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                 m.put("condition", condition);
                 m.put("numberOfDays", parentCondition.getParameter("numberOfDays"));
                 String key = CustomObjectMapper.getObjectMapper().writeValueAsString(m);
-                System.out.println(key);
                 key = "eventTriggered" + getMD5(key);
-                System.out.println(key);
                 parentCondition.setParameter("generatedPropertyKey", key);
                 Rule rule = rulesService.getRule(metadata.getScope(), key);
                 if (rule == null) {
