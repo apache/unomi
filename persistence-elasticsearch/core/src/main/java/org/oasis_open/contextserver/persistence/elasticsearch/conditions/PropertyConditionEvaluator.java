@@ -154,7 +154,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             return
                     compare(actualValue, null, expectedValuesDate != null ? (Date) expectedValuesDate.get(0) : null, expectedValuesInteger != null ? (Integer) expectedValuesInteger.get(0) : null, expectedValuesDateExpr != null ? (String) expectedValuesDateExpr.get(0) : null) >= 0
                             &&
-                            compare(actualValue, null, expectedValuesDate != null ? (Date) expectedValuesDate.get(1) : null, expectedValuesInteger != null ? (Integer) expectedValuesInteger.get(1) : null, expectedValuesDateExpr != null ? (String) expectedValuesDateExpr.get(1) : null) < 0;
+                            compare(actualValue, null, expectedValuesDate != null ? (Date) expectedValuesDate.get(1) : null, expectedValuesInteger != null ? (Integer) expectedValuesInteger.get(1) : null, expectedValuesDateExpr != null ? (String) expectedValuesDateExpr.get(1) : null) <= 0;
         } else if (op.equals("contains")) {
             return actualValue.toString().contains(expectedValue);
         } else if (op.equals("startsWith")) {

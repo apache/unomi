@@ -69,7 +69,7 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         } else if (op.equals("lessThanOrEqualTo")) {
             return FilterBuilders.rangeFilter(name).lte(value);
         } else if (op.equals("between")) {
-            return FilterBuilders.rangeFilter(name).gte(values.get(0)).lt(values.get(1));
+            return FilterBuilders.rangeFilter(name).gte(values.get(0)).lte(values.get(1));
         } else if (op.equals("exists")) {
             return FilterBuilders.existsFilter(name);
         } else if (op.equals("missing")) {
