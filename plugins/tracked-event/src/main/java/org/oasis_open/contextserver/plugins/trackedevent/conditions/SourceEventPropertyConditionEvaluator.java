@@ -35,23 +35,22 @@ import java.util.List;
 import java.util.Map;
 
 public class SourceEventPropertyConditionEvaluator implements ConditionEvaluator {
-    private DefinitionsService definitionsService;
-
-    private Map<String,String> mappedProperties;
-
-    public SourceEventPropertyConditionEvaluator() {
-        mappedProperties = new HashMap<>();
-        mappedProperties.put("id", "itemId");
-        mappedProperties.put("path", "properties.pageInfo.pagePath");
-        mappedProperties.put("type", "itemType");
-        mappedProperties.put("scope", "scope");
+    private static final Map<String,String> MAPPED_PROPERTIES;
+    static {
+        MAPPED_PROPERTIES = new HashMap<>(4);
+        MAPPED_PROPERTIES.put("id", "itemId");
+        MAPPED_PROPERTIES.put("path", "properties.pageInfo.pagePath");
+        MAPPED_PROPERTIES.put("type", "itemType");
+        MAPPED_PROPERTIES.put("scope", "scope");
     }
+
+    private DefinitionsService definitionsService;
 
     private void appendConditionIfPropExist(List<Condition> conditions, Condition condition, String prop, ConditionType propConditionType) {
         if (condition.getParameterValues().get(prop) != null && !"".equals(condition.getParameterValues().get(prop))) {
             Condition propCondition = new Condition(propConditionType);
             propCondition.setParameter("comparisonOperator", "equals");
-            propCondition.setParameter("propertyName",mappedProperties.get(prop));
+            propCondition.setParameter("propertyName",MAPPED_PROPERTIES.get(prop));
             propCondition.setParameter("propertyValue", condition.getParameterValues().get(prop));
             conditions.add(propCondition);
         }
@@ -63,7 +62,7 @@ public class SourceEventPropertyConditionEvaluator implements ConditionEvaluator
         andCondition.setParameter("operator", "and");
         ArrayList<Condition> conditions = new ArrayList<Condition>();
 
-        for (String prop : mappedProperties.keySet()){
+        for (String prop : MAPPED_PROPERTIES.keySet()){
             appendConditionIfPropExist(conditions, condition, prop, definitionsService.getConditionType("eventPropertyCondition"));
         }
 
