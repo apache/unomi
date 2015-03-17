@@ -26,10 +26,12 @@ import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.campaigns.Campaign;
+import org.oasis_open.contextserver.api.campaigns.events.CampaignEvent;
 import org.oasis_open.contextserver.api.goals.Goal;
 import org.oasis_open.contextserver.api.goals.GoalReport;
 import org.oasis_open.contextserver.api.query.AggregateQuery;
 
+import java.util.List;
 import java.util.Set;
 
 public interface GoalsService {
@@ -58,6 +60,12 @@ public interface GoalsService {
     void setCampaign(Campaign campaign);
 
     void removeCampaign(String scope, String campaignId);
+
+    PartialList<CampaignEvent> getEvents(String scope, String campaignId, int offset, int size, String sortBy);
+
+    void setCampaignEvent(CampaignEvent event);
+
+    void removeCampaignEvent(String scope, String campaignEventId);
 
 
     PartialList<Profile> getMatchingIndividuals(String scope, String campaignId, int offset, int size, String sortBy);

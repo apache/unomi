@@ -31,6 +31,7 @@ import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.campaigns.Campaign;
+import org.oasis_open.contextserver.api.campaigns.events.CampaignEvent;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.goals.Goal;
 import org.oasis_open.contextserver.api.rules.Rule;
@@ -73,6 +74,7 @@ public class CustomObjectMapper extends ObjectMapper {
 
         Map<String,Class<? extends Item>> classes = new HashMap<>();
         classes.put(Campaign.ITEM_TYPE,Campaign.class);
+        classes.put(CampaignEvent.ITEM_TYPE,CampaignEvent.class);
         classes.put(Event.ITEM_TYPE,Event.class);
         classes.put(Goal.ITEM_TYPE,Goal.class);
         classes.put(Persona.ITEM_TYPE,Persona.class);

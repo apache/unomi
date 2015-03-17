@@ -192,8 +192,10 @@ public class EventServiceImpl implements EventService {
     }
 
     public void unbind(ServiceReference<EventListenerService> serviceReference) {
-        EventListenerService eventListenerService = bundleContext.getService(serviceReference);
-        eventListeners.remove(eventListenerService);
+        if(serviceReference!=null) {
+            EventListenerService eventListenerService = bundleContext.getService(serviceReference);
+            eventListeners.remove(eventListenerService);
+        }
     }
 
 }

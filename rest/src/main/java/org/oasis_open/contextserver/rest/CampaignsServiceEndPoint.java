@@ -27,6 +27,7 @@ import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.campaigns.Campaign;
+import org.oasis_open.contextserver.api.campaigns.events.CampaignEvent;
 import org.oasis_open.contextserver.api.services.GoalsService;
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -61,8 +62,8 @@ public class CampaignsServiceEndPoint {
 
     @POST
     @Path("/")
-    public void setCampaignDefinition(Campaign segment) {
-        goalsService.setCampaign(segment);
+    public void setCampaignDefinition(Campaign campaign) {
+        goalsService.setCampaign(campaign);
     }
 
     @GET
@@ -95,4 +96,21 @@ public class CampaignsServiceEndPoint {
         return goalsService.getMatchingIndividualsCount(scope, campaignId);
     }
 
+    @POST
+    @Path("/event")
+    public void setCampaignEventDefinition(CampaignEvent campaignEvent) {
+        goalsService.setCampaignEvent(campaignEvent);
+    }
+
+    @DELETE
+    @Path("/{scope}/{campaignID}/event/{eventId}")
+    public void removeCampaignDefinition(@PathParam("scope") String scope, @PathParam("campaignID") String campaignID, @PathParam("eventId") String campaignEventID) {
+        goalsService.removeCampaignEvent(scope, campaignEventID);
+    }
+
+    @GET
+    @Path("/{scope}/{campaignID}/events")
+    public PartialList<CampaignEvent> getCampaignEvents(@PathParam("scope") String scope, @PathParam("campaignID") String campaignId, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
+        return goalsService.getEvents(scope, campaignId, offset, size, sortBy);
+    }
 }

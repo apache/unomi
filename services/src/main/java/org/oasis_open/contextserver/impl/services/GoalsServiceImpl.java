@@ -22,10 +22,10 @@ package org.oasis_open.contextserver.impl.services;
  * #L%
  */
 
-import com.fasterxml.jackson.databind.util.ISO8601DateFormat;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.campaigns.Campaign;
+import org.oasis_open.contextserver.api.campaigns.events.CampaignEvent;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.goals.Goal;
@@ -499,7 +499,6 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     //Campaign profile matching methods
 
-
     @Override
     public PartialList<Profile> getMatchingIndividuals(String scope, String campaignId, int offset, int size, String sortBy) {
         Condition campaignCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
@@ -511,6 +510,39 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     @Override
     public long getMatchingIndividualsCount(String scope, String campaignId) {
         return 0;
+    }
+
+    // Campaign Event management methods
+
+
+    @Override
+    public PartialList<CampaignEvent> getEvents(String scope, String campaignId, int offset, int size, String sortBy) {
+        Condition scopeCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+        scopeCondition.setParameter("propertyName","metadata.scope");
+        scopeCondition.setParameter("comparisonOperator","equals");
+        scopeCondition.setParameter("propertyValue",scope);
+        Condition eventCampaignCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+        eventCampaignCondition.setParameter("propertyName","campaignId");
+        eventCampaignCondition.setParameter("comparisonOperator","equals");
+        eventCampaignCondition.setParameter("propertyValue",campaignId);
+        List<Condition> conditions = Arrays.asList(scopeCondition,eventCampaignCondition);
+        Condition booleanCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+        Map<String,Object> stringObjectMap = new HashMap<>();
+        stringObjectMap.put("operator","and");
+        stringObjectMap.put("subConditions",conditions);
+        booleanCondition.setParameterValues(stringObjectMap);
+        return persistenceService.query(booleanCondition,sortBy,CampaignEvent.class, offset, size);
+    }
+
+    @Override
+    public void setCampaignEvent(CampaignEvent event) {
+        persistenceService.save(event);
+    }
+
+    @Override
+    public void removeCampaignEvent(String scope, String campaignEventId) {
+        String idWithScope = Metadata.getIdWithScope(scope, campaignEventId);
+        persistenceService.remove(idWithScope, CampaignEvent.class);
     }
 
     public void bundleChanged(BundleEvent event) {
