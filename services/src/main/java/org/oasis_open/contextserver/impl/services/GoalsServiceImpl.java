@@ -502,9 +502,10 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     @Override
     public PartialList<Profile> getMatchingIndividuals(String scope, String campaignId, int offset, int size, String sortBy) {
-        Campaign campaign = getCampaign(scope,campaignId);
-        ISO8601DateFormat iso8601DateFormat = new ISO8601DateFormat();
-        return persistenceService.rangeQuery(campaignId + "Engaged", iso8601DateFormat.format(campaign.getStartDate()), iso8601DateFormat.format(campaign.getEndDate()), sortBy, Profile.class,offset,size);
+        Condition campaignCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        campaignCondition.setParameter("propertyName", campaignId + "Engaged");
+        campaignCondition.setParameter("comparisonOperator", "exists");
+        return persistenceService.query(campaignCondition, sortBy, Profile.class, offset,size);
     }
 
     @Override
