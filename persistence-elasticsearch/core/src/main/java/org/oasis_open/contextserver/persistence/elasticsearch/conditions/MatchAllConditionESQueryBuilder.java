@@ -30,9 +30,7 @@ import java.util.Map;
 
 public class MatchAllConditionESQueryBuilder implements ConditionESQueryBuilder {
 
-    public MatchAllConditionESQueryBuilder() {
-    }
-
+    @Override
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         return FilterBuilders.matchAllFilter();
     }
