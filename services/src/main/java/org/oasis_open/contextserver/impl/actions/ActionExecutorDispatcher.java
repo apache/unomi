@@ -55,6 +55,7 @@ public class ActionExecutorDispatcher {
         return n;
     }
 
+    @SuppressWarnings("unchecked")
     private static Map<String, Object> parseMap(Event event, Map<String, Object> map) {
         Map<String, Object> values = new HashMap<String, Object>();
         for (Map.Entry<String, Object> entry : map.entrySet()) {
@@ -94,6 +95,7 @@ public class ActionExecutorDispatcher {
         return values;
     }
 
+    @SuppressWarnings("unchecked")
     private static boolean hasContextualParameter(Map<String, Object> values) {
         for (Map.Entry<String, Object> entry : values.entrySet()) {
             Object value = entry.getValue();

@@ -83,6 +83,7 @@ public class ParserHelper {
                 Condition parameterValueCondition = (Condition) parameterValue;
                 visitConditions(parameterValueCondition, visitor);
             } else if (parameterValue instanceof Collection) {
+                @SuppressWarnings("unchecked")
                 Collection<Object> valueList = (Collection<Object>) parameterValue;
                 for (Object value : valueList) {
                     if (value instanceof Condition) {

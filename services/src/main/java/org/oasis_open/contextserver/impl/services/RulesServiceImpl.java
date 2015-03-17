@@ -54,8 +54,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     private DefinitionsService definitionsService;
 
-    private ProfileService profileService;
-
     private EventService eventService;
 
     private ActionExecutorDispatcher actionExecutorDispatcher;
@@ -70,10 +68,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
-    }
-
-    public void setProfileService(ProfileService profileService) {
-        this.profileService = profileService;
     }
 
     public void setEventService(EventService eventService) {
@@ -196,7 +190,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
         List<Rule> allItems = getAllRules();
 
-        long l = System.currentTimeMillis();
         for (Rule rule : allItems) {
             String scope = rule.getMetadata().getScope();
             if (scope.equals(Metadata.SYSTEM_SCOPE) || scope.equals(event.getScope())) {
@@ -315,12 +308,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         if (condition != null) {
             if (rule.getMetadata().isEnabled() && !rule.getMetadata().isMissingPlugins()) {
                 ParserHelper.resolveConditionType(definitionsService, condition);
-                Condition eventCondition = definitionsService.extractConditionByTag(condition, "eventCondition");
-//                if (eventCondition != null) {
-//                    persistenceService.saveQuery(RULE_QUERY_PREFIX + rule.getMetadata().getIdWithScope(), eventCondition);
-//                }
-//            } else {
-//                persistenceService.removeQuery(RULE_QUERY_PREFIX + rule.getMetadata().getIdWithScope());
+                definitionsService.extractConditionByTag(condition, "eventCondition");
             }
         }
         persistenceService.save(rule);

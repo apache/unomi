@@ -42,7 +42,6 @@ import javax.ws.rs.core.MediaType;
 
 
 import java.util.*;
-import java.util.regex.Pattern;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
@@ -51,8 +50,6 @@ import java.util.regex.Pattern;
         allowCredentials = true
 )
 public class DefinitionsServiceEndPoint {
-
-    private static final Pattern I18N_PATTERN = Pattern.compile("#\\{([a-zA-Z_\\.]+)\\}");
 
     private DefinitionsService definitionsService;
     private BundleContext bundleContext;

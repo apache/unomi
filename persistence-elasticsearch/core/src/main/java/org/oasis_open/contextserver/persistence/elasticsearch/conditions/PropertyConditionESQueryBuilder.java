@@ -45,13 +45,14 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         Object expectedValueDate = condition.getParameter("propertyValueDate");
         Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
 
-        List expectedValues = (List) condition.getParameter("propertyValues");
-        List expectedValuesInteger = (List) condition.getParameter("propertyValuesInteger");
-        List expectedValuesDate = (List) condition.getParameter("propertyValuesDate");
-        List expectedValuesDateExpr = (List) condition.getParameter("propertyValuesDateExpr");
+        List<?> expectedValues = (List<?>) condition.getParameter("propertyValues");
+        List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
+        List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
+        List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");
 
         Object value = ObjectUtils.firstNonNull(expectedValue,expectedValueInteger,expectedValueDate,expectedValueDateExpr);
-        List values = ObjectUtils.firstNonNull(expectedValues,expectedValuesInteger,expectedValuesDate,expectedValuesDateExpr);
+        @SuppressWarnings("unchecked")
+        List<?> values = ObjectUtils.firstNonNull(expectedValues,expectedValuesInteger,expectedValuesDate,expectedValuesDateExpr);
 
         if (op.equals("equals")) {
             return FilterBuilders.termFilter(name, value);

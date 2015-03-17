@@ -36,6 +36,7 @@ public class ConditionContextHelper {
         if (context.isEmpty() || !hasContextualParameter(condition.getParameterValues())) {
             return condition;
         }
+        @SuppressWarnings("unchecked")
         Map<String, Object> values = (Map<String, Object>) parseParameter(context, condition.getParameterValues());
         if (values == null) {
             return null;
@@ -45,6 +46,7 @@ public class ConditionContextHelper {
         return n;
     }
 
+    @SuppressWarnings("unchecked")
     private static Object parseParameter(Map<String, Object> context, Object value) {
         if (value instanceof String) {
             if (((String) value).startsWith("parameter::") || ((String) value).startsWith("script::")) {
@@ -66,8 +68,8 @@ public class ConditionContextHelper {
             }
             return values;
         } else if (value instanceof List) {
-            List values = new ArrayList();
-            for (Object o : ((List) value)) {
+            List<Object> values = new ArrayList<Object>();
+            for (Object o : ((List<?>) value)) {
                 Object parameter = parseParameter(context, o);
                 if (parameter != null) {
                     values.add(parameter);
@@ -84,13 +86,13 @@ public class ConditionContextHelper {
                 return true;
             }
         } else if (value instanceof Map) {
-            for (Object o : ((Map) value).values()) {
+            for (Object o : ((Map<?, ?>) value).values()) {
                 if (hasContextualParameter(o)) {
                     return true;
                 }
             }
         } else if (value instanceof List) {
-            for (Object o : ((List) value)) {
+            for (Object o : ((List<?>) value)) {
                 if (hasContextualParameter(o)) {
                     return true;
                 }

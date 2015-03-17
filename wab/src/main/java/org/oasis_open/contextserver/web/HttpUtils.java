@@ -71,7 +71,6 @@ public class HttpUtils {
 
     public static String dumpBasicRequestInfo(HttpServletRequest httpServletRequest) {
         StringBuilder stringBuilder = new StringBuilder();
-        String sessionId = null;
         stringBuilder.append(httpServletRequest.getMethod()).append(" ").append(httpServletRequest.getRequestURI());
         if (httpServletRequest.getQueryString() != null) {
             stringBuilder.append("?").append(httpServletRequest.getQueryString());

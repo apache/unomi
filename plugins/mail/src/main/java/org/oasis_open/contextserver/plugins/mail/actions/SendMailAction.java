@@ -77,9 +77,8 @@ public class SendMailAction implements ActionExecutor {
         String htmlEmailTemplate = stringTemplate.render();
 
         // define you base URL to resolve relative resource locations
-        URL url = null;
         try {
-            url = new URL("http://www.apache.org");
+            new URL("http://www.apache.org");
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }

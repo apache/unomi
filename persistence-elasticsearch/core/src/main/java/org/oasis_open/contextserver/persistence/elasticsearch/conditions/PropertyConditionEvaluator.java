@@ -57,8 +57,9 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         }
     }
 
-    private boolean compareMultivalue(Object actualValue, List expectedValues, List expectedValuesDate, List expectedValuesNumber, List expectedValuesDateExpr, String op) {
-        List expected = ObjectUtils.firstNonNull(expectedValues, expectedValuesDate, expectedValuesNumber);
+    private boolean compareMultivalue(Object actualValue, List<?> expectedValues, List<?> expectedValuesDate, List<?> expectedValuesNumber, List<?> expectedValuesDateExpr, String op) {
+        @SuppressWarnings("unchecked")
+        List<?> expected = ObjectUtils.firstNonNull(expectedValues, expectedValuesDate, expectedValuesNumber);
         if (actualValue == null) {
             return expected == null;
         } else if (expected == null) {
@@ -113,10 +114,10 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         Object expectedValueDate = condition.getParameter("propertyValueDate");
         Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
 
-        List expectedValues = (List) condition.getParameter("propertyValues");
-        List expectedValuesInteger = (List) condition.getParameter("propertyValuesInteger");
-        List expectedValuesDate = (List) condition.getParameter("propertyValuesDate");
-        List expectedValuesDateExpr = (List) condition.getParameter("propertyValuesDateExpr");
+        List<?> expectedValues = (List<?>) condition.getParameter("propertyValues");
+        List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
+        List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
+        List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");
 
         Object actualValue;
         try {
@@ -132,7 +133,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             return true;
         } else if (op.equals("equals")) {
             if (actualValue instanceof Collection) {
-                for (Object o : ((Collection)actualValue)) {
+                for (Object o : ((Collection<?>)actualValue)) {
                     if (compare(o, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) == 0) {
                         return true;
                     }
@@ -183,15 +184,6 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             } catch (ElasticsearchParseException e) {
                 // Not a date
             }
-        }
-        return null;
-    }
-
-    private Double getDouble(Object value) {
-        try {
-            return Double.parseDouble(value.toString());
-        } catch (NumberFormatException e) {
-            // Not a number
         }
         return null;
     }

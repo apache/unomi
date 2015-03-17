@@ -41,9 +41,9 @@ public interface PersistenceService {
 
     boolean save(Item item);
 
-    boolean update(String itemId, Date dateHint, Class clazz, Map source);
+    boolean update(String itemId, Date dateHint, Class<?> clazz, Map<?, ?> source);
 
-    boolean update(String itemId, Date dateHint, Class clazz, String propertyName, Object propertyValue);
+    boolean update(String itemId, Date dateHint, Class<?> clazz, String propertyName, Object propertyValue);
 
     <T extends Item> T load(String itemId, Class<T> clazz);
 

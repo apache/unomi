@@ -302,6 +302,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return getAllItems(clazz, 0, -1, null).getList();
     }
 
+    @Override
     public long getAllItemsCount(String itemType) {
         return queryCount(FilterBuilders.matchAllFilter(), itemType);
     }
@@ -311,10 +312,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return query(QueryBuilders.matchAllQuery(), sortBy, clazz, offset, size, null);
     }
 
+    @Override
     public <T extends Item> T load(final String itemId, final Class<T> clazz) {
         return load(itemId, null, clazz);
     }
 
+    @Override
     public <T extends Item> T load(final String itemId, final Date dateHint, final Class<T> clazz) {
         return new InClassLoaderExecute<T>() {
             protected T execute(Object... args) {
@@ -354,6 +357,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     }
 
+    @Override
     public boolean save(final Item item) {
 
         return new InClassLoaderExecute<Boolean>() {
@@ -377,10 +381,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     }
 
+    @Override
     public boolean update(final String itemId, final Date dateHint, final Class clazz, final String propertyName, final Object propertyValue) {
         return update(itemId, dateHint, clazz, Collections.singletonMap(propertyName, propertyValue));
     }
 
+    @Override
     public boolean update(final String itemId, final Date dateHint, final Class clazz, final Map source) {
         return new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {
@@ -438,6 +444,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
+    @Override
     public Map<String, Map<String, Object>> getMapping(final String itemType) {
         return new InClassLoaderExecute<Map<String, Map<String, Object>>>() {
             @SuppressWarnings("unchecked")
@@ -478,6 +485,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
+    @Override
     public boolean saveQuery(String queryName, Condition query) {
         if (query == null) {
             return false;
@@ -486,6 +494,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return true;
     }
 
+    @Override
     public boolean removeQuery(final String queryName) {
         return new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {
@@ -503,6 +512,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
+    @Override
     public List<String> getMatchingSavedQueries(final Item item) {
         return new InClassLoaderExecute<List<String>>() {
             protected List<String> execute(Object... args) {
@@ -555,18 +565,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return false;
     }
 
+    @Override
     public <T extends Item> List<T> query(final Condition query, String sortBy, final Class<T> clazz) {
         return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz, 0, -1, null).getList();
     }
 
+    @Override
     public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size) {
         return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz, offset, size, null);
     }
 
+    @Override
     public <T extends Item> List<T> query(final String fieldName, final String fieldValue, String sortBy, final Class<T> clazz) {
         return query(fieldName, fieldValue, sortBy, clazz, 0, -1).getList();
     }
 
+    @Override
     public <T extends Item> List<T> query(final String fieldName, final String[] fieldValues, String sortBy, final Class<T> clazz) {
         return query(QueryBuilders.termsQuery(fieldName, fieldValues), sortBy, clazz, 0, -1, getRouting(fieldName, fieldValues, clazz)).getList();
     }
@@ -662,6 +676,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
+    @Override
     public Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType) {
         return new InClassLoaderExecute<Map<String, Long>>() {
 
@@ -786,6 +801,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
 
+    @Override
     public List<ClusterNode> getClusterNodes() {
         return new InClassLoaderExecute<List<ClusterNode>>() {
 
@@ -860,6 +876,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return gc;
     }
 
+    @Override
     public void refresh() {
         new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {
@@ -871,6 +888,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
 
+    @Override
     public void purge(final Date date) {
         new InClassLoaderExecute<Object>() {
             @Override

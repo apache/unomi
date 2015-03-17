@@ -33,10 +33,8 @@ import static org.elasticsearch.common.collect.Lists.newArrayList;
 
 public class SecurityPlugin extends AbstractPlugin {
 
-    private final Settings settings;
-
     public SecurityPlugin(Settings settings) {
-        this.settings = settings;
+        super();
     }
 
     public String name() {
@@ -56,6 +54,7 @@ public class SecurityPlugin extends AbstractPlugin {
         return modules;
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public Collection<Class<? extends LifecycleComponent>> services() {
         Collection<Class<? extends LifecycleComponent>> services = newArrayList();

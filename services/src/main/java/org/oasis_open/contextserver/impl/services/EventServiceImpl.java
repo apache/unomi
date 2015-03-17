@@ -123,6 +123,7 @@ public class EventServiceImpl implements EventService {
         return props;
     }
 
+    @SuppressWarnings("unchecked")
     private void getEventProperties(Map<String, Map<String, Object>> mappings, List<EventProperty> props, String prefix) {
         for (Map.Entry<String, Map<String, Object>> e : mappings.entrySet()) {
             if (e.getValue().get("properties") != null) {

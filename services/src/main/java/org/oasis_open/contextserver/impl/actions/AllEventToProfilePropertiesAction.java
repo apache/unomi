@@ -39,6 +39,7 @@ public class AllEventToProfilePropertiesAction implements ActionExecutor {
         this.profileService = profileService;
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public boolean execute(Action action, Event event) {
         boolean changed = false;
         Map<String, Object> properties = new HashMap<String,Object>();

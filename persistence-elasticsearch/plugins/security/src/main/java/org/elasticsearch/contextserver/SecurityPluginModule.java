@@ -27,13 +27,10 @@ import org.elasticsearch.common.settings.Settings;
 
 public class SecurityPluginModule extends AbstractModule {
 
-    private final Settings settings;
-
     public SecurityPluginModule(Settings settings) {
-        this.settings = settings;
+        super();
     }
 
-    @SuppressWarnings({"unchecked"})
     @Override
     protected void configure() {
         bind(SecurityPluginService.class).asEagerSingleton();

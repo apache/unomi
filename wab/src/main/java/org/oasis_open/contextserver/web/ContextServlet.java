@@ -273,7 +273,6 @@ public class ContextServlet extends HttpServlet {
     private void handleRequest(ContextRequest contextRequest, Profile profile, Session session, ContextResponse data, ServletRequest request, ServletResponse response, Date timestamp)
             throws IOException {
         // execute provided events if any
-        Event viewEvent = null;
         if(contextRequest.getEvents() != null) {
             for (Event event : contextRequest.getEvents()){
                 if(event.getEventType() != null) {
@@ -287,9 +286,6 @@ public class ContextServlet extends HttpServlet {
                     event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                     log("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
                     eventService.send(eventToSend);
-                    if("view".equals(eventToSend.getEventType())){
-                        viewEvent = eventToSend;
-                    }
                 }
             }
         }

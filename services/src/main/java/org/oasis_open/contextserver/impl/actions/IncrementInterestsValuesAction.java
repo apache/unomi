@@ -32,10 +32,10 @@ import java.util.Map;
 
 public class IncrementInterestsValuesAction implements ActionExecutor {
 
+    @SuppressWarnings("unchecked")
     @Override
     public boolean execute(Action action, Event event) {
         boolean modified = false;
-        Map<String, Object> profileProps = event.getProfile().getProperties();
 
         try {
             Map<String, Object> interests = (Map<String, Object>) PropertyUtils.getProperty(event, "target.properties.interests");

@@ -71,7 +71,6 @@
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
-        <property name="profileService" ref="profileServiceImpl"/>
         <property name="eventService" ref="eventServiceImpl"/>
         <property name="actionExecutorDispatcher" ref="actionExecutorDispatcherImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
