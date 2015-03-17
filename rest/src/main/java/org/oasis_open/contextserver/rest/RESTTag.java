@@ -23,7 +23,6 @@ package org.oasis_open.contextserver.rest;
  */
 
 import java.util.Collection;
-import java.util.Set;
 import java.util.TreeSet;
 
 public class RESTTag {

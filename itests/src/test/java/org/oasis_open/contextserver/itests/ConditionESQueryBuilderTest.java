@@ -1,7 +1,5 @@
 package org.oasis_open.contextserver.itests;
 
-import static org.junit.Assert.assertNotNull;
-
 import java.util.List;
 
 import javax.inject.Inject;
@@ -10,7 +8,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.oasis_open.contextserver.api.Item;
-import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.SegmentService;

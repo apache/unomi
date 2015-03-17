@@ -22,7 +22,6 @@ package org.oasis_open.contextserver.impl.services;
  * #L%
  */
 
-import org.oasis_open.contextserver.api.PluginType;
 import org.oasis_open.contextserver.api.PropertyType;
 import org.oasis_open.contextserver.api.ValueType;
 import org.oasis_open.contextserver.api.actions.Action;
@@ -30,7 +29,6 @@ import org.oasis_open.contextserver.api.actions.ActionType;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
-import org.osgi.framework.Bundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

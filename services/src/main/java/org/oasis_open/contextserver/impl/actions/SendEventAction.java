@@ -22,7 +22,6 @@ package org.oasis_open.contextserver.impl.actions;
  * #L%
  */
 
-import org.apache.commons.beanutils.BeanUtils;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
@@ -30,7 +29,6 @@ import org.oasis_open.contextserver.api.services.EventService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 
 public class SendEventAction implements ActionExecutor {

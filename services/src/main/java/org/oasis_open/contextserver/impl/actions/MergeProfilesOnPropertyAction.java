@@ -24,7 +24,6 @@ package org.oasis_open.contextserver.impl.actions;
 
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.Persona;
-import org.oasis_open.contextserver.api.Session;
 import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;

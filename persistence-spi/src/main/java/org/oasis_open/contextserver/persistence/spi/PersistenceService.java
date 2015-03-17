@@ -24,7 +24,6 @@ package org.oasis_open.contextserver.persistence.spi;
 
 import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.PartialList;
-import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.persistence.spi.aggregate.BaseAggregate;
 

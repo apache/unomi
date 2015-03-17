@@ -37,7 +37,6 @@ import org.oasis_open.contextserver.api.rules.Rule;
 import org.oasis_open.contextserver.api.segments.Scoring;
 import org.oasis_open.contextserver.api.segments.Segment;
 
-import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;

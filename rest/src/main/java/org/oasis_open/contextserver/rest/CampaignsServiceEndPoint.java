@@ -27,12 +27,7 @@ import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.campaigns.Campaign;
-import org.oasis_open.contextserver.api.segments.Segment;
 import org.oasis_open.contextserver.api.services.GoalsService;
-import org.oasis_open.contextserver.api.services.ProfileService;
-import org.oasis_open.contextserver.api.services.QueryService;
-import org.oasis_open.contextserver.api.services.SegmentService;
-
 import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;

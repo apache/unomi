@@ -25,7 +25,6 @@ package org.oasis_open.contextserver.impl.conditions.initializers;
 import org.oasis_open.contextserver.api.EventProperty;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
-import org.oasis_open.contextserver.api.conditions.initializers.I18nSupport;
 import org.oasis_open.contextserver.api.services.EventService;
 
 import java.util.ArrayList;

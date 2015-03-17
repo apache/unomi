@@ -22,7 +22,6 @@ package org.oasis_open.contextserver.impl.services;
  * #L%
  */
 
-import org.apache.commons.lang3.StringUtils;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.services.*;
 import org.oasis_open.contextserver.impl.actions.ActionExecutorDispatcher;

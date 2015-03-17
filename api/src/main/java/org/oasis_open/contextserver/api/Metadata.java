@@ -22,7 +22,6 @@ package org.oasis_open.contextserver.api;
  * #L%
  */
 
-import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.util.LinkedHashSet;
 import java.util.Set;

@@ -26,7 +26,6 @@ import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
 
 import java.util.Date;
-import java.util.Set;
 
 public interface ProfileService {
 
