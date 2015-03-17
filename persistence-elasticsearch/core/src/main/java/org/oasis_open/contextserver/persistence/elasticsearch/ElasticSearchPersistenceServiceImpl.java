@@ -348,7 +348,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                 } catch (IllegalAccessException e) {
                     logger.error("Error loading itemType=" + clazz.getName() + "itemId=" + itemId, e);
-                } catch (Throwable t) {
+                } catch (Exception t) {
                     logger.error("Error loading itemType=" + clazz.getName() + "itemId=" + itemId, t);
                 }
                 return null;

@@ -549,8 +549,8 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             }
             return sb.toString();
         } catch (java.security.NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
         }
-        return null;
     }
 
     public void bundleChanged(BundleEvent event) {
