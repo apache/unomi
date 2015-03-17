@@ -10,6 +10,12 @@
             "choiceListInitializerFilter": "(initializerId=propertyType)"
         },
         {
+            "id": "setSessionPropertyName",
+            "type": "string",
+            "multivalued": false,
+            "choiceListInitializerFilter": "(initializerId=sessionPropertyType)"
+        },
+        {
             "id": "setPropertyValue",
             "type": "string",
             "multivalued": false
