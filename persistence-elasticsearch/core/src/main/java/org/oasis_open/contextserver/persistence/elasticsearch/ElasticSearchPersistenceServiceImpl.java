@@ -26,15 +26,11 @@ import org.elasticsearch.action.admin.cluster.node.info.NodeInfo;
 import org.elasticsearch.action.admin.cluster.node.info.NodesInfoResponse;
 import org.elasticsearch.action.admin.cluster.node.stats.NodeStats;
 import org.elasticsearch.action.admin.cluster.node.stats.NodesStatsResponse;
-import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
-import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.admin.indices.stats.IndicesStatsResponse;
-import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
-import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.percolate.PercolateResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -90,6 +86,7 @@ import java.util.*;
 
 import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 
+@SuppressWarnings("rawtypes")
 public class ElasticSearchPersistenceServiceImpl implements PersistenceService, ClusterService {
 
     public static final long MILLIS_PER_DAY = 24L * 60L * 60L * 1000L;
@@ -217,11 +214,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                 }
                 if (!indexExists) {
-                    logger.info(indexName + " index doesn't exist yet, creating it...");
-                    CreateIndexResponse createIndexResponse = client.admin().indices().prepareCreate(indexName).execute().actionGet();
+                    logger.info("{} index doesn't exist yet, creating it...", indexName);
+                    client.admin().indices().prepareCreate(indexName).execute().actionGet();
                 }
 
-                PutIndexTemplateResponse response = client.admin().indices().preparePutTemplate(indexName + "_dailyindex")
+                client.admin().indices().preparePutTemplate(indexName + "_dailyindex")
                         .setTemplate(indexName + "-*")
                         .setOrder(1)
                         .setSettings(ImmutableSettings.settingsBuilder().put("number_of_shards", 1).build())
@@ -261,8 +258,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         boolean indexExists = indicesExistsResponse.isExists();
 
         if (!indexExists) {
-            logger.info(indexName + " index doesn't exist yet, creating it...");
-            CreateIndexResponse createIndexResponse = client.admin().indices().prepareCreate(dailyIndexName).execute().actionGet();
+            logger.info("{} index doesn't exist yet, creating it...", indexName);
+            client.admin().indices().prepareCreate(dailyIndexName).execute().actionGet();
 
             for (Map.Entry<String, String> entry : mappings.entrySet()) {
                 createMapping(entry.getKey(), entry.getValue(), dailyIndexName);
@@ -369,9 +366,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     if (routingByType.containsKey(itemType)) {
                         indexBuilder = indexBuilder.setRouting(routingByType.get(itemType));
                     }
-                    IndexResponse response = indexBuilder
-                            .execute()
-                            .actionGet();
+                    indexBuilder.execute().actionGet();
                     return true;
                 } catch (IOException e) {
                     logger.error("Error saving item " + item, e);
@@ -445,6 +440,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public Map<String, Map<String, Object>> getMapping(final String itemType) {
         return new InClassLoaderExecute<Map<String, Map<String, Object>>>() {
+            @SuppressWarnings("unchecked")
             protected Map<String, Map<String, Object>> execute(Object... args) {
                 GetMappingsResponse getMappingsResponse = client.admin().indices().prepareGetMappings().setTypes(itemType).execute().actionGet();
                 ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> mappings = getMappingsResponse.getMappings();
@@ -909,7 +905,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                 }
                 if (!toDelete.isEmpty()) {
-                    DeleteIndexResponse response = client.admin().indices().prepareDelete(toDelete.toArray(new String[toDelete.size()])).execute().actionGet();
+                    client.admin().indices().prepareDelete(toDelete.toArray(new String[toDelete.size()])).execute().actionGet();
                 }
                 return null;
             }

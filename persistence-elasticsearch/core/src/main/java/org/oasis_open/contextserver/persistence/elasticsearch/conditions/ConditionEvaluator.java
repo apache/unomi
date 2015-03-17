@@ -32,6 +32,6 @@ import java.util.Map;
  */
 public interface ConditionEvaluator {
 
-    public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher);
+    boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher);
 
 }

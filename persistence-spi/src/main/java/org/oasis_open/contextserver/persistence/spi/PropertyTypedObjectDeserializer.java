@@ -55,10 +55,6 @@ public class PropertyTypedObjectDeserializer extends UntypedObjectDeserializer {
 
     private static final long serialVersionUID = -2561171359946902967L;
 
-    public PropertyTypedObjectDeserializer() {
-        super();
-    }
-
     private Map<String, Class<? extends Object>> registry =
             new LinkedHashMap<String, Class<? extends Object>>();
 

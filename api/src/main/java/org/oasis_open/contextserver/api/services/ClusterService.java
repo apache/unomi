@@ -31,6 +31,6 @@ public interface ClusterService {
 
     List<ClusterNode> getClusterNodes();
 
-    public void purge(final Date date);
+    void purge(final Date date);
 
 }

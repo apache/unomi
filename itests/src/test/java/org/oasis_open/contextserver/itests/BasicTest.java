@@ -19,15 +19,11 @@ import org.oasis_open.contextserver.api.ContextResponse;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class BasicTest extends BaseTest{
-    private final static Logger LOGGER = LoggerFactory.getLogger(BasicTest.class);
     private static final String JSON_MYME_TYPE = "application/json";
 
     private ObjectMapper objectMapper = new ObjectMapper();

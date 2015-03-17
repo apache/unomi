@@ -29,6 +29,6 @@ import java.util.Map;
 
 public interface ConditionESQueryBuilder {
 
-    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher);
+    FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher);
 
 }

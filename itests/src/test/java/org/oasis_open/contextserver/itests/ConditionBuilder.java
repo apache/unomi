@@ -3,8 +3,6 @@ package org.oasis_open.contextserver.itests;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
-
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 
@@ -168,10 +166,6 @@ public class ConditionBuilder {
 
         private ComparisonCondition dateValue(Date value) {
             return parameter("propertyValueDate", value);
-        }
-
-        private ComparisonCondition stringValues(List<String> values) {
-            return parameter("propertyValues", values);
         }
 
         private ComparisonCondition stringValues(String... values) {

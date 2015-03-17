@@ -29,6 +29,6 @@ import org.oasis_open.contextserver.api.Event;
  */
 public interface ActionExecutor {
 
-    public abstract boolean execute(Action action, Event event);
+    boolean execute(Action action, Event event);
 
 }
