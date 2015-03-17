@@ -37,6 +37,7 @@ import java.util.Map;
 
 public class ItemDeserializer extends StdDeserializer<Item> {
 
+    private static final long serialVersionUID = -7040054009670771266L;
     private Map<String,Class<? extends Item>> classes = new HashMap<>();
 
     public ItemDeserializer() {

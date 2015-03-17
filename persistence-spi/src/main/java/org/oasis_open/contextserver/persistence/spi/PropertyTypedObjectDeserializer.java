@@ -53,6 +53,8 @@ import java.util.*;
  */
 public class PropertyTypedObjectDeserializer extends UntypedObjectDeserializer {
 
+    private static final long serialVersionUID = -2561171359946902967L;
+
     public PropertyTypedObjectDeserializer() {
         super();
     }

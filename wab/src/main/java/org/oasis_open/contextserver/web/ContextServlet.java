@@ -63,6 +63,7 @@ import org.ops4j.pax.cdi.api.OsgiService;
 @WebServlet(urlPatterns = {"/context.js", "/context.json"})
 public class ContextServlet extends HttpServlet {
 
+    private static final long serialVersionUID = 2928875830103325238L;
     public static final String BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/base.js";
     public static final String IMPERSONATE_BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/impersonateBase.js";
 
