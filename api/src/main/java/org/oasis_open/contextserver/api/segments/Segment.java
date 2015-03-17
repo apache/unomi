@@ -31,6 +31,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement
 public class Segment extends MetadataItem {
 
+    private static final long serialVersionUID = -1384533444860961296L;
+
     public static final String ITEM_TYPE = "segment";
 
     private Condition condition;

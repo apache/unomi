@@ -27,6 +27,7 @@ import java.io.Serializable;
 
 public abstract class Item implements Serializable {
 
+    private static final long serialVersionUID = 7446061538573517071L;
     protected String itemId;
     protected String itemType;
     protected String scope;

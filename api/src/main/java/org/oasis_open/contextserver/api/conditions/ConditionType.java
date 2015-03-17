@@ -38,6 +38,7 @@ import java.util.*;
  */
 @XmlRootElement
 public class ConditionType implements PluginType, Serializable {
+    private static final long serialVersionUID = -6965481691241954968L;
     private String id;
     private String nameKey;
     private String descriptionKey;

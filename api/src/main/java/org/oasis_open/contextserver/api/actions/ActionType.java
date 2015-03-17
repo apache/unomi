@@ -33,6 +33,7 @@ import java.util.*;
 
 public class ActionType implements PluginType, Serializable {
 
+    private static final long serialVersionUID = -3522958600710010934L;
     private String id;
     private String nameKey;
     private String descriptionKey;

@@ -26,6 +26,7 @@ import java.io.Serializable;
 import java.util.List;
 
 public class GoalReport implements Serializable {
+    private static final long serialVersionUID = -9150361970326342064L;
     private Stat globalStats;
     private List<Stat> split;
 
@@ -49,6 +50,7 @@ public class GoalReport implements Serializable {
     }
 
     public static class Stat implements Serializable {
+        private static final long serialVersionUID = 4306277648074263098L;
         private String key;
         private long startCount;
         private long targetCount;

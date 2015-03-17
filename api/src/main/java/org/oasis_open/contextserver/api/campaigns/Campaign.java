@@ -29,6 +29,8 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 import java.util.Date;
 
 public class Campaign extends MetadataItem {
+    private static final long serialVersionUID = -1829542196982959946L;
+
     public static final String ITEM_TYPE = "campaign";
 
     private Date startDate;

@@ -26,6 +26,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
 
 public abstract class MetadataItem extends Item {
+    private static final long serialVersionUID = -2459510107927663510L;
     protected Metadata metadata;
 
     public MetadataItem() {

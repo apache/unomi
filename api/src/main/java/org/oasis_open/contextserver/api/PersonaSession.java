@@ -25,6 +25,7 @@ package org.oasis_open.contextserver.api;
 import java.util.Date;
 
 public class PersonaSession extends Session {
+    private static final long serialVersionUID = -1499107289607498852L;
     public static final String ITEM_TYPE = "personaSession";
 
     public PersonaSession() {

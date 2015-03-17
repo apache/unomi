@@ -26,6 +26,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class CustomItem extends Item {
+    private static final long serialVersionUID = -7178914125308851922L;
+
     public static final String ITEM_TYPE = "custom";
 
     private Map<String,Object> properties = new HashMap<String,Object>();

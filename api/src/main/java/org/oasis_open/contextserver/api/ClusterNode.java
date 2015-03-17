@@ -29,6 +29,8 @@ import java.io.Serializable;
  */
 public class ClusterNode implements Serializable {
 
+    private static final long serialVersionUID = 1281422346318230514L;
+    
     private double cpuLoad;
     private double[] loadAverage;
     private String hostName;

@@ -30,6 +30,8 @@ import java.util.List;
 
 @XmlRootElement
 public class Scoring extends MetadataItem {
+    private static final long serialVersionUID = 6351058906259967559L;
+
     public static final String ITEM_TYPE = "scoring";
 
     private List<ScoringElement> elements;

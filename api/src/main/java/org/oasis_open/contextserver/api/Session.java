@@ -28,6 +28,8 @@ import java.util.Map;
 
 public class Session extends Item implements TimestampedItem {
 
+    private static final long serialVersionUID = 4628640198281687336L;
+
     public static final String ITEM_TYPE = "session";
 
     private String profileId;

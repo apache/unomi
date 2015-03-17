@@ -30,6 +30,8 @@ import java.util.Set;
 
 public class ContextResponse implements Serializable {
 
+    private static final long serialVersionUID = -5638595408986826332L;
+
     private String profileId;
 
     private String sessionId;

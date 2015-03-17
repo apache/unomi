@@ -28,6 +28,7 @@ package org.oasis_open.contextserver.api;
  */
 public class Persona extends Profile {
 
+    private static final long serialVersionUID = -1239061113528609426L;
     public static final String ITEM_TYPE = "persona";
 
     public Persona() {

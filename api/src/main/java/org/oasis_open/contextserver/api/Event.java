@@ -27,6 +27,7 @@ import java.util.*;
 
 public class Event extends Item implements TimestampedItem {
 
+    private static final long serialVersionUID = -1096874942838593575L;
     public static final String ITEM_TYPE = "event";
     public static final String HTTP_REQUEST_ATTRIBUTE = "http_request";
     public static final String HTTP_RESPONSE_ATTRIBUTE = "http_response";

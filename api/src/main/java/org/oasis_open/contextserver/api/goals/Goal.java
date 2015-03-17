@@ -27,6 +27,8 @@ import org.oasis_open.contextserver.api.MetadataItem;
 import org.oasis_open.contextserver.api.conditions.Condition;
 
 public class Goal extends MetadataItem {
+    private static final long serialVersionUID = 6131648013470949983L;
+
     public static final String ITEM_TYPE = "goal";
 
     private Condition startEvent;

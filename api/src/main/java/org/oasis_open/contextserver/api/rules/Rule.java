@@ -31,6 +31,8 @@ import java.util.List;
 
 public class Rule extends MetadataItem {
 
+    private static final long serialVersionUID = 3058739939263056507L;
+
     public static final String ITEM_TYPE = "rule";
 
     private Condition condition;

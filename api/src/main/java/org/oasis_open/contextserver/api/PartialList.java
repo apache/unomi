@@ -34,6 +34,7 @@ import java.util.List;
 @XmlRootElement
 public class PartialList<T> implements Serializable {
 
+    private static final long serialVersionUID = 2661946814840468260L;
     private List<T> list;
     private long offset;
     private long pageSize;
