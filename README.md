@@ -98,7 +98,7 @@ on your disk and copy all the files from the lib/sigar directory into Karaf's li
        feature:install -v pax-cdi-web-openwebbeans
     ```
 
-4. Create a new etc/org.apache.cfx.osgi.cfg file and put the following property inside :
+4. Create a new etc/org.apache.cxf.osgi.cfg file and put the following property inside :
 
     ```
        org.apache.cxf.servlet.context=/cxs
