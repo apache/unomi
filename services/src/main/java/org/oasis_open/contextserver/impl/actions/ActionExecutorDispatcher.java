@@ -31,12 +31,15 @@ import org.oasis_open.contextserver.api.actions.ActionExecutor;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
 public class ActionExecutorDispatcher {
+    private static final Logger logger = LoggerFactory.getLogger(ActionExecutorDispatcher.class.getName());
 
     private BundleContext bundleContext;
 
@@ -131,7 +134,7 @@ public class ActionExecutorDispatcher {
         try {
             matchingActionExecutorReferences = bundleContext.getServiceReferences(ActionExecutor.class, action.getActionType().getServiceFilter());
         } catch (InvalidSyntaxException e) {
-            e.printStackTrace();
+            logger.error("Invalid filter",e);
             return false;
         }
         boolean changed = false;

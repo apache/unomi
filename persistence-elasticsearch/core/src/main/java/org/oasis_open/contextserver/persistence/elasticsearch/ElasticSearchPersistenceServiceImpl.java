@@ -210,7 +210,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     try {
                         Thread.sleep(100);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        logger.error("Interrupted", e);
                     }
                 }
                 if (!indexExists) {
@@ -424,7 +424,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             .execute().actionGet();
                     return true;
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    logger.error("Cannot remove", e);
                 }
                 return false;
             }
@@ -459,7 +459,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         propertyMap.putAll((Map<String, Map<String,Object>>) next.get(itemType).getSourceAsMap().get("properties"));
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    logger.error("Cannot get mapping", e);
                 }
                 return propertyMap;
             }
@@ -478,7 +478,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             .execute().actionGet();
                     return true;
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    logger.error("Cannot save query", e);
                 }
                 return false;
             }
@@ -505,7 +505,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             .execute().actionGet();
                     return true;
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    logger.error("Cannot delete query",e);
                 }
                 return false;
             }

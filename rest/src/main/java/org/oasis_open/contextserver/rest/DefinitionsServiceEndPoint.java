@@ -34,6 +34,8 @@ import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -50,6 +52,7 @@ import java.util.*;
         allowCredentials = true
 )
 public class DefinitionsServiceEndPoint {
+    private static final Logger logger = LoggerFactory.getLogger(DefinitionsServiceEndPoint.class.getName());
 
     private DefinitionsService definitionsService;
     private BundleContext bundleContext;
@@ -327,7 +330,7 @@ public class DefinitionsServiceEndPoint {
                     }
                 }
             } catch (InvalidSyntaxException e) {
-                e.printStackTrace();
+                logger.error("Invalid filter",e);
             }
         }
     }

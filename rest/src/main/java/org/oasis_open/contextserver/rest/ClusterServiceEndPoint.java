@@ -26,6 +26,8 @@ import org.apache.cxf.jaxrs.ext.MessageContext;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.ClusterNode;
 import org.oasis_open.contextserver.api.services.ClusterService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jws.WebService;
 import javax.ws.rs.GET;
@@ -45,6 +47,7 @@ import java.util.List;
         allowCredentials = true
 )
 public class ClusterServiceEndPoint {
+    private static final Logger logger = LoggerFactory.getLogger(ClusterServiceEndPoint.class.getName());
 
     @Context
     private MessageContext messageContext;
@@ -75,7 +78,7 @@ public class ClusterServiceEndPoint {
         try {
             clusterService.purge(new SimpleDateFormat("yyyy-MM-dd").parse(date));
         } catch (ParseException e) {
-            e.printStackTrace();
+            logger.error("Cannot purge",e);
         }
     }
 }

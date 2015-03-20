@@ -29,12 +29,15 @@ import org.apache.commons.mail.ImageHtmlEmail;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.stringtemplate.v4.ST;
 
 import java.net.MalformedURLException;
 import java.net.URL;
 
 public class SendMailAction implements ActionExecutor {
+    private static final Logger logger = LoggerFactory.getLogger(SendMailAction.class.getName());
 
     private String mailServerHostName;
     private int mailServerPort;
@@ -80,7 +83,7 @@ public class SendMailAction implements ActionExecutor {
         try {
             new URL("http://www.apache.org");
         } catch (MalformedURLException e) {
-            e.printStackTrace();
+            //
         }
 
         // create the email message
@@ -110,7 +113,7 @@ public class SendMailAction implements ActionExecutor {
             // send the email
             email.send();
         } catch (EmailException e) {
-            e.printStackTrace();
+            logger.error("Cannot send mail",e);
         }
 
         return true;

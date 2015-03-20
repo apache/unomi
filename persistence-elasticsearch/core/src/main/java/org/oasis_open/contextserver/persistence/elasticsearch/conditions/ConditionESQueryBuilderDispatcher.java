@@ -30,12 +30,15 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
 public class ConditionESQueryBuilderDispatcher {
+    private static final Logger logger = LoggerFactory.getLogger(ConditionESQueryBuilderDispatcher.class.getName());
 
     private BundleContext bundleContext;
 
@@ -72,7 +75,7 @@ public class ConditionESQueryBuilderDispatcher {
         try {
             matchingQueryBuilderReferences = bundleContext.getServiceReferences(ConditionESQueryBuilder.class, queryBuilderFilter);
         } catch (InvalidSyntaxException e) {
-            e.printStackTrace();
+            logger.error("Invalid filter",e);
         }
         // despite multiple references possible, we will only execute the first one
         for (ServiceReference<ConditionESQueryBuilder> queryBuilderServiceReference : matchingQueryBuilderReferences) {

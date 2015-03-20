@@ -22,9 +22,13 @@ package org.oasis_open.contextserver.api;
  * #L%
  */
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.Serializable;
 
 public abstract class Item implements Serializable {
+    private static final Logger logger = LoggerFactory.getLogger(Item.class.getName());
 
     private static final long serialVersionUID = 7446061538573517071L;
     protected String itemId;
@@ -35,7 +39,7 @@ public abstract class Item implements Serializable {
         try {
             this.itemType = (String) this.getClass().getField("ITEM_TYPE").get(null);
         } catch (IllegalAccessException | NoSuchFieldException e) {
-            e.printStackTrace();
+            logger.error("Cannot get item type",e);
         }
     }
 

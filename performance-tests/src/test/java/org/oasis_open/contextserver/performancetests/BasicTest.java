@@ -53,7 +53,7 @@ public class BasicTest {
             benchmarks.mkdirs();
             return new BenchmarkRule(new WriterConsumer(new FileWriter(new File(benchmarks,"benchmark.txt"),true)));
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("Cannot get benchamrks",e);
         }
         return null;
     }

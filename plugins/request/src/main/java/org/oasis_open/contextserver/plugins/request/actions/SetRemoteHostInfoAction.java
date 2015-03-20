@@ -32,6 +32,8 @@ import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.Session;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
 import javax.json.Json;
@@ -49,6 +51,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 public class SetRemoteHostInfoAction implements ActionExecutor {
+    private static final Logger logger = LoggerFactory.getLogger(SetRemoteHostInfoAction.class.getName());
 
     public static final Pattern IPV4 = Pattern.compile("[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}");
 
@@ -88,7 +91,7 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
                 session.setProperty("location", location);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Cannot lookup IP", e);
         }
 
         UserAgentStringParser parser = UADetectorServiceFactory.getResourceModuleParser();
@@ -130,16 +133,14 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             locationMap.put("lon", location.getJsonNumber("longitude").doubleValue());
             session.setProperty("location", locationMap);
             return true;
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Cannot get geoip database",e);
         } finally {
             if (inputStream != null) {
                 try {
                     inputStream.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    logger.error("Cannot close", e);
                 }
             }
         }
@@ -162,7 +163,7 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         try {
             this.databaseReader = new DatabaseReader.Builder(database).build();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Cannot read IP database", e);
         }
 
     }
@@ -186,10 +187,8 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             locationMap.put("lon", cityResponse.getLocation().getLongitude());
             session.setProperty("location", locationMap);
             return true;
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (GeoIp2Exception e) {
-            e.printStackTrace();
+        } catch (IOException | GeoIp2Exception e) {
+            logger.error("Cannot resolve IP", e);
         }
         return false;
     }

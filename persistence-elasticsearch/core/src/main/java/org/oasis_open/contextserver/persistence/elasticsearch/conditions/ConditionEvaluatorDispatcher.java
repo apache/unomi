@@ -27,6 +27,8 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -36,6 +38,7 @@ import java.util.Map;
  * Entry point for condition evaluation. Will dispatch to all evaluators.
  */
 public class ConditionEvaluatorDispatcher {
+    private static final Logger logger = LoggerFactory.getLogger(ConditionEvaluatorDispatcher.class.getName());
 
     private BundleContext bundleContext;
 
@@ -59,7 +62,7 @@ public class ConditionEvaluatorDispatcher {
         try {
             matchConditionEvaluators = bundleContext.getServiceReferences(ConditionEvaluator.class, condition.getConditionType().getConditionEvaluator());
         } catch (InvalidSyntaxException e) {
-            e.printStackTrace();
+            logger.error("Invalid filter",e);
         }
         // despite multiple references possible, we will only execute the first one
         for (ServiceReference<ConditionEvaluator> evaluatorServiceReference : matchConditionEvaluators) {

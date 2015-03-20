@@ -26,12 +26,16 @@ import org.apache.commons.beanutils.BeanUtils;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.text.SimpleDateFormat;
 import java.util.TimeZone;
 
 public class SetPropertyAction implements ActionExecutor {
+    private static final Logger logger = LoggerFactory.getLogger(SetPropertyAction.class.getName());
+
     public SetPropertyAction() {
     }
 
@@ -60,12 +64,8 @@ public class SetPropertyAction implements ActionExecutor {
                     modified = true;
                 }
             }
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
+        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+            logger.error("Cannot set property", e);
         }
         return modified;
     }
