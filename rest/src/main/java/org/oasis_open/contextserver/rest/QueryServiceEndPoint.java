@@ -58,6 +58,12 @@ public class QueryServiceEndPoint implements QueryService {
     }
 
     @POST
+    @Path("/{type}/{property}/{metricTypes:((sum|avg|min|max)/?)*}")
+    public Map<String, Double> getMetric(@PathParam("type") String type, @PathParam("property") String property, @PathParam("metricTypes") String metricsType, Condition condition) {
+        return queryService.getMetric(type, property, metricsType, condition);
+    }
+
+    @POST
     @Path("/{type}/count")
     public long getQueryCount(@PathParam("type") String type, Condition condition) {
         return queryService.getQueryCount(type, condition);

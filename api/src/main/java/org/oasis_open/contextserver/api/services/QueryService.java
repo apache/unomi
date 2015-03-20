@@ -34,4 +34,6 @@ public interface QueryService {
     Map<String, Long> getAggregate(String type, String property, AggregateQuery query);
 
     long getQueryCount(String type, Condition condition);
+
+    Map<String,Double> getMetric(String type, String property, String metricType, Condition condition);
 }

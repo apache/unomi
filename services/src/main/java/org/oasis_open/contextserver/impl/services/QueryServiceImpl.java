@@ -27,13 +27,11 @@ import org.oasis_open.contextserver.api.query.AggregateQuery;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.QueryService;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
-import org.oasis_open.contextserver.persistence.spi.aggregate.DateAggregate;
-import org.oasis_open.contextserver.persistence.spi.aggregate.DateRangeAggregate;
-import org.oasis_open.contextserver.persistence.spi.aggregate.NumericRangeAggregate;
-import org.oasis_open.contextserver.persistence.spi.aggregate.TermsAggregate;
+import org.oasis_open.contextserver.persistence.spi.aggregate.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
 import java.util.Map;
 
 public class QueryServiceImpl implements QueryService {
@@ -72,16 +70,17 @@ public class QueryServiceImpl implements QueryService {
 
             // resolve aggregate
             if(query.getAggregate() != null) {
-                if (query.getAggregate().getType() != null){
+                String aggregateType = query.getAggregate().getType();
+                if (aggregateType != null){
                     // try to guess the aggregate type
-                    if(query.getAggregate().getType().equals("date")){
+                    if(aggregateType.equals("date")){
                         String interval = (String) query.getAggregate().getParameters().get("interval");
                         String format = (String) query.getAggregate().getParameters().get("format");
                         return persistenceService.aggregateQuery(query.getCondition(), new DateAggregate(property, interval, format), type);
-                    }else if (query.getAggregate().getType().equals("dateRange") && query.getAggregate().getGenericRanges() != null && query.getAggregate().getGenericRanges().size() > 0) {
+                    }else if (aggregateType.equals("dateRange") && query.getAggregate().getGenericRanges() != null && query.getAggregate().getGenericRanges().size() > 0) {
                         String format = (String) query.getAggregate().getParameters().get("format");
                         return persistenceService.aggregateQuery(query.getCondition(), new DateRangeAggregate(query.getAggregate().getProperty(), format, query.getAggregate().getGenericRanges()), type);
-                    } else if (query.getAggregate().getType().equals("range") && query.getAggregate().getNumericRanges() != null && query.getAggregate().getNumericRanges().size() > 0) {
+                    } else if (aggregateType.equals("range") && query.getAggregate().getNumericRanges() != null && query.getAggregate().getNumericRanges().size() > 0) {
                         return persistenceService.aggregateQuery(query.getCondition(), new NumericRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().getNumericRanges()), type);
                     }
                 }
@@ -92,6 +91,14 @@ public class QueryServiceImpl implements QueryService {
         }
 
         return getAggregate(type, property);
+    }
+
+    @Override
+    public Map<String, Double> getMetric(String type, String property, String metricType, Condition condition) {
+        if (condition.getConditionType() == null) {
+            ParserHelper.resolveConditionType(definitionsService, condition);
+        }
+        return persistenceService.getSingleValuesMetrics(condition,metricType.split("/"),property, type);
     }
 
     @Override

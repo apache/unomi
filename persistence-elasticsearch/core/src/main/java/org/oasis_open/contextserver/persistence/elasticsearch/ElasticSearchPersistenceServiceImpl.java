@@ -48,9 +48,7 @@ import org.elasticsearch.index.query.*;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
-import org.elasticsearch.search.aggregations.AggregationBuilder;
-import org.elasticsearch.search.aggregations.AggregationBuilders;
-import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.*;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregation;
 import org.elasticsearch.search.aggregations.bucket.filter.Filter;
@@ -60,6 +58,7 @@ import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramBuild
 import org.elasticsearch.search.aggregations.bucket.missing.MissingBuilder;
 import org.elasticsearch.search.aggregations.bucket.range.RangeBuilder;
 import org.elasticsearch.search.aggregations.bucket.range.date.DateRangeBuilder;
+import org.elasticsearch.search.aggregations.metrics.InternalNumericMetricsAggregation;
 import org.elasticsearch.search.sort.SortOrder;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
@@ -930,6 +929,56 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
+    @Override
+    public Map<String, Double> getSingleValuesMetrics(final Condition condition, final String[] metrics, final String field, final String itemType) {
+        return new InClassLoaderExecute<Map<String, Double>>() {
+
+            @Override
+            protected Map<String, Double> execute(Object... args) {
+                Map<String, Double> results = new LinkedHashMap<String, Double>();
+
+                SearchRequestBuilder builder = client.prepareSearch(itemsDailyIndexed.contains(itemType) ? indexName + "-*" : indexName)
+                        .setTypes(itemType)
+                        .setSearchType(SearchType.COUNT)
+                        .setQuery(QueryBuilders.matchAllQuery());
+                AggregationBuilder filterAggregation = AggregationBuilders.filter("metrics").filter(conditionESQueryBuilderDispatcher.buildFilter(condition));
+
+                if(metrics!=null) {
+                    for (String metric : metrics) {
+                        switch (metric) {
+                            case "sum":
+                                filterAggregation.subAggregation(AggregationBuilders.sum("sum").field(field));
+                                break;
+                            case "avg":
+                                filterAggregation.subAggregation(AggregationBuilders.avg("avg").field(field));
+                                break;
+                            case "min":
+                                filterAggregation.subAggregation(AggregationBuilders.min("min").field(field));
+                                break;
+                            case "max":
+                                filterAggregation.subAggregation(AggregationBuilders.max("max").field(field));
+                                break;
+                        }
+                    }
+                }
+                builder.addAggregation(filterAggregation);
+                SearchResponse response = builder.execute().actionGet();
+
+                Aggregations aggregations = response.getAggregations();
+                if (aggregations != null) {
+                    Aggregation metricsResults = aggregations.get("metrics");
+                    if(metricsResults instanceof HasAggregations) {
+                        aggregations = ((HasAggregations)metricsResults).getAggregations();
+                        for (Aggregation aggregation : aggregations) {
+                            InternalNumericMetricsAggregation.SingleValue singleValue = (InternalNumericMetricsAggregation.SingleValue) aggregation;
+                            results.put("_" + singleValue.getName(), singleValue.value());
+                        }
+                    }
+                }
+                return results;
+            }
+        }.executeInClassLoader();
+    }
 
     public abstract class InClassLoaderExecute<T> {
 
