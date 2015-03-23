@@ -24,21 +24,24 @@ package org.oasis_open.contextserver.impl.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.oasis_open.contextserver.api.*;
+import org.oasis_open.contextserver.api.actions.Action;
+import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
+import org.oasis_open.contextserver.api.rules.Rule;
 import org.oasis_open.contextserver.api.segments.Scoring;
 import org.oasis_open.contextserver.api.segments.ScoringElement;
 import org.oasis_open.contextserver.api.segments.Segment;
-import org.oasis_open.contextserver.api.actions.Action;
-import org.oasis_open.contextserver.api.conditions.Condition;
-import org.oasis_open.contextserver.api.rules.Rule;
+import org.oasis_open.contextserver.api.segments.SegmentsAndScores;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.RulesService;
 import org.oasis_open.contextserver.api.services.SegmentService;
-import org.oasis_open.contextserver.api.segments.SegmentsAndScores;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
 import org.oasis_open.contextserver.persistence.spi.aggregate.TermsAggregate;
-import org.osgi.framework.*;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleEvent;
+import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -232,20 +235,64 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         }
     }
 
-    public Set<Metadata> getSegmentMetadatas() {
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Segment definition : persistenceService.getAllItems(Segment.class, 0, 50, null).getList()) {
-            descriptions.add(definition.getMetadata());
+    private Set<Metadata> getSegmentMetadataFrom(List<Segment> segments) {
+        if (!segments.isEmpty()) {
+            Set<Metadata> result = new HashSet<>(50);
+            for (Segment segment : segments) {
+                result.add(segment.getMetadata());
+            }
+            return result;
         }
-        return descriptions;
+
+        return Collections.emptySet();
+    }
+
+    public Set<Metadata> getSegmentMetadatas() {
+        return getSegmentMetadataFrom(persistenceService.getAllItems(Segment.class, 0, 50, null).getList());
     }
 
     public Set<Metadata> getSegmentMetadatas(String scope) {
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Segment definition : persistenceService.query("metadata.scope", scope, null, Segment.class, 0, 50).getList()) {
-            descriptions.add(definition.getMetadata());
+        return getSegmentMetadataFrom(persistenceService.query("metadata.scope", scope, null, Segment.class, 0, 50).getList());
+    }
+
+    @Override
+    public Map<String, Set<Metadata>> getScopedSegmentMetadata(String scope, boolean includeShared) {
+        if (scope == null) {
+            final List<Segment> all = persistenceService.getAllItems(Segment.class, 0, 50, null).getList();
+            final Map<String, Set<Metadata>> results = new HashMap<>(all.size());
+            for (Segment segment : all) {
+                final String segmentScope = segment.getScope();
+                Set<Metadata> metadataSet = results.get(segmentScope);
+                if (metadataSet == null) {
+                    metadataSet = new HashSet<>(all.size());
+                    results.put(segmentScope, metadataSet);
+                }
+                metadataSet.add(segment.getMetadata());
+            }
+
+            return results;
+        } else {
+            if (!includeShared) {
+                return Collections.singletonMap(scope, getSegmentMetadatas(scope));
+            } else {
+                // todo: create appropriate query if needed
+                final Map<String, Set<Metadata>> results = new HashMap<>(2);
+                final Set<Metadata> all = getSegmentMetadatas();
+                for (Metadata metadata : all) {
+                    final String metadataScope = metadata.getScope();
+                    if (Metadata.SYSTEM_SCOPE.equals(metadataScope) || metadataScope.equals(scope)) {
+                        Set<Metadata> metadataSet = results.get(metadataScope);
+                        if (metadataSet == null) {
+                            metadataSet = new HashSet<>(all.size());
+                            results.put(metadataScope, metadataSet);
+                        }
+                        metadataSet.add(metadata);
+                    }
+                }
+
+                return results;
+            }
         }
-        return descriptions;
     }
 
     private List<Segment> getAllSegmentDefinitions() {

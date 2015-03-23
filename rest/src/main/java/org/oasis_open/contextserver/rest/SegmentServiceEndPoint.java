@@ -25,14 +25,15 @@ package org.oasis_open.contextserver.rest;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PartialList;
-import org.oasis_open.contextserver.api.segments.Segment;
 import org.oasis_open.contextserver.api.Profile;
+import org.oasis_open.contextserver.api.segments.Segment;
 import org.oasis_open.contextserver.api.services.SegmentService;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.util.Map;
 import java.util.Set;
 
 @WebService
@@ -88,6 +89,18 @@ public class SegmentServiceEndPoint {
     @Path("/{scope}")
     public Set<Metadata> getSegmentMetadatas(@PathParam("scope") String scope) {
         return segmentService.getSegmentMetadatas(scope);
+    }
+
+    @GET
+    @Path("/scoped")
+    public Map<String, Set<Metadata>> getScopedSegmentMetadata() {
+        return segmentService.getScopedSegmentMetadata(null, true);
+    }
+
+    @GET
+    @Path("/scoped/{scope}")
+    public Map<String, Set<Metadata>> getScopedSegmentMetadata(@PathParam("scope") String scope, @QueryParam("includeShared") boolean includeShared) {
+        return segmentService.getScopedSegmentMetadata(scope, includeShared);
     }
 
     @GET
