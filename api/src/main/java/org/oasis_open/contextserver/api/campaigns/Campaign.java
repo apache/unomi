@@ -45,6 +45,8 @@ public class Campaign extends MetadataItem {
 
     private String primaryGoal;
 
+    private String timezone;
+
     public Campaign() {
     }
 
@@ -98,5 +100,13 @@ public class Campaign extends MetadataItem {
 
     public void setPrimaryGoal(String primaryGoal) {
         this.primaryGoal = primaryGoal;
+    }
+
+    public String getTimezone() {
+        return timezone;
+    }
+
+    public void setTimezone(String timezone) {
+        this.timezone = timezone;
     }
 }

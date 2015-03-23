@@ -51,6 +51,7 @@ public class CampaignEvent extends MetadataItem {
     private String campaignId;
     private Double cost;
     private String currency;
+    private String timezone;
 
     public CampaignEvent() {
     }
@@ -89,5 +90,13 @@ public class CampaignEvent extends MetadataItem {
 
     public void setCampaignId(String campaignId) {
         this.campaignId = campaignId;
+    }
+
+    public String getTimezone() {
+        return timezone;
+    }
+
+    public void setTimezone(String timezone) {
+        this.timezone = timezone;
     }
 }
