@@ -71,4 +71,6 @@ public interface GoalsService {
     PartialList<Profile> getMatchingIndividuals(String scope, String campaignId, int offset, int size, String sortBy);
 
     long getMatchingIndividualsCount(String scope, String campaignId);
+
+    Set<Metadata> getSiteGoalsMetadatas(String scope);
 }

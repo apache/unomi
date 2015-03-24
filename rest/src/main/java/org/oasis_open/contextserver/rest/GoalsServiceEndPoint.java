@@ -56,6 +56,7 @@ public class GoalsServiceEndPoint {
         return goalsService.getGoalMetadatas();
     }
 
+
     @POST
     @Path("/")
     public void setGoal(Goal goal) {
@@ -66,6 +67,12 @@ public class GoalsServiceEndPoint {
     @Path("/{scope}/")
     public Set<Metadata> getGoalMetadatas(@PathParam("scope") String scope) {
         return goalsService.getGoalMetadatas(scope);
+    }
+
+    @GET
+    @Path("/{scope}/sitegoals")
+    public Set<Metadata> getSiteGoalsMetadatas(@PathParam("scope") String scope) {
+        return goalsService.getSiteGoalsMetadatas(scope);
     }
 
     @GET

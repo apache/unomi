@@ -232,6 +232,28 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         return descriptions;
     }
 
+    @Override
+    public Set<Metadata> getSiteGoalsMetadatas(String scope) {
+        Set<Metadata> descriptions = new HashSet<Metadata>();
+        Condition scopeCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+        scopeCondition.setParameter("propertyName","metadata.scope");
+        scopeCondition.setParameter("comparisonOperator","equals");
+        scopeCondition.setParameter("propertyValue",scope);
+        Condition eventCampaignCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+        eventCampaignCondition.setParameter("propertyName","campaignId");
+        eventCampaignCondition.setParameter("comparisonOperator","missing");
+        List<Condition> conditions = Arrays.asList(scopeCondition,eventCampaignCondition);
+        Condition booleanCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+        Map<String,Object> stringObjectMap = new HashMap<>();
+        stringObjectMap.put("operator","and");
+        stringObjectMap.put("subConditions",conditions);
+        booleanCondition.setParameterValues(stringObjectMap);
+        for (Goal definition : persistenceService.query(booleanCondition,null,Goal.class, 0, 50).getList()){
+            descriptions.add(definition.getMetadata());
+        }
+        return descriptions;
+    }
+
     public Goal getGoal(String scope, String goalId) {
         Goal goal = persistenceService.load(Metadata.getIdWithScope(scope,goalId), Goal.class);
         if (goal != null) {
