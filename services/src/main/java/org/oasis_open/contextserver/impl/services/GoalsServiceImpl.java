@@ -418,7 +418,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         Goal g = getGoal(scope, goalId);
 
         Condition goalTargetCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-        goalTargetCondition.setParameter("propertyName", goalId+ "TargetReached");
+        goalTargetCondition.setParameter("propertyName",  "properties." + goalId+ "TargetReached");
         goalTargetCondition.setParameter("comparisonOperator", "exists");
 
         Condition goalStartCondition;
@@ -430,7 +430,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             goalStartCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
         } else {
             goalStartCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-            goalStartCondition.setParameter("propertyName", goalId + "StartReached");
+            goalStartCondition.setParameter("propertyName", "properties." + goalId + "StartReached");
             goalStartCondition.setParameter("comparisonOperator", "exists");
         }
 
