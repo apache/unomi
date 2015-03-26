@@ -29,6 +29,7 @@ import org.oasis_open.contextserver.api.segments.Scoring;
 import org.oasis_open.contextserver.api.segments.Segment;
 import org.oasis_open.contextserver.api.segments.SegmentsAndScores;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -52,7 +53,18 @@ public interface SegmentService {
 
     void setSegmentDefinition(Segment segment);
 
-    void removeSegmentDefinition(String scope, String segmentId);
+    /**
+     * Removes the segment definition associated with the specified scope and identifier. We can specify that we want the operation to be validated beforehand so that we can
+     * know if any other segment that might use the segment we're trying to delete as a condition might be impacted. If <code>validate</code> is set to <code>false</code>, no
+     * validation is performed. If set to <code>true</code>, we will first check if any segments depend on the one we're trying to delete and if so we will not delete the
+     * segment but rather return the list of the identifiers of the impacted segments. If no dependents are found, then we properly delete the segment.
+     *
+     * @param scope     the scope of the segment we want to delete
+     * @param segmentId the identifier of the segment we want to delete within the specified scope
+     * @param validate  whether or not to perform validation
+     * @return a list of impacted segment identifiers if any or an empty if no such impacted segments are found or validation was skipped
+     */
+    List<String> removeSegmentDefinition(String scope, String segmentId, boolean validate);
 
     PartialList<Profile> getMatchingIndividuals(String scope, String segmentID, int offset, int size, String sortBy);
 

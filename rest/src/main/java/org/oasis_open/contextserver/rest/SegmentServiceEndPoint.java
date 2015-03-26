@@ -33,6 +33,7 @@ import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -111,8 +112,8 @@ public class SegmentServiceEndPoint {
 
     @DELETE
     @Path("/{scope}/{segmentID}")
-    public void removeSegmentDefinition(@PathParam("scope") String scope, @PathParam("segmentID") String segmentId) {
-        segmentService.removeSegmentDefinition(scope, segmentId);
+    public List<String> removeSegmentDefinition(@PathParam("scope") String scope, @PathParam("segmentID") String segmentId, @QueryParam("validate") boolean validate) {
+        return segmentService.removeSegmentDefinition(scope, segmentId, validate);
     }
 
     @GET
