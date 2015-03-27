@@ -36,9 +36,9 @@ public class BooleanConditionEvaluator implements ConditionEvaluator {
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context,
             ConditionEvaluatorDispatcher dispatcher) {
-        boolean isAnd = "and".equalsIgnoreCase((String) condition.getParameterValues().get("operator"));
+        boolean isAnd = "and".equalsIgnoreCase((String) condition.getParameter("operator"));
         @SuppressWarnings("unchecked")
-        List<Condition> conditions = (List<Condition>) condition.getParameterValues().get("subConditions");
+        List<Condition> conditions = (List<Condition>) condition.getParameter("subConditions");
         for (Condition sub : conditions) {
             boolean eval = dispatcher.eval(sub, item, context);
             if (!eval && isAnd) {

@@ -34,7 +34,7 @@ public class NotConditionEvaluator implements ConditionEvaluator {
 
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
-        Condition subCondition = (Condition) condition.getParameterValues().get("subCondition");
+        Condition subCondition = (Condition) condition.getParameter("subCondition");
         return !dispatcher.eval(subCondition, item, context);
     }
 }

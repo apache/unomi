@@ -40,8 +40,8 @@ public class HoverEventConditionESQueryBuilder implements ConditionESQueryBuilde
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         List<FilterBuilder> filters = new ArrayList<FilterBuilder>();
         filters.add(FilterBuilders.termFilter("eventType", "hover"));
-        String targetId = (String) condition.getParameterValues().get("targetId");
-        String targetPath = (String) condition.getParameterValues().get("targetPath");
+        String targetId = (String) condition.getParameter("targetId");
+        String targetPath = (String) condition.getParameter("targetPath");
 
         if (targetId != null && targetId.trim().length() > 0) {
             filters.add(FilterBuilders.termFilter("target.itemId", targetId));

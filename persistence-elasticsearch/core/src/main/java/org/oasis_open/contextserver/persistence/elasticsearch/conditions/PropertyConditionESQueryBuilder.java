@@ -37,8 +37,8 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
 
     @Override
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        String op = (String) condition.getParameterValues().get("comparisonOperator");
-        String name = (String) condition.getParameterValues().get("propertyName");
+        String op = (String) condition.getParameter("comparisonOperator");
+        String name = (String) condition.getParameter("propertyName");
 
         String expectedValue = (String) condition.getParameter("propertyValue");
         Object expectedValueInteger = condition.getParameter("propertyValueInteger");
@@ -54,38 +54,39 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         @SuppressWarnings("unchecked")
         List<?> values = ObjectUtils.firstNonNull(expectedValues,expectedValuesInteger,expectedValuesDate,expectedValuesDateExpr);
 
-        if (op.equals("equals")) {
-            return FilterBuilders.termFilter(name, value);
-        } else if (op.equals("notEquals")) {
-            return FilterBuilders.notFilter(FilterBuilders.termFilter(name, value));
-        } else if (op.equals("greaterThan")) {
-            return FilterBuilders.rangeFilter(name).gt(value);
-        } else if (op.equals("greaterThanOrEqualTo")) {
-            return FilterBuilders.rangeFilter(name).gte(value);
-        } else if (op.equals("lessThan")) {
-            return FilterBuilders.rangeFilter(name).lt(value);
-        } else if (op.equals("lessThanOrEqualTo")) {
-            return FilterBuilders.rangeFilter(name).lte(value);
-        } else if (op.equals("between")) {
-            return FilterBuilders.rangeFilter(name).gte(values.get(0)).lte(values.get(1));
-        } else if (op.equals("exists")) {
-            return FilterBuilders.existsFilter(name);
-        } else if (op.equals("missing")) {
-            return FilterBuilders.missingFilter(name);
-        } else if (op.equals("contains")) {
-            return FilterBuilders.regexpFilter(name, ".*" + expectedValue + ".*");
-        } else if (op.equals("startsWith")) {
-            return FilterBuilders.prefixFilter(name, expectedValue);
-        } else if (op.equals("endsWith")) {
-            return FilterBuilders.regexpFilter(name, ".*" + expectedValue);
-        } else if (op.equals("matchesRegex")) {
-            return FilterBuilders.regexpFilter(name, expectedValue);
-        } else if (op.equals("in")) {
-            return FilterBuilders.inFilter(name, values.toArray());
-        } else if (op.equals("notIn")) {
-            return FilterBuilders.notFilter(FilterBuilders.inFilter(name, values.toArray()));
-        } else if (op.equals("all")) {
-            return FilterBuilders.termsFilter(name, values.toArray()).execution("and");
+        switch (op) {
+            case "equals":
+                return FilterBuilders.termFilter(name, value);
+            case "notEquals":
+                return FilterBuilders.notFilter(FilterBuilders.termFilter(name, value));
+            case "greaterThan":
+                return FilterBuilders.rangeFilter(name).gt(value);
+            case "greaterThanOrEqualTo":
+                return FilterBuilders.rangeFilter(name).gte(value);
+            case "lessThan":
+                return FilterBuilders.rangeFilter(name).lt(value);
+            case "lessThanOrEqualTo":
+                return FilterBuilders.rangeFilter(name).lte(value);
+            case "between":
+                return FilterBuilders.rangeFilter(name).gte(values.get(0)).lte(values.get(1));
+            case "exists":
+                return FilterBuilders.existsFilter(name);
+            case "missing":
+                return FilterBuilders.missingFilter(name);
+            case "contains":
+                return FilterBuilders.regexpFilter(name, ".*" + expectedValue + ".*");
+            case "startsWith":
+                return FilterBuilders.prefixFilter(name, expectedValue);
+            case "endsWith":
+                return FilterBuilders.regexpFilter(name, ".*" + expectedValue);
+            case "matchesRegex":
+                return FilterBuilders.regexpFilter(name, expectedValue);
+            case "in":
+                return FilterBuilders.inFilter(name, values.toArray());
+            case "notIn":
+                return FilterBuilders.notFilter(FilterBuilders.inFilter(name, values.toArray()));
+            case "all":
+                return FilterBuilders.termsFilter(name, values.toArray()).execution("and");
         }
         return null;
     }

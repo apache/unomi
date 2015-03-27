@@ -29,6 +29,7 @@ import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 
+import java.lang.Object;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -47,11 +48,12 @@ public class SourceEventPropertyConditionEvaluator implements ConditionEvaluator
     private DefinitionsService definitionsService;
 
     private void appendConditionIfPropExist(List<Condition> conditions, Condition condition, String prop, ConditionType propConditionType) {
-        if (condition.getParameterValues().get(prop) != null && !"".equals(condition.getParameterValues().get(prop))) {
+        final Object parameter = condition.getParameter(prop);
+        if (parameter != null && !"".equals(parameter)) {
             Condition propCondition = new Condition(propConditionType);
             propCondition.setParameter("comparisonOperator", "equals");
             propCondition.setParameter("propertyName",MAPPED_PROPERTIES.get(prop));
-            propCondition.setParameter("propertyValue", condition.getParameterValues().get(prop));
+            propCondition.setParameter("propertyValue", parameter);
             conditions.add(propCondition);
         }
     }

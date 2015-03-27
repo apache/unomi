@@ -34,7 +34,7 @@ import java.util.Map;
 public class NotConditionESQueryBuilder implements ConditionESQueryBuilder {
 
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        Condition subCondition = (Condition) condition.getParameterValues().get("subCondition");
+        Condition subCondition = (Condition) condition.getParameter("subCondition");
         return FilterBuilders.notFilter(dispatcher.buildFilter(subCondition, context));
     }
 }

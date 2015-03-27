@@ -83,7 +83,7 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
             profileCondition.setParameter("propertyValue", item.getItemId());
             l.add(profileCondition);
 
-            Integer numberOfDays = (Integer) condition.getParameterValues().get("numberOfDays");
+            Integer numberOfDays = (Integer) condition.getParameter("numberOfDays");
             if (numberOfDays != null) {
                 Condition numberOfDaysCondition = new Condition();
                 numberOfDaysCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));

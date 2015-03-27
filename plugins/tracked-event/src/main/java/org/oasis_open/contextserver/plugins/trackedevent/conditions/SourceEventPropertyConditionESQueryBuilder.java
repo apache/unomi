@@ -28,6 +28,7 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 
+import java.lang.Object;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,8 +39,9 @@ public class SourceEventPropertyConditionESQueryBuilder implements ConditionESQu
     }
 
     private void appendFilderIfPropExist(List<FilterBuilder> filterBuilders, Condition condition, String prop){
-        if (condition.getParameterValues().get(prop) != null && !"".equals(condition.getParameterValues().get(prop))) {
-            filterBuilders.add(FilterBuilders.termFilter("source." + prop, (String) condition.getParameterValues().get(prop)));
+        final Object parameter = condition.getParameter(prop);
+        if (parameter != null && !"".equals(parameter)) {
+            filterBuilders.add(FilterBuilders.termFilter("source." + prop, (String) parameter));
         }
     }
 

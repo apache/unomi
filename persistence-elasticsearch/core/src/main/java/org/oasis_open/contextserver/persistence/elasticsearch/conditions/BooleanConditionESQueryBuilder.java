@@ -37,9 +37,9 @@ public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
     @Override
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context,
             ConditionESQueryBuilderDispatcher dispatcher) {
-        boolean isAndOperator = "and".equalsIgnoreCase((String) condition.getParameterValues().get("operator"));
+        boolean isAndOperator = "and".equalsIgnoreCase((String) condition.getParameter("operator"));
         @SuppressWarnings("unchecked")
-        List<Condition> conditions = (List<Condition>) condition.getParameterValues().get("subConditions");
+        List<Condition> conditions = (List<Condition>) condition.getParameter("subConditions");
 
         int conditionCount = conditions.size();
 

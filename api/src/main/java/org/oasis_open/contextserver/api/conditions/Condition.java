@@ -68,6 +68,10 @@ public class Condition {
         return parameterValues;
     }
 
+    public boolean containsParameter(String name) {
+        return parameterValues.containsKey(name);
+    }
+
     public Object getParameter(String name) {
         return parameterValues.get(name);
     }

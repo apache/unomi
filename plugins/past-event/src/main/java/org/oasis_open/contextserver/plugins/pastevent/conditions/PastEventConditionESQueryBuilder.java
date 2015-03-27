@@ -60,7 +60,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
 
         l.add(eventCondition);
 
-        Integer numberOfDays = (Integer) condition.getParameterValues().get("numberOfDays");
+        Integer numberOfDays = (Integer) condition.getParameter("numberOfDays");
         if (numberOfDays != null) {
             Condition numberOfDaysCondition = new Condition();
             numberOfDaysCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));

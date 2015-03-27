@@ -39,11 +39,11 @@ public class GeoLocationByPointSessionConditionEvaluator implements ConditionEva
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
         try {
-            Double latitude1 = Double.parseDouble((String) condition.getParameterValues().get("latitude"));
-            Double longitude1 = Double.parseDouble((String) condition.getParameterValues().get("longitude"));
+            Double latitude1 = Double.parseDouble((String) condition.getParameter("latitude"));
+            Double longitude1 = Double.parseDouble((String) condition.getParameter("longitude"));
             Double latitude2 = Double.parseDouble(BeanUtils.getProperty(item, "properties.location.lat"));
             Double longitude2 = Double.parseDouble(BeanUtils.getProperty(item, "properties.location.lon"));
-            DistanceUnit.Distance distance = DistanceUnit.Distance.parseDistance((String) condition.getParameterValues().get("distance"));
+            DistanceUnit.Distance distance = DistanceUnit.Distance.parseDistance((String) condition.getParameter("distance"));
 
             double d = GeoDistance.DEFAULT.calculate(latitude1, longitude1, latitude2, longitude2, distance.unit);
             return d < distance.value;

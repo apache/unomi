@@ -53,7 +53,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         andCondition.setParameter("operator", "and");
         ArrayList<Condition> conditions = new ArrayList<Condition>();
 
-        Condition eventCondition = (Condition) pastEventCondition.getParameterValues().get("eventCondition");
+        Condition eventCondition = (Condition) pastEventCondition.getParameter("eventCondition");
         ParserHelper.resolveConditionType(definitionsService, eventCondition);
         conditions.add(eventCondition);
 
@@ -63,8 +63,8 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         c.setParameter("propertyValue",event.getProfileId());
         conditions.add(c);
 
-        if (pastEventCondition.getParameterValues().get("numberOfDays") != null) {
-            int i = (Integer) pastEventCondition.getParameterValues().get("numberOfDays");
+        if (pastEventCondition.getParameter("numberOfDays") != null) {
+            int i = (Integer) pastEventCondition.getParameter("numberOfDays");
 
             Condition timeCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
             timeCondition.setParameter("propertyName","timeStamp");
@@ -78,7 +78,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
         long count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
 
-        event.getProfile().setProperty((String) pastEventCondition.getParameterValues().get("generatedPropertyKey"), count+1);
+        event.getProfile().setProperty((String) pastEventCondition.getParameter("generatedPropertyKey"), count + 1);
 
         return true;
     }

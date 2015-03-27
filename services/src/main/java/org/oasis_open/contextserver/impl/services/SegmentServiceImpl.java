@@ -355,7 +355,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             }
         }
 
-        // if we don't have any impacted segments or we didn't validate, perform the remove operation
+        // if we didn't record any metadata (meaning either we didn't find any or we just didn't validate), perform the remove operation
         if (impactedSegmentsMetadata.isEmpty()) {
 
         if (impactedSegments.isEmpty()) {
@@ -580,7 +580,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
         l.add(eventCondition);
 
-        Integer numberOfDays = (Integer) parentCondition.getParameterValues().get("numberOfDays");
+        Integer numberOfDays = (Integer) parentCondition.getParameter("numberOfDays");
         if (numberOfDays != null) {
             Condition numberOfDaysCondition = new Condition();
             numberOfDaysCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
@@ -669,7 +669,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                     for (Action action : rule.getActions()) {
                         if (action.getActionTypeId().equals("setEventOccurenceCountAction")) {
                             Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
-                            if (pastEventCondition.getParameterValues().containsKey("numberOfDays")) {
+                            if (pastEventCondition.containsParameter("numberOfDays")) {
                                 updateExistingProfilesForPastEventCondition(rule.getCondition(), pastEventCondition);
                             }
                         }

@@ -31,9 +31,9 @@ import java.util.Map;
 public class GeoLocationByPointSessionConditionESQueryBuilder implements ConditionESQueryBuilder {
     @Override
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        String latitude = (String) condition.getParameterValues().get("latitude");
-        String longitude = (String) condition.getParameterValues().get("longitude");
-        String distance = (String) condition.getParameterValues().get("distance");
+        String latitude = (String) condition.getParameter("latitude");
+        String longitude = (String) condition.getParameter("longitude");
+        String distance = (String) condition.getParameter("distance");
         return FilterBuilders.geoDistanceFilter("location")
                 .lat(Double.parseDouble(latitude))
                 .lon(Double.parseDouble(longitude))

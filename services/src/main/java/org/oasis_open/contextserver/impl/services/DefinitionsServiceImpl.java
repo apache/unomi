@@ -505,9 +505,9 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     public Set<Condition> extractConditionsByType(Condition rootCondition, String typeId) {
-        if (rootCondition.getParameterValues().containsKey("subConditions")) {
+        if (rootCondition.containsParameter("subConditions")) {
             @SuppressWarnings("unchecked")
-            List<Condition> subConditions = (List<Condition>) rootCondition.getParameterValues().get("subConditions");
+            List<Condition> subConditions = (List<Condition>) rootCondition.getParameter("subConditions");
             Set<Condition> matchingConditions = new HashSet<>();
             for (Condition condition : subConditions) {
                 matchingConditions.addAll(extractConditionsByType(condition, typeId));
@@ -521,9 +521,9 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     public Condition extractConditionByTag(Condition rootCondition, String tagId) {
-        if (rootCondition.getParameterValues().containsKey("subConditions")) {
+        if (rootCondition.containsParameter("subConditions")) {
             @SuppressWarnings("unchecked")
-            List<Condition> subConditions = (List<Condition>) rootCondition.getParameterValues().get("subConditions");
+            List<Condition> subConditions = (List<Condition>) rootCondition.getParameter("subConditions");
             List<Condition> matchingConditions = new ArrayList<Condition>();
             for (Condition condition : subConditions) {
                 Condition c = extractConditionByTag(condition, tagId);
@@ -535,7 +535,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 return null;
             } else if (matchingConditions.equals(subConditions)) {
                 return rootCondition;
-            } else if (rootCondition.getConditionTypeId().equals("booleanCondition") && "and".equals(rootCondition.getParameterValues().get("operator"))) {
+            } else if (rootCondition.getConditionTypeId().equals("booleanCondition") && "and".equals(rootCondition.getParameter("operator"))) {
                 if (matchingConditions.size() == 1) {
                     return matchingConditions.get(0);
                 } else {
