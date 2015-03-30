@@ -322,6 +322,69 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         updateExistingProfilesForSegment(segment);
     }
 
+    /**
+     * Adds the specified segment (or its metadata) to the specified collection if it would be impacted by the deletion of the segment identified by the specified identifier,
+     * cleaning conditions up as we process them if so specified. The return value of this method can be ignored, it is only used internally on recursive calls.
+     *
+     * @param segment                  the segment we're checking
+     * @param condition                the segment's condition being currently examined
+     * @param segmentToDeleteId        the identifier of the segment we want to delete
+     * @param removeAsWeGo             whether we want to remove impacted conditions as we process them
+     * @param impactedSegmentsMetadata the collection of impacted segments metadata, only populated if we're not asking removal as we go
+     * @param impactedSegments         the collection of impacted segments
+     * @return <code>true</code> if the current sub-condition being looked at needs to be removed from the parent, <code>false</code> otherwise.
+     */
+    private boolean checkIfSegmentIsImpacted(Segment segment, Condition condition, String segmentToDeleteId, boolean removeAsWeGo, Collection<Metadata> impactedSegmentsMetadata,
+                                             Collection<Segment> impactedSegments) {
+        @SuppressWarnings("unchecked")
+        final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
+        if (subConditions != null) {
+            final Iterator<Condition> subConditionsIterator = subConditions.iterator();
+            while (subConditionsIterator.hasNext()) {
+                Condition child = subConditionsIterator.next();
+                final boolean shouldRemoveCurrentSubCondition = checkIfSegmentIsImpacted(segment, child, segmentToDeleteId, removeAsWeGo, impactedSegmentsMetadata, impactedSegments);
+
+                // if we're removing as we go and the current sub-condition is marked for removal, remove it
+                // todo: ideally, we should check if the current condition is now empty and see what should be done
+                if (removeAsWeGo && shouldRemoveCurrentSubCondition) {
+                    subConditionsIterator.remove();
+                }
+            }
+            return false;
+        } else if ("profileSegmentCondition".equals(condition.getConditionTypeId())) {
+            // we've found a profile segment condition, check if it references the segment we're trying to delete
+            @SuppressWarnings("unchecked")
+            final List<String> referencedSegmentIds = (List<String>) condition.getParameter("segments");
+
+            boolean shouldRemoveSubCondition = false;
+            int positionOfSegmentToDelete = referencedSegmentIds.indexOf(segmentToDeleteId);
+            if (positionOfSegmentToDelete >= 0) {
+                // we found a reference to the segment to delete
+                //
+                if (!removeAsWeGo) {
+                    // if we're only validating, add the segment we're considering to the list of impacted segments
+                    impactedSegmentsMetadata.add(segment.getMetadata());
+                } else {
+                    // remove the segment from the list of segments on which the currently looked at segment depends
+                    referencedSegmentIds.remove(positionOfSegmentToDelete);
+
+                    // now check if, as a result of removing the reference, we are left with no segment references anymore for this condition
+                    if (referencedSegmentIds.isEmpty()) {
+                        // we need to remove this sub-condition
+                        shouldRemoveSubCondition = true;
+                    }
+                }
+
+                // add currently looked at segment to set of impacted segment to be saved
+                impactedSegments.add(segment);
+            }
+
+            return shouldRemoveSubCondition;
+        }
+
+        return false;
+    }
+
 
     public List<Metadata> removeSegmentDefinition(String scope, String segmentId, boolean validate) {
         String idWithScope = Metadata.getIdWithScope(scope, segmentId);
@@ -332,33 +395,14 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         List<Metadata> impactedSegmentsMetadata = validate ? new ArrayList<Metadata>(allSegments.size()) : Collections.<Metadata>emptyList();
         Set<Segment> impactedSegments = new HashSet<>(allSegments.size());
         for (Segment segment : allSegments) {
-            // get the profileSegmentConditions for the current segment
-            final Set<Condition> segmentConditions = definitionsService.extractConditionsByType(segment.getCondition(), "profileSegmentCondition");
-
-            // check whether any of these conditions reference the segment we want to delete
-            for (Condition segmentCondition : segmentConditions) {
-                final List<String> referencedSegmentIds = (List<String>) segmentCondition.getParameter("segments");
-
-                final int positionOfSegmentToDelete = referencedSegmentIds.indexOf(idWithScope);
-                if (positionOfSegmentToDelete >= 0) {
-                    if (validate) {
-                        // if we're only validating, add the segment we're considering to the list of impacted segments
-                        impactedSegmentsMetadata.add(segment.getMetadata());
-                    } else {
-                        // remove the segment from the list of segments on which the currently looked at segment depends
-                        referencedSegmentIds.remove(positionOfSegmentToDelete);
-                    }
-
-                    // add currently looked at segment to set of impacted segment to be saved
-                    impactedSegments.add(segment);
-                }
-            }
+            // check whether the current segment is impacted and add it to the appropriate collections if needed
+            checkIfSegmentIsImpacted(segment, segment.getCondition(), idWithScope, !validate, impactedSegmentsMetadata, impactedSegments);
         }
 
         // if we didn't record any metadata (meaning either we didn't find any or we just didn't validate), perform the remove operation
         if (impactedSegmentsMetadata.isEmpty()) {
 
-        if (impactedSegments.isEmpty()) {
+            // update profiles
             PartialList<Profile> profiles = getMatchingIndividuals(scope, segmentId, 0, -1, null);
             for (Profile profile : profiles.getList()) {
                 profile.getSegments().remove(idWithScope);
