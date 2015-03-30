@@ -161,11 +161,13 @@ The generated package is also configured with a default SSL certificate. You can
     
 2. Update the keystore and certificate password in /etc/custom.properties file :
  
+```
     org.osgi.service.http.secure.enabled = true
     org.ops4j.pax.web.ssl.keystore=${karaf.etc}/keystore
     org.ops4j.pax.web.ssl.password=changeme
     org.ops4j.pax.web.ssl.keypassword=changeme
     org.osgi.service.http.port.secure=9443
+```
 
 You should now have SSL setup on Karaf with your certificate, and you can test it by trying to access it on port 9443.
 
