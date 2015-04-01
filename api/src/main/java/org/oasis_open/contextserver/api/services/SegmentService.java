@@ -62,9 +62,9 @@ public interface SegmentService {
      * @param scope     the scope of the segment we want to delete
      * @param segmentId the identifier of the segment we want to delete within the specified scope
      * @param validate  whether or not to perform validation
-     * @return a list of impacted segment identifiers if any or an empty if no such impacted segments are found or validation was skipped
+     * @return a list of impacted segment if any or an empty if no such impacted segments are found or validation was skipped
      */
-    List<String> removeSegmentDefinition(String scope, String segmentId, boolean validate);
+    List<Segment> removeSegmentDefinition(String scope, String segmentId, boolean validate);
 
     PartialList<Profile> getMatchingIndividuals(String scope, String segmentID, int offset, int size, String sortBy);
 

@@ -112,7 +112,7 @@ public class SegmentServiceEndPoint {
 
     @DELETE
     @Path("/{scope}/{segmentID}")
-    public List<String> removeSegmentDefinition(@PathParam("scope") String scope, @PathParam("segmentID") String segmentId, @QueryParam("validate") boolean validate) {
+    public List<Segment> removeSegmentDefinition(@PathParam("scope") String scope, @PathParam("segmentID") String segmentId, @QueryParam("validate") boolean validate) {
         return segmentService.removeSegmentDefinition(scope, segmentId, validate);
     }
 
