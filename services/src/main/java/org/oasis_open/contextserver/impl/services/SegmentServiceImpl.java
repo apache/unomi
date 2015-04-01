@@ -347,6 +347,12 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
 
         if (impactedSegmentIds.isEmpty()) {
+            PartialList<Profile> profiles = getMatchingIndividuals(scope, segmentId, 0, -1, null);
+            for (Profile profile : profiles.getList()) {
+                profile.getSegments().remove(idWithScope);
+                persistenceService.update(profile.getItemId(), null, Profile.class, "segments", profile.getSegments());
+            }
+
             persistenceService.remove(idWithScope, Segment.class);
 
             List<Rule> previousRules = persistenceService.query("linkedItems", idWithScope, null, Rule.class);
