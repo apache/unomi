@@ -130,17 +130,30 @@ public class ContextServlet extends HttpServlet {
                 HttpUtils.clearCookie(response, personaIdCookieName);
             } else {
                 PersonaWithSessions personaWithSessions = profileService.loadPersonaWithSessions(personaId);
-                profile = personaWithSessions.getPersona();
-                session = personaWithSessions.getLastSession();
-                if (profile != null) {
-                    HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, personaIdCookieName);
+                if (personaWithSessions == null) {
+                    log("Couldn't find persona with id=" + personaId);
+                    profile = null;
+                    HttpUtils.clearCookie(response, personaIdCookieName);
+                } else {
+                    profile = personaWithSessions.getPersona();
+                    session = personaWithSessions.getLastSession();
+                    if (profile != null) {
+                        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, personaIdCookieName);
+                    }
                 }
             }
         } else if (cookiePersonaId != null) {
             PersonaWithSessions personaWithSessions = profileService.loadPersonaWithSessions(cookiePersonaId);
-            profile = personaWithSessions.getPersona();
-            session = personaWithSessions.getLastSession();
+            if (personaWithSessions == null) {
+                log("Couldn't find persona with id=" + personaId);
+                profile = null;
+                HttpUtils.clearCookie(response, personaIdCookieName);
+            } else {
+                profile = personaWithSessions.getPersona();
+                session = personaWithSessions.getLastSession();
+            }
         }
+
 
         String sessionId = request.getParameter("sessionId");
 
