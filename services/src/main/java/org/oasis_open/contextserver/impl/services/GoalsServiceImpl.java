@@ -388,6 +388,9 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     public void removeCampaign(String scope, String id) {
         String idWithScope = Metadata.getIdWithScope(scope, id);
+        for(Metadata m : getCampaignGoalMetadatas(id)) {
+            removeGoal(scope, m.getId());
+        }
         persistenceService.remove(idWithScope, Campaign.class);
     }
 
