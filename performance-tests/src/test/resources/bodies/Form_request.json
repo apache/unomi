@@ -1,0 +1,36 @@
+{
+  "events": [
+    {
+      "scope": "ACMESPACE",
+      "eventType": "form",
+      "source": {
+        "itemType": "page",
+        "scope": "ACMESPACE",
+        "itemId": "${pageId}",
+        "properties": {
+          "pageInfo": {
+            "pageID": "${pageId}",
+            "pageName": "${pageName}",
+            "pagePath": "${pagePath}",
+            "destinationURL": "${destinationURL}",
+            "referringURL": "${previousURL}",
+            "language": "${language}"
+          },
+          "category": {},
+          "attributes": {}
+        }
+      },
+      "target": {
+        "itemType": "form",
+        "scope": "ACMESPACE",
+        "itemId": "testForm"
+      },
+      "properties": {
+        "email": "fsdfds@fsf.com",
+        "gender": "male",
+        "age": "10",
+        "income": "546545"
+      }
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "events": [
+    {
+      "eventType": "login",
+      "scope": "ACMESPACE",
+      "source": {
+        "itemType": "site",
+        "scope": "ACMESPACE",
+        "itemId": "1a928b07-8813-4bc6-9f55-bd00041d9a01"
+      },
+      "target": {
+        "itemType": "generatedUser",
+        "scope": "ACMESPACE",
+        "itemId": "xxx",
+        "properties": {
+          "gender": "${gender}",
+          "age": "${age}",
+          "income": "${income}",
+          "faceBookId": "${faceBookId}",
+          "email": "${email}",
+          "phoneNumber": "${phoneNumber}",
+          "leadAssignedTo": "${leadAssignedTo}"
+        }
+      }
+    }
+  ]
+}

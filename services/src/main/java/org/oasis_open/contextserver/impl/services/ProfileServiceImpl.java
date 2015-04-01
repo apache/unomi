@@ -38,7 +38,7 @@ import java.util.*;
 
 public class ProfileServiceImpl implements ProfileService, SynchronousBundleListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ProfileServiceImpl.class.getName());
 
     private BundleContext bundleContext;
 

@@ -9,6 +9,16 @@
     <artifactId>context-server-performance-tests</artifactId>
     <name>Context Server Performance Tests</name>
 
+    <properties>
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
+        <scala.version>2.11.4</scala.version>
+        <encoding>UTF-8</encoding>
+
+        <gatling.version>2.1.2</gatling.version>
+        <scala-maven-plugin.version>3.2.0</scala-maven-plugin.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.oasis-open.contextserver</groupId>
@@ -126,21 +136,75 @@
             <version>1.4.181</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>io.gatling</groupId>
+            <artifactId>gatling-app</artifactId>
+            <version>${gatling.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.gatling</groupId>
+            <artifactId>gatling-recorder</artifactId>
+            <version>${gatling.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.gatling.highcharts</groupId>
+            <artifactId>gatling-charts-highcharts</artifactId>
+            <version>${gatling.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>${scala.version}</version>
+        </dependency>
+
     </dependencies>
 
     <build>
+        <testSourceDirectory>src/test/scala</testSourceDirectory>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>net.alchim31.maven</groupId>
+                    <artifactId>scala-maven-plugin</artifactId>
+                    <version>${scala-maven-plugin.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
         <plugins>
-            <!-- Needed if you use versionAsInProject() -->
+            <!--<plugin>-->
+            <!--<groupId>org.apache.servicemix.tooling</groupId>-->
+            <!--<artifactId>depends-maven-plugin</artifactId>-->
+            <!--<version>1.2</version>-->
+            <!--<executions>-->
+            <!--<execution>-->
+            <!--<id>generate-depends-file</id>-->
+            <!--<goals>-->
+            <!--<goal>generate-depends-file</goal>-->
+            <!--</goals>-->
+            <!--</execution>-->
+            <!--</executions>-->
+            <!--</plugin>-->
+
+
             <plugin>
-                <groupId>org.apache.servicemix.tooling</groupId>
-                <artifactId>depends-maven-plugin</artifactId>
-                <version>1.2</version>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>generate-depends-file</id>
                         <goals>
-                            <goal>generate-depends-file</goal>
+                            <goal>testCompile</goal>
                         </goals>
+                        <configuration>
+                            <args>
+                                <arg>-target:jvm-1.7</arg>
+                                <arg>-deprecation</arg>
+                                <arg>-feature</arg>
+                                <arg>-unchecked</arg>
+                                <arg>-language:implicitConversions</arg>
+                                <arg>-language:postfixOps</arg>
+                            </args>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
