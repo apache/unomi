@@ -25,6 +25,8 @@ package org.oasis_open.contextserver.api;
 import org.oasis_open.contextserver.api.conditions.Condition;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class ContextRequest {
 
@@ -34,6 +36,14 @@ public class ContextRequest {
     private List<String> requiredSessionProperties;
     private List<Event> events;
     private List<FilteredContent> filters;
+
+    // the following overrides make it possible to override temporarily the current profile segments, properties or
+    // even session properties. This is useful for building UIs to temporarily override one of these parameters to
+    // test different filter results.
+
+    private Set<String> segmentOverrides;
+    private Map<String,Object> profilePropertiesOverrides;
+    private Map<String,Object> sessionPropertiesOverrides;
 
     public Item getSource() {
         return source;
@@ -81,6 +91,30 @@ public class ContextRequest {
 
     public void setEvents(List<Event> events) {
         this.events = events;
+    }
+
+    public Set<String> getSegmentOverrides() {
+        return segmentOverrides;
+    }
+
+    public void setSegmentOverrides(Set<String> segmentOverrides) {
+        this.segmentOverrides = segmentOverrides;
+    }
+
+    public Map<String, Object> getProfilePropertiesOverrides() {
+        return profilePropertiesOverrides;
+    }
+
+    public void setProfilePropertiesOverrides(Map<String, Object> profilePropertiesOverrides) {
+        this.profilePropertiesOverrides = profilePropertiesOverrides;
+    }
+
+    public Map<String, Object> getSessionPropertiesOverrides() {
+        return sessionPropertiesOverrides;
+    }
+
+    public void setSessionPropertiesOverrides(Map<String, Object> sessionPropertiesOverrides) {
+        this.sessionPropertiesOverrides = sessionPropertiesOverrides;
     }
 
     public static class FilteredContent {
