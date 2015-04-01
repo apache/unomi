@@ -288,6 +288,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     public PersonaWithSessions loadPersonaWithSessions(String personaId) {
         Persona persona = persistenceService.load(personaId, Persona.class);
+        if (persona == null) {
+            return null;
+        }
         List<PersonaSession> sessions = persistenceService.query("profileId", persona.getItemId(), "timeStamp:desc", PersonaSession.class);
         return new PersonaWithSessions(persona, sessions);
     }
