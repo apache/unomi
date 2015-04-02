@@ -36,5 +36,9 @@
     "type":"booleanCondition"
   },
   "startDate": "2014-01-01T00:00:00Z",
-  "endDate": "2015-12-31T00:00:00Z"
+  "endDate": "2015-12-31T00:00:00Z",
+  "timezone": "Europe/Berlin",
+  "cost": 1000,
+  "currency": "USD"
+
 }
