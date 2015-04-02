@@ -63,6 +63,10 @@ public class Profile extends Item {
         return properties;
     }
 
+    public void setProperties(Map<String, Object> properties) {
+        this.properties = properties;
+    }
+
     @XmlTransient
     public String getScope() {
         return "systemscope";

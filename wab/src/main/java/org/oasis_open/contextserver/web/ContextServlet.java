@@ -25,11 +25,7 @@ package org.oasis_open.contextserver.web;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
@@ -66,6 +62,7 @@ public class ContextServlet extends HttpServlet {
     private static final long serialVersionUID = 2928875830103325238L;
     public static final String BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/base.js";
     public static final String IMPERSONATE_BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/impersonateBase.js";
+    public static final String PROFILE_OVERRIDE_MARKER = "---IGNORE---";
 
     @Inject
     @OsgiService
@@ -326,6 +323,8 @@ public class ContextServlet extends HttpServlet {
             }
         }
 
+        processOverrides(contextRequest, profile, session);
+
         List<ContextRequest.FilteredContent> filterNodes = contextRequest.getFilters();
         if (filterNodes != null) {
             data.setFilteringResults(new HashMap<String, Boolean>());
@@ -340,6 +339,53 @@ public class ContextServlet extends HttpServlet {
         }
 
         data.setTrackedConditions(rulesService.getTrackedConditions(contextRequest.getSource()));
+    }
+
+    private void processOverrides(ContextRequest contextRequest, Profile profile, Session session) {
+        if (contextRequest.getSegmentOverrides() != null && contextRequest.getSegmentOverrides().size() > 0) {
+            Set<String> segments = profile.getSegments();
+            for (String segmentOverride : contextRequest.getSegmentOverrides()) {
+                if (segmentOverride == null) {
+                    continue;
+                }
+                if (segmentOverride.startsWith(PROFILE_OVERRIDE_MARKER)) {
+                    segments.remove(segmentOverride.substring(PROFILE_OVERRIDE_MARKER.length()));
+                } else {
+                    segments.add(segmentOverride);
+                }
+            }
+            profile.setSegments(segments);
+        }
+
+        if (contextRequest.getProfilePropertiesOverrides() != null && contextRequest.getProfilePropertiesOverrides().size() > 0) {
+            Map<String,Object> profileProperties = profile.getProperties();
+            for (Map.Entry<String,Object> profilePropertyOverride : contextRequest.getProfilePropertiesOverrides().entrySet()) {
+                if (profilePropertyOverride.getKey() == null) {
+                    continue;
+                }
+                if (PROFILE_OVERRIDE_MARKER.equals(profilePropertyOverride.getValue())) {
+                    profileProperties.remove(profilePropertyOverride.getKey());
+                } else {
+                    profileProperties.put(profilePropertyOverride.getKey(), profilePropertyOverride.getValue());
+                }
+            }
+            profile.setProperties(profileProperties); // we do this just in case a cache is behind this
+        }
+
+        if (contextRequest.getSessionPropertiesOverrides() != null && contextRequest.getSessionPropertiesOverrides().size() > 0) {
+            Map<String,Object> sessionProperties = session.getProperties();
+            for (Map.Entry<String,Object> sessionPropertyOverride : contextRequest.getSessionPropertiesOverrides().entrySet()) {
+                if (sessionPropertyOverride.getKey() == null) {
+                    continue;
+                }
+                if (PROFILE_OVERRIDE_MARKER.equals(sessionPropertyOverride.getValue())) {
+                    sessionProperties.remove(sessionPropertyOverride.getKey());
+                } else {
+                    sessionProperties.put(sessionPropertyOverride.getKey(), sessionPropertyOverride.getValue());
+                }
+            }
+            session.setProperties(sessionProperties); // we do this just in case a cache is behind this
+        }
     }
 
     private Profile createNewProfile(String existingProfileId, ServletResponse response, Date timestamp) {

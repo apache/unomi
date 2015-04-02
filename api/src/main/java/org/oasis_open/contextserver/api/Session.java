@@ -85,6 +85,10 @@ public class Session extends Item implements TimestampedItem {
         return properties;
     }
 
+    public void setProperties(Map<String, Object> properties) {
+        this.properties = properties;
+    }
+
     public Date getTimeStamp() {
         return timeStamp;
     }
