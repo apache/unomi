@@ -65,12 +65,14 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.GenericRange;
 import org.oasis_open.contextserver.api.query.NumericRange;
 import org.oasis_open.contextserver.api.services.ClusterService;
+import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
+import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 import org.oasis_open.contextserver.persistence.spi.aggregate.*;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
-import org.osgi.framework.BundleContext;
+import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,7 +88,7 @@ import java.util.*;
 import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 
 @SuppressWarnings("rawtypes")
-public class ElasticSearchPersistenceServiceImpl implements PersistenceService, ClusterService {
+public class ElasticSearchPersistenceServiceImpl implements PersistenceService, ClusterService, SynchronousBundleListener {
 
     public static final long MILLIS_PER_DAY = 24L * 60L * 60L * 1000L;
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
@@ -230,6 +232,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
         initializeTimer();
 
+        try {
+            for (ServiceReference<ConditionEvaluator> reference : bundleContext.getServiceReferences(ConditionEvaluator.class, null)) {
+                ConditionEvaluator service = bundleContext.getService(reference);
+                conditionEvaluatorDispatcher.addEvaluator(reference.getProperty("conditionEvaluatorId").toString(), reference.getBundle().getBundleId(), service);
+            }
+            for (ServiceReference<ConditionESQueryBuilder> reference : bundleContext.getServiceReferences(ConditionESQueryBuilder.class, null)) {
+                ConditionESQueryBuilder service = bundleContext.getService(reference);
+                conditionESQueryBuilderDispatcher.addQueryBuilder(reference.getProperty("queryBuilderId").toString(), reference.getBundle().getBundleId(), service);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        bundleContext.addBundleListener(this);
     }
 
     public void stop() {
@@ -247,6 +262,30 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             timer = null;
         }
 
+        bundleContext.removeBundleListener(this);
+    }
+
+    @Override
+    public void bundleChanged(BundleEvent event) {
+        switch (event.getType()) {
+            case BundleEvent.STARTED:
+                if (event.getBundle() != null && event.getBundle().getRegisteredServices() != null) {
+                    for (ServiceReference<?> reference : event.getBundle().getRegisteredServices()) {
+                        Object service = bundleContext.getService(reference);
+                        if (service instanceof ConditionEvaluator) {
+                            conditionEvaluatorDispatcher.addEvaluator(reference.getProperty("conditionEvaluatorId").toString(), event.getBundle().getBundleId(), (ConditionEvaluator) service);
+                        }
+                        if (service instanceof ConditionESQueryBuilder) {
+                            conditionESQueryBuilderDispatcher.addQueryBuilder(reference.getProperty("queryBuilderId").toString(), event.getBundle().getBundleId(), (ConditionESQueryBuilder) service);
+                        }
+                    }
+                }
+                break;
+            case BundleEvent.STOPPING:
+                conditionEvaluatorDispatcher.removeEvaluators(event.getBundle().getBundleId());
+                conditionESQueryBuilderDispatcher.removeQueryBuilders(event.getBundle().getBundleId());
+                break;
+        }
     }
 
     private String getDailyIndex(Date date) {

@@ -229,7 +229,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         if (!currentProfile.getItemId().equals(masterProfile.getItemId())) {
             currentSession.setProfile(masterProfile);
             saveSession(currentSession);
-            delete(currentProfile.getItemId(), false);
         }
 
         return updated;
@@ -249,12 +248,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     public Session loadSession(String sessionId, Date dateHint) {
         Session s = persistenceService.load(sessionId, dateHint, Session.class);
-        if (s == null) {
+        if (s == null && dateHint != null) {
             Date yesterday = new Date(dateHint.getTime() - (24L * 60L * 60L * 1000L));
             s = persistenceService.load(sessionId, yesterday, Session.class);
-            if (s == null) {
-                s = persistenceService.load(sessionId, null, Session.class);
-            }
         }
         return s;
     }

@@ -1,7 +1,7 @@
 {
   "id": "notCondition",
-  "conditionEvaluator": "(conditionEvaluatorId=notConditionEvaluator)",
-  "queryBuilderFilter": "(queryBuilderId=notConditionESQueryBuilder)",
+  "conditionEvaluator": "notConditionEvaluator",
+  "queryBuilder": "notConditionESQueryBuilder",
   "tags": [ "logical", "profileCondition", "eventCondition", "sessionCondition" ],
   "parameters": [
     {

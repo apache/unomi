@@ -1,7 +1,7 @@
 {
     "id": "booleanCondition",
-    "conditionEvaluator": "(conditionEvaluatorId=booleanConditionEvaluator)",
-    "queryBuilderFilter": "(queryBuilderId=booleanConditionESQueryBuilder)",
+    "conditionEvaluator": "booleanConditionEvaluator",
+    "queryBuilder": "booleanConditionESQueryBuilder",
     "tags": [ "logical", "profileCondition", "eventCondition", "sessionCondition" ],
     "parameters": [
         {

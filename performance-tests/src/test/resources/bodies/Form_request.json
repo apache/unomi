@@ -26,10 +26,9 @@
         "itemId": "testForm"
       },
       "properties": {
-        "email": "fsdfds@fsf.com",
-        "gender": "male",
-        "age": "10",
-        "income": "546545"
+        "gender": "${gender}",
+        "age": "${age}",
+        "income": "${income}"
       }
     }
   ]

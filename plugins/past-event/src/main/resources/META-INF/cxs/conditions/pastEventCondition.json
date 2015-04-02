@@ -1,7 +1,7 @@
 {
     "id": "pastEventCondition",
-    "conditionEvaluator": "(conditionEvaluatorId=pastEventConditionEvaluator)",
-    "queryBuilderFilter": "(queryBuilderId=pastEventConditionESQueryBuilder)",
+    "conditionEvaluator": "pastEventConditionEvaluator",
+    "queryBuilder": "pastEventConditionESQueryBuilder",
     "tags": [ "event", "profileCondition" ],
     "parameters": [
         {

@@ -28,14 +28,11 @@ import org.elasticsearch.index.query.FilteredQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.InvalidSyntaxException;
-import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ConditionESQueryBuilderDispatcher {
     private static final Logger logger = LoggerFactory.getLogger(ConditionESQueryBuilderDispatcher.class.getName());
@@ -47,6 +44,26 @@ public class ConditionESQueryBuilderDispatcher {
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
+    }
+
+    private Map<String, ConditionESQueryBuilder> queryBuilders = new ConcurrentHashMap<>();
+    private Map<Long, List<String>> queryBuildersByBundle = new ConcurrentHashMap<>();
+
+    public void addQueryBuilder(String name, long bundleId, ConditionESQueryBuilder evaluator) {
+        queryBuilders.put(name, evaluator);
+        if (!queryBuildersByBundle.containsKey(bundleId)) {
+            queryBuildersByBundle.put(bundleId, new ArrayList<String>());
+        }
+        queryBuildersByBundle.get(bundleId).add(name);
+    }
+
+    public void removeQueryBuilders(long bundleId) {
+        if (queryBuildersByBundle.containsKey(bundleId)) {
+            for (String s : queryBuildersByBundle.get(bundleId)) {
+                queryBuilders.remove(s);
+            }
+            queryBuildersByBundle.remove(bundleId);
+        }
     }
 
     public String getQuery(Condition condition) {
@@ -62,29 +79,24 @@ public class ConditionESQueryBuilderDispatcher {
     }
 
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context) {
-        String queryBuilderFilter = condition.getConditionType().getQueryBuilderFilter();
-        if (queryBuilderFilter == null && condition.getConditionType().getParentCondition() != null) {
+        String queryBuilderKey = condition.getConditionType().getQueryBuilder();
+        if (queryBuilderKey == null && condition.getConditionType().getParentCondition() != null) {
             context.putAll(condition.getParameterValues());
             return buildFilter(condition.getConditionType().getParentCondition(), context);
         }
 
-        if (queryBuilderFilter == null) {
+        if (queryBuilderKey == null) {
             throw new UnsupportedOperationException("No query builder defined for : " + condition.getConditionTypeId());
         }
-        Collection<ServiceReference<ConditionESQueryBuilder>> matchingQueryBuilderReferences = null;
-        try {
-            matchingQueryBuilderReferences = bundleContext.getServiceReferences(ConditionESQueryBuilder.class, queryBuilderFilter);
-        } catch (InvalidSyntaxException e) {
-            logger.error("Invalid filter",e);
-        }
-        // despite multiple references possible, we will only execute the first one
-        for (ServiceReference<ConditionESQueryBuilder> queryBuilderServiceReference : matchingQueryBuilderReferences) {
-            ConditionESQueryBuilder queryBuilder = bundleContext.getService(queryBuilderServiceReference);
+
+        if (queryBuilders.containsKey(queryBuilderKey)) {
+            ConditionESQueryBuilder queryBuilder = queryBuilders.get(queryBuilderKey);
             Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context);
             if (contextualCondition != null) {
                 return queryBuilder.buildFilter(contextualCondition, context, this);
             }
         }
+
         // if no matching
         return FilterBuilders.matchAllFilter();
     }

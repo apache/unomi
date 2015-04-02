@@ -44,7 +44,7 @@ public class ConditionType implements PluginType, Serializable {
     private String descriptionKey;
     private long pluginId;
     private String conditionEvaluator;
-    private String queryBuilderFilter;
+    private String queryBuilder;
     private Condition parentCondition;
     private Set<Tag> tags = new TreeSet<Tag>();
     private Set<String> tagIDs = new LinkedHashSet<String>();
@@ -102,12 +102,12 @@ public class ConditionType implements PluginType, Serializable {
         this.conditionEvaluator = conditionEvaluator;
     }
 
-    public String getQueryBuilderFilter() {
-        return queryBuilderFilter;
+    public String getQueryBuilder() {
+        return queryBuilder;
     }
 
-    public void setQueryBuilderFilter(String queryBuilderFilter) {
-        this.queryBuilderFilter = queryBuilderFilter;
+    public void setQueryBuilder(String queryBuilder) {
+        this.queryBuilder = queryBuilder;
     }
 
     public Condition getParentCondition() {

@@ -24,15 +24,13 @@ package org.oasis_open.contextserver.persistence.elasticsearch.conditions;
 
 import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.conditions.Condition;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.InvalidSyntaxException;
-import org.osgi.framework.ServiceReference;
+import org.oasis_open.contextserver.api.conditions.ConditionType;
+import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Entry point for condition evaluation. Will dispatch to all evaluators.
@@ -46,32 +44,49 @@ public class ConditionEvaluatorDispatcher {
         this.bundleContext = bundleContext;
     }
 
+    private Map<String, ConditionEvaluator> evaluators = new ConcurrentHashMap<>();
+    private Map<Long, List<String>> evaluatorsByBundle = new ConcurrentHashMap<>();
+
+    public void addEvaluator(String name, long bundleId, ConditionEvaluator evaluator) {
+        evaluators.put(name, evaluator);
+        if (!evaluatorsByBundle.containsKey(bundleId)) {
+            evaluatorsByBundle.put(bundleId, new ArrayList<String>());
+        }
+        evaluatorsByBundle.get(bundleId).add(name);
+    }
+
+    public void removeEvaluators(long bundleId) {
+        if (evaluatorsByBundle.containsKey(bundleId)) {
+            for (String s : evaluatorsByBundle.get(bundleId)) {
+                evaluators.remove(s);
+            }
+            evaluatorsByBundle.remove(bundleId);
+        }
+    }
+
     public boolean eval(Condition condition, Item item) {
         return eval(condition, item, new HashMap<String, Object>());
     }
 
     public boolean eval(Condition condition, Item item, Map<String, Object> context) {
+        String conditionEvaluatorKey = condition.getConditionType().getConditionEvaluator();
         if (condition.getConditionType().getParentCondition() != null) {
             context.putAll(condition.getParameterValues());
             return eval(condition.getConditionType().getParentCondition(), item, context);
         }
-        Collection<ServiceReference<ConditionEvaluator>> matchConditionEvaluators = null;
-        if (condition.getConditionType().getConditionEvaluator() == null) {
+
+        if (conditionEvaluatorKey == null) {
             throw new UnsupportedOperationException("No evaluator defined for : " + condition.getConditionTypeId());
         }
-        try {
-            matchConditionEvaluators = bundleContext.getServiceReferences(ConditionEvaluator.class, condition.getConditionType().getConditionEvaluator());
-        } catch (InvalidSyntaxException e) {
-            logger.error("Invalid filter",e);
-        }
-        // despite multiple references possible, we will only execute the first one
-        for (ServiceReference<ConditionEvaluator> evaluatorServiceReference : matchConditionEvaluators) {
-            ConditionEvaluator evaluator = bundleContext.getService(evaluatorServiceReference);
+
+        if (evaluators.containsKey(conditionEvaluatorKey)) {
+            ConditionEvaluator evaluator = evaluators.get(conditionEvaluatorKey);
             Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context);
             if (contextualCondition != null) {
                 return evaluator.eval(contextualCondition, item, context, this);
             }
         }
+
         // if no matching
         return true;
 

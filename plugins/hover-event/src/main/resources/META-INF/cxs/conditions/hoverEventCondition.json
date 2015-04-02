@@ -1,6 +1,6 @@
 {
     "id": "hoverEventCondition",
-    "queryBuilderFilter": "(queryBuilderId=hoverEventConditionESQueryBuilder)",
+    "queryBuilder": "hoverEventConditionESQueryBuilder",
     "tags": [ "event", "eventCondition", "usableInPastEventCondition" ],
     "parameters": [
         {
