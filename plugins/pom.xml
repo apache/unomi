@@ -17,6 +17,7 @@
         <module>mail</module>
         <module>past-event</module>
         <module>tracked-event</module>
+        <module>optimization-test</module>
     </modules>
 
     <dependencies>
