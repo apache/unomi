@@ -84,6 +84,8 @@ public class ConditionEvaluatorDispatcher {
             Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context);
             if (contextualCondition != null) {
                 return evaluator.eval(contextualCondition, item, context, this);
+            } else {
+                return true;
             }
         }
 
