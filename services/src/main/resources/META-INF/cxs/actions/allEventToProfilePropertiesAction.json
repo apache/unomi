@@ -1,7 +1,0 @@
-{
-    "id": "allEventToProfilePropertiesAction",
-    "serviceFilter": "(actionExecutorId=allEventToProfileProperties)",
-    "tags": [ "event" ],
-    "parameters": [
-    ]
-}

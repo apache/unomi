@@ -1,6 +1,6 @@
 {
     "id": "setRemoteHostInfoAction",
-    "serviceFilter": "(actionExecutorId=setRemoteHostInfo)",
+    "actionExecutor": "setRemoteHostInfo",
     "tags": [ "event" ],
     "parameters": [
     ]

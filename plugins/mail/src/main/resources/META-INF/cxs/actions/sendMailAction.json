@@ -1,6 +1,6 @@
 {
     "id": "sendMailAction",
-    "serviceFilter": "(actionExecutorId=sendMail)",
+    "actionExecutor": "sendMail",
     "tags": [ "event" ],
     "parameters": [
         {

@@ -52,12 +52,15 @@ import org.oasis_open.contextserver.api.services.RulesService;
 import org.oasis_open.contextserver.api.services.SegmentService;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.ops4j.pax.cdi.api.OsgiService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
  */
 @WebServlet(urlPatterns = {"/context.js", "/context.json"})
 public class ContextServlet extends HttpServlet {
+    private static final Logger logger = LoggerFactory.getLogger(ContextServlet.class.getName());
 
     private static final long serialVersionUID = 2928875830103325238L;
     public static final String BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/base.js";
@@ -95,7 +98,7 @@ public class ContextServlet extends HttpServlet {
 
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
         String httpMethod = httpServletRequest.getMethod();
-//        log(HttpUtils.dumpRequestInfo(httpServletRequest));
+//        logger.debug(HttpUtils.dumpRequestInfo(httpServletRequest));
 
         // set up CORS headers as soon as possible so that errors are not misconstrued on the client for CORS errors
         HttpUtils.setupCORSHeaders(httpServletRequest, response);
@@ -128,7 +131,7 @@ public class ContextServlet extends HttpServlet {
             } else {
                 PersonaWithSessions personaWithSessions = profileService.loadPersonaWithSessions(personaId);
                 if (personaWithSessions == null) {
-                    log("Couldn't find persona with id=" + personaId);
+                    logger.error("Couldn't find persona with id=" + personaId);
                     profile = null;
                     HttpUtils.clearCookie(response, personaIdCookieName);
                 } else {
@@ -142,7 +145,7 @@ public class ContextServlet extends HttpServlet {
         } else if (cookiePersonaId != null) {
             PersonaWithSessions personaWithSessions = profileService.loadPersonaWithSessions(cookiePersonaId);
             if (personaWithSessions == null) {
-                log("Couldn't find persona with id=" + personaId);
+                logger.error("Couldn't find persona with id=" + personaId);
                 profile = null;
                 HttpUtils.clearCookie(response, personaIdCookieName);
             } else {
@@ -165,7 +168,7 @@ public class ContextServlet extends HttpServlet {
             try {
                 contextRequest = mapper.readValue(factory.createParser(stringPayload), ContextRequest.class);
             } catch (Exception e) {
-                log("Cannot read payload " +stringPayload,e);
+                logger.error("Cannot read payload " + stringPayload, e);
                 return;
             }
             scope = contextRequest.getSource().getScope();
@@ -211,7 +214,7 @@ public class ContextServlet extends HttpServlet {
 
                 event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                 event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                log("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
+                logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
                 eventService.send(event);
             }
         }
@@ -222,7 +225,7 @@ public class ContextServlet extends HttpServlet {
             profileUpdated.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
             profileUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
 
-            log("Received event " + profileUpdated.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + profileUpdated.getTarget() + " timestamp=" + timestamp);
+            logger.debug("Received event " + profileUpdated.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + profileUpdated.getTarget() + " timestamp=" + timestamp);
             eventService.send(profileUpdated);
         }
 
@@ -263,14 +266,14 @@ public class ContextServlet extends HttpServlet {
             Profile profileToDelete = profile;
             profile = profileService.load(profileId);
             if (profile != null) {
-                log("Session profile was merged with profile " + profileId + ", replacing profile in session");
+                logger.debug("Session profile was merged with profile " + profileId + ", replacing profile in session");
                 if (session != null) {
                     session.setProfile(profile);
                     profileService.saveSession(session);
                 }
                 HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, personaIdCookieName);
             } else {
-                log("Couldn't find merged profile" + profileId + ", falling back to profile " + profileToDelete.getItemId());
+                logger.debug("Couldn't find merged profile" + profileId + ", falling back to profile " + profileToDelete.getItemId());
                 profile = profileToDelete;
                 profile.setMergedWith(null);
                 profileService.save(profile);
@@ -293,7 +296,7 @@ public class ContextServlet extends HttpServlet {
                     }
                     event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                    log("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
+                    logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
                     eventService.send(eventToSend);
                 }
             }

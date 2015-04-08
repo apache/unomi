@@ -23,6 +23,7 @@ package org.oasis_open.contextserver.impl.services;
  */
 
 import org.oasis_open.contextserver.api.*;
+import org.oasis_open.contextserver.api.actions.ActionExecutor;
 import org.oasis_open.contextserver.api.services.*;
 import org.oasis_open.contextserver.impl.actions.ActionExecutorDispatcher;
 import org.oasis_open.contextserver.api.actions.Action;
@@ -32,10 +33,7 @@ import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.rules.Rule;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.SynchronousBundleListener;
+import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,6 +55,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     private EventService eventService;
 
     private ActionExecutorDispatcher actionExecutorDispatcher;
+    private List<Rule> allRules;
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -87,7 +86,18 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 loadPredefinedRules(bundle.getBundleContext());
             }
         }
+        try {
+            for (ServiceReference<ActionExecutor> reference : bundleContext.getServiceReferences(ActionExecutor.class, null)) {
+                ActionExecutor service = bundleContext.getService(reference);
+                actionExecutorDispatcher.addExecutor(reference.getProperty("actionExecutorId").toString(), reference.getBundle().getBundleId(), service);
+            }
+        } catch (Exception e) {
+            logger.error("Cannot get services",e);
+        }
+
         bundleContext.addBundleListener(this);
+
+        initializeTimer();
     }
 
     public void preDestroy() {
@@ -123,6 +133,14 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 }
             }
         }
+        if (bundleContext.getBundle().getRegisteredServices() != null) {
+            for (ServiceReference<?> reference : bundleContext.getBundle().getRegisteredServices()) {
+                Object service = bundleContext.getService(reference);
+                if (service instanceof ActionExecutor) {
+                    actionExecutorDispatcher.addExecutor(reference.getProperty("actionExecutorId").toString(), bundleContext.getBundle().getBundleId(), (ActionExecutor) service);
+                }
+            }
+        }
     }
 
     private void processBundleStop(BundleContext bundleContext) {
@@ -155,6 +173,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 }
             }
         }
+        actionExecutorDispatcher.removeExecutors(bundleContext.getBundle().getBundleId());
     }
 
     private void loadPredefinedRules(BundleContext bundleContext) {
@@ -188,12 +207,11 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         Boolean hasEventAlreadyBeenRaisedForSession = null;
         Boolean hasEventAlreadyBeenRaisedForProfile = null;
 
-        List<Rule> allItems = getAllRules();
+        List<Rule> allItems = allRules;
 
         for (Rule rule : allItems) {
             String scope = rule.getMetadata().getScope();
             if (scope.equals(Metadata.SYSTEM_SCOPE) || scope.equals(event.getScope())) {
-                ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
                 Condition eventCondition = definitionsService.extractConditionByTag(rule.getCondition(), "eventCondition");
 
                 if (eventCondition == null) {
@@ -242,7 +260,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     private List<Rule> getAllRules() {
-        // todo : must use cache here
         List<Rule> allItems = persistenceService.getAllItems(Rule.class, 0, -1, "priority").getList();
         for (Rule rule : allItems) {
             ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
@@ -261,7 +278,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
         boolean changed = false;
         for (Rule rule : rules) {
-            logger.info("Fired rule "+rule.getMetadata().getId() + " for "+event.getEventType() + " - " + event.getItemId());
+            logger.debug("Fired rule " + rule.getMetadata().getId() + " for " + event.getEventType() + " - " + event.getItemId());
             for (Action action : rule.getActions()) {
                 changed |= actionExecutorDispatcher.execute(action, event);
             }
@@ -316,8 +333,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public Set<Condition> getTrackedConditions(Item source){
         Set<Condition> trackedConditions = new HashSet<>();
-        for (Metadata metadata : getRuleMetadatas()) {
-            Rule r = getRule(metadata.getScope(), metadata.getId());
+        for (Rule r : allRules) {
             Condition trackedCondition = definitionsService.extractConditionByTag(r.getCondition(), "trackedCondition");
             if(trackedCondition != null){
                 Set<Condition> sourceEventPropertyConditions = definitionsService.extractConditionsByType(r.getCondition(), "sourceEventPropertyCondition");
@@ -341,6 +357,17 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         String idWithScope = Metadata.getIdWithScope(scope, ruleId);
 //        persistenceService.removeQuery(RULE_QUERY_PREFIX + idWithScope);
         persistenceService.remove(idWithScope, Rule.class);
+    }
+
+    private void initializeTimer() {
+        Timer timer = new Timer();
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                allRules = getAllRules();
+            }
+        };
+        timer.scheduleAtFixedRate(task, 0, 1000);
     }
 
     public void bundleChanged(BundleEvent event) {

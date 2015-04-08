@@ -88,7 +88,6 @@ public class ConditionEvaluatorDispatcher {
         }
 
         // if no matching
-        return true;
-
+        return false;
     }
 }

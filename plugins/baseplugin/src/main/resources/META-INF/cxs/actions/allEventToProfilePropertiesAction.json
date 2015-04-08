@@ -1,0 +1,7 @@
+{
+    "id": "allEventToProfilePropertiesAction",
+    "actionExecutor": "allEventToProfileProperties",
+    "tags": [ "event" ],
+    "parameters": [
+    ]
+}

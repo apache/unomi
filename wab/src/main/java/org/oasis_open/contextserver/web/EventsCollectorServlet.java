@@ -30,6 +30,8 @@ import org.oasis_open.contextserver.api.services.SegmentService;
 import org.oasis_open.contextserver.api.services.ProfileService;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.ops4j.pax.cdi.api.OsgiService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.servlet.ServletException;
@@ -43,6 +45,7 @@ import java.util.Date;
 
 @WebServlet(urlPatterns = {"/eventcollector"})
 public class EventsCollectorServlet extends HttpServlet {
+    private static final Logger logger = LoggerFactory.getLogger(EventsCollectorServlet.class.getName());
 
     private static final long serialVersionUID = 2008054804885122957L;
 
@@ -72,7 +75,7 @@ public class EventsCollectorServlet extends HttpServlet {
 
     @Override
     protected void doOptions(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-//        log(HttpUtils.dumpRequestInfo(request));
+//        logger.debug(HttpUtils.dumpRequestInfo(request));
         HttpUtils.setupCORSHeaders(request, response);
         response.flushBuffer();
     }
@@ -83,7 +86,7 @@ public class EventsCollectorServlet extends HttpServlet {
             timestamp.setTime(Long.parseLong(request.getParameter("timestamp")));
         }
 
-//        log(HttpUtils.dumpRequestInfo(request));
+//        logger.debug(HttpUtils.dumpRequestInfo(request));
 
         HttpUtils.setupCORSHeaders(request, response);
 
@@ -120,7 +123,7 @@ public class EventsCollectorServlet extends HttpServlet {
         try {
             events = mapper.readValue(factory.createParser(payload), EventsCollectorRequest.class);
         } catch (Exception e) {
-            log("Cannot read payload " + payload,e);
+            logger.error("Cannot read payload " + payload,e);
             return;
         }
         if (events == null || events.getEvents() == null) {
@@ -138,7 +141,7 @@ public class EventsCollectorServlet extends HttpServlet {
                 }
                 eventToSend.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                 eventToSend.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                log("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
+                logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
                 boolean eventChanged = eventService.send(eventToSend);
                 changed = changed || eventChanged;
             }

@@ -42,9 +42,9 @@ class BasicSimulation extends Simulation {
   val minTime: Long = format.parse("2014-01").getTime()
   val maxTime: Long = format.parse("2015-12").getTime()
 
-  val totalNumberOfUsers = 100
-  val numberOfConcurrentUsers = 50
-  val rampUpTime = 10 seconds
+  val totalTime = 1 minutes
+  val numberOfConcurrentUsers = 500
+  val rampUpTime = 20 seconds
   val numberOfSessionsPerUser = 2
   val sessionSize = 10
 
@@ -52,7 +52,7 @@ class BasicSimulation extends Simulation {
   val formEventPercentage: Double = 10.0
   val searchEventPercentage: Double = 10.0
 
-  val delayAverage: Double = 1
+  val delayAverage: Double = 4.5
   val delayStdDev: Double = 0.5
 
 
@@ -67,12 +67,7 @@ class BasicSimulation extends Simulation {
       "sessionId" -> UUID.randomUUID().toString,
       "sessionSize" -> sessionSize,
       "timestamp" -> (minTime + r.nextInt(((maxTime - minTime) / 1000).toInt).toLong * 1000),
-      "previousURL" -> ""
-    )
-  }
-
-  val userPropertiesFeed = Iterator.continually {
-    Map(
+      "previousURL" -> "",
       "gender" -> (if (r.nextBoolean()) "male" else "female"),
       "age" -> (15 + r.nextInt(60)),
       "income" -> (10000 * r.nextInt(2000)),
@@ -85,7 +80,10 @@ class BasicSimulation extends Simulation {
   }
 
   val requestsFeed = Iterator.continually {
-    Map("pauseTime" -> Math.round((delayAverage + delayStdDev * r.nextGaussian()) * 1000).asInstanceOf[Int])
+    Map(
+      "pauseTime" -> Math.round((delayAverage + delayStdDev * r.nextGaussian()) * 1000).asInstanceOf[Int],
+      "requestTemplate" -> r.nextInt(2)
+    )
   }
 
   val ipListFeed = csv("ipList.txt").random
@@ -107,11 +105,11 @@ class BasicSimulation extends Simulation {
   
   val loadContext = feed(requestsFeed).feed(urllistFeed).exec(http("LoadContext ${flag}").post("/context.js?sessionId=${sessionId}&timestamp=${timestamp}")
     .headers(headers)
-    .body(ELFileBody("ContextLoad_request.json")))
+    .body(ELFileBody("ContextLoad_request_${requestTemplate}.json")))
     .exec(updatePreviousURL)
     .exec(pauseAndUpdateTimestamp)
 
-  val userLogin = feed(requestsFeed).feed(userPropertiesFeed).exec(http("UserLogin").post("/eventcollector?sessionId=${sessionId}&timestamp=${timestamp}")
+  val userLogin = feed(requestsFeed).exec(http("UserLogin").post("/eventcollector?sessionId=${sessionId}&timestamp=${timestamp}")
     .headers(headers)
     .body(ELFileBody("UserLogin_request.json")))
     .exec(pauseAndUpdateTimestamp)
@@ -133,7 +131,9 @@ class BasicSimulation extends Simulation {
     .randomSwitch(loginPercentage -> userLogin)
     .repeat("${sessionSize}")  {
       loadContext
-      .randomSwitch(formEventPercentage -> formEvent, searchEventPercentage -> searchEvent)
+      .randomSwitch(
+//          formEventPercentage -> formEvent,
+          searchEventPercentage -> searchEvent)
     }
     .exec(flushSessionCookies)
 
@@ -144,8 +144,7 @@ class BasicSimulation extends Simulation {
     }
     .exec(flushCookieJar)
 
-  val userScenario = scenario("User")
-    .repeat(Math.round(totalNumberOfUsers / numberOfConcurrentUsers).asInstanceOf[Int]) { user }
+  val userScenario = scenario("User").during(totalTime) { user }
 
   setUp(userScenario.inject(rampUsers(numberOfConcurrentUsers) over rampUpTime)).protocols(httpProtocol)
 

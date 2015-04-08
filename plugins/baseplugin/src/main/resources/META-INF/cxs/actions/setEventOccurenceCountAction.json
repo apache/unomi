@@ -1,0 +1,12 @@
+{
+    "id": "setEventOccurenceCountAction",
+    "actionExecutor": "setEventOccurenceCount",
+    "tags": [ "demographic" ],
+    "parameters": [
+        {
+            "id": "pastEventCondition",
+            "type": "condition",
+            "multivalued": false
+        }
+    ]
+}

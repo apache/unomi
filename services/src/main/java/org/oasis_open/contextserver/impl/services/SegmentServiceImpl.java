@@ -69,6 +69,9 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         logger.info("Initializing segment service...");
     }
 
+    private List<Segment> allSegments;
+    private List<Scoring> allScoring;
+
     public static void dumpJSON(JsonValue tree, String key, String depthPrefix) {
         if (key != null)
             logger.info(depthPrefix + "Key " + key + ": ");
@@ -722,6 +725,15 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             }
         };
         timer.scheduleAtFixedRate(task, getDay(1).getTime(), taskExecutionPeriod);
+
+        task = new TimerTask() {
+            @Override
+            public void run() {
+                allSegments = getAllSegmentDefinitions();
+                allScoring = getAllScoringDefinitions();
+            }
+        };
+        timer.scheduleAtFixedRate(task, 0, 1000);
     }
 
     private GregorianCalendar getDay(int offset) {

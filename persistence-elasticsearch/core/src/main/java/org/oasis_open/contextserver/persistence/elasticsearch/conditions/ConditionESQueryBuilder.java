@@ -24,6 +24,7 @@ package org.oasis_open.contextserver.persistence.elasticsearch.conditions;
 
 import org.elasticsearch.index.query.FilterBuilder;
 import org.oasis_open.contextserver.api.conditions.Condition;
+import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 
 import java.util.Map;
 

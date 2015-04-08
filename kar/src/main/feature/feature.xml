@@ -46,6 +46,5 @@
         <bundle start-level="76">mvn:org.oasis-open.contextserver/context-server-persistence-elasticsearch-core/1.0-SNAPSHOT</bundle>
         <bundle start-level="77">mvn:org.oasis-open.contextserver/context-server-services/1.0-SNAPSHOT</bundle>
         <bundle start-level="78">mvn:org.oasis-open.contextserver/context-server-rest/1.0-SNAPSHOT</bundle>
-        <bundle start-level="80">mvn:org.oasis-open.contextserver/context-server-wab/1.0-SNAPSHOT</bundle>
     </feature>
 </features>

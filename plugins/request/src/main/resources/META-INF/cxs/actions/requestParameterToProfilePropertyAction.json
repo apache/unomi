@@ -1,6 +1,6 @@
 {
     "id": "requestParameterToProfilePropertyAction",
-    "serviceFilter": "(actionExecutorId=requestParameterToProfileProperty)",
+    "actionExecutor": "requestParameterToProfileProperty",
     "tags": [ "event" ],
     "parameters": [
         {

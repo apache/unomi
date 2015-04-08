@@ -1,0 +1,7 @@
+{
+    "id": "evaluateProfileSegmentsAction",
+    "actionExecutor": "evaluateProfileSegments",
+    "tags": [ "event" ],
+    "parameters": [
+    ]
+}

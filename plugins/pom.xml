@@ -12,11 +12,10 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>baseplugin</module>
         <module>request</module>
         <module>hover-event</module>
         <module>mail</module>
-        <module>past-event</module>
-        <module>tracked-event</module>
         <module>optimization-test</module>
     </modules>
 

@@ -72,4 +72,5 @@ public interface DefinitionsService {
 
     Condition extractConditionByTag(Condition rootCondition, String tagId);
 
+    boolean resolveConditionType(Condition rootCondition);
 }

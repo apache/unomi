@@ -27,26 +27,5 @@
     <reference id="definitionsService" interface="org.oasis_open.contextserver.api.services.DefinitionsService"/>
     <reference id="persistenceService" interface="org.oasis_open.contextserver.persistence.spi.PersistenceService"/>
 
-    <service
-            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
-        <service-properties>
-            <entry key="conditionEvaluatorId" value="pastEventConditionEvaluator"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.plugins.pastevent.conditions.PastEventConditionEvaluator">
-            <property name="definitionsService" ref="definitionsService"/>
-            <property name="persistenceService" ref="persistenceService"/>
-        </bean>
-    </service>
-
-    <service
-            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="pastEventConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.plugins.pastevent.conditions.PastEventConditionESQueryBuilder">
-            <property name="definitionsService" ref="definitionsService"/>
-            <property name="persistenceService" ref="persistenceService"/>
-        </bean>
-    </service>
 
 </blueprint>

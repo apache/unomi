@@ -232,6 +232,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
         initializeTimer();
 
+        bundleContext.addBundleListener(this);
+
         try {
             for (ServiceReference<ConditionEvaluator> reference : bundleContext.getServiceReferences(ConditionEvaluator.class, null)) {
                 ConditionEvaluator service = bundleContext.getService(reference);
@@ -242,9 +244,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 conditionESQueryBuilderDispatcher.addQueryBuilder(reference.getProperty("queryBuilderId").toString(), reference.getBundle().getBundleId(), service);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Cannot get services",e);
         }
-        bundleContext.addBundleListener(this);
     }
 
     public void stop() {
@@ -289,7 +290,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private String getDailyIndex(Date date) {
-        String d = new SimpleDateFormat("-YYYY-MM-dd").format(date);
+        String d = new SimpleDateFormat("-YYYY-MM").format(date);
         String dailyIndexName = indexName + d;
 
         IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(dailyIndexName).execute().actionGet();
@@ -945,7 +946,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         .execute()
                         .actionGet();
 
-                SimpleDateFormat d = new SimpleDateFormat("yyyy-MM-dd");
+                SimpleDateFormat d = new SimpleDateFormat("MM-dd");
 
                 List<String> toDelete = new ArrayList<String>();
                 for (String currentIndexName : statsResponse.getIndices().keySet()) {

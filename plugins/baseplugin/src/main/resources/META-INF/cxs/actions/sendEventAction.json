@@ -1,0 +1,17 @@
+{
+    "id": "sendEventAction",
+    "actionExecutor": "sendEvent",
+    "tags": [ "event" ],
+    "parameters": [
+        {
+            "id": "eventType",
+            "type": "string",
+            "multivalued": false
+        },
+        {
+            "id": "eventProperties",
+            "type": "properties",
+            "multivalued": false
+        }
+    ]
+}

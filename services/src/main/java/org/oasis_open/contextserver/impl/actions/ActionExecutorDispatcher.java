@@ -29,23 +29,43 @@ import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ActionExecutorDispatcher {
     private static final Logger logger = LoggerFactory.getLogger(ActionExecutorDispatcher.class.getName());
 
     private BundleContext bundleContext;
 
+    private Map<String, ActionExecutor> executors = new ConcurrentHashMap<>();
+    private Map<Long, List<String>> executorsByBundle = new ConcurrentHashMap<>();
+
     public ActionExecutorDispatcher() {
 
     }
+
+
+    public void addExecutor(String name, long bundleId, ActionExecutor evaluator) {
+        executors.put(name, evaluator);
+        if (!executorsByBundle.containsKey(bundleId)) {
+            executorsByBundle.put(bundleId, new ArrayList<String>());
+        }
+        executorsByBundle.get(bundleId).add(name);
+    }
+
+    public void removeExecutors(long bundleId) {
+        if (executorsByBundle.containsKey(bundleId)) {
+            for (String s : executorsByBundle.get(bundleId)) {
+                executors.remove(s);
+            }
+            executorsByBundle.remove(bundleId);
+        }
+    }
+
 
     public static Action getContextualAction(Action action, Event event) {
         if (!hasContextualParameter(action.getParameterValues())) {
@@ -127,22 +147,16 @@ public class ActionExecutorDispatcher {
     }
 
     public boolean execute(Action action, Event event) {
-        Collection<ServiceReference<ActionExecutor>> matchingActionExecutorReferences;
-        if (action.getActionType().getServiceFilter() == null) {
+        String actionKey = action.getActionType().getActionExecutor();
+        if (actionKey == null) {
             throw new UnsupportedOperationException("No service defined for : " + action.getActionType());
         }
-        try {
-            matchingActionExecutorReferences = bundleContext.getServiceReferences(ActionExecutor.class, action.getActionType().getServiceFilter());
-        } catch (InvalidSyntaxException e) {
-            logger.error("Invalid filter",e);
-            return false;
+
+        if (executors.containsKey(actionKey)) {
+            ActionExecutor actionExecutor = executors.get(actionKey);
+            return actionExecutor.execute(getContextualAction(action, event), event);
         }
-        boolean changed = false;
-        for (ServiceReference<ActionExecutor> actionExecutorReference : matchingActionExecutorReferences) {
-            ActionExecutor actionExecutor = bundleContext.getService(actionExecutorReference);
-            changed |= actionExecutor.execute(getContextualAction(action, event), event);
-        }
-        return changed;
+        return false;
     }
 
 }

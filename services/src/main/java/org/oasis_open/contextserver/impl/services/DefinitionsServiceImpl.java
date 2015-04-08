@@ -554,6 +554,8 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         }
     }
 
-
-
+    @Override
+    public boolean resolveConditionType(Condition rootCondition) {
+        return ParserHelper.resolveConditionType(this, rootCondition);
+    }
 }

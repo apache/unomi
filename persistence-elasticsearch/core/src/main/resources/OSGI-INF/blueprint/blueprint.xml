@@ -58,87 +58,10 @@
         </interfaces>
     </service>
 
-    <service
-            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="booleanConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.BooleanConditionESQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="notConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.NotConditionESQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="matchAllConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.MatchAllConditionESQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="propertyConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.PropertyConditionESQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="geoLocationByPointSessionConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.GeoLocationByPointSessionConditionESQueryBuilder"/>
-    </service>
-
     <bean id="conditionESQueryBuilderDispatcher"
           class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher">
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-
-
-    <!-- Condition evaluators -->
-    <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
-        <service-properties>
-            <entry key="conditionEvaluatorId" value="booleanConditionEvaluator"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.BooleanConditionEvaluator"/>
-    </service>
-
-    <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
-        <service-properties>
-            <entry key="conditionEvaluatorId" value="notConditionEvaluator"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.NotConditionEvaluator"/>
-    </service>
-
-    <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
-        <service-properties>
-            <entry key="conditionEvaluatorId" value="propertyConditionEvaluator"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.PropertyConditionEvaluator"/>
-    </service>
-
-    <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
-        <service-properties>
-            <entry key="conditionEvaluatorId" value="matchAllConditionEvaluator"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.MatchAllConditionEvaluator"/>
-    </service>
-
-    <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
-        <service-properties>
-            <entry key="conditionEvaluatorId" value="geoLocationByPointSessionConditionEvaluator"/>
-        </service-properties>
-        <bean class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.GeoLocationByPointSessionConditionEvaluator"/>
-    </service>
 
     <bean id="conditionEvaluatorDispatcherImpl"
           class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher">

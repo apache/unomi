@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  #%L
+  Context Server Plugin - Provides conditions based on past events
+  $Id:$
+  $HeadURL:$
+  %%
+  Copyright (C) 2014 - 2015 Jahia Solutions
+  %%
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+       http://www.apache.org/licenses/LICENSE-2.0
+  
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  #L%
+  -->
+
+<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd">
+
+    <reference id="definitionsService" interface="org.oasis_open.contextserver.api.services.DefinitionsService"/>
+    <reference id="persistenceService" interface="org.oasis_open.contextserver.persistence.spi.PersistenceService"/>
+    <reference id="profileService" interface="org.oasis_open.contextserver.api.services.ProfileService"/>
+    <reference id="segmentService" interface="org.oasis_open.contextserver.api.services.SegmentService"/>
+    <reference id="eventService" interface="org.oasis_open.contextserver.api.services.EventService"/>
+
+    <service
+            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="booleanConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.conditions.BooleanConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="notConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.conditions.NotConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="matchAllConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.conditions.MatchAllConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="propertyConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.conditions.PropertyConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="geoLocationByPointSessionConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.conditions.GeoLocationByPointSessionConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="sourceEventPropertyConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.conditions.SourceEventPropertyConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="pastEventConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.conditions.PastEventConditionESQueryBuilder">
+            <property name="definitionsService" ref="definitionsService"/>
+            <property name="persistenceService" ref="persistenceService"/>
+        </bean>
+    </service>
+
+
+    <!-- Condition evaluators -->
+    <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
+        <service-properties>
+            <entry key="conditionEvaluatorId" value="booleanConditionEvaluator"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.conditions.BooleanConditionEvaluator"/>
+    </service>
+
+    <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
+        <service-properties>
+            <entry key="conditionEvaluatorId" value="notConditionEvaluator"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.conditions.NotConditionEvaluator"/>
+    </service>
+
+    <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
+        <service-properties>
+            <entry key="conditionEvaluatorId" value="propertyConditionEvaluator"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.conditions.PropertyConditionEvaluator"/>
+    </service>
+
+    <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
+        <service-properties>
+            <entry key="conditionEvaluatorId" value="matchAllConditionEvaluator"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.conditions.MatchAllConditionEvaluator"/>
+    </service>
+
+    <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
+        <service-properties>
+            <entry key="conditionEvaluatorId" value="geoLocationByPointSessionConditionEvaluator"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.conditions.GeoLocationByPointSessionConditionEvaluator"/>
+    </service>
+
+    <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
+        <service-properties>
+            <entry key="conditionEvaluatorId" value="sourceEventPropertyConditionEvaluator"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.conditions.SourceEventPropertyConditionEvaluator">
+            <property name="definitionsService" ref="definitionsService"/>
+        </bean>
+    </service>
+
+    <service
+            interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator">
+        <service-properties>
+            <entry key="conditionEvaluatorId" value="pastEventConditionEvaluator"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.conditions.PastEventConditionEvaluator">
+            <property name="definitionsService" ref="definitionsService"/>
+            <property name="persistenceService" ref="persistenceService"/>
+        </bean>
+    </service>
+
+    <!-- Action executors -->
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="actionExecutorId" value="allEventToProfileProperties"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.actions.AllEventToProfilePropertiesAction">
+            <property name="profileService" ref="profileService"/>
+        </bean>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="actionExecutorId" value="eventToProfileProperty"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.actions.EventToProfilePropertyAction"/>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="actionExecutorId" value="setProperty"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.actions.SetPropertyAction"/>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="actionExecutorId" value="evaluateProfileSegments"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.actions.EvaluateProfileSegmentsAction">
+            <property name="segmentService" ref="segmentService"/>
+        </bean>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="actionExecutorId" value="incrementInterestsValues"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.actions.IncrementInterestsValuesAction"/>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="actionExecutorId" value="setEventOccurenceCount"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.actions.SetEventOccurenceCountAction">
+            <property name="definitionsService" ref="definitionsService"/>
+            <property name="persistenceService" ref="persistenceService"/>
+        </bean>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="actionExecutorId" value="sendEvent"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.actions.SendEventAction">
+            <property name="eventService" ref="eventService"/>
+        </bean>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="actionExecutorId" value="mergeProfilesOnProperty"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.actions.MergeProfilesOnPropertyAction">
+            <property name="profileService" ref="profileService"/>
+        </bean>
+    </service>
+
+</blueprint>

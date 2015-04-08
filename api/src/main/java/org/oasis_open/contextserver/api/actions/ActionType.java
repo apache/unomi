@@ -37,7 +37,7 @@ public class ActionType implements PluginType, Serializable {
     private String id;
     private String nameKey;
     private String descriptionKey;
-    private String serviceFilter;
+    private String actionExecutor;
     private Set<Tag> tags = new TreeSet<Tag>();
     private Set<String> tagIds = new LinkedHashSet<String>();
     private long pluginId;
@@ -86,12 +86,12 @@ public class ActionType implements PluginType, Serializable {
         this.pluginId = pluginId;
     }
 
-    public String getServiceFilter() {
-        return serviceFilter;
+    public String getActionExecutor() {
+        return actionExecutor;
     }
 
-    public void setServiceFilter(String serviceFilter) {
-        this.serviceFilter = serviceFilter;
+    public void setActionExecutor(String actionExecutor) {
+        this.actionExecutor = actionExecutor;
     }
 
     @XmlElement(name = "tags")
