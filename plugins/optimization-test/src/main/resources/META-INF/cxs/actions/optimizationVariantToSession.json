@@ -1,6 +1,6 @@
 {
     "id": "optimizationVariantToSession",
-    "serviceFilter": "(actionExecutorId=optimizationVariantToSession)",
+    "actionExecutor": "optimizationVariantToSession",
     "tags": [ "event" ],
     "parameters": [
     ]
