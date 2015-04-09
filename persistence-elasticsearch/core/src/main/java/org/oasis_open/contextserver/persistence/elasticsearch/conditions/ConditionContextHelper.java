@@ -26,12 +26,16 @@ import org.apache.commons.lang3.StringUtils;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.mvel2.MVEL;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ConditionContextHelper {
+    private static Map<String,Serializable> mvelExpressions = new ConcurrentHashMap<>();
+
     public static Condition getContextualCondition(Condition condition, Map<String, Object> context) {
         if (context.isEmpty() || !hasContextualParameter(condition.getParameterValues())) {
             return condition;
@@ -54,7 +58,11 @@ public class ConditionContextHelper {
                 if (s.startsWith("parameter::")) {
                     return context.get(StringUtils.substringAfter(s, "parameter::"));
                 } else if (s.startsWith("script::")) {
-                    return MVEL.eval(StringUtils.substringAfter(s, "script::"), context);
+                    String script = StringUtils.substringAfter(s, "script::");
+                    if (!mvelExpressions.containsKey(script)) {
+                        mvelExpressions.put(script,MVEL.compileExpression(script));
+                    }
+                    return MVEL.executeExpression(mvelExpressions.get(script), context);
                 }
             }
         } else if (value instanceof Map) {

@@ -26,6 +26,7 @@ import org.apache.commons.beanutils.PropertyUtils;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
+import org.oasis_open.contextserver.api.services.EventService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -34,7 +35,7 @@ public class IncrementInterestsValuesAction implements ActionExecutor {
 
     @SuppressWarnings("unchecked")
     @Override
-    public boolean execute(Action action, Event event) {
+    public int execute(Action action, Event event) {
         boolean modified = false;
 
         try {
@@ -62,6 +63,6 @@ public class IncrementInterestsValuesAction implements ActionExecutor {
             throw new UnsupportedOperationException(e);
         }
 
-        return modified;
+        return modified ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
     }
 }

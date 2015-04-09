@@ -394,7 +394,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
         // search all segments to see if they define a profileSegmentCondition with the segment we're trying to delete
         // to see which segments would be impacted by this deletion
-        final List<Segment> allSegments = getAllSegmentDefinitions();
+        final List<Segment> allSegments = this.allSegments;
         List<Metadata> impactedSegmentsMetadata = validate ? new ArrayList<Metadata>(allSegments.size()) : Collections.<Metadata>emptyList();
         Set<Segment> impactedSegments = new HashSet<>(allSegments.size());
         for (Segment segment : allSegments) {
@@ -452,14 +452,14 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         Set<String> segments = new HashSet<String>();
         Map<String,Integer> scores = new HashMap<String, Integer>();
 
-        List<Segment> allSegments = getAllSegmentDefinitions();
+        List<Segment> allSegments = this.allSegments;
         for (Segment segment : allSegments) {
             if (persistenceService.testMatch(segment.getCondition(), profile)) {
                 segments.add(segment.getMetadata().getIdWithScope());
             }
         }
 
-        List<Scoring> allScoring = getAllScoringDefinitions();
+        List<Scoring> allScoring = this.allScoring;
         for (Scoring scoring : allScoring) {
             int score = 0;
             for (ScoringElement scoringElement : scoring.getElements()) {

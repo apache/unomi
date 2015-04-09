@@ -69,16 +69,16 @@ public class EventServiceImpl implements EventService {
         this.bundleContext = bundleContext;
     }
 
-    public boolean send(Event event) {
+    public int send(Event event) {
         if (event.isPersistent()) {
             persistenceService.save(event);
         }
 
-        boolean changed = false;
+        int changes = NO_CHANGE;
 
         Profile profile = event.getProfile();
         final Session session = event.getSession();
-        if (session != null) {
+        if (event.isPersistent() && session != null) {
             session.setLastEventDate(event.getTimeStamp());
         }
 
@@ -88,7 +88,7 @@ public class EventServiceImpl implements EventService {
 
             for (EventListenerService eventListenerService : eventListeners) {
                 if (eventListenerService.canHandle(event)) {
-                    changed |= eventListenerService.onEvent(event);
+                    changes |= eventListenerService.onEvent(event);
                 }
             }
 
@@ -97,22 +97,18 @@ public class EventServiceImpl implements EventService {
                 profile = session.getProfile();
             }
 
-            if (changed && (!profile.getProperties().equals(previousProperties) || !profile.getSegments().equals(previousSegments))) {
+            if ((changes & PROFILE_UPDATED) == PROFILE_UPDATED && (!profile.getProperties().equals(previousProperties) || !profile.getSegments().equals(previousSegments))) {
                 Event profileUpdated = new Event("profileUpdated", session, profile, event.getScope(), event.getSource(), profile, event.getTimeStamp());
                 profileUpdated.setPersistent(false);
                 profileUpdated.getAttributes().putAll(event.getAttributes());
-                send(profileUpdated);
-                profileService.save(profile);
+                changes |= send(profileUpdated);
                 if (session != null) {
+                    changes |= SESSION_UPDATED;
                     session.setProfile(profile);
                 }
             }
-
-            if (session != null) {
-                profileService.saveSession(session);
-            }
         }
-        return changed;
+        return changes;
     }
 
     @Override

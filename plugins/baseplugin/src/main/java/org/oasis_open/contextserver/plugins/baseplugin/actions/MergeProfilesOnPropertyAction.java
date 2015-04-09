@@ -22,11 +22,13 @@ package org.oasis_open.contextserver.plugins.baseplugin.actions;
  * #L%
  */
 
+import org.apache.commons.lang3.StringUtils;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.Persona;
 import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
+import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.api.services.ProfileService;
 
 import javax.servlet.ServletResponse;
@@ -53,28 +55,28 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         this.profileService = profileService;
     }
 
-    public boolean execute(Action action, Event event) {
+    public int execute(Action action, Event event) {
         String mergeProfilePropertyName = (String) action.getParameterValues().get("mergeProfilePropertyName");
         Profile profile = event.getProfile();
 
         if (profile instanceof Persona) {
-            return false;
+            return EventService.NO_CHANGE;
         }
 
         Object currentMergePropertyValue = profile.getProperty(mergeProfilePropertyName);
 
-        if (currentMergePropertyValue == null) {
-            return false;
+        if (currentMergePropertyValue == null || StringUtils.isEmpty(currentMergePropertyValue.toString())) {
+            return EventService.NO_CHANGE;
         }
         String profileId = profile.getItemId();
-        boolean updated = profileService.mergeProfilesOnProperty(profile, event.getSession(), mergeProfilePropertyName, (currentMergePropertyValue == null ? null : currentMergePropertyValue.toString()));
+        boolean updated = profileService.mergeProfilesOnProperty(profile, event.getSession(), mergeProfilePropertyName, currentMergePropertyValue.toString());
 
         if (!event.getSession().getProfileId().equals(profileId)) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
             sendProfileCookie(event.getSession().getProfile(), httpServletResponse);
         }
 
-        return updated;
+        return EventService.NO_CHANGE;
     }
 
     public void sendProfileCookie(Profile profile, ServletResponse response) {

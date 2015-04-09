@@ -37,7 +37,7 @@ public class SendEventAction implements ActionExecutor {
     }
 
     @Override
-    public boolean execute(Action action, Event event) {
+    public int execute(Action action, Event event) {
         String eventType = (String) action.getParameterValues().get("eventType");
         @SuppressWarnings("unchecked")
         Map<String, Object> eventProperties = (Map<String, Object>) action.getParameterValues().get("eventProperties");
@@ -51,8 +51,6 @@ public class SendEventAction implements ActionExecutor {
         subEvent.getAttributes().putAll(event.getAttributes());
         subEvent.getProperties().putAll(eventProperties);
 
-        eventService.send(subEvent);
-
-        return false;
+        return eventService.send(subEvent);
     }
 }

@@ -84,7 +84,7 @@
                     "propertyValuesDateExpr": [],
                     "propertyName": "properties.gender",
                     "comparisonOperator": "equals",
-                    "propertyValueInteger": "${gender}"
+                    "propertyValue": "${gender}"
                   }
                 }
               ],

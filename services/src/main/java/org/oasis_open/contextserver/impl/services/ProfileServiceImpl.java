@@ -88,10 +88,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private void processBundleStop(BundleContext bundleContext) {
     }
 
-    public PartialList<Profile> getAllProfiles() {
-        return persistenceService.getAllItems(Profile.class, 0, 50, null);
-    }
-
     public long getAllProfilesCount() {
         return persistenceService.getAllItemsCount(Profile.ITEM_TYPE);
     }
@@ -131,6 +127,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             return false;
         }
 
+        logger.info("Merging profiles for "+propertyName + "=" + propertyValue);
+
         Profile masterProfile = profilesToMerge.get(0);
 
         // now let's remove all the already merged profiles from the list.
@@ -141,6 +139,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                     filteredProfile.getMergedWith() == null || !filteredProfile.getMergedWith().equals(masterProfile.getItemId()))) {
                 filteredProfilesToMerge.add(filteredProfile);
             }
+        }
+
+        if (filteredProfilesToMerge.isEmpty()) {
+            return false;
         }
 
         profilesToMerge = filteredProfilesToMerge;

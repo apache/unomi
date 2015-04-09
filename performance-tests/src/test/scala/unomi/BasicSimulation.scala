@@ -4,10 +4,12 @@ import java.text.SimpleDateFormat
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
+import io.gatling.core.Predef.Session
+import io.gatling.core.action.builder.RepeatLoopType
 import io.gatling.core.feeder
 import io.gatling.core.feeder.Record
-import io.gatling.core.session.SessionAttribute
-import io.gatling.core.structure.ScenarioBuilder
+import io.gatling.core.session._
+import io.gatling.core.structure.{ChainBuilder, ScenarioBuilder}
 import io.gatling.core.validation.Validation
 
 import scala.concurrent.duration._
@@ -18,9 +20,30 @@ import io.gatling.jdbc.Predef._
 
 class BasicSimulation extends Simulation {
 
+  // Configuration
+
+  val r = scala.util.Random
+
+  val format = new java.text.SimpleDateFormat("yyyy-MM")
+  val minTime: Long = format.parse("2014-01").getTime()
+  val maxTime: Long = format.parse("2015-12").getTime()
+
+  val totalTime = 30 minutes
+  val numberOfConcurrentUsers = 1000
+  val numberOfConcurrentAdminUsers = 0
+  val rampUpTime = 120 seconds
+  val numberOfSessionsPerUser = 3
+  val sessionSize = 10
+
+  val loginPercentage: Double = 10.0
+  val formEventPercentage: Double = 5.0
+  val searchEventPercentage: Double = 5.0
+
+  val delayAverage: Double = 4.5
+  val delayStdDev: Double = 0.5
+
   val httpProtocol = http
-    .baseURL("http://local1:8181")
-    .inferHtmlResources(WhiteList("""http://local1:8181/.*"""), BlackList())
+    .baseURLs("http://local1:8181", "http://local2:8181")
     .acceptHeader("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
     .acceptEncodingHeader("gzip, deflate")
     .acceptLanguageHeader("en-US,en;q=0.5")
@@ -34,27 +57,16 @@ class BasicSimulation extends Simulation {
     "User-Agent" -> "${userAgent}"
   )
 
-  val uri1 = "http://local1:8181/context.js"
+  val adminHeaders = Map(
+    "Origin" -> "http://localhost:8080",
+    "Pragma" -> "no-cache",
+    "Accept-Encoding" -> "gzip, deflate, sdch",
+    "Accept-Language" -> "en",
+    "Accept" -> "application/json, text/plain, */*'",
+    "Content-Type" -> "application/json;charset=UTF-8"
+  )
 
-  val r = scala.util.Random
-
-  val format = new java.text.SimpleDateFormat("yyyy-MM")
-  val minTime: Long = format.parse("2014-01").getTime()
-  val maxTime: Long = format.parse("2015-12").getTime()
-
-  val totalTime = 1 minutes
-  val numberOfConcurrentUsers = 500
-  val rampUpTime = 20 seconds
-  val numberOfSessionsPerUser = 2
-  val sessionSize = 10
-
-  val loginPercentage: Double = 50.0
-  val formEventPercentage: Double = 10.0
-  val searchEventPercentage: Double = 10.0
-
-  val delayAverage: Double = 4.5
-  val delayStdDev: Double = 0.5
-
+  // Feeds
 
   val usersFeed = Iterator.continually {
     Map(
@@ -71,10 +83,10 @@ class BasicSimulation extends Simulation {
       "gender" -> (if (r.nextBoolean()) "male" else "female"),
       "age" -> (15 + r.nextInt(60)),
       "income" -> (10000 * r.nextInt(2000)),
-      "faceBookId" -> (if (r.nextInt(10) > 7) "facebook" + Integer.toString(15 + r.nextInt(60)) else ""),
-      "twitterId" -> (if (r.nextInt(10) > 7) "twitter" + Integer.toString(15 + r.nextInt(60))  else ""),
-      "email" -> (if (r.nextInt(10) > 7) "user" + Integer.toString(15 + r.nextInt(60)) + "@test.com" else ""),
-      "phoneNumber" -> (if (r.nextInt(10) > 7) "001-202-555-" + Integer.toString(1000 + r.nextInt(8999)) else ""),
+      "faceBookId" -> (if (r.nextInt(10) > 7) "facebook" + Integer.toString(r.nextInt(10000)) else ""),
+      "twitterId" -> (if (r.nextInt(10) > 7) "twitter" + Integer.toString(r.nextInt(10000)) else ""),
+      "email" -> (if (r.nextInt(10) > 7) "user" + Integer.toString(r.nextInt(100000)) + "@test.com" else ""),
+      "phoneNumber" -> (if (r.nextInt(10) > 7) "001-202-555-" + Integer.toString(1000 + r.nextInt(10000)) else ""),
       "leadAssignedTo" -> (if (r.nextInt(10) > 7) "account_manager" + Integer.toString(r.nextInt(10)) + "@test.com" else "")
     )
   }
@@ -87,23 +99,35 @@ class BasicSimulation extends Simulation {
   }
 
   val ipListFeed = csv("ipList.txt").random
-  val linklist = separatedValues("linklist.txt",' ').random
+  val linklist = separatedValues("linklist.txt", ' ').random
   val urllistFeed = csv("urllist.txt").random
   val userAgentFeed = csv("userAgent.txt").random
   val wordsFeed = csv("words.txt").random
 
-  val flagNewUser = exec(session => { session.set("flag", "New user") })
-  val flagNewSession = exec(session => {
-    if (session.attributes.get("flag").get == "") session.set("flag", "New session") else session }
-  )
-  val unflag = exec(session => { session.set("flag", "") })
+  val flagNewUser = exec(session => {
+    session.set("flag", "New user")
+  })
 
-  val updatePreviousURL = exec(session => { session.set("previousURL", session.attributes.get("destinationURL").get) })
+  val flagNewSession = exec(session => {
+    if (session.attributes.get("flag").get == "") session.set("flag", "New session") else session
+  })
+
+  val unflag = exec(session => {
+    session.set("flag", "")
+  })
+
+  val updatePreviousURL = exec(session => {
+    session.set("previousURL", session.attributes.get("destinationURL").get)
+  })
 
   val pauseAndUpdateTimestamp = pause("${pauseTime}", TimeUnit.MILLISECONDS)
-    .exec(session => { session.set("timestamp", session.attributes.get("timestamp").get.asInstanceOf[Long] + session.attributes.get("pauseTime").get.asInstanceOf[Int]) })
-  
-  val loadContext = feed(requestsFeed).feed(urllistFeed).exec(http("LoadContext ${flag}").post("/context.js?sessionId=${sessionId}&timestamp=${timestamp}")
+    .exec(session => {
+    session.set("timestamp", session.attributes.get("timestamp").get.asInstanceOf[Long] + session.attributes.get("pauseTime").get.asInstanceOf[Int])
+  })
+
+  // Browsing requests and scenario
+
+  val loadContext = feed(requestsFeed).feed(urllistFeed).exec(http("LoadContext ${requestTemplate} ${flag}").post("/context.js?sessionId=${sessionId}&timestamp=${timestamp}")
     .headers(headers)
     .body(ELFileBody("ContextLoad_request_${requestTemplate}.json")))
     .exec(updatePreviousURL)
@@ -124,28 +148,56 @@ class BasicSimulation extends Simulation {
     .body(ELFileBody("Search_request.json")))
     .exec(pauseAndUpdateTimestamp)
 
-  val fullUserSession = feed(sessionsFeed).feed(userAgentFeed).feed(ipListFeed)
-    .exec(flagNewSession)
-    .exec(loadContext)
-    .exec(unflag)
-    .randomSwitch(loginPercentage -> userLogin)
-    .repeat("${sessionSize}")  {
-      loadContext
-      .randomSwitch(
-//          formEventPercentage -> formEvent,
-          searchEventPercentage -> searchEvent)
+  val userScenario = scenario("User").during(totalTime) {
+      feed(usersFeed)
+      .exec(flagNewUser)
+      .repeat("${numberOfSessions}") {
+        feed(sessionsFeed).feed(userAgentFeed).feed(ipListFeed)
+        .exec(flagNewSession)
+        .exec(loadContext)
+        .exec(unflag)
+        .randomSwitch(loginPercentage -> userLogin)
+        .repeat("${sessionSize}") {
+          loadContext
+          .randomSwitch(
+            formEventPercentage -> formEvent,
+            searchEventPercentage -> searchEvent
+          )
+        }
+        .exec(flushSessionCookies)
+      }
+      .exec(flushCookieJar)
+  }
+
+  // Admin scenario
+
+  val siteDashboard = feed(requestsFeed).exec(http("Goals list").get("/cxs/goals/ACMESPACE/sitegoals")
+    .basicAuth("karaf", "karaf")
+    .headers(adminHeaders)
+    .check(jsonPath("$..id").findAll.exists.saveAs("goalIds")))
+
+    .exec(http("Site timeline").post("/cxs/query/session/timeStamp")
+    .basicAuth("karaf", "karaf")
+    .headers(adminHeaders)
+    .body(ELFileBody("SiteTimeline_request.json")))
+
+    .foreach("${goalIds}", "goalId") {
+      exec(http("Goal widget").post("/cxs/goals/ACMESPACE/${goalId}/report")
+      .basicAuth("karaf", "karaf")
+      .headers(adminHeaders)
+      .body(ELFileBody("GoalReport_request.json")))
     }
-    .exec(flushSessionCookies)
+    .pause("${pauseTime}", TimeUnit.MILLISECONDS)
 
-  val user = feed(usersFeed)
-    .exec(flagNewUser)
-    .repeat("${numberOfSessions}") {
-      fullUserSession
-    }
-    .exec(flushCookieJar)
+  val adminScenario = scenario("Admin").during(totalTime) {
+    siteDashboard
+  }
 
-  val userScenario = scenario("User").during(totalTime) { user }
 
-  setUp(userScenario.inject(rampUsers(numberOfConcurrentUsers) over rampUpTime)).protocols(httpProtocol)
+  setUp(
+    userScenario.inject(rampUsers(numberOfConcurrentUsers) over rampUpTime)
+//    ,
+//    adminScenario.inject(rampUsers(numberOfConcurrentAdminUsers) over rampUpTime)
+  ).protocols(httpProtocol)
 
 }

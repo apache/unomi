@@ -26,6 +26,7 @@ import org.apache.commons.beanutils.BeanUtils;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
+import org.oasis_open.contextserver.api.services.EventService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,31 +44,30 @@ public class SetPropertyAction implements ActionExecutor {
         return "setPropertyAction";
     }
 
-    public boolean execute(Action action, Event event) {
+    public int execute(Action action, Event event) {
         Object propertyValue = action.getParameterValues().get("setPropertyValue");
         if (propertyValue != null && propertyValue.equals("now")) {
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
             format.setTimeZone(TimeZone.getTimeZone("UTC"));
             propertyValue = format.format(event.getTimeStamp());
         }
-        boolean modified = false;
         String propertyName = (String) action.getParameterValues().get("setPropertyName");
         try {
             if (Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"))) {
                 if (propertyValue != null && !propertyValue.equals(BeanUtils.getProperty(event.getSession(), propertyName))) {
                     BeanUtils.setProperty(event.getSession(), propertyName, propertyValue);
-                    modified = true;
+                    return EventService.SESSION_UPDATED;
                 }
             } else {
                 if (propertyValue != null && !propertyValue.equals(BeanUtils.getProperty(event.getProfile(), propertyName))) {
                     BeanUtils.setProperty(event.getProfile(), propertyName, propertyValue);
-                    modified = true;
+                    return EventService.PROFILE_UPDATED;
                 }
             }
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             logger.error("Cannot set property", e);
         }
-        return modified;
+        return EventService.NO_CHANGE;
     }
 
 }

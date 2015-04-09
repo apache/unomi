@@ -27,6 +27,7 @@ import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
+import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
 
 import java.util.ArrayList;
@@ -45,7 +46,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
     }
 
     @Override
-    public boolean execute(Action action, Event event) {
+    public int execute(Action action, Event event) {
         final Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
 
         Condition andCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
@@ -79,6 +80,6 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
         event.getProfile().setProperty((String) pastEventCondition.getParameter("generatedPropertyKey"), count + 1);
 
-        return true;
+        return EventService.PROFILE_UPDATED;
     }
 }

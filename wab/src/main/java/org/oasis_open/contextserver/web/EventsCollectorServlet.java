@@ -130,7 +130,7 @@ public class EventsCollectorServlet extends HttpServlet {
             return;
         }
 
-        boolean changed = false;
+        int changes = 0;
         for (Event event : events.getEvents()){
             if(event.getEventType() != null){
                 Event eventToSend;
@@ -142,13 +142,21 @@ public class EventsCollectorServlet extends HttpServlet {
                 eventToSend.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                 eventToSend.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                 logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
-                boolean eventChanged = eventService.send(eventToSend);
-                changed = changed || eventChanged;
+                int eventChanged = eventService.send(eventToSend);
+                changes |= eventChanged;
             }
         }
 
+        if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
+            profileService.save(profile);
+        }
+        if ((changes & EventService.SESSION_UPDATED) == EventService.SESSION_UPDATED) {
+            profileService.saveSession(session);
+        }
+
+
         PrintWriter responseWriter = response.getWriter();
-        responseWriter.append("{\"updated\":" + changed + "}");
+        responseWriter.append("{\"updated\":" + changes + "}");
         responseWriter.flush();
     }
 

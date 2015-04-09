@@ -68,12 +68,6 @@ public class ProfileServiceEndPoint {
     }
 
     @GET
-    @Path("/")
-    public PartialList<Profile> getAllProfiles() {
-        return profileService.getAllProfiles();
-    }
-
-    @GET
     @Path("/count")
     public long getAllProfilesCount() {
         return profileService.getAllProfilesCount();

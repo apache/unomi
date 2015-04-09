@@ -27,25 +27,26 @@ import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.Session;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
+import org.oasis_open.contextserver.api.services.EventService;
 
 /**
  * Set variant id on the session when optimization test event is triggered
  */
 public class OptimizationVariantToSessionAction implements ActionExecutor{
     @Override
-    public boolean execute(Action action, Event event) {
+    public int execute(Action action, Event event) {
         Session session = event.getSession();
         if (session == null) {
-            return false;
+            return EventService.NO_CHANGE;
         }
 
         // we know that the source and target are CustomItem
         if (!(event.getTarget() instanceof CustomItem)){
-            return false;
+            return EventService.NO_CHANGE;
         }
         CustomItem optimizationTestItem = (CustomItem) event.getTarget();
 
         session.setProperty("optimizationTest_" + optimizationTestItem.getItemId(), optimizationTestItem.getProperties().get("variantId"));
-        return true;
+        return EventService.SESSION_UPDATED;
     }
 }

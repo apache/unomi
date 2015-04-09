@@ -29,6 +29,7 @@ import org.apache.commons.mail.ImageHtmlEmail;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
+import org.oasis_open.contextserver.api.services.EventService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stringtemplate.v4.ST;
@@ -65,7 +66,7 @@ public class SendMailAction implements ActionExecutor {
         this.mailServerSSLOnConnect = mailServerSSLOnConnect;
     }
 
-    public boolean execute(Action action, Event event) {
+    public int execute(Action action, Event event) {
         String from = (String) action.getParameterValues().get("from");
         String to = (String) action.getParameterValues().get("to");
         String cc = (String) action.getParameterValues().get("cc");
@@ -116,6 +117,6 @@ public class SendMailAction implements ActionExecutor {
             logger.error("Cannot send mail",e);
         }
 
-        return true;
+        return EventService.NO_CHANGE;
     }
 }

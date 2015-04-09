@@ -25,6 +25,7 @@ package org.oasis_open.contextserver.plugins.request.actions;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
+import org.oasis_open.contextserver.api.services.EventService;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -34,11 +35,11 @@ import javax.servlet.http.HttpServletRequest;
  * @todo add support for multi-valued parameters or storing values as a list
  */
 public class RequestParameterToProfilePropertyAction implements ActionExecutor {
-    public boolean execute(Action action, Event event) {
+    public int execute(Action action, Event event) {
         boolean changed = false;
         HttpServletRequest httpServletRequest = (HttpServletRequest) event.getAttributes().get(Event.HTTP_REQUEST_ATTRIBUTE);
         if (httpServletRequest == null) {
-            return false;
+            return EventService.NO_CHANGE;
         }
         String requestParameterName = (String) action.getParameterValues().get("requestParameterName");
         String profilePropertyName = (String) action.getParameterValues().get("profilePropertyName");
@@ -48,15 +49,15 @@ public class RequestParameterToProfilePropertyAction implements ActionExecutor {
             if (profilePropertyName != null) {
                 if (event.getProfile().getProperty(profilePropertyName) == null || !event.getProfile().getProperty(profilePropertyName).equals(requestParameterValue)) {
                     event.getProfile().setProperty(profilePropertyName, requestParameterValue);
-                    changed = true;
+                    return EventService.PROFILE_UPDATED;
                 }
             } else if (sessionPropertyName != null) {
                 if (event.getSession().getProperty(sessionPropertyName) == null || !event.getSession().getProperty(sessionPropertyName).equals(requestParameterValue)) {
                     event.getSession().setProperty(sessionPropertyName, requestParameterValue);
-                    changed = true;
+                    return EventService.SESSION_UPDATED;
                 }
             }
         }
-        return changed;
+        return EventService.NO_CHANGE;
     }
 }

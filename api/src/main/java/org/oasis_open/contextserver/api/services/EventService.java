@@ -35,7 +35,11 @@ import java.util.Set;
  */
 public interface EventService {
 
-    boolean send(Event event);
+    int NO_CHANGE = 0;
+    int SESSION_UPDATED = 1;
+    int PROFILE_UPDATED = 2;
+
+    int send(Event event);
 
     /**
      * Returns a list of available event properties.

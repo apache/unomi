@@ -30,8 +30,6 @@ import java.util.Set;
 
 public interface ProfileService {
 
-    PartialList<Profile> getAllProfiles();
-
     long getAllProfilesCount();
 
     PartialList<Profile> getProfiles(String query, int offset, int size, String sortBy);

@@ -174,6 +174,8 @@ public class ContextServlet extends HttpServlet {
             scope = contextRequest.getSource().getScope();
         }
 
+        int changes = EventService.NO_CHANGE;
+
         if (profile == null) {
             if (sessionId != null) {
                 session = profileService.loadSession(sessionId, timestamp);
@@ -209,31 +211,41 @@ public class ContextServlet extends HttpServlet {
             // associate profile with session
             if (sessionId != null && session == null) {
                 session = new Session(sessionId, profile, timestamp, scope);
-                profileService.saveSession(session);
+                changes |= EventService.SESSION_UPDATED;
                 Event event = new Event("sessionCreated", session, profile, scope, null, session, timestamp);
 
                 event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                 event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                 logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
-                eventService.send(event);
+                changes |= eventService.send(event);
             }
         }
 
         if (profileCreated) {
+            changes |= EventService.PROFILE_UPDATED;
+
             Event profileUpdated = new Event("profileUpdated", session, profile, scope, null, profile, timestamp);
             profileUpdated.setPersistent(false);
             profileUpdated.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
             profileUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
 
             logger.debug("Received event " + profileUpdated.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + profileUpdated.getTarget() + " timestamp=" + timestamp);
-            eventService.send(profileUpdated);
+            changes |= eventService.send(profileUpdated);
         }
 
         ContextResponse data = new ContextResponse();
 
         if(contextRequest != null){
-            handleRequest(contextRequest, profile, session, data, request, response, timestamp);
+            changes |= handleRequest(contextRequest, profile, session, data, request, response, timestamp);
         }
+
+        if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED && profile != null) {
+            profileService.save(profile);
+        }
+        if ((changes & EventService.SESSION_UPDATED) == EventService.SESSION_UPDATED && session != null) {
+            profileService.saveSession(session);
+        }
+
 
         String extension = httpServletRequest.getRequestURI().substring(httpServletRequest.getRequestURI().lastIndexOf(".") + 1);
         boolean noScript = "json".equals(extension);
@@ -282,8 +294,9 @@ public class ContextServlet extends HttpServlet {
         return profile;
     }
 
-    private void handleRequest(ContextRequest contextRequest, Profile profile, Session session, ContextResponse data, ServletRequest request, ServletResponse response, Date timestamp)
+    private int handleRequest(ContextRequest contextRequest, Profile profile, Session session, ContextResponse data, ServletRequest request, ServletResponse response, Date timestamp)
             throws IOException {
+        int changes = EventService.NO_CHANGE;
         // execute provided events if any
         if(contextRequest.getEvents() != null) {
             for (Event event : contextRequest.getEvents()){
@@ -297,7 +310,7 @@ public class ContextServlet extends HttpServlet {
                     event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                     logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
-                    eventService.send(eventToSend);
+                    changes |= eventService.send(eventToSend);
                 }
             }
         }
@@ -342,6 +355,8 @@ public class ContextServlet extends HttpServlet {
         }
 
         data.setTrackedConditions(rulesService.getTrackedConditions(contextRequest.getSource()));
+
+        return changes;
     }
 
     private void processOverrides(ContextRequest contextRequest, Profile profile, Session session) {
@@ -399,7 +414,6 @@ public class ContextServlet extends HttpServlet {
         }
         profile = new Profile(profileId);
         profile.setProperty("firstVisit", timestamp);
-        profileService.save(profile);
         HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, personaIdCookieName);
         return profile;
     }

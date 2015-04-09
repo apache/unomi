@@ -32,6 +32,6 @@ public interface EventListenerService {
 
     boolean canHandle(Event event);
 
-    boolean onEvent(Event event);
+    int onEvent(Event event);
 
 }

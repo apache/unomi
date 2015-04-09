@@ -28,11 +28,12 @@ import org.mvel2.MVEL;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
+import org.oasis_open.contextserver.api.services.EventService;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -43,6 +44,8 @@ public class ActionExecutorDispatcher {
 
     private Map<String, ActionExecutor> executors = new ConcurrentHashMap<>();
     private Map<Long, List<String>> executorsByBundle = new ConcurrentHashMap<>();
+    private Map<String,Serializable> mvelExpressions = new ConcurrentHashMap<>();
+
 
     public ActionExecutorDispatcher() {
 
@@ -67,7 +70,7 @@ public class ActionExecutorDispatcher {
     }
 
 
-    public static Action getContextualAction(Action action, Event event) {
+    public Action getContextualAction(Action action, Event event) {
         if (!hasContextualParameter(action.getParameterValues())) {
             return action;
         }
@@ -79,7 +82,7 @@ public class ActionExecutorDispatcher {
     }
 
     @SuppressWarnings("unchecked")
-    private static Map<String, Object> parseMap(Event event, Map<String, Object> map) {
+    private Map<String, Object> parseMap(Event event, Map<String, Object> map) {
         Map<String, Object> values = new HashMap<String, Object>();
         for (Map.Entry<String, Object> entry : map.entrySet()) {
             Object value = entry.getValue();
@@ -99,11 +102,15 @@ public class ActionExecutorDispatcher {
                     } else if (s.startsWith("simpleEventProperty::")) {
                         value = event.getProperty(StringUtils.substringAfter(s, "simpleEventProperty::"));
                     } else if (s.startsWith("script::")) {
+                        String script = StringUtils.substringAfter(s, "script::");
+                        if (!mvelExpressions.containsKey(script)) {
+                            mvelExpressions.put(script,MVEL.compileExpression(script));
+                        }
                         Map<String, Object> ctx = new HashMap<String, Object>();
                         ctx.put("event", event);
                         ctx.put("session", event.getSession());
                         ctx.put("profile", event.getProfile());
-                        value = MVEL.eval(StringUtils.substringAfter(s, "script::"), ctx);
+                        value = MVEL.executeExpression(mvelExpressions.get(script), ctx);
                     }
                 } catch (UnsupportedOperationException e) {
                     throw e;
@@ -119,7 +126,7 @@ public class ActionExecutorDispatcher {
     }
 
     @SuppressWarnings("unchecked")
-    private static boolean hasContextualParameter(Map<String, Object> values) {
+    private boolean hasContextualParameter(Map<String, Object> values) {
         for (Map.Entry<String, Object> entry : values.entrySet()) {
             Object value = entry.getValue();
             if (value instanceof String) {
@@ -146,7 +153,7 @@ public class ActionExecutorDispatcher {
         this.bundleContext = bundleContext;
     }
 
-    public boolean execute(Action action, Event event) {
+    public int execute(Action action, Event event) {
         String actionKey = action.getActionType().getActionExecutor();
         if (actionKey == null) {
             throw new UnsupportedOperationException("No service defined for : " + action.getActionType());
@@ -156,7 +163,7 @@ public class ActionExecutorDispatcher {
             ActionExecutor actionExecutor = executors.get(actionKey);
             return actionExecutor.execute(getContextualAction(action, event), event);
         }
-        return false;
+        return EventService.NO_CHANGE;
     }
 
 }

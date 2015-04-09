@@ -25,6 +25,7 @@ package org.oasis_open.contextserver.plugins.baseplugin.actions;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
+import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.api.services.SegmentService;
 import org.oasis_open.contextserver.api.segments.SegmentsAndScores;
 
@@ -44,7 +45,7 @@ public class EvaluateProfileSegmentsAction implements ActionExecutor {
     }
 
     @Override
-    public boolean execute(Action action, Event event) {
+    public int execute(Action action, Event event) {
         boolean updated = false;
         SegmentsAndScores segmentsAndScoringForProfile = segmentService.getSegmentsAndScoresForProfile(event.getProfile());
         Set<String> segments = segmentsAndScoringForProfile.getSegments();
@@ -57,6 +58,6 @@ public class EvaluateProfileSegmentsAction implements ActionExecutor {
             event.getProfile().setScores(scores);
             updated = true;
         }
-        return updated;
+        return updated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
     }
 }

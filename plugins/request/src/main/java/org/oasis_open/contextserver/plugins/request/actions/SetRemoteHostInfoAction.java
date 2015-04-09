@@ -32,6 +32,7 @@ import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.Session;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
+import org.oasis_open.contextserver.api.services.EventService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +45,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -63,14 +63,14 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
     }
 
     @Override
-    public boolean execute(Action action, Event event) {
+    public int execute(Action action, Event event) {
         HttpServletRequest httpServletRequest = (HttpServletRequest) event.getAttributes().get(Event.HTTP_REQUEST_ATTRIBUTE);
         if (httpServletRequest == null) {
-            return false;
+            return EventService.NO_CHANGE;
         }
         Session session = event.getSession();
         if (session == null) {
-            return false;
+            return EventService.NO_CHANGE;
         }
 
         session.setProperty("remoteAddr", httpServletRequest.getRemoteAddr());
@@ -102,7 +102,7 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         session.setProperty("userAgentVersion", agent.getVersionNumber().toVersionString());
         session.setProperty("deviceCategory", agent.getDeviceCategory().getName());
 
-        return true;
+        return EventService.SESSION_UPDATED;
     }
 
     private boolean ipLookup(String remoteAddr, Session session) {

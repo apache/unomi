@@ -273,22 +273,22 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         return true;
     }
 
-    public boolean onEvent(Event event) {
+    public int onEvent(Event event) {
         Set<Rule> rules = getMatchingRules(event);
 
-        boolean changed = false;
+        int changes = EventService.NO_CHANGE;
         for (Rule rule : rules) {
             logger.debug("Fired rule " + rule.getMetadata().getId() + " for " + event.getEventType() + " - " + event.getItemId());
             for (Action action : rule.getActions()) {
-                changed |= actionExecutorDispatcher.execute(action, event);
+                changes |= actionExecutorDispatcher.execute(action, event);
             }
 
             Event ruleFired = new Event("ruleFired", event.getSession(), event.getProfile(), event.getScope(), event, rule, event.getTimeStamp());
             ruleFired.getAttributes().putAll(event.getAttributes());
             ruleFired.setPersistent(false);
-            eventService.send(ruleFired);
+            changes |= eventService.send(ruleFired);
         }
-        return changed;
+        return changes;
     }
 
     public Set<Metadata> getRuleMetadatas() {

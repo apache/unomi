@@ -26,6 +26,7 @@ import org.apache.commons.beanutils.BeanUtilsBean;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
+import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.api.services.ProfileService;
 
 import java.util.HashMap;
@@ -40,7 +41,7 @@ public class AllEventToProfilePropertiesAction implements ActionExecutor {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public boolean execute(Action action, Event event) {
+    public int execute(Action action, Event event) {
         boolean changed = false;
         Map<String, Object> properties = new HashMap<String,Object>();
         if (event.getProperties() != null) {
@@ -67,6 +68,6 @@ public class AllEventToProfilePropertiesAction implements ActionExecutor {
                 changed = true;
             }
         }
-        return changed;
+        return changed ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
     }
 }
