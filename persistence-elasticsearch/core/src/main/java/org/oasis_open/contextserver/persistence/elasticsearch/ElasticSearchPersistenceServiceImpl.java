@@ -742,8 +742,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     } else if (aggregate instanceof NumericRangeAggregate){
                         RangeBuilder rangebuilder = AggregationBuilders.range("buckets").field(aggregate.getField());
                         for (NumericRange range : ((NumericRangeAggregate) aggregate).getRanges()){
-                            if(range != null){
-                                rangebuilder.addRange(range.getKey(), range.getFrom(), range.getTo());
+                            if (range != null) {
+                                if (range.getFrom() != null && range.getTo() != null) {
+                                    rangebuilder.addRange(range.getKey(), range.getFrom(), range.getTo());
+                                } else if (range.getFrom() != null) {
+                                    rangebuilder.addUnboundedFrom(range.getKey(), range.getFrom());
+                                } else if (range.getTo() != null) {
+                                    rangebuilder.addUnboundedTo(range.getKey(), range.getTo());
+                                }
                             }
                         }
                         bucketsAggregation = rangebuilder;

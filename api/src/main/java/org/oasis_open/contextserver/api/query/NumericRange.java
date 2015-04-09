@@ -27,8 +27,8 @@ public class NumericRange {
     }
 
     private String key;
-    private double from;
-    private double to;
+    private Double from;
+    private Double to;
 
     public String getKey() {
         return key;
@@ -38,19 +38,19 @@ public class NumericRange {
         this.key = key;
     }
 
-    public double getFrom() {
+    public Double getFrom() {
         return from;
     }
 
-    public void setFrom(double from) {
+    public void setFrom(Double from) {
         this.from = from;
     }
 
-    public double getTo() {
+    public Double getTo() {
         return to;
     }
 
-    public void setTo(double to) {
+    public void setTo(Double to) {
         this.to = to;
     }
 }
