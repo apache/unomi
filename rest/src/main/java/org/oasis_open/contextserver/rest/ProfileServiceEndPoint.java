@@ -46,6 +46,8 @@ public class ProfileServiceEndPoint {
 
     private EventService eventService;
 
+    private LocalizationHelper localizationHelper;
+
     public ProfileServiceEndPoint() {
         System.out.println("Initializing profile service endpoint...");
     }
@@ -58,6 +60,11 @@ public class ProfileServiceEndPoint {
     @WebMethod(exclude = true)
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
+    }
+
+    @WebMethod(exclude = true)
+    public void setLocalizationHelper(LocalizationHelper localizationHelper) {
+        this.localizationHelper = localizationHelper;
     }
 
     @GET
@@ -186,4 +193,12 @@ public class ProfileServiceEndPoint {
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
         return profileService.matchCondition(condition, profile, session);
     }
+
+    @GET
+    @Path("/existingProperties")
+    public Collection<RESTPropertyType> getExistingProperties(@HeaderParam("Accept-Language") String language) {
+        Set<PropertyType> properties = profileService.getExistingProfileProperties();
+        return localizationHelper.generatePropertyTypes(properties, language);
+    }
+
 }

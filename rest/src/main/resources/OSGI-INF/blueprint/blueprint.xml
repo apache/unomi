@@ -189,8 +189,7 @@
 
     <bean id="definitionsServiceEndPoint" class="org.oasis_open.contextserver.rest.DefinitionsServiceEndPoint">
         <property name="definitionsService" ref="definitionsService"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="resourceBundleHelper" ref="resourceBundleHelper"/>
+        <property name="localizationHelper" ref="localizationHelper"/>
     </bean>
 
     <bean id="goalsServiceEndPoint" class="org.oasis_open.contextserver.rest.GoalsServiceEndPoint">
@@ -208,6 +207,7 @@
     <bean id="profileServiceEndPoint" class="org.oasis_open.contextserver.rest.ProfileServiceEndPoint">
         <property name="profileService" ref="profileService"/>
         <property name="eventService" ref="eventService"/>
+        <property name="localizationHelper" ref="localizationHelper"/>
     </bean>
 
     <bean id="clusterServiceEndPoint" class="org.oasis_open.contextserver.rest.ClusterServiceEndPoint">
@@ -221,5 +221,10 @@
     <bean id="resourceBundleHelper" class="org.oasis_open.contextserver.rest.ResourceBundleHelper">
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
+
+  <bean id="localizationHelper" class="org.oasis_open.contextserver.rest.LocalizationHelper">
+    <property name="bundleContext" ref="blueprintBundleContext"/>
+    <property name="resourceBundleHelper" ref="resourceBundleHelper"/>
+  </bean>
 
 </blueprint>

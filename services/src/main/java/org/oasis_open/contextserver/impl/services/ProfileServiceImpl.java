@@ -308,6 +308,19 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return persistenceService.query("profileId", personaId, sortBy, Session.class, offset, size);
     }
 
+    @Override
+    public Set<PropertyType> getExistingProfileProperties() {
+        Set<PropertyType> filteredProperties = new LinkedHashSet<PropertyType>();
+        Set<PropertyType> profileProperties = definitionsService.getPropertyTypeByTag(definitionsService.getTag("profileProperties"), true);
+        Map<String, Map<String, String>> propMapping = (Map<String, Map<String, String>>) persistenceService.getMapping("profile").get("properties").get("properties");
+        for (PropertyType propertyType : profileProperties) {
+            if (propMapping.containsKey(propertyType.getId())) {
+                filteredProperties.add(propertyType);
+            }
+        }
+        return filteredProperties;
+    }
+
     private void loadPredefinedPersonas(BundleContext bundleContext) {
         if (bundleContext == null) {
             return;

@@ -26,6 +26,7 @@ import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
 
 import java.util.Date;
+import java.util.Set;
 
 public interface ProfileService {
 
@@ -67,4 +68,5 @@ public interface ProfileService {
 
     PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy);
 
+    Set<PropertyType> getExistingProfileProperties();
 }
