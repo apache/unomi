@@ -33,6 +33,7 @@ import org.oasis_open.contextserver.persistence.elasticsearch.conditions.Conditi
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -184,7 +185,12 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else {
             DateMathParser parser = new DateMathParser(DateFieldMapper.Defaults.DATE_TIME_FORMATTER, TimeUnit.MILLISECONDS);
             try {
-                return new Date(parser.parse(value.toString(), System.currentTimeMillis()));
+                return new Date(parser.parse(value.toString(), new Callable<Long>() {
+                    @Override
+                    public Long call() throws Exception {
+                        return System.currentTimeMillis();
+                    }
+                }));
             } catch (ElasticsearchParseException e) {
                 // Not a date
             }
