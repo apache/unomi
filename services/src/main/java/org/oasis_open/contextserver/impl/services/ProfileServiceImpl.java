@@ -311,10 +311,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     @Override
-    public Set<PropertyType> getExistingProfileProperties() {
+    public Set<PropertyType> getExistingProfileProperties(String itemType) {
         Set<PropertyType> filteredProperties = new LinkedHashSet<PropertyType>();
         Set<PropertyType> profileProperties = definitionsService.getPropertyTypeByTag(definitionsService.getTag("profileProperties"), true);
-        Map<String, Map<String, String>> propMapping = (Map<String, Map<String, String>>) persistenceService.getMapping("profile").get("properties").get("properties");
+        Map<String, Map<String, String>> propMapping = (Map<String, Map<String, String>>) persistenceService.getMapping(itemType).get("properties").get("properties");
         for (PropertyType propertyType : profileProperties) {
             if (propMapping.containsKey(propertyType.getId())) {
                 filteredProperties.add(propertyType);

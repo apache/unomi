@@ -66,5 +66,5 @@ public interface ProfileService {
 
     PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy);
 
-    Set<PropertyType> getExistingProfileProperties();
+    Set<PropertyType> getExistingProfileProperties(String itemType);
 }
