@@ -58,8 +58,8 @@ public class SegmentServiceEndPoint {
 
     @GET
     @Path("/{scope}/{segmentID}/match")
-    public PartialList<Profile> getMatchingIndividuals(@PathParam("scope") String scope, @PathParam("segmentID") String segmentId, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
-        return segmentService.getMatchingIndividuals(scope, segmentId, offset, size, sortBy);
+    public PartialList<Profile> getMatchingIndividuals(@QueryParam("q") String query, @PathParam("scope") String scope, @PathParam("segmentID") String segmentId, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
+        return segmentService.getMatchingIndividuals(query, scope, segmentId, offset, size, sortBy);
     }
 
     @GET

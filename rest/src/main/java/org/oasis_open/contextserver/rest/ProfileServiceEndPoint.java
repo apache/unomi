@@ -120,10 +120,11 @@ public class ProfileServiceEndPoint {
 
     @GET
     @Path("/personas")
-    public PartialList<Persona> getPersonas(@QueryParam("offset") @DefaultValue("0") int offset,
+    public PartialList<Persona> getPersonas(@QueryParam("q") String query,
+                                            @QueryParam("offset") @DefaultValue("0") int offset,
                                             @QueryParam("size") @DefaultValue("50") int size,
                                             @QueryParam("sort") String sortBy) {
-        return profileService.getPersonas(offset, size, sortBy);
+        return profileService.getPersonas(query, offset, size, sortBy);
     }
 
     @GET

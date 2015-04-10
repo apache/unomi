@@ -22,6 +22,7 @@ package org.oasis_open.contextserver.impl.services;
  * #L%
  */
 
+import org.apache.commons.lang3.StringUtils;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
@@ -93,7 +94,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public PartialList<Profile> getProfiles(String query, int offset, int size, String sortBy) {
-        return persistenceService.getAllItems(Profile.class, offset, size, sortBy);
+        if (StringUtils.isNotBlank(query)) {
+            return persistenceService.queryFullText(query, sortBy, Profile.class, offset, size);
+        } else {
+            return persistenceService.getAllItems(Profile.class, offset, size, sortBy);
+        }
     }
 
     public PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue, int offset, int size, String sortBy) {
@@ -293,8 +298,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return new PersonaWithSessions(persona, sessions);
     }
 
-    public PartialList<Persona> getPersonas(int offset, int size, String sortBy) {
-        return persistenceService.getAllItems(Persona.class, offset, size, sortBy);
+    public PartialList<Persona> getPersonas(String query, int offset, int size, String sortBy) {
+        if (StringUtils.isNotBlank(query)) {
+            return persistenceService.queryFullText(query, sortBy, Persona.class, offset, size);
+        } else {
+            return persistenceService.getAllItems(Persona.class, offset, size, sortBy);
+        }
     }
 
     public void createPersona(String personaId) {

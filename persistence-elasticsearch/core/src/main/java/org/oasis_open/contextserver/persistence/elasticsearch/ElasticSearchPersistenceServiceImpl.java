@@ -615,6 +615,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
+    public <T extends Item> PartialList<T> queryFullText(final String value, final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size) {
+        return query(QueryBuilders.boolQuery().must(QueryBuilders.queryString(value).defaultField("_all")).must(conditionESQueryBuilderDispatcher.getQueryBuilder(query)), sortBy, clazz, offset, size, null);
+    }
+
+    @Override
     public <T extends Item> List<T> query(final String fieldName, final String fieldValue, String sortBy, final Class<T> clazz) {
         return query(fieldName, fieldValue, sortBy, clazz, 0, -1).getList();
     }
@@ -627,6 +632,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     @Override
     public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz, int offset, int size) {
         return query(QueryBuilders.termQuery(fieldName, fieldValue), sortBy, clazz, offset, size, getRouting(fieldName, new String[]{fieldValue}, clazz));
+    }
+
+    @Override
+    public <T extends Item> PartialList<T> queryFullText(String value, String sortBy, Class<T> clazz, int offset, int size) {
+        return query(QueryBuilders.queryString(value).defaultField("_all"), sortBy, clazz, offset, size, getRouting("_all", new String[]{value}, clazz));
     }
 
     @Override

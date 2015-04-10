@@ -60,7 +60,7 @@ public interface ProfileService {
 
     PersonaWithSessions loadPersonaWithSessions(String personaId);
 
-    PartialList<Persona> getPersonas(int offset, int size, String sortBy);
+    PartialList<Persona> getPersonas(String query, int offset, int size, String sortBy);
 
     void createPersona(String personaId);
 

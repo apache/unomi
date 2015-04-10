@@ -23,6 +23,7 @@ package org.oasis_open.contextserver.impl.services;
  */
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.apache.commons.lang3.StringUtils;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.conditions.Condition;
@@ -428,11 +429,19 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
 
     public PartialList<Profile> getMatchingIndividuals(String scope, String segmentID, int offset, int size, String sortBy) {
+        return getMatchingIndividuals(null, scope, segmentID, offset, size, sortBy);
+    }
+
+    public PartialList<Profile> getMatchingIndividuals(String query, String scope, String segmentID, int offset, int size, String sortBy) {
         Segment segment = getSegmentDefinition(scope, segmentID);
         if (segment == null) {
             return new PartialList<Profile>();
         }
-        return persistenceService.query(segment.getCondition(), sortBy, Profile.class, offset, size);
+        if (StringUtils.isNotBlank(query)) {
+            return persistenceService.queryFullText(query, segment.getCondition(), sortBy, Profile.class, offset, size);
+        } else {
+            return persistenceService.query(segment.getCondition(), sortBy, Profile.class, offset, size);
+        }
     }
 
     public long getMatchingIndividualsCount(String scope, String segmentID) {
