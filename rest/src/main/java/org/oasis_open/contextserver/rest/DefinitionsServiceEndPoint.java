@@ -82,7 +82,7 @@ public class DefinitionsServiceEndPoint {
     @Path("/conditions")
     public Collection<RESTConditionType> getAllConditionTypes(@HeaderParam("Accept-Language") String language) {
         Collection<ConditionType> conditionTypes = definitionsService.getAllConditionTypes();
-        return localizationHelper.generateConditions(conditionTypes, null, language);
+        return localizationHelper.generateConditions(conditionTypes, language);
     }
 
 
@@ -94,21 +94,21 @@ public class DefinitionsServiceEndPoint {
         for (String s : tagsArray) {
             results.addAll(definitionsService.getConditionTypesByTag(definitionsService.getTag(s), recursive));
         }
-        return localizationHelper.generateConditions(results, null, language);
+        return localizationHelper.generateConditions(results, language);
     }
 
     @GET
     @Path("/conditions/{conditionId}")
     public RESTConditionType getConditionType(@PathParam("conditionId") String id, @HeaderParam("Accept-Language") String language) {
         ConditionType conditionType = definitionsService.getConditionType(id);
-        return localizationHelper.generateCondition(conditionType, null, language);
+        return localizationHelper.generateCondition(conditionType, language);
     }
 
     @GET
     @Path("/actions")
     public Collection<RESTActionType> getAllActionTypes(@HeaderParam("Accept-Language") String language) {
         Collection<ActionType> actionTypes = definitionsService.getAllActionTypes();
-        return localizationHelper.generateActions(actionTypes, null, language);
+        return localizationHelper.generateActions(actionTypes, language);
     }
 
     @GET
@@ -119,14 +119,14 @@ public class DefinitionsServiceEndPoint {
         for (String s : tagsArray) {
             results.addAll(definitionsService.getActionTypeByTag(definitionsService.getTag(s), recursive));
         }
-        return localizationHelper.generateActions(results, null, language);
+        return localizationHelper.generateActions(results, language);
     }
 
     @GET
     @Path("/actions/{actionId}")
     public RESTActionType getActionType(@PathParam("actionId") String id, @HeaderParam("Accept-Language") String language) {
         ActionType actionType = definitionsService.getActionType(id);
-        return localizationHelper.generateAction(actionType, null, language);
+        return localizationHelper.generateAction(actionType, language);
     }
 
     @GET

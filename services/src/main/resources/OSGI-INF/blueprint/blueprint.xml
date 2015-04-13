@@ -109,7 +109,9 @@
         <service-properties>
             <entry key="initializerId" value="comparisonOperator"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.conditions.initializers.ComparisonOperatorChoiceListInitializer"/>
+        <bean class="org.oasis_open.contextserver.impl.conditions.initializers.ComparisonOperatorChoiceListInitializer">
+            <property name="bundleContext" ref="blueprintBundleContext"/>
+        </bean>
     </service>
 
     <service auto-export="interfaces">

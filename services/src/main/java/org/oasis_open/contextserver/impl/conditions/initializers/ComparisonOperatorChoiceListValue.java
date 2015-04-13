@@ -95,6 +95,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.oasis_open.contextserver.api.PluginType;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
 
 /**
@@ -102,9 +103,11 @@ import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
  * 
  * @author Sergiy Shyrkov
  */
-public class ComparisonOperatorChoiceListValue extends ChoiceListValue {
+public class ComparisonOperatorChoiceListValue extends ChoiceListValue implements PluginType {
 
     private Set<String> appliesTo = Collections.emptySet();
+
+    private long pluginId;
 
     /**
      * Initializes an instance of this class.
@@ -149,4 +152,13 @@ public class ComparisonOperatorChoiceListValue extends ChoiceListValue {
         return appliesTo;
     }
 
+    @Override
+    public long getPluginId() {
+        return pluginId;
+    }
+
+    @Override
+    public void setPluginId(long pluginId) {
+        this.pluginId = pluginId;
+    }
 }

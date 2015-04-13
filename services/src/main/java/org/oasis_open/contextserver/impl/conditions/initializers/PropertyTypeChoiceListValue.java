@@ -91,6 +91,7 @@ package org.oasis_open.contextserver.impl.conditions.initializers;
  * #L%
  */
 
+import org.oasis_open.contextserver.api.PluginType;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
 
 /**
@@ -98,11 +99,13 @@ import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
  * 
  * @author Sergiy Shyrkov
  */
-public class PropertyTypeChoiceListValue extends ChoiceListValue {
+public class PropertyTypeChoiceListValue extends ChoiceListValue implements PluginType {
 
     private boolean multivalued;
 
     private String valueType = "string";
+
+    private long pluginId;
 
     /**
      * Initializes an instance of this class.
@@ -134,6 +137,27 @@ public class PropertyTypeChoiceListValue extends ChoiceListValue {
         super(id, name);
         this.valueType = valueType;
         this.multivalued = multivalued;
+    }
+
+    /**
+     * Initializes an instance of this class.
+     *
+     * @param id
+     *            the ID of the property
+     * @param name
+     *            the display name
+     * @param valueType
+     *            the required property value type
+     * @param multivalued
+     *            <code>true</code> if the property supports multiple values; <code>false</code> - in case it is a single value property
+     * @param pluginId
+     *            the PropertyType PluginId to retrieve bundle
+     */
+    public PropertyTypeChoiceListValue(String id, String name, String valueType, boolean multivalued, long pluginId) {
+        super(id, name);
+        this.multivalued = multivalued;
+        this.valueType = valueType;
+        this.pluginId = pluginId;
     }
 
     /**
@@ -174,4 +198,13 @@ public class PropertyTypeChoiceListValue extends ChoiceListValue {
         this.valueType = valueType;
     }
 
+    @Override
+    public long getPluginId() {
+        return pluginId;
+    }
+
+    @Override
+    public void setPluginId(long pluginId) {
+        this.pluginId = pluginId;
+    }
 }

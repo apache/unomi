@@ -28,41 +28,50 @@ import java.util.List;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
 import org.oasis_open.contextserver.api.conditions.initializers.I18nSupport;
+import org.osgi.framework.BundleContext;
 
 /**
  * Initializer for the set of available comparison operators.
  */
 public class ComparisonOperatorChoiceListInitializer implements ChoiceListInitializer, I18nSupport {
 
-    private static final List<ChoiceListValue> OPERATORS;
+    private List<ChoiceListValue> operators;
 
-    static {
-        OPERATORS = new ArrayList<ChoiceListValue>(12);
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("equals", "comparisonOperator.equals"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("notEquals", "comparisonOperator.notEquals"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("lessThan", "comparisonOperator.lessThan", "integer", "date"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("greaterThan", "comparisonOperator.greaterThan", "integer", "date"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("lessThanOrEqualTo", "comparisonOperator.lessThanOrEqualTo",
-                "integer", "date"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("greaterThanOrEqualTo", "comparisonOperator.greaterThanOrEqualTo",
-                "integer", "date"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("between", "comparisonOperator.between",
-                "integer", "date"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("startsWith", "comparisonOperator.startsWith", "string", "email"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("endsWith", "comparisonOperator.endsWith", "string", "email"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("matchesRegex", "comparisonOperator.matchesRegularExpression",
-                "string", "email"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("contains", "comparisonOperator.contains", "string", "email"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("exists", "comparisonOperator.exists"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("missing", "comparisonOperator.missing"));
-        
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("in", "comparisonOperator.in"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("notIn", "comparisonOperator.notIn"));
-        OPERATORS.add(new ComparisonOperatorChoiceListValue("all", "comparisonOperator.all"));
-    }
+    private BundleContext bundleContext;
 
     @Override
     public List<ChoiceListValue> getValues(Object context) {
-        return OPERATORS;
+        return operators;
+    }
+
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+
+        operators = new ArrayList<>(12);
+        operators.add(new ComparisonOperatorChoiceListValue("equals", "comparisonOperator.equals"));
+        operators.add(new ComparisonOperatorChoiceListValue("notEquals", "comparisonOperator.notEquals"));
+        operators.add(new ComparisonOperatorChoiceListValue("lessThan", "comparisonOperator.lessThan", "integer", "date"));
+        operators.add(new ComparisonOperatorChoiceListValue("greaterThan", "comparisonOperator.greaterThan", "integer", "date"));
+        operators.add(new ComparisonOperatorChoiceListValue("lessThanOrEqualTo", "comparisonOperator.lessThanOrEqualTo",
+                "integer", "date"));
+        operators.add(new ComparisonOperatorChoiceListValue("greaterThanOrEqualTo", "comparisonOperator.greaterThanOrEqualTo",
+                "integer", "date"));
+        operators.add(new ComparisonOperatorChoiceListValue("between", "comparisonOperator.between",
+                "integer", "date"));
+        operators.add(new ComparisonOperatorChoiceListValue("startsWith", "comparisonOperator.startsWith", "string", "email"));
+        operators.add(new ComparisonOperatorChoiceListValue("endsWith", "comparisonOperator.endsWith", "string", "email"));
+        operators.add(new ComparisonOperatorChoiceListValue("matchesRegex", "comparisonOperator.matchesRegularExpression",
+                "string", "email"));
+        operators.add(new ComparisonOperatorChoiceListValue("contains", "comparisonOperator.contains", "string", "email"));
+        operators.add(new ComparisonOperatorChoiceListValue("exists", "comparisonOperator.exists"));
+        operators.add(new ComparisonOperatorChoiceListValue("missing", "comparisonOperator.missing"));
+        operators.add(new ComparisonOperatorChoiceListValue("in", "comparisonOperator.in"));
+        operators.add(new ComparisonOperatorChoiceListValue("notIn", "comparisonOperator.notIn"));
+        operators.add(new ComparisonOperatorChoiceListValue("all", "comparisonOperator.all"));
+
+        for (ChoiceListValue op : operators) {
+            ((ComparisonOperatorChoiceListValue) op).setPluginId(bundleContext.getBundle().getBundleId());
+        }
+
     }
 }

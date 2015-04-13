@@ -22,10 +22,7 @@ package org.oasis_open.contextserver.rest;
  * #L%
  */
 
-import org.oasis_open.contextserver.api.Parameter;
-import org.oasis_open.contextserver.api.PropertyType;
-import org.oasis_open.contextserver.api.Tag;
-import org.oasis_open.contextserver.api.ValueType;
+import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.ActionType;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListInitializer;
@@ -47,29 +44,29 @@ public class LocalizationHelper {
     private BundleContext bundleContext;
     private ResourceBundleHelper resourceBundleHelper;
 
-    public Collection<RESTConditionType> generateConditions(Collection<ConditionType> conditionTypes, Object context, String language) {
+    public Collection<RESTConditionType> generateConditions(Collection<ConditionType> conditionTypes, String language) {
         List<RESTConditionType> result = new ArrayList<RESTConditionType>();
         if (conditionTypes == null) {
             return result;
         }
         for (ConditionType conditionType : conditionTypes) {
-            result.add(generateCondition(conditionType, context, language));
+            result.add(generateCondition(conditionType, language));
         }
         return result;
     }
 
-    public Collection<RESTActionType> generateActions(Collection<ActionType> actionTypes, Object context, String language) {
+    public Collection<RESTActionType> generateActions(Collection<ActionType> actionTypes, String language) {
         List<RESTActionType> result = new ArrayList<RESTActionType>();
         if (actionTypes == null) {
             return result;
         }
         for (ActionType actionType : actionTypes) {
-            result.add(generateAction(actionType, context, language));
+            result.add(generateAction(actionType, language));
         }
         return result;
     }
 
-    public RESTConditionType generateCondition(ConditionType conditionType, Object context, String language) {
+    public RESTConditionType generateCondition(ConditionType conditionType, String language) {
         RESTConditionType result = new RESTConditionType();
         result.setId(conditionType.getId());
 
@@ -80,13 +77,13 @@ public class LocalizationHelper {
         result.setTags(conditionType.getTagIDs());
 
         for (Parameter parameter : conditionType.getParameters()) {
-            result.getParameters().add(generateParameter(parameter, context, bundle));
+            result.getParameters().add(generateParameter(parameter, bundle));
         }
 
         return result;
     }
 
-    public RESTActionType generateAction(ActionType actionType, Object context, String language) {
+    public RESTActionType generateAction(ActionType actionType, String language) {
         RESTActionType result = new RESTActionType();
         result.setId(actionType.getId());
 
@@ -98,14 +95,14 @@ public class LocalizationHelper {
 
         List<RESTParameter> parameters = new ArrayList<RESTParameter>();
         for (Parameter parameter : actionType.getParameters()) {
-            parameters.add(generateParameter(parameter, context, bundle));
+            parameters.add(generateParameter(parameter, bundle));
         }
         result.setParameters(parameters);
 
         return result;
     }
 
-    public RESTParameter generateParameter(Parameter parameter, Object context, ResourceBundle bundle) {
+    public RESTParameter generateParameter(Parameter parameter, ResourceBundle bundle) {
         RESTParameter result = new RESTParameter();
         result.setId(parameter.getId());
         result.setDefaultValue(parameter.getDefaultValue());
@@ -163,7 +160,11 @@ public class LocalizationHelper {
                     List<ChoiceListValue> options = choiceListInitializer.getValues(bundle.getLocale());
                     if (choiceListInitializer instanceof I18nSupport) {
                         for (ChoiceListValue value : options) {
-                            result.add(value.localizedCopy(resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
+                            if (value instanceof PluginType) {
+                                result.add(value.localizedCopy(resourceBundleHelper.getResourceBundleValue(resourceBundleHelper.getResourceBundle((PluginType) value, bundle.getLocale().getLanguage()), value.getName())));
+                            } else {
+                                result.add(value.localizedCopy(resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
+                            }
                         }
                     } else {
                         result.addAll(options);
