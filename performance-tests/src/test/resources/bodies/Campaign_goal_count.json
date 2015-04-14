@@ -1,0 +1,24 @@
+{
+  "type": "booleanCondition",
+  "parameterValues": {
+    "operator": "and",
+    "subConditions": [
+      {
+        "type": "sessionPropertyCondition",
+        "parameterValues": {
+          "propertyName": "metadata.scope",
+          "comparisonOperator": "equals",
+          "propertyValue": "ACMESPACE"
+        }
+      },
+      {
+        "type": "sessionPropertyCondition",
+        "parameterValues": {
+          "propertyName": "campaignId",
+          "comparisonOperator": "equals",
+          "propertyValue": "${campaignId}"
+        }
+      }
+    ]
+  }
+}
