@@ -2,27 +2,46 @@
   "metadata" : {
     "id": "formMappingTest",
     "name": "Form mapping test",
-    "description" : "Form mappong test"
+    "description" : "Form mapping test",
+    "tags" : ["formMappingRule"]
   },
 
   "condition" : {
+    "type": "booleanCondition",
     "parameterValues": {
-      "formId":"testForm"
-    },
-    "type": "formEventCondition"
+      "operator": "and",
+      "subConditions": [
+        {
+          "parameterValues": {
+            "formId": "testForm"
+          },
+          "type": "formEventCondition"
+        },
+        {
+          "parameterValues": {
+            "path": "/sites/ACMESPACE/home"
+          },
+          "type": "sourceEventPropertyCondition"
+        }
+      ]
+    }
   },
 
   "actions": [
     {
       "parameterValues": {
+        "setPropertyName": "properties.age",
+        "setPropertyValue": "eventProperty::properties.age",
+        "setPropertyStrategy": "alwaysReplace"
       },
-      "type": "allEventToProfilePropertiesAction"
+      "type": "setPropertyAction"
     },
     {
       "parameterValues": {
-        "mergeProfilePropertyName": "email"
+        "setPropertyName": "properties.gender",
+        "setPropertyValue": "eventProperty::properties.gender"
       },
-      "type": "mergeProfilesOnPropertyAction"
+      "type": "setPropertyAction"
     }
   ]
 
