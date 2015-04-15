@@ -68,8 +68,6 @@ public interface SegmentService {
 
     PartialList<Profile> getMatchingIndividuals(String scope, String segmentID, int offset, int size, String sortBy);
 
-    PartialList<Profile> getMatchingIndividuals(String query, String scope, String segmentID, int offset, int size, String sortBy);
-
     long getMatchingIndividualsCount(String scope, String segmentID);
 
     Boolean isProfileInSegment(Profile profile, String scope, String segmentId);

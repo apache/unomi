@@ -429,19 +429,11 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
 
     public PartialList<Profile> getMatchingIndividuals(String scope, String segmentID, int offset, int size, String sortBy) {
-        return getMatchingIndividuals(null, scope, segmentID, offset, size, sortBy);
-    }
-
-    public PartialList<Profile> getMatchingIndividuals(String query, String scope, String segmentID, int offset, int size, String sortBy) {
         Segment segment = getSegmentDefinition(scope, segmentID);
         if (segment == null) {
             return new PartialList<Profile>();
         }
-        if (StringUtils.isNotBlank(query)) {
-            return persistenceService.queryFullText(query, segment.getCondition(), sortBy, Profile.class, offset, size);
-        } else {
-            return persistenceService.query(segment.getCondition(), sortBy, Profile.class, offset, size);
-        }
+        return persistenceService.query(segment.getCondition(), sortBy, Profile.class, offset, size);
     }
 
     public long getMatchingIndividualsCount(String scope, String segmentID) {

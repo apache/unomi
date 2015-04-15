@@ -32,7 +32,13 @@ public interface ProfileService {
 
     long getAllProfilesCount();
 
+    PartialList<Profile> getProfiles(int offset, int size, String sortBy);
+
     PartialList<Profile> getProfiles(String query, int offset, int size, String sortBy);
+
+    PartialList<Profile> getProfiles(Condition condition, int offset, int size, String sortBy);
+
+    PartialList<Profile> getProfiles(String query, Condition condition, int offset, int size, String sortBy);
 
     PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue, int offset, int size, String sortBy);
 
@@ -60,7 +66,13 @@ public interface ProfileService {
 
     PersonaWithSessions loadPersonaWithSessions(String personaId);
 
+    PartialList<Persona> getPersonas(int offset, int size, String sortBy);
+
     PartialList<Persona> getPersonas(String query, int offset, int size, String sortBy);
+
+    PartialList<Persona> getPersonas(Condition condition, int offset, int size, String sortBy);
+
+    PartialList<Persona> getPersonas(String query, Condition condition, int offset, int size, String sortBy);
 
     void createPersona(String personaId);
 

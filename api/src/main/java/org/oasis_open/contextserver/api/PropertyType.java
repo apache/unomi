@@ -31,7 +31,6 @@ import java.util.*;
 
 @XmlRootElement
 public class PropertyType implements Comparable<PropertyType>, PluginType {
-    public static final String ITEM_TYPE = "propertyType";
     private String id;
     private String target;
     private String nameKey;

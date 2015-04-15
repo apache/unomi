@@ -82,6 +82,16 @@ public class ProfileServiceEndPoint {
         return profileService.getProfiles(query, offset, size, sortBy);
     }
 
+    @POST
+    @Path("/search")
+    public PartialList<Profile> getProfiles(@QueryParam("q") String query,
+                                            @QueryParam("offset") @DefaultValue("0") int offset,
+                                            @QueryParam("size") @DefaultValue("50") int size,
+                                            @QueryParam("sort") String sortBy,
+                                            Condition condition) {
+        return profileService.getProfiles(query, condition, offset, size, sortBy);
+    }
+
     @GET
     @Path("/{profileId}")
     public Profile load(@PathParam("profileId") String profileId) {
@@ -125,6 +135,16 @@ public class ProfileServiceEndPoint {
                                             @QueryParam("size") @DefaultValue("50") int size,
                                             @QueryParam("sort") String sortBy) {
         return profileService.getPersonas(query, offset, size, sortBy);
+    }
+
+    @POST
+    @Path("/personas")
+    public PartialList<Persona> getPersonas(@QueryParam("q") String query,
+                                            @QueryParam("offset") @DefaultValue("0") int offset,
+                                            @QueryParam("size") @DefaultValue("50") int size,
+                                            @QueryParam("sort") String sortBy,
+                                            Condition condition) {
+        return profileService.getPersonas(query, condition, offset, size, sortBy);
     }
 
     @GET

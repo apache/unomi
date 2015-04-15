@@ -93,11 +93,31 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return persistenceService.getAllItemsCount(Profile.ITEM_TYPE);
     }
 
+    public PartialList<Profile> getProfiles(int offset, int size, String sortBy) {
+        return getProfiles(null, null, offset, size, sortBy);
+    }
+
     public PartialList<Profile> getProfiles(String query, int offset, int size, String sortBy) {
-        if (StringUtils.isNotBlank(query)) {
-            return persistenceService.queryFullText(query, sortBy, Profile.class, offset, size);
+        return getProfiles(query, null, offset, size, sortBy);
+    }
+
+    public PartialList<Profile> getProfiles(Condition condition, int offset, int size, String sortBy) {
+        return getProfiles(null, condition, offset, size, sortBy);
+    }
+
+    public PartialList<Profile> getProfiles(String query, Condition condition, int offset, int size, String sortBy) {
+        if (condition != null && definitionsService.resolveConditionType(condition)) {
+            if (StringUtils.isNotBlank(query)) {
+                return persistenceService.queryFullText(query, condition, sortBy, Profile.class, offset, size);
+            } else {
+                return persistenceService.query(condition, sortBy, Profile.class, offset, size);
+            }
         } else {
-            return persistenceService.getAllItems(Profile.class, offset, size, sortBy);
+            if (StringUtils.isNotBlank(query)) {
+                return persistenceService.queryFullText(query, sortBy, Profile.class, offset, size);
+            } else {
+                return persistenceService.getAllItems(Profile.class, offset, size, sortBy);
+            }
         }
     }
 
@@ -298,11 +318,31 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return new PersonaWithSessions(persona, sessions);
     }
 
+    public PartialList<Persona> getPersonas(int offset, int size, String sortBy) {
+        return getPersonas(null, null, offset, size, sortBy);
+    }
+
     public PartialList<Persona> getPersonas(String query, int offset, int size, String sortBy) {
-        if (StringUtils.isNotBlank(query)) {
-            return persistenceService.queryFullText(query, sortBy, Persona.class, offset, size);
+        return getPersonas(query, null, offset, size, sortBy);
+    }
+
+    public PartialList<Persona> getPersonas(Condition condition, int offset, int size, String sortBy) {
+        return getPersonas(null, condition, offset, size, sortBy);
+    }
+
+    public PartialList<Persona> getPersonas(String query, Condition condition, int offset, int size, String sortBy) {
+        if (condition != null && definitionsService.resolveConditionType(condition)) {
+            if (StringUtils.isNotBlank(query)) {
+                return persistenceService.queryFullText(query, condition, sortBy, Persona.class, offset, size);
+            } else {
+                return persistenceService.query(condition, sortBy, Persona.class, offset, size);
+            }
         } else {
-            return persistenceService.getAllItems(Persona.class, offset, size, sortBy);
+            if (StringUtils.isNotBlank(query)) {
+                return persistenceService.queryFullText(query, sortBy, Persona.class, offset, size);
+            } else {
+                return persistenceService.getAllItems(Persona.class, offset, size, sortBy);
+            }
         }
     }
 
