@@ -186,6 +186,25 @@ To run the tests simply activate the following profile :
  
     mvn -P integration-tests clean install
 
+Running the performance tests
+-----------------------------
+
+Performance tests are based on Gatling. You need to have a running context server or cluster of servers before
+executing the tests.
+
+Test parameteres are editable in the performance-tests/src/test/scala/unomi/Parameters.scala file. baseUrls should
+contains the URLs of all your cluster nodes
+
+Run the test by using the gatling.conf file in performance-tests/src/test/resources :
+
+```
+    export GATLING_CONF=<path>/performance-tests/src/test/resources
+    gatling.sh
+```
+
+Reports are generated in performance-tests/target/results.
+
+
 Testing with an example page
 ----------------------------
 
