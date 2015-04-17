@@ -8,7 +8,7 @@ class FullSimulation extends Simulation {
 
 
   val httpProtocol = http
-    .baseURLs("http://local1:8181", "http://local2:8181")
+    .baseURLs(Parameters.baseUrls)
     .acceptHeader("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
     .acceptEncodingHeader("gzip, deflate")
     .acceptLanguageHeader("en-US,en;q=0.5")

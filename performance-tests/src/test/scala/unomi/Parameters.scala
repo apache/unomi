@@ -7,6 +7,8 @@ import scala.concurrent.duration._
  */
 object Parameters {
 
+  val baseUrls = List("http://localhost:8181")
+
   val format = new java.text.SimpleDateFormat("yyyy-MM")
   val minTime: Long = format.parse("2014-01").getTime()
   val maxTime: Long = format.parse("2015-12").getTime()

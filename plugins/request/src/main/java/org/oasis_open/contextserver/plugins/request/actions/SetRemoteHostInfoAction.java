@@ -77,10 +77,10 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         session.setProperty("remoteHost", httpServletRequest.getRemoteHost());
 
         try {
-            if (!httpServletRequest.getRemoteAddr().equals("127.0.0.1") && IPV4.matcher(httpServletRequest.getRemoteAddr()).matches()) {
-                ipLookup(httpServletRequest.getRemoteAddr(), session);
-            } else if (httpServletRequest.getParameter("remoteAddr") != null && httpServletRequest.getParameter("remoteAddr").length() > 0) {
+            if (httpServletRequest.getParameter("remoteAddr") != null && httpServletRequest.getParameter("remoteAddr").length() > 0) {
                 ipLookup(httpServletRequest.getParameter("remoteAddr"), session);
+            } else if (!httpServletRequest.getRemoteAddr().equals("127.0.0.1") && IPV4.matcher(httpServletRequest.getRemoteAddr()).matches()) {
+                ipLookup(httpServletRequest.getRemoteAddr(), session);
             } else {
                 session.setProperty("countryCode", "CH");
                 session.setProperty("countryName", "Switzerland");
