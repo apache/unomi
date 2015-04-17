@@ -14,9 +14,9 @@ object Parameters {
   val maxTime: Long = format.parse("2015-12").getTime()
 
   val totalTime = 5 minutes
-  val numberOfConcurrentUsers = 0
-  val numberOfConcurrentAdminUsers = 1
-  val rampUpTime = 1 minute
+  val numberOfConcurrentUsers = 100
+  val numberOfConcurrentAdminUsers = 0
+  val rampUpTime = 2 minute
   val numberOfSessionsPerUser = 5
   val sessionSizeAverage = 20
   val sessionSizeStdDev = 4
