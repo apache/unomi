@@ -126,8 +126,9 @@
                                     <classifier>contextservercfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>
-                                        ${project.build.directory}/assembly/system/org/oasis-open/cxs/context-server-wab/1.0-SNAPSHOT
+                                        ${project.build.directory}/assembly/etc
                                     </outputDirectory>
+                                    <destFileName>org.oasis_open.contextserver.web.cfg</destFileName>
                                 </artifactItem>
                                 <artifactItem>
                                     <groupId>org.oasis-open.contextserver</groupId>
@@ -136,8 +137,9 @@
                                     <classifier>elasticsearchcfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>
-                                        ${project.build.directory}/assembly/system/org/oasis-open/cxs/context-server-persistence-elasticsearch-core/1.0-SNAPSHOT
+                                        ${project.build.directory}/assembly/etc
                                     </outputDirectory>
+                                    <destFileName>org.oasis_open.contextserver.persistence.elasticsearch.cfg</destFileName>
                                 </artifactItem>
                                 <artifactItem>
                                     <groupId>org.oasis-open.contextserver</groupId>
@@ -146,8 +148,9 @@
                                     <classifier>elasticsearchconfig</classifier>
                                     <type>yml</type>
                                     <outputDirectory>
-                                        ${project.build.directory}/assembly/system/org/oasis-open/cxs/context-server-persistence-elasticsearch-core/1.0-SNAPSHOT
+                                        ${project.build.directory}/assembly/etc
                                     </outputDirectory>
+                                    <destFileName>elasticsearch.yml</destFileName>
                                 </artifactItem>
                                 <artifactItem>
                                     <groupId>org.oasis-open.contextserver</groupId>
@@ -156,8 +159,9 @@
                                     <classifier>requestcfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>
-                                        ${project.build.directory}/assembly/system/org/oasis-open/cxs/context-server-plugins-request/1.0-SNAPSHOT
+                                        ${project.build.directory}/assembly/etc
                                     </outputDirectory>
+                                    <destFileName>org.oasis_open.contextserver.plugins.request.cfg</destFileName>
                                 </artifactItem>
                             </artifactItems>
                             <!-- other configurations here -->
