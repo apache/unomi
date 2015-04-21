@@ -1,0 +1,9 @@
+{
+    "id": "firstVisit",
+    "type": "date",
+    "tags": ["systemProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "1.0"
+}

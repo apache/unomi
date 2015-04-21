@@ -1,0 +1,9 @@
+{
+    "id": "jobTitle",
+    "type": "string",
+    "tags": ["identityProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "12.0"
+}

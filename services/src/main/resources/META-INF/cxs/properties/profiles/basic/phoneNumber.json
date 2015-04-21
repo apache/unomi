@@ -1,9 +1,0 @@
-{
-    "id": "phoneNumber",
-    "type": "string",
-    "tags": ["basicProfileProperties"],
-    "defaultValue": "",
-    "selectorId": "",
-    "automaticMappingsFrom": [ "j:facebookID" ],
-    "rank": "6.0"
-}

@@ -1,0 +1,9 @@
+{
+    "id": "company",
+    "type": "string",
+    "tags": ["identityProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "10.0"
+}

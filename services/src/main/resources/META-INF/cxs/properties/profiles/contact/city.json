@@ -1,0 +1,9 @@
+{
+    "id": "city",
+    "type": "string",
+    "tags": ["contactProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ "j:city" ],
+    "rank": "8.0"
+}

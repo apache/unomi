@@ -1,9 +1,0 @@
-{
-    "id": "brandLoyalty",
-    "type": "string",
-    "tags": ["behavioralProfileProperties"],
-    "defaultValue": "totally,mostly,not at all",
-    "selectorId": "",
-    "automaticMappingsFrom": [ ],
-    "rank": "4.0"
-}

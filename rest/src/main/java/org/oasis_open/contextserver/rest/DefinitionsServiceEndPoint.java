@@ -90,7 +90,7 @@ public class DefinitionsServiceEndPoint {
     @Path("/conditions/tags/{tagId}")
     public Collection<RESTConditionType> getConditionTypesByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
         String[] tagsArray = tags.split(",");
-        HashSet<ConditionType> results = new HashSet<ConditionType>();
+        Set<ConditionType> results = new LinkedHashSet<>();
         for (String s : tagsArray) {
             results.addAll(definitionsService.getConditionTypesByTag(definitionsService.getTag(s), recursive));
         }
@@ -115,7 +115,7 @@ public class DefinitionsServiceEndPoint {
     @Path("/actions/tags/{tagId}")
     public Collection<RESTActionType> getActionTypeByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
         String[] tagsArray = tags.split(",");
-        HashSet<ActionType> results = new HashSet<ActionType>();
+        Set<ActionType> results = new LinkedHashSet<>();
         for (String s : tagsArray) {
             results.addAll(definitionsService.getActionTypeByTag(definitionsService.getTag(s), recursive));
         }
@@ -139,7 +139,7 @@ public class DefinitionsServiceEndPoint {
     @Path("/values/tags/{tagId}")
     public Collection<RESTValueType> getValueTypeByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
         String[] tagsArray = tags.split(",");
-        HashSet<ValueType> results = new HashSet<ValueType>();
+        Set<ValueType> results = new LinkedHashSet<>();
         for (String s : tagsArray) {
             results.addAll(definitionsService.getValueTypeByTag(definitionsService.getTag(s), recursive));
         }
@@ -157,7 +157,7 @@ public class DefinitionsServiceEndPoint {
     @Path("/properties")
     public Map<String, Collection<RESTPropertyType>> getPropertyTypes(@HeaderParam("Accept-Language") String language) {
         Map<String, Collection<PropertyType>> propertyTypes = definitionsService.getAllPropertyTypes();
-        Map<String, Collection<RESTPropertyType>> result = new HashMap<>();
+        Map<String, Collection<RESTPropertyType>> result = new LinkedHashMap<>();
 
         for (String id : propertyTypes.keySet()){
             result.put(id, localizationHelper.generatePropertyTypes(propertyTypes.get(id), language));
@@ -176,7 +176,7 @@ public class DefinitionsServiceEndPoint {
     @Path("/properties/tags/{tagId}")
     public Collection<RESTPropertyType> getPropertyTypeByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
         String[] tagsArray = tags.split(",");
-        HashSet<PropertyType> results = new HashSet<PropertyType>();
+        Set<PropertyType> results = new LinkedHashSet<>();
         for (String s : tagsArray) {
             results.addAll(definitionsService.getPropertyTypeByTag(definitionsService.getTag(s), recursive));
         }

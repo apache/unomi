@@ -1,0 +1,9 @@
+{
+    "id": "maritalStatus",
+    "type": "string",
+    "tags": ["identityProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "8.0"
+}

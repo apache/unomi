@@ -1,0 +1,9 @@
+{
+    "id": "email",
+    "type": "email",
+    "tags": ["contactProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ "j:email" ],
+    "rank": "1.0"
+}

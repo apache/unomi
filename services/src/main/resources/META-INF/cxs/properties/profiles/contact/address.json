@@ -1,0 +1,9 @@
+{
+    "id": "address",
+    "type": "string",
+    "tags": ["contactProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "6.0"
+}

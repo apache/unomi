@@ -1,9 +1,0 @@
-{
-    "id": "lifestyle",
-    "type": "string",
-    "tags": ["psychographicProfileProperties"],
-    "defaultValue": "",
-    "selectorId": "",
-    "automaticMappingsFrom": [ ],
-    "rank": "3.0"
-}

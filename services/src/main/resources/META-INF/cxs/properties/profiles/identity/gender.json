@@ -1,0 +1,9 @@
+{
+    "id": "gender",
+    "type": "string",
+    "tags": ["identityProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ "j:gender" ],
+    "rank": "4.0"
+}

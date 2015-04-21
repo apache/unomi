@@ -1,9 +1,0 @@
-{
-    "id": "facebookId",
-    "type": "string",
-    "tags": ["basicProfileProperties"],
-    "defaultValue": "",
-    "selectorId": "",
-    "automaticMappingsFrom": [ "j:facebookID" ],
-    "rank": "7.0"
-}

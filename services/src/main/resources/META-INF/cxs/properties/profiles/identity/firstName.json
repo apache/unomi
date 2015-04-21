@@ -1,0 +1,9 @@
+{
+    "id": "firstName",
+    "type": "string",
+    "tags": ["identityProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ "j:firstName" ],
+    "rank": "1.0"
+}

@@ -1,0 +1,9 @@
+{
+    "id": "linkedInId",
+    "type": "string",
+    "tags": ["contactProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ "j:linkedInID" ],
+    "rank": "4.0"
+}

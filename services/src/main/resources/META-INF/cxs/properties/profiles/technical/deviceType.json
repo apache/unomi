@@ -1,9 +1,0 @@
-{
-    "id": "deviceType",
-    "type": "string",
-    "tags": ["technicalProfileProperties"],
-    "defaultValue": "",
-    "selectorId": "",
-    "automaticMappingsFrom": [ ],
-    "rank": "1.0"
-}

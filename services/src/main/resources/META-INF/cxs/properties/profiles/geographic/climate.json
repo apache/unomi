@@ -1,9 +1,0 @@
-{
-    "id": "climate",
-    "type": "string",
-    "tags": ["geographicProfileProperties"],
-    "defaultValue": "",
-    "selectorId": "",
-    "automaticMappingsFrom": [ ],
-    "rank": "2.0"
-}

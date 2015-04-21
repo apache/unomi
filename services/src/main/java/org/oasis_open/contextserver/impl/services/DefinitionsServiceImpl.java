@@ -279,7 +279,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                         propertyType.getTags().add(tag);
                         Set<PropertyType> propertyTypes = propertyTypeByTag.get(tag);
                         if (propertyTypes == null) {
-                            propertyTypes = new LinkedHashSet<>();
+                            propertyTypes = new TreeSet<>();
                         }
                         propertyTypes.add(propertyType);
                         propertyTypeByTag.put(tag, propertyTypes);

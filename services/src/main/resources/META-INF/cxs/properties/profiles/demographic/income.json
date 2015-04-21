@@ -1,9 +1,0 @@
-{
-    "id": "income",
-    "type": "integer",
-    "tags": ["demographicProfileProperties"],
-    "defaultValue": "",
-    "selectorId": "",
-    "automaticMappingsFrom": [ "j:income" ],
-    "rank": "3.0"
-}

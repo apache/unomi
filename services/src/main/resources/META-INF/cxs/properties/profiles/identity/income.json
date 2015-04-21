@@ -1,0 +1,9 @@
+{
+    "id": "income",
+    "type": "integer",
+    "tags": ["identityProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ "j:income" ],
+    "rank": "13.0"
+}

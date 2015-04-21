@@ -1,9 +1,0 @@
-{
-    "id": "gender",
-    "type": "string",
-    "tags": ["demographicProfileProperties"],
-    "defaultValue": "",
-    "selectorId": "",
-    "automaticMappingsFrom": [ "j:gender" ],
-    "rank": "2.0"
-}

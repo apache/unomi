@@ -1,0 +1,9 @@
+{
+    "id": "kids",
+    "type": "integer",
+    "tags": ["identityProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "9.0"
+}

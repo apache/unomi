@@ -1,9 +1,0 @@
-{
-    "id": "description",
-    "type": "string",
-    "tags": ["basicProfileProperties"],
-    "defaultValue": "",
-    "selectorId": "",
-    "automaticMappingsFrom": [ ],
-    "rank": "2.0"
-}

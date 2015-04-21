@@ -1,9 +1,0 @@
-{
-    "id": "lastVisit",
-    "type": "date",
-    "tags": ["behavioralProfileProperties"],
-    "defaultValue": "",
-    "selectorId": "",
-    "automaticMappingsFrom": [ ],
-    "rank": "1.0"
-}

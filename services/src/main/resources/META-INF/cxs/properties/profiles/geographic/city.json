@@ -1,9 +1,0 @@
-{
-    "id": "city",
-    "type": "string",
-    "tags": ["geographicProfileProperties"],
-    "defaultValue": "",
-    "selectorId": "",
-    "automaticMappingsFrom": [ "j:city" ],
-    "rank": "1.0"
-}

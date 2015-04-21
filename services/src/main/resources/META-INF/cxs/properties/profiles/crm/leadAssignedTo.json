@@ -1,9 +1,0 @@
-{
-    "id": "leadAssignedTo",
-    "type": "string",
-    "tags": ["crmProfileProperties"],
-    "defaultValue": "",
-    "selectorId": "",
-    "automaticMappingsFrom": [ ],
-    "rank": "1.0"
-}

@@ -1,0 +1,9 @@
+{
+    "id": "birthPlace",
+    "type": "string",
+    "tags": ["identityProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "6.0"
+}

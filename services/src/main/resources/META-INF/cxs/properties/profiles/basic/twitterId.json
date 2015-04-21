@@ -1,9 +1,0 @@
-{
-    "id": "twitterId",
-    "type": "string",
-    "tags": ["basicProfileProperties"],
-    "defaultValue": "",
-    "selectorId": "",
-    "automaticMappingsFrom": [ "j:twitterID" ],
-    "rank": "9.0"
-}

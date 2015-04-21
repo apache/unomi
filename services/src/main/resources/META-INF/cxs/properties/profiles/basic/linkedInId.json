@@ -1,9 +1,0 @@
-{
-    "id": "linkedInId",
-    "type": "string",
-    "tags": ["basicProfileProperties"],
-    "defaultValue": "",
-    "selectorId": "",
-    "automaticMappingsFrom": [ "j:linkedInID" ],
-    "rank": "8.0"
-}

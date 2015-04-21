@@ -1,0 +1,9 @@
+{
+    "id": "lastVisit",
+    "type": "date",
+    "tags": ["systemProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "2.0"
+}

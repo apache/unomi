@@ -1,9 +1,0 @@
-{
-    "id": "usageRate",
-    "type": "string",
-    "tags": ["behavioralProfileProperties"],
-    "defaultValue": "heavy,moderate,light,nonprofile",
-    "selectorId": "",
-    "automaticMappingsFrom": [ ],
-    "rank": "3.0"
-}

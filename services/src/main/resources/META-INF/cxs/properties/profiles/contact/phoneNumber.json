@@ -1,0 +1,9 @@
+{
+    "id": "phoneNumber",
+    "type": "string",
+    "tags": ["contactProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "2.0"
+}

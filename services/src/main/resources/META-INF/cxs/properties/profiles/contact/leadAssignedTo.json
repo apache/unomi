@@ -1,0 +1,9 @@
+{
+    "id": "leadAssignedTo",
+    "type": "string",
+    "tags": ["contactProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "9.0"
+}

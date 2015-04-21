@@ -1,0 +1,9 @@
+{
+    "id": "nationality",
+    "type": "string",
+    "tags": ["identityProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "7.0"
+}

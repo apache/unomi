@@ -1,0 +1,9 @@
+{
+    "id": "name",
+    "type": "string",
+    "tags": ["identityProfileProperties"],
+    "defaultValue": "",
+    "selectorId": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "3.0"
+}

@@ -1,0 +1,17 @@
+{
+    "id": "age",
+    "type": "integer",
+    "tags": ["identityProfileProperties"],
+    "defaultValue": "",
+    "ranges": {
+      "*_10" : {"to" : 10 },
+      "10_20" : {"from" : 10, "to" : 20 },
+      "20_30" : {"from" : 20, "to" : 30 },
+      "30_40" : {"from" : 30, "to" : 40 },
+      "40_50" : {"from" : 40, "to" : 50 },
+      "50_*" : {"from" : 50 }
+    },
+    "selectorId": "",
+    "automaticMappingsFrom": [ "j:age" ],
+    "rank": "5.0"
+}
