@@ -1,9 +1,9 @@
 {
-    "id": "company",
+    "id": "title",
     "type": "string",
     "tags": ["identityProfileProperties"],
     "defaultValue": "",
     "selectorId": "",
-    "automaticMappingsFrom": [ ],
-    "rank": "11.0"
+    "automaticMappingsFrom": [ "j:title" ],
+    "rank": "4.0"
 }

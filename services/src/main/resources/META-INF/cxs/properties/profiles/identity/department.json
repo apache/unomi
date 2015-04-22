@@ -1,5 +1,5 @@
 {
-    "id": "jobTitle",
+    "id": "department",
     "type": "string",
     "tags": ["identityProfileProperties"],
     "defaultValue": "",

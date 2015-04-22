@@ -199,14 +199,28 @@ public class LocalizationHelper {
     }
 
     public Collection<RESTTag> generateTags(Collection<Tag> tags, String language) {
+        return generateTags(tags, language, false);
+    }
+
+    public Collection<RESTTag> generateTags(Collection<Tag> tags, String language, boolean filterHidden) {
         List<RESTTag> result = new ArrayList<RESTTag>();
         for (Tag tag : tags) {
-            result.add(generateTag(tag, language));
+            RESTTag subTag = generateTag(tag, language, filterHidden);
+            if (subTag != null) {
+                result.add(subTag);
+            }
         }
         return result;
     }
 
     public RESTTag generateTag(Tag tag, String language) {
+        return generateTag(tag, language, false);
+    }
+
+    public RESTTag generateTag(Tag tag, String language, boolean filterHidden) {
+        if (filterHidden && tag.isHidden()) {
+            return null;
+        }
         RESTTag result = new RESTTag();
         result.setId(tag.getId());
         ResourceBundle bundle = resourceBundleHelper.getResourceBundle(tag, language);
@@ -214,7 +228,7 @@ public class LocalizationHelper {
         result.setDescription(resourceBundleHelper.getResourceBundleValue(bundle, tag.getDescriptionKey()));
         result.setParentId(tag.getParentId());
         result.setRank(tag.getRank());
-        result.setSubTags(generateTags(tag.getSubTags(), language));
+        result.setSubTags(generateTags(tag.getSubTags(), language, filterHidden));
         return result;
     }
 

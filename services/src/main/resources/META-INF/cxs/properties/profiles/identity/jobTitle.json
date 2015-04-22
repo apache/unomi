@@ -1,9 +1,9 @@
 {
-    "id": "department",
+    "id": "jobTitle",
     "type": "string",
     "tags": ["identityProfileProperties"],
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ ],
-    "rank": "11.0"
+    "rank": "13.0"
 }

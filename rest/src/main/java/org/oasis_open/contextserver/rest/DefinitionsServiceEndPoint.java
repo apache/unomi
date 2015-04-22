@@ -74,8 +74,8 @@ public class DefinitionsServiceEndPoint {
 
     @GET
     @Path("/tags/{tagId}")
-    public RESTTag getTag(@PathParam("tagId") String tag, @HeaderParam("Accept-Language") String language) {
-        return localizationHelper.generateTag(definitionsService.getTag(tag), language);
+    public RESTTag getTag(@PathParam("tagId") String tag, @QueryParam("filterHidden") @DefaultValue("false") boolean filterHidden, @HeaderParam("Accept-Language") String language) {
+        return localizationHelper.generateTag(definitionsService.getTag(tag), language, filterHidden);
     }
 
     @GET

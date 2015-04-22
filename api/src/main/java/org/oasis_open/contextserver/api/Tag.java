@@ -39,6 +39,7 @@ public class Tag implements PluginType, Comparable<Tag> {
     private String parentId;
     private double rank = 0.0;
     private long pluginId;
+    private boolean hidden = false;
 
     public Tag() {
     }
@@ -87,6 +88,14 @@ public class Tag implements PluginType, Comparable<Tag> {
 
     public void setRank(double rank) {
         this.rank = rank;
+    }
+
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
     }
 
     @XmlTransient
