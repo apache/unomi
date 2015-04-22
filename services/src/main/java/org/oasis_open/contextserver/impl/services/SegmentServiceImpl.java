@@ -23,7 +23,6 @@ package org.oasis_open.contextserver.impl.services;
  */
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.commons.lang3.StringUtils;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.conditions.Condition;
@@ -446,7 +445,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     public Boolean isProfileInSegment(Profile profile, String scope, String segmentId) {
         Set<String> matchingSegments = getSegmentsAndScoresForProfile(profile).getSegments();
 
-        return matchingSegments.contains(Metadata.getIdWithScope(scope,segmentId));
+        return matchingSegments.contains(Metadata.getIdWithScope(scope, segmentId));
     }
 
     public SegmentsAndScores getSegmentsAndScoresForProfile(Profile profile) {
@@ -472,6 +471,19 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         }
 
         return new SegmentsAndScores(segments, scores);
+    }
+
+    public List<Metadata> getSegmentMetadatasForProfile(Profile profile) {
+        List<Metadata> metadatas = new ArrayList<>();
+
+        List<Segment> allSegments = this.allSegments;
+        for (Segment segment : allSegments) {
+            if (persistenceService.testMatch(segment.getCondition(), profile)) {
+                metadatas.add(segment.getMetadata());
+            }
+        }
+
+        return metadatas;
     }
 
     public Set<Metadata> getScoringMetadatas() {

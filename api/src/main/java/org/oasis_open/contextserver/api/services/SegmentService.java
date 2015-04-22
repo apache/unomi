@@ -74,6 +74,8 @@ public interface SegmentService {
 
     SegmentsAndScores getSegmentsAndScoresForProfile(Profile profile);
 
+    List<Metadata> getSegmentMetadatasForProfile(Profile profile);
+
     Set<Metadata> getScoringMetadatas();
 
     Set<Metadata> getScoringMetadatas(String scope);

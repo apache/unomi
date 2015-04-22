@@ -27,12 +27,16 @@ import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.api.services.ProfileService;
+import org.oasis_open.contextserver.api.services.SegmentService;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import java.util.*;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
@@ -45,6 +49,8 @@ public class ProfileServiceEndPoint {
     private ProfileService profileService;
 
     private EventService eventService;
+
+    private SegmentService segmentService;
 
     private LocalizationHelper localizationHelper;
 
@@ -60,6 +66,11 @@ public class ProfileServiceEndPoint {
     @WebMethod(exclude = true)
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
+    }
+
+    @WebMethod(exclude = true)
+    public void setSegmentService(SegmentService segmentService) {
+        this.segmentService = segmentService;
     }
 
     @WebMethod(exclude = true)
@@ -120,6 +131,13 @@ public class ProfileServiceEndPoint {
                                                    @QueryParam("size") @DefaultValue("50") int size,
                                                    @QueryParam("sort") String sortBy) {
         return profileService.getProfileSessions(profileId, offset, size, sortBy);
+    }
+
+    @GET
+    @Path("/{profileId}/segments")
+    public List<Metadata> getProfileSegments(@PathParam("profileId") String profileId) {
+        Profile profile = profileService.load(profileId);
+        return segmentService.getSegmentMetadatasForProfile(profile);
     }
 
     @GET
