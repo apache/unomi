@@ -228,11 +228,4 @@ public class ProfileServiceEndPoint {
         return profileService.matchCondition(condition, profile, session);
     }
 
-    @GET
-    @Path("/existingProperties")
-    public Collection<RESTPropertyType> getExistingProperties(@QueryParam("itemType") @DefaultValue("profile") String itemType, @HeaderParam("Accept-Language") String language) {
-        Set<PropertyType> properties = profileService.getExistingProfileProperties(itemType);
-        return localizationHelper.generatePropertyTypes(properties, language);
-    }
-
 }

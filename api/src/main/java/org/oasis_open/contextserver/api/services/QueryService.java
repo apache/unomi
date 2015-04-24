@@ -22,10 +22,12 @@ package org.oasis_open.contextserver.api.services;
  * #L%
  */
 
+import org.oasis_open.contextserver.api.PropertyType;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.AggregateQuery;
 
 import java.util.Map;
+import java.util.Set;
 
 public interface QueryService {
 
@@ -36,4 +38,6 @@ public interface QueryService {
     long getQueryCount(String type, Condition condition);
 
     Map<String,Double> getMetric(String type, String property, String metricType, Condition condition);
+
+    Set<PropertyType> getExistingProperties(String tagId, String itemType);
 }

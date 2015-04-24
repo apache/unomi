@@ -217,6 +217,7 @@
 
     <bean id="queryServiceEndPoint" class="org.oasis_open.contextserver.rest.QueryServiceEndPoint">
         <property name="queryService" ref="queryService"/>
+        <property name="localizationHelper" ref="localizationHelper"/>
     </bean>
 
     <bean id="resourceBundleHelper" class="org.oasis_open.contextserver.rest.ResourceBundleHelper">

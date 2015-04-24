@@ -77,6 +77,4 @@ public interface ProfileService {
     void createPersona(String personaId);
 
     PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy);
-
-    Set<PropertyType> getExistingProfileProperties(String itemType);
 }

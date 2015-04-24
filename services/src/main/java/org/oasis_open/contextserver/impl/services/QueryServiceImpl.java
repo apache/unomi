@@ -22,6 +22,7 @@ package org.oasis_open.contextserver.impl.services;
  * #L%
  */
 
+import org.oasis_open.contextserver.api.PropertyType;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.AggregateQuery;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
@@ -32,7 +33,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class QueryServiceImpl implements QueryService {
     private static final Logger logger = LoggerFactory.getLogger(QueryServiceImpl.class.getName());
@@ -112,5 +115,18 @@ public class QueryServiceImpl implements QueryService {
             logger.warn("Invalid query");
             return 0;
         }
+    }
+
+    @Override
+    public Set<PropertyType> getExistingProperties(String tagId, String itemType) {
+        Set<PropertyType> filteredProperties = new LinkedHashSet<PropertyType>();
+        Set<PropertyType> profileProperties = definitionsService.getPropertyTypeByTag(definitionsService.getTag(tagId), true);
+        Map<String, Map<String, String>> propMapping = (Map<String, Map<String, String>>) persistenceService.getMapping(itemType).get("properties").get("properties");
+        for (PropertyType propertyType : profileProperties) {
+            if (propMapping.containsKey(propertyType.getId())) {
+                filteredProperties.add(propertyType);
+            }
+        }
+        return filteredProperties;
     }
 }

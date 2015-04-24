@@ -23,14 +23,18 @@ package org.oasis_open.contextserver.rest;
  */
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
+import org.oasis_open.contextserver.api.PropertyType;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.AggregateQuery;
 import org.oasis_open.contextserver.api.services.QueryService;
 
+import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
@@ -38,11 +42,21 @@ import java.util.Map;
         allowAllOrigins = true,
         allowCredentials = true
 )
-public class QueryServiceEndPoint implements QueryService {
+public class QueryServiceEndPoint {
+
     private QueryService queryService;
 
+    private LocalizationHelper localizationHelper;
+
+    @WebMethod(exclude = true)
     public void setQueryService(QueryService queryService) {
         this.queryService = queryService;
+    }
+
+
+    @WebMethod(exclude = true)
+    public void setLocalizationHelper(LocalizationHelper localizationHelper) {
+        this.localizationHelper = localizationHelper;
     }
 
     @GET
@@ -67,5 +81,12 @@ public class QueryServiceEndPoint implements QueryService {
     @Path("/{type}/count")
     public long getQueryCount(@PathParam("type") String type, Condition condition) {
         return queryService.getQueryCount(type, condition);
+    }
+
+    @GET
+    @Path("/existingProperties")
+    public Collection<RESTPropertyType> getExistingProperties(@QueryParam("tagId") String tagId, @QueryParam("itemType") String itemType, @HeaderParam("Accept-Language") String language) {
+        Set<PropertyType> properties = queryService.getExistingProperties(tagId, itemType);
+        return localizationHelper.generatePropertyTypes(properties, language);
     }
 }
