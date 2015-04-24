@@ -56,7 +56,7 @@ public interface ProfileService {
 
     Session loadSession(String sessionId, Date dateHint);
 
-    boolean saveSession(Session session);
+    Session saveSession(Session session);
 
     PartialList<Session> findProfileSessions(String profileId);
 

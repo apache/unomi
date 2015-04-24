@@ -214,7 +214,7 @@ public class ProfileServiceEndPoint {
 
     @POST
     @Path("/sessions/{sessionId}")
-    public boolean saveSession(Session session) {
+    public Session saveSession(Session session) {
         return profileService.saveSession(session);
     }
 

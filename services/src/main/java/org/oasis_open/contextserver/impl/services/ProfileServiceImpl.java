@@ -286,9 +286,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return s;
     }
 
-    public boolean saveSession(Session session) {
-        persistenceService.save(session);
-        return false;
+    public Session saveSession(Session session) {
+        return persistenceService.save(session) ? session : null;
     }
 
     public PartialList<Session> findProfileSessions(String profileId) {
