@@ -127,10 +127,11 @@ public class ProfileServiceEndPoint {
     @GET
     @Path("/{profileId}/sessions")
     public PartialList<Session> getProfileSessions(@PathParam("profileId") String profileId,
+                                                   @QueryParam("q") String query,
                                                    @QueryParam("offset") @DefaultValue("0") int offset,
                                                    @QueryParam("size") @DefaultValue("50") int size,
                                                    @QueryParam("sort") String sortBy) {
-        return profileService.getProfileSessions(profileId, offset, size, sortBy);
+        return profileService.getProfileSessions(profileId, query, offset, size, sortBy);
     }
 
     @GET

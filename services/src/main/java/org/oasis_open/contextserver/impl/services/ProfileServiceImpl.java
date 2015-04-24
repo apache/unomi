@@ -261,8 +261,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return updated;
     }
 
-    public PartialList<Session> getProfileSessions(String profileId, int offset, int size, String sortBy) {
-        return persistenceService.query("profileId", profileId, sortBy, Session.class, offset, size);
+    public PartialList<Session> getProfileSessions(String profileId, String query, int offset, int size, String sortBy) {
+        if (StringUtils.isNotBlank(query)) {
+            return persistenceService.queryFullText("profileId", profileId, query, sortBy, Session.class, offset, size);
+        } else {
+            return persistenceService.query("profileId", profileId, sortBy, Session.class, offset, size);
+        }
     }
 
     public String getPropertyTypeMapping(String fromPropertyTypeId) {

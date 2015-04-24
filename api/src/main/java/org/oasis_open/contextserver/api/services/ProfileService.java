@@ -50,7 +50,7 @@ public interface ProfileService {
 
     void delete(String profileId, boolean persona);
 
-    PartialList<Session> getProfileSessions(String profileId, int offset, int size, String sortBy);
+    PartialList<Session> getProfileSessions(String profileId, String query, int offset, int size, String sortBy);
 
     String getPropertyTypeMapping(String fromPropertyTypeId);
 
