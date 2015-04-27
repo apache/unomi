@@ -218,6 +218,17 @@ public class ProfileServiceEndPoint {
         return profileService.saveSession(session);
     }
 
+    @GET
+    @Path("/sessions/{sessionId}/events")
+    public PartialList<Event> getSessionEvents(@PathParam("sessionId") String sessionId,
+                                               @QueryParam("eventType") String eventType,
+                                               @QueryParam("q") String query,
+                                               @QueryParam("offset") @DefaultValue("0") int offset,
+                                               @QueryParam("size") @DefaultValue("50") int size,
+                                               @QueryParam("sort") String sortBy) {
+        return eventService.searchEvents(sessionId, eventType, query, offset, size, sortBy);
+    }
+
     @WebMethod(exclude = true)
     public PartialList<Session> findProfileSessions(String profileId) {
         return null;

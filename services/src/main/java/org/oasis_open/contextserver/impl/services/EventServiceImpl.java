@@ -22,6 +22,7 @@ package org.oasis_open.contextserver.impl.services;
  * #L%
  */
 
+import org.apache.commons.lang3.StringUtils;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
@@ -140,6 +141,33 @@ public class EventServiceImpl implements EventService {
     @Override
     public PartialList<Event> searchEvents(Condition condition, int offset, int size) {
         return persistenceService.query(condition, "timeStamp", Event.class, offset, size);
+    }
+
+    @Override
+    public PartialList<Event> searchEvents(String sessionId, String eventType, String query, int offset, int size, String sortBy) {
+        List<Condition> conditions = new ArrayList<Condition>();
+
+        Condition condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        condition.setParameter("propertyName", "sessionId");
+        condition.setParameter("propertyValue", sessionId);
+        condition.setParameter("comparisonOperator", "equals");
+        conditions.add(condition);
+
+        condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        condition.setParameter("propertyName", "eventType");
+        condition.setParameter("propertyValue", eventType);
+        condition.setParameter("comparisonOperator", "equals");
+        conditions.add(condition);
+
+        condition = new Condition(definitionsService.getConditionType("booleanCondition"));
+        condition.setParameter("operator", "and");
+        condition.setParameter("subConditions", conditions);
+
+        if (StringUtils.isNotBlank(query)) {
+            return persistenceService.queryFullText(query, condition, sortBy, Event.class, offset, size);
+        } else {
+            return persistenceService.query(condition, sortBy, Event.class, offset, size);
+        }
     }
 
     public boolean hasEventAlreadyBeenRaised(Event event, boolean session) {
