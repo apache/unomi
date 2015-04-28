@@ -186,8 +186,8 @@ public class ProfileServiceEndPoint {
 
     @DELETE
     @Path("/personas/{personaId}")
-    public void deletePersona(Persona persona) {
-        profileService.delete(persona.getItemId(), true);
+    public void deletePersona(@PathParam("personaId") String personaId) {
+        profileService.delete(personaId, true);
     }
 
     @PUT
