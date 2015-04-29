@@ -193,8 +193,8 @@ public class ProfileServiceEndPoint {
     @PUT
     @Path("/personas/{personaId}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public void createPersona(@PathParam("personaId") String personaId) {
-        profileService.createPersona(personaId);
+    public Persona createPersona(@PathParam("personaId") String personaId) {
+        return profileService.createPersona(personaId);
     }
 
     @GET

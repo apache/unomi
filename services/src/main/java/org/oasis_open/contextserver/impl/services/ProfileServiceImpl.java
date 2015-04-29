@@ -349,13 +349,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
     }
 
-    public void createPersona(String personaId) {
+    public Persona createPersona(String personaId) {
         Persona newPersona = new Persona(personaId);
 
         Session session = new PersonaSession(UUID.randomUUID().toString(), newPersona, new Date());
 
         persistenceService.save(newPersona);
         persistenceService.save(session);
+        return newPersona;
     }
 
     public PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy) {

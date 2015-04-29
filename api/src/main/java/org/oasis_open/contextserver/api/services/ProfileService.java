@@ -74,7 +74,7 @@ public interface ProfileService {
 
     PartialList<Persona> getPersonas(String query, Condition condition, int offset, int size, String sortBy);
 
-    void createPersona(String personaId);
+    Persona createPersona(String personaId);
 
     PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy);
 }
