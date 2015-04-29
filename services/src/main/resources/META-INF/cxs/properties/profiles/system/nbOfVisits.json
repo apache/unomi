@@ -14,5 +14,6 @@
       "100_*" : {"from" : 100 }
     },
     "mergeStrategy": "addMergeStrategy",
-    "rank": "3.0"
+    "rank": "3.0",
+    "protected": true
 }

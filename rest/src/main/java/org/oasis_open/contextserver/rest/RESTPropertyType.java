@@ -41,6 +41,7 @@ public class RESTPropertyType {
     private Set<String> tags;
     private boolean multivalued;
     private Set<RESTRange> ranges;
+    private boolean protekted;
 
     public RESTPropertyType() {
     }
@@ -139,5 +140,13 @@ public class RESTPropertyType {
 
     public void setTags(Set<String> tags) {
         this.tags = tags;
+    }
+
+    public boolean isProtected() {
+        return protekted;
+    }
+
+    public void setProtected(boolean protekted) {
+        this.protekted = protekted;
     }
 }

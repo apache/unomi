@@ -47,6 +47,7 @@ public class PropertyType implements Comparable<PropertyType>, PluginType {
     private Set<Tag> tags = new TreeSet<Tag>();
     private Set<String> tagIds = new LinkedHashSet<String>();
     private boolean multivalued;
+    private boolean protekted = false;
 
     public PropertyType() {
     }
@@ -227,5 +228,13 @@ public class PropertyType implements Comparable<PropertyType>, PluginType {
 
     public void setMultivalued(boolean multvalued) {
         this.multivalued = multvalued;
+    }
+
+    public boolean isProtected() {
+        return protekted;
+    }
+
+    public void setProtected(boolean protekted) {
+        this.protekted = protekted;
     }
 }

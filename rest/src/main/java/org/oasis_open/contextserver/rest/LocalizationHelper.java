@@ -134,6 +134,7 @@ public class LocalizationHelper {
         result.setMergeStrategy(type.getMergeStrategy());
         result.setSelectorId(type.getSelectorId());
         result.setMultivalued(type.isMultivalued());
+        result.setProtected(type.isProtected());
 
         if(type.getRanges() != null && type.getRanges().size() > 0) {
             result.setRanges(new LinkedHashSet<RESTRange>());

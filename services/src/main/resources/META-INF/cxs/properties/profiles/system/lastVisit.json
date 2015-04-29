@@ -5,5 +5,6 @@
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ ],
-    "rank": "2.0"
+    "rank": "2.0",
+    "protected": true
 }
