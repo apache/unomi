@@ -30,6 +30,16 @@ import java.util.List;
 
 public class MostRecentPropertyMergeStrategyExecutor implements PropertyMergeStrategyExecutor {
     public boolean mergeProperty(String propertyName, PropertyType propertyType, List<Profile> profilesToMerge, Profile targetProfile) {
+        Object result = null;
+        int i = profilesToMerge.size() - 1;
+        while (result == null && i >=0) {
+            result = profilesToMerge.get(i).getProperty(propertyName);
+            i--;
+        }
+        if (result != null && (targetProfile.getProperty(propertyName) == null || !result.equals(targetProfile.getProperty(propertyName)))) {
+            targetProfile.setProperty(propertyName, result);
+            return true;
+        }
         return false;
     }
 }

@@ -105,12 +105,25 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return getProfiles(null, condition, offset, size, sortBy);
     }
 
-    public PartialList<Profile> getProfiles(String query, Condition condition, int offset, int size, String sortBy) {
-        if (condition != null && definitionsService.resolveConditionType(condition)) {
-            if (StringUtils.isNotBlank(query)) {
-                return persistenceService.queryFullText(query, condition, sortBy, Profile.class, offset, size);
+    public PartialList<Profile> getProfiles(String query, Condition condition, int offset, int size, String sortBy, boolean excludeMergedProfiles) {
+        Condition c = condition;
+        if (excludeMergedProfiles) {
+            Condition excludeMergedProfilesCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+            excludeMergedProfilesCondition.setParameter("comparisonOperator", "missing");
+            excludeMergedProfilesCondition.setParameter("propertyName", "mergedWith");
+            if (c == null) {
+                c = excludeMergedProfilesCondition;
             } else {
-                return persistenceService.query(condition, sortBy, Profile.class, offset, size);
+                c = new Condition(definitionsService.getConditionType("booleanCondition"));
+                c.setParameter("operator", "and");
+                c.setParameter("subConditions", Arrays.asList(condition, excludeMergedProfilesCondition));
+            }
+        }
+        if (c != null && definitionsService.resolveConditionType(c)) {
+            if (StringUtils.isNotBlank(query)) {
+                return persistenceService.queryFullText(query, c, sortBy, Profile.class, offset, size);
+            } else {
+                return persistenceService.query(c, sortBy, Profile.class, offset, size);
             }
         } else {
             if (StringUtils.isNotBlank(query)) {
@@ -119,6 +132,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 return persistenceService.getAllItems(Profile.class, offset, size, sortBy);
             }
         }
+    }
+
+    public PartialList<Profile> getProfiles(String query, Condition condition, int offset, int size, String sortBy) {
+        return getProfiles(query, condition, offset, size, sortBy, true);
     }
 
     public PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue, int offset, int size, String sortBy) {
@@ -254,6 +271,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
 
         if (!currentProfile.getItemId().equals(masterProfile.getItemId())) {
+            persistenceService.save(masterProfile);
             currentSession.setProfile(masterProfile);
             saveSession(currentSession);
         }

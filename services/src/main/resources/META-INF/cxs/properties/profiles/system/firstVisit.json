@@ -5,6 +5,7 @@
     "defaultValue": "",
     "selectorId": "",
     "automaticMappingsFrom": [ ],
+    "mergeStrategy": "oldestMergeStrategy",
     "rank": "1.0",
     "protected": true
 }

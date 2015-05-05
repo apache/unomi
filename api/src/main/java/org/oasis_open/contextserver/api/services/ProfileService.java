@@ -38,6 +38,8 @@ public interface ProfileService {
 
     PartialList<Profile> getProfiles(Condition condition, int offset, int size, String sortBy);
 
+    PartialList<Profile> getProfiles(String query, Condition condition, int offset, int size, String sortBy, boolean excludeMergedProfiles);
+
     PartialList<Profile> getProfiles(String query, Condition condition, int offset, int size, String sortBy);
 
     PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue, int offset, int size, String sortBy);

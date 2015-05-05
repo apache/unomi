@@ -30,47 +30,51 @@ import java.util.List;
 
 public class AddPropertyMergeStrategyExecutor implements PropertyMergeStrategyExecutor {
     public boolean mergeProperty(String propertyName, PropertyType propertyType, List<Profile> profilesToMerge, Profile targetProfile) {
-        Object result = null;
-        if (propertyType.getValueTypeId() != null) {
-            if (propertyType.getValueTypeId().equals("integer")) {
-                result = new Integer(0);
-            } else if (propertyType.getValueTypeId().equals("long")) {
-                result = new Long(0);
-            } else if (propertyType.getValueTypeId().equals("double")) {
-                result = new Double(0.0);
-            } else if (propertyType.getValueTypeId().equals("float")) {
-                result = new Float(0.0);
+        Object targetPropertyValue = targetProfile.getProperty(propertyName);
+        Object result = targetPropertyValue;
+        if (result == null) {
+            if (propertyType.getValueTypeId() != null) {
+                if (propertyType.getValueTypeId().equals("integer")) {
+                    result = new Integer(0);
+                } else if (propertyType.getValueTypeId().equals("long")) {
+                    result = new Long(0);
+                } else if (propertyType.getValueTypeId().equals("double")) {
+                    result = new Double(0.0);
+                } else if (propertyType.getValueTypeId().equals("float")) {
+                    result = new Float(0.0);
+                } else {
+                    result = new Long(0);
+                }
             } else {
                 result = new Long(0);
             }
-        } else {
-            result = new Long(0);
         }
 
         for (Profile profileToMerge : profilesToMerge) {
 
-            if (profileToMerge.getProperty(propertyName) == null) {
+            Object property = profileToMerge.getProperty(propertyName);
+            if (property == null) {
                 continue;
             }
 
             if (propertyType != null) {
-                if (propertyType.getValueTypeId().equals("integer") || (profileToMerge.getProperty(propertyName) instanceof Integer)) {
-                    result = (Integer) result + (Integer) profileToMerge.getProperty(propertyName);
-                } else if (propertyType.getValueTypeId().equals("long") || (profileToMerge.getProperty(propertyName) instanceof Long)) {
-                    result = (Long) result + (Long) profileToMerge.getProperty(propertyName);
-                } else if (propertyType.getValueTypeId().equals("double") || (profileToMerge.getProperty(propertyName) instanceof Double)) {
-                    result = (Double) result + (Double) profileToMerge.getProperty(propertyName);
-                } else if (propertyType.getValueTypeId().equals("float") || (profileToMerge.getProperty(propertyName) instanceof Float)) {
-                    result = (Float) result + (Float) profileToMerge.getProperty(propertyName);
+                if (propertyType.getValueTypeId().equals("integer") || (property instanceof Integer)) {
+                    result = (Integer) result + (Integer) property;
+                } else if (propertyType.getValueTypeId().equals("long") || (property instanceof Long)) {
+                    result = (Long) result + (Long) property;
+                } else if (propertyType.getValueTypeId().equals("double") || (property instanceof Double)) {
+                    result = (Double) result + (Double) property;
+                } else if (propertyType.getValueTypeId().equals("float") || (property instanceof Float)) {
+                    result = (Float) result + (Float) property;
                 } else {
-                    result = (Long) result + Long.parseLong(profileToMerge.getProperty(propertyName).toString());
+                    result = (Long) result + Long.parseLong(property.toString());
                 }
             } else {
-                result = (Long) result + Long.parseLong(profileToMerge.getProperty(propertyName).toString());
+                result = (Long) result + Long.parseLong(property.toString());
             }
 
         }
-        if (targetProfile.getProperty(propertyName) == null || !targetProfile.getProperty(propertyName).equals(result)) {
+        if (targetPropertyValue == null || !targetPropertyValue.equals(result)) {
             targetProfile.setProperty(propertyName, result);
             return true;
         }
