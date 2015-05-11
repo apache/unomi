@@ -491,7 +491,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
         GoalReport.Stat stat = new GoalReport.Stat();
         Long allFiltered = all.remove("_filtered");
-        Long matchFiltered = all.remove("_filtered");
+        Long matchFiltered = match.remove("_filtered");
         stat.setStartCount(allFiltered != null ? allFiltered : 0);
         stat.setTargetCount(matchFiltered != null ? matchFiltered : 0);
         stat.setConversionRate(stat.getStartCount() > 0 ? (float) stat.getTargetCount() / (float) stat.getStartCount() : 0);
