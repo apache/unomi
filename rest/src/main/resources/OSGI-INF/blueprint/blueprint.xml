@@ -170,6 +170,18 @@
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
+    <jaxrs:server address="/lists" id="restUserListService">
+        <jaxrs:providers>
+            <ref component-id="jaxb-provider"/>
+            <ref component-id="cors-filter"/>
+            <ref component-id="jaas-filter"/>
+        </jaxrs:providers>
+
+        <jaxrs:serviceBeans>
+            <ref component-id="userListServiceEndPoint"/>
+        </jaxrs:serviceBeans>
+    </jaxrs:server>
+
     <reference id="segmentService" interface="org.oasis_open.contextserver.api.services.SegmentService"/>
     <reference id="definitionsService" interface="org.oasis_open.contextserver.api.services.DefinitionsService"/>
     <reference id="goalsService" interface="org.oasis_open.contextserver.api.services.GoalsService"/>
@@ -178,6 +190,7 @@
     <reference id="clusterService" interface="org.oasis_open.contextserver.api.services.ClusterService"/>
     <reference id="queryService" interface="org.oasis_open.contextserver.api.services.QueryService"/>
     <reference id="eventService" interface="org.oasis_open.contextserver.api.services.EventService"/>
+    <reference id="userListService" interface="org.jahia.unomi.services.UserListService"/>
 
     <bean id="segmentServiceEndPoint" class="org.oasis_open.contextserver.rest.SegmentServiceEndPoint">
         <property name="segmentService" ref="segmentService"/>
@@ -217,6 +230,11 @@
 
     <bean id="queryServiceEndPoint" class="org.oasis_open.contextserver.rest.QueryServiceEndPoint">
         <property name="queryService" ref="queryService"/>
+        <property name="localizationHelper" ref="localizationHelper"/>
+    </bean>
+
+    <bean id="userListServiceEndPoint" class="org.oasis_open.contextserver.rest.UserListServiceEndPoint">
+        <property name="userListService" ref="userListService"/>
         <property name="localizationHelper" ref="localizationHelper"/>
     </bean>
 
