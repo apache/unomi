@@ -470,6 +470,24 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
+    public <T extends Item> boolean removeByQuery(final Condition query, final Class<T> clazz) {
+        return new InClassLoaderExecute<Boolean>() {
+            protected Boolean execute(Object... args) {
+                try {
+                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
+
+                    client.prepareDeleteByQuery(itemsDailyIndexed.contains(itemType) ? indexName + "-*" : indexName)
+                            .setQuery(conditionESQueryBuilderDispatcher.getQueryBuilder(query))
+                            .execute().actionGet();
+                    return true;
+                } catch (Exception e) {
+                    logger.error("Cannot remove by query", e);
+                }
+                return false;
+            }
+        }.executeInClassLoader();
+    }
+
     private boolean createMapping(final String type, final String source, final String indexName) {
         return new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {

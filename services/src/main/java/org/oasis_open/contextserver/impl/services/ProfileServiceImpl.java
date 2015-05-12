@@ -25,6 +25,7 @@ package org.oasis_open.contextserver.impl.services;
 import org.apache.commons.lang3.StringUtils;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
+import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.ProfileService;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
@@ -46,6 +47,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private PersistenceService persistenceService;
 
     private DefinitionsService definitionsService;
+
+    private Condition purgeProfileQuery;
+    private Long purgeProfileExistTime;
+    private Long purgeProfileInactiveTime;
+    private Long purgeProfileInterval;
+    private Timer purgeProfileTimer;
 
     public ProfileServiceImpl() {
         logger.info("Initializing profile service...");
@@ -73,10 +80,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             }
         }
         bundleContext.addBundleListener(this);
+        initializePurge();
     }
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
+        cancelPurge();
     }
 
     private void processBundleStartup(BundleContext bundleContext) {
@@ -87,6 +96,86 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     private void processBundleStop(BundleContext bundleContext) {
+    }
+
+    public void setPurgeProfileExistTime(Long purgeProfileExistTime) {
+        this.purgeProfileExistTime = purgeProfileExistTime;
+    }
+
+    public void setPurgeProfileInactiveTime(Long purgeProfileInactiveTime) {
+        this.purgeProfileInactiveTime = purgeProfileInactiveTime;
+    }
+
+    public void setPurgeProfileInterval(Long purgeProfileInterval) {
+        this.purgeProfileInterval = purgeProfileInterval;
+    }
+
+    private void initializePurge() {
+        logger.info("Profile purge: Initializing");
+
+        if(purgeProfileInactiveTime > 0 || purgeProfileExistTime > 0) {
+            if(purgeProfileInactiveTime > 0) {
+                logger.info("Profile purge: Profile with no visits since {} days, will be purged", purgeProfileInactiveTime);
+            }
+            if(purgeProfileExistTime > 0) {
+                logger.info("Profile purge: Profile created since {} days, will be purged", purgeProfileExistTime);
+            }
+
+            purgeProfileTimer = new Timer();
+            TimerTask task = new TimerTask() {
+                @Override
+                public void run() {
+                    long t = System.currentTimeMillis();
+                    logger.debug("Profile purge: Purge triggered");
+
+                    if(purgeProfileQuery == null){
+                        ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
+                        ConditionType booleanCondition = definitionsService.getConditionType("booleanCondition");
+                        if (profilePropertyConditionType == null || booleanCondition == null){
+                            // definition service not yet fully instantiate
+                            return;
+                        }
+
+                        purgeProfileQuery = new Condition(booleanCondition);
+                        purgeProfileQuery.setParameter("operator", "or");
+                        List<Condition> subConditions = new ArrayList<>();
+
+                        if(purgeProfileInactiveTime > 0) {
+                            Condition inactiveTimeCondition = new Condition(profilePropertyConditionType);
+                            inactiveTimeCondition.setParameter("propertyName","lastVisit");
+                            inactiveTimeCondition.setParameter("comparisonOperator","lessThanOrEqualTo");
+                            inactiveTimeCondition.setParameter("propertyValueDateExpr","now-"+purgeProfileInactiveTime+"d");
+                            subConditions.add(inactiveTimeCondition);
+                        }
+
+                        if(purgeProfileExistTime > 0) {
+                            Condition existTimeCondition = new Condition(profilePropertyConditionType);
+                            existTimeCondition.setParameter("propertyName","firstVisit");
+                            existTimeCondition.setParameter("comparisonOperator","lessThanOrEqualTo");
+                            existTimeCondition.setParameter("propertyValueDateExpr","now-"+purgeProfileExistTime+"d");
+                            subConditions.add(existTimeCondition);
+                        }
+
+                        purgeProfileQuery.setParameter("subConditions", subConditions);
+                    }
+
+                    persistenceService.removeByQuery(purgeProfileQuery, Profile.class);
+                    logger.debug("Profile purge: purge executed in {} ms", System.currentTimeMillis() - t);
+                }
+            };
+            // 5 sec delay because waiting
+            purgeProfileTimer.scheduleAtFixedRate(task, 0, purgeProfileInterval);
+            logger.info("Profile purge: purge scheduled with an interval of {} ms", purgeProfileInterval);
+        } else {
+            logger.info("Profile purge: No purge scheduled");
+        }
+    }
+
+    private void cancelPurge() {
+        if(purgeProfileTimer != null) {
+            purgeProfileTimer.cancel();
+        }
+        logger.info("Profile purge: Purge unscheduled");
     }
 
     public long getAllProfilesCount() {

@@ -22,7 +22,18 @@
   -->
 
 <blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
-           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd">
+           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
+           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+           http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
+
+    <cm:property-placeholder persistent-id="org.oasis_open.contextserver.services"
+                             update-strategy="reload" placeholder-prefix="${services.">
+        <cm:default-properties>
+            <cm:property name="profile.purge.interval" value="86400000"/>
+            <cm:property name="profile.purge.inactiveTime" value="30"/>
+            <cm:property name="profile.purge.existTime" value="-1"/>
+        </cm:default-properties>
+    </cm:property-placeholder>
 
     <reference id="persistenceService"
                interface="org.oasis_open.contextserver.persistence.spi.PersistenceService"/>
@@ -92,6 +103,9 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="purgeProfileInterval" value="${services.profile.purge.interval}"/>
+        <property name="purgeProfileInactiveTime" value="${services.profile.purge.inactiveTime}"/>
+        <property name="purgeProfileExistTime" value="${services.profile.purge.existTime}"/>
     </bean>
     <service id="profileService" ref="profileServiceImpl" auto-export="interfaces"/>
 

@@ -121,7 +121,13 @@ public class QueryServiceImpl implements QueryService {
     public Set<PropertyType> getExistingProperties(String tagId, String itemType) {
         Set<PropertyType> filteredProperties = new LinkedHashSet<PropertyType>();
         Set<PropertyType> profileProperties = definitionsService.getPropertyTypeByTag(definitionsService.getTag(tagId), true);
-        Map<String, Map<String, String>> propMapping = (Map<String, Map<String, String>>) persistenceService.getMapping(itemType).get("properties").get("properties");
+        Map<String, Map<String, Object>> itemMapping = persistenceService.getMapping(itemType);
+
+        if (itemMapping == null || itemMapping.isEmpty() || itemMapping.get("properties") == null || itemMapping.get("properties").get("properties") == null){
+            return filteredProperties;
+        }
+
+        Map<String, Map<String, String>> propMapping = (Map<String, Map<String, String>>) itemMapping.get("properties").get("properties");
         for (PropertyType propertyType : profileProperties) {
             if (propMapping.containsKey(propertyType.getId())) {
                 filteredProperties.add(propertyType);

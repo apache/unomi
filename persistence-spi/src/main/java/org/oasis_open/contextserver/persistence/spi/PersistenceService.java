@@ -51,6 +51,8 @@ public interface PersistenceService {
 
     <T extends Item> boolean remove(String itemId, Class<T> clazz);
 
+    <T extends Item> boolean removeByQuery(Condition query, Class<T> clazz);
+
     boolean saveQuery(String queryName, Condition query);
 
     boolean removeQuery(String queryName);
