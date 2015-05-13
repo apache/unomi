@@ -60,7 +60,10 @@ import org.elasticsearch.search.aggregations.bucket.range.RangeBuilder;
 import org.elasticsearch.search.aggregations.bucket.range.date.DateRangeBuilder;
 import org.elasticsearch.search.aggregations.metrics.InternalNumericMetricsAggregation;
 import org.elasticsearch.search.sort.SortOrder;
-import org.oasis_open.contextserver.api.*;
+import org.oasis_open.contextserver.api.ClusterNode;
+import org.oasis_open.contextserver.api.Item;
+import org.oasis_open.contextserver.api.PartialList;
+import org.oasis_open.contextserver.api.TimestampedItem;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.GenericRange;
 import org.oasis_open.contextserver.api.query.NumericRange;
@@ -69,10 +72,16 @@ import org.oasis_open.contextserver.persistence.elasticsearch.conditions.Conditi
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
-import org.oasis_open.contextserver.persistence.spi.aggregate.*;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
-import org.osgi.framework.*;
+import org.oasis_open.contextserver.persistence.spi.aggregate.BaseAggregate;
+import org.oasis_open.contextserver.persistence.spi.aggregate.DateAggregate;
+import org.oasis_open.contextserver.persistence.spi.aggregate.DateRangeAggregate;
+import org.oasis_open.contextserver.persistence.spi.aggregate.NumericRangeAggregate;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleEvent;
+import org.osgi.framework.ServiceReference;
+import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -862,7 +871,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         try {
             return (String) clazz.getField("ITEM_TYPE").get(null);
         } catch (NoSuchFieldException e) {
-            logger.error("Error loading itemType=" + clazz.getName(), e);
+            logger.error("Class " + clazz.getName() + " doesn't define a publicly accessible ITEM_TYPE field", e);
         } catch (IllegalAccessException e) {
             logger.error("Error loading itemType=" + clazz.getName(), e);
         }
