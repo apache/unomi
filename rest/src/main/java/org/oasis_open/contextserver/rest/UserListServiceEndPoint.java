@@ -42,6 +42,7 @@ package org.oasis_open.contextserver.rest;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.jahia.unomi.lists.UserList;
 import org.jahia.unomi.services.UserListService;
+import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PartialList;
 
 import javax.jws.WebMethod;
@@ -72,17 +73,18 @@ public class UserListServiceEndPoint {
     }
 
     @GET
-    @Path("/")
-    public PartialList<UserList> getLists(@QueryParam("offset") @DefaultValue("0") int offset,
+    @Path("/{scope}")
+    public PartialList<UserList> getLists(@PathParam("scope") String scope,
+                                          @QueryParam("offset") @DefaultValue("0") int offset,
                                           @QueryParam("size") @DefaultValue("50") int size,
                                           @QueryParam("sort") String sortBy) {
-        return userListService.getLists(offset, size, sortBy);
+        return userListService.getLists(scope, offset, size, sortBy);
     }
 
     @GET
-    @Path("/{listId}")
-    public UserList load(@PathParam("listId") String listId) {
-        return userListService.load(listId);
+    @Path("/{scope}/{listId}")
+    public UserList load(@PathParam("scope") String scope, @PathParam("listId") String listId) {
+        return userListService.load(Metadata.getIdWithScope(scope, listId));
     }
 
     @POST
@@ -92,8 +94,8 @@ public class UserListServiceEndPoint {
     }
 
     @DELETE
-    @Path("/{listId}")
-    public void delete(@PathParam("listId") String listId) {
-        userListService.delete(listId);
+    @Path("/{scope}/{listId}")
+    public void delete(@PathParam("scope") String scope, @PathParam("listId") String listId) {
+        userListService.delete(Metadata.getIdWithScope(scope, listId));
     }
 }

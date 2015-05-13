@@ -48,7 +48,7 @@ import org.oasis_open.contextserver.api.PartialList;
  */
 public interface UserListService {
 
-    PartialList<UserList> getLists(int offset, int size, String sortBy);
+    PartialList<UserList> getLists(String scope, int offset, int size, String sortBy);
 
     UserList load(String listId);
 

@@ -54,8 +54,8 @@ public class UserListServiceImpl implements UserListService {
     }
 
     @Override
-    public PartialList<UserList> getLists(int offset, int size, String sortBy) {
-        return persistenceService.getAllItems(UserList.class, offset, size, sortBy);
+    public PartialList<UserList> getLists(String scope, int offset, int size, String sortBy) {
+        return persistenceService.query("metadata.scope", scope, sortBy, UserList.class, offset, size);
     }
 
     @Override
