@@ -64,7 +64,7 @@ public class UserListServiceEndPoint {
     private LocalizationHelper localizationHelper;
 
     public UserListServiceEndPoint() {
-        System.out.println("Initializing UserList service endpoint...");
+        System.out.println("Initializing user list service endpoint...");
     }
 
 

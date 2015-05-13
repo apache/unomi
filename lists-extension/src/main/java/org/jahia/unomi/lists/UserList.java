@@ -39,43 +39,35 @@
  */
 package org.jahia.unomi.lists;
 
-import org.oasis_open.contextserver.api.Item;
-import org.oasis_open.contextserver.api.Profile;
+import org.oasis_open.contextserver.api.Metadata;
+import org.oasis_open.contextserver.api.MetadataItem;
 
-import java.util.Collections;
+import javax.xml.bind.annotation.XmlRootElement;
 import java.util.Date;
-import java.util.Set;
 
 /**
  * @author Christophe Laprun
  */
-public class UserList extends Item {
-    private final String name;
-    private final String description;
-    private final Date createdOn;
-    private Set<Profile> members;
+@XmlRootElement
+public class UserList extends MetadataItem {
+    private static final long serialVersionUID = 1L;
+    public static final String ITEM_TYPE = "userList";
 
-    public UserList(String itemId, String name, String description) {
-        super(itemId);
-        this.name = name;
-        this.description = description;
+    private Date createdOn;
+
+    public UserList() {
+    }
+
+    public UserList(Metadata metadata) {
+        super(metadata);
         this.createdOn = new Date();
-        this.members = Collections.emptySet();
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getDescription() {
-        return description;
     }
 
     public Date getCreatedOn() {
         return createdOn;
     }
 
-    public Set<Profile> getMembers() {
-        return members;
+    public void setCreatedOn(Date createdOn) {
+        this.createdOn = createdOn;
     }
 }
