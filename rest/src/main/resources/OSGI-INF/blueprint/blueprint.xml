@@ -235,7 +235,6 @@
 
     <bean id="userListServiceEndPoint" class="org.oasis_open.contextserver.rest.UserListServiceEndPoint">
         <property name="userListService" ref="userListService"/>
-        <property name="localizationHelper" ref="localizationHelper"/>
     </bean>
 
     <bean id="resourceBundleHelper" class="org.oasis_open.contextserver.rest.ResourceBundleHelper">

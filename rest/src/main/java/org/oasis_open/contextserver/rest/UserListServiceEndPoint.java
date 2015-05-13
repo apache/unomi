@@ -61,22 +61,14 @@ import javax.ws.rs.core.MediaType;
 )
 public class UserListServiceEndPoint {
     private UserListService userListService;
-    private LocalizationHelper localizationHelper;
 
     public UserListServiceEndPoint() {
         System.out.println("Initializing user list service endpoint...");
     }
 
-
     @WebMethod(exclude = true)
     public void setUserListService(UserListService userListService) {
         this.userListService = userListService;
-    }
-
-
-    @WebMethod(exclude = true)
-    public void setLocalizationHelper(LocalizationHelper localizationHelper) {
-        this.localizationHelper = localizationHelper;
     }
 
     @GET
