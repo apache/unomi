@@ -52,6 +52,8 @@ import java.util.Set;
  */
 public interface UserListService {
 
+    public Set<Metadata> getListMetadatas(int offset, int size, String sortBy);
+
     public Set<Metadata> getListMetadatas(String scope, int offset, int size, String sortBy);
 
     public Set<Metadata> getListMetadatas(Query query);

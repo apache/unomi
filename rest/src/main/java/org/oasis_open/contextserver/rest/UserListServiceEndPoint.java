@@ -74,6 +74,12 @@ public class UserListServiceEndPoint {
     }
 
     @GET
+    @Path("/")
+    public Set<Metadata> getListMetadatas() {
+        return userListService.getListMetadatas(0, 50, null);
+    }
+
+    @GET
     @Path("/{scope}")
     public Set<Metadata> getListMetadatas(@PathParam("scope") String scope,
                                           @QueryParam("offset") @DefaultValue("0") int offset,

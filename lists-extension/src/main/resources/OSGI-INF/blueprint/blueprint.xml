@@ -27,10 +27,14 @@
     <reference id="persistenceService"
                interface="org.oasis_open.contextserver.persistence.spi.PersistenceService"/>
 
+    <reference id="definitionsService" interface="org.oasis_open.contextserver.api.services.DefinitionsService"/>
+
+
     <!-- User List service -->
 
     <bean id="userListServiceImpl" class="org.jahia.unomi.services.UserListServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
+        <property name="definitionsService" ref="definitionsService"/>
     </bean>
     <service id="userListService" ref="userListServiceImpl" auto-export="interfaces"/>
 </blueprint>

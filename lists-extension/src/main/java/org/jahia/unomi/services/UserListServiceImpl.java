@@ -44,6 +44,7 @@ import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.Query;
+import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
 
 import java.util.HashSet;
@@ -56,8 +57,22 @@ import java.util.Set;
 public class UserListServiceImpl implements UserListService {
     private PersistenceService persistenceService;
 
+    private DefinitionsService definitionsService;
+
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
+    }
+
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
+    }
+
+    public Set<Metadata> getListMetadatas(int offset, int size, String sortBy) {
+        Set<Metadata> descriptions = new HashSet<Metadata>();
+        for (UserList definition : persistenceService.getAllItems(UserList.class, offset, size, sortBy).getList()) {
+            descriptions.add(definition.getMetadata());
+        }
+        return descriptions;
     }
 
     public Set<Metadata> getListMetadatas(String scope, int offset, int size, String sortBy) {
@@ -69,6 +84,7 @@ public class UserListServiceImpl implements UserListService {
     }
 
     public Set<Metadata> getListMetadatas(Query query) {
+        definitionsService.resolveConditionType(query.getCondition());
         Set<Metadata> descriptions = new HashSet<Metadata>();
         for (UserList definition : persistenceService.query(query.getCondition(), query.getSortby(), UserList.class, query.getOffset(), query.getLimit()).getList()) {
             descriptions.add(definition.getMetadata());
