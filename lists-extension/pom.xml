@@ -4,6 +4,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <modules>
+        <module>services</module>
+        <module>rest</module>
+    </modules>
+
     <parent>
         <groupId>org.oasis-open.contextserver</groupId>
         <artifactId>context-server</artifactId>
@@ -13,61 +18,5 @@
     <groupId>org.jahia.unomi</groupId>
     <artifactId>cxs-lists-extension</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <packaging>bundle</packaging>
-
-    <dependencies>
-        <dependency>
-            <groupId>org.oasis-open.contextserver</groupId>
-            <artifactId>context-server-api</artifactId>
-            <version>1.0-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.oasis-open.contextserver</groupId>
-            <artifactId>context-server-persistence-spi</artifactId>
-            <version>1.0-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.cxf</groupId>
-            <artifactId>cxf-rt-rs-security-cors</artifactId>
-            <version>2.7.11</version>
-            <scope>provided</scope>
-        </dependency>
-    </dependencies>
-
-    <build>
-        <plugins>
-            <!--<plugin>
-                <groupId>org.jahia.server</groupId>
-                <artifactId>jahia-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>native2ascii</id>
-                        <goals>
-                            <goal>native2ascii</goal>
-                        </goals>
-                        <configuration>
-                            <includes>messages*.properties</includes>
-                            <defaultPropertiesFileLocale>en</defaultPropertiesFileLocale>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>-->
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
-                        <Import-Package>
-                            sun.misc;resolution:=optional,
-                            *
-                        </Import-Package>
-                    </instructions>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+    <packaging>pom</packaging>
 </project>

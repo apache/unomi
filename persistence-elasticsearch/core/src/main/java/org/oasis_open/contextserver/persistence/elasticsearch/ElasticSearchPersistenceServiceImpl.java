@@ -290,6 +290,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                     }
                 }
+                loadPredefinedMappings(event.getBundle().getBundleContext());
                 break;
             case BundleEvent.STOPPING:
                 conditionEvaluatorDispatcher.removeEvaluators(event.getBundle().getBundleId());

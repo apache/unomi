@@ -1,4 +1,4 @@
-/**
+package org.jahia.unomi.rest; /**
  * This file is part of Jahia, next-generation open source CMS:
  * Jahia's next-generation, open source CMS stems from a widely acknowledged vision
  * of enterprise application convergence - web, search, document, social and portal -
@@ -37,7 +37,6 @@
  * If you are unsure which license is appropriate for your use,
  * please contact the sales department at sales@jahia.com.
  */
-package org.oasis_open.contextserver.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.jahia.unomi.lists.UserList;
