@@ -43,12 +43,13 @@ import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.jahia.unomi.lists.UserList;
 import org.jahia.unomi.services.UserListService;
 import org.oasis_open.contextserver.api.Metadata;
-import org.oasis_open.contextserver.api.PartialList;
+import org.oasis_open.contextserver.api.query.Query;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.util.Set;
 
 
 /**
@@ -74,11 +75,17 @@ public class UserListServiceEndPoint {
 
     @GET
     @Path("/{scope}")
-    public PartialList<UserList> getLists(@PathParam("scope") String scope,
+    public Set<Metadata> getListMetadatas(@PathParam("scope") String scope,
                                           @QueryParam("offset") @DefaultValue("0") int offset,
                                           @QueryParam("size") @DefaultValue("50") int size,
                                           @QueryParam("sort") String sortBy) {
-        return userListService.getLists(scope, offset, size, sortBy);
+        return userListService.getListMetadatas(scope, offset, size, sortBy);
+    }
+
+    @POST
+    @Path("/query")
+    public Set<Metadata> getListMetadatas(Query query) {
+        return userListService.getListMetadatas(query);
     }
 
     @GET
@@ -88,7 +95,7 @@ public class UserListServiceEndPoint {
     }
 
     @POST
-    @Path("/{listId}")
+    @Path("/")
     public void save(UserList list) {
         userListService.save(list);
     }

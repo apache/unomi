@@ -25,6 +25,7 @@ package org.oasis_open.contextserver.api.services;
 import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.Profile;
+import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.segments.Scoring;
 import org.oasis_open.contextserver.api.segments.Segment;
 import org.oasis_open.contextserver.api.segments.SegmentsAndScores;
@@ -35,19 +36,11 @@ import java.util.Set;
 
 public interface SegmentService {
 
-    Set<Metadata> getSegmentMetadatas();
+    public Set<Metadata> getSegmentMetadatas(int offset, int size, String sortBy);
 
-    Set<Metadata> getSegmentMetadatas(String scope);
+    public Set<Metadata> getSegmentMetadatas(String scope, int offset, int size, String sortBy);
 
-    /**
-     * Retrieves segment metadata by scope. If no scope is provided, then all segment metadata is returned. If a scope is provided, we only return the segment metadata
-     * associated with the provided scope with, optionally, if <code>includeShared</code> is <code>true</code>, shared segments.
-     *
-     * @param scope         a potentially <code>null</code> scope about which we want to retrieve metadata
-     * @param includeShared <code>true</code> if we want to also include shared segments, <code>false</code> otherwise
-     * @return a <code>Map</code> of segment metadata, each entry consisting of a scope name and a set of associated segment metadata
-     */
-    Map<String, Set<Metadata>> getScopedSegmentMetadata(String scope, boolean includeShared);
+    public Set<Metadata> getSegmentMetadatas(Query query);
 
     Segment getSegmentDefinition(String scope, String segmentId);
 

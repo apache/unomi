@@ -26,6 +26,7 @@ import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.Profile;
+import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.segments.Segment;
 import org.oasis_open.contextserver.api.services.SegmentService;
 
@@ -34,7 +35,6 @@ import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 @WebService
@@ -77,7 +77,7 @@ public class SegmentServiceEndPoint {
     @GET
     @Path("/")
     public Set<Metadata> getSegmentMetadatas() {
-        return segmentService.getSegmentMetadatas();
+        return segmentService.getSegmentMetadatas(0, 50, null);
     }
 
     @POST
@@ -88,20 +88,17 @@ public class SegmentServiceEndPoint {
 
     @GET
     @Path("/{scope}")
-    public Set<Metadata> getSegmentMetadatas(@PathParam("scope") String scope) {
-        return segmentService.getSegmentMetadatas(scope);
+    public Set<Metadata> getListMetadatas(@PathParam("scope") String scope,
+                                          @QueryParam("offset") @DefaultValue("0") int offset,
+                                          @QueryParam("size") @DefaultValue("50") int size,
+                                          @QueryParam("sort") String sortBy) {
+        return segmentService.getSegmentMetadatas(scope, offset, size, sortBy);
     }
 
-    @GET
-    @Path("/scoped")
-    public Map<String, Set<Metadata>> getScopedSegmentMetadata() {
-        return segmentService.getScopedSegmentMetadata(null, true);
-    }
-
-    @GET
-    @Path("/scoped/{scope}")
-    public Map<String, Set<Metadata>> getScopedSegmentMetadata(@PathParam("scope") String scope, @QueryParam("includeShared") boolean includeShared) {
-        return segmentService.getScopedSegmentMetadata(scope, includeShared);
+    @POST
+    @Path("/query")
+    public Set<Metadata> getListMetadatas(Query query) {
+        return segmentService.getSegmentMetadatas(query);
     }
 
     @GET
@@ -119,7 +116,7 @@ public class SegmentServiceEndPoint {
     @GET
     @Path("/resetQueries")
     public void resetQueries() {
-        for (Metadata metadata : segmentService.getSegmentMetadatas()) {
+        for (Metadata metadata : segmentService.getSegmentMetadatas(0, 50, null)) {
             Segment s = segmentService.getSegmentDefinition(metadata.getScope(), metadata.getId());
             segmentService.setSegmentDefinition(s);
         }

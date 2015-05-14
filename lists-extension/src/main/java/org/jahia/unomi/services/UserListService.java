@@ -40,7 +40,11 @@
 package org.jahia.unomi.services;
 
 import org.jahia.unomi.lists.UserList;
-import org.oasis_open.contextserver.api.PartialList;
+import org.oasis_open.contextserver.api.Metadata;
+import org.oasis_open.contextserver.api.conditions.Condition;
+import org.oasis_open.contextserver.api.query.Query;
+
+import java.util.Set;
 
 
 /**
@@ -48,7 +52,9 @@ import org.oasis_open.contextserver.api.PartialList;
  */
 public interface UserListService {
 
-    PartialList<UserList> getLists(String scope, int offset, int size, String sortBy);
+    public Set<Metadata> getListMetadatas(String scope, int offset, int size, String sortBy);
+
+    public Set<Metadata> getListMetadatas(Query query);
 
     UserList load(String listId);
 

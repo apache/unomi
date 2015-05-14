@@ -40,8 +40,15 @@
 package org.jahia.unomi.services;
 
 import org.jahia.unomi.lists.UserList;
+import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PartialList;
+import org.oasis_open.contextserver.api.conditions.Condition;
+import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * @author Christophe Laprun
@@ -53,9 +60,20 @@ public class UserListServiceImpl implements UserListService {
         this.persistenceService = persistenceService;
     }
 
-    @Override
-    public PartialList<UserList> getLists(String scope, int offset, int size, String sortBy) {
-        return persistenceService.query("metadata.scope", scope, sortBy, UserList.class, offset, size);
+    public Set<Metadata> getListMetadatas(String scope, int offset, int size, String sortBy) {
+        Set<Metadata> descriptions = new HashSet<Metadata>();
+        for (UserList definition : persistenceService.query("metadata.scope", scope, sortBy, UserList.class, offset, size).getList()) {
+            descriptions.add(definition.getMetadata());
+        }
+        return descriptions;
+    }
+
+    public Set<Metadata> getListMetadatas(Query query) {
+        Set<Metadata> descriptions = new HashSet<Metadata>();
+        for (UserList definition : persistenceService.query(query.getCondition(), query.getSortby(), UserList.class, query.getOffset(), query.getLimit()).getList()) {
+            descriptions.add(definition.getMetadata());
+        }
+        return descriptions;
     }
 
     @Override
@@ -71,5 +89,6 @@ public class UserListServiceImpl implements UserListService {
     @Override
     public void delete(String listId) {
         persistenceService.remove(listId, UserList.class);
+        // TODO remove id on profiles
     }
 }

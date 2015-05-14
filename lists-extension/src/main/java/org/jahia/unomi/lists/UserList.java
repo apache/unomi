@@ -43,7 +43,6 @@ import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.MetadataItem;
 
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.Date;
 
 /**
  * @author Christophe Laprun
@@ -53,21 +52,10 @@ public class UserList extends MetadataItem {
     private static final long serialVersionUID = 1L;
     public static final String ITEM_TYPE = "userList";
 
-    private Date createdOn;
-
     public UserList() {
     }
 
     public UserList(Metadata metadata) {
         super(metadata);
-        this.createdOn = new Date();
-    }
-
-    public Date getCreatedOn() {
-        return createdOn;
-    }
-
-    public void setCreatedOn(Date createdOn) {
-        this.createdOn = createdOn;
     }
 }

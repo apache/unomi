@@ -27,6 +27,7 @@ import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
+import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.rules.Rule;
 import org.oasis_open.contextserver.api.segments.Scoring;
 import org.oasis_open.contextserver.api.segments.ScoringElement;
@@ -250,52 +251,29 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         return Collections.emptySet();
     }
 
-    public Set<Metadata> getSegmentMetadatas() {
-        return getSegmentMetadataFrom(persistenceService.getAllItems(Segment.class, 0, 50, null).getList());
-    }
-
-    public Set<Metadata> getSegmentMetadatas(String scope) {
-        return getSegmentMetadataFrom(persistenceService.query("metadata.scope", scope, null, Segment.class, 0, 50).getList());
-    }
-
-    @Override
-    public Map<String, Set<Metadata>> getScopedSegmentMetadata(String scope, boolean includeShared) {
-        if (scope == null) {
-            final List<Segment> all = persistenceService.getAllItems(Segment.class, 0, 50, null).getList();
-            final Map<String, Set<Metadata>> results = new HashMap<>(all.size());
-            for (Segment segment : all) {
-                final String segmentScope = segment.getScope();
-                Set<Metadata> metadataSet = results.get(segmentScope);
-                if (metadataSet == null) {
-                    metadataSet = new HashSet<>(all.size());
-                    results.put(segmentScope, metadataSet);
-                }
-                metadataSet.add(segment.getMetadata());
-            }
-
-            return results;
-        } else {
-            if (!includeShared) {
-                return Collections.singletonMap(scope, getSegmentMetadatas(scope));
-            } else {
-                // todo: create appropriate query if needed
-                final Map<String, Set<Metadata>> results = new HashMap<>(2);
-                final Set<Metadata> all = getSegmentMetadatas();
-                for (Metadata metadata : all) {
-                    final String metadataScope = metadata.getScope();
-                    if (Metadata.SYSTEM_SCOPE.equals(metadataScope) || metadataScope.equals(scope)) {
-                        Set<Metadata> metadataSet = results.get(metadataScope);
-                        if (metadataSet == null) {
-                            metadataSet = new HashSet<>(all.size());
-                            results.put(metadataScope, metadataSet);
-                        }
-                        metadataSet.add(metadata);
-                    }
-                }
-
-                return results;
-            }
+    public Set<Metadata> getSegmentMetadatas(int offset, int size, String sortBy) {
+        Set<Metadata> descriptions = new HashSet<Metadata>();
+        for (Segment definition : persistenceService.getAllItems(Segment.class, offset, size, sortBy).getList()) {
+            descriptions.add(definition.getMetadata());
         }
+        return descriptions;
+    }
+
+    public Set<Metadata> getSegmentMetadatas(String scope, int offset, int size, String sortBy) {
+        Set<Metadata> descriptions = new HashSet<Metadata>();
+        for (Segment definition : persistenceService.query("metadata.scope", scope, sortBy, Segment.class, offset, size).getList()) {
+            descriptions.add(definition.getMetadata());
+        }
+        return descriptions;
+    }
+
+    public Set<Metadata> getSegmentMetadatas(Query query) {
+        definitionsService.resolveConditionType(query.getCondition());
+        Set<Metadata> descriptions = new HashSet<Metadata>();
+        for (Segment definition : persistenceService.query(query.getCondition(), query.getSortby(), Segment.class, query.getOffset(), query.getLimit()).getList()) {
+            descriptions.add(definition.getMetadata());
+        }
+        return descriptions;
     }
 
     private List<Segment> getAllSegmentDefinitions() {
@@ -720,6 +698,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     }
 
     private void initializeTimer() {
+        // TODO : timer need to be canceled in preDestroy
         Timer timer = new Timer();
         TimerTask task = new TimerTask() {
             @Override
