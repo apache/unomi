@@ -280,7 +280,7 @@ public class ContextServlet extends HttpServlet {
                 }
                 HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, personaIdCookieName);
             } else {
-                logger.debug("Couldn't find merged profile" + profileId + ", falling back to profile " + profileToDelete.getItemId());
+                logger.warn("Couldn't find merged profile" + profileId + ", falling back to profile " + profileToDelete.getItemId());
                 profile = profileToDelete;
                 profile.setMergedWith(null);
                 profileService.save(profile);

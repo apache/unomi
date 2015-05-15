@@ -52,6 +52,7 @@ public class ConditionEvaluatorTest extends BaseTest {
         lastVisit = new GregorianCalendar(2015,1,1,20,30,0).getTime();
 
         Profile profile = new Profile("profile-" + UUID.randomUUID().toString());
+        profile.setProperty("firstVisit", lastVisit);
         profile.setProperty("age", Integer.valueOf(30));
         profile.setProperty("gender", "female");
         profile.setProperty("lastVisit", lastVisit);

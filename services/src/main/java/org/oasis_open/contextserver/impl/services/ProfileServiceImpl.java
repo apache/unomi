@@ -248,7 +248,21 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public boolean mergeProfilesOnProperty(Profile currentProfile, Session currentSession, String propertyName, String propertyValue) {
-        List<Profile> profilesToMerge = persistenceService.query(propertyName, propertyValue, "properties.firstVisit", Profile.class);
+
+        Condition propertyCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        propertyCondition.setParameter("comparisonOperator", "equals");
+        propertyCondition.setParameter("propertyName", propertyName);
+        propertyCondition.setParameter("propertyValue", propertyValue);
+
+        Condition excludeMergedProfilesCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        excludeMergedProfilesCondition.setParameter("comparisonOperator", "missing");
+        excludeMergedProfilesCondition.setParameter("propertyName", "mergedWith");
+
+        Condition c = new Condition(definitionsService.getConditionType("booleanCondition"));
+        c.setParameter("operator", "and");
+        c.setParameter("subConditions", Arrays.asList(propertyCondition, excludeMergedProfilesCondition));
+
+        List<Profile> profilesToMerge = persistenceService.query(c, "properties.firstVisit", Profile.class);
 
         if (!profilesToMerge.contains(currentProfile)) {
             profilesToMerge.add(currentProfile);
