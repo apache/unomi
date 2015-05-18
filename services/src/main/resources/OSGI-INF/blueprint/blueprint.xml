@@ -106,6 +106,7 @@
         <property name="purgeProfileInterval" value="${services.profile.purge.interval}"/>
         <property name="purgeProfileInactiveTime" value="${services.profile.purge.inactiveTime}"/>
         <property name="purgeProfileExistTime" value="${services.profile.purge.existTime}"/>
+        <property name="purgeSessionsAndEventsTime" value="${services.event.purge.existTime}"/>
     </bean>
     <service id="profileService" ref="profileServiceImpl" auto-export="interfaces"/>
 

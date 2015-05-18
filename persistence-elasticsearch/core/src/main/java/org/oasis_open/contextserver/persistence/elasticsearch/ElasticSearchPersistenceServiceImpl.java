@@ -239,8 +239,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
         loadPredefinedMappings(bundleContext);
 
-        initializeTimer();
-
         bundleContext.addBundleListener(this);
 
         try {
@@ -943,27 +941,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
-    private void initializeTimer() {
-        final int autoPurge = node.settings().getAsInt("node.contextserver.autoPurge", -1);
-        if (autoPurge > 0) {
-            timer = new Timer();
-            TimerTask task = new TimerTask() {
-                @Override
-                public void run() {
-                    purge(getDay(-autoPurge).getTime());
-                }
-            };
-            timer.scheduleAtFixedRate(task, getDay(1).getTime(), MILLIS_PER_DAY);
-        }
-    }
-
-    private GregorianCalendar getDay(int offset) {
-        GregorianCalendar gc = new GregorianCalendar();
-        gc = new GregorianCalendar(gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), gc.get(Calendar.DAY_OF_MONTH));
-        gc.add(Calendar.DAY_OF_MONTH, offset);
-        return gc;
-    }
-
     @Override
     public void refresh() {
         new InClassLoaderExecute<Boolean>() {
@@ -995,13 +972,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         .execute()
                         .actionGet();
 
-                SimpleDateFormat d = new SimpleDateFormat("MM-dd");
+                SimpleDateFormat d = new SimpleDateFormat("yyyy-MM");
 
                 List<String> toDelete = new ArrayList<String>();
                 for (String currentIndexName : statsResponse.getIndices().keySet()) {
                     if (currentIndexName.startsWith(indexName + "-")) {
                         try {
                             Date indexDate = d.parse(currentIndexName.substring(indexName.length() + 1));
+
                             if (indexDate.before(date)) {
                                 toDelete.add(currentIndexName);
                             }

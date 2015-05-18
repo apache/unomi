@@ -49,9 +49,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private DefinitionsService definitionsService;
 
     private Condition purgeProfileQuery;
-    private Long purgeProfileExistTime;
-    private Long purgeProfileInactiveTime;
-    private Long purgeProfileInterval;
+    private Integer purgeProfileExistTime = 0;
+    private Integer purgeProfileInactiveTime = 0;
+    private Integer purgeSessionsAndEventsTime = 0;
+    private Integer purgeProfileInterval = 0;
+
     private Timer purgeProfileTimer;
 
     public ProfileServiceImpl() {
@@ -98,22 +100,26 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private void processBundleStop(BundleContext bundleContext) {
     }
 
-    public void setPurgeProfileExistTime(Long purgeProfileExistTime) {
+    public void setPurgeProfileExistTime(Integer purgeProfileExistTime) {
         this.purgeProfileExistTime = purgeProfileExistTime;
     }
 
-    public void setPurgeProfileInactiveTime(Long purgeProfileInactiveTime) {
+    public void setPurgeProfileInactiveTime(Integer purgeProfileInactiveTime) {
         this.purgeProfileInactiveTime = purgeProfileInactiveTime;
     }
 
-    public void setPurgeProfileInterval(Long purgeProfileInterval) {
+    public void setPurgeSessionsAndEventsTime(Integer purgeSessionsAndEventsTime) {
+        this.purgeSessionsAndEventsTime = purgeSessionsAndEventsTime;
+    }
+
+    public void setPurgeProfileInterval(Integer purgeProfileInterval) {
         this.purgeProfileInterval = purgeProfileInterval;
     }
 
     private void initializePurge() {
         logger.info("Profile purge: Initializing");
 
-        if(purgeProfileInactiveTime > 0 || purgeProfileExistTime > 0) {
+        if(purgeProfileInactiveTime > 0 || purgeProfileExistTime > 0 || purgeSessionsAndEventsTime > 0) {
             if(purgeProfileInactiveTime > 0) {
                 logger.info("Profile purge: Profile with no visits since {} days, will be purged", purgeProfileInactiveTime);
             }
@@ -160,12 +166,16 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                     }
 
                     persistenceService.removeByQuery(purgeProfileQuery, Profile.class);
+
+                    if (purgeSessionsAndEventsTime > 0) {
+                        persistenceService.purge(getMonth(-purgeSessionsAndEventsTime).getTime());
+                    }
+
                     logger.debug("Profile purge: purge executed in {} ms", System.currentTimeMillis() - t);
                 }
             };
-            // 5 sec delay because waiting
-            purgeProfileTimer.scheduleAtFixedRate(task, 0, purgeProfileInterval);
-            logger.info("Profile purge: purge scheduled with an interval of {} ms", purgeProfileInterval);
+            purgeProfileTimer.scheduleAtFixedRate(task, getDay(1).getTime(), purgeProfileInterval);
+            logger.info("Profile purge: purge scheduled with an interval of {} days", purgeProfileInterval);
         } else {
             logger.info("Profile purge: No purge scheduled");
         }
@@ -176,6 +186,20 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             purgeProfileTimer.cancel();
         }
         logger.info("Profile purge: Purge unscheduled");
+    }
+
+    private GregorianCalendar getDay(int offset) {
+        GregorianCalendar gc = new GregorianCalendar();
+        gc = new GregorianCalendar(gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), gc.get(Calendar.DAY_OF_MONTH));
+        gc.add(Calendar.DAY_OF_MONTH, offset);
+        return gc;
+    }
+
+    private GregorianCalendar getMonth(int offset) {
+        GregorianCalendar gc = new GregorianCalendar();
+        gc = new GregorianCalendar(gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), 1);
+        gc.add(Calendar.MONTH, offset);
+        return gc;
     }
 
     public long getAllProfilesCount() {
