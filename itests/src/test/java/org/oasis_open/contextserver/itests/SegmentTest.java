@@ -24,7 +24,7 @@ public class SegmentTest extends BaseTest{
     @Test
     public void testSegments() {
         Assert.assertNotNull("Segment service should be available", segmentService);
-        Set<Metadata> segmentMetadatas = segmentService.getSegmentMetadatas();
+        Set<Metadata> segmentMetadatas = segmentService.getSegmentMetadatas(0, 50, null);
         Assert.assertNotEquals("Segment metadata list should not be empty", 0, segmentMetadatas.size());
         LOGGER.info("Retrieved " + segmentMetadatas.size() + " segment metadata entries");
     }
