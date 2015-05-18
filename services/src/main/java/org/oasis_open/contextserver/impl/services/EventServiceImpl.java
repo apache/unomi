@@ -197,7 +197,7 @@ public class EventServiceImpl implements EventService {
         conditions.add(condition);
 
         condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        condition.setParameter("propertyName", "target.type");
+        condition.setParameter("propertyName", "target.itemType");
         condition.setParameter("propertyValue", event.getTarget().getItemType());
         condition.setParameter("comparisonOperator", "equals");
         conditions.add(condition);
