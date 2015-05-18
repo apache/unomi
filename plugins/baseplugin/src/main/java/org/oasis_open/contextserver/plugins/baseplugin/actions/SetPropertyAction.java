@@ -73,8 +73,13 @@ public class SetPropertyAction implements ActionExecutor {
             }
 
             if (propertyValue != null && !propertyValue.equals(BeanUtils.getProperty(target, propertyName))) {
-                BeanUtils.setProperty(target, propertyName, propertyValue);
-                return  Boolean.TRUE.equals(action.getParameterValues().get("storeInSession")) ? EventService.SESSION_UPDATED : EventService.PROFILE_UPDATED;
+                String setPropertyStrategy = (String) action.getParameterValues().get("setPropertyStrategy");
+                if (setPropertyStrategy == null ||
+                        setPropertyStrategy.equals("alwaysSet") ||
+                        (setPropertyStrategy.equals("setIfMissing") && BeanUtils.getProperty(target, propertyName) == null)) {
+                    BeanUtils.setProperty(target, propertyName, propertyValue);
+                    return Boolean.TRUE.equals(action.getParameterValues().get("storeInSession")) ? EventService.SESSION_UPDATED : EventService.PROFILE_UPDATED;
+                }
             }
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             logger.error("Cannot set property", e);

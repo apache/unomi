@@ -21,6 +21,11 @@
             "multivalued": false
         },
         {
+            "id": "setPropertyStrategy",
+            "type": "string",
+            "multivalued": false
+        },
+        {
             "id": "storeInSession",
             "type": "boolean",
             "multivalued": false
