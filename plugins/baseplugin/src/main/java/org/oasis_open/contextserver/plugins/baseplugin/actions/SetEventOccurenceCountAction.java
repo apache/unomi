@@ -31,6 +31,8 @@ import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class SetEventOccurenceCountAction implements ActionExecutor {
     private DefinitionsService definitionsService;
@@ -78,7 +80,12 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
         long count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
 
-        event.getProfile().setProperty((String) pastEventCondition.getParameter("generatedPropertyKey"), count + 1);
+        Map<String,Object> pastEvents = (Map<String,Object>) event.getProfile().getSystemProperties().get("pastEvents");
+        if (pastEvents == null) {
+            pastEvents = new LinkedHashMap<>();
+            event.getProfile().getSystemProperties().put("pastEvents", pastEvents);
+        }
+        pastEvents.put((String) pastEventCondition.getParameter("generatedPropertyKey"), count + 1);
 
         return EventService.PROFILE_UPDATED;
     }

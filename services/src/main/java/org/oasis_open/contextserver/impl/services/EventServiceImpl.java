@@ -85,6 +85,7 @@ public class EventServiceImpl implements EventService {
 
         if (profile != null) {
             Map<String, Object> previousProperties = new LinkedHashMap<String, Object>(profile.getProperties());
+            Map<String, Object> previousSystemProperties = new LinkedHashMap<String, Object>(profile.getSystemProperties());
             Set<String> previousSegments = new HashSet<String>(profile.getSegments());
 
             for (EventListenerService eventListenerService : eventListeners) {
@@ -98,7 +99,7 @@ public class EventServiceImpl implements EventService {
                 profile = session.getProfile();
             }
 
-            if ((changes & PROFILE_UPDATED) == PROFILE_UPDATED && (!profile.getProperties().equals(previousProperties) || !profile.getSegments().equals(previousSegments))) {
+            if ((changes & PROFILE_UPDATED) == PROFILE_UPDATED) {
                 Event profileUpdated = new Event("profileUpdated", session, profile, event.getScope(), event.getSource(), profile, event.getTimeStamp());
                 profileUpdated.setPersistent(false);
                 profileUpdated.getAttributes().putAll(event.getAttributes());

@@ -633,8 +633,10 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             if (!entry.getKey().startsWith("_")) {
                 Map<String,Object> p = new HashMap<>();
                 p.put(propertyKey, entry.getValue());
+                Map<String,Object> p2 = new HashMap<>();
+                p2.put("pastEvents",p);
                 try {
-                    persistenceService.update(entry.getKey(), null, Profile.class, "properties", p);
+                    persistenceService.update(entry.getKey(), null, Profile.class, "systemProperties", p2);
                 } catch (Exception e) {
                     logger.error(e.getMessage(), e);
                 }

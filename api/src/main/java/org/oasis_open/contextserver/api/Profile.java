@@ -35,7 +35,9 @@ public class Profile extends Item {
     public static final String ITEM_TYPE = "profile";
     
     private Map<String,Object> properties;
-    
+
+    private Map<String,Object> systemProperties;
+
     private Set<String> segments;
     
     private Map<String,Integer> scores;
@@ -48,6 +50,7 @@ public class Profile extends Item {
     public Profile(String profileId) {
         super(profileId);
         properties = new HashMap<String, Object>();
+        systemProperties = new HashMap<String, Object>();
         segments = new HashSet<String>();
     }
 
@@ -65,6 +68,14 @@ public class Profile extends Item {
 
     public void setProperties(Map<String, Object> properties) {
         this.properties = properties;
+    }
+
+    public Map<String, Object> getSystemProperties() {
+        return systemProperties;
+    }
+
+    public void setSystemProperties(Map<String, Object> systemProperties) {
+        this.systemProperties = systemProperties;
     }
 
     @XmlTransient
@@ -95,7 +106,7 @@ public class Profile extends Item {
     public void setScores(Map<String, Integer> scores) {
         this.scores = scores;
     }
-    
+
     @Override
     public String toString() {
         return new StringBuilder(512).append("{id: \"").append(getItemId()).append("\", segments: ")

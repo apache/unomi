@@ -38,6 +38,8 @@ public class Session extends Item implements TimestampedItem {
 
     private Map<String,Object> properties;
 
+    private Map<String,Object> systemProperties;
+
     private Date timeStamp;
 
     private String scope;
@@ -56,6 +58,7 @@ public class Session extends Item implements TimestampedItem {
         this.profile = profile;
         this.profileId = profile.getItemId();
         properties = new HashMap<String, Object>();
+        systemProperties = new HashMap<String, Object>();
         this.timeStamp = timeStamp;
         this.scope = scope;
     }
@@ -87,6 +90,14 @@ public class Session extends Item implements TimestampedItem {
 
     public void setProperties(Map<String, Object> properties) {
         this.properties = properties;
+    }
+
+    public Map<String, Object> getSystemProperties() {
+        return systemProperties;
+    }
+
+    public void setSystemProperties(Map<String, Object> systemProperties) {
+        this.systemProperties = systemProperties;
     }
 
     public Date getTimeStamp() {

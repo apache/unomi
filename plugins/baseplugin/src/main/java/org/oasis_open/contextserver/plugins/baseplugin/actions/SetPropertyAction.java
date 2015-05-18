@@ -23,6 +23,9 @@ package org.oasis_open.contextserver.plugins.baseplugin.actions;
  */
 
 import org.apache.commons.beanutils.BeanUtils;
+import org.apache.commons.beanutils.NestedNullException;
+import org.apache.commons.beanutils.PropertyUtils;
+import org.apache.commons.beanutils.expression.DefaultResolver;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
@@ -32,10 +35,13 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.text.SimpleDateFormat;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.TimeZone;
 
 public class SetPropertyAction implements ActionExecutor {
     private static final Logger logger = LoggerFactory.getLogger(SetPropertyAction.class.getName());
+    private DefaultResolver resolver = new DefaultResolver();
 
     public SetPropertyAction() {
     }
@@ -52,17 +58,23 @@ public class SetPropertyAction implements ActionExecutor {
             propertyValue = format.format(event.getTimeStamp());
         }
         String propertyName = (String) action.getParameterValues().get("setPropertyName");
+
+        Object target = Boolean.TRUE.equals(action.getParameterValues().get("storeInSession")) ? event.getSession() : event.getProfile();
+
         try {
-            if (Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"))) {
-                if (propertyValue != null && !propertyValue.equals(BeanUtils.getProperty(event.getSession(), propertyName))) {
-                    BeanUtils.setProperty(event.getSession(), propertyName, propertyValue);
-                    return EventService.SESSION_UPDATED;
+            while (resolver.hasNested(propertyName)) {
+                Object v = PropertyUtils.getProperty(target, resolver.next(propertyName));
+                if (v == null) {
+                    v = new LinkedHashMap<>();
+                    PropertyUtils.setProperty(target, resolver.next(propertyName), v);
                 }
-            } else {
-                if (propertyValue != null && !propertyValue.equals(BeanUtils.getProperty(event.getProfile(), propertyName))) {
-                    BeanUtils.setProperty(event.getProfile(), propertyName, propertyValue);
-                    return EventService.PROFILE_UPDATED;
-                }
+                propertyName = resolver.remove(propertyName);
+                target = v;
+            }
+
+            if (propertyValue != null && !propertyValue.equals(BeanUtils.getProperty(target, propertyName))) {
+                BeanUtils.setProperty(target, propertyName, propertyValue);
+                return  Boolean.TRUE.equals(action.getParameterValues().get("storeInSession")) ? EventService.SESSION_UPDATED : EventService.PROFILE_UPDATED;
             }
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             logger.error("Cannot set property", e);

@@ -3,7 +3,7 @@
     "parentCondition" : {
         "type": "profilePropertyCondition",
         "parameterValues": {
-            "propertyName": "script::'properties.'+goalId+'TargetReached'",
+            "propertyName": "script::'systemProperties.goals.'+goalId+'TargetReached'",
             "comparisonOperator": "exists"
         }
     },

@@ -14,7 +14,7 @@
       {
         "type": "sessionPropertyCondition",
         "parameterValues": {
-          "propertyName": "properties.testGoalPrimary_${campaignId}TargetReached",
+          "propertyName": "systemProperties.goals.testGoalPrimary_${campaignId}TargetReached",
           "comparisonOperator": "exists"
         }
       }
