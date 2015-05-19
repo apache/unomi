@@ -57,21 +57,21 @@ public class SegmentServiceEndPoint {
     }
 
     @GET
-    @Path("/{scope}/{segmentID}/match")
-    public PartialList<Profile> getMatchingIndividuals(@PathParam("scope") String scope, @PathParam("segmentID") String segmentId, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
-        return segmentService.getMatchingIndividuals(scope, segmentId, offset, size, sortBy);
+    @Path("/{segmentID}/match")
+    public PartialList<Profile> getMatchingIndividuals(@PathParam("segmentID") String segmentId, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
+        return segmentService.getMatchingIndividuals(segmentId, offset, size, sortBy);
     }
 
     @GET
-    @Path("/{scope}/{segmentID}/count")
-    public long getMatchingIndividualsCount(@PathParam("scope") String scope, @PathParam("segmentID") String segmentId) {
-        return segmentService.getMatchingIndividualsCount(scope, segmentId);
+    @Path("/{segmentID}/count")
+    public long getMatchingIndividualsCount(@PathParam("segmentID") String segmentId) {
+        return segmentService.getMatchingIndividualsCount(segmentId);
     }
 
     @GET
-    @Path("/{scope}/{segmentID}/match/{profile}")
-    public Boolean isProfileInSegment(@PathParam("profile") Profile profile, @PathParam("scope") String scope, @PathParam("segmentID") String segmentId) {
-        return segmentService.isProfileInSegment(profile, scope, segmentId);
+    @Path("/{segmentID}/match/{profile}")
+    public Boolean isProfileInSegment(@PathParam("profile") Profile profile, @PathParam("segmentID") String segmentId) {
+        return segmentService.isProfileInSegment(profile, segmentId);
     }
 
     @GET
@@ -86,15 +86,6 @@ public class SegmentServiceEndPoint {
         segmentService.setSegmentDefinition(segment);
     }
 
-    @GET
-    @Path("/{scope}")
-    public Set<Metadata> getListMetadatas(@PathParam("scope") String scope,
-                                          @QueryParam("offset") @DefaultValue("0") int offset,
-                                          @QueryParam("size") @DefaultValue("50") int size,
-                                          @QueryParam("sort") String sortBy) {
-        return segmentService.getSegmentMetadatas(scope, offset, size, sortBy);
-    }
-
     @POST
     @Path("/query")
     public Set<Metadata> getListMetadatas(Query query) {
@@ -102,22 +93,22 @@ public class SegmentServiceEndPoint {
     }
 
     @GET
-    @Path("/{scope}/{segmentID}")
-    public Segment getSegmentDefinition(@PathParam("scope") String scope, @PathParam("segmentID") String segmentId) {
-        return segmentService.getSegmentDefinition(scope, segmentId);
+    @Path("/{segmentID}")
+    public Segment getSegmentDefinition(@PathParam("segmentID") String segmentId) {
+        return segmentService.getSegmentDefinition(segmentId);
     }
 
     @DELETE
-    @Path("/{scope}/{segmentID}")
-    public List<Metadata> removeSegmentDefinition(@PathParam("scope") String scope, @PathParam("segmentID") String segmentId, @QueryParam("validate") boolean validate) {
-        return segmentService.removeSegmentDefinition(scope, segmentId, validate);
+    @Path("/{segmentID}")
+    public List<Metadata> removeSegmentDefinition(@PathParam("segmentID") String segmentId, @QueryParam("validate") boolean validate) {
+        return segmentService.removeSegmentDefinition(segmentId, validate);
     }
 
     @GET
     @Path("/resetQueries")
     public void resetQueries() {
         for (Metadata metadata : segmentService.getSegmentMetadatas(0, 50, null)) {
-            Segment s = segmentService.getSegmentDefinition(metadata.getScope(), metadata.getId());
+            Segment s = segmentService.getSegmentDefinition(metadata.getId());
             segmentService.setSegmentDefinition(s);
         }
     }

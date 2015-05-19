@@ -22,7 +22,6 @@ package org.oasis_open.contextserver.api;
  * #L%
  */
 
-import javax.xml.bind.annotation.XmlTransient;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -93,15 +92,6 @@ public class Metadata implements Comparable<Metadata> {
         this.tags = tagIDs;
     }
 
-    @XmlTransient
-    public String getIdWithScope() {
-        return getIdWithScope(scope, id);
-    }
-
-    public static String getIdWithScope(String scope, String id) {
-        return (scope == null ? SYSTEM_SCOPE : scope) + "_" + id;
-    }
-
     public boolean isEnabled() {
         return enabled;
     }
@@ -135,7 +125,7 @@ public class Metadata implements Comparable<Metadata> {
     }
 
     public int compareTo(Metadata o) {
-        return getIdWithScope().compareTo(o.getIdWithScope());
+        return getId().compareTo(o.getId());
     }
 
     @Override

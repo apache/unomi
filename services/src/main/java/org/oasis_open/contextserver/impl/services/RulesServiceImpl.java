@@ -24,6 +24,8 @@ package org.oasis_open.contextserver.impl.services;
 
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
+import org.oasis_open.contextserver.api.goals.Goal;
+import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.services.*;
 import org.oasis_open.contextserver.impl.actions.ActionExecutorDispatcher;
 import org.oasis_open.contextserver.api.actions.Action;
@@ -191,7 +193,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 if (rule.getMetadata().getScope() == null) {
                     rule.getMetadata().setScope("systemscope");
                 }
-                if (getRule(rule.getMetadata().getScope(), rule.getMetadata().getId()) == null) {
+                if (getRule(rule.getMetadata().getId()) == null) {
                     setRule(rule);
                 }
             } catch (IOException e) {
@@ -299,16 +301,17 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         return metadatas;
     }
 
-    public Set<Metadata> getRuleMetadatas(String scope) {
-        Set<Metadata> metadatas = new HashSet<Metadata>();
-        for (Rule rule : persistenceService.query("scope", scope, null, Rule.class, 0, 50).getList()) {
-            metadatas.add(rule.getMetadata());
+    public Set<Metadata> getRuleMetadatas(Query query) {
+        definitionsService.resolveConditionType(query.getCondition());
+        Set<Metadata> descriptions = new HashSet<Metadata>();
+        for (Rule definition : persistenceService.query(query.getCondition(), query.getSortby(), Rule.class, query.getOffset(), query.getLimit()).getList()) {
+            descriptions.add(definition.getMetadata());
         }
-        return metadatas;
+        return descriptions;
     }
 
-    public Rule getRule(String scope, String ruleId) {
-        Rule rule = persistenceService.load(Metadata.getIdWithScope(scope, ruleId), Rule.class);
+    public Rule getRule(String ruleId) {
+        Rule rule = persistenceService.load(ruleId, Rule.class);
         if (rule != null) {
             if (rule.getCondition() != null) {
                 ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
@@ -353,10 +356,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         return trackedConditions;
     }
 
-    public void removeRule(String scope, String ruleId) {
-        String idWithScope = Metadata.getIdWithScope(scope, ruleId);
-//        persistenceService.removeQuery(RULE_QUERY_PREFIX + idWithScope);
-        persistenceService.remove(idWithScope, Rule.class);
+    public void removeRule(String ruleId) {
+        persistenceService.remove(ruleId, Rule.class);
     }
 
     private void initializeTimer() {

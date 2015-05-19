@@ -24,6 +24,7 @@ package org.oasis_open.contextserver.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.Metadata;
+import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.segments.Scoring;
 import org.oasis_open.contextserver.api.services.SegmentService;
 
@@ -58,21 +59,21 @@ public class ScoringServiceEndPoint {
         return segmentService.getScoringMetadatas();
     }
 
-    @GET
-    @Path("/{scope}")
-    public Set<Metadata> getScoringMetadatas(@PathParam("scope") String scope) {
-        return segmentService.getScoringMetadatas(scope);
+    @POST
+    @Path("/query")
+    public Set<Metadata> getScoringMetadatas(Query query) {
+        return segmentService.getScoringMetadatas(query);
     }
 
     @GET
-    @Path("/{scope}/{scoringID}")
-    public Scoring getScoringDefinition(@PathParam("scope") String scope, @PathParam("scoringID") String scoringId) {
-        return segmentService.getScoringDefinition(scope, scoringId);
+    @Path("/{scoringID}")
+    public Scoring getScoringDefinition(@PathParam("scoringID") String scoringId) {
+        return segmentService.getScoringDefinition(scoringId);
     }
 
     @POST
-    @Path("/{scope}/{scoringID}")
-    public void setScoringDefinition(@PathParam("scope") String scope, @PathParam("scoringID") String scoringId, Scoring scoring) {
+    @Path("/")
+    public void setScoringDefinition(Scoring scoring) {
         segmentService.setScoringDefinition(scoring);
     }
 
@@ -84,16 +85,16 @@ public class ScoringServiceEndPoint {
     }
 
     @DELETE
-    @Path("/{scope}/{scoringID}")
-    public void removeScoringDefinition(@PathParam("scope") String scope, @PathParam("scoringID") String scoringId) {
-        segmentService.removeScoringDefinition(scope, scoringId);
+    @Path("/{scoringID}")
+    public void removeScoringDefinition(@PathParam("scoringID") String scoringId) {
+        segmentService.removeScoringDefinition(scoringId);
     }
 
     @GET
     @Path("/resetQueries")
     public void resetQueries() {
         for (Metadata metadata : segmentService.getScoringMetadatas()) {
-            Scoring s = segmentService.getScoringDefinition(metadata.getScope(), metadata.getId());
+            Scoring s = segmentService.getScoringDefinition(metadata.getId());
             segmentService.setScoringDefinition(s);
         }
     }

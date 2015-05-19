@@ -42,6 +42,7 @@ package org.jahia.unomi.services;
 import org.jahia.unomi.lists.UserList;
 import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PartialList;
+import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
@@ -75,14 +76,6 @@ public class UserListServiceImpl implements UserListService {
         return descriptions;
     }
 
-    public Set<Metadata> getListMetadatas(String scope, int offset, int size, String sortBy) {
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (UserList definition : persistenceService.query("metadata.scope", scope, sortBy, UserList.class, offset, size).getList()) {
-            descriptions.add(definition.getMetadata());
-        }
-        return descriptions;
-    }
-
     public Set<Metadata> getListMetadatas(Query query) {
         definitionsService.resolveConditionType(query.getCondition());
         Set<Metadata> descriptions = new HashSet<Metadata>();
@@ -104,7 +97,13 @@ public class UserListServiceImpl implements UserListService {
 
     @Override
     public void delete(String listId) {
+        Condition query = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        query.setParameter("propertyName", "lists");
+        query.setParameter("comparisonOperator", "equals");
+        query.setParameter("propertyValue", listId);
+
+        List<Profile> profiles = persistenceService.query(query, null, Profile.class);
+
         persistenceService.remove(listId, UserList.class);
-        // TODO remove id on profiles
     }
 }

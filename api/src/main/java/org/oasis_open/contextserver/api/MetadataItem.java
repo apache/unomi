@@ -33,7 +33,7 @@ public abstract class MetadataItem extends Item {
     }
 
     public MetadataItem(Metadata metadata) {
-        super(metadata.getIdWithScope());
+        super(metadata.getId());
         this.metadata = metadata;
     }
 
@@ -43,7 +43,7 @@ public abstract class MetadataItem extends Item {
     }
 
     public void setMetadata(Metadata metadata) {
-        this.itemId = metadata.getIdWithScope();
+        this.itemId = metadata.getId();
         this.metadata = metadata;
     }
 

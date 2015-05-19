@@ -27,6 +27,7 @@ import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.goals.Goal;
 import org.oasis_open.contextserver.api.goals.GoalReport;
 import org.oasis_open.contextserver.api.query.AggregateQuery;
+import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.services.GoalsService;
 
 import javax.jws.WebMethod;
@@ -63,46 +64,33 @@ public class GoalsServiceEndPoint {
         goalsService.setGoal(goal);
     }
 
-    @GET
-    @Path("/{scope}/")
-    public Set<Metadata> getGoalMetadatas(@PathParam("scope") String scope) {
-        return goalsService.getGoalMetadatas(scope);
+    @POST
+    @Path("/query")
+    public Set<Metadata> getGoalMetadatas(Query query) {
+        return goalsService.getGoalMetadatas(query);
     }
 
     @GET
-    @Path("/{scope}/sitegoals")
-    public Set<Metadata> getSiteGoalsMetadatas(@PathParam("scope") String scope) {
-        return goalsService.getSiteGoalsMetadatas(scope);
-    }
-
-    @GET
-    @Path("/{campaignId}/campaign")
-    public Set<Metadata> getCampaignGoalMetadatas(@PathParam("campaignId") String campaignId) {
-        return goalsService.getCampaignGoalMetadatas(campaignId);
-    }
-
-    @GET
-    @Path("/{scope}/{goalId}")
-    public Goal getGoal(@PathParam("scope") String scope, @PathParam("goalId") String goalId) {
-        return goalsService.getGoal(scope, goalId);
+    @Path("/{goalId}")
+    public Goal getGoal(@PathParam("goalId") String goalId) {
+        return goalsService.getGoal(goalId);
     }
 
     @DELETE
-    @Path("/{scope}/{goalId}")
-    public void removeGoal(@PathParam("scope") String scope, @PathParam("goalId") String goalId) {
-        goalsService.removeGoal(scope, goalId);
+    @Path("/{goalId}")
+    public void removeGoal(@PathParam("goalId") String goalId) {
+        goalsService.removeGoal(goalId);
     }
 
     @GET
-    @Path("/{scope}/{goalID}/report")
-    public GoalReport getGoalReport(@PathParam("scope") String scope, @PathParam("goalID") String goalId) {
-        return goalsService.getGoalReport(scope, goalId);
+    @Path("/{goalID}/report")
+    public GoalReport getGoalReport(@PathParam("goalID") String goalId) {
+        return goalsService.getGoalReport(goalId);
     }
 
     @POST
-    @Path("/{scope}/{goalID}/report")
-    public GoalReport getGoalReport(@PathParam("scope") String scope, @PathParam("goalID") String goalId, AggregateQuery query) {
-        return goalsService.getGoalReport(scope, goalId, query);
+    @Path("/{goalID}/report")
+    public GoalReport getGoalReport(@PathParam("goalID") String goalId, AggregateQuery query) {
+        return goalsService.getGoalReport(goalId, query);
     }
-
 }

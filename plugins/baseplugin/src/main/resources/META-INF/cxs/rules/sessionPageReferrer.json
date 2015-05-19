@@ -1,6 +1,6 @@
 {
     "metadata": {
-        "id": "sessionPageReferrer",
+        "id": "_i6iqbc3x8_sessionPageReferrer",
         "name": "Detect page referrer on page view",
         "description": "Set page referring URL property on session when a page is view",
         "readOnly":true

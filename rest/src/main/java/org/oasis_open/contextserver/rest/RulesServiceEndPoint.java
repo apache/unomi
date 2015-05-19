@@ -24,6 +24,7 @@ package org.oasis_open.contextserver.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.Metadata;
+import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.rules.Rule;
 import org.oasis_open.contextserver.api.services.RulesService;
 
@@ -64,29 +65,29 @@ public class RulesServiceEndPoint {
         rulesService.setRule(rule);
     }
 
-    @GET
-    @Path("/{scope}")
-    public Set<Metadata> getRuleMetadatas(@PathParam("scope") String scope) {
-        return rulesService.getRuleMetadatas(scope);
+    @POST
+    @Path("/query")
+    public Set<Metadata> getRuleMetadatas(Query query) {
+        return rulesService.getRuleMetadatas(query);
     }
 
     @GET
-    @Path("/{scope}/{ruleId}")
-    public Rule getRule(@PathParam("scope") String scope, @PathParam("ruleId") String ruleId) {
-        return rulesService.getRule(scope, ruleId);
+    @Path("/{ruleId}")
+    public Rule getRule( @PathParam("ruleId") String ruleId) {
+        return rulesService.getRule(ruleId);
     }
 
     @DELETE
-    @Path("/{scope}/{ruleId}")
-    public void removeRule(@PathParam("scope") String scope, @PathParam("ruleId") String ruleId) {
-        rulesService.removeRule(scope, ruleId);
+    @Path("/{ruleId}")
+    public void removeRule(@PathParam("ruleId") String ruleId) {
+        rulesService.removeRule(ruleId);
     }
 
     @GET
     @Path("/resetQueries")
     public void resetQueries() {
         for (Metadata metadata : rulesService.getRuleMetadatas()) {
-            Rule r = rulesService.getRule(metadata.getScope(), metadata.getId());
+            Rule r = rulesService.getRule(metadata.getId());
             rulesService.setRule(r);
         }
     }

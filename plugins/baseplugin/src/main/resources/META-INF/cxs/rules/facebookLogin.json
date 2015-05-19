@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "id": "facebookLogin",
+    "id": "_d63zx3c00_facebookLogin",
     "name": "Facebook login",
     "description": "Upon Facebook login event, copy all event properties to profile properties"
   },

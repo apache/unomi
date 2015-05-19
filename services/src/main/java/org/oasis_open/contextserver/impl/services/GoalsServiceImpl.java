@@ -31,7 +31,9 @@ import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.goals.Goal;
 import org.oasis_open.contextserver.api.goals.GoalReport;
 import org.oasis_open.contextserver.api.query.AggregateQuery;
+import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.rules.Rule;
+import org.oasis_open.contextserver.api.segments.Segment;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.GoalsService;
 import org.oasis_open.contextserver.api.services.RulesService;
@@ -145,7 +147,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
                 if (goal.getMetadata().getScope() == null) {
                     goal.getMetadata().setScope("systemscope");
                 }
-                if (getGoal(goal.getMetadata().getScope(), goal.getMetadata().getId()) == null) {
+                if (getGoal(goal.getMetadata().getId()) == null) {
                     for (String tagId : goal.getMetadata().getTags()) {
                         Tag tag = definitionsService.getTag(tagId);
                         if (tag != null) {
@@ -226,38 +228,18 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         return descriptions;
     }
 
-    public Set<Metadata> getGoalMetadatas(String scope) {
+    public Set<Metadata> getGoalMetadatas(Query query) {
+        definitionsService.resolveConditionType(query.getCondition());
         Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Goal definition : persistenceService.query("scope", scope, null, Goal.class, 0, 50).getList()) {
+        for (Goal definition : persistenceService.query(query.getCondition(), query.getSortby(), Goal.class, query.getOffset(), query.getLimit()).getList()) {
             descriptions.add(definition.getMetadata());
         }
         return descriptions;
     }
 
-    @Override
-    public Set<Metadata> getSiteGoalsMetadatas(String scope) {
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        Condition scopeCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-        scopeCondition.setParameter("propertyName","metadata.scope");
-        scopeCondition.setParameter("comparisonOperator","equals");
-        scopeCondition.setParameter("propertyValue",scope);
-        Condition eventCampaignCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-        eventCampaignCondition.setParameter("propertyName","campaignId");
-        eventCampaignCondition.setParameter("comparisonOperator","missing");
-        List<Condition> conditions = Arrays.asList(scopeCondition,eventCampaignCondition);
-        Condition booleanCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-        Map<String,Object> stringObjectMap = new HashMap<>();
-        stringObjectMap.put("operator","and");
-        stringObjectMap.put("subConditions",conditions);
-        booleanCondition.setParameterValues(stringObjectMap);
-        for (Goal definition : persistenceService.query(booleanCondition,null,Goal.class, 0, 50).getList()){
-            descriptions.add(definition.getMetadata());
-        }
-        return descriptions;
-    }
 
-    public Goal getGoal(String scope, String goalId) {
-        Goal goal = persistenceService.load(Metadata.getIdWithScope(scope,goalId), Goal.class);
+    public Goal getGoal(String goalId) {
+        Goal goal = persistenceService.load(goalId, Goal.class);
         if (goal != null) {
             ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent());
             ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent());
@@ -266,9 +248,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     @Override
-    public void removeGoal(String scope, String goalId) {
-        String idWithScope = Metadata.getIdWithScope(scope, goalId);
-        persistenceService.remove(idWithScope, Goal.class);
+    public void removeGoal(String goalId) {
+        persistenceService.remove(goalId, Goal.class);
     }
 
     @Override
@@ -307,7 +288,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
             try {
                 Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(predefinedCampaignURL, Campaign.class);
-                if (getCampaign(campaign.getMetadata().getScope(), campaign.getMetadata().getId()) == null) {
+                if (getCampaign(campaign.getMetadata().getId()) == null) {
                     setCampaign(campaign);
                 }
             } catch (IOException e) {
@@ -372,28 +353,28 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         return descriptions;
     }
 
-    public Set<Metadata> getCampaignMetadatas(String scope) {
+    public Set<Metadata> getCampaignMetadatas(Query query) {
+        definitionsService.resolveConditionType(query.getCondition());
         Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Campaign definition : persistenceService.query("scope", scope, null, Campaign.class, 0, 50).getList()) {
+        for (Campaign definition : persistenceService.query(query.getCondition(), query.getSortby(), Campaign.class, query.getOffset(), query.getLimit()).getList()) {
             descriptions.add(definition.getMetadata());
         }
         return descriptions;
     }
 
-    public Campaign getCampaign(String scope, String id) {
-        Campaign campaign = persistenceService.load(Metadata.getIdWithScope(scope,id), Campaign.class);
+    public Campaign getCampaign(String id) {
+        Campaign campaign = persistenceService.load(id, Campaign.class);
         if (campaign != null) {
             ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition());
         }
         return campaign;
     }
 
-    public void removeCampaign(String scope, String id) {
-        String idWithScope = Metadata.getIdWithScope(scope, id);
+    public void removeCampaign(String id) {
         for(Metadata m : getCampaignGoalMetadatas(id)) {
-            removeGoal(scope, m.getId());
+            removeGoal(m.getId());
         }
-        persistenceService.remove(idWithScope, Campaign.class);
+        persistenceService.remove(id, Campaign.class);
     }
 
     public void setCampaign(Campaign campaign) {
@@ -410,17 +391,17 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
 
 
-    public GoalReport getGoalReport(String scope, String goalId) {
-        return getGoalReport(scope, goalId, null);
+    public GoalReport getGoalReport(String goalId) {
+        return getGoalReport(goalId, null);
     }
 
-    public GoalReport getGoalReport(String scope, String goalId, AggregateQuery query) {
+    public GoalReport getGoalReport(String goalId, AggregateQuery query) {
         Condition condition = new Condition(definitionsService.getConditionType("booleanCondition"));
         final ArrayList<Condition> list = new ArrayList<Condition>();
         condition.setParameter("operator", "and");
         condition.setParameter("subConditions", list);
 
-        Goal g = getGoal(scope, goalId);
+        Goal g = getGoal(goalId);
 
         Condition goalTargetCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
         goalTargetCondition.setParameter("propertyName",  "systemProperties.goals." + goalId+ "TargetReached");
@@ -529,7 +510,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     //Campaign profile matching methods
 
     @Override
-    public PartialList<Profile> getMatchingIndividuals(String scope, String campaignId, int offset, int size, String sortBy) {
+    public PartialList<Profile> getMatchingIndividuals(String campaignId, int offset, int size, String sortBy) {
         Condition campaignCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
         campaignCondition.setParameter("propertyName", "systemProperties.campaigns." + campaignId + "Engaged");
         campaignCondition.setParameter("comparisonOperator", "exists");
@@ -537,7 +518,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     @Override
-    public long getMatchingIndividualsCount(String scope, String campaignId) {
+    public long getMatchingIndividualsCount(String campaignId) {
         return 0;
     }
 
@@ -545,16 +526,12 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
 
     @Override
-    public PartialList<CampaignEvent> getEvents(String scope, String campaignId, int offset, int size, String sortBy) {
-        Condition scopeCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-        scopeCondition.setParameter("propertyName","metadata.scope");
-        scopeCondition.setParameter("comparisonOperator","equals");
-        scopeCondition.setParameter("propertyValue",scope);
+    public PartialList<CampaignEvent> getEvents(String campaignId, int offset, int size, String sortBy) {
         Condition eventCampaignCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
         eventCampaignCondition.setParameter("propertyName","campaignId");
         eventCampaignCondition.setParameter("comparisonOperator","equals");
         eventCampaignCondition.setParameter("propertyValue",campaignId);
-        List<Condition> conditions = Arrays.asList(scopeCondition,eventCampaignCondition);
+        List<Condition> conditions = Arrays.asList(eventCampaignCondition);
         Condition booleanCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
         Map<String,Object> stringObjectMap = new HashMap<>();
         stringObjectMap.put("operator","and");
@@ -569,9 +546,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     @Override
-    public void removeCampaignEvent(String scope, String campaignEventId) {
-        String idWithScope = Metadata.getIdWithScope(scope, campaignEventId);
-        persistenceService.remove(idWithScope, CampaignEvent.class);
+    public void removeCampaignEvent(String campaignEventId) {
+        persistenceService.remove(campaignEventId, CampaignEvent.class);
     }
 
     public void bundleChanged(BundleEvent event) {

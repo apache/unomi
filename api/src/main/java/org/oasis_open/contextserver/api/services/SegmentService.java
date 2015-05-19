@@ -42,7 +42,7 @@ public interface SegmentService {
 
     public Set<Metadata> getSegmentMetadatas(Query query);
 
-    Segment getSegmentDefinition(String scope, String segmentId);
+    Segment getSegmentDefinition(String segmentId);
 
     void setSegmentDefinition(Segment segment);
 
@@ -57,13 +57,13 @@ public interface SegmentService {
      * @param validate  whether or not to perform validation
      * @return a list of impacted segment metadata if any or an empty if no such impacted segments are found or validation was skipped
      */
-    List<Metadata> removeSegmentDefinition(String scope, String segmentId, boolean validate);
+    List<Metadata> removeSegmentDefinition(String segmentId, boolean validate);
 
-    PartialList<Profile> getMatchingIndividuals(String scope, String segmentID, int offset, int size, String sortBy);
+    PartialList<Profile> getMatchingIndividuals(String segmentID, int offset, int size, String sortBy);
 
-    long getMatchingIndividualsCount(String scope, String segmentID);
+    long getMatchingIndividualsCount(String segmentID);
 
-    Boolean isProfileInSegment(Profile profile, String scope, String segmentId);
+    Boolean isProfileInSegment(Profile profile, String segmentId);
 
     SegmentsAndScores getSegmentsAndScoresForProfile(Profile profile);
 
@@ -71,14 +71,14 @@ public interface SegmentService {
 
     Set<Metadata> getScoringMetadatas();
 
-    Set<Metadata> getScoringMetadatas(String scope);
+    Set<Metadata> getScoringMetadatas(Query query);
 
-    Scoring getScoringDefinition(String scope, String scoringId);
+    Scoring getScoringDefinition(String scoringId);
 
     void setScoringDefinition(Scoring scoring);
 
     void createScoringDefinition(String scope, String scoringId, String name, String description);
 
-    void removeScoringDefinition(String scope, String scoringId);
+    void removeScoringDefinition(String scoringId);
 
 }

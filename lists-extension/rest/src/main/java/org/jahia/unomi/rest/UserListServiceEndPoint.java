@@ -78,15 +78,6 @@ public class UserListServiceEndPoint {
         return userListService.getListMetadatas(0, 50, null);
     }
 
-    @GET
-    @Path("/{scope}")
-    public Set<Metadata> getListMetadatas(@PathParam("scope") String scope,
-                                          @QueryParam("offset") @DefaultValue("0") int offset,
-                                          @QueryParam("size") @DefaultValue("50") int size,
-                                          @QueryParam("sort") String sortBy) {
-        return userListService.getListMetadatas(scope, offset, size, sortBy);
-    }
-
     @POST
     @Path("/query")
     public Set<Metadata> getListMetadatas(Query query) {
@@ -94,9 +85,9 @@ public class UserListServiceEndPoint {
     }
 
     @GET
-    @Path("/{scope}/{listId}")
-    public UserList load(@PathParam("scope") String scope, @PathParam("listId") String listId) {
-        return userListService.load(Metadata.getIdWithScope(scope, listId));
+    @Path("/{listId}")
+    public UserList load(@PathParam("listId") String listId) {
+        return userListService.load(listId);
     }
 
     @POST
@@ -106,8 +97,8 @@ public class UserListServiceEndPoint {
     }
 
     @DELETE
-    @Path("/{scope}/{listId}")
-    public void delete(@PathParam("scope") String scope, @PathParam("listId") String listId) {
-        userListService.delete(Metadata.getIdWithScope(scope, listId));
+    @Path("/{listId}")
+    public void delete(@PathParam("listId") String listId) {
+        userListService.delete(listId);
     }
 }

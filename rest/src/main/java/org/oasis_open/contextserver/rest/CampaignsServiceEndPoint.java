@@ -28,6 +28,7 @@ import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.campaigns.Campaign;
 import org.oasis_open.contextserver.api.campaigns.events.CampaignEvent;
+import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.services.GoalsService;
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -66,34 +67,34 @@ public class CampaignsServiceEndPoint {
         goalsService.setCampaign(campaign);
     }
 
-    @GET
-    @Path("/{scope}")
-    public Set<Metadata> getCampaignMetadatas(@PathParam("scope") String scope) {
-        return goalsService.getCampaignMetadatas(scope);
+    @POST
+    @Path("/query")
+    public Set<Metadata> getCampaignMetadatas(Query query) {
+        return goalsService.getCampaignMetadatas(query);
     }
 
     @GET
-    @Path("/{scope}/{campaignID}")
-    public Campaign getCampaignDefinition(@PathParam("scope") String scope, @PathParam("campaignID") String campaignID) {
-        return goalsService.getCampaign(scope, campaignID);
+    @Path("/{campaignID}")
+    public Campaign getCampaignDefinition(@PathParam("campaignID") String campaignID) {
+        return goalsService.getCampaign(campaignID);
     }
 
     @DELETE
-    @Path("/{scope}/{campaignID}")
-    public void removeCampaignDefinition(@PathParam("scope") String scope, @PathParam("campaignID") String campaignID) {
-        goalsService.removeCampaign(scope, campaignID);
+    @Path("/{campaignID}")
+    public void removeCampaignDefinition(@PathParam("campaignID") String campaignID) {
+        goalsService.removeCampaign(campaignID);
     }
 
     @GET
-    @Path("/{scope}/{campaignID}/match")
-    public PartialList<Profile> getMatchingIndividuals(@PathParam("scope") String scope, @PathParam("campaignID") String campaignId, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
-        return goalsService.getMatchingIndividuals(scope, campaignId, offset, size, sortBy);
+    @Path("/{campaignID}/match")
+    public PartialList<Profile> getMatchingIndividuals(@PathParam("campaignID") String campaignId, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
+        return goalsService.getMatchingIndividuals(campaignId, offset, size, sortBy);
     }
 
     @GET
-    @Path("/{scope}/{campaignID}/count")
-    public long getMatchingIndividualsCount(@PathParam("scope") String scope, @PathParam("campaignID") String campaignId) {
-        return goalsService.getMatchingIndividualsCount(scope, campaignId);
+    @Path("/{campaignID}/count")
+    public long getMatchingIndividualsCount(@PathParam("campaignID") String campaignId) {
+        return goalsService.getMatchingIndividualsCount(campaignId);
     }
 
     @POST
@@ -103,14 +104,14 @@ public class CampaignsServiceEndPoint {
     }
 
     @DELETE
-    @Path("/{scope}/{campaignID}/event/{eventId}")
-    public void removeCampaignDefinition(@PathParam("scope") String scope, @PathParam("campaignID") String campaignID, @PathParam("eventId") String campaignEventID) {
-        goalsService.removeCampaignEvent(scope, campaignEventID);
+    @Path("/{campaignID}/event/{eventId}")
+    public void removeCampaignDefinition(@PathParam("campaignID") String campaignID, @PathParam("eventId") String campaignEventID) {
+        goalsService.removeCampaignEvent(campaignEventID);
     }
 
     @GET
-    @Path("/{scope}/{campaignID}/events")
-    public PartialList<CampaignEvent> getCampaignEvents(@PathParam("scope") String scope, @PathParam("campaignID") String campaignId, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
-        return goalsService.getEvents(scope, campaignId, offset, size, sortBy);
+    @Path("/{campaignID}/events")
+    public PartialList<CampaignEvent> getCampaignEvents(@PathParam("campaignID") String campaignId, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
+        return goalsService.getEvents(campaignId, offset, size, sortBy);
     }
 }
