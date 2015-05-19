@@ -48,9 +48,7 @@ import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author Christophe Laprun
@@ -103,6 +101,17 @@ public class UserListServiceImpl implements UserListService {
         query.setParameter("propertyValue", listId);
 
         List<Profile> profiles = persistenceService.query(query, null, Profile.class);
+        Map<String, Object> profileProps;
+        for (Profile p : profiles) {
+            profileProps = p.getProperties();
+            if(profileProps != null && profileProps.get("lists") != null) {
+                int index = ((List) profileProps.get("lists")).indexOf(listId);
+                if(index != -1){
+                    ((List) profileProps.get("lists")).remove(index);
+                    persistenceService.update(p.getItemId(), null, Profile.class, "properties", profileProps);
+                }
+            }
+        }
 
         persistenceService.remove(listId, UserList.class);
     }
