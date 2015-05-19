@@ -96,19 +96,19 @@ public class UserListServiceImpl implements UserListService {
     @Override
     public void delete(String listId) {
         Condition query = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
-        query.setParameter("propertyName", "lists");
+        query.setParameter("propertyName", "systemProperties.lists");
         query.setParameter("comparisonOperator", "equals");
         query.setParameter("propertyValue", listId);
 
         List<Profile> profiles = persistenceService.query(query, null, Profile.class);
         Map<String, Object> profileProps;
         for (Profile p : profiles) {
-            profileProps = p.getProperties();
+            profileProps = p.getSystemProperties();
             if(profileProps != null && profileProps.get("lists") != null) {
                 int index = ((List) profileProps.get("lists")).indexOf(listId);
                 if(index != -1){
                     ((List) profileProps.get("lists")).remove(index);
-                    persistenceService.update(p.getItemId(), null, Profile.class, "properties", profileProps);
+                    persistenceService.update(p.getItemId(), null, Profile.class, "systemProperties", profileProps);
                 }
             }
         }
