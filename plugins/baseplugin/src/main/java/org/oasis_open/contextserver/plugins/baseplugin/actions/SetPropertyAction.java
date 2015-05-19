@@ -23,7 +23,6 @@ package org.oasis_open.contextserver.plugins.baseplugin.actions;
  */
 
 import org.apache.commons.beanutils.BeanUtils;
-import org.apache.commons.beanutils.NestedNullException;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.beanutils.expression.DefaultResolver;
 import org.oasis_open.contextserver.api.Event;
@@ -35,9 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.text.SimpleDateFormat;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.TimeZone;
+import java.util.*;
 
 public class SetPropertyAction implements ActionExecutor {
     private static final Logger logger = LoggerFactory.getLogger(SetPropertyAction.class.getName());
@@ -71,9 +68,22 @@ public class SetPropertyAction implements ActionExecutor {
                 propertyName = resolver.remove(propertyName);
                 target = v;
             }
+            String setPropertyStrategy = (String) action.getParameterValues().get("setPropertyStrategy");
 
-            if (propertyValue != null && !propertyValue.equals(BeanUtils.getProperty(target, propertyName))) {
-                String setPropertyStrategy = (String) action.getParameterValues().get("setPropertyStrategy");
+            if (setPropertyStrategy != null && setPropertyStrategy.equals("addValue")) {
+                Object previousValue = PropertyUtils.getProperty(target, propertyName);
+                List<Object> values = new ArrayList<>();
+                if (previousValue != null && previousValue instanceof List) {
+                    values.addAll((List) previousValue);
+                } else if (previousValue != null) {
+                    values.add(previousValue);
+                }
+                if (!values.contains(propertyValue)) {
+                    values.add(propertyValue);
+                    BeanUtils.setProperty(target, propertyName, values);
+                    return Boolean.TRUE.equals(action.getParameterValues().get("storeInSession")) ? EventService.SESSION_UPDATED : EventService.PROFILE_UPDATED;
+                }
+            } else if (propertyValue != null && !propertyValue.equals(BeanUtils.getProperty(target, propertyName))) {
                 if (setPropertyStrategy == null ||
                         setPropertyStrategy.equals("alwaysSet") ||
                         (setPropertyStrategy.equals("setIfMissing") && BeanUtils.getProperty(target, propertyName) == null)) {
