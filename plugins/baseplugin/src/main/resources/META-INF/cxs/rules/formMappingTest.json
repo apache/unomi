@@ -32,7 +32,7 @@
       "parameterValues": {
         "setPropertyName": "properties.age",
         "setPropertyValue": "eventProperty::properties.age",
-        "setPropertyStrategy": "alwaysReplace"
+        "setPropertyStrategy": "alwaysSet"
       },
       "type": "setPropertyAction"
     },
