@@ -5,7 +5,7 @@
         "description" : "Evaluate segments when a profile is modified"
     },
 
-    "raiseEventOnlyOnceForProfile":true,
+    "raiseEventOnlyOnceForSession":true,
 
     "condition" : {
         "parameterValues": {
