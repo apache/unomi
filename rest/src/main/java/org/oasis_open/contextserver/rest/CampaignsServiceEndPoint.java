@@ -85,18 +85,6 @@ public class CampaignsServiceEndPoint {
         goalsService.removeCampaign(campaignID);
     }
 
-    @GET
-    @Path("/{campaignID}/match")
-    public PartialList<Profile> getMatchingIndividuals(@PathParam("campaignID") String campaignId, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
-        return goalsService.getMatchingIndividuals(campaignId, offset, size, sortBy);
-    }
-
-    @GET
-    @Path("/{campaignID}/count")
-    public long getMatchingIndividualsCount(@PathParam("campaignID") String campaignId) {
-        return goalsService.getMatchingIndividualsCount(campaignId);
-    }
-
     @POST
     @Path("/event")
     public void setCampaignEventDefinition(CampaignEvent campaignEvent) {

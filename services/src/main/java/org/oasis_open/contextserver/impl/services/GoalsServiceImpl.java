@@ -507,24 +507,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         return goals;
     }
 
-    //Campaign profile matching methods
-
-    @Override
-    public PartialList<Profile> getMatchingIndividuals(String campaignId, int offset, int size, String sortBy) {
-        Condition campaignCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
-        campaignCondition.setParameter("propertyName", "systemProperties.campaigns." + campaignId + "Engaged");
-        campaignCondition.setParameter("comparisonOperator", "exists");
-        return persistenceService.query(campaignCondition, sortBy, Profile.class, offset,size);
-    }
-
-    @Override
-    public long getMatchingIndividualsCount(String campaignId) {
-        return 0;
-    }
-
     // Campaign Event management methods
-
-
     @Override
     public PartialList<CampaignEvent> getEvents(String campaignId, int offset, int size, String sortBy) {
         Condition eventCampaignCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));

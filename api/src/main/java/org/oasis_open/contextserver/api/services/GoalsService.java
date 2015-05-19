@@ -65,8 +65,4 @@ public interface GoalsService {
     void setCampaignEvent(CampaignEvent event);
 
     void removeCampaignEvent(String campaignEventId);
-
-    PartialList<Profile> getMatchingIndividuals(String campaignId, int offset, int size, String sortBy);
-
-    long getMatchingIndividualsCount(String campaignId);
 }
