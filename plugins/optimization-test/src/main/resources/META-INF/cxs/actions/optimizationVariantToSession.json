@@ -1,7 +1,0 @@
-{
-    "id": "optimizationVariantToSession",
-    "actionExecutor": "optimizationVariantToSession",
-    "tags": [ "event" ],
-    "parameters": [
-    ]
-}

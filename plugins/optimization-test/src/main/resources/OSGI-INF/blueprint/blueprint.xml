@@ -25,13 +25,5 @@
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd">
 
-    <!-- Action executors -->
-
-    <bean id="optimizationVariantToSessionActionImpl" class="org.oasis_open.contextserver.plugins.optimization.actions.OptimizationVariantToSessionAction"/>
-    <service id="optimizationVariantToSessionAction" ref="optimizationVariantToSessionActionImpl" auto-export="interfaces">
-        <service-properties>
-            <entry key="actionExecutorId" value="optimizationVariantToSession"/>
-        </service-properties>
-    </service>
 
 </blueprint>

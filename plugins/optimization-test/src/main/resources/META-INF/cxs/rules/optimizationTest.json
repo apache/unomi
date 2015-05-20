@@ -12,10 +12,12 @@
     },
     "actions": [
         {
-            "parameterValues": {
-
-            },
-            "type": "optimizationVariantToSession"
+          "parameterValues": {
+            "setPropertyName": "script::'properties.optimizationTest_'+event.target.itemId",
+            "setPropertyValue": "script::event.target.properties.variantId",
+            "storeInSession": true
+          },
+          "type": "setPropertyAction"
         }
     ]
 }
