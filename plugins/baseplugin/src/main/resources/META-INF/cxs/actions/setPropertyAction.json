@@ -6,14 +6,7 @@
         {
             "id": "setPropertyName",
             "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": "(initializerId=propertyType)"
-        },
-        {
-            "id": "setSessionPropertyName",
-            "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": "(initializerId=sessionPropertyType)"
+            "multivalued": false
         },
         {
             "id": "setPropertyValue",

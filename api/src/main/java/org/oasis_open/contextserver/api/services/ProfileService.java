@@ -64,6 +64,8 @@ public interface ProfileService {
 
     boolean matchCondition(Condition condition, Profile profile, Session session);
 
+    void batchProfilesUpdate(BatchUpdate update);
+
     Persona loadPersona(String personaId);
 
     PersonaWithSessions loadPersonaWithSessions(String personaId);

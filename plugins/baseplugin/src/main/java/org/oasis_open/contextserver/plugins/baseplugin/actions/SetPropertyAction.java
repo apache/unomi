@@ -29,6 +29,7 @@ import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
 import org.oasis_open.contextserver.api.services.EventService;
+import org.oasis_open.contextserver.persistence.spi.PropertyHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +39,6 @@ import java.util.*;
 
 public class SetPropertyAction implements ActionExecutor {
     private static final Logger logger = LoggerFactory.getLogger(SetPropertyAction.class.getName());
-    private DefaultResolver resolver = new DefaultResolver();
 
     public SetPropertyAction() {
     }
@@ -56,43 +56,12 @@ public class SetPropertyAction implements ActionExecutor {
         }
         String propertyName = (String) action.getParameterValues().get("setPropertyName");
 
-        Object target = Boolean.TRUE.equals(action.getParameterValues().get("storeInSession")) ? event.getSession() : event.getProfile();
+        boolean storeInSession = Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"));
 
-        try {
-            while (resolver.hasNested(propertyName)) {
-                Object v = PropertyUtils.getProperty(target, resolver.next(propertyName));
-                if (v == null) {
-                    v = new LinkedHashMap<>();
-                    PropertyUtils.setProperty(target, resolver.next(propertyName), v);
-                }
-                propertyName = resolver.remove(propertyName);
-                target = v;
-            }
-            String setPropertyStrategy = (String) action.getParameterValues().get("setPropertyStrategy");
+        Object target = storeInSession ? event.getSession() : event.getProfile();
 
-            if (setPropertyStrategy != null && setPropertyStrategy.equals("addValue")) {
-                Object previousValue = PropertyUtils.getProperty(target, propertyName);
-                List<Object> values = new ArrayList<>();
-                if (previousValue != null && previousValue instanceof List) {
-                    values.addAll((List) previousValue);
-                } else if (previousValue != null) {
-                    values.add(previousValue);
-                }
-                if (!values.contains(propertyValue)) {
-                    values.add(propertyValue);
-                    BeanUtils.setProperty(target, propertyName, values);
-                    return Boolean.TRUE.equals(action.getParameterValues().get("storeInSession")) ? EventService.SESSION_UPDATED : EventService.PROFILE_UPDATED;
-                }
-            } else if (propertyValue != null && !propertyValue.equals(BeanUtils.getProperty(target, propertyName))) {
-                if (setPropertyStrategy == null ||
-                        setPropertyStrategy.equals("alwaysSet") ||
-                        (setPropertyStrategy.equals("setIfMissing") && BeanUtils.getProperty(target, propertyName) == null)) {
-                    BeanUtils.setProperty(target, propertyName, propertyValue);
-                    return Boolean.TRUE.equals(action.getParameterValues().get("storeInSession")) ? EventService.SESSION_UPDATED : EventService.PROFILE_UPDATED;
-                }
-            }
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            logger.error("Cannot set property", e);
+        if (PropertyHelper.setProperty(target, propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {
+            return storeInSession ? EventService.SESSION_UPDATED : EventService.PROFILE_UPDATED;
         }
         return EventService.NO_CHANGE;
     }

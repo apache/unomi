@@ -118,6 +118,12 @@ public class ProfileServiceEndPoint {
         profileService.save(profile);
     }
 
+    @POST
+    @Path("/batchProfilesUpdate")
+    public void batchProfilesUpdate(BatchUpdate update) {
+        profileService.batchProfilesUpdate(update);
+    }
+
     @DELETE
     @Path("/{profileId}")
     public void delete(@PathParam("profileId") String profileId, @QueryParam("persona") @DefaultValue("false") boolean persona) {

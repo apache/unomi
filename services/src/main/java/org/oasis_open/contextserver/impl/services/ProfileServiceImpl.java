@@ -22,14 +22,19 @@ package org.oasis_open.contextserver.impl.services;
  * #L%
  */
 
+import org.apache.commons.beanutils.PropertyUtils;
+import org.apache.commons.beanutils.expression.DefaultResolver;
 import org.apache.commons.lang3.StringUtils;
 import org.oasis_open.contextserver.api.*;
+import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.ProfileService;
+import org.oasis_open.contextserver.impl.actions.ActionExecutorDispatcher;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
+import org.oasis_open.contextserver.persistence.spi.PropertyHelper;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +52,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private PersistenceService persistenceService;
 
     private DefinitionsService definitionsService;
+
+    private ActionExecutorDispatcher actionExecutorDispatcher;
 
     private Condition purgeProfileQuery;
     private Integer purgeProfileExistTime = 0;
@@ -451,6 +458,20 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             return false;
         }
         return true;
+    }
+
+    public void batchProfilesUpdate(BatchUpdate update) {
+        ParserHelper.resolveConditionType(definitionsService, update.getCondition());
+        List<Profile> profiles = persistenceService.query(update.getCondition(), null, Profile.class);
+
+        for (Profile profile : profiles) {
+            if (PropertyHelper.setProperty(profile, update.getPropertyName(), update.getPropertyValue(), update.getStrategy())) {
+//                Event profileUpdated = new Event("profileUpdated", null, profile, null, null, profile, new Date());
+//                profileUpdated.setPersistent(false);
+//                eventService.send(profileUpdated);
+                save(profile);
+            }
+        }
     }
 
     public Persona loadPersona(String personaId) {
