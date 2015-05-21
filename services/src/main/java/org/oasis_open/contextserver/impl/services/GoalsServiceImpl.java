@@ -250,6 +250,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     @Override
     public void removeGoal(String goalId) {
         persistenceService.remove(goalId, Goal.class);
+        rulesService.removeRule(goalId + "StartEvent");
+        rulesService.removeRule(goalId + "TargetEvent");
     }
 
     @Override
@@ -264,6 +266,9 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             if (goal.getTargetEvent() != null) {
                 createRule(goal, goal.getTargetEvent(), "Target", goal.getStartEvent() != null);
             }
+        } else {
+            rulesService.removeRule(goal.getMetadata().getId() + "StartEvent");
+            rulesService.removeRule(goal.getMetadata().getId() + "TargetEvent");
         }
 
         persistenceService.save(goal);
