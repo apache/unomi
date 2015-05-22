@@ -261,6 +261,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         if (persona) {
             persistenceService.remove(profileId, Persona.class);
         } else {
+            Condition mergeCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+            mergeCondition.setParameter("propertyName", "mergedWith");
+            mergeCondition.setParameter("comparisonOperator", "equals");
+            mergeCondition.setParameter("propertyValue", profileId);
+            persistenceService.removeByQuery(mergeCondition, Profile.class);
+
             persistenceService.remove(profileId, Profile.class);
         }
     }

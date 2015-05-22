@@ -268,7 +268,7 @@ public class ContextServlet extends HttpServlet {
 
     private Profile checkMergedProfile(ServletResponse response, Profile profile, Session session) {
         String profileId;
-        if (profile.getMergedWith() != null) {
+        if (profile != null && profile.getMergedWith() != null) {
             profileId = profile.getMergedWith();
             Profile profileToDelete = profile;
             profile = profileService.load(profileId);
