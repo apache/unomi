@@ -239,10 +239,36 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     @Override
     public String exportProfilesPropertiesToCsv(Query query) {
-        Set<PropertyType> propertyTypes = queryService.getExistingProperties("profileProperties", Profile.ITEM_TYPE);
+        StringBuilder sb = new StringBuilder();
+        Set<PropertyType> profileProperties = queryService.getExistingProperties("profileProperties", Profile.ITEM_TYPE);
+        PropertyType[] propertyTypes = profileProperties.toArray(new PropertyType[profileProperties.size()]);
         PartialList<Profile> profiles = search(query, Profile.class);
 
-        return "";
+        // headers
+        for (int i = 0; i < propertyTypes.length; i++) {
+            PropertyType propertyType = propertyTypes[i];
+            sb.append(propertyType.getId());
+            if(i < propertyTypes.length - 1) {
+                sb.append(";");
+            } else {
+                sb.append("\n");
+            }
+        }
+
+        // rows
+        for (Profile profile : profiles.getList()) {
+            for (int i = 0; i < propertyTypes.length; i++) {
+                PropertyType propertyType = propertyTypes[i];
+                sb.append(profile.getProperties().get(propertyType.getId()) != null ? profile.getProperties().get(propertyType.getId()).toString() : "");
+                if(i < propertyTypes.length - 1) {
+                    sb.append(";");
+                } else {
+                    sb.append("\n");
+                }
+            }
+        }
+
+        return sb.toString();
     }
 
     public PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue, int offset, int size, String sortBy) {

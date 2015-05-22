@@ -29,11 +29,17 @@ import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.api.services.ProfileService;
 import org.oasis_open.contextserver.api.services.SegmentService;
+import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
@@ -44,6 +50,8 @@ import java.util.List;
         allowCredentials = true
 )
 public class ProfileServiceEndPoint {
+
+    private static final Logger logger = LoggerFactory.getLogger(ProfileServiceEndPoint.class.getName());
 
     private ProfileService profileService;
 
@@ -89,10 +97,20 @@ public class ProfileServiceEndPoint {
         return profileService.search(query, Profile.class);
     }
 
-    @POST
+    @GET
     @Path("/export")
-    public String exportProfiles(Query query) {
-        return profileService.exportProfilesPropertiesToCsv(query);
+    @Produces("text/csv")
+    public Response exportProfiles(@QueryParam("query") String query) {
+        try {
+            Query queryObject = CustomObjectMapper.getObjectMapper().readValue(query, Query.class);
+            Response.ResponseBuilder response = Response.ok(profileService.exportProfilesPropertiesToCsv(queryObject));
+            response.header("Content-Disposition",
+                    "attachment; filename=Profiles_export_" + new SimpleDateFormat("yyyy-MM-dd-HH-mm").format(new Date()) + ".csv");
+            return response.build();
+        } catch (IOException e) {
+            logger.error(e.getMessage(), e);
+            return Response.serverError().build();
+        }
     }
 
     @POST
