@@ -6,12 +6,21 @@ import org.oasis_open.contextserver.api.conditions.Condition;
  * Created by kevan on 14/05/15.
  */
 public class Query {
+    private String text;
     private int offset;
     private int limit;
     private String sortby;
     private Condition condition;
 
     public Query() {
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public void setText(String text) {
+        this.text = text;
     }
 
     public int getOffset() {

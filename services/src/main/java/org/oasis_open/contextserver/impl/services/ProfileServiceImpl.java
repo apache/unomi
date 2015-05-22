@@ -29,8 +29,10 @@ import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
+import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.ProfileService;
+import org.oasis_open.contextserver.api.services.QueryService;
 import org.oasis_open.contextserver.impl.actions.ActionExecutorDispatcher;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
@@ -52,6 +54,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private PersistenceService persistenceService;
 
     private DefinitionsService definitionsService;
+
+    private QueryService queryService;
 
     private ActionExecutorDispatcher actionExecutorDispatcher;
 
@@ -105,6 +109,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     private void processBundleStop(BundleContext bundleContext) {
+    }
+
+    public void setQueryService(QueryService queryService) {
+        this.queryService = queryService;
     }
 
     public void setPurgeProfileExistTime(Integer purgeProfileExistTime) {
@@ -213,49 +221,28 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return persistenceService.getAllItemsCount(Profile.ITEM_TYPE);
     }
 
-    public PartialList<Profile> getProfiles(int offset, int size, String sortBy) {
-        return getProfiles(null, null, offset, size, sortBy);
-    }
-
-    public PartialList<Profile> getProfiles(String query, int offset, int size, String sortBy) {
-        return getProfiles(query, null, offset, size, sortBy);
-    }
-
-    public PartialList<Profile> getProfiles(Condition condition, int offset, int size, String sortBy) {
-        return getProfiles(null, condition, offset, size, sortBy);
-    }
-
-    public PartialList<Profile> getProfiles(String query, Condition condition, int offset, int size, String sortBy, boolean excludeMergedProfiles) {
-        Condition c = condition;
-        if (excludeMergedProfiles) {
-            Condition excludeMergedProfilesCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-            excludeMergedProfilesCondition.setParameter("comparisonOperator", "missing");
-            excludeMergedProfilesCondition.setParameter("propertyName", "mergedWith");
-            if (c == null) {
-                c = excludeMergedProfilesCondition;
+    public <T extends Profile> PartialList<T> search(Query query, final Class<T> clazz) {
+        if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition())) {
+            if (StringUtils.isNotBlank(query.getText())) {
+                return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit());
             } else {
-                c = new Condition(definitionsService.getConditionType("booleanCondition"));
-                c.setParameter("operator", "and");
-                c.setParameter("subConditions", Arrays.asList(condition, excludeMergedProfilesCondition));
-            }
-        }
-        if (c != null && definitionsService.resolveConditionType(c)) {
-            if (StringUtils.isNotBlank(query)) {
-                return persistenceService.queryFullText(query, c, sortBy, Profile.class, offset, size);
-            } else {
-                return persistenceService.query(c, sortBy, Profile.class, offset, size);
+                return persistenceService.query(query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit());
             }
         } else {
-            if (StringUtils.isNotBlank(query)) {
-                return persistenceService.queryFullText(query, sortBy, Profile.class, offset, size);
+            if (StringUtils.isNotBlank(query.getText())) {
+                return persistenceService.queryFullText(query.getText(), query.getSortby(), clazz, query.getOffset(), query.getLimit());
             } else {
-                return persistenceService.getAllItems(Profile.class, offset, size, sortBy);
+                return persistenceService.getAllItems(clazz, query.getOffset(), query.getLimit(), query.getSortby());
             }
         }
     }
 
-    public PartialList<Profile> getProfiles(String query, Condition condition, int offset, int size, String sortBy) {
-        return getProfiles(query, condition, offset, size, sortBy, true);
+    @Override
+    public String exportProfilesPropertiesToCsv(Query query) {
+        Set<PropertyType> propertyTypes = queryService.getExistingProperties("profileProperties", Profile.ITEM_TYPE);
+        PartialList<Profile> profiles = search(query, Profile.class);
+
+        return "";
     }
 
     public PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue, int offset, int size, String sortBy) {
@@ -485,34 +472,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
         List<PersonaSession> sessions = persistenceService.query("profileId", persona.getItemId(), "timeStamp:desc", PersonaSession.class);
         return new PersonaWithSessions(persona, sessions);
-    }
-
-    public PartialList<Persona> getPersonas(int offset, int size, String sortBy) {
-        return getPersonas(null, null, offset, size, sortBy);
-    }
-
-    public PartialList<Persona> getPersonas(String query, int offset, int size, String sortBy) {
-        return getPersonas(query, null, offset, size, sortBy);
-    }
-
-    public PartialList<Persona> getPersonas(Condition condition, int offset, int size, String sortBy) {
-        return getPersonas(null, condition, offset, size, sortBy);
-    }
-
-    public PartialList<Persona> getPersonas(String query, Condition condition, int offset, int size, String sortBy) {
-        if (condition != null && definitionsService.resolveConditionType(condition)) {
-            if (StringUtils.isNotBlank(query)) {
-                return persistenceService.queryFullText(query, condition, sortBy, Persona.class, offset, size);
-            } else {
-                return persistenceService.query(condition, sortBy, Persona.class, offset, size);
-            }
-        } else {
-            if (StringUtils.isNotBlank(query)) {
-                return persistenceService.queryFullText(query, sortBy, Persona.class, offset, size);
-            } else {
-                return persistenceService.getAllItems(Persona.class, offset, size, sortBy);
-            }
-        }
     }
 
     public Persona createPersona(String personaId) {

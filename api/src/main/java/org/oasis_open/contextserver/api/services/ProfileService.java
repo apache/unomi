@@ -24,6 +24,7 @@ package org.oasis_open.contextserver.api.services;
 
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
+import org.oasis_open.contextserver.api.query.Query;
 
 import java.util.Date;
 import java.util.Set;
@@ -32,15 +33,9 @@ public interface ProfileService {
 
     long getAllProfilesCount();
 
-    PartialList<Profile> getProfiles(int offset, int size, String sortBy);
+    <T extends Profile>  PartialList<T> search(Query query, Class<T> clazz);
 
-    PartialList<Profile> getProfiles(String query, int offset, int size, String sortBy);
-
-    PartialList<Profile> getProfiles(Condition condition, int offset, int size, String sortBy);
-
-    PartialList<Profile> getProfiles(String query, Condition condition, int offset, int size, String sortBy, boolean excludeMergedProfiles);
-
-    PartialList<Profile> getProfiles(String query, Condition condition, int offset, int size, String sortBy);
+    String exportProfilesPropertiesToCsv(Query query);
 
     PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue, int offset, int size, String sortBy);
 
@@ -69,14 +64,6 @@ public interface ProfileService {
     Persona loadPersona(String personaId);
 
     PersonaWithSessions loadPersonaWithSessions(String personaId);
-
-    PartialList<Persona> getPersonas(int offset, int size, String sortBy);
-
-    PartialList<Persona> getPersonas(String query, int offset, int size, String sortBy);
-
-    PartialList<Persona> getPersonas(Condition condition, int offset, int size, String sortBy);
-
-    PartialList<Persona> getPersonas(String query, Condition condition, int offset, int size, String sortBy);
 
     Persona createPersona(String personaId);
 

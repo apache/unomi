@@ -25,6 +25,7 @@ package org.oasis_open.contextserver.rest;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
+import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.api.services.ProfileService;
 import org.oasis_open.contextserver.api.services.SegmentService;
@@ -33,10 +34,8 @@ import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-import java.util.Set;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
@@ -84,23 +83,22 @@ public class ProfileServiceEndPoint {
         return profileService.getAllProfilesCount();
     }
 
-    @GET
+    @POST
     @Path("/search")
-    public PartialList<Profile> getProfiles(@QueryParam("q") String query,
-                                            @QueryParam("offset") @DefaultValue("0") int offset,
-                                            @QueryParam("size") @DefaultValue("50") int size,
-                                            @QueryParam("sort") String sortBy) {
-        return profileService.getProfiles(query, offset, size, sortBy);
+    public PartialList<Profile> getProfiles(Query query) {
+        return profileService.search(query, Profile.class);
     }
 
     @POST
-    @Path("/search")
-    public PartialList<Profile> getProfiles(@QueryParam("q") String query,
-                                            @QueryParam("offset") @DefaultValue("0") int offset,
-                                            @QueryParam("size") @DefaultValue("50") int size,
-                                            @QueryParam("sort") String sortBy,
-                                            Condition condition) {
-        return profileService.getProfiles(query, condition, offset, size, sortBy);
+    @Path("/export")
+    public String exportProfiles(Query query) {
+        return profileService.exportProfilesPropertiesToCsv(query);
+    }
+
+    @POST
+    @Path("/batchProfilesUpdate")
+    public void batchProfilesUpdate(BatchUpdate update) {
+        profileService.batchProfilesUpdate(update);
     }
 
     @GET
@@ -110,18 +108,12 @@ public class ProfileServiceEndPoint {
     }
 
     @POST
-    @Path("/{profileId}")
+    @Path("/")
     public void save(Profile profile) {
         Event profileUpdated = new Event("profileUpdated", null, profile, null, null, profile, new Date());
         profileUpdated.setPersistent(false);
         eventService.send(profileUpdated);
         profileService.save(profile);
-    }
-
-    @POST
-    @Path("/batchProfilesUpdate")
-    public void batchProfilesUpdate(BatchUpdate update) {
-        profileService.batchProfilesUpdate(update);
     }
 
     @DELETE
@@ -153,23 +145,10 @@ public class ProfileServiceEndPoint {
         return profileService.getPropertyTypeMapping(fromPropertyTypeId);
     }
 
-    @GET
-    @Path("/personas")
-    public PartialList<Persona> getPersonas(@QueryParam("q") String query,
-                                            @QueryParam("offset") @DefaultValue("0") int offset,
-                                            @QueryParam("size") @DefaultValue("50") int size,
-                                            @QueryParam("sort") String sortBy) {
-        return profileService.getPersonas(query, offset, size, sortBy);
-    }
-
     @POST
-    @Path("/personas")
-    public PartialList<Persona> getPersonas(@QueryParam("q") String query,
-                                            @QueryParam("offset") @DefaultValue("0") int offset,
-                                            @QueryParam("size") @DefaultValue("50") int size,
-                                            @QueryParam("sort") String sortBy,
-                                            Condition condition) {
-        return profileService.getPersonas(query, condition, offset, size, sortBy);
+    @Path("/personas/search")
+    public PartialList<Persona> getPersonas(Query query) {
+        return profileService.search(query, Persona.class);
     }
 
     @GET
@@ -185,7 +164,7 @@ public class ProfileServiceEndPoint {
     }
 
     @POST
-    @Path("/personas/{personaId}")
+    @Path("/personas")
     public void savePersona(Persona persona) {
         profileService.save(persona);
     }
