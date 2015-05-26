@@ -100,7 +100,24 @@ public class ProfileServiceEndPoint {
     @GET
     @Path("/export")
     @Produces("text/csv")
-    public Response exportProfiles(@QueryParam("query") String query) {
+    public Response getExportProfiles(@QueryParam("query") String query) {
+        try {
+            Query queryObject = CustomObjectMapper.getObjectMapper().readValue(query, Query.class);
+            Response.ResponseBuilder response = Response.ok(profileService.exportProfilesPropertiesToCsv(queryObject));
+            response.header("Content-Disposition",
+                    "attachment; filename=Profiles_export_" + new SimpleDateFormat("yyyy-MM-dd-HH-mm").format(new Date()) + ".csv");
+            return response.build();
+        } catch (IOException e) {
+            logger.error(e.getMessage(), e);
+            return Response.serverError().build();
+        }
+    }
+
+    @GET
+    @Path("/export")
+    @Produces("text/csv")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response formExportProfiles(@FormParam("query") String query) {
         try {
             Query queryObject = CustomObjectMapper.getObjectMapper().readValue(query, Query.class);
             Response.ResponseBuilder response = Response.ok(profileService.exportProfilesPropertiesToCsv(queryObject));

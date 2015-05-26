@@ -237,6 +237,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
     }
 
+    // TODO: can be improve to use ES mappings directly to read the existing properties
     @Override
     public String exportProfilesPropertiesToCsv(Query query) {
         StringBuilder sb = new StringBuilder();
@@ -259,7 +260,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         for (Profile profile : profiles.getList()) {
             for (int i = 0; i < propertyTypes.length; i++) {
                 PropertyType propertyType = propertyTypes[i];
-                sb.append(profile.getProperties().get(propertyType.getId()) != null ? profile.getProperties().get(propertyType.getId()).toString() : "");
+                if(profile.getProperties().get(propertyType.getId()) != null){
+                    handleExportProperty(sb, profile.getProperties().get(propertyType.getId()), propertyType);
+                }else {
+                    sb.append("");
+                }
                 if(i < propertyTypes.length - 1) {
                     sb.append(";");
                 } else {
@@ -269,6 +274,36 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
 
         return sb.toString();
+    }
+
+    // TODO may be moved this in a specific Export Utils Class and improve it to handle date format, ...
+    private void handleExportProperty(StringBuilder sb, Object propertyValue, PropertyType propertyType) {
+        if(propertyValue instanceof Collection && propertyType.isMultivalued()){
+            Collection propertyValues = (Collection) propertyValue;
+            if(propertyValues.size() > 0) {
+                Object[] propertyValuesArray = propertyValues.toArray();
+                for (int i = 0; i < propertyValuesArray.length; i++) {
+                    Object o = propertyValuesArray[i];
+                    if(o instanceof String && i == 0){
+                        sb.append("\"");
+                    }
+                    sb.append(propertyValue.toString());
+                    if(o instanceof String && i == propertyValuesArray.length - 1){
+                        sb.append("\"");
+                    } else {
+                        sb.append(",");
+                    }
+                }
+            }
+        } else {
+            if (propertyValue instanceof String) {
+                sb.append("\"");
+            }
+            sb.append(propertyValue.toString());
+            if (propertyValue instanceof String) {
+                sb.append("\"");
+            }
+        }
     }
 
     public PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue, int offset, int size, String sortBy) {

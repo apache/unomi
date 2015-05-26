@@ -120,6 +120,7 @@ public class QueryServiceImpl implements QueryService {
     @Override
     public Set<PropertyType> getExistingProperties(String tagId, String itemType) {
         Set<PropertyType> filteredProperties = new LinkedHashSet<PropertyType>();
+        // TODO: here we limit the result to the definition we have, but what if some properties haven't definition but exist in ES mapping ?
         Set<PropertyType> profileProperties = definitionsService.getPropertyTypeByTag(definitionsService.getTag(tagId), true);
         Map<String, Map<String, Object>> itemMapping = persistenceService.getMapping(itemType);
 

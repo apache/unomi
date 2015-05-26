@@ -32,6 +32,7 @@
             <cm:property name="profile.purge.interval" value="86400000"/>
             <cm:property name="profile.purge.inactiveTime" value="30"/>
             <cm:property name="profile.purge.existTime" value="-1"/>
+            <cm:property name="event.purge.existTime" value="12"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
