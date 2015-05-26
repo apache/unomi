@@ -1,9 +1,8 @@
 {
-    "id": "deviceCategory",
+    "metadata": {     "id": "deviceCategory", "name": "Device category"   },
     "type": "string",
     "tags": ["technicalSessionProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ ],
-    "rank": "5.0"
+    "rank": "105.0"
 }

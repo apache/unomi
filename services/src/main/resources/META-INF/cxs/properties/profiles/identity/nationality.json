@@ -1,9 +1,8 @@
 {
-    "id": "nationality",
+    "metadata": {     "id": "nationality", "name": "Nationality"   },
     "type": "string",
     "tags": ["identityProfileProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ ],
     "rank": "7.0"
 }

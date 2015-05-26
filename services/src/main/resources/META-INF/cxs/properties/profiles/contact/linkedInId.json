@@ -1,9 +1,8 @@
 {
-    "id": "linkedInId",
+    "metadata": {     "id": "linkedInId", "name": "LinkedIn ID"   },
     "type": "string",
     "tags": ["contactProfileProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ "j:linkedInID" ],
-    "rank": "4.0"
+    "rank": "104.0"
 }

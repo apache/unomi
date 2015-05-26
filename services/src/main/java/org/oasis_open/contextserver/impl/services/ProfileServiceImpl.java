@@ -86,10 +86,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 
-        loadPredefinedPersonas(bundleContext);
+        processBundleStartup(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
             if (bundle.getBundleContext() != null) {
-                loadPredefinedPersonas(bundle.getBundleContext());
+                processBundleStartup(bundle.getBundleContext());
             }
         }
         bundleContext.addBundleListener(this);
@@ -106,6 +106,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             return;
         }
         loadPredefinedPersonas(bundleContext);
+        loadPredefinedPropertyTypes(bundleContext);
     }
 
     private void processBundleStop(BundleContext bundleContext) {
@@ -237,18 +238,39 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
     }
 
+    @Override
+    public Set<PropertyType> getExistingProperties(String tagId, String itemType) {
+        Set<PropertyType> filteredProperties = new LinkedHashSet<PropertyType>();
+        // TODO: here we limit the result to the definition we have, but what if some properties haven't definition but exist in ES mapping ?
+        Set<PropertyType> profileProperties = getPropertyTypeByTag(tagId, true);
+        Map<String, Map<String, Object>> itemMapping = persistenceService.getMapping(itemType);
+
+        if (itemMapping == null || itemMapping.isEmpty() || itemMapping.get("properties") == null || itemMapping.get("properties").get("properties") == null){
+            return filteredProperties;
+        }
+
+        Map<String, Map<String, String>> propMapping = (Map<String, Map<String, String>>) itemMapping.get("properties").get("properties");
+        for (PropertyType propertyType : profileProperties) {
+            if (propMapping.containsKey(propertyType.getMetadata().getId())) {
+                filteredProperties.add(propertyType);
+            }
+        }
+        return filteredProperties;
+    }
+
+
     // TODO: can be improve to use ES mappings directly to read the existing properties
     @Override
     public String exportProfilesPropertiesToCsv(Query query) {
         StringBuilder sb = new StringBuilder();
-        Set<PropertyType> profileProperties = queryService.getExistingProperties("profileProperties", Profile.ITEM_TYPE);
+        Set<PropertyType> profileProperties = getExistingProperties("profileProperties", Profile.ITEM_TYPE);
         PropertyType[] propertyTypes = profileProperties.toArray(new PropertyType[profileProperties.size()]);
         PartialList<Profile> profiles = search(query, Profile.class);
 
         // headers
         for (int i = 0; i < propertyTypes.length; i++) {
             PropertyType propertyType = propertyTypes[i];
-            sb.append(propertyType.getId());
+            sb.append(propertyType.getMetadata().getId());
             if(i < propertyTypes.length - 1) {
                 sb.append(";");
             } else {
@@ -260,8 +282,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         for (Profile profile : profiles.getList()) {
             for (int i = 0; i < propertyTypes.length; i++) {
                 PropertyType propertyType = propertyTypes[i];
-                if(profile.getProperties().get(propertyType.getId()) != null){
-                    handleExportProperty(sb, profile.getProperties().get(propertyType.getId()), propertyType);
+                if(profile.getProperties().get(propertyType.getMetadata().getId()) != null){
+                    handleExportProperty(sb, profile.getProperties().get(propertyType.getMetadata().getId()), propertyType);
                 }else {
                     sb.append("");
                 }
@@ -382,10 +404,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             allProfileProperties.addAll(profile.getProperties().keySet());
         }
 
-        Set<PropertyType> profilePropertyTypes = definitionsService.getPropertyTypeByTag(definitionsService.getTag("profileProperties"), true);
+        Collection<PropertyType> profilePropertyTypes = getAllPropertyTypes("profiles");
         Map<String, PropertyType> profilePropertyTypeById = new HashMap<String, PropertyType>();
         for (PropertyType propertyType : profilePropertyTypes) {
-            profilePropertyTypeById.put(propertyType.getId(), propertyType);
+            profilePropertyTypeById.put(propertyType.getMetadata().getId(), propertyType);
         }
         Set<String> profileIdsToMerge = new TreeSet<String>();
         for (Profile profileToMerge : profilesToMerge) {
@@ -476,9 +498,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public String getPropertyTypeMapping(String fromPropertyTypeId) {
-        Collection<PropertyType> types = definitionsService.getPropertyTypeByMapping(fromPropertyTypeId);
+        Collection<PropertyType> types = getPropertyTypeByMapping(fromPropertyTypeId);
         if (types.size() > 0) {
-            return types.iterator().next().getId();
+            return types.iterator().next().getMetadata().getId();
         }
         return null;
     }
@@ -551,6 +573,48 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return newPersona;
     }
 
+
+    public Collection<PropertyType> getAllPropertyTypes(String target) {
+        return persistenceService.query("target", target, null, PropertyType.class);
+    }
+
+    public HashMap<String, Collection<PropertyType>> getAllPropertyTypes() {
+        Collection<PropertyType> props = persistenceService.getAllItems(PropertyType.class, 0, -1, "rank").getList();
+
+        HashMap<String, Collection<PropertyType>> propertyTypes = new HashMap<>();
+        for (PropertyType prop : props){
+            if (!propertyTypes.containsKey(prop.getTarget())) {
+                propertyTypes.put(prop.getTarget(), new LinkedHashSet<PropertyType>());
+            }
+            propertyTypes.get(prop.getTarget()).add(prop);
+        }
+        return propertyTypes;
+    }
+
+    public Set<PropertyType> getPropertyTypeByTag(String tag, boolean recursive) {
+        Set<PropertyType> propertyTypes = new LinkedHashSet<PropertyType>();
+        Collection<PropertyType> directPropertyTypes = persistenceService.query("tags", tag, "rank", PropertyType.class);
+
+        if (directPropertyTypes != null) {
+            propertyTypes.addAll(directPropertyTypes);
+        }
+        if (recursive) {
+            for (Tag subTag : definitionsService.getTag(tag).getSubTags()) {
+                Set<PropertyType> childPropertyTypes = getPropertyTypeByTag(subTag.getId(), true);
+                propertyTypes.addAll(childPropertyTypes);
+            }
+        }
+        return propertyTypes;
+    }
+
+    public Collection<PropertyType> getPropertyTypeByMapping(String propertyName) {
+        return persistenceService.query("automaticMappingsFrom", propertyName, "rank", PropertyType.class);
+    }
+
+    public PropertyType getPropertyType(String target, String id) {
+        return persistenceService.load(id, PropertyType.class);
+    }
+
     public PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy) {
         return persistenceService.query("profileId", personaId, sortBy, Session.class, offset, size);
     }
@@ -583,6 +647,31 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
         }
     }
+
+    private void loadPredefinedPropertyTypes(BundleContext bundleContext) {
+        Enumeration<URL> predefinedPropertyTypeEntries = bundleContext.getBundle().findEntries("META-INF/cxs/properties", "*.json", true);
+        if (predefinedPropertyTypeEntries == null) {
+            return;
+        }
+
+        while (predefinedPropertyTypeEntries.hasMoreElements()) {
+            URL predefinedPropertyTypeURL = predefinedPropertyTypeEntries.nextElement();
+            logger.debug("Found predefined property type at " + predefinedPropertyTypeURL + ", loading... ");
+
+            try {
+                PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeURL, PropertyType.class);
+                String[] splitPath = predefinedPropertyTypeURL.getPath().split("/");
+                String target = splitPath[4];
+                propertyType.setTarget(target);
+
+                persistenceService.save(propertyType);
+            } catch (IOException e) {
+                logger.error("Error while loading properties " + predefinedPropertyTypeURL, e);
+            }
+        }
+    }
+
+
 
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {

@@ -154,36 +154,6 @@ public class DefinitionsServiceEndPoint {
     }
 
     @GET
-    @Path("/properties")
-    public Map<String, Collection<RESTPropertyType>> getPropertyTypes(@HeaderParam("Accept-Language") String language) {
-        Map<String, Collection<PropertyType>> propertyTypes = definitionsService.getAllPropertyTypes();
-        Map<String, Collection<RESTPropertyType>> result = new LinkedHashMap<>();
-
-        for (String id : propertyTypes.keySet()){
-            result.put(id, localizationHelper.generatePropertyTypes(propertyTypes.get(id), language));
-        }
-
-        return result;
-    }
-
-    @GET
-    @Path("/properties/{target}")
-    public Collection<RESTPropertyType> getPropertyTypesByTarget(@PathParam("target") String target, @HeaderParam("Accept-Language") String language) {
-        return localizationHelper.generatePropertyTypes(definitionsService.getAllPropertyTypes(target), language);
-    }
-
-    @GET
-    @Path("/properties/tags/{tagId}")
-    public Collection<RESTPropertyType> getPropertyTypeByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
-        String[] tagsArray = tags.split(",");
-        Set<PropertyType> results = new LinkedHashSet<>();
-        for (String s : tagsArray) {
-            results.addAll(definitionsService.getPropertyTypeByTag(definitionsService.getTag(s), recursive));
-        }
-        return localizationHelper.generatePropertyTypes(results, language);
-    }
-
-    @GET
     @Path("/typesByPlugin")
     public Map<Long, List<PluginType>> getTypesByPlugin() {
         return definitionsService.getTypesByPlugin();

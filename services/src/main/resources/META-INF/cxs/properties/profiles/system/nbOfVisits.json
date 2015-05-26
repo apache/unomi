@@ -1,19 +1,18 @@
 {
-    "id": "nbOfVisits",
+    "metadata": {     "id": "nbOfVisits", "name": "Number of visits"   },
     "type": "integer",
     "tags": ["systemProfileProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ ],
-    "ranges": {
-      "*_5" : {"to" : 5 },
-      "5_10" : {"from" : 5, "to" : 10 },
-      "10_20" : {"from" : 10, "to" : 20 },
-      "20_40" : {"from" : 20, "to" : 40 },
-      "40_80" : {"from" : 40, "to" : 80 },
-      "100_*" : {"from" : 100 }
-    },
+    "ranges": [
+       {"key":"*_5", "to" : 5 },
+       {"key":"5_10", "from" : 5, "to" : 10 },
+       {"key":"10_20", "from" : 10, "to" : 20 },
+       {"key":"20_40", "from" : 20, "to" : 40 },
+       {"key":"40_80", "from" : 40, "to" : 80 },
+       {"key":"100_*", "from" : 100 }
+    ],
     "mergeStrategy": "addMergeStrategy",
-    "rank": "3.0",
+    "rank": "203.0",
     "protected": true
 }

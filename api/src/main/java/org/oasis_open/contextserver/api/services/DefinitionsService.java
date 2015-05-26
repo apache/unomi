@@ -54,16 +54,6 @@ public interface DefinitionsService {
 
     ValueType getValueType(String id);
 
-    Collection<PropertyType> getAllPropertyTypes(String target);
-
-    HashMap<String, Collection<PropertyType>> getAllPropertyTypes();
-
-    Set<PropertyType> getPropertyTypeByTag(Tag tag, boolean recursive);
-
-    Set<PropertyType> getPropertyTypeByMapping(String propertyName);
-
-    PropertyType getPropertyType(String target, String id);
-
     Map<Long, List<PluginType>> getTypesByPlugin();
 
     PropertyMergeStrategyType getPropertyMergeStrategyType(String id);

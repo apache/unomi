@@ -1,9 +1,8 @@
 {
-    "id": "email",
+    "metadata": {     "id": "email", "name": "Email"   },
     "type": "email",
     "tags": ["contactProfileProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ "j:email" ],
-    "rank": "1.0"
+    "rank": "101.0"
 }

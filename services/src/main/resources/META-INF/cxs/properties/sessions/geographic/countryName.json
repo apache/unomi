@@ -1,9 +1,8 @@
 {
-    "id": "countryName",
+    "metadata": {     "id": "countryName", "name": "Country"   },
     "type": "string",
     "tags": ["geographicSessionProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ ],
     "rank": "2.0"
 }

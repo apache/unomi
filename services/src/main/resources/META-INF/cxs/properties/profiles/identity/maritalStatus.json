@@ -1,9 +1,8 @@
 {
-    "id": "maritalStatus",
+    "metadata": {     "id": "maritalStatus", "name": "Marital status"   },
     "type": "string",
     "tags": ["identityProfileProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ ],
     "rank": "9.0"
 }

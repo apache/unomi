@@ -26,7 +26,9 @@ import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.Query;
 
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Set;
 
 public interface ProfileService {
@@ -68,4 +70,18 @@ public interface ProfileService {
     Persona createPersona(String personaId);
 
     PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy);
+
+    Collection<PropertyType> getAllPropertyTypes(String target);
+
+    HashMap<String, Collection<PropertyType>> getAllPropertyTypes();
+
+    Set<PropertyType> getPropertyTypeByTag(String tag, boolean recursive);
+
+    Collection<PropertyType> getPropertyTypeByMapping(String propertyName);
+
+    PropertyType getPropertyType(String target, String id);
+
+    Set<PropertyType> getExistingProperties(String tagId, String itemType);
+
+
 }

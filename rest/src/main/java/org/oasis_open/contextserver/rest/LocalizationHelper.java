@@ -114,44 +114,6 @@ public class LocalizationHelper {
         return result;
     }
 
-    public Collection<RESTPropertyType> generatePropertyTypes(Collection<PropertyType> type, String language) {
-        Set<RESTPropertyType> result = new LinkedHashSet<>();
-        for (PropertyType propertyType : type) {
-            result.add(generatePropertyType(propertyType, resourceBundleHelper.getResourceBundle(propertyType, language)));
-        }
-        return result;
-    }
-
-    public RESTPropertyType generatePropertyType(PropertyType type, ResourceBundle bundle) {
-        RESTPropertyType result = new RESTPropertyType();
-        result.setId(type.getId());
-        result.setName(resourceBundleHelper.getResourceBundleValue(bundle, type.getNameKey()));
-        result.setType(type.getValueTypeId());
-        result.setDefaultValue(type.getDefaultValue());
-        result.setRank(type.getRank());
-        result.setTags(type.getTagIds());
-        result.setAutomaticMappingsFrom(type.getAutomaticMappingsFrom());
-        result.setMergeStrategy(type.getMergeStrategy());
-        result.setSelectorId(type.getSelectorId());
-        result.setMultivalued(type.isMultivalued());
-        result.setProtected(type.isProtected());
-
-        if(type.getRanges() != null && type.getRanges().size() > 0) {
-            result.setRanges(new LinkedHashSet<RESTRange>());
-            for (Map.Entry<String, GenericRange> range : type.getRanges().entrySet()) {
-                RESTRange restRange = new RESTRange();
-                restRange.setKey(range.getKey());
-                restRange.setTo(range.getValue().getTo());
-                restRange.setFrom(range.getValue().getFrom());
-                result.getRanges().add(restRange);
-            }
-        }
-
-        localizeChoiceListValues(bundle, result.getChoiceListValues(), type.getChoiceListInitializerFilter());
-
-        return result;
-    }
-
     public void localizeChoiceListValues(ResourceBundle bundle, List<ChoiceListValue> result, String choiceListInitializerFilter) {
         if (choiceListInitializerFilter != null && choiceListInitializerFilter.length() > 0) {
             try {

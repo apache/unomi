@@ -22,7 +22,10 @@ package org.oasis_open.contextserver.impl.services;
  * #L%
  */
 
-import org.oasis_open.contextserver.api.*;
+import org.oasis_open.contextserver.api.PluginType;
+import org.oasis_open.contextserver.api.PropertyMergeStrategyType;
+import org.oasis_open.contextserver.api.Tag;
+import org.oasis_open.contextserver.api.ValueType;
 import org.oasis_open.contextserver.api.actions.ActionType;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
@@ -47,14 +50,11 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     private Set<Tag> rootTags = new LinkedHashSet<>();
     private Map<String, ConditionType> conditionTypeById = new HashMap<>();
     private Map<String, ActionType> actionTypeById = new HashMap<>();
-    private Map<String, Map<String, PropertyType>> propertyTypeById = new HashMap<>();
     private Map<String, ValueType> valueTypeById = new HashMap<>();
     private Map<Tag, Set<ConditionType>> conditionTypeByTag = new HashMap<>();
     private Map<Tag, Set<ActionType>> actionTypeByTag = new HashMap<>();
-    private Map<Tag, Set<PropertyType>> propertyTypeByTag = new HashMap<>();
     private Map<Tag, Set<ValueType>> valueTypeByTag = new HashMap<>();
     private Map<Long, List<PluginType>> pluginTypes = new HashMap<>();
-    private Map<String, Set<PropertyType>> propertyTypeByMapping = new HashMap<>();
     private Map<String, PropertyMergeStrategyType> propertyMergeStrategyTypeById = new HashMap<>();
 
     private BundleContext bundleContext;
@@ -92,7 +92,6 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
         loadPredefinedConditionTypes(bundleContext);
         loadPredefinedActionTypes(bundleContext);
-        loadPredefinedPropertyTypes(bundleContext);
         loadPredefinedValueTypes(bundleContext);
         loadPredefinedPropertyMergeStrategies(bundleContext);
 
@@ -122,15 +121,6 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                     valueTypeById.remove(valueType.getId());
                     for (Tag tag : valueType.getTags()) {
                         valueTypeByTag.get(tag).remove(valueType);
-                    }
-                } else if (type instanceof PropertyType) {
-                    PropertyType propertyType = (PropertyType) type;
-                    propertyTypeById.get(propertyType.getTarget()).remove(propertyType.getId());
-                    for (Tag tag : propertyType.getTags()) {
-                        propertyTypeByTag.get(tag).remove(propertyType);
-                    }
-                    for (String propertyName : propertyType.getAutomaticMappingsFrom()) {
-                        propertyTypeByMapping.get(propertyName).remove(propertyType);
                     }
                 }
             }
@@ -249,57 +239,6 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             }
         }
 
-    }
-
-    private void loadPredefinedPropertyTypes(BundleContext bundleContext) {
-        Enumeration<URL> predefinedPropertyTypeEntries = bundleContext.getBundle().findEntries("META-INF/cxs/properties", "*.json", true);
-        if (predefinedPropertyTypeEntries == null) {
-            return;
-        }
-        ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
-        while (predefinedPropertyTypeEntries.hasMoreElements()) {
-            URL predefinedPropertyTypeURL = predefinedPropertyTypeEntries.nextElement();
-            logger.debug("Found predefined property type at " + predefinedPropertyTypeURL + ", loading... ");
-
-            try {
-                PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeURL, PropertyType.class);
-                ParserHelper.resolveValueType(this, propertyType);
-                propertyType.setPluginId(bundleContext.getBundle().getBundleId());
-                String[] splitPath = predefinedPropertyTypeURL.getPath().split("/");
-                String target = splitPath[4];
-                propertyType.setTarget(target);
-                if (!propertyTypeById.containsKey(target)) {
-                    propertyTypeById.put(target, new HashMap<String, PropertyType>());
-                }
-                propertyTypeById.get(target).put(propertyType.getId(), propertyType);
-                pluginTypeArrayList.add(propertyType);
-                for (String tagId : propertyType.getTagIds()) {
-                    Tag tag = tags.get(tagId);
-                    if (tag != null) {
-                        propertyType.getTags().add(tag);
-                        Set<PropertyType> propertyTypes = propertyTypeByTag.get(tag);
-                        if (propertyTypes == null) {
-                            propertyTypes = new TreeSet<>();
-                        }
-                        propertyTypes.add(propertyType);
-                        propertyTypeByTag.put(tag, propertyTypes);
-                    } else {
-                        // we found a tag that is not defined, we will define it automatically
-                        logger.warn("Unknown tag " + tagId + " used in action definition " + predefinedPropertyTypeURL);
-                    }
-                }
-                for (String propertyName : propertyType.getAutomaticMappingsFrom()) {
-                    Set<PropertyType> propertyTypes = propertyTypeByMapping.get(propertyName);
-                    if (propertyTypes == null) {
-                        propertyTypes = new LinkedHashSet<>();
-                    }
-                    propertyTypes.add(propertyType);
-                    propertyTypeByMapping.put(propertyName, propertyTypes);
-                }
-            } catch (IOException e) {
-                logger.error("Error while loading properties " + predefinedPropertyTypeURL, e);
-            }
-        }
     }
 
     private void loadPredefinedValueTypes(BundleContext bundleContext) {
@@ -426,45 +365,6 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     public ValueType getValueType(String id) {
         return valueTypeById.get(id);
-    }
-
-    public Collection<PropertyType> getAllPropertyTypes(String target) {
-        return propertyTypeById.get(target).values();
-    }
-
-    public HashMap<String, Collection<PropertyType>> getAllPropertyTypes() {
-        HashMap<String, Collection<PropertyType>> propertyTypes = new HashMap<>();
-        for (String id : propertyTypeById.keySet()){
-            propertyTypes.put(id, getAllPropertyTypes(id));
-        }
-        return propertyTypes;
-    }
-
-    public Set<PropertyType> getPropertyTypeByTag(Tag tag, boolean recursive) {
-        Set<PropertyType> propertyTypes = new LinkedHashSet<PropertyType>();
-        Set<PropertyType> directPropertyTypes = propertyTypeByTag.get(tag);
-        if (directPropertyTypes != null) {
-            propertyTypes.addAll(directPropertyTypes);
-        }
-        if (recursive) {
-            for (Tag subTag : tag.getSubTags()) {
-                Set<PropertyType> childPropertyTypes = getPropertyTypeByTag(subTag, true);
-                propertyTypes.addAll(childPropertyTypes);
-            }
-        }
-        return propertyTypes;
-    }
-
-    public Set<PropertyType> getPropertyTypeByMapping(String propertyName) {
-        if (propertyTypeByMapping.containsKey(propertyName)) {
-            return propertyTypeByMapping.get(propertyName);
-        } else {
-            return Collections.emptySet();
-        }
-    }
-
-    public PropertyType getPropertyType(String target, String id) {
-        return propertyTypeById.get(target).get(id);
     }
 
     public void bundleChanged(BundleEvent event) {

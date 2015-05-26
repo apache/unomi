@@ -1,9 +1,8 @@
 {
-    "id": "jobTitle",
+    "metadata": {     "id": "jobTitle", "name": "Job Title"   },
     "type": "string",
     "tags": ["identityProfileProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ ],
     "rank": "13.0"
 }

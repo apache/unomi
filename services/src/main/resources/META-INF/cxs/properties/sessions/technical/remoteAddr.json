@@ -1,9 +1,8 @@
 {
-    "id": "remoteAddr",
+    "metadata": {     "id": "remoteAddr", "name": "Remote IP address"   },
     "type": "string",
     "tags": ["technicalSessionProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ ],
-    "rank": "6.0"
+    "rank": "106.0"
 }

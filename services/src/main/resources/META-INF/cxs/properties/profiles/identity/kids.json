@@ -1,9 +1,8 @@
 {
-    "id": "kids",
+    "metadata": {     "id": "kids", "name": "Kids"   },
     "type": "integer",
     "tags": ["identityProfileProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ ],
     "rank": "10.0"
 }

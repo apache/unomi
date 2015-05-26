@@ -1,9 +1,8 @@
 {
-    "id": "operatingSystemFamily",
+    "metadata": {     "id": "operatingSystemFamily", "name": "Operating system family"   },
     "type": "string",
     "tags": ["technicalSessionProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ ],
-    "rank": "1.0"
+    "rank": "101.0"
 }

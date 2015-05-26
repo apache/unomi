@@ -1,9 +1,8 @@
 {
-    "id": "department",
+    "metadata": {     "id": "department", "name": "Department"   },
     "type": "string",
     "tags": ["identityProfileProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ ],
     "rank": "12.0"
 }

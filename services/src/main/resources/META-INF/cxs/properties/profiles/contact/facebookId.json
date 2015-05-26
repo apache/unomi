@@ -1,9 +1,8 @@
 {
-    "id": "facebookId",
+    "metadata": {     "id": "facebookId", "name": "Facebook ID"   },
     "type": "string",
     "tags": ["contactProfileProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ "j:facebookID" ],
-    "rank": "3.0"
+    "rank": "103.0"
 }

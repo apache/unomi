@@ -1,9 +1,8 @@
 {
-    "id": "income",
+    "metadata": {     "id": "income", "name": "Income"   },
     "type": "integer",
     "tags": ["identityProfileProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ "j:income" ],
     "rank": "14.0"
 }

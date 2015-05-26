@@ -1,9 +1,8 @@
 {
-    "id": "latitude",
+    "metadata": {     "id": "latitude", "name": "Latitude"   },
     "type": "string",
     "tags": ["geographicSessionProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ ],
     "rank": "4.0"
 }

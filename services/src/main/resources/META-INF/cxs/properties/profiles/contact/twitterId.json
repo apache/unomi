@@ -1,9 +1,8 @@
 {
-    "id": "twitterId",
+    "metadata": {     "id": "twitterId", "name": "Twitter ID"   },
     "type": "string",
     "tags": ["contactProfileProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ "j:twitterID" ],
-    "rank": "5.0"
+    "rank": "105.0"
 }

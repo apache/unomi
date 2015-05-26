@@ -29,20 +29,16 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.util.*;
 
-@XmlRootElement
-public class PropertyType implements Comparable<PropertyType>, PluginType {
-    private String id;
+public class PropertyType extends MetadataItem {
+    public static final String ITEM_TYPE = "propertyType";
+
     private String target;
-    private String nameKey;
     private String valueTypeId;
     private ValueType valueType;
-    private String choiceListInitializerFilter;
     private String defaultValue;
-    private Map<String, GenericRange> ranges = new TreeMap<>();
-    private String selectorId;
+    private List<GenericRange> ranges = new ArrayList<>();
     private Set<String> automaticMappingsFrom;
     private double rank;
-    private long pluginId;
     private String mergeStrategy;
     private Set<Tag> tags = new TreeSet<Tag>();
     private Set<String> tagIds = new LinkedHashSet<String>();
@@ -52,44 +48,16 @@ public class PropertyType implements Comparable<PropertyType>, PluginType {
     public PropertyType() {
     }
 
-    public Map<String, GenericRange> getRanges() {
-        return ranges;
+    public PropertyType(Metadata metadata) {
+        super(metadata);
     }
 
-    public void setRanges(Map<String, GenericRange> ranges) {
-        this.ranges = ranges;
-    }
-
-    public PropertyType(String id) {
-        this.id = id;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    @XmlTransient
     public String getTarget() {
         return target;
     }
 
     public void setTarget(String target) {
         this.target = target;
-    }
-
-    public String getNameKey() {
-        if (nameKey == null) {
-            nameKey = target + "Property." + id;
-        }
-        return nameKey;
-    }
-
-    public void setNameKey(String nameKey) {
-        this.nameKey = nameKey;
     }
 
     @XmlElement(name = "type")
@@ -128,28 +96,12 @@ public class PropertyType implements Comparable<PropertyType>, PluginType {
         this.tagIds = tagIds;
     }
 
-    public String getChoiceListInitializerFilter() {
-        return choiceListInitializerFilter;
-    }
-
-    public void setChoiceListInitializerFilter(String choiceListInitializerFilter) {
-        this.choiceListInitializerFilter = choiceListInitializerFilter;
-    }
-
     public String getDefaultValue() {
         return defaultValue;
     }
 
     public void setDefaultValue(String defaultValue) {
         this.defaultValue = defaultValue;
-    }
-
-    public String getSelectorId() {
-        return selectorId;
-    }
-
-    public void setSelectorId(String selectorId) {
-        this.selectorId = selectorId;
     }
 
     public Set<String> getAutomaticMappingsFrom() {
@@ -168,15 +120,6 @@ public class PropertyType implements Comparable<PropertyType>, PluginType {
         this.rank = rank;
     }
 
-    @XmlTransient
-    public long getPluginId() {
-        return pluginId;
-    }
-
-    public void setPluginId(long pluginId) {
-        this.pluginId = pluginId;
-    }
-
     public String getMergeStrategy() {
         return mergeStrategy;
     }
@@ -185,41 +128,12 @@ public class PropertyType implements Comparable<PropertyType>, PluginType {
         this.mergeStrategy = mergeStrategy;
     }
 
-    public int compareTo(PropertyType o) {
-        int rankCompare = Double.compare(rank, o.rank);
-        if (rankCompare != 0) {
-            return rankCompare;
-        }
-        int idCompare = id.compareTo(o.id);
-        if (idCompare != 0) {
-            return idCompare;
-        }
-        return idCompare;
+    public List<GenericRange> getRanges() {
+        return ranges;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        PropertyType that = (PropertyType) o;
-
-        if (Double.compare(that.rank, rank) != 0) return false;
-        if (!id.equals(that.id)) return false;
-        if (pluginId != that.pluginId) return false;
-
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        int result;
-        long temp;
-        result = id.hashCode();
-        temp = Double.doubleToLongBits(rank);
-        result = 31 * result + (int) (temp ^ (temp >>> 32));
-        result = 31 * result + (int) (pluginId ^ (pluginId >>> 32));
-        return result;
+    public void setRanges(List<GenericRange> ranges) {
+        this.ranges = ranges;
     }
 
     public boolean isMultivalued() {
@@ -237,4 +151,5 @@ public class PropertyType implements Comparable<PropertyType>, PluginType {
     public void setProtected(boolean protekted) {
         this.protekted = protekted;
     }
+
 }

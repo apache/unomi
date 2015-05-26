@@ -22,20 +22,19 @@ package org.oasis_open.contextserver.impl.services;
  * #L%
  */
 
-import org.oasis_open.contextserver.api.PropertyType;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.AggregateQuery;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.QueryService;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
-import org.oasis_open.contextserver.persistence.spi.aggregate.*;
+import org.oasis_open.contextserver.persistence.spi.aggregate.DateAggregate;
+import org.oasis_open.contextserver.persistence.spi.aggregate.DateRangeAggregate;
+import org.oasis_open.contextserver.persistence.spi.aggregate.NumericRangeAggregate;
+import org.oasis_open.contextserver.persistence.spi.aggregate.TermsAggregate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Set;
 
 public class QueryServiceImpl implements QueryService {
     private static final Logger logger = LoggerFactory.getLogger(QueryServiceImpl.class.getName());
@@ -65,22 +64,22 @@ public class QueryServiceImpl implements QueryService {
 
     @Override
     public Map<String, Long> getAggregate(String type, String property, AggregateQuery query) {
-        if(query != null) {
+        if (query != null) {
             // resolve condition
-            if(query.getCondition() != null){
+            if (query.getCondition() != null) {
                 ParserHelper.resolveConditionType(definitionsService, query.getCondition());
             }
 
             // resolve aggregate
-            if(query.getAggregate() != null) {
+            if (query.getAggregate() != null) {
                 String aggregateType = query.getAggregate().getType();
-                if (aggregateType != null){
+                if (aggregateType != null) {
                     // try to guess the aggregate type
-                    if(aggregateType.equals("date")){
+                    if (aggregateType.equals("date")) {
                         String interval = (String) query.getAggregate().getParameters().get("interval");
                         String format = (String) query.getAggregate().getParameters().get("format");
                         return persistenceService.aggregateQuery(query.getCondition(), new DateAggregate(property, interval, format), type);
-                    }else if (aggregateType.equals("dateRange") && query.getAggregate().getGenericRanges() != null && query.getAggregate().getGenericRanges().size() > 0) {
+                    } else if (aggregateType.equals("dateRange") && query.getAggregate().getGenericRanges() != null && query.getAggregate().getGenericRanges().size() > 0) {
                         String format = (String) query.getAggregate().getParameters().get("format");
                         return persistenceService.aggregateQuery(query.getCondition(), new DateRangeAggregate(query.getAggregate().getProperty(), format, query.getAggregate().getGenericRanges()), type);
                     } else if (aggregateType.equals("range") && query.getAggregate().getNumericRanges() != null && query.getAggregate().getNumericRanges().size() > 0) {
@@ -101,7 +100,7 @@ public class QueryServiceImpl implements QueryService {
         if (condition.getConditionType() == null) {
             ParserHelper.resolveConditionType(definitionsService, condition);
         }
-        return persistenceService.getSingleValuesMetrics(condition,metricType.split("/"),property, type);
+        return persistenceService.getSingleValuesMetrics(condition, metricType.split("/"), property, type);
     }
 
     @Override
@@ -115,25 +114,5 @@ public class QueryServiceImpl implements QueryService {
             logger.warn("Invalid query");
             return 0;
         }
-    }
-
-    @Override
-    public Set<PropertyType> getExistingProperties(String tagId, String itemType) {
-        Set<PropertyType> filteredProperties = new LinkedHashSet<PropertyType>();
-        // TODO: here we limit the result to the definition we have, but what if some properties haven't definition but exist in ES mapping ?
-        Set<PropertyType> profileProperties = definitionsService.getPropertyTypeByTag(definitionsService.getTag(tagId), true);
-        Map<String, Map<String, Object>> itemMapping = persistenceService.getMapping(itemType);
-
-        if (itemMapping == null || itemMapping.isEmpty() || itemMapping.get("properties") == null || itemMapping.get("properties").get("properties") == null){
-            return filteredProperties;
-        }
-
-        Map<String, Map<String, String>> propMapping = (Map<String, Map<String, String>>) itemMapping.get("properties").get("properties");
-        for (PropertyType propertyType : profileProperties) {
-            if (propMapping.containsKey(propertyType.getId())) {
-                filteredProperties.add(propertyType);
-            }
-        }
-        return filteredProperties;
     }
 }

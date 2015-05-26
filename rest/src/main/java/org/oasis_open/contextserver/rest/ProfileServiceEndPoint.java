@@ -40,8 +40,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
@@ -258,5 +257,36 @@ public class ProfileServiceEndPoint {
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
         return profileService.matchCondition(condition, profile, session);
     }
+
+    @GET
+    @Path("/existingProperties")
+    public Collection<PropertyType> getExistingProperties(@QueryParam("tagId") String tagId, @QueryParam("itemType") String itemType, @HeaderParam("Accept-Language") String language) {
+        Set<PropertyType> properties = profileService.getExistingProperties(tagId, itemType);
+        return properties;
+    }
+
+        @GET
+    @Path("/properties")
+    public Map<String, Collection<PropertyType>> getPropertyTypes(@HeaderParam("Accept-Language") String language) {
+        return profileService.getAllPropertyTypes();
+    }
+
+    @GET
+    @Path("/properties/{target}")
+    public Collection<PropertyType> getPropertyTypesByTarget(@PathParam("target") String target, @HeaderParam("Accept-Language") String language) {
+        return profileService.getAllPropertyTypes(target);
+    }
+
+    @GET
+    @Path("/properties/tags/{tagId}")
+    public Collection<PropertyType> getPropertyTypeByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
+        String[] tagsArray = tags.split(",");
+        Set<PropertyType> results = new LinkedHashSet<>();
+        for (String s : tagsArray) {
+            results.addAll(profileService.getPropertyTypeByTag(s, recursive));
+        }
+        return results;
+    }
+
 
 }

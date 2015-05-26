@@ -1,9 +1,8 @@
 {
-    "id": "gender",
+    "metadata": {     "id": "gender", "name": "Gender"   },
     "type": "string",
     "tags": ["identityProfileProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ "j:gender" ],
     "rank": "8.0"
 }

@@ -7,8 +7,7 @@
         {
             "id": "propertyName",
             "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": "(initializerId=sessionPropertyType)"
+            "multivalued": false
         },
         {
             "id": "comparisonOperator",

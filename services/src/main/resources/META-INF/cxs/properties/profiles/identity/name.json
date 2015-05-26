@@ -1,9 +1,8 @@
 {
-    "id": "name",
+    "metadata": {     "id": "name", "name": "Name"   },
     "type": "string",
     "tags": ["identityProfileProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ ],
     "rank": "3.0"
 }

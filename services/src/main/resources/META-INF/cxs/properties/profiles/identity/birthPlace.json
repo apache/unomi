@@ -1,9 +1,8 @@
 {
-    "id": "birthPlace",
+    "metadata": {     "id": "birthPlace", "name": "Birth place"   },
     "type": "string",
     "tags": ["identityProfileProperties"],
     "defaultValue": "",
-    "selectorId": "",
     "automaticMappingsFrom": [ ],
     "rank": "6.0"
 }
