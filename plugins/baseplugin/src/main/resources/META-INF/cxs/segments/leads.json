@@ -1,6 +1,6 @@
 {
     "metadata": {
-        "id": "_2wtgdusu0_leads",
+        "id": "leads",
         "name": "Leads",
         "description": "This segment includes all leads, meaning all profiles that are assigned to an account manager",
         "readOnly":true
