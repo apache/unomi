@@ -216,7 +216,17 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         action2.setParameter("setPropertyName", name);
         action2.setParameter("setPropertyValue", "script::profile.properties.?"+name+" != null ? (profile.properties."+name+") : 'now'");
         action2.setParameter("storeInSession", false);
-        rule.setActions(Arrays.asList(action1,action2));
+        rule.setActions(Arrays.asList(action1, action2));
+
+        if (id.equals("Target")) {
+            Action action3 = new Action();
+            action3.setActionType(definitionsService.getActionType("sendEventAction"));
+            action3.setParameter("eventType", "goal");
+            action3.setParameter("eventTarget", goal);
+            action3.setParameter("eventProperties", new HashMap<String, Object>());
+            rule.setActions(Arrays.asList(action1,action2,action3));
+        }
+
         rulesService.setRule(rule);
     }
 
