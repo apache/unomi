@@ -24,15 +24,14 @@ package org.oasis_open.contextserver.api.services;
 
 import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PartialList;
-import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.campaigns.Campaign;
+import org.oasis_open.contextserver.api.campaigns.CampaignDetail;
 import org.oasis_open.contextserver.api.campaigns.events.CampaignEvent;
 import org.oasis_open.contextserver.api.goals.Goal;
 import org.oasis_open.contextserver.api.goals.GoalReport;
 import org.oasis_open.contextserver.api.query.AggregateQuery;
 import org.oasis_open.contextserver.api.query.Query;
 
-import java.util.List;
 import java.util.Set;
 
 public interface GoalsService {
@@ -53,6 +52,10 @@ public interface GoalsService {
     Set<Metadata> getCampaignMetadatas();
 
     Set<Metadata> getCampaignMetadatas(Query query);
+
+    PartialList<CampaignDetail> getCampaignDetails(Query query);
+
+    CampaignDetail getCampaignDetail(String id);
 
     Campaign getCampaign(String campaignId);
 

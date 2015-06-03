@@ -25,8 +25,8 @@ package org.oasis_open.contextserver.rest;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PartialList;
-import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.campaigns.Campaign;
+import org.oasis_open.contextserver.api.campaigns.CampaignDetail;
 import org.oasis_open.contextserver.api.campaigns.events.CampaignEvent;
 import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.services.GoalsService;
@@ -71,6 +71,18 @@ public class CampaignsServiceEndPoint {
     @Path("/query")
     public Set<Metadata> getCampaignMetadatas(Query query) {
         return goalsService.getCampaignMetadatas(query);
+    }
+
+    @POST
+    @Path("/query/detailed")
+    public PartialList<CampaignDetail> getCampaignDetails(Query query) {
+        return goalsService.getCampaignDetails(query);
+    }
+
+    @GET
+    @Path("/{campaignID}/detailed")
+    public CampaignDetail getCampaignDetail(@PathParam("campaignID") String campaignID) {
+        return goalsService.getCampaignDetail(campaignID);
     }
 
     @GET

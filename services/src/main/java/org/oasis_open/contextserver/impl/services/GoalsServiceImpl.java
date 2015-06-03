@@ -25,6 +25,7 @@ package org.oasis_open.contextserver.impl.services;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.campaigns.Campaign;
+import org.oasis_open.contextserver.api.campaigns.CampaignDetail;
 import org.oasis_open.contextserver.api.campaigns.events.CampaignEvent;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
@@ -33,7 +34,6 @@ import org.oasis_open.contextserver.api.goals.GoalReport;
 import org.oasis_open.contextserver.api.query.AggregateQuery;
 import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.rules.Rule;
-import org.oasis_open.contextserver.api.segments.Segment;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.GoalsService;
 import org.oasis_open.contextserver.api.services.RulesService;
@@ -375,6 +375,53 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             descriptions.add(definition.getMetadata());
         }
         return descriptions;
+    }
+
+    public PartialList<CampaignDetail> getCampaignDetails(Query query) {
+        definitionsService.resolveConditionType(query.getCondition());
+        PartialList<Campaign> campaigns = persistenceService.query(query.getCondition(), query.getSortby(), Campaign.class, query.getOffset(), query.getLimit());
+        List<CampaignDetail> details = new LinkedList<>();
+        for (Campaign definition : campaigns.getList()) {
+            details.add(getCampaignDetail(definition));
+        }
+        return new PartialList<>(details, campaigns.getOffset(), campaigns.getPageSize(), campaigns.getTotalSize());
+    }
+
+    public CampaignDetail getCampaignDetail(String id) {
+        return getCampaignDetail(getCampaign(id));
+    }
+
+    private CampaignDetail getCampaignDetail(Campaign campaign) {
+        CampaignDetail campaignDetail = new CampaignDetail(campaign);
+
+        // engaged profile
+        Condition profileEngagedCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        profileEngagedCondition.setParameter("propertyName", "systemProperties.campaigns." + campaign.getMetadata().getId() + "Engaged");
+        profileEngagedCondition.setParameter("comparisonOperator", "exists");
+        campaignDetail.setEngagedProfiles(persistenceService.queryCount(profileEngagedCondition, Profile.ITEM_TYPE));
+
+        // number of goals
+        Condition campaignGoalsCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+        campaignGoalsCondition.setParameter("propertyName", "campaignId");
+        campaignGoalsCondition.setParameter("comparisonOperator", "equals");
+        campaignGoalsCondition.setParameter("propertyValue", campaign.getMetadata().getId());
+        campaignDetail.setNumberOfGoals(persistenceService.queryCount(campaignGoalsCondition, Goal.ITEM_TYPE));
+
+        // sessions
+        Condition sessionEngagedCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+        sessionEngagedCondition.setParameter("propertyName", "systemProperties.campaigns." + campaign.getMetadata().getId() + "Engaged");
+        sessionEngagedCondition.setParameter("comparisonOperator", "exists");
+        campaignDetail.setCampaignSessionViews(persistenceService.queryCount(sessionEngagedCondition, Session.ITEM_TYPE));
+
+        // sessions
+        Condition sessionConvertedCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+        sessionConvertedCondition.setParameter("propertyName", "systemProperties.goals." + campaign.getPrimaryGoal() + "TargetReached");
+        sessionConvertedCondition.setParameter("comparisonOperator", "exists");
+        campaignDetail.setCampaignSessionSuccess(persistenceService.queryCount(sessionConvertedCondition, Session.ITEM_TYPE));
+
+        // conversion
+        campaignDetail.setConversionRate(campaignDetail.getCampaignSessionSuccess() / (campaignDetail.getCampaignSessionViews() > 0  ? campaignDetail.getCampaignSessionViews() : 1));
+        return campaignDetail;
     }
 
     public Campaign getCampaign(String id) {
