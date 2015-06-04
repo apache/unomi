@@ -84,10 +84,6 @@ public class EventServiceImpl implements EventService {
         }
 
         if (profile != null) {
-            Map<String, Object> previousProperties = new LinkedHashMap<String, Object>(profile.getProperties());
-            Map<String, Object> previousSystemProperties = new LinkedHashMap<String, Object>(profile.getSystemProperties());
-            Set<String> previousSegments = new HashSet<String>(profile.getSegments());
-
             for (EventListenerService eventListenerService : eventListeners) {
                 if (eventListenerService.canHandle(event)) {
                     changes |= eventListenerService.onEvent(event);
