@@ -521,7 +521,21 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     UnmodifiableIterator<ImmutableOpenMap<String, MappingMetaData>> it = mappings.valuesIt();
                     while (it.hasNext()) {
                         ImmutableOpenMap<String, MappingMetaData> next = it.next();
-                        propertyMap.putAll((Map<String, Map<String,Object>>) next.get(itemType).getSourceAsMap().get("properties"));
+                        Map<String, Map<String, Object>> properties = (Map<String, Map<String, Object>>) next.get(itemType).getSourceAsMap().get("properties");
+                        for (Map.Entry<String, Map<String, Object>> entry : properties.entrySet()) {
+                            if (propertyMap.containsKey(entry.getKey())) {
+                                Map<String, Object> subPropMap = propertyMap.get(entry.getKey());
+                                for (Map.Entry<String, Object> subentry : entry.getValue().entrySet()) {
+                                    if (subPropMap.containsKey(subentry.getKey()) && subPropMap.get(subentry.getKey()) instanceof Map && subentry.getValue() instanceof Map) {
+                                        ((Map) subPropMap.get(subentry.getKey())).putAll((Map) subentry.getValue());
+                                    } else {
+                                        subPropMap.put(subentry.getKey(), subentry.getValue());
+                                    }
+                                }
+                            } else {
+                                propertyMap.put(entry.getKey(), entry.getValue());
+                            }
+                        }
                     }
                 } catch (IOException e) {
                     logger.error("Cannot get mapping", e);
