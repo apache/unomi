@@ -420,7 +420,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         campaignDetail.setCampaignSessionSuccess(persistenceService.queryCount(sessionConvertedCondition, Session.ITEM_TYPE));
 
         // conversion
-        campaignDetail.setConversionRate(campaignDetail.getCampaignSessionSuccess() / (campaignDetail.getCampaignSessionViews() > 0  ? campaignDetail.getCampaignSessionViews() : 1));
+        campaignDetail.setConversionRate((double) campaignDetail.getCampaignSessionSuccess() / (campaignDetail.getCampaignSessionViews() > 0  ? (double) campaignDetail.getCampaignSessionViews() : 1));
         return campaignDetail;
     }
 
