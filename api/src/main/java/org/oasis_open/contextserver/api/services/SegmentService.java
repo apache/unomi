@@ -31,16 +31,15 @@ import org.oasis_open.contextserver.api.segments.Segment;
 import org.oasis_open.contextserver.api.segments.SegmentsAndScores;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public interface SegmentService {
 
-    public Set<Metadata> getSegmentMetadatas(int offset, int size, String sortBy);
+    public PartialList<Metadata> getSegmentMetadatas(int offset, int size, String sortBy);
 
-    public Set<Metadata> getSegmentMetadatas(String scope, int offset, int size, String sortBy);
+    public PartialList<Metadata> getSegmentMetadatas(String scope, int offset, int size, String sortBy);
 
-    public Set<Metadata> getSegmentMetadatas(Query query);
+    public PartialList<Metadata> getSegmentMetadatas(Query query);
 
     Segment getSegmentDefinition(String segmentId);
 

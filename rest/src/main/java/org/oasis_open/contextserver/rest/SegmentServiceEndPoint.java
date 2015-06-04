@@ -76,8 +76,8 @@ public class SegmentServiceEndPoint {
 
     @GET
     @Path("/")
-    public Set<Metadata> getSegmentMetadatas() {
-        return segmentService.getSegmentMetadatas(0, 50, null);
+    public List<Metadata> getSegmentMetadatas() {
+        return segmentService.getSegmentMetadatas(0, 50, null).getList();
     }
 
     @POST
@@ -88,7 +88,7 @@ public class SegmentServiceEndPoint {
 
     @POST
     @Path("/query")
-    public Set<Metadata> getListMetadatas(Query query) {
+    public PartialList<Metadata> getListMetadatas(Query query) {
         return segmentService.getSegmentMetadatas(query);
     }
 
@@ -107,7 +107,7 @@ public class SegmentServiceEndPoint {
     @GET
     @Path("/resetQueries")
     public void resetQueries() {
-        for (Metadata metadata : segmentService.getSegmentMetadatas(0, 50, null)) {
+        for (Metadata metadata : segmentService.getSegmentMetadatas(0, 50, null).getList()) {
             Segment s = segmentService.getSegmentDefinition(metadata.getId());
             segmentService.setSegmentDefinition(s);
         }

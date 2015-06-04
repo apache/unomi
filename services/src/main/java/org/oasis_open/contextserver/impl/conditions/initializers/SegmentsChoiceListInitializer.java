@@ -44,7 +44,7 @@ public class SegmentsChoiceListInitializer implements ChoiceListInitializer {
 
     public List<ChoiceListValue> getValues(Object context) {
         List<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
-        Set<Metadata> profileProperties = segmentService.getSegmentMetadatas(0, 50, null);
+        List<Metadata> profileProperties = segmentService.getSegmentMetadatas(0, 50, null).getList();
         for (Metadata profileProperty : profileProperties) {
             choiceListValues.add(new ChoiceListValue(profileProperty.getId(), profileProperty.getName()));
         }

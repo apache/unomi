@@ -42,6 +42,7 @@ import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.jahia.unomi.lists.UserList;
 import org.jahia.unomi.services.UserListService;
 import org.oasis_open.contextserver.api.Metadata;
+import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.query.Query;
 
 import javax.jws.WebMethod;
@@ -74,13 +75,13 @@ public class UserListServiceEndPoint {
 
     @GET
     @Path("/")
-    public Set<Metadata> getListMetadatas() {
+    public PartialList<Metadata> getListMetadatas() {
         return userListService.getListMetadatas(0, 50, null);
     }
 
     @POST
     @Path("/query")
-    public Set<Metadata> getListMetadatas(Query query) {
+    public PartialList<Metadata> getListMetadatas(Query query) {
         return userListService.getListMetadatas(query);
     }
 

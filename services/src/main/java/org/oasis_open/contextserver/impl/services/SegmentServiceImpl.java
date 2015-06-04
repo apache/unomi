@@ -240,41 +240,32 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         }
     }
 
-    private Set<Metadata> getSegmentMetadataFrom(List<Segment> segments) {
-        if (!segments.isEmpty()) {
-            Set<Metadata> result = new HashSet<>(50);
-            for (Segment segment : segments) {
-                result.add(segment.getMetadata());
-            }
-            return result;
+    public PartialList<Metadata> getSegmentMetadatas(int offset, int size, String sortBy) {
+        PartialList<Segment> segments = persistenceService.getAllItems(Segment.class, offset, size, sortBy);
+        List<Metadata> details = new LinkedList<>();
+        for (Segment definition : segments.getList()) {
+            details.add(definition.getMetadata());
         }
-
-        return Collections.emptySet();
+        return new PartialList<>(details, segments.getOffset(), segments.getPageSize(), segments.getTotalSize());
     }
 
-    public Set<Metadata> getSegmentMetadatas(int offset, int size, String sortBy) {
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Segment definition : persistenceService.getAllItems(Segment.class, offset, size, sortBy).getList()) {
-            descriptions.add(definition.getMetadata());
+    public PartialList<Metadata> getSegmentMetadatas(String scope, int offset, int size, String sortBy) {
+        PartialList<Segment> segments = persistenceService.query("metadata.scope", scope, sortBy, Segment.class, offset, size);
+        List<Metadata> details = new LinkedList<>();
+        for (Segment definition : segments.getList()) {
+            details.add(definition.getMetadata());
         }
-        return descriptions;
+        return new PartialList<>(details, segments.getOffset(), segments.getPageSize(), segments.getTotalSize());
     }
 
-    public Set<Metadata> getSegmentMetadatas(String scope, int offset, int size, String sortBy) {
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Segment definition : persistenceService.query("metadata.scope", scope, sortBy, Segment.class, offset, size).getList()) {
-            descriptions.add(definition.getMetadata());
-        }
-        return descriptions;
-    }
-
-    public Set<Metadata> getSegmentMetadatas(Query query) {
+    public PartialList<Metadata> getSegmentMetadatas(Query query) {
         definitionsService.resolveConditionType(query.getCondition());
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Segment definition : persistenceService.query(query.getCondition(), query.getSortby(), Segment.class, query.getOffset(), query.getLimit()).getList()) {
-            descriptions.add(definition.getMetadata());
+        PartialList<Segment> segments = persistenceService.query(query.getCondition(), query.getSortby(), Segment.class, query.getOffset(), query.getLimit());
+        List<Metadata> details = new LinkedList<>();
+        for (Segment definition : segments.getList()) {
+            details.add(definition.getMetadata());
         }
-        return descriptions;
+        return new PartialList<>(details, segments.getOffset(), segments.getPageSize(), segments.getTotalSize());
     }
 
     private List<Segment> getAllSegmentDefinitions() {

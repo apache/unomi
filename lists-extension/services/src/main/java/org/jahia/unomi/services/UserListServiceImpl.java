@@ -43,6 +43,8 @@ import org.jahia.unomi.lists.UserList;
 import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.Profile;
+import org.oasis_open.contextserver.api.campaigns.Campaign;
+import org.oasis_open.contextserver.api.campaigns.CampaignDetail;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
@@ -66,21 +68,23 @@ public class UserListServiceImpl implements UserListService {
         this.definitionsService = definitionsService;
     }
 
-    public Set<Metadata> getListMetadatas(int offset, int size, String sortBy) {
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (UserList definition : persistenceService.getAllItems(UserList.class, offset, size, sortBy).getList()) {
-            descriptions.add(definition.getMetadata());
+    public PartialList<Metadata> getListMetadatas(int offset, int size, String sortBy) {
+        PartialList<UserList> userLists = persistenceService.getAllItems(UserList.class, offset, size, sortBy);
+        List<Metadata> metadata = new LinkedList<>();
+        for (UserList definition : userLists.getList()) {
+            metadata.add(definition.getMetadata());
         }
-        return descriptions;
+        return new PartialList<>(metadata, userLists.getOffset(), userLists.getPageSize(), userLists.getTotalSize());
     }
 
-    public Set<Metadata> getListMetadatas(Query query) {
+    public PartialList<Metadata> getListMetadatas(Query query) {
         definitionsService.resolveConditionType(query.getCondition());
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (UserList definition : persistenceService.query(query.getCondition(), query.getSortby(), UserList.class, query.getOffset(), query.getLimit()).getList()) {
-            descriptions.add(definition.getMetadata());
+        PartialList<UserList> userLists = persistenceService.query(query.getCondition(), query.getSortby(), UserList.class, query.getOffset(), query.getLimit());
+        List<Metadata> metadata = new LinkedList<>();
+        for (UserList definition : userLists.getList()) {
+            metadata.add(definition.getMetadata());
         }
-        return descriptions;
+        return new PartialList<>(metadata, userLists.getOffset(), userLists.getPageSize(), userLists.getTotalSize());
     }
 
     @Override

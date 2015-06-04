@@ -41,6 +41,7 @@ package org.jahia.unomi.services;
 
 import org.jahia.unomi.lists.UserList;
 import org.oasis_open.contextserver.api.Metadata;
+import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.Query;
 
@@ -52,9 +53,9 @@ import java.util.Set;
  */
 public interface UserListService {
 
-    public Set<Metadata> getListMetadatas(int offset, int size, String sortBy);
+    public PartialList<Metadata> getListMetadatas(int offset, int size, String sortBy);
 
-    public Set<Metadata> getListMetadatas(Query query);
+    public PartialList<Metadata> getListMetadatas(Query query);
 
     UserList load(String listId);
 
