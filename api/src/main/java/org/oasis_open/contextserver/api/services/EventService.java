@@ -52,7 +52,7 @@ public interface EventService {
 
     PartialList<Event> searchEvents(Condition condition, int offset, int size);
 
-    PartialList<Event> searchEvents(String sessionId, String eventType, String query, int offset, int size, String sortBy);
+    PartialList<Event> searchEvents(String sessionId, String[] eventTypes, String query, int offset, int size, String sortBy);
 
     boolean hasEventAlreadyBeenRaised(Event event, boolean session);
 }

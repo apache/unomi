@@ -141,7 +141,7 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public PartialList<Event> searchEvents(String sessionId, String eventType, String query, int offset, int size, String sortBy) {
+    public PartialList<Event> searchEvents(String sessionId, String[] eventTypes, String query, int offset, int size, String sortBy) {
         List<Condition> conditions = new ArrayList<Condition>();
 
         Condition condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
@@ -150,10 +150,17 @@ public class EventServiceImpl implements EventService {
         condition.setParameter("comparisonOperator", "equals");
         conditions.add(condition);
 
-        condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        condition.setParameter("propertyName", "eventType");
-        condition.setParameter("propertyValue", eventType);
-        condition.setParameter("comparisonOperator", "equals");
+        condition = new Condition(definitionsService.getConditionType("booleanCondition"));
+        condition.setParameter("operator", "or");
+        List<Condition> subConditions = new ArrayList<Condition>();
+        for (String eventType : eventTypes) {
+            Condition subCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+            subCondition.setParameter("propertyName", "eventType");
+            subCondition.setParameter("propertyValue", eventType);
+            subCondition.setParameter("comparisonOperator", "equals");
+            subConditions.add(subCondition);
+        }
+        condition.setParameter("subConditions", subConditions);
         conditions.add(condition);
 
         condition = new Condition(definitionsService.getConditionType("booleanCondition"));

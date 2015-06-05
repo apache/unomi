@@ -240,12 +240,12 @@ public class ProfileServiceEndPoint {
     @GET
     @Path("/sessions/{sessionId}/events")
     public PartialList<Event> getSessionEvents(@PathParam("sessionId") String sessionId,
-                                               @QueryParam("eventType") String eventType,
+                                               @QueryParam("eventTypes") String[] eventTypes,
                                                @QueryParam("q") String query,
                                                @QueryParam("offset") @DefaultValue("0") int offset,
                                                @QueryParam("size") @DefaultValue("50") int size,
                                                @QueryParam("sort") String sortBy) {
-        return eventService.searchEvents(sessionId, eventType, query, offset, size, sortBy);
+        return eventService.searchEvents(sessionId, eventTypes, query, offset, size, sortBy);
     }
 
     @WebMethod(exclude = true)
@@ -265,7 +265,7 @@ public class ProfileServiceEndPoint {
         return properties;
     }
 
-        @GET
+    @GET
     @Path("/properties")
     public Map<String, Collection<PropertyType>> getPropertyTypes(@HeaderParam("Accept-Language") String language) {
         return profileService.getAllPropertyTypes();
