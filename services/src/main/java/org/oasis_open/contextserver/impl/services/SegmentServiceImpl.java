@@ -408,7 +408,15 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         if (getSegmentDefinition(segmentID) == null) {
             return 0;
         }
-        return persistenceService.queryCount(getSegmentDefinition(segmentID).getCondition(), Profile.ITEM_TYPE);
+
+        Condition excludeMergedProfilesCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        excludeMergedProfilesCondition.setParameter("propertyName", "mergedWith");
+        excludeMergedProfilesCondition.setParameter("comparisonOperator", "missing");
+        Condition condition = new Condition(definitionsService.getConditionType("booleanCondition"));
+        condition.setParameter("operator", "and");
+        condition.setParameter("subConditions", Arrays.asList(getSegmentDefinition(segmentID).getCondition(), excludeMergedProfilesCondition));
+
+        return persistenceService.queryCount(condition, Profile.ITEM_TYPE);
     }
 
     public Boolean isProfileInSegment(Profile profile, String segmentId) {
