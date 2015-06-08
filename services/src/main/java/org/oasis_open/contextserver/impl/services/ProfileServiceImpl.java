@@ -190,7 +190,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                     logger.debug("Profile purge: purge executed in {} ms", System.currentTimeMillis() - t);
                 }
             };
-            purgeProfileTimer.scheduleAtFixedRate(task, getDay(1).getTime(), purgeProfileInterval);
+//            purgeProfileTimer.scheduleAtFixedRate(task, getDay(1).getTime(), purgeProfileInterval);
             logger.info("Profile purge: purge scheduled with an interval of {} days", purgeProfileInterval);
         } else {
             logger.info("Profile purge: No purge scheduled");
