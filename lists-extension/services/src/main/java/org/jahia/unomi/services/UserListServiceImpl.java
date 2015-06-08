@@ -78,6 +78,9 @@ public class UserListServiceImpl implements UserListService {
     }
 
     public PartialList<Metadata> getListMetadatas(Query query) {
+        if(query.isForceRefresh()){
+            persistenceService.refresh();
+        }
         definitionsService.resolveConditionType(query.getCondition());
         PartialList<UserList> userLists = persistenceService.query(query.getCondition(), query.getSortby(), UserList.class, query.getOffset(), query.getLimit());
         List<Metadata> metadata = new LinkedList<>();

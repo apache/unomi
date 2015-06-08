@@ -11,6 +11,7 @@ public class Query {
     private int limit;
     private String sortby;
     private Condition condition;
+    private boolean forceRefresh;
 
     public Query() {
     }
@@ -53,5 +54,13 @@ public class Query {
 
     public void setCondition(Condition condition) {
         this.condition = condition;
+    }
+
+    public boolean isForceRefresh() {
+        return forceRefresh;
+    }
+
+    public void setForceRefresh(boolean forceRefresh) {
+        this.forceRefresh = forceRefresh;
     }
 }

@@ -259,6 +259,9 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     }
 
     public PartialList<Metadata> getSegmentMetadatas(Query query) {
+        if(query.isForceRefresh()){
+            persistenceService.refresh();
+        }
         definitionsService.resolveConditionType(query.getCondition());
         PartialList<Segment> segments = persistenceService.query(query.getCondition(), query.getSortby(), Segment.class, query.getOffset(), query.getLimit());
         List<Metadata> details = new LinkedList<>();
