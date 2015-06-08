@@ -74,7 +74,7 @@ public class ContextServlet extends HttpServlet {
     private RulesService rulesService;
 
     private String profileIdCookieName = "context-profile-id";
-    private String personaIdCookieName = "context-persona-id";
+//    private String personaIdCookieName = "context-persona-id";
 
     @Inject
     @OsgiService
@@ -110,8 +110,6 @@ public class ContextServlet extends HttpServlet {
         for (Cookie cookie : cookies) {
             if (profileIdCookieName.equals(cookie.getName())) {
                 cookieProfileId = cookie.getValue();
-            } else if (personaIdCookieName.equals(cookie.getName())) {
-                cookiePersonaId = cookie.getValue();
             }
         }
 
@@ -119,35 +117,15 @@ public class ContextServlet extends HttpServlet {
 
         String personaId = request.getParameter("personaId");
         if (personaId != null) {
-            if ("currentProfile".equals(personaId) || personaId.equals(cookieProfileId)) {
-                profile = null;
-                HttpUtils.clearCookie(response, personaIdCookieName);
-            } else {
-                PersonaWithSessions personaWithSessions = profileService.loadPersonaWithSessions(personaId);
-                if (personaWithSessions == null) {
-                    logger.error("Couldn't find persona with id=" + personaId);
-                    profile = null;
-                    HttpUtils.clearCookie(response, personaIdCookieName);
-                } else {
-                    profile = personaWithSessions.getPersona();
-                    session = personaWithSessions.getLastSession();
-                    if (profile != null) {
-                        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, personaIdCookieName);
-                    }
-                }
-            }
-        } else if (cookiePersonaId != null) {
-            PersonaWithSessions personaWithSessions = profileService.loadPersonaWithSessions(cookiePersonaId);
+            PersonaWithSessions personaWithSessions = profileService.loadPersonaWithSessions(personaId);
             if (personaWithSessions == null) {
                 logger.error("Couldn't find persona with id=" + personaId);
                 profile = null;
-                HttpUtils.clearCookie(response, personaIdCookieName);
             } else {
                 profile = personaWithSessions.getPersona();
                 session = personaWithSessions.getLastSession();
             }
         }
-
 
         String sessionId = request.getParameter("sessionId");
 
@@ -192,7 +170,7 @@ public class ContextServlet extends HttpServlet {
                         // or if we merged the profiles and somehow this cookie didn't get updated.
                         profile = createNewProfile(null, response, timestamp);
                         profileCreated = true;
-                        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, personaIdCookieName);
+                        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName);
                     } else {
                         profile = checkMergedProfile(response, profile, session);
                     }
@@ -200,7 +178,7 @@ public class ContextServlet extends HttpServlet {
 
             } else if (cookieProfileId == null || !cookieProfileId.equals(profile.getItemId())) {
                 // profile if stored in session but not in cookie
-                HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, personaIdCookieName);
+                HttpUtils.sendProfileCookie(profile, response, profileIdCookieName);
             }
             // associate profile with session
             if (sessionId != null && session == null) {
@@ -278,7 +256,7 @@ public class ContextServlet extends HttpServlet {
                     session.setProfile(profile);
                     profileService.saveSession(session);
                 }
-                HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, personaIdCookieName);
+                HttpUtils.sendProfileCookie(profile, response, profileIdCookieName);
             } else {
                 logger.warn("Couldn't find merged profile" + profileId + ", falling back to profile " + profileToDelete.getItemId());
                 profile = profileToDelete;
@@ -409,7 +387,7 @@ public class ContextServlet extends HttpServlet {
         }
         profile = new Profile(profileId);
         profile.setProperty("firstVisit", timestamp);
-        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, personaIdCookieName);
+        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName);
         return profile;
     }
 

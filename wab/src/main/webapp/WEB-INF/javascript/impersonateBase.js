@@ -86,11 +86,11 @@ cxs.loadXMLDoc = function (url, successCallBack) {
 };
 
 cxs.collectEvent = function (event, successCallBack) {
-
+    successCallBack();
 };
 
 cxs.collectEvents = function(events, successCallBack) {
-
+    successCallBack();
 };
 
 cxs.createCookie = function (name, value, days) {
