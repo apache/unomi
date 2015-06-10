@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import java.util.Set;
+import java.util.List;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
@@ -24,7 +24,7 @@ public class SegmentTest extends BaseTest{
     @Test
     public void testSegments() {
         Assert.assertNotNull("Segment service should be available", segmentService);
-        Set<Metadata> segmentMetadatas = segmentService.getSegmentMetadatas(0, 50, null);
+        List<Metadata> segmentMetadatas = segmentService.getSegmentMetadatas(0, 50, null).getList();
         Assert.assertNotEquals("Segment metadata list should not be empty", 0, segmentMetadatas.size());
         LOGGER.info("Retrieved " + segmentMetadatas.size() + " segment metadata entries");
     }
