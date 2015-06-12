@@ -23,6 +23,7 @@ package org.oasis_open.contextserver.api.services;
  */
 
 import org.oasis_open.contextserver.api.Item;
+import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.rules.Rule;
@@ -34,7 +35,7 @@ public interface RulesService {
 
     Set<Metadata> getRuleMetadatas();
 
-    Set<Metadata> getRuleMetadatas(Query query);
+    PartialList<Metadata> getRuleMetadatas(Query query);
 
     Rule getRule(String ruleId);
 

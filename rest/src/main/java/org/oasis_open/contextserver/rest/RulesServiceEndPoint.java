@@ -24,6 +24,7 @@ package org.oasis_open.contextserver.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.Metadata;
+import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.rules.Rule;
 import org.oasis_open.contextserver.api.services.RulesService;
@@ -67,7 +68,7 @@ public class RulesServiceEndPoint {
 
     @POST
     @Path("/query")
-    public Set<Metadata> getRuleMetadatas(Query query) {
+    public PartialList<Metadata> getRuleMetadatas(Query query) {
         return rulesService.getRuleMetadatas(query);
     }
 

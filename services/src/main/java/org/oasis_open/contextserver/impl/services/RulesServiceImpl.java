@@ -301,13 +301,17 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         return metadatas;
     }
 
-    public Set<Metadata> getRuleMetadatas(Query query) {
+    public PartialList<Metadata> getRuleMetadatas(Query query) {
+        if(query.isForceRefresh()){
+            persistenceService.refresh();
+        }
         definitionsService.resolveConditionType(query.getCondition());
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Rule definition : persistenceService.query(query.getCondition(), query.getSortby(), Rule.class, query.getOffset(), query.getLimit()).getList()) {
+        List<Metadata> descriptions = new LinkedList<>();
+        PartialList<Rule> rules = persistenceService.query(query.getCondition(), query.getSortby(), Rule.class, query.getOffset(), query.getLimit());
+        for (Rule definition : rules.getList()) {
             descriptions.add(definition.getMetadata());
         }
-        return descriptions;
+        return new PartialList<>(descriptions, rules.getOffset(), rules.getPageSize(), rules.getTotalSize());
     }
 
     public Rule getRule(String ruleId) {
