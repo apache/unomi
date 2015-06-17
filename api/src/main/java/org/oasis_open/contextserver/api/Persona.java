@@ -32,6 +32,7 @@ public class Persona extends Profile {
     public static final String ITEM_TYPE = "persona";
 
     public Persona() {
+        super();
     }
 
     public Persona(String personaId) {

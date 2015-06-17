@@ -34,11 +34,11 @@ public class Profile extends Item {
     
     public static final String ITEM_TYPE = "profile";
     
-    private Map<String,Object> properties;
+    private Map<String,Object> properties = new HashMap<String, Object>();
 
-    private Map<String,Object> systemProperties;
+    private Map<String,Object> systemProperties = new HashMap<String, Object>();
 
-    private Set<String> segments;
+    private Set<String> segments = new HashSet<String>();
     
     private Map<String,Integer> scores;
 
@@ -49,9 +49,6 @@ public class Profile extends Item {
 
     public Profile(String profileId) {
         super(profileId);
-        properties = new HashMap<String, Object>();
-        systemProperties = new HashMap<String, Object>();
-        segments = new HashSet<String>();
     }
 
     public void setProperty(String name, Object value) {
