@@ -1,0 +1,8 @@
+{
+    "metadata": {     "id": "googleId", "name": "Google ID"   },
+    "type": "string",
+    "tags": ["contactProfileProperties"],
+    "defaultValue": "",
+    "automaticMappingsFrom": [ ],
+    "rank": "110.0"
+}
