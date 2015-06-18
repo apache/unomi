@@ -18,10 +18,18 @@
           "type": "formEventCondition"
         },
         {
+          "type": "booleanCondition",
           "parameterValues": {
-            "path": "/sites/ACMESPACE/home"
-          },
-          "type": "sourceEventPropertyCondition"
+            "operator": "or",
+            "subConditions": [
+              {
+                "parameterValues": {
+                  "path": "/sites/ACMESPACE/home"
+                },
+                "type": "sourceEventPropertyCondition"
+              }
+            ]
+          }
         }
       ]
     }
@@ -39,7 +47,8 @@
     {
       "parameterValues": {
         "setPropertyName": "properties.gender",
-        "setPropertyValue": "eventProperty::properties.gender"
+        "setPropertyValue": "eventProperty::properties.gender",
+        "setPropertyStrategy": "alwaysSet"
       },
       "type": "setPropertyAction"
     }
