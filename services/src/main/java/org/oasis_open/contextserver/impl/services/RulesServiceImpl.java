@@ -224,13 +224,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                     continue;
                 }
 
-                Set<Condition> sourceConditions = definitionsService.extractConditionsByType(rule.getCondition(), "sourceEventPropertyCondition");
-
-                boolean unmatchedSource = false;
-                for (Condition sourceCondition : sourceConditions) {
-                    unmatchedSource = unmatchedSource || !persistenceService.testMatch(sourceCondition, event.getSource());
-                }
-                if (unmatchedSource) {
+                Condition sourceCondition = definitionsService.extractConditionByTag(rule.getCondition(), "sourceEventCondition");
+                if (sourceCondition != null && !persistenceService.testMatch(sourceCondition, event.getSource())) {
                     continue;
                 }
 
@@ -343,18 +338,16 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         for (Rule r : allRules) {
             Condition trackedCondition = definitionsService.extractConditionByTag(r.getCondition(), "trackedCondition");
             if(trackedCondition != null){
-                Set<Condition> sourceEventPropertyConditions = definitionsService.extractConditionsByType(r.getCondition(), "sourceEventPropertyCondition");
-                boolean match = !(source == null && sourceEventPropertyConditions.size() > 0);
-                for (Condition sourceEventPropertyCondition : sourceEventPropertyConditions){
+                Condition sourceEventPropertyCondition = definitionsService.extractConditionByTag(r.getCondition(), "sourceEventProperty");
+                if(source != null && sourceEventPropertyCondition != null) {
                     ParserHelper.resolveConditionType(definitionsService, sourceEventPropertyCondition);
-                    match = persistenceService.testMatch(sourceEventPropertyCondition, source);
-                    if(!match){
-                        break;
+                    if(persistenceService.testMatch(sourceEventPropertyCondition, source)){
+                        trackedConditions.add(trackedCondition);
                     }
-                }
-                if(match){
+                } else {
                     trackedConditions.add(trackedCondition);
                 }
+
             }
         }
         return trackedConditions;

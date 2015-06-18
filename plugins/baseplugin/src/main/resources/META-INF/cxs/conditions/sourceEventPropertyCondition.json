@@ -2,7 +2,7 @@
     "id": "sourceEventPropertyCondition",
     "conditionEvaluator": "sourceEventPropertyConditionEvaluator",
     "queryBuilder": "sourceEventPropertyConditionESQueryBuilder",
-    "tags": [ ],
+    "tags": ["sourceEventCondition"],
     "parameters": [
         {
             "id": "id",

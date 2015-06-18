@@ -2,7 +2,7 @@
     "id": "matchAllCondition",
     "conditionEvaluator": "matchAllConditionEvaluator",
     "queryBuilder": "matchAllConditionESQueryBuilder",
-    "tags": [ "logical", "profileCondition", "eventCondition", "sessionCondition" ],
+    "tags": [ "logical", "profileCondition", "eventCondition", "sessionCondition" , "sourceEventCondition"],
     "parameters": [
     ]
 }

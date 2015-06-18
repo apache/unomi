@@ -2,7 +2,7 @@
   "id": "notCondition",
   "conditionEvaluator": "notConditionEvaluator",
   "queryBuilder": "notConditionESQueryBuilder",
-  "tags": [ "logical", "profileCondition", "eventCondition", "sessionCondition" ],
+  "tags": [ "logical", "profileCondition", "eventCondition", "sessionCondition" , "sourceEventCondition"],
   "parameters": [
     {
       "id": "subCondition",
