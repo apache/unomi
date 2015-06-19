@@ -219,7 +219,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public long getAllProfilesCount() {
-        return persistenceService.getAllItemsCount(Profile.ITEM_TYPE);
+        Condition condition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        condition.setParameter("propertyName", "mergedWith");
+        condition.setParameter("comparisonOperator", "missing");
+        return persistenceService.queryCount(condition, Profile.ITEM_TYPE);
     }
 
     public <T extends Profile> PartialList<T> search(Query query, final Class<T> clazz) {
