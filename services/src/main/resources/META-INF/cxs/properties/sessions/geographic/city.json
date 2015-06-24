@@ -1,5 +1,5 @@
 {
-    "metadata": {     "id": "city", "name": "City"   },
+    "metadata": {     "id": "sessionCity", "name": "City"   },
     "type": "string",
     "tags": ["geographicSessionProperties"],
     "defaultValue": "",

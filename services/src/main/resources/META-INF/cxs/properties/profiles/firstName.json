@@ -1,7 +1,7 @@
 {
     "metadata": {     "id": "firstName", "name": "First name"   },
     "type": "string",
-    "tags": ["identityProfileProperties"],
+    "tags": [],
     "defaultValue": "",
     "automaticMappingsFrom": [ "j:firstName" ],
     "rank": "1.0"

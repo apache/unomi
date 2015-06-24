@@ -1,7 +1,7 @@
 {
     "metadata": {     "id": "jobTitle", "name": "Job Title"   },
     "type": "string",
-    "tags": ["identityProfileProperties"],
+    "tags": ["workProperties"],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "13.0"

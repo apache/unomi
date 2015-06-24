@@ -81,6 +81,10 @@ public interface ProfileService {
 
     PropertyType getPropertyType(String target, String id);
 
+    boolean createPropertyType(PropertyType property);
+
+    boolean deletePropertyType(String propertyId);
+
     Set<PropertyType> getExistingProperties(String tagId, String itemType);
 
 

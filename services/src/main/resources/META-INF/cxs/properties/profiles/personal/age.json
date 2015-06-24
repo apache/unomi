@@ -1,7 +1,7 @@
 {
     "metadata": {     "id": "age", "name": "Age"   },
     "type": "integer",
-    "tags": ["identityProfileProperties"],
+    "tags": ["personalInfoProperties"],
     "defaultValue": "",
     "ranges": [
        {"key":"*_10", "to" : 10 },

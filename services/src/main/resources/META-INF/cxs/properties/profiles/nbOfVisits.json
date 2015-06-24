@@ -1,7 +1,7 @@
 {
     "metadata": {     "id": "nbOfVisits", "name": "Number of visits"   },
     "type": "integer",
-    "tags": ["systemProfileProperties"],
+    "tags": [],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "ranges": [

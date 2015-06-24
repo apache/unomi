@@ -288,5 +288,16 @@ public class ProfileServiceEndPoint {
         return results;
     }
 
+    @POST
+    @Path("/properties")
+    public boolean createPropertyType(PropertyType property) {
+        return profileService.createPropertyType(property);
+    }
+
+    @DELETE
+    @Path("/properties/{propertyId}")
+    public boolean deleteProperty(@PathParam("propertyId") String propertyId) {
+        return profileService.deletePropertyType(propertyId);
+    }
 
 }
