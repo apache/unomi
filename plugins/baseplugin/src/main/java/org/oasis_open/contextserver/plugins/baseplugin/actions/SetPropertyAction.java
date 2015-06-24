@@ -22,23 +22,16 @@ package org.oasis_open.contextserver.plugins.baseplugin.actions;
  * #L%
  */
 
-import org.apache.commons.beanutils.BeanUtils;
-import org.apache.commons.beanutils.PropertyUtils;
-import org.apache.commons.beanutils.expression.DefaultResolver;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
 import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.persistence.spi.PropertyHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.InvocationTargetException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class SetPropertyAction implements ActionExecutor {
-    private static final Logger logger = LoggerFactory.getLogger(SetPropertyAction.class.getName());
 
     public SetPropertyAction() {
     }
