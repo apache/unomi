@@ -12,8 +12,8 @@ import io.gatling.http.Predef._
 class PrepareIndices extends Simulation {
 
   val httpProtocol = http
-    .baseURL("http://local1:8181")
-    .inferHtmlResources(WhiteList("""http://local1:8181/.*"""), BlackList())
+    .baseURL("http://localhost:8181")
+    .inferHtmlResources(WhiteList("""http://localhost:8181/.*"""), BlackList())
     .acceptHeader("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
     .acceptEncodingHeader("gzip, deflate")
     .acceptLanguageHeader("en-US,en;q=0.5")
