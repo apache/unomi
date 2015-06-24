@@ -2,7 +2,6 @@
     "persona": {
         "itemId": "usVisitor",
         "properties": {
-            "name": "U.S. Visitor",
             "description": "Represents a visitor browsing from inside the continental US",
             "firstName": "U.S.",
             "lastName": "Visitor",

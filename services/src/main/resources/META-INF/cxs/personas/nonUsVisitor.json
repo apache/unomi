@@ -2,7 +2,6 @@
     "persona": {
         "itemId": "nonUsVisitor",
         "properties": {
-            "name": "Non U.S. Visitor",
             "description": "Represents a visitor browsing from somewhere outside the US",
             "firstName": "Non U.S.",
             "lastName": "Visitor",
