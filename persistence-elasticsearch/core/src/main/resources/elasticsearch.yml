@@ -373,3 +373,6 @@ index.percolator.allow_unmapped_fields: true
 #monitor.jvm.gc.ConcurrentMarkSweep.warn: 10s
 #monitor.jvm.gc.ConcurrentMarkSweep.info: 5s
 #monitor.jvm.gc.ConcurrentMarkSweep.debug: 2s
+
+################################## Thread Pool ###############################
+threadpool.index.queue_size: 1000
