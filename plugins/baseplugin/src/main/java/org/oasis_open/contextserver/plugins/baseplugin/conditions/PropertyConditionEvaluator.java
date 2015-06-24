@@ -143,8 +143,10 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 if (time > 5000000L) {
                     logger.info("eval took {} ms for {} {}", time / 1000000L, item.getClass().getName(), name);
                 }
-            } catch (Exception e) {
+            } catch (NullPointerException e) {
                 // property not found
+                actualValue = null;
+            } catch (Exception e) {
                 logger.warn("Error evaluating value for " + item.getClass().getName() + " " + name, e);
                 actualValue = null;
             }
