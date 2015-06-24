@@ -1,7 +1,7 @@
 {
     "metadata": {     "id": "name", "name": "Name"   },
     "type": "string",
-    "tags": ["identityProfileProperties"],
+    "tags": [],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "3.0"

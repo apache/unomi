@@ -1,7 +1,7 @@
 {
     "metadata": {     "id": "leadAssignedTo", "name": "Assigned to"   },
     "type": "string",
-    "tags": ["contactProfileProperties"],
+    "tags": [],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "109.0"

@@ -1,7 +1,7 @@
 {
     "metadata": {     "id": "department", "name": "Department"   },
     "type": "string",
-    "tags": ["identityProfileProperties"],
+    "tags": [],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "12.0"

@@ -22,11 +22,8 @@ package org.oasis_open.contextserver.impl.services;
  * #L%
  */
 
-import org.apache.commons.beanutils.PropertyUtils;
-import org.apache.commons.beanutils.expression.DefaultResolver;
 import org.apache.commons.lang3.StringUtils;
 import org.oasis_open.contextserver.api.*;
-import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.query.Query;
@@ -239,6 +236,19 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 return persistenceService.getAllItems(clazz, query.getOffset(), query.getLimit(), query.getSortby());
             }
         }
+    }
+
+    @Override
+    public boolean createPropertyType(PropertyType property) {
+        if (persistenceService.load(property.getItemId(), PropertyType.class) != null) {
+            return false;
+        }
+        return persistenceService.save(property);
+    }
+
+    @Override
+    public boolean deletePropertyType(String propertyId) {
+        return persistenceService.remove(propertyId, PropertyType.class);
     }
 
     @Override
