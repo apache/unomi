@@ -22,15 +22,23 @@ package org.oasis_open.contextserver.plugins.baseplugin.conditions;
  * #L%
  */
 
+import ognl.Node;
+import ognl.Ognl;
+import ognl.OgnlContext;
+import ognl.enhance.ExpressionAccessor;
+
 import org.apache.commons.beanutils.BeanUtilsBean;
 import org.apache.commons.lang3.ObjectUtils;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.joda.DateMathParser;
 import org.elasticsearch.index.mapper.core.DateFieldMapper;
+import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -42,7 +50,11 @@ import java.util.regex.Pattern;
  */
 public class PropertyConditionEvaluator implements ConditionEvaluator {
 
+    private static final Logger logger = LoggerFactory.getLogger(PropertyConditionEvaluator.class.getName());
+    
     private BeanUtilsBean beanUtilsBean = BeanUtilsBean.getInstance();
+    
+    private Map<String, Map<String, ExpressionAccessor>> expressionCache = new HashMap<>(64); 
 
     private int compare(Object actualValue, String expectedValue, Object expectedValueDate, Object expectedValueInteger, Object expectedValueDateExpr) {
         if (expectedValue == null && expectedValueDate == null && expectedValueInteger == null && getDate(expectedValueDateExpr) == null) {
@@ -119,17 +131,23 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         Object expectedValueDate = condition.getParameter("propertyValueDate");
         Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
 
-        List<?> expectedValues = (List<?>) condition.getParameter("propertyValues");
-        List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
-        List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
-        List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");
-
         Object actualValue;
-        try {
-            actualValue = beanUtilsBean.getPropertyUtils().getProperty(item, name);
-        } catch (Exception e) {
-            // property not found
-            actualValue = null;
+        if (item instanceof Event && "eventType".equals(name)) {
+            actualValue = ((Event)item).getEventType();
+        } else {
+            try {
+                long time = System.nanoTime();
+                //actualValue = beanUtilsBean.getPropertyUtils().getProperty(item, name);
+                actualValue = getPropertyValue(item, name);
+                time = System.nanoTime() - time;
+                if (time > 5000000L) {
+                    logger.info("eval took {} ms for {} {}", time / 1000000L, item.getClass().getName(), name);
+                }
+            } catch (Exception e) {
+                // property not found
+                logger.warn("Error evaluating value for " + item.getClass().getName() + " " + name, e);
+                actualValue = null;
+            }
         }
 
         if(actualValue == null){
@@ -157,6 +175,10 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("lessThanOrEqualTo")) {
             return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) >= 0;
         } else if (op.equals("between")) {
+            List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
+            List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
+            List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");
+
             return
                     compare(actualValue, null, expectedValuesDate != null ? (Date) expectedValuesDate.get(0) : null, expectedValuesInteger != null ? (Integer) expectedValuesInteger.get(0) : null, expectedValuesDateExpr != null ? (String) expectedValuesDateExpr.get(0) : null) >= 0
                             &&
@@ -170,12 +192,55 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("matchesRegex")) {
             return Pattern.compile(expectedValue).matcher(actualValue.toString()).matches();
         } else if (op.equals("in") || op.equals("notIn") || op.equals("all")) {
+            List<?> expectedValues = (List<?>) condition.getParameter("propertyValues");
+            List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
+            List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
+            List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");
+
             return compareMultivalue(actualValue, expectedValues, expectedValuesDate, expectedValuesInteger, expectedValuesDateExpr, op);
         }
         
         return false;
     }
 
+    private Object getPropertyValue(Item item, String expression) throws Exception {
+        ExpressionAccessor accessor = getPropertyAccessor(item, expression);
+        return accessor != null ? accessor.get(null, item) : null;
+    }
+
+    private ExpressionAccessor getPropertyAccessor(Item item, String expression) throws Exception {
+        ExpressionAccessor accessor = null;
+        String clazz = item.getClass().getName();
+        Map<String, ExpressionAccessor> expressions = expressionCache.get(clazz);
+        if (expressions == null) {
+            expressions = new HashMap<>();
+            expressionCache.put(clazz, expressions);
+        } else {
+            accessor = expressions.get(expression);
+        }
+        if (accessor == null) {
+            long time = System.nanoTime();
+            Thread current = Thread.currentThread();
+            ClassLoader contextCL = current.getContextClassLoader();
+            try {
+                current.setContextClassLoader(PropertyConditionEvaluator.class.getClassLoader());
+                Node node = (Node) Ognl.compileExpression((OgnlContext) Ognl.createDefaultContext(null), item, expression);
+                accessor = node.getAccessor();
+            } finally {
+                current.setContextClassLoader(contextCL);
+            }
+            if (accessor != null) {
+                expressions.put(expression, accessor);
+            } else {
+                logger.warn("Unable to compile expression for {} and {}", clazz, expression);
+            }
+            time = System.nanoTime() - time;
+            logger.info("Expression compilation for {} took {}", expression, time / 1000000L);
+        }
+
+        return accessor;
+    }
+    
     private Date getDate(Object value) {
         if (value == null) {
             return null;
