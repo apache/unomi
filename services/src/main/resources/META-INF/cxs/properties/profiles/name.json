@@ -1,8 +1,0 @@
-{
-    "metadata": {     "id": "name", "name": "Name"   },
-    "type": "string",
-    "tags": [],
-    "defaultValue": "",
-    "automaticMappingsFrom": [ ],
-    "rank": "3.0"
-}

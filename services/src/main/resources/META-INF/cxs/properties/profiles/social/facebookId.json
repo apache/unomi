@@ -1,8 +1,8 @@
 {
     "metadata": {     "id": "facebookId", "name": "Facebook ID"   },
     "type": "string",
-    "tags": [],
+    "tags": [ "socialProfileProperties" ],
     "defaultValue": "",
     "automaticMappingsFrom": [ "j:facebookID" ],
-    "rank": "103.0"
+    "rank": "401.0"
 }

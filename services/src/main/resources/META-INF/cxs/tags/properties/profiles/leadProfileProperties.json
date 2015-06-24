@@ -1,0 +1,6 @@
+{
+    "id": "leadProfileProperties",
+    "parent": "profileProperties",
+    "rank": "3.0",
+    "hidden": true
+}

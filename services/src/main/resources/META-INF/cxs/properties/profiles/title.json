@@ -1,8 +1,0 @@
-{
-    "metadata": {     "id": "title", "name": "Title"   },
-    "type": "string",
-    "tags": [],
-    "defaultValue": "",
-    "automaticMappingsFrom": [ "j:title" ],
-    "rank": "4.0"
-}

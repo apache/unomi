@@ -1,8 +1,8 @@
 {
     "metadata": {     "id": "leadAssignedTo", "name": "Assigned to"   },
     "type": "string",
-    "tags": [],
+    "tags": [ "leadProfileProperties" ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
-    "rank": "109.0"
+    "rank": "201.0"
 }

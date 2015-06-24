@@ -1,0 +1,6 @@
+{
+    "id": "basicProfileProperties",
+    "parent": "profileProperties",
+    "rank": "2.0",
+    "hidden": true
+}

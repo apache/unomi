@@ -1,8 +1,0 @@
-{
-    "metadata": {     "id": "birthPlace", "name": "Birth place"   },
-    "type": "string",
-    "tags": [],
-    "defaultValue": "",
-    "automaticMappingsFrom": [ ],
-    "rank": "6.0"
-}

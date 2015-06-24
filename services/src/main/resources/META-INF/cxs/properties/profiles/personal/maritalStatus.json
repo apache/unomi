@@ -1,8 +1,8 @@
 {
     "metadata": {     "id": "maritalStatus", "name": "Marital status"   },
     "type": "string",
-    "tags": ["personalInfoProperties"],
+    "tags": ["personalProfileProperties"],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
-    "rank": "9.0"
+    "rank": "502.0"
 }

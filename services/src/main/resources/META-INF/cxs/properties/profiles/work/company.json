@@ -1,8 +1,8 @@
 {
     "metadata": {     "id": "company", "name": "Company"   },
     "type": "string",
-    "tags": ["workProperties"],
+    "tags": [ "workProfileProperties" ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
-    "rank": "11.0"
+    "rank": "601.0"
 }

@@ -1,8 +1,0 @@
-{
-    "metadata": {     "id": "department", "name": "Department"   },
-    "type": "string",
-    "tags": [],
-    "defaultValue": "",
-    "automaticMappingsFrom": [ ],
-    "rank": "12.0"
-}

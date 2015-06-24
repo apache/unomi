@@ -1,0 +1,6 @@
+{
+    "id": "socialProfileProperties",
+    "parent": "profileProperties",
+    "rank": "5.0",
+    "hidden": true
+}

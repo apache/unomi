@@ -1,7 +1,7 @@
 {
     "metadata": {     "id": "age", "name": "Age"   },
     "type": "integer",
-    "tags": ["personalInfoProperties"],
+    "tags": ["personalProfileProperties"],
     "defaultValue": "",
     "ranges": [
        {"key":"*_10", "to" : 10 },
@@ -12,5 +12,5 @@
        {"key":"50_*", "from" : 50 }
     ],
     "automaticMappingsFrom": [ "j:age" ],
-    "rank": "5.0"
+    "rank": "501.0"
 }

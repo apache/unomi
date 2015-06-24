@@ -1,7 +1,7 @@
 {
     "metadata": {     "id": "nbOfVisits", "name": "Number of visits"   },
     "type": "integer",
-    "tags": [],
+    "tags": [ "systemProfileProperties" ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "ranges": [
@@ -13,6 +13,6 @@
        {"key":"100_*", "from" : 100 }
     ],
     "mergeStrategy": "addMergeStrategy",
-    "rank": "203.0",
+    "rank": "101.0",
     "protected": true
 }

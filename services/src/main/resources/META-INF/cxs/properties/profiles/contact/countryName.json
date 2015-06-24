@@ -1,8 +1,8 @@
 {
     "metadata": {     "id": "countryName", "name": "Country"   },
     "type": "string",
-    "tags": ["geographicSessionProperties", "contactProfileProperties"],
+    "tags": ["contactProfileProperties"],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
-    "rank": "105.0"
+    "rank": "305.0"
 }

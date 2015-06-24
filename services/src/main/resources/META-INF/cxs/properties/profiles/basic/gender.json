@@ -1,8 +1,8 @@
 {
     "metadata": {     "id": "gender", "name": "Gender"   },
     "type": "string",
-    "tags": [],
+    "tags": [ "basicProfileProperties" ],
     "defaultValue": "",
     "automaticMappingsFrom": [ "j:gender" ],
-    "rank": "8.0"
+    "rank": "104.0"
 }
