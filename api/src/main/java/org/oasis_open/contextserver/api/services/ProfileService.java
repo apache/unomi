@@ -65,6 +65,8 @@ public interface ProfileService {
 
     Persona loadPersona(String personaId);
 
+    Persona savePersona(Persona persona);
+
     PersonaWithSessions loadPersonaWithSessions(String personaId);
 
     Persona createPersona(String personaId);

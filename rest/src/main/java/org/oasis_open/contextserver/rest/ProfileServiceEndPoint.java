@@ -199,8 +199,8 @@ public class ProfileServiceEndPoint {
 
     @POST
     @Path("/personas")
-    public void savePersona(Persona persona) {
-        profileService.save(persona);
+    public Persona savePersona(Persona persona) {
+        return profileService.savePersona(persona);
     }
 
     @DELETE
