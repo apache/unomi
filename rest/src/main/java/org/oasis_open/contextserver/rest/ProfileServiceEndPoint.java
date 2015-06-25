@@ -143,11 +143,11 @@ public class ProfileServiceEndPoint {
 
     @POST
     @Path("/")
-    public void save(Profile profile) {
+    public Profile save(Profile profile) {
         Event profileUpdated = new Event("profileUpdated", null, profile, null, null, profile, new Date());
         profileUpdated.setPersistent(false);
         eventService.send(profileUpdated);
-        profileService.save(profile);
+        return profileService.save(profile);
     }
 
     @DELETE

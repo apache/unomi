@@ -349,8 +349,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return persistenceService.load(profileId, Profile.class);
     }
 
-    public void save(Profile profile) {
+    public Profile save(Profile profile) {
         persistenceService.save(profile);
+        return persistenceService.load(profile.getItemId(), Profile.class);
     }
 
     public void delete(String profileId, boolean persona) {

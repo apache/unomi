@@ -45,7 +45,7 @@ public interface ProfileService {
 
     Profile load(String profileId);
 
-    void save(Profile profile);
+    Profile save(Profile profile);
 
     void delete(String profileId, boolean persona);
 
