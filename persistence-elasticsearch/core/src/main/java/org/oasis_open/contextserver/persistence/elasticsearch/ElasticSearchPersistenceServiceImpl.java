@@ -29,6 +29,8 @@ import org.elasticsearch.action.admin.cluster.node.stats.NodesStatsResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.admin.indices.stats.IndicesStatsResponse;
+import org.elasticsearch.action.bulk.BulkRequestBuilder;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.percolate.PercolateResponse;
@@ -44,6 +46,7 @@ import org.elasticsearch.common.collect.UnmodifiableIterator;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsException;
+import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.*;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.search.SearchHit;
@@ -1005,6 +1008,52 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 if (!toDelete.isEmpty()) {
                     client.admin().indices().prepareDelete(toDelete.toArray(new String[toDelete.size()])).execute().actionGet();
                 }
+                return null;
+            }
+        }.executeInClassLoader();
+    }
+
+    @Override
+    public void purge(final String scope) {
+        new InClassLoaderExecute<Void>() {
+            @Override
+            protected Void execute(Object... args) {
+                QueryBuilder query = QueryBuilders.termQuery("scope", scope);
+
+                BulkRequestBuilder deleteByScope = client.prepareBulk();
+
+                final TimeValue keepAlive = TimeValue.timeValueHours(1);
+                SearchResponse response = client.prepareSearch(indexName + "*")
+                        .setSearchType(SearchType.SCAN)
+                        .setScroll(keepAlive)
+                        .setQuery(query)
+                        .setSize(100).execute().actionGet();
+
+                // Scroll until no more hits are returned
+                while (true) {
+
+                    for (SearchHit hit : response.getHits().getHits()) {
+                        // add hit to bulk delete
+                        deleteByScope.add(Requests.deleteRequest(hit.index()).type(hit.type()).id(hit.id()));
+                    }
+
+                    response = client.prepareSearchScroll(response.getScrollId()).setScroll(keepAlive).execute().actionGet();
+
+                    // If we have no more hits, exit
+                    if (response.getHits().getHits().length == 0) {
+                        break;
+                    }
+                }
+
+                // we're done with the scrolling, delete now
+                if (deleteByScope.numberOfActions() > 0) {
+                    final BulkResponse deleteResponse = deleteByScope.get();
+                    if (deleteResponse.hasFailures()) {
+                        // do something
+                        logger.debug("Couldn't delete from scope " + scope + ":\n{}", deleteResponse.buildFailureMessage());
+                    }
+                }
+
                 return null;
             }
         }.executeInClassLoader();

@@ -111,8 +111,10 @@ public class QueryServiceImpl implements QueryService {
             }
             return persistenceService.queryCount(condition, type);
         } catch (Exception e) {
-            logger.warn("Invalid query");
+            logger.warn("Invalid query", e);
             return 0;
         }
     }
+
+
 }
