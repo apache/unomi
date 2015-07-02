@@ -1,7 +1,0 @@
-{
-  "type": "profilePropertyCondition",
-  "parameterValues": {
-    "propertyName": "systemProperties.campaigns.${campaignId}Engaged",
-    "comparisonOperator": "exists"
-  }
-}
