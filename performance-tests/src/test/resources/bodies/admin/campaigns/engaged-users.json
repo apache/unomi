@@ -1,0 +1,28 @@
+{
+  "condition":{
+    "parameterValues":{
+      "operator":"and",
+      "subConditions":[
+        {
+          "parameterValues":{
+            "propertyName":"systemProperties.campaigns.${campaignId}Engaged",
+            "comparisonOperator":"exists"
+          },
+          "type":"profilePropertyCondition"
+        },
+        {
+          "parameterValues":{
+            "comparisonOperator":"missing",
+            "propertyName":"mergedWith"
+          },
+          "type":"profilePropertyCondition"
+        }
+      ]
+    },
+    "type":"booleanCondition"
+  },
+  "limit":10,
+  "offset":0,
+  "sortby":"itemId:asc",
+  "text":""
+}

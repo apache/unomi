@@ -1,0 +1,33 @@
+{
+  "aggregate":{
+    "type":"date",
+    "parameters":{
+      "interval":"1M",
+      "format":"yyyy-MM-dd"
+    }
+  },
+  "condition":{
+    "type":"booleanCondition",
+    "parameterValues":{
+      "operator":"and",
+      "subConditions":[
+        {
+          "type":"sessionPropertyCondition",
+          "parameterValues":{
+            "propertyName":"scope",
+            "comparisonOperator":"equals",
+            "propertyValue":"ACMESPACE"
+          }
+        },
+        {
+          "type":"sessionPropertyCondition",
+          "parameterValues":{
+            "propertyName":"nbOfVisits",
+            "comparisonOperator":"equals",
+            "propertyValueInteger":1
+          }
+        }
+      ]
+    }
+  }
+}

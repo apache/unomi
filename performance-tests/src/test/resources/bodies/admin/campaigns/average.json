@@ -1,0 +1,27 @@
+{
+  "type":"booleanCondition",
+  "parameterValues":{
+    "operator":"and",
+    "subConditions":[
+      {
+        "type":"sessionPropertyCondition",
+        "parameterValues":{
+          "propertyName":"scope",
+          "comparisonOperator":"equals",
+          "propertyValue":"ACMESPACE"
+        }
+      },
+      {
+        "type":"sessionPropertyCondition",
+        "parameterValues":{
+          "propertyName":"systemProperties.campaigns.${campaignId}Engaged",
+          "comparisonOperator":"between",
+          "propertyValuesDate":[
+            "${startDate}",
+            "${endDate}"
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -7,16 +7,17 @@ import scala.concurrent.duration._
  */
 object Parameters {
 
+  //val baseUrls = List("http://localhost:8181", "http://localhost:9191")
   val baseUrls = List("http://localhost:8181")
 
   val format = new java.text.SimpleDateFormat("yyyy-MM")
   val minTime: Long = format.parse("2014-01").getTime()
   val maxTime: Long = format.parse("2015-12").getTime()
 
-  val totalTime = 5 minutes
-  val numberOfConcurrentUsers = 100
-  val numberOfConcurrentAdminUsers = 0
-  val rampUpTime = 2 minute
+  val totalTime = 120 minutes
+  val numberOfConcurrentUsers = 1000
+  val numberOfConcurrentAdminUsers = 250
+  val rampUpTime = 3 minutes
   val numberOfSessionsPerUser = 5
   val sessionSizeAverage = 20
   val sessionSizeStdDev = 4
@@ -27,6 +28,9 @@ object Parameters {
 
   val delayAverage: Double = 4.5
   val delayStdDev: Double = 0.5
+
+  val navigationDelayAverage: Double = 1.0
+  val navigationDelayStdDev: Double = 0.2
 
 
 }

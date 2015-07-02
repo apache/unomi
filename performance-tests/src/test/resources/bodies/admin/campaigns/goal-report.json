@@ -1,0 +1,9 @@
+{
+  "aggregate":{
+    "type":"date",
+    "property":"timeStamp",
+    "parameters":{
+      "interval":"1d"
+    }
+  }
+}
