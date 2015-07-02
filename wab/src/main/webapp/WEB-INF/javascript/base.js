@@ -108,8 +108,8 @@ cxs.collectEvents = function(events, successCallBack) {
         xhr.withCredentials = true;
         xhr.open("GET", url + "&payload=" + encodeURIComponent(data), true);
     } else if ("withCredentials" in xhr) {
-        xhr.withCredentials = true;
         xhr.open("POST", url, true);
+        xhr.withCredentials = true;
     } else if (typeof XDomainRequest != "undefined") {
         xhr = new XDomainRequest();
         xhr.open("POST", url);
