@@ -25,10 +25,12 @@ package org.oasis_open.contextserver.plugins.baseplugin.conditions;
 import ognl.Node;
 import ognl.Ognl;
 import ognl.OgnlContext;
+import ognl.OgnlException;
 import ognl.enhance.ExpressionAccessor;
 
 import org.apache.commons.beanutils.BeanUtilsBean;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.joda.DateMathParser;
 import org.elasticsearch.index.mapper.core.DateFieldMapper;
@@ -147,7 +149,11 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 // property not found
                 actualValue = null;
             } catch (Exception e) {
-                logger.warn("Error evaluating value for " + item.getClass().getName() + " " + name, e);
+                if (!(e instanceof OgnlException)
+                        || (!StringUtils.startsWith(((OgnlException) e).getMessage(),
+                                "source is null for getProperty(null"))) {
+                    logger.warn("Error evaluating value for " + item.getClass().getName() + " " + name, e);
+                }
                 actualValue = null;
             }
         }
