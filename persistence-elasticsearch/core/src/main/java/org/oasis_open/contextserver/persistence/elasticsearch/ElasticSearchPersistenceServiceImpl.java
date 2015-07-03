@@ -842,7 +842,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     for (AggregationBuilder aggregationBuilder : lastAggregation) {
                         filterAggregation.subAggregation(aggregationBuilder);
                     }
-                    lastAggregation = Arrays.asList(filterAggregation);
+                    lastAggregation = Collections.singletonList(filterAggregation);
                 }
 
 
