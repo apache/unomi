@@ -207,7 +207,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
 
     private Object getPropertyValue(Item item, String expression) throws Exception {
         ExpressionAccessor accessor = getPropertyAccessor(item, expression);
-        return accessor != null ? accessor.get(null, item) : null;
+        return accessor != null ? accessor.get((OgnlContext) Ognl.createDefaultContext(null), item) : null;
     }
 
     private ExpressionAccessor getPropertyAccessor(Item item, String expression) throws Exception {
