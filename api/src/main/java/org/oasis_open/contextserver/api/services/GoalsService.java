@@ -63,7 +63,7 @@ public interface GoalsService {
 
     void removeCampaign(String campaignId);
 
-    PartialList<CampaignEvent> getEvents(String campaignId, int offset, int size, String sortBy);
+    PartialList<CampaignEvent> getEvents(Query query);
 
     void setCampaignEvent(CampaignEvent event);
 

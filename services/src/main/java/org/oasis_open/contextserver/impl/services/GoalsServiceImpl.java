@@ -571,18 +571,12 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     // Campaign Event management methods
     @Override
-    public PartialList<CampaignEvent> getEvents(String campaignId, int offset, int size, String sortBy) {
-        Condition eventCampaignCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-        eventCampaignCondition.setParameter("propertyName","campaignId");
-        eventCampaignCondition.setParameter("comparisonOperator","equals");
-        eventCampaignCondition.setParameter("propertyValue",campaignId);
-        List<Condition> conditions = Arrays.asList(eventCampaignCondition);
-        Condition booleanCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-        Map<String,Object> stringObjectMap = new HashMap<>();
-        stringObjectMap.put("operator","and");
-        stringObjectMap.put("subConditions",conditions);
-        booleanCondition.setParameterValues(stringObjectMap);
-        return persistenceService.query(booleanCondition,sortBy,CampaignEvent.class, offset, size);
+    public PartialList<CampaignEvent> getEvents(Query query) {
+        if(query.isForceRefresh()){
+            persistenceService.refresh();
+        }
+        definitionsService.resolveConditionType(query.getCondition());
+        return persistenceService.query(query.getCondition(), query.getSortby(), CampaignEvent.class, query.getOffset(), query.getLimit());
     }
 
     @Override

@@ -104,14 +104,14 @@ public class CampaignsServiceEndPoint {
     }
 
     @DELETE
-    @Path("/{campaignID}/event/{eventId}")
-    public void removeCampaignDefinition(@PathParam("campaignID") String campaignID, @PathParam("eventId") String campaignEventID) {
+    @Path("/event/{eventId}")
+    public void removeCampaignEventDefinition(@PathParam("eventId") String campaignEventID) {
         goalsService.removeCampaignEvent(campaignEventID);
     }
 
-    @GET
-    @Path("/{campaignID}/events")
-    public PartialList<CampaignEvent> getCampaignEvents(@PathParam("campaignID") String campaignId, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
-        return goalsService.getEvents(campaignId, offset, size, sortBy);
+    @POST
+    @Path("/events/query")
+    public PartialList<CampaignEvent> getCampaignEvents(Query query) {
+        return goalsService.getEvents(query);
     }
 }
