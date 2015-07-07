@@ -298,85 +298,79 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         updateExistingProfilesForSegment(segment);
     }
 
-    /**
-     * Adds the specified segment (or its metadata) to the specified collection if it would be impacted by the deletion of the segment identified by the specified identifier,
-     * cleaning conditions up as we process them if so specified. The return value of this method can be ignored, it is only used internally on recursive calls.
-     *
-     * @param segment                  the segment we're checking
-     * @param condition                the segment's condition being currently examined
-     * @param segmentToDeleteId        the identifier of the segment we want to delete
-     * @param removeAsWeGo             whether we want to remove impacted conditions as we process them
-     * @param impactedSegmentsMetadata the collection of impacted segments metadata, only populated if we're not asking removal as we go
-     * @param impactedSegments         the collection of impacted segments
-     * @return <code>true</code> if the current sub-condition being looked at needs to be removed from the parent, <code>false</code> otherwise.
-     */
-    private boolean checkIfSegmentIsImpacted(Segment segment, Condition condition, String segmentToDeleteId, boolean removeAsWeGo, Collection<Metadata> impactedSegmentsMetadata,
-                                             Collection<Segment> impactedSegments) {
+    private void checkIfSegmentIsImpacted(Segment segment, Condition condition, String segmentToDeleteId, Set<Segment> impactedSegments) {
         @SuppressWarnings("unchecked")
         final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
         if (subConditions != null) {
-            final Iterator<Condition> subConditionsIterator = subConditions.iterator();
-            while (subConditionsIterator.hasNext()) {
-                Condition child = subConditionsIterator.next();
-                final boolean shouldRemoveCurrentSubCondition = checkIfSegmentIsImpacted(segment, child, segmentToDeleteId, removeAsWeGo, impactedSegmentsMetadata, impactedSegments);
-
-                // if we're removing as we go and the current sub-condition is marked for removal, remove it
-                // todo: ideally, we should check if the current condition is now empty and see what should be done
-                if (removeAsWeGo && shouldRemoveCurrentSubCondition) {
-                    subConditionsIterator.remove();
-                }
+            for (Condition subCondition : subConditions) {
+                checkIfSegmentIsImpacted(segment, subCondition, segmentToDeleteId, impactedSegments);
             }
-            return false;
         } else if ("profileSegmentCondition".equals(condition.getConditionTypeId())) {
-            // we've found a profile segment condition, check if it references the segment we're trying to delete
             @SuppressWarnings("unchecked")
             final List<String> referencedSegmentIds = (List<String>) condition.getParameter("segments");
 
-            boolean shouldRemoveSubCondition = false;
-            int positionOfSegmentToDelete = referencedSegmentIds.indexOf(segmentToDeleteId);
-            if (positionOfSegmentToDelete >= 0) {
-                // we found a reference to the segment to delete
-                //
-                if (!removeAsWeGo) {
-                    // if we're only validating, add the segment we're considering to the list of impacted segments
-                    impactedSegmentsMetadata.add(segment.getMetadata());
-                } else {
-                    // remove the segment from the list of segments on which the currently looked at segment depends
-                    referencedSegmentIds.remove(positionOfSegmentToDelete);
-
-                    // now check if, as a result of removing the reference, we are left with no segment references anymore for this condition
-                    if (referencedSegmentIds.isEmpty()) {
-                        // we need to remove this sub-condition
-                        shouldRemoveSubCondition = true;
-                    }
-                }
-
-                // add currently looked at segment to set of impacted segment to be saved
+            if (referencedSegmentIds.indexOf(segmentToDeleteId) >= 0) {
                 impactedSegments.add(segment);
             }
-
-            return shouldRemoveSubCondition;
         }
-
-        return false;
     }
 
+    /**
+     * Return an updated condition that do not contain a condition on the segmentId anymore
+     * it's remove the unnecessary boolean condition (if a condition is the only one of a boolean the boolean will be remove and the subcondition returned)
+     * it's return null when there is no more condition after (if the condition passed was only a segment condition on the segmentId)
+     * @param condition the condition to update
+     * @param segmentId the segment id to remove in the condition
+     * @return updated condition
+     */
+    private Condition updateImpactedCondition(Condition condition, String segmentId) {
+        if ("booleanCondition".equals(condition.getConditionTypeId())) {
+            @SuppressWarnings("unchecked")
+            final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
+            List<Condition> updatedSubConditions = new LinkedList<>();
+            for (Condition subCondition : subConditions) {
+                Condition updatedCondition = updateImpactedCondition(subCondition, segmentId);
+                if(updatedCondition != null) {
+                    updatedSubConditions.add(updatedCondition);
+                }
+            }
+            if(!updatedSubConditions.isEmpty()){
+                if(updatedSubConditions.size() == 1) {
+                    return updatedSubConditions.get(0);
+                } else {
+                    condition.setParameter("subConditions", updatedSubConditions);
+                    return condition;
+                }
+            } else {
+                return null;
+            }
+        } else if("profileSegmentCondition".equals(condition.getConditionTypeId())) {
+            @SuppressWarnings("unchecked")
+            final List<String> referencedSegmentIds = (List<String>) condition.getParameter("segments");
+            if (referencedSegmentIds.indexOf(segmentId) >= 0) {
+                referencedSegmentIds.remove(segmentId);
+                if(referencedSegmentIds.isEmpty()) {
+                    return null;
+                } else {
+                    condition.setParameter("segments", referencedSegmentIds);
+                }
+            }
+        }
+        return condition;
+    }
 
     public List<Metadata> removeSegmentDefinition(String segmentId, boolean validate) {
 
         // search all segments to see if they define a profileSegmentCondition with the segment we're trying to delete
         // to see which segments would be impacted by this deletion
         final List<Segment> allSegments = this.allSegments;
-        List<Metadata> impactedSegmentsMetadata = validate ? new ArrayList<Metadata>(allSegments.size()) : Collections.<Metadata>emptyList();
         Set<Segment> impactedSegments = new HashSet<>(allSegments.size());
         for (Segment segment : allSegments) {
             // check whether the current segment is impacted and add it to the appropriate collections if needed
-            checkIfSegmentIsImpacted(segment, segment.getCondition(), segmentId, !validate, impactedSegmentsMetadata, impactedSegments);
+            checkIfSegmentIsImpacted(segment, segment.getCondition(), segmentId, impactedSegments);
         }
 
-        // if we didn't record any metadata (meaning either we didn't find any or we just didn't validate), perform the remove operation
-        if (impactedSegmentsMetadata.isEmpty()) {
-
+        if (!validate || impactedSegments.isEmpty()) {
             // update profiles
             PartialList<Profile> profiles = getMatchingIndividuals(segmentId, 0, -1, null);
             for (Profile profile : profiles.getList()) {
@@ -384,18 +378,27 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                 persistenceService.update(profile.getItemId(), null, Profile.class, "segments", profile.getSegments());
             }
 
-            // save modified impacted segments
+            // update impacted segments
             for (Segment segment : impactedSegments) {
+                Condition updatedCondition = updateImpactedCondition(segment.getCondition(), segmentId);
+                segment.setCondition(updatedCondition);
+                if(updatedCondition == null) {
+                    clearAutoGeneratedRules(persistenceService.query("linkedItems", segment.getMetadata().getId(), null, Rule.class), segment.getMetadata().getId());
+                    segment.getMetadata().setEnabled(false);
+                }
                 setSegmentDefinition(segment);
             }
 
             persistenceService.remove(segmentId, Segment.class);
-
             List<Rule> previousRules = persistenceService.query("linkedItems", segmentId, null, Rule.class);
             clearAutoGeneratedRules(previousRules, segmentId);
         }
 
-        return impactedSegmentsMetadata;
+        List<Metadata> metadata = new LinkedList<>();
+        for (Segment definition : impactedSegments) {
+            metadata.add(definition.getMetadata());
+        }
+        return metadata;
     }
 
 
@@ -651,20 +654,28 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         segmentCondition.setParameter("comparisonOperator", "equals");
         segmentCondition.setParameter("propertyValue", segment.getItemId());
 
-        List<Profile> previousProfiles = persistenceService.query(segmentCondition, null, Profile.class);
-        List<Profile> newProfiles = persistenceService.query(segment.getCondition(), null, Profile.class);
+        if(segment.getMetadata().isEnabled()) {
+            List<Profile> previousProfiles = persistenceService.query(segmentCondition, null, Profile.class);
+            List<Profile> newProfiles = persistenceService.query(segment.getCondition(), null, Profile.class);
 
-        List<Profile> add = new ArrayList<>(newProfiles);
-        add.removeAll(previousProfiles);
-        previousProfiles.removeAll(newProfiles);
+            List<Profile> add = new ArrayList<>(newProfiles);
+            add.removeAll(previousProfiles);
+            previousProfiles.removeAll(newProfiles);
 
-        for (Profile profileToAdd : add) {
-            profileToAdd.getSegments().add(segment.getItemId());
-            persistenceService.update(profileToAdd.getItemId(), null, Profile.class, "segments", profileToAdd.getSegments());
-        }
-        for (Profile profileToRemove : previousProfiles) {
-            profileToRemove.getSegments().remove(segment.getItemId());
-            persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
+            for (Profile profileToAdd : add) {
+                profileToAdd.getSegments().add(segment.getItemId());
+                persistenceService.update(profileToAdd.getItemId(), null, Profile.class, "segments", profileToAdd.getSegments());
+            }
+            for (Profile profileToRemove : previousProfiles) {
+                profileToRemove.getSegments().remove(segment.getItemId());
+                persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
+            }
+        } else {
+            List<Profile> previousProfiles = persistenceService.query(segmentCondition, null, Profile.class);
+            for (Profile profileToRemove : previousProfiles) {
+                profileToRemove.getSegments().remove(segment.getItemId());
+                persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
+            }
         }
         logger.info("Segments updated in {}", System.currentTimeMillis()-t);
     }
