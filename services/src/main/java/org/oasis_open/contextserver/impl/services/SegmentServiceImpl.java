@@ -299,18 +299,20 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     }
 
     private void checkIfSegmentIsImpacted(Segment segment, Condition condition, String segmentToDeleteId, Set<Segment> impactedSegments) {
-        @SuppressWarnings("unchecked")
-        final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
-        if (subConditions != null) {
-            for (Condition subCondition : subConditions) {
-                checkIfSegmentIsImpacted(segment, subCondition, segmentToDeleteId, impactedSegments);
-            }
-        } else if ("profileSegmentCondition".equals(condition.getConditionTypeId())) {
+        if(condition != null) {
             @SuppressWarnings("unchecked")
-            final List<String> referencedSegmentIds = (List<String>) condition.getParameter("segments");
+            final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
+            if (subConditions != null) {
+                for (Condition subCondition : subConditions) {
+                    checkIfSegmentIsImpacted(segment, subCondition, segmentToDeleteId, impactedSegments);
+                }
+            } else if ("profileSegmentCondition".equals(condition.getConditionTypeId())) {
+                @SuppressWarnings("unchecked")
+                final List<String> referencedSegmentIds = (List<String>) condition.getParameter("segments");
 
-            if (referencedSegmentIds.indexOf(segmentToDeleteId) >= 0) {
-                impactedSegments.add(segment);
+                if (referencedSegmentIds.indexOf(segmentToDeleteId) >= 0) {
+                    impactedSegments.add(segment);
+                }
             }
         }
     }
@@ -372,10 +374,16 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
         if (!validate || impactedSegments.isEmpty()) {
             // update profiles
-            PartialList<Profile> profiles = getMatchingIndividuals(segmentId, 0, -1, null);
-            for (Profile profile : profiles.getList()) {
-                profile.getSegments().remove(segmentId);
-                persistenceService.update(profile.getItemId(), null, Profile.class, "segments", profile.getSegments());
+            Condition segmentCondition = new Condition();
+            segmentCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
+            segmentCondition.setParameter("propertyName", "segments");
+            segmentCondition.setParameter("comparisonOperator", "equals");
+            segmentCondition.setParameter("propertyValue", segmentId);
+
+            List<Profile> previousProfiles = persistenceService.query(segmentCondition, null, Profile.class);
+            for (Profile profileToRemove : previousProfiles) {
+                profileToRemove.getSegments().remove(segmentId);
+                persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
             }
 
             // update impacted segments
