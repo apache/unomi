@@ -40,7 +40,10 @@ import org.oasis_open.contextserver.api.services.RulesService;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
 import org.oasis_open.contextserver.persistence.spi.aggregate.*;
-import org.osgi.framework.*;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleEvent;
+import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -382,7 +385,10 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         PartialList<Campaign> campaigns = persistenceService.query(query.getCondition(), query.getSortby(), Campaign.class, query.getOffset(), query.getLimit());
         List<CampaignDetail> details = new LinkedList<>();
         for (Campaign definition : campaigns.getList()) {
-            details.add(getCampaignDetail(definition));
+            final CampaignDetail campaignDetail = getCampaignDetail(definition);
+            if (campaignDetail != null) {
+                details.add(campaignDetail);
+            }
         }
         return new PartialList<>(details, campaigns.getOffset(), campaigns.getPageSize(), campaigns.getTotalSize());
     }
@@ -392,6 +398,10 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     private CampaignDetail getCampaignDetail(Campaign campaign) {
+        if (campaign == null) {
+            return null;
+        }
+
         CampaignDetail campaignDetail = new CampaignDetail(campaign);
 
         // engaged profile
