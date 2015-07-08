@@ -59,6 +59,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     private ActionExecutorDispatcher actionExecutorDispatcher;
     private List<Rule> allRules;
 
+    private Timer purgeRulesTimer;
+
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
@@ -104,6 +106,14 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
+        cancelPurge();
+    }
+
+    private void cancelPurge() {
+        if(purgeRulesTimer != null) {
+            purgeRulesTimer.cancel();
+        }
+        logger.info("Rule purge: Purge unscheduled");
     }
 
     private void processBundleStartup(BundleContext bundleContext) {
@@ -358,14 +368,14 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     private void initializeTimer() {
-        Timer timer = new Timer();
+        purgeRulesTimer = new Timer();
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
                 allRules = getAllRules();
             }
         };
-        timer.scheduleAtFixedRate(task, 0, 1000);
+        purgeRulesTimer.scheduleAtFixedRate(task, 0, 1000);
     }
 
     public void bundleChanged(BundleEvent event) {

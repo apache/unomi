@@ -74,6 +74,8 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     private List<Segment> allSegments;
     private List<Scoring> allScoring;
 
+    private Timer purgeSegmentTimer;
+
     public static void dumpJSON(JsonValue tree, String key, String depthPrefix) {
         if (key != null)
             logger.info(depthPrefix + "Key " + key + ": ");
@@ -138,8 +140,15 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
+        cancelPurge();
     }
 
+    private void cancelPurge() {
+        if(purgeSegmentTimer != null) {
+            purgeSegmentTimer.cancel();
+        }
+        logger.info("Segment purge: Purge unscheduled");
+    }
 
     private void processBundleStartup(BundleContext bundleContext) {
         if (bundleContext == null) {
@@ -716,7 +725,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
     private void initializeTimer() {
         // TODO : timer need to be canceled in preDestroy
-        Timer timer = new Timer();
+        purgeSegmentTimer = new Timer();
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
@@ -733,7 +742,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                 }
             }
         };
-        timer.scheduleAtFixedRate(task, getDay(1).getTime(), taskExecutionPeriod);
+        purgeSegmentTimer.scheduleAtFixedRate(task, getDay(1).getTime(), taskExecutionPeriod);
 
         task = new TimerTask() {
             @Override
@@ -742,7 +751,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                 allScoring = getAllScoringDefinitions();
             }
         };
-        timer.scheduleAtFixedRate(task, 0, 1000);
+        purgeSegmentTimer.scheduleAtFixedRate(task, 0, 1000);
     }
 
     private GregorianCalendar getDay(int offset) {
