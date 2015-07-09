@@ -27,7 +27,6 @@ import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
-import org.oasis_open.contextserver.api.goals.Goal;
 import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.rules.Rule;
 import org.oasis_open.contextserver.api.segments.Scoring;
@@ -74,7 +73,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     private List<Segment> allSegments;
     private List<Scoring> allScoring;
 
-    private Timer purgeSegmentTimer;
+    private Timer segmentTimer;
 
     public static void dumpJSON(JsonValue tree, String key, String depthPrefix) {
         if (key != null)
@@ -140,12 +139,12 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
-        cancelPurge();
+        cancelTimers();
     }
 
-    private void cancelPurge() {
-        if(purgeSegmentTimer != null) {
-            purgeSegmentTimer.cancel();
+    private void cancelTimers() {
+        if(segmentTimer != null) {
+            segmentTimer.cancel();
         }
         logger.info("Segment purge: Purge unscheduled");
     }
@@ -724,8 +723,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     }
 
     private void initializeTimer() {
-        // TODO : timer need to be canceled in preDestroy
-        purgeSegmentTimer = new Timer();
+        segmentTimer = new Timer();
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
@@ -742,7 +740,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                 }
             }
         };
-        purgeSegmentTimer.scheduleAtFixedRate(task, getDay(1).getTime(), taskExecutionPeriod);
+        segmentTimer.scheduleAtFixedRate(task, getDay(1).getTime(), taskExecutionPeriod);
 
         task = new TimerTask() {
             @Override
@@ -751,7 +749,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                 allScoring = getAllScoringDefinitions();
             }
         };
-        purgeSegmentTimer.scheduleAtFixedRate(task, 0, 1000);
+        segmentTimer.scheduleAtFixedRate(task, 0, 1000);
     }
 
     private GregorianCalendar getDay(int offset) {

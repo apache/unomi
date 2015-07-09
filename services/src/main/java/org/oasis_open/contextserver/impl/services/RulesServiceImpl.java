@@ -24,7 +24,6 @@ package org.oasis_open.contextserver.impl.services;
 
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
-import org.oasis_open.contextserver.api.goals.Goal;
 import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.services.*;
 import org.oasis_open.contextserver.impl.actions.ActionExecutorDispatcher;
@@ -59,7 +58,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     private ActionExecutorDispatcher actionExecutorDispatcher;
     private List<Rule> allRules;
 
-    private Timer purgeRulesTimer;
+    private Timer rulesTimer;
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -106,12 +105,12 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
-        cancelPurge();
+        cancelTimers();
     }
 
-    private void cancelPurge() {
-        if(purgeRulesTimer != null) {
-            purgeRulesTimer.cancel();
+    private void cancelTimers() {
+        if(rulesTimer != null) {
+            rulesTimer.cancel();
         }
         logger.info("Rule purge: Purge unscheduled");
     }
@@ -368,14 +367,14 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     private void initializeTimer() {
-        purgeRulesTimer = new Timer();
+        rulesTimer = new Timer();
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
                 allRules = getAllRules();
             }
         };
-        purgeRulesTimer.scheduleAtFixedRate(task, 0, 1000);
+        rulesTimer.scheduleAtFixedRate(task, 0, 1000);
     }
 
     public void bundleChanged(BundleEvent event) {
