@@ -39,6 +39,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -227,8 +228,8 @@ public class ProfileServiceEndPoint {
 
     @GET
     @Path("/sessions/{sessionId}")
-    public Session loadSession(@PathParam("sessionId") String sessionId, @QueryParam("dateHint") Date dateHint) {
-        return profileService.loadSession(sessionId, dateHint);
+    public Session loadSession(@PathParam("sessionId") String sessionId, @QueryParam("dateHint") String dateHint) throws ParseException {
+        return profileService.loadSession(sessionId, new SimpleDateFormat("yyyy-MM").parse(dateHint));
     }
 
     @POST
