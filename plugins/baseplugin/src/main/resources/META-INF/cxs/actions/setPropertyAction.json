@@ -9,9 +9,14 @@
             "multivalued": false
         },
         {
-            "id": "setPropertyValue",
-            "type": "string",
-            "multivalued": false
+          "id": "setPropertyValue",
+          "type": "string",
+          "multivalued": false
+        },
+        {
+          "id": "setPropertyValueInteger",
+          "type": "integer",
+          "multivalued": false
         },
         {
             "id": "setPropertyStrategy",

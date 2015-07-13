@@ -81,7 +81,7 @@ public interface ProfileService {
 
     Collection<PropertyType> getPropertyTypeByMapping(String propertyName);
 
-    PropertyType getPropertyType(String target, String id);
+    PropertyType getPropertyType(String id);
 
     boolean createPropertyType(PropertyType property);
 

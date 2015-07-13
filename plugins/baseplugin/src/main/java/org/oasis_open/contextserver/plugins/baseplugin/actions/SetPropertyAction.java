@@ -42,6 +42,12 @@ public class SetPropertyAction implements ActionExecutor {
 
     public int execute(Action action, Event event) {
         Object propertyValue = action.getParameterValues().get("setPropertyValue");
+        Object propertyValueInteger = action.getParameterValues().get("setPropertyValueInteger");
+
+        if(propertyValueInteger != null && propertyValue == null) {
+            propertyValue = PropertyHelper.getInteger(propertyValueInteger);
+        }
+
         if (propertyValue != null && propertyValue.equals("now")) {
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
             format.setTimeZone(TimeZone.getTimeZone("UTC"));

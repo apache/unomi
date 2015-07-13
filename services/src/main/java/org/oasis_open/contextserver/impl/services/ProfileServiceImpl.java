@@ -630,7 +630,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return persistenceService.query("automaticMappingsFrom", propertyName, "rank", PropertyType.class);
     }
 
-    public PropertyType getPropertyType(String target, String id) {
+    public PropertyType getPropertyType(String id) {
         return persistenceService.load(id, PropertyType.class);
     }
 

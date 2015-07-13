@@ -39,6 +39,7 @@ import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
+import org.oasis_open.contextserver.persistence.spi.PropertyHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +67,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         }
 
         if (expectedValueInteger != null) {
-            return getInteger(actualValue).compareTo(getInteger(expectedValueInteger));
+            return PropertyHelper.getInteger(actualValue).compareTo(PropertyHelper.getInteger(expectedValueInteger));
         } else if (expectedValueDate != null) {
             return getDate(actualValue).compareTo(getDate(expectedValueDate));
         } else if (expectedValueDateExpr != null) {
@@ -266,19 +267,6 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 }));
             } catch (ElasticsearchParseException e) {
                 // Not a date
-            }
-        }
-        return null;
-    }
-
-    private Integer getInteger(Object value) {
-        if (value instanceof Number) {
-            return ((Number)value).intValue();
-        } else {
-            try {
-                return Integer.parseInt(value.toString());
-            } catch (NumberFormatException e) {
-                // Not a number
             }
         }
         return null;
