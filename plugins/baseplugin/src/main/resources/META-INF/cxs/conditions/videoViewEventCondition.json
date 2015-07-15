@@ -1,38 +1,51 @@
 {
-    "id": "videoViewEventCondition",
-    "parentCondition": {
-        "type": "booleanCondition",
-        "parameterValues": {
-            "subConditions": [
-                {
-                    "type": "eventTypeCondition",
-                    "parameterValues": {
-                        "eventTypeId": "video"
-                    }
-                },
-                {
-                    "type": "eventPropertyCondition",
-                    "parameterValues": {
-                        "propertyName": "target.itemId",
-                        "propertyValue": "parameter::videoId",
-                        "comparisonOperator": "equals"
-                    }
-                }
-            ],
-            "operator" : "and"
-        }
-    },
-    "tags": [
-        "event",
-        "eventCondition",
-        "usableInPastEventCondition",
-        "trackedCondition"
-    ],
-    "parameters": [
+  "id": "videoViewEventCondition",
+  "parentCondition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "subConditions": [
         {
-            "id": "videoId",
-            "type": "String",
-            "multivalued": false
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "video"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "source.properties.pageInfo.pagePath",
+            "propertyValue": "parameter::pagePath",
+            "comparisonOperator": "equals"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "target.itemId",
+            "propertyValue": "parameter::videoId",
+            "comparisonOperator": "equals"
+          }
         }
-    ]
+      ],
+      "operator" : "and"
+    }
+  },
+  "tags": [
+    "event",
+    "eventCondition",
+    "usableInPastEventCondition",
+    "trackedCondition"
+  ],
+  "parameters": [
+    {
+      "id": "videoId",
+      "type": "String",
+      "multivalued": false
+    },
+    {
+      "id": "pagePath",
+      "type": "String",
+      "multivalued": false
+    }
+  ]
 }
