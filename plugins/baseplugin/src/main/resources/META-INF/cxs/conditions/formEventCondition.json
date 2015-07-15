@@ -17,6 +17,14 @@
             "propertyValue": "parameter::formId",
             "comparisonOperator": "equals"
           }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "source.properties.pageInfo.pagePath",
+            "propertyValue": "parameter::pagePath",
+            "comparisonOperator": "equals"
+          }
         }
       ],
       "operator" : "and"
@@ -31,6 +39,11 @@
   "parameters": [
     {
       "id": "formId",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "pagePath",
       "type": "string",
       "multivalued": false
     }
