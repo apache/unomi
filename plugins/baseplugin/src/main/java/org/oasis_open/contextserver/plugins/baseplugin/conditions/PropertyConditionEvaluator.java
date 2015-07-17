@@ -43,6 +43,7 @@ import org.oasis_open.contextserver.persistence.spi.PropertyHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -54,6 +55,8 @@ import java.util.regex.Pattern;
 public class PropertyConditionEvaluator implements ConditionEvaluator {
 
     private static final Logger logger = LoggerFactory.getLogger(PropertyConditionEvaluator.class.getName());
+
+    private static final SimpleDateFormat yearMonthDayDateFormat = new SimpleDateFormat("yyyyMMdd");
     
     private BeanUtilsBean beanUtilsBean = BeanUtilsBean.getInstance();
     
@@ -207,6 +210,10 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");
 
             return compareMultivalue(actualValue, expectedValues, expectedValuesDate, expectedValuesInteger, expectedValuesDateExpr, op);
+        } else if(op.equals("isDay") && expectedValueDate != null) {
+            return yearMonthDayDateFormat.format(getDate(actualValue)).equals(yearMonthDayDateFormat.format(getDate(expectedValueDate)));
+        } else if(op.equals("isNotDay") && expectedValueDate != null) {
+            return !yearMonthDayDateFormat.format(getDate(actualValue)).equals(yearMonthDayDateFormat.format(getDate(expectedValueDate)));
         }
         
         return false;

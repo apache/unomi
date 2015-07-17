@@ -23,6 +23,7 @@ package org.oasis_open.contextserver.plugins.baseplugin.conditions;
  */
 
 import org.apache.commons.lang3.ObjectUtils;
+import org.elasticsearch.common.joda.time.DateTime;
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.oasis_open.contextserver.api.conditions.Condition;
@@ -89,8 +90,18 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
                 return FilterBuilders.notFilter(FilterBuilders.inFilter(name, values.toArray()));
             case "all":
                 return FilterBuilders.termsFilter(name, values.toArray()).execution("and");
+            case "isDay":
+                return getIsSameDayRange(value, name);
+            case "isNotDay":
+                return FilterBuilders.notFilter(getIsSameDayRange(value, name));
         }
         return null;
     }
 
+    private FilterBuilder getIsSameDayRange (Object value, String name) {
+        DateTime date = new DateTime(value);
+        DateTime dayStart = date.withTimeAtStartOfDay();
+        DateTime dayAfterStart = date.plusDays(1).withTimeAtStartOfDay();
+        return FilterBuilders.rangeFilter(name).gte(dayStart.toDate()).lte(dayAfterStart.toDate());
+    }
 }

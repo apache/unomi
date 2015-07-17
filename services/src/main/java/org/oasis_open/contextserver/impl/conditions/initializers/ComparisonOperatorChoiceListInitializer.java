@@ -48,8 +48,10 @@ public class ComparisonOperatorChoiceListInitializer implements ChoiceListInitia
         this.bundleContext = bundleContext;
 
         operators = new ArrayList<>(12);
-        operators.add(new ComparisonOperatorChoiceListValue("equals", "comparisonOperator.equals"));
-        operators.add(new ComparisonOperatorChoiceListValue("notEquals", "comparisonOperator.notEquals"));
+        operators.add(new ComparisonOperatorChoiceListValue("equals", "comparisonOperator.equals",
+                "string", "integer", "email"));
+        operators.add(new ComparisonOperatorChoiceListValue("notEquals", "comparisonOperator.notEquals",
+                "string", "integer", "email"));
         operators.add(new ComparisonOperatorChoiceListValue("lessThan", "comparisonOperator.lessThan", "integer", "date"));
         operators.add(new ComparisonOperatorChoiceListValue("greaterThan", "comparisonOperator.greaterThan", "integer", "date"));
         operators.add(new ComparisonOperatorChoiceListValue("lessThanOrEqualTo", "comparisonOperator.lessThanOrEqualTo",
@@ -65,9 +67,11 @@ public class ComparisonOperatorChoiceListInitializer implements ChoiceListInitia
         operators.add(new ComparisonOperatorChoiceListValue("contains", "comparisonOperator.contains", "string", "email"));
         operators.add(new ComparisonOperatorChoiceListValue("exists", "comparisonOperator.exists"));
         operators.add(new ComparisonOperatorChoiceListValue("missing", "comparisonOperator.missing"));
-        operators.add(new ComparisonOperatorChoiceListValue("in", "comparisonOperator.in"));
-        operators.add(new ComparisonOperatorChoiceListValue("notIn", "comparisonOperator.notIn"));
+        operators.add(new ComparisonOperatorChoiceListValue("in", "comparisonOperator.in", "string", "integer", "email"));
+        operators.add(new ComparisonOperatorChoiceListValue("notIn", "comparisonOperator.notIn", "string", "integer", "email"));
         operators.add(new ComparisonOperatorChoiceListValue("all", "comparisonOperator.all"));
+        operators.add(new ComparisonOperatorChoiceListValue("isDay", "comparisonOperator.isDay", "date"));
+        operators.add(new ComparisonOperatorChoiceListValue("isNotDay", "comparisonOperator.isNotDay", "date"));
 
         for (ChoiceListValue op : operators) {
             ((ComparisonOperatorChoiceListValue) op).setPluginId(bundleContext.getBundle().getBundleId());
