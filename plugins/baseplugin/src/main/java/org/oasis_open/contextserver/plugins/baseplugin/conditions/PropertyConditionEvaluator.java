@@ -162,7 +162,9 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             }
         }
 
-        if(actualValue == null){
+        if(op == null) {
+            return false;
+        } else if(actualValue == null){
             return op.equals("missing");
         } else if (op.equals("exists")) {
             return true;
@@ -202,7 +204,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("endsWith")) {
             return actualValue.toString().endsWith(expectedValue);
         } else if (op.equals("matchesRegex")) {
-            return Pattern.compile(expectedValue).matcher(actualValue.toString()).matches();
+            return expectedValue != null && Pattern.compile(expectedValue).matcher(actualValue.toString()).matches();
         } else if (op.equals("in") || op.equals("notIn") || op.equals("all")) {
             List<?> expectedValues = (List<?>) condition.getParameter("propertyValues");
             List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
