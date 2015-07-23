@@ -111,8 +111,7 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         boolean result = false;
         if (databaseReader != null) {
             result = ipLookupInDatabase(remoteAddr, session);
-        }
-        if (!result) {
+        } else {
             result = ipLookupInFreeWebService(remoteAddr, session);
         }
         return result;
