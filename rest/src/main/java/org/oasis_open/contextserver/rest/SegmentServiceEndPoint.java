@@ -80,6 +80,12 @@ public class SegmentServiceEndPoint {
         return segmentService.getSegmentMetadatas(0, 50, null).getList();
     }
 
+    @GET
+    @Path("/{segmentID}/impacted")
+    public List<Metadata> getSegmentImpacted(@PathParam("segmentID") String segmentId) {
+        return segmentService.getImpactedSegmentMetadata(segmentId);
+    }
+
     @POST
     @Path("/")
     public void setSegmentDefinition(Segment segment) {

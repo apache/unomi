@@ -58,6 +58,8 @@ public interface SegmentService {
      */
     List<Metadata> removeSegmentDefinition(String segmentId, boolean validate);
 
+    List<Metadata> getImpactedSegmentMetadata(String segmentId);
+
     PartialList<Profile> getMatchingIndividuals(String segmentID, int offset, int size, String sortBy);
 
     long getMatchingIndividualsCount(String segmentID);

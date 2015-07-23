@@ -369,17 +369,25 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         return condition;
     }
 
-    public List<Metadata> removeSegmentDefinition(String segmentId, boolean validate) {
-
-        // search all segments to see if they define a profileSegmentCondition with the segment we're trying to delete
-        // to see which segments would be impacted by this deletion
-        final List<Segment> allSegments = this.allSegments;
-        Set<Segment> impactedSegments = new HashSet<>(allSegments.size());
-        for (Segment segment : allSegments) {
-            // check whether the current segment is impacted and add it to the appropriate collections if needed
+    private Set<Segment> getImpactedSegments(String segmentId) {
+        Set<Segment> impactedSegments = new HashSet<>(this.allSegments.size());
+        for (Segment segment : this.allSegments) {
             checkIfSegmentIsImpacted(segment, segment.getCondition(), segmentId, impactedSegments);
         }
+        return impactedSegments;
+    }
 
+    public List<Metadata> getImpactedSegmentMetadata(String segmentId) {
+        List<Metadata> details = new LinkedList<>();
+        for (Segment definition : getImpactedSegments(segmentId)) {
+            details.add(definition.getMetadata());
+        }
+
+        return details;
+    }
+
+    public List<Metadata> removeSegmentDefinition(String segmentId, boolean validate) {
+        Set<Segment> impactedSegments = getImpactedSegments(segmentId);
         if (!validate || impactedSegments.isEmpty()) {
             // update profiles
             Condition segmentCondition = new Condition();
