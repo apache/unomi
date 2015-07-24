@@ -38,6 +38,8 @@
             <cm:property name="cluster.name" value="contextElasticSearch"/>
             <cm:property name="index.name" value="context"/>
             <cm:property name="elasticSearchConfig" value="file:${karaf.etc}/elasticsearch.yml"/>
+            <cm:property name="monthlyIndex.numberOfShards" value="3"/>
+            <cm:property name="monthlyIndex.numberOfReplicas" value="1"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -77,12 +79,14 @@
         <property name="conditionESQueryBuilderDispatcher" ref="conditionESQueryBuilderDispatcher"/>
         <property name="clusterName" value="${es.cluster.name}"/>
         <property name="indexName" value="${es.index.name}"/>
+        <property name="numberOfShards" value="${es.monthlyIndex.numberOfShards}"/>
+        <property name="numberOfReplicas" value="${es.monthlyIndex.numberOfReplicas}"/>
         <property name="address" value="${web.contextserver.address}"/>
         <property name="port" value="${web.contextserver.port}"/>
         <property name="secureAddress" value="${web.contextserver.secureAddress}"/>
         <property name="securePort" value="${web.contextserver.securePort}"/>
         <property name="elasticSearchConfig" value="${es.elasticSearchConfig}"/>
-        <property name="itemsDailyIndexed">
+        <property name="itemsMonthlyIndexed">
             <list>
                 <value>event</value>
                 <value>session</value>

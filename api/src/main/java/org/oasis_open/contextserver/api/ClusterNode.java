@@ -40,6 +40,7 @@ public class ClusterNode implements Serializable {
     private int securePort;
     private long uptime;
     private boolean master;
+    private boolean data;
 
     public ClusterNode() {
     }
@@ -114,5 +115,13 @@ public class ClusterNode implements Serializable {
 
     public void setMaster(boolean master) {
         this.master = master;
+    }
+
+    public boolean isData() {
+        return data;
+    }
+
+    public void setData(boolean data) {
+        this.data = data;
     }
 }

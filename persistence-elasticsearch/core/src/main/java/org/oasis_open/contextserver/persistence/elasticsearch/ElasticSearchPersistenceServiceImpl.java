@@ -48,6 +48,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsException;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.*;
+import org.elasticsearch.indices.IndexMissingException;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
@@ -108,13 +109,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private Client client;
     private String clusterName;
     private String indexName;
+    private String numberOfShards;
+    private String numberOfReplicas;
     private String elasticSearchConfig = null;
     private BundleContext bundleContext;
     private Map<String, String> mappings = new HashMap<String, String>();
     private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
 
-    private List<String> itemsDailyIndexed;
+    private List<String> itemsMonthlyIndexed;
     private Map<String, String> routingByType;
 
     private String address;
@@ -136,6 +139,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.indexName = indexName;
     }
 
+    public void setNumberOfShards(String numberOfShards) {
+        this.numberOfShards = numberOfShards;
+    }
+
+    public void setNumberOfReplicas(String numberOfReplicas) {
+        this.numberOfReplicas = numberOfReplicas;
+    }
+
     public void setAddress(String address) {
         this.address = address;
     }
@@ -152,8 +163,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.securePort = securePort;
     }
 
-    public void setItemsDailyIndexed(List<String> itemsDailyIndexed) {
-        this.itemsDailyIndexed = itemsDailyIndexed;
+    public void setItemsMonthlyIndexed(List<String> itemsMonthlyIndexed) {
+        this.itemsMonthlyIndexed = itemsMonthlyIndexed;
     }
 
     public void setRoutingByType(Map<String, String> routingByType) {
@@ -231,11 +242,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     client.admin().indices().prepareCreate(indexName).execute().actionGet();
                 }
 
-                client.admin().indices().preparePutTemplate(indexName + "_dailyindex")
+                client.admin().indices().preparePutTemplate(indexName + "_monthlyindex")
                         .setTemplate(indexName + "-*")
                         .setOrder(1)
-                        .setSettings(ImmutableSettings.settingsBuilder().put("number_of_shards", 1).build())
-                        .execute().actionGet();
+                        .setSettings(ImmutableSettings.settingsBuilder()
+                                .put("number_of_shards", Integer.parseInt(numberOfShards))
+                                .put("number_of_replicas", Integer.parseInt(numberOfReplicas))
+                                .build()).execute().actionGet();
+
+                getMonthlyIndex(new Date(), true);
+
                 return null;
             }
         }.executeInClassLoader();
@@ -256,6 +272,20 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         } catch (Exception e) {
             logger.error("Cannot get services",e);
         }
+
+        timer = new Timer();
+
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                GregorianCalendar gc = new GregorianCalendar();
+                int thisMonth = gc.get(Calendar.MONTH);
+                gc.add(Calendar.DAY_OF_MONTH,1);
+                if (gc.get(Calendar.MONTH) != thisMonth) {
+                    getMonthlyIndex(gc.getTime(), true);
+                }
+            }
+        }, 10000L, 24L * 60L * 60L * 1000L);
     }
 
     public void stop() {
@@ -300,23 +330,29 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    private String getDailyIndex(Date date) {
+    private String getMonthlyIndex(Date date) {
+        return getMonthlyIndex(date, false);
+    }
+
+    private String getMonthlyIndex(Date date, boolean checkAndCreate) {
         String d = new SimpleDateFormat("-YYYY-MM").format(date);
-        String dailyIndexName = indexName + d;
+        String monthlyIndexName = indexName + d;
 
-        IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(dailyIndexName).execute().actionGet();
-        boolean indexExists = indicesExistsResponse.isExists();
+        if (checkAndCreate) {
+            IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(monthlyIndexName).execute().actionGet();
+            boolean indexExists = indicesExistsResponse.isExists();
 
-        if (!indexExists) {
-            logger.info("{} index doesn't exist yet, creating it...", indexName);
-            client.admin().indices().prepareCreate(dailyIndexName).execute().actionGet();
+            if (!indexExists) {
+                logger.info("{} index doesn't exist yet, creating it...", indexName);
+                client.admin().indices().prepareCreate(monthlyIndexName).execute().actionGet();
 
-            for (Map.Entry<String, String> entry : mappings.entrySet()) {
-                createMapping(entry.getKey(), entry.getValue(), dailyIndexName);
+                for (Map.Entry<String, String> entry : mappings.entrySet()) {
+                    createMapping(entry.getKey(), entry.getValue(), monthlyIndexName);
+                }
             }
         }
 
-        return dailyIndexName;
+        return monthlyIndexName;
     }
 
     private void loadPredefinedMappings(BundleContext bundleContext) {
@@ -373,18 +409,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected T execute(Object... args) {
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
-                    String dailyIndexName = indexName;
-                    if (itemsDailyIndexed.contains(itemType) && dateHint != null) {
-                        dailyIndexName = getDailyIndex(dateHint);
+                    String monthlyIndexName = indexName;
+                    if (itemsMonthlyIndexed.contains(itemType) && dateHint != null) {
+                        monthlyIndexName = getMonthlyIndex(dateHint);
                     }
-                    if (itemsDailyIndexed.contains(itemType) && dateHint == null) {
+                    if (itemsMonthlyIndexed.contains(itemType) && dateHint == null) {
                         PartialList<T> r = query(QueryBuilders.idsQuery(itemType).ids(itemId), null, clazz, 0, 1, null);
                         if (r.size() > 0) {
                             return r.get(0);
                         }
                         return null;
                     } else {
-                        GetResponse response = client.prepareGet(dailyIndexName, itemType, itemId)
+                        GetResponse response = client.prepareGet(monthlyIndexName, itemType, itemId)
                                 .execute()
                                 .actionGet();
                         if (response.isExists()) {
@@ -396,6 +432,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             return null;
                         }
                     }
+                } catch (IndexMissingException e) {
+                    logger.debug("No index found for itemType=" + clazz.getName() + "itemId=" + itemId, e);
                 } catch (IllegalAccessException e) {
                     logger.error("Error loading itemType=" + clazz.getName() + "itemId=" + itemId, e);
                 } catch (Exception t) {
@@ -415,12 +453,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String source = CustomObjectMapper.getObjectMapper().writeValueAsString(item);
                     String itemType = (String) item.getItemType();
-                    IndexRequestBuilder indexBuilder = client.prepareIndex(itemsDailyIndexed.contains(itemType) ? getDailyIndex(((TimestampedItem) item).getTimeStamp()) : indexName, itemType, item.getItemId())
+                    IndexRequestBuilder indexBuilder = client.prepareIndex(itemsMonthlyIndexed.contains(itemType) ? getMonthlyIndex(((TimestampedItem) item).getTimeStamp()) : indexName, itemType, item.getItemId())
                             .setSource(source);
                     if (routingByType.containsKey(itemType)) {
                         indexBuilder = indexBuilder.setRouting(routingByType.get(itemType));
                     }
-                    indexBuilder.execute().actionGet();
+                    try {
+                        indexBuilder.execute().actionGet();
+                    } catch (IndexMissingException e) {
+                        if (itemsMonthlyIndexed.contains(itemType)) {
+                            getMonthlyIndex(((TimestampedItem) item).getTimeStamp(), true);
+                            indexBuilder.execute().actionGet();
+                        }
+                    }
                     return true;
                 } catch (IOException e) {
                     logger.error("Error saving item " + item, e);
@@ -442,15 +487,17 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) {
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
-                    String dailyIndexName = indexName;
-                    if (itemsDailyIndexed.contains(itemType) && dateHint != null) {
-                        dailyIndexName = getDailyIndex(dateHint);
+                    String monthlyIndexName = indexName;
+                    if (itemsMonthlyIndexed.contains(itemType) && dateHint != null) {
+                        monthlyIndexName = getMonthlyIndex(dateHint);
                     }
 
-                    client.prepareUpdate(dailyIndexName, itemType, itemId).setDoc(source)
+                    client.prepareUpdate(monthlyIndexName, itemType, itemId).setDoc(source)
                             .execute()
                             .actionGet();
                     return true;
+                } catch (IndexMissingException e) {
+                    logger.debug("No index found for itemType=" + clazz.getName() + "itemId=" + itemId, e);
                 } catch (NoSuchFieldException e) {
                     logger.error("Error updating item " + itemId, e);
                 } catch (IllegalAccessException e) {
@@ -470,7 +517,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
 
-                    client.prepareDelete(itemsDailyIndexed.contains(itemType) ? indexName + "-*" : indexName, itemType, itemId)
+                    client.prepareDelete(itemsMonthlyIndexed.contains(itemType) ? indexName + "-*" : indexName, itemType, itemId)
                             .execute().actionGet();
                     return true;
                 } catch (Exception e) {
@@ -487,7 +534,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
 
-                    client.prepareDeleteByQuery(itemsDailyIndexed.contains(itemType) ? indexName + "-*" : indexName)
+                    client.prepareDeleteByQuery(itemsMonthlyIndexed.contains(itemType) ? indexName + "-*" : indexName)
                             .setQuery(conditionESQueryBuilderDispatcher.getQueryBuilder(query))
                             .execute().actionGet();
                     return true;
@@ -705,7 +752,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
             @Override
             protected Long execute(Object... args) {
-                SearchResponse response = client.prepareSearch(itemsDailyIndexed.contains(itemType) ? indexName + "-*" : indexName)
+                SearchResponse response = client.prepareSearch(itemsMonthlyIndexed.contains(itemType) ? indexName + "-*" : indexName)
                         .setTypes(itemType)
                         .setSearchType(SearchType.COUNT)
                         .setQuery(QueryBuilders.matchAllQuery())
@@ -728,7 +775,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 long totalHits = 0;
                 try {
                     String itemType = getItemType(clazz);
-                    SearchRequestBuilder requestBuilder = client.prepareSearch(itemsDailyIndexed.contains(itemType) ? indexName + "-*" : indexName)
+                    SearchRequestBuilder requestBuilder = client.prepareSearch(itemsMonthlyIndexed.contains(itemType) ? indexName + "-*" : indexName)
                             .setTypes(itemType)
                             .setFetchSource(true)
                             .setQuery(query)
@@ -781,7 +828,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Map<String, Long> execute(Object... args) {
                 Map<String, Long> results = new LinkedHashMap<String, Long>();
 
-                SearchRequestBuilder builder = client.prepareSearch(itemsDailyIndexed.contains(itemType) ? indexName + "-*" : indexName)
+                SearchRequestBuilder builder = client.prepareSearch(itemsMonthlyIndexed.contains(itemType) ? indexName + "-*" : indexName)
                         .setTypes(itemType)
                         .setSearchType(SearchType.COUNT)
                         .setQuery(QueryBuilders.matchAllQuery());
@@ -926,6 +973,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         clusterNode.setSecureHostAddress(nodeInfo.getSettings().get("node.contextserver.secureAddress"));
                         clusterNode.setSecurePort(Integer.parseInt(nodeInfo.getSettings().get("node.contextserver.securePort")));
                         clusterNode.setMaster(nodeInfo.getNode().isMasterNode());
+                        clusterNode.setData(nodeInfo.getNode().isDataNode());
                         clusterNodes.put(nodeInfo.getNode().getId(), clusterNode);
                     }
                 }
@@ -1067,7 +1115,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Map<String, Double> execute(Object... args) {
                 Map<String, Double> results = new LinkedHashMap<String, Double>();
 
-                SearchRequestBuilder builder = client.prepareSearch(itemsDailyIndexed.contains(itemType) ? indexName + "-*" : indexName)
+                SearchRequestBuilder builder = client.prepareSearch(itemsMonthlyIndexed.contains(itemType) ? indexName + "-*" : indexName)
                         .setTypes(itemType)
                         .setSearchType(SearchType.COUNT)
                         .setQuery(QueryBuilders.matchAllQuery());

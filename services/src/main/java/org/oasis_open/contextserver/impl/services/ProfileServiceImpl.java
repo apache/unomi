@@ -64,6 +64,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     private Timer purgeProfileTimer;
 
+    private List<PropertyType> allPropertyTypes;
+
     public ProfileServiceImpl() {
         logger.info("Initializing profile service...");
     }
@@ -188,6 +190,16 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 }
             };
 //            purgeProfileTimer.scheduleAtFixedRate(task, getDay(1).getTime(), purgeProfileInterval);
+
+
+            task = new TimerTask() {
+                @Override
+                public void run() {
+                    allPropertyTypes = persistenceService.getAllItems(PropertyType.class);
+                }
+            };
+            purgeProfileTimer.scheduleAtFixedRate(task, 0, 1000);
+
             logger.info("Profile purge: purge scheduled with an interval of {} days", purgeProfileInterval);
         } else {
             logger.info("Profile purge: No purge scheduled");
@@ -527,8 +539,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     public Session loadSession(String sessionId, Date dateHint) {
         Session s = persistenceService.load(sessionId, dateHint, Session.class);
         if (s == null && dateHint != null) {
-            Date yesterday = new Date(dateHint.getTime() - (24L * 60L * 60L * 1000L));
-            s = persistenceService.load(sessionId, yesterday, Session.class);
+            GregorianCalendar gc = new GregorianCalendar();
+            gc.setTime(dateHint);
+            if (gc.get(Calendar.DAY_OF_MONTH) == 1) {
+                gc.add(Calendar.DAY_OF_MONTH, -1);
+                s = persistenceService.load(sessionId, gc.getTime(), Session.class);
+            }
         }
         return s;
     }
@@ -627,7 +643,25 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Collection<PropertyType> getPropertyTypeByMapping(String propertyName) {
-        return persistenceService.query("automaticMappingsFrom", propertyName, "rank", PropertyType.class);
+        Collection<PropertyType> l = new TreeSet<PropertyType>(new Comparator<PropertyType>() {
+            @Override
+            public int compare(PropertyType o1, PropertyType o2) {
+                if (o1.getRank() == o2.getRank()) {
+                    return o1.getMetadata().getName().compareTo(o1.getMetadata().getName());
+                } else if (o1.getRank() < o2.getRank()) {
+                    return -1;
+                } else {
+                    return 1;
+                }
+            }
+        });
+
+        for (PropertyType propertyType : allPropertyTypes) {
+            if (propertyType.getAutomaticMappingsFrom().contains(propertyName)) {
+                l.add(propertyType);
+            }
+        }
+        return l;
     }
 
     public PropertyType getPropertyType(String id) {

@@ -374,7 +374,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 allRules = getAllRules();
             }
         };
-        rulesTimer.scheduleAtFixedRate(task, 0, 1000);
+        rulesTimer.schedule(task, 0, 1000);
     }
 
     public void bundleChanged(BundleEvent event) {

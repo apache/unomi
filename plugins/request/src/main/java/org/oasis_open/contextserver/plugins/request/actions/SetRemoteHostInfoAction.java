@@ -189,7 +189,7 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             session.setProperty("location", locationMap);
             return true;
         } catch (IOException | GeoIp2Exception e) {
-            logger.error("Cannot resolve IP", e);
+            logger.debug("Cannot resolve IP", e);
         }
         return false;
     }
