@@ -266,7 +266,7 @@ index.percolator.allow_unmapped_fields: true
 # gateway.expected_nodes: 2
 
 # Require explicit index creation
-# action.auto_create_index: false
+action.auto_create_index: false
 
 # Protect against accidental close/delete operations
 # on all indices. You can still close/delete individual
