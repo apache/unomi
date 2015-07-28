@@ -244,6 +244,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     client.admin().indices().prepareCreate(indexName).execute().actionGet();
                 }
 
+                for (Map.Entry<String, String> entry : mappings.entrySet()) {
+                    createMapping(entry.getKey(), entry.getValue(), indexName);
+                }
+
                 client.admin().indices().preparePutTemplate(indexName + "_monthlyindex")
                         .setTemplate(indexName + "-*")
                         .setOrder(1)
@@ -375,8 +379,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     content.append(l);
                 }
                 mappings.put(name, content.toString());
-
-                createMapping(name, content.toString(), indexName);
             } catch (Exception e) {
                 logger.error("Error while loading segment definition " + predefinedMappingURL, e);
             }
