@@ -185,6 +185,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void start() {
 
+        loadPredefinedMappings(bundleContext);
+
         // on startup
         new InClassLoaderExecute<Object>() {
             public Object execute(Object... args) {
@@ -256,7 +258,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             }
         }.executeInClassLoader();
 
-        loadPredefinedMappings(bundleContext);
 
         bundleContext.addBundleListener(this);
 
