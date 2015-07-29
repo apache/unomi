@@ -22,35 +22,23 @@ package org.oasis_open.contextserver.persistence.spi.aggregate;
  * #L%
  */
 
-import org.oasis_open.contextserver.api.query.DateRange;
+import org.oasis_open.contextserver.api.query.IpRange;
 
 import java.util.List;
 
-public class DateRangeAggregate extends BaseAggregate{
-
-    public DateRangeAggregate(String field, String format, List<DateRange> dateRanges) {
+public class IpRangeAggregate extends BaseAggregate{
+    public IpRangeAggregate(String field, List<IpRange> ranges) {
         super(field);
-        this.format = format;
-        this.dateRanges = dateRanges;
+        this.ranges = ranges;
     }
 
-    private String format;
+    private List<IpRange> ranges;
 
-    private List<DateRange> dateRanges;
-
-    public List<DateRange> getDateRanges() {
-        return dateRanges;
+    public List<IpRange> getRanges() {
+        return ranges;
     }
 
-    public void setDateRanges(List<DateRange> dateRanges) {
-        this.dateRanges = dateRanges;
-    }
-
-    public String getFormat() {
-        return format;
-    }
-
-    public void setFormat(String format) {
-        this.format = format;
+    public void setRanges(List<IpRange> ranges) {
+        this.ranges = ranges;
     }
 }

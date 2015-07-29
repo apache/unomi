@@ -22,13 +22,13 @@ package org.oasis_open.contextserver.api.query;
  * #L%
  */
 
-public class GenericRange {
-    public GenericRange() {
+public class IpRange {
+    public IpRange() {
     }
 
     private String key;
-    private Object from;
-    private Object to;
+    private String from;
+    private String to;
 
     public String getKey() {
         return key;
@@ -38,19 +38,19 @@ public class GenericRange {
         this.key = key;
     }
 
-    public Object getFrom() {
+    public String getFrom() {
         return from;
     }
 
-    public void setFrom(Object from) {
+    public void setFrom(String from) {
         this.from = from;
     }
 
-    public Object getTo() {
+    public String getTo() {
         return to;
     }
 
-    public void setTo(Object to) {
+    public void setTo(String to) {
         this.to = to;
     }
 }

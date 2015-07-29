@@ -22,10 +22,11 @@ package org.oasis_open.contextserver.api;
  * #L%
  */
 
-import org.oasis_open.contextserver.api.query.GenericRange;
+import org.oasis_open.contextserver.api.query.DateRange;
+import org.oasis_open.contextserver.api.query.IpRange;
+import org.oasis_open.contextserver.api.query.NumericRange;
 
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.util.*;
 
@@ -36,7 +37,9 @@ public class PropertyType extends MetadataItem {
     private String valueTypeId;
     private ValueType valueType;
     private String defaultValue;
-    private List<GenericRange> ranges = new ArrayList<>();
+    private List<DateRange> dateRanges = new ArrayList<>();
+    private List<NumericRange> numericRanges = new ArrayList<>();
+    private List<IpRange> ipRanges = new ArrayList<>();
     private Set<String> automaticMappingsFrom;
     private double rank;
     private String mergeStrategy;
@@ -128,12 +131,28 @@ public class PropertyType extends MetadataItem {
         this.mergeStrategy = mergeStrategy;
     }
 
-    public List<GenericRange> getRanges() {
-        return ranges;
+    public List<DateRange> getDateRanges() {
+        return dateRanges;
     }
 
-    public void setRanges(List<GenericRange> ranges) {
-        this.ranges = ranges;
+    public void setDateRanges(List<DateRange> dateRanges) {
+        this.dateRanges = dateRanges;
+    }
+
+    public List<NumericRange> getNumericRanges() {
+        return numericRanges;
+    }
+
+    public void setNumericRanges(List<NumericRange> numericRanges) {
+        this.numericRanges = numericRanges;
+    }
+
+    public List<IpRange> getIpRanges() {
+        return ipRanges;
+    }
+
+    public void setIpRanges(List<IpRange> ipRanges) {
+        this.ipRanges = ipRanges;
     }
 
     public boolean isMultivalued() {

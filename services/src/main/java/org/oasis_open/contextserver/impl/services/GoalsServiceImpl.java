@@ -509,11 +509,13 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
                     String interval = (String) query.getAggregate().getParameters().get("interval");
                     String format = (String) query.getAggregate().getParameters().get("format");
                     aggregate = new DateAggregate(query.getAggregate().getProperty(), interval, format);
-                } else if (query.getAggregate().getType().equals("dateRange") && query.getAggregate().getGenericRanges() != null && query.getAggregate().getGenericRanges().size() > 0) {
+                } else if (query.getAggregate().getType().equals("dateRange") && query.getAggregate().getDateRanges() != null && query.getAggregate().getDateRanges().size() > 0) {
                     String format = (String) query.getAggregate().getParameters().get("format");
-                    aggregate = new DateRangeAggregate(query.getAggregate().getProperty(), format, query.getAggregate().getGenericRanges());
-                } else if (query.getAggregate().getType().equals("range") && query.getAggregate().getNumericRanges() != null && query.getAggregate().getNumericRanges().size() > 0) {
+                    aggregate = new DateRangeAggregate(query.getAggregate().getProperty(), format, query.getAggregate().getDateRanges());
+                } else if (query.getAggregate().getType().equals("numericRange") && query.getAggregate().getNumericRanges() != null && query.getAggregate().getNumericRanges().size() > 0) {
                     aggregate = new NumericRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().getNumericRanges());
+                } else if (query.getAggregate().getType().equals("ipRange") && query.getAggregate().ipRanges() != null && query.getAggregate().ipRanges().size() > 0) {
+                    aggregate = new IpRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().ipRanges());
                 }
             }
 

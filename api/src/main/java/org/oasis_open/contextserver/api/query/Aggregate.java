@@ -31,8 +31,10 @@ public class Aggregate {
     private String type;
     private String property;
     private Map<String, Object> parameters = new HashMap<>();
+    private List<DateRange> dateRanges = new ArrayList<>();
     private List<NumericRange> numericRanges = new ArrayList<>();
-    private List<GenericRange> genericRanges = new ArrayList<>();
+    private List<IpRange> ipRanges = new ArrayList<>();
+
 
     public Aggregate() {
     }
@@ -65,15 +67,19 @@ public class Aggregate {
         return numericRanges;
     }
 
-    public void setNumericRanges(List<NumericRange> numericRanges) {
-        this.numericRanges = numericRanges;
+    public List<DateRange> getDateRanges() {
+        return dateRanges;
     }
 
-    public List<GenericRange> getGenericRanges() {
-        return genericRanges;
+    public void setDateRanges(List<DateRange> dateRanges) {
+        this.dateRanges = dateRanges;
     }
 
-    public void setGenericRanges(List<GenericRange> genericRanges) {
-        this.genericRanges = genericRanges;
+    public List<IpRange> ipRanges() {
+        return ipRanges;
+    }
+
+    public void setIpRanges(List<IpRange> ipRanges) {
+        this.ipRanges = ipRanges;
     }
 }

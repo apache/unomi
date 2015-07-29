@@ -22,20 +22,25 @@ package org.oasis_open.contextserver.rest;
  * #L%
  */
 
-import org.oasis_open.contextserver.api.*;
+import org.oasis_open.contextserver.api.Parameter;
+import org.oasis_open.contextserver.api.PluginType;
+import org.oasis_open.contextserver.api.Tag;
+import org.oasis_open.contextserver.api.ValueType;
 import org.oasis_open.contextserver.api.actions.ActionType;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListInitializer;
 import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
 import org.oasis_open.contextserver.api.conditions.initializers.I18nSupport;
-import org.oasis_open.contextserver.api.query.GenericRange;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.ResourceBundle;
 
 public class LocalizationHelper {
 

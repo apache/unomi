@@ -62,6 +62,7 @@ import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramBuild
 import org.elasticsearch.search.aggregations.bucket.missing.MissingBuilder;
 import org.elasticsearch.search.aggregations.bucket.range.RangeBuilder;
 import org.elasticsearch.search.aggregations.bucket.range.date.DateRangeBuilder;
+import org.elasticsearch.search.aggregations.bucket.range.ipv4.IPv4RangeBuilder;
 import org.elasticsearch.search.aggregations.metrics.InternalNumericMetricsAggregation;
 import org.elasticsearch.search.sort.SortOrder;
 import org.oasis_open.contextserver.api.ClusterNode;
@@ -69,7 +70,8 @@ import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.TimestampedItem;
 import org.oasis_open.contextserver.api.conditions.Condition;
-import org.oasis_open.contextserver.api.query.GenericRange;
+import org.oasis_open.contextserver.api.query.DateRange;
+import org.oasis_open.contextserver.api.query.IpRange;
 import org.oasis_open.contextserver.api.query.NumericRange;
 import org.oasis_open.contextserver.api.services.ClusterService;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
@@ -78,10 +80,7 @@ import org.oasis_open.contextserver.persistence.elasticsearch.conditions.Conditi
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
-import org.oasis_open.contextserver.persistence.spi.aggregate.BaseAggregate;
-import org.oasis_open.contextserver.persistence.spi.aggregate.DateAggregate;
-import org.oasis_open.contextserver.persistence.spi.aggregate.DateRangeAggregate;
-import org.oasis_open.contextserver.persistence.spi.aggregate.NumericRangeAggregate;
+import org.oasis_open.contextserver.persistence.spi.aggregate.*;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.ServiceReference;
@@ -285,7 +284,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             public void run() {
                 GregorianCalendar gc = new GregorianCalendar();
                 int thisMonth = gc.get(Calendar.MONTH);
-                gc.add(Calendar.DAY_OF_MONTH,1);
+                gc.add(Calendar.DAY_OF_MONTH, 1);
                 if (gc.get(Calendar.MONTH) != thisMonth) {
                     getMonthlyIndex(gc.getTime(), true);
                 }
@@ -861,18 +860,27 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             }
                         }
                         bucketsAggregation = rangebuilder;
-                    } else if (aggregate instanceof DateRangeAggregate){
+                    } else if (aggregate instanceof DateRangeAggregate) {
                         DateRangeAggregate dateRangeAggregate = (DateRangeAggregate) aggregate;
                         DateRangeBuilder rangebuilder = AggregationBuilders.dateRange("buckets").field(aggregate.getField());
                         if(dateRangeAggregate.getFormat() != null){
                             rangebuilder.format(dateRangeAggregate.getFormat());
                         }
-                        for (GenericRange range : dateRangeAggregate.getRanges()){
+                        for (DateRange range : dateRangeAggregate.getDateRanges()){
                             if(range != null){
                                 rangebuilder.addRange(range.getKey(), range.getFrom(), range.getTo());
                             }
                         }
                         bucketsAggregation = rangebuilder;
+                    } else if (aggregate instanceof IpRangeAggregate) {
+                        IpRangeAggregate ipRangeAggregate = (IpRangeAggregate) aggregate;
+                            IPv4RangeBuilder rangebuilder = AggregationBuilders.ipRange("buckets").field(aggregate.getField());
+                            for (IpRange range : ipRangeAggregate.getRanges()) {
+                                if (range != null) {
+                                    rangebuilder.addRange(range.getKey(), range.getFrom(), range.getTo());
+                                }
+                            }
+                            bucketsAggregation = rangebuilder;
                     }  else {
                         //default
                         bucketsAggregation = AggregationBuilders.terms("buckets").field(aggregate.getField()).size(Integer.MAX_VALUE);
