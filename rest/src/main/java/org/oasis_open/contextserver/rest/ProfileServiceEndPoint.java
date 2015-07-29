@@ -229,7 +229,7 @@ public class ProfileServiceEndPoint {
     @GET
     @Path("/sessions/{sessionId}")
     public Session loadSession(@PathParam("sessionId") String sessionId, @QueryParam("dateHint") String dateHint) throws ParseException {
-        return profileService.loadSession(sessionId, new SimpleDateFormat("yyyy-MM").parse(dateHint));
+        return profileService.loadSession(sessionId, dateHint != null ? new SimpleDateFormat("yyyy-MM").parse(dateHint) : null);
     }
 
     @POST
