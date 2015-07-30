@@ -39,7 +39,11 @@
             <cm:property name="index.name" value="context"/>
             <cm:property name="elasticSearchConfig" value="file:${karaf.etc}/elasticsearch.yml"/>
             <cm:property name="monthlyIndex.numberOfShards" value="3"/>
-            <cm:property name="monthlyIndex.numberOfReplicas" value="1"/>
+            <cm:property name="monthlyIndex.numberOfReplicas" value="0"/>
+            <cm:property name="numberOfShards" value="5"/>
+            <cm:property name="numberOfReplicas" value="0"/>
+            <cm:property name="discovery.zen.ping.multicast.enabled" value="false"/>
+            <cm:property name="node.data" value="true"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -79,8 +83,12 @@
         <property name="conditionESQueryBuilderDispatcher" ref="conditionESQueryBuilderDispatcher"/>
         <property name="clusterName" value="${es.cluster.name}"/>
         <property name="indexName" value="${es.index.name}"/>
-        <property name="numberOfShards" value="${es.monthlyIndex.numberOfShards}"/>
-        <property name="numberOfReplicas" value="${es.monthlyIndex.numberOfReplicas}"/>
+        <property name="monthlyIndexNumberOfShards" value="${es.monthlyIndex.numberOfShards}"/>
+        <property name="monthlyIndexNumberOfReplicas" value="${es.monthlyIndex.numberOfReplicas}"/>
+        <property name="numberOfShards" value="${es.numberOfShards}"/>
+        <property name="numberOfReplicas" value="${es.numberOfReplicas}"/>
+        <property name="nodeData" value="${es.node.data}"/>
+        <property name="discoveryEnabled" value="${es.discovery.zen.ping.multicast.enabled}"/>
         <property name="address" value="${web.contextserver.address}"/>
         <property name="port" value="${web.contextserver.port}"/>
         <property name="secureAddress" value="${web.contextserver.secureAddress}"/>

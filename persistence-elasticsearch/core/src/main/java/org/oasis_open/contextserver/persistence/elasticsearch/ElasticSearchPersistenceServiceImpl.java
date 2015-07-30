@@ -108,8 +108,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private Client client;
     private String clusterName;
     private String indexName;
+    private String monthlyIndexNumberOfShards;
+    private String monthlyIndexNumberOfReplicas;
     private String numberOfShards;
     private String numberOfReplicas;
+    private Boolean nodeData;
+    private Boolean discoveryEnabled;
     private String elasticSearchConfig = null;
     private BundleContext bundleContext;
     private Map<String, String> mappings = new HashMap<String, String>();
@@ -138,12 +142,28 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.indexName = indexName;
     }
 
+    public void setMonthlyIndexNumberOfShards(String monthlyIndexNumberOfShards) {
+        this.monthlyIndexNumberOfShards = monthlyIndexNumberOfShards;
+    }
+
+    public void setMonthlyIndexNumberOfReplicas(String monthlyIndexNumberOfReplicas) {
+        this.monthlyIndexNumberOfReplicas = monthlyIndexNumberOfReplicas;
+    }
+
+    public void setDiscoveryEnabled(Boolean discoveryEnabled) {
+        this.discoveryEnabled = discoveryEnabled;
+    }
+
     public void setNumberOfShards(String numberOfShards) {
         this.numberOfShards = numberOfShards;
     }
 
     public void setNumberOfReplicas(String numberOfReplicas) {
         this.numberOfReplicas = numberOfReplicas;
+    }
+
+    public void setNodeData(Boolean nodeData) {
+        this.nodeData = nodeData;
     }
 
     public void setAddress(String address) {
@@ -218,6 +238,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
 
                 settingsBuilder.put("cluster.name", clusterName)
+                        .put("node.data", nodeData)
+                        .put("discovery.zen.ping.multicast.enabled", discoveryEnabled)
+                        .put("index.number_of_replicas", numberOfReplicas)
+                        .put("index.number_of_shards", numberOfShards)
                         .put("node.contextserver.address", address)
                         .put("node.contextserver.port", port)
                         .put("node.contextserver.secureAddress", secureAddress)
@@ -251,8 +275,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         .setTemplate(indexName + "-*")
                         .setOrder(1)
                         .setSettings(ImmutableSettings.settingsBuilder()
-                                .put("number_of_shards", Integer.parseInt(numberOfShards))
-                                .put("number_of_replicas", Integer.parseInt(numberOfReplicas))
+                                .put("number_of_shards", Integer.parseInt(monthlyIndexNumberOfShards))
+                                .put("number_of_replicas", Integer.parseInt(monthlyIndexNumberOfReplicas))
                                 .build()).execute().actionGet();
 
                 getMonthlyIndex(new Date(), true);
