@@ -1,20 +1,55 @@
 {
-    "id": "geoLocationSessionCondition",
-    "parentCondition" : {
-        "type": "profilePropertyCondition",
-        "parameterValues": {
-            "propertyName": "properties.countryCode",
-            "propertyValues": "parameter::countries",
-            "comparisonOperator": "in"
-        }
-    },
-    "tags": [ "geographic", "sessionCondition" ],
-    "parameters": [
+  "id": "geoLocationSessionCondition",
+  "parentCondition" : {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "operator": "and",
+      "subConditions" : [
         {
-            "id": "countries",
-            "type": "string",
-            "multivalued": true,
-            "choiceListInitializerFilter": "(initializerId=country)"
+          "type": "profilePropertyCondition",
+          "parameterValues" : {"propertyName": "properties.sessionCountryCode",
+            "propertyValues": "parameter::country",
+            "comparisonOperator": "equals"}
+        },
+        {
+          "type": "profilePropertyCondition",
+          "parameterValues" : {"propertyName": "properties.sessionAdminSubDiv1",
+            "propertyValues": "parameter::admin1",
+            "comparisonOperator": "equals"}
+        },
+        {
+          "type": "profilePropertyCondition",
+          "parameterValues" : {"propertyName": "properties.sessionAdminSubDiv2",
+            "propertyValues": "parameter::admin2",
+            "comparisonOperator": "equals"}
+        },
+        {
+          "type": "profilePropertyCondition",
+          "parameterValues" : {"propertyName": "properties.sessionCity",
+            "propertyValues": "parameter::city",
+            "comparisonOperator": "equals"}
         }
-    ]
+      ]
+    }
+  },
+  "tags": [ "geographic", "sessionCondition" ],
+  "parameters": [
+    {
+      "id": "country",
+      "type": "string",
+      "choiceListInitializerFilter": "(initializerId=country)"
+    },
+    {
+      "id": "admin1",
+      "type": "string"
+    },
+    {
+      "id": "admin2",
+      "type": "string"
+    },
+    {
+      "id": "city",
+      "type": "string"
+    }
+  ]
 }

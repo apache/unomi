@@ -82,9 +82,12 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             } else if (!httpServletRequest.getRemoteAddr().equals("127.0.0.1") && IPV4.matcher(httpServletRequest.getRemoteAddr()).matches()) {
                 ipLookup(httpServletRequest.getRemoteAddr(), session);
             } else {
-                session.setProperty("countryCode", "CH");
-                session.setProperty("countryName", "Switzerland");
-                session.setProperty("city", "Geneva");
+                session.setProperty("sessionCountryCode", "CH");
+                session.setProperty("sessionCountryName", "Switzerland");
+                session.setProperty("sessionCity", "Geneva");
+                session.setProperty("sessionAdminSubDiv1", "Geneva");
+                session.setProperty("sessionAdminSubDiv2", "");
+                session.setProperty("sessionIsp", "Cablecom");
                 Map<String, Double> location = new HashMap<String, Double>();
                 location.put("lat", 46.1884341);
                 location.put("lon", 6.1282508);
@@ -125,14 +128,19 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             inputStream = url.openConnection().getInputStream();
             JsonReader reader = Json.createReader(inputStream);
             JsonObject location = (JsonObject) reader.read();
-            session.setProperty("countryCode", location.getString("country_code"));
-            session.setProperty("countryName", location.getString("country"));
-            session.setProperty("city", location.getString("city"));
+            setLocationPropOnSession(session, location, "country_code", "sessionCountryCode");
+            setLocationPropOnSession(session, location, "country", "sessionCountryName");
+            setLocationPropOnSession(session, location, "city", "sessionCity");
+            setLocationPropOnSession(session, location, "1st-order administrative division", "sessionAdminSubDiv1");
+            setLocationPropOnSession(session, location, "2nd-order administrative division", "sessionAdminSubDiv2");
+            setLocationPropOnSession(session, location, "isp", "sessionIsp");
 
-            Map<String, Double> locationMap = new HashMap<String, Double>();
-            locationMap.put("lat", location.getJsonNumber("latitude").doubleValue());
-            locationMap.put("lon", location.getJsonNumber("longitude").doubleValue());
-            session.setProperty("location", locationMap);
+            if(location.get("latitude") != null && location.get("latitude") != null){
+                Map<String, Double> locationMap = new HashMap<String, Double>();
+                locationMap.put("lat", location.getJsonNumber("latitude").doubleValue());
+                locationMap.put("lon", location.getJsonNumber("longitude").doubleValue());
+                session.setProperty("location", locationMap);
+            }
             return true;
         } catch (IOException e) {
             logger.error("Cannot get geoip database",e);
@@ -146,6 +154,14 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             }
         }
         return false;
+    }
+
+    private void setLocationPropOnSession(Session session, JsonObject location, String prop, String sessionProp) {
+        try {
+            session.setProperty(sessionProp, location.getString(prop));
+        } catch (Exception e){
+            // do nothing
+        }
     }
 
     @PostConstruct
