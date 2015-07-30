@@ -195,9 +195,17 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         CityResponse cityResponse = null;
         try {
             cityResponse = databaseReader.city(InetAddress.getByName(remoteAddr));
-            session.setProperty("countryCode", cityResponse.getCountry().getIsoCode());
-            session.setProperty("countryName", cityResponse.getCountry().getName());
-            session.setProperty("city", cityResponse.getCity().getName());
+
+            session.setProperty("sessionCountryCode", cityResponse.getCountry().getIsoCode());
+            session.setProperty("sessionCountryName", cityResponse.getCountry().getName());
+            session.setProperty("sessionCity", cityResponse.getCity().getName());
+            if (cityResponse.getSubdivisions().size() > 0) {
+                session.setProperty("sessionAdminSubDiv1", cityResponse.getSubdivisions().get(0).getIsoCode());
+            }
+            if (cityResponse.getSubdivisions().size() > 1) {
+                session.setProperty("sessionAdminSubDiv2", cityResponse.getSubdivisions().get(1).getIsoCode());
+            }
+            session.setProperty("sessionIsp", databaseReader.isp(InetAddress.getByName(remoteAddr)).getIsp());
 
             Map<String, Double> locationMap = new HashMap<String, Double>();
             locationMap.put("lat", cityResponse.getLocation().getLatitude());
