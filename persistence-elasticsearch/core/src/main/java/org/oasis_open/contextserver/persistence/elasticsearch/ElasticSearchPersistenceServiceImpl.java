@@ -375,7 +375,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 client.admin().indices().prepareCreate(monthlyIndexName).execute().actionGet();
 
                 for (Map.Entry<String, String> entry : mappings.entrySet()) {
-                    createMapping(entry.getKey(), entry.getValue(), monthlyIndexName);
+                    if (itemsMonthlyIndexed.contains(entry.getKey())) {
+                        createMapping(entry.getKey(), entry.getValue(), monthlyIndexName);
+                    } else {
+                        createMapping(entry.getKey(), entry.getValue(), indexName);
+                    }
                 }
             }
         }
