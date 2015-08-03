@@ -87,7 +87,9 @@ public interface PersistenceService {
 
     void purge(Date date);
 
-    <T extends Item> PartialList<T>  rangeQuery(String s, String from, String to, String sortBy, Class<T> clazz, int offset, int size);
+    <T extends Item> PartialList<T> rangeQuery(String s, String from, String to, String sortBy, Class<T> clazz, int offset, int size);
 
-    Map<String,Double> getSingleValuesMetrics(Condition condition, String[] metrics, String field, String type);
+    Map<String, Double> getSingleValuesMetrics(Condition condition, String[] metrics, String field, String type);
+
+    boolean createIndex(final String indexName);
 }

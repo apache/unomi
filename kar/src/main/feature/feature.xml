@@ -48,6 +48,8 @@
         <bundle start-level="77">mvn:org.oasis-open.contextserver/context-server-services/1.0-SNAPSHOT</bundle>
         <bundle start-level="77">mvn:org.jahia.unomi/cxs-lists-extension-services/1.0-SNAPSHOT</bundle>
         <bundle start-level="77">mvn:org.jahia.unomi/cxs-lists-extension-rest/1.0-SNAPSHOT</bundle>
+        <bundle start-level="77">mvn:org.jahia.unomi/cxs-geonames-services/1.0-SNAPSHOT</bundle>
+        <bundle start-level="77">mvn:org.jahia.unomi/cxs-geonames-rest/1.0-SNAPSHOT</bundle>
         <bundle start-level="78">mvn:org.oasis-open.contextserver/context-server-rest/1.0-SNAPSHOT</bundle>
     </feature>
 </features>

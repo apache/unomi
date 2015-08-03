@@ -8,25 +8,25 @@
         {
           "type": "profilePropertyCondition",
           "parameterValues" : {"propertyName": "properties.sessionCountryCode",
-            "propertyValues": "parameter::country",
+            "propertyValue": "parameter::country",
             "comparisonOperator": "equals"}
         },
         {
           "type": "profilePropertyCondition",
           "parameterValues" : {"propertyName": "properties.sessionAdminSubDiv1",
-            "propertyValues": "parameter::admin1",
+            "propertyValue": "parameter::admin1",
             "comparisonOperator": "equals"}
         },
         {
           "type": "profilePropertyCondition",
           "parameterValues" : {"propertyName": "properties.sessionAdminSubDiv2",
-            "propertyValues": "parameter::admin2",
+            "propertyValue": "parameter::admin2",
             "comparisonOperator": "equals"}
         },
         {
           "type": "profilePropertyCondition",
           "parameterValues" : {"propertyName": "properties.sessionCity",
-            "propertyValues": "parameter::city",
+            "propertyValue": "parameter::city",
             "comparisonOperator": "equals"}
         }
       ]

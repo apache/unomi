@@ -1,0 +1,76 @@
+{
+  "geonameEntry": {
+    "properties": {
+      "admin1Code": {
+        "type": "string",
+        "index": "not_analyzed"
+      },
+      "admin2Code": {
+        "type": "string",
+        "index": "not_analyzed"
+      },
+      "admin3Code": {
+        "type": "string",
+        "index": "not_analyzed"
+      },
+      "admin4Code": {
+        "type": "string",
+        "index": "not_analyzed"
+      },
+      "alternatenames": {
+        "type": "string"
+      },
+      "asciiname": {
+        "type": "string"
+      },
+      "cc2": {
+        "type": "string"
+      },
+      "countryCode": {
+        "type": "string",
+        "index": "not_analyzed"
+      },
+      "dem": {
+        "type": "string",
+        "index": "not_analyzed"
+      },
+      "elevation": {
+        "type": "long"
+      },
+      "featureClass": {
+        "type": "string",
+        "index": "not_analyzed"
+      },
+      "featureCode": {
+        "type": "string",
+        "index": "not_analyzed"
+      },
+      "itemId": {
+        "type": "string",
+        "index": "not_analyzed"
+      },
+      "itemType": {
+        "type": "string",
+        "index": "not_analyzed"
+      },
+      "location": {
+        "type": "geo_point"
+      },
+      "modificationDate": {
+        "type": "date",
+        "format": "dateOptionalTime"
+      },
+      "name": {
+        "type": "string",
+        "index": "not_analyzed"
+      },
+      "population": {
+        "type": "long"
+      },
+      "timezone": {
+        "type": "string",
+        "index": "not_analyzed"
+      }
+    }
+  }
+}

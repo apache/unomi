@@ -104,6 +104,11 @@
             <map>
             </map>
         </property>
+        <property name="indexNames">
+            <map>
+                <entry key="geonameEntry" value="geonames"/>
+            </map>
+        </property>
     </bean>
 
 </blueprint>

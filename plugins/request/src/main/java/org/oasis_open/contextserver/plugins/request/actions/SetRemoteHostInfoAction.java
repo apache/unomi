@@ -37,15 +37,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.InetAddress;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -85,8 +80,8 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
                 session.setProperty("sessionCountryCode", "CH");
                 session.setProperty("sessionCountryName", "Switzerland");
                 session.setProperty("sessionCity", "Geneva");
-                session.setProperty("sessionAdminSubDiv1", "Geneva");
-                session.setProperty("sessionAdminSubDiv2", "");
+                session.setProperty("sessionAdminSubDiv1", "GE");
+                session.setProperty("sessionAdminSubDiv2", "2500");
                 session.setProperty("sessionIsp", "Cablecom");
                 Map<String, Double> location = new HashMap<String, Double>();
                 location.put("lat", 46.1884341);
@@ -111,57 +106,10 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
     }
 
     private boolean ipLookup(String remoteAddr, Session session) {
-        boolean result = false;
         if (databaseReader != null) {
-            result = ipLookupInDatabase(remoteAddr, session);
-        } else {
-            result = ipLookupInFreeWebService(remoteAddr, session);
-        }
-        return result;
-    }
-
-    private boolean ipLookupInFreeWebService(String remoteAddr, Session session) {
-        final URL url;
-        InputStream inputStream = null;
-        try {
-            url = new URL("http://www.telize.com/geoip/" + remoteAddr);
-            inputStream = url.openConnection().getInputStream();
-            JsonReader reader = Json.createReader(inputStream);
-            JsonObject location = (JsonObject) reader.read();
-            setLocationPropOnSession(session, location, "country_code", "sessionCountryCode");
-            setLocationPropOnSession(session, location, "country", "sessionCountryName");
-            setLocationPropOnSession(session, location, "city", "sessionCity");
-            setLocationPropOnSession(session, location, "1st-order administrative division", "sessionAdminSubDiv1");
-            setLocationPropOnSession(session, location, "2nd-order administrative division", "sessionAdminSubDiv2");
-            setLocationPropOnSession(session, location, "isp", "sessionIsp");
-
-            if(location.get("latitude") != null && location.get("latitude") != null){
-                Map<String, Double> locationMap = new HashMap<String, Double>();
-                locationMap.put("lat", location.getJsonNumber("latitude").doubleValue());
-                locationMap.put("lon", location.getJsonNumber("longitude").doubleValue());
-                session.setProperty("location", locationMap);
-            }
-            return true;
-        } catch (IOException e) {
-            logger.error("Cannot get geoip database",e);
-        } finally {
-            if (inputStream != null) {
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-                    logger.error("Cannot close", e);
-                }
-            }
+            return ipLookupInDatabase(remoteAddr, session);
         }
         return false;
-    }
-
-    private void setLocationPropOnSession(Session session, JsonObject location, String prop, String sessionProp) {
-        try {
-            session.setProperty(sessionProp, location.getString(prop));
-        } catch (Exception e){
-            // do nothing
-        }
     }
 
     @PostConstruct
@@ -199,11 +147,13 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             session.setProperty("sessionCountryCode", cityResponse.getCountry().getIsoCode());
             session.setProperty("sessionCountryName", cityResponse.getCountry().getName());
             session.setProperty("sessionCity", cityResponse.getCity().getName());
+            session.setProperty("sessionCityId", cityResponse.getCity().getGeoNameId());
+
             if (cityResponse.getSubdivisions().size() > 0) {
-                session.setProperty("sessionAdminSubDiv1", cityResponse.getSubdivisions().get(0).getIsoCode());
+                session.setProperty("sessionAdminSubDiv1", cityResponse.getSubdivisions().get(0).getGeoNameId());
             }
             if (cityResponse.getSubdivisions().size() > 1) {
-                session.setProperty("sessionAdminSubDiv2", cityResponse.getSubdivisions().get(1).getIsoCode());
+                session.setProperty("sessionAdminSubDiv2", cityResponse.getSubdivisions().get(1).getGeoNameId());
             }
             session.setProperty("sessionIsp", databaseReader.isp(InetAddress.getByName(remoteAddr)).getIsp());
 
