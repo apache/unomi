@@ -187,8 +187,9 @@
         <module>rest</module>
         <module>wab</module>
         <module>plugins</module>
-        <module>kar</module>
         <module>lists-extension</module>
+        <module>geonames</module>
+        <module>kar</module>
     </modules>
 
     <dependencies>
