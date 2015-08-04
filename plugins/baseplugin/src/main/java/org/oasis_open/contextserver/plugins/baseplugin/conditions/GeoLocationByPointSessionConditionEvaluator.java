@@ -43,11 +43,23 @@ public class GeoLocationByPointSessionConditionEvaluator implements ConditionEva
         try {
             Double latitude1 = Double.parseDouble((String) condition.getParameter("latitude"));
             Double longitude1 = Double.parseDouble((String) condition.getParameter("longitude"));
-            Double latitude2 = Double.parseDouble(BeanUtils.getProperty(item, "properties.location.lat"));
-            Double longitude2 = Double.parseDouble(BeanUtils.getProperty(item, "properties.location.lon"));
+
+            Double latitudeProperty = Double.parseDouble(BeanUtils.getProperty(item, "properties.location.lat"));
+            Double longitudeProperty = Double.parseDouble(BeanUtils.getProperty(item, "properties.location.lon"));
+
+            if (condition.getParameter("latitude2") != null && condition.getParameter("longitude2") != null) {
+                Double latitude2 = Double.parseDouble((String) condition.getParameter("latitude2"));
+                Double longitude2 = Double.parseDouble((String) condition.getParameter("longitude2"));
+
+                return latitudeProperty < Math.max(latitude1, latitude2)  &&
+                        latitudeProperty > Math.min(latitude1, latitude2) &&
+                        longitudeProperty < Math.max(longitude1, longitude2) &&
+                        longitudeProperty > Math.min(longitude1, longitude2);
+            }
+
             DistanceUnit.Distance distance = DistanceUnit.Distance.parseDistance((String) condition.getParameter("distance"));
 
-            double d = GeoDistance.DEFAULT.calculate(latitude1, longitude1, latitude2, longitude2, distance.unit);
+            double d = GeoDistance.DEFAULT.calculate(latitude1, longitude1, latitudeProperty, longitudeProperty, distance.unit);
             return d < distance.value;
         } catch (Exception e) {
             logger.debug("Cannot get properties", e);

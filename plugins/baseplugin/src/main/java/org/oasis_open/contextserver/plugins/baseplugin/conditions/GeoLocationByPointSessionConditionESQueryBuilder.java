@@ -36,9 +36,24 @@ public class GeoLocationByPointSessionConditionESQueryBuilder implements Conditi
         String latitude = (String) condition.getParameter("latitude");
         String longitude = (String) condition.getParameter("longitude");
         String distance = (String) condition.getParameter("distance");
+        double lat = Double.parseDouble(latitude);
+        double lon = Double.parseDouble(longitude);
+
+        String latitude2 = (String) condition.getParameter("latitude2");
+        String longitude2 = (String) condition.getParameter("longitude2");
+
+        if (latitude2 != null && longitude2 != null) {
+            double lat2 = Double.parseDouble(latitude2);
+            double lon2 = Double.parseDouble(longitude2);
+
+            return FilterBuilders.geoBoundingBoxFilter("location")
+                    .bottomLeft(Math.min(lat,lat2), Math.min(lon,lon2))
+                    .topRight(Math.max(lat, lat2), Math.max(lon, lon2));
+        }
+
         return FilterBuilders.geoDistanceFilter("location")
-                .lat(Double.parseDouble(latitude))
-                .lon(Double.parseDouble(longitude))
+                .lat(lat)
+                .lon(lon)
                 .distance(distance);
     }
 
