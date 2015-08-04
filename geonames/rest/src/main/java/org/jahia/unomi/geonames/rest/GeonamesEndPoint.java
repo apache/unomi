@@ -57,6 +57,13 @@ public class GeonamesEndPoint {
         return list;
     }
 
+    @GET
+    @Path("/capitals/{id}")
+    public List<GeonameEntry> getCapitalEntries(@PathParam("id") String id, @HeaderParam("Accept-Language") String language) {
+        List<GeonameEntry> list = geonamesService.getCapitalEntries(id);
+        translate(list, new Locale(language));
+        return list;
+    }
 
     private void translate(List<GeonameEntry> l, Locale locale) {
         for (GeonameEntry entry : l) {

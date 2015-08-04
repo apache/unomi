@@ -168,7 +168,7 @@ public class GeonamesServiceImpl implements GeonamesService {
 
         l.add(getPropertyCondition("featureCode", "propertyValues", CITIES_FEATURE_CODES, "in"));
 
-        PartialList<GeonameEntry> list = persistenceService.query(andCondition, "geo:location:"+lat+":"+lon, GeonameEntry.class, 0, 1);
+        PartialList<GeonameEntry> list = persistenceService.query(andCondition, "geo:location:" + lat + ":" + lon, GeonameEntry.class, 0, 1);
         if (!list.getList().isEmpty()) {
             return getHierarchy(list.getList().get(0));
         }
@@ -194,7 +194,7 @@ public class GeonamesServiceImpl implements GeonamesService {
         }
         if (items.size() > 2) {
             l.add(getPropertyCondition("admin2Code", "propertyValue", items.get(2), "equals"));
-            l.add(getPropertyCondition("population", "propertyValueInteger", 10000, "greaterThan"));
+//            l.add(getPropertyCondition("population", "propertyValueInteger", 10000, "greaterThan"));
         }
 
         return getChildrenEntries(andCondition, featureCodeCondition, offset, size, items.size());
@@ -210,6 +210,43 @@ public class GeonamesServiceImpl implements GeonamesService {
             r = persistenceService.query(andCondition, null, GeonameEntry.class, offset, size);
         }
         return r;
+    }
+
+    public List<GeonameEntry> getCapitalEntries(String itemId) {
+        GeonameEntry entry = persistenceService.load(itemId, GeonameEntry.class);
+        List<String> featureCodes;
+
+        List<Condition> l = new ArrayList<Condition>();
+        Condition andCondition = new Condition();
+        andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
+        andCondition.setParameter("operator", "and");
+        andCondition.setParameter("subConditions", l);
+
+        l.add(getPropertyCondition("countryCode", "propertyValue", entry.getCountryCode(), "equals"));
+
+        if (COUNTRY_FEATURE_CODES.contains(entry.getFeatureCode())) {
+            featureCodes = Arrays.asList("PPLC");
+        } else if (ADM1_FEATURE_CODES.contains(entry.getFeatureCode())) {
+            featureCodes = Arrays.asList("PPLA", "PPLC");
+            l.add(getPropertyCondition("admin1Code", "propertyValue", entry.getAdmin1Code(), "equals"));
+        } else if (ADM2_FEATURE_CODES.contains(entry.getFeatureCode())) {
+            featureCodes = Arrays.asList("PPLA2","PPLA", "PPLC");
+            l.add(getPropertyCondition("admin1Code", "propertyValue", entry.getAdmin1Code(), "equals"));
+            l.add(getPropertyCondition("admin2Code", "propertyValue", entry.getAdmin2Code(), "equals"));
+        } else {
+            return Collections.emptyList();
+        }
+
+        Condition featureCodeCondition = new Condition();
+        featureCodeCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+        featureCodeCondition.setParameter("propertyName", "featureCode");
+        featureCodeCondition.setParameter("propertyValues", featureCodes);
+        featureCodeCondition.setParameter("comparisonOperator", "in");
+        l.add(featureCodeCondition);
+
+        List<GeonameEntry> entries = persistenceService.query(andCondition, null, GeonameEntry.class);
+        return getHierarchy(entries.get(0));
+//        getPropertyCondition()
     }
 
     private Condition getPropertyCondition(String name, String propertyValueField, Object value, String operator) {
