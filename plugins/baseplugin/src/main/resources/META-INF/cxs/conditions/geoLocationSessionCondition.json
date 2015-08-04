@@ -25,7 +25,7 @@
         },
         {
           "type": "profilePropertyCondition",
-          "parameterValues" : {"propertyName": "properties.sessionCity",
+          "parameterValues" : {"propertyName": "properties.sessionCityId",
             "propertyValue": "parameter::city",
             "comparisonOperator": "equals"}
         }
