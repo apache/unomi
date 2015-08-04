@@ -15,17 +15,17 @@
             "profileId": "usVisitor",
             "properties": {
                 "operatingSystemName": "OS X 10.9 Mavericks",
-                "countryName": "United States",
+                "sessionCountryName": "United States",
                 "location": {
                     "lat":37.422,
                     "lon":-122.084058
                 },
                 "userAgentVersion": "37.0.2062.120",
-                "countryCode": "US",
+                "sessionCountryCode": "US",
                 "deviceCategory": "Personal computer",
                 "operatingSystemFamily": "OS X",
                 "userAgentName": "Chrome",
-                "city": "Mountain View",
+                "sessionCity": "Mountain View",
                 "remoteHost": "www.google.com",
                 "remoteAddr": "66.249.66.1"
             },

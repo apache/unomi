@@ -14,17 +14,17 @@
         "profileId": "nonUsVisitor",
         "properties": {
             "operatingSystemName": "OS X 10.9 Mavericks",
-            "countryName": "Switzerland",
+            "sessionCountryName": "Switzerland",
             "location": {
                 "lat":46.1884341,
                 "lon":6.1282508
             },
-            "userAgentVersion": "37.0.2062.120",
-            "countryCode": "CH",
+        "userAgentVersion": "37.0.2062.120",
+            "sessionCountryCode": "CH",
             "deviceCategory": "Personal computer",
             "operatingSystemFamily": "OS X",
             "userAgentName": "Chrome",
-            "city": "Lausanne",
+            "sessionCity": "Lausanne",
             "remoteHost": "www.epfl.ch",
             "remoteAddr": "128.178.50.12"
         },

@@ -14,17 +14,17 @@
         "profileId": "googleBot",
         "properties": {
             "operatingSystemName": "unknown",
-            "countryName": "United States",
+            "sessionCountryName": "United States",
             "location": {
                 "lat":37.422,
                 "lon":-122.084058
             },
             "userAgentVersion": "2.1",
-            "countryCode": "US",
+            "sessionCountryCode": "US",
             "deviceCategory": "Other",
             "operatingSystemFamily": "unknown",
             "userAgentName": "Googlebot/2.1",
-            "city": "Mountain View",
+            "sessionCity": "Mountain View",
             "remoteHost": "www.google.com",
             "remoteAddr": "66.249.66.1"
         },
