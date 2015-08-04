@@ -32,6 +32,7 @@
         <configfile finalname="/etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg">mvn:org.oasis-open.contextserver/context-server-persistence-elasticsearch-core/1.0-SNAPSHOT/cfg/elasticsearchcfg</configfile>
         <configfile finalname="/etc/org.oasis_open.contextserver.plugins.request.cfg">mvn:org.oasis-open.contextserver/context-server-plugins-request/1.0-SNAPSHOT/cfg/requestcfg</configfile>
         <configfile finalname="/etc/org.oasis_open.contextserver.services.cfg">mvn:org.oasis-open.contextserver/context-server-services/1.0-SNAPSHOT/cfg/servicescfg</configfile>
+        <configfile finalname="/etc/org.oasis_open.contextserver.geonames.cfg">mvn:org.jahia.unomi/cxs-geonames-services/1.0-SNAPSHOT/cfg/geonamescfg</configfile>
         <configfile finalname="/etc/elasticsearch.yml">mvn:org.oasis-open.contextserver/context-server-persistence-elasticsearch-core/1.0-SNAPSHOT/yml/elasticsearchconfig</configfile>
         <bundle start-level="75">mvn:commons-io/commons-io/2.4</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-core/2.4.0</bundle>
