@@ -26,16 +26,12 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.services.EventService;
-import org.oasis_open.contextserver.api.services.SegmentService;
 import org.oasis_open.contextserver.api.services.ProfileService;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
-import org.ops4j.pax.cdi.api.OsgiService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -43,23 +39,13 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
 
-@WebServlet(urlPatterns = {"/eventcollector"})
 public class EventsCollectorServlet extends HttpServlet {
     private static final Logger logger = LoggerFactory.getLogger(EventsCollectorServlet.class.getName());
 
     private static final long serialVersionUID = 2008054804885122957L;
 
-    @Inject
-    @OsgiService
     private EventService eventService;
-
-    @Inject
-    @OsgiService
     private ProfileService profileService;
-
-    @Inject
-    @OsgiService
-    private SegmentService segmentService;
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -160,4 +146,11 @@ public class EventsCollectorServlet extends HttpServlet {
         responseWriter.flush();
     }
 
+    public void setEventService(EventService eventService) {
+        this.eventService = eventService;
+    }
+
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
+    }
 }

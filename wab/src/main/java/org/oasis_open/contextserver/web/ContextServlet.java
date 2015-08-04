@@ -30,17 +30,13 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.api.services.ProfileService;
 import org.oasis_open.contextserver.api.services.RulesService;
-import org.oasis_open.contextserver.api.services.SegmentService;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
-import org.ops4j.pax.cdi.api.OsgiService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -52,33 +48,22 @@ import java.util.*;
 /**
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
  */
-@WebServlet(urlPatterns = {"/context.js", "/context.json"})
 public class ContextServlet extends HttpServlet {
     private static final Logger logger = LoggerFactory.getLogger(ContextServlet.class.getName());
 
     private static final long serialVersionUID = 2928875830103325238L;
-    public static final String BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/base.js";
-    public static final String IMPERSONATE_BASE_SCRIPT_LOCATION = "/WEB-INF/javascript/impersonateBase.js";
+    public static final String BASE_SCRIPT_LOCATION = "/javascript/base.js";
+    public static final String IMPERSONATE_BASE_SCRIPT_LOCATION = "/javascript/impersonateBase.js";
     public static final String PROFILE_OVERRIDE_MARKER = "---IGNORE---";
 
-    @Inject
-    @OsgiService
+
     private ProfileService profileService;
-
-    @Inject
-    @OsgiService
-    private SegmentService segmentService;
-
-    @Inject
-    @OsgiService
+    private EventService eventService;
     private RulesService rulesService;
 
     private String profileIdCookieName = "context-profile-id";
 //    private String personaIdCookieName = "context-persona-id";
 
-    @Inject
-    @OsgiService
-    private EventService eventService;
 
     @Override
     public void service(ServletRequest request, ServletResponse response) throws ServletException, IOException {
@@ -393,5 +378,17 @@ public class ContextServlet extends HttpServlet {
 
 
     public void destroy() {
+    }
+
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
+    }
+
+    public void setEventService(EventService eventService) {
+        this.eventService = eventService;
+    }
+
+    public void setRulesService(RulesService rulesService) {
+        this.rulesService = rulesService;
     }
 }
