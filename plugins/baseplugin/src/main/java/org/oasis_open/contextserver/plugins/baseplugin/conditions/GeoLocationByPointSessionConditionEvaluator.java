@@ -41,15 +41,15 @@ public class GeoLocationByPointSessionConditionEvaluator implements ConditionEva
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
         try {
-            Double latitude1 = Double.parseDouble((String) condition.getParameter("latitude"));
-            Double longitude1 = Double.parseDouble((String) condition.getParameter("longitude"));
+            Double latitude1 = (Double) condition.getParameter("latitude");
+            Double longitude1 = (Double) condition.getParameter("longitude");
 
             Double latitudeProperty = Double.parseDouble(BeanUtils.getProperty(item, "properties.location.lat"));
             Double longitudeProperty = Double.parseDouble(BeanUtils.getProperty(item, "properties.location.lon"));
 
             if (condition.getParameter("latitude2") != null && condition.getParameter("longitude2") != null) {
-                Double latitude2 = Double.parseDouble((String) condition.getParameter("latitude2"));
-                Double longitude2 = Double.parseDouble((String) condition.getParameter("longitude2"));
+                Double latitude2 = (Double) condition.getParameter("latitude2");
+                Double longitude2 = (Double) condition.getParameter("longitude2");
 
                 return latitudeProperty < Math.max(latitude1, latitude2)  &&
                         latitudeProperty > Math.min(latitude1, latitude2) &&
@@ -57,7 +57,7 @@ public class GeoLocationByPointSessionConditionEvaluator implements ConditionEva
                         longitudeProperty > Math.min(longitude1, longitude2);
             }
 
-            DistanceUnit.Distance distance = DistanceUnit.Distance.parseDistance((String) condition.getParameter("distance"));
+            DistanceUnit.Distance distance = DistanceUnit.Distance.parseDistance(condition.getParameter("distance").toString());
 
             double d = GeoDistance.DEFAULT.calculate(latitude1, longitude1, latitudeProperty, longitudeProperty, distance.unit);
             return d < distance.value;
