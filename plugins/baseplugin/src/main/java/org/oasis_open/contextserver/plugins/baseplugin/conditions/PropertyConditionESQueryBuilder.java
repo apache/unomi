@@ -23,10 +23,13 @@ package org.oasis_open.contextserver.plugins.baseplugin.conditions;
  */
 
 import org.apache.commons.lang3.ObjectUtils;
+import org.elasticsearch.common.base.Function;
+import org.elasticsearch.common.collect.Lists;
 import org.elasticsearch.common.joda.time.DateTime;
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.oasis_open.contextserver.api.conditions.Condition;
+import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionContextHelper;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 
@@ -44,11 +47,25 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         String name = (String) condition.getParameter("propertyName");
 
         String expectedValue = (String) condition.getParameter("propertyValue");
+        if (expectedValue != null) {
+            expectedValue = ConditionContextHelper.foldToASCII((String) expectedValue);
+        }
         Object expectedValueInteger = condition.getParameter("propertyValueInteger");
         Object expectedValueDate = condition.getParameter("propertyValueDate");
         Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
 
         List<?> expectedValues = (List<?>) condition.getParameter("propertyValues");
+        if (expectedValues != null) {
+            expectedValues = Lists.transform(expectedValues, new Function<Object,Object> () {
+                @Override
+                public Object apply(Object o) {
+                    if (o instanceof String) {
+                        return ConditionContextHelper.foldToASCII((String) o);
+                    }
+                    return o;
+                }
+            });
+        }
         List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
         List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
         List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");

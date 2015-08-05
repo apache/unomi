@@ -22,6 +22,10 @@ package org.oasis_open.contextserver.persistence.elasticsearch;
  * #L%
  */
 
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.miscellaneous.ASCIIFoldingFilter;
+import org.apache.lucene.analysis.miscellaneous.ASCIIFoldingFilterFactory;
+import org.apache.lucene.util.ArrayUtil;
 import org.elasticsearch.action.admin.cluster.node.info.NodeInfo;
 import org.elasticsearch.action.admin.cluster.node.info.NodesInfoResponse;
 import org.elasticsearch.action.admin.cluster.node.stats.NodeStats;
@@ -74,10 +78,7 @@ import org.oasis_open.contextserver.api.query.DateRange;
 import org.oasis_open.contextserver.api.query.IpRange;
 import org.oasis_open.contextserver.api.query.NumericRange;
 import org.oasis_open.contextserver.api.services.ClusterService;
-import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
-import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
-import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator;
-import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
+import org.oasis_open.contextserver.persistence.elasticsearch.conditions.*;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
 import org.oasis_open.contextserver.persistence.spi.aggregate.*;
@@ -267,7 +268,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
                 if (!indexExists) {
                     logger.info("{} index doesn't exist yet, creating it...", indexName);
-                    client.admin().indices().prepareCreate(indexName).execute().actionGet();
+                    internalCreateIndex(indexName);
                 }
 
                 for (Map.Entry<String, String> entry : mappings.entrySet()) {
@@ -377,8 +378,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
             if (!indexExists) {
                 logger.info("{} index doesn't exist yet, creating it...", indexName);
-                client.admin().indices().prepareCreate(monthlyIndexName).execute().actionGet();
-
+                internalCreateIndex(monthlyIndexName);
                 for (Map.Entry<String, String> entry : mappings.entrySet()) {
                     if (itemsMonthlyIndexed.contains(entry.getKey())) {
                         createMapping(entry.getKey(), entry.getValue(), monthlyIndexName);
@@ -595,7 +595,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(indexName).execute().actionGet();
                 boolean indexExists = indicesExistsResponse.isExists();
                 if (!indexExists) {
-                    client.admin().indices().prepareCreate(indexName).execute().actionGet();
+                    internalCreateIndex(indexName);
 
                     for (Map.Entry<String, String> entry : mappings.entrySet()) {
                         if (indexNames.containsKey(entry.getKey()) && indexNames.get(entry.getKey()).equals(indexName)) {
@@ -608,6 +608,31 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             }
         }.executeInClassLoader();
     }
+
+
+    private void internalCreateIndex(String indexName) {
+        client.admin().indices().prepareCreate(indexName)
+                .setSettings("{\n" +
+                        "    \"analysis\": {\n" +
+                        "      \"tokenizer\": {\n" +
+                        "        \"myTokenizer\": {\n" +
+                        "          \"type\":\"pattern\",\n" +
+                        "          \"pattern\":\".*\",\n" +
+                        "          \"group\":0\n" +
+                        "        }\n" +
+                        "      },\n" +
+                        "      \"analyzer\": {\n" +
+                        "        \"folding\": {\n" +
+                        "          \"type\":\"custom\",\n" +
+                        "          \"tokenizer\": \"myTokenizer\",\n" +
+                        "          \"filter\":  [ \"lowercase\", \"asciifolding\" ]\n" +
+                        "        }\n" +
+                        "      }\n" +
+                        "    }\n" +
+                        "}\n")
+                .execute().actionGet();
+    }
+
 
     private boolean createMapping(final String type, final String source, final String indexName) {
         client.admin().indices()
@@ -775,12 +800,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> List<T> query(final String fieldName, final String[] fieldValues, String sortBy, final Class<T> clazz) {
-        return query(QueryBuilders.termsQuery(fieldName, fieldValues), sortBy, clazz, 0, -1, getRouting(fieldName, fieldValues, clazz)).getList();
+        return query(QueryBuilders.termsQuery(fieldName, ConditionContextHelper.foldToASCII(fieldValues)), sortBy, clazz, 0, -1, getRouting(fieldName, fieldValues, clazz)).getList();
     }
 
     @Override
     public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz, int offset, int size) {
-        return query(QueryBuilders.termQuery(fieldName, fieldValue), sortBy, clazz, offset, size, getRouting(fieldName, new String[]{fieldValue}, clazz));
+        return query(QueryBuilders.termQuery(fieldName, ConditionContextHelper.foldToASCII(fieldValue)), sortBy, clazz, offset, size, getRouting(fieldName, new String[]{fieldValue}, clazz));
     }
 
     @Override
@@ -1145,7 +1170,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         new InClassLoaderExecute<Void>() {
             @Override
             protected Void execute(Object... args) {
-                QueryBuilder query = QueryBuilders.termQuery("scope", scope);
+                QueryBuilder query = QueryBuilders.termQuery("scope", ConditionContextHelper.foldToASCII(scope));
 
                 BulkRequestBuilder deleteByScope = client.prepareBulk();
 

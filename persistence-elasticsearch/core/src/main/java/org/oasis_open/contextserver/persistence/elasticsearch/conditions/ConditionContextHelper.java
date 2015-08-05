@@ -23,6 +23,8 @@ package org.oasis_open.contextserver.persistence.elasticsearch.conditions;
  */
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.lucene.analysis.miscellaneous.ASCIIFoldingFilter;
+import org.apache.lucene.util.ArrayUtil;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.mvel2.MVEL;
 
@@ -109,5 +111,18 @@ public class ConditionContextHelper {
         return false;
     }
 
+    public static String[] foldToASCII(String[] s) {
+        for (int i = 0; i < s.length; i++) {
+            s[i] = foldToASCII(s[i]);
+        }
+        return s;
+    }
 
+    public static String foldToASCII(String s) {
+        s = s.toLowerCase();
+        int maxSizeNeeded = 4 * s.length();
+        char[] output = new char[ArrayUtil.oversize(maxSizeNeeded, 2)];
+        int length = ASCIIFoldingFilter.foldToASCII(s.toCharArray(), 0, output, 0, s.length());
+        return new String(output, 0, length);
+    }
 }
