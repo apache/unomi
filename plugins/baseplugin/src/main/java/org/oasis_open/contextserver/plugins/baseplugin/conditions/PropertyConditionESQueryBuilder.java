@@ -46,26 +46,12 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         String op = (String) condition.getParameter("comparisonOperator");
         String name = (String) condition.getParameter("propertyName");
 
-        String expectedValue = (String) condition.getParameter("propertyValue");
-        if (expectedValue != null) {
-            expectedValue = ConditionContextHelper.foldToASCII((String) expectedValue);
-        }
+        String expectedValue = ConditionContextHelper.foldToASCII((String) condition.getParameter("propertyValue"));
         Object expectedValueInteger = condition.getParameter("propertyValueInteger");
         Object expectedValueDate = condition.getParameter("propertyValueDate");
         Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
 
-        List<?> expectedValues = (List<?>) condition.getParameter("propertyValues");
-        if (expectedValues != null) {
-            expectedValues = Lists.transform(expectedValues, new Function<Object,Object> () {
-                @Override
-                public Object apply(Object o) {
-                    if (o instanceof String) {
-                        return ConditionContextHelper.foldToASCII((String) o);
-                    }
-                    return o;
-                }
-            });
-        }
+        List<?> expectedValues = ConditionContextHelper.foldToASCII((List<?>) condition.getParameter("propertyValues"));
         List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
         List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
         List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");

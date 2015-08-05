@@ -25,6 +25,8 @@ package org.oasis_open.contextserver.persistence.elasticsearch.conditions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.lucene.analysis.miscellaneous.ASCIIFoldingFilter;
 import org.apache.lucene.util.ArrayUtil;
+import org.elasticsearch.common.base.Function;
+import org.elasticsearch.common.collect.Lists;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.mvel2.MVEL;
 
@@ -112,17 +114,38 @@ public class ConditionContextHelper {
     }
 
     public static String[] foldToASCII(String[] s) {
-        for (int i = 0; i < s.length; i++) {
-            s[i] = foldToASCII(s[i]);
+        if (s != null) {
+            for (int i = 0; i < s.length; i++) {
+                s[i] = foldToASCII(s[i]);
+            }
         }
         return s;
     }
 
     public static String foldToASCII(String s) {
-        s = s.toLowerCase();
-        int maxSizeNeeded = 4 * s.length();
-        char[] output = new char[ArrayUtil.oversize(maxSizeNeeded, 2)];
-        int length = ASCIIFoldingFilter.foldToASCII(s.toCharArray(), 0, output, 0, s.length());
-        return new String(output, 0, length);
+        if (s != null) {
+            s = s.toLowerCase();
+            int maxSizeNeeded = 4 * s.length();
+            char[] output = new char[ArrayUtil.oversize(maxSizeNeeded, 2)];
+            int length = ASCIIFoldingFilter.foldToASCII(s.toCharArray(), 0, output, 0, s.length());
+            return new String(output, 0, length);
+        }
+        return null;
     }
+
+    public static <T> List<T> foldToASCII(List<T> s) {
+        if (s != null) {
+            return Lists.transform(s, new Function<T, T>() {
+                @Override
+                public T apply(T o) {
+                    if (o instanceof String) {
+                        return (T) ConditionContextHelper.foldToASCII((String) o);
+                    }
+                    return o;
+                }
+            });
+        }
+        return null;
+    }
+
 }

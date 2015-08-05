@@ -32,11 +32,15 @@ import org.apache.commons.beanutils.BeanUtilsBean;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.ElasticsearchParseException;
+import org.elasticsearch.common.base.Function;
+import org.elasticsearch.common.collect.Lists;
+import org.elasticsearch.common.collect.Sets;
 import org.elasticsearch.common.joda.DateMathParser;
 import org.elasticsearch.index.mapper.core.DateFieldMapper;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.conditions.Condition;
+import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionContextHelper;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluator;
 import org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 import org.oasis_open.contextserver.persistence.spi.PropertyHelper;
@@ -89,7 +93,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             return false;
         }
         
-        Set<Object> actual = getValueSet(actualValue);
+        List<Object> actual = ConditionContextHelper.foldToASCII(getValueSet(actualValue));
 
         boolean result = true;
         
@@ -132,7 +136,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         String op = (String) condition.getParameter("comparisonOperator");
         String name = (String) condition.getParameter("propertyName");
 
-        String expectedValue = (String) condition.getParameter("propertyValue");
+        String expectedValue = ConditionContextHelper.foldToASCII((String) condition.getParameter("propertyValue"));
         Object expectedValueInteger = condition.getParameter("propertyValueInteger");
         Object expectedValueDate = condition.getParameter("propertyValueDate");
         Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
@@ -161,6 +165,9 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 actualValue = null;
             }
         }
+        if (actualValue instanceof String) {
+            actualValue = ConditionContextHelper.foldToASCII((String) actualValue);
+        }
 
         if(op == null) {
             return false;
@@ -171,6 +178,9 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("equals")) {
             if (actualValue instanceof Collection) {
                 for (Object o : ((Collection<?>)actualValue)) {
+                    if (o instanceof String) {
+                        o = ConditionContextHelper.foldToASCII((String) o);
+                    }
                     if (compare(o, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) == 0) {
                         return true;
                     }
@@ -206,7 +216,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("matchesRegex")) {
             return expectedValue != null && Pattern.compile(expectedValue).matcher(actualValue.toString()).matches();
         } else if (op.equals("in") || op.equals("notIn") || op.equals("all")) {
-            List<?> expectedValues = (List<?>) condition.getParameter("propertyValues");
+            List<?> expectedValues = ConditionContextHelper.foldToASCII((List<?>) condition.getParameter("propertyValues"));
             List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
             List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
             List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");
@@ -282,13 +292,13 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     }
 
     @SuppressWarnings("unchecked")
-    private Set<Object> getValueSet(Object expectedValue) {
-        if (expectedValue instanceof Set) {
-            return (Set<Object>) expectedValue;
+    private List<Object> getValueSet(Object expectedValue) {
+        if (expectedValue instanceof List) {
+            return (List<Object>) expectedValue;
         } else if (expectedValue instanceof Collection) {
-            return new HashSet<Object>((Collection<?>) expectedValue);
+            return new ArrayList<Object>((Collection<?>) expectedValue);
         } else {
-            return Collections.singleton(expectedValue);
+            return Collections.singletonList(expectedValue);
         }
     }
 }
