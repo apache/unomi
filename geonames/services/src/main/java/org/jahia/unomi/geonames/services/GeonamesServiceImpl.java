@@ -161,8 +161,8 @@ public class GeonamesServiceImpl implements GeonamesService {
 
         Condition geoLocation = new Condition();
         geoLocation.setConditionType(definitionsService.getConditionType("geoLocationByPointSessionCondition"));
-        geoLocation.setParameter("latitude", lat);
-        geoLocation.setParameter("longitude", lon);
+        geoLocation.setParameter("latitude", Double.parseDouble(lat));
+        geoLocation.setParameter("longitude", Double.parseDouble(lon));
         geoLocation.setParameter("distance", "50km");
         l.add(geoLocation);
 
