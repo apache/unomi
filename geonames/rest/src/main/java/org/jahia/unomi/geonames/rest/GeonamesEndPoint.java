@@ -69,7 +69,7 @@ public class GeonamesEndPoint {
         for (GeonameEntry entry : l) {
             if (GeonamesService.COUNTRY_FEATURE_CODES.contains(entry.getFeatureCode())) {
                 String name = new Locale("", entry.getCountryCode()).getDisplayCountry(locale);
-                if (!StringUtils.isEmpty(name)) {
+                if (!StringUtils.isEmpty(name) && !name.equals(entry.getCountryCode())) {
                     entry.setName(name);
                 }
             }
