@@ -243,10 +243,11 @@ public class GeonamesServiceImpl implements GeonamesService {
         featureCodeCondition.setParameter("propertyValues", featureCodes);
         featureCodeCondition.setParameter("comparisonOperator", "in");
         l.add(featureCodeCondition);
-
         List<GeonameEntry> entries = persistenceService.query(andCondition, null, GeonameEntry.class);
-        return getHierarchy(entries.get(0));
-//        getPropertyCondition()
+        if (entries.size() > 0) {
+            return getHierarchy(entries.get(0));
+        }
+        return Collections.emptyList();
     }
 
     private Condition getPropertyCondition(String name, String propertyValueField, Object value, String operator) {
