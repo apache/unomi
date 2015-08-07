@@ -46,20 +46,24 @@ or on Windows shell :
 Installing the MaxMind GeoIPLite2 IP lookup database
 ----------------------------------------------------
 
-By default, the Context Server will use a remote IP lookup service but this can proove very inefficient in terms of
- performance especially as the service throttles the lookups and is limited. Also this will prevent working offline.
-The IP lookup service also supports downloadable maps from MaxMind that you can get here : 
+The Context Server requires an IP database in order to resolve IP addresses to user location.
+The GeoLite2 database can be downloaded from MaxMind here :
 http://dev.maxmind.com/geoip/geoip2/geolite2/
 
-Simply download the desired maps into the "etc" directory and then adjust the following configuration file : 
+Simply download the GeoLite2-City.mmdb file into the "etc" directory.
 
-    etc/org.oasis_open.contextserver.plugins.request.cfg
-    
-it should point to a file such as : 
+Installing Geonames database
+----------------------------
 
-    request.ipDatabase.location=${karaf.etc}/GeoLite2-City.mmdb
-    
-(by default we reference the free city database).
+Context server includes a geocoding service based on the geonames database ( http://www.geonames.org/ ). It can be
+used to create conditions on countries or cities.
+
+In order to use it, you need to install the Geonames database into . Get the "allCountries.zip" database from here :
+http://download.geonames.org/export/dump/
+
+Download it and put it in the "etc" directory, without unzipping it.
+Import should start at the next startup. Import runs in background, but can take about 15 minutes.
+At the end, you should have about 4 million entries in the geonames index.
 
 Deploying into an existing Karaf server
 ---------------------------------------
@@ -280,7 +284,7 @@ to generate the nodes quickly on the same machine. Here are the steps to do this
     ```
     ssh karaf@localhost -p 8103 
     ```
-    
+
     The default password is "karaf". BE SURE TO CHANGE THIS WHEN YOU GO TO PRODUCTION !
    
 7. You can then install all the required features by using the following commands : 
