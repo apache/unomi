@@ -27,6 +27,8 @@ import org.apache.lucene.analysis.miscellaneous.ASCIIFoldingFilter;
 import org.apache.lucene.util.ArrayUtil;
 import org.elasticsearch.common.base.Function;
 import org.elasticsearch.common.collect.Lists;
+import org.mvel2.ParserConfiguration;
+import org.mvel2.ParserContext;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.mvel2.MVEL;
 
@@ -64,7 +66,9 @@ public class ConditionContextHelper {
                 } else if (s.startsWith("script::")) {
                     String script = StringUtils.substringAfter(s, "script::");
                     if (!mvelExpressions.containsKey(script)) {
-                        mvelExpressions.put(script,MVEL.compileExpression(script));
+                        ParserConfiguration parserConfiguration = new ParserConfiguration();
+                        parserConfiguration.setClassLoader(ConditionContextHelper.class.getClassLoader());
+                        mvelExpressions.put(script,MVEL.compileExpression(script, new ParserContext(parserConfiguration)));
                     }
                     return MVEL.executeExpression(mvelExpressions.get(script), context);
                 }

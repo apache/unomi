@@ -22,10 +22,6 @@ package org.oasis_open.contextserver.persistence.elasticsearch;
  * #L%
  */
 
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.miscellaneous.ASCIIFoldingFilter;
-import org.apache.lucene.analysis.miscellaneous.ASCIIFoldingFilterFactory;
-import org.apache.lucene.util.ArrayUtil;
 import org.elasticsearch.action.admin.cluster.node.info.NodeInfo;
 import org.elasticsearch.action.admin.cluster.node.info.NodesInfoResponse;
 import org.elasticsearch.action.admin.cluster.node.stats.NodeStats;
@@ -72,7 +68,10 @@ import org.elasticsearch.search.aggregations.metrics.InternalNumericMetricsAggre
 import org.elasticsearch.search.sort.GeoDistanceSortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
-import org.oasis_open.contextserver.api.*;
+import org.oasis_open.contextserver.api.ClusterNode;
+import org.oasis_open.contextserver.api.Item;
+import org.oasis_open.contextserver.api.PartialList;
+import org.oasis_open.contextserver.api.TimestampedItem;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.DateRange;
 import org.oasis_open.contextserver.api.query.IpRange;
@@ -89,7 +88,9 @@ import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.ParseException;
@@ -1267,7 +1268,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 (itemsMonthlyIndexed.contains(itemType) ? indexName + "-*" : indexName);
     }
 
-    public abstract class InClassLoaderExecute<T> {
+    public abstract static class InClassLoaderExecute<T> {
 
         protected abstract T execute(Object... args);
 

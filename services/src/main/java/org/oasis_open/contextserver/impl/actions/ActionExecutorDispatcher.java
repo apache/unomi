@@ -25,6 +25,8 @@ package org.oasis_open.contextserver.impl.actions;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.mvel2.MVEL;
+import org.mvel2.ParserConfiguration;
+import org.mvel2.ParserContext;
 import org.oasis_open.contextserver.api.Event;
 import org.oasis_open.contextserver.api.actions.Action;
 import org.oasis_open.contextserver.api.actions.ActionExecutor;
@@ -104,7 +106,9 @@ public class ActionExecutorDispatcher {
                     } else if (s.startsWith("script::")) {
                         String script = StringUtils.substringAfter(s, "script::");
                         if (!mvelExpressions.containsKey(script)) {
-                            mvelExpressions.put(script,MVEL.compileExpression(script));
+                            ParserConfiguration parserConfiguration = new ParserConfiguration();
+                            parserConfiguration.setClassLoader(getClass().getClassLoader());
+                            mvelExpressions.put(script,MVEL.compileExpression(script, new ParserContext(parserConfiguration)));
                         }
                         Map<String, Object> ctx = new HashMap<String, Object>();
                         ctx.put("event", event);
