@@ -21,6 +21,8 @@ import java.util.zip.ZipInputStream;
 public class GeonamesServiceImpl implements GeonamesService {
     private static final Logger logger = LoggerFactory.getLogger(GeonamesServiceImpl.class.getName());
 
+    public static final String GEOCODING_MAX_DISTANCE = "100km";
+
     private DefinitionsService definitionsService;
     private PersistenceService persistenceService;
 
@@ -163,7 +165,7 @@ public class GeonamesServiceImpl implements GeonamesService {
         geoLocation.setConditionType(definitionsService.getConditionType("geoLocationByPointSessionCondition"));
         geoLocation.setParameter("latitude", Double.parseDouble(lat));
         geoLocation.setParameter("longitude", Double.parseDouble(lon));
-        geoLocation.setParameter("distance", "50km");
+        geoLocation.setParameter("distance", GEOCODING_MAX_DISTANCE);
         l.add(geoLocation);
 
         l.add(getPropertyCondition("featureCode", "propertyValues", CITIES_FEATURE_CODES, "in"));
@@ -244,6 +246,10 @@ public class GeonamesServiceImpl implements GeonamesService {
         featureCodeCondition.setParameter("comparisonOperator", "in");
         l.add(featureCodeCondition);
         List<GeonameEntry> entries = persistenceService.query(andCondition, null, GeonameEntry.class);
+        if (entries.size() == 0) {
+            featureCodeCondition.setParameter("propertyValues", CITIES_FEATURE_CODES);
+            entries = persistenceService.query(andCondition, "population:desc", GeonameEntry.class, 0, 1).getList();
+        }
         if (entries.size() > 0) {
             return getHierarchy(entries.get(0));
         }
