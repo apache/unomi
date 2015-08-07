@@ -144,10 +144,14 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         try {
             cityResponse = databaseReader.city(InetAddress.getByName(remoteAddr));
 
-            session.setProperty("sessionCountryCode", cityResponse.getCountry().getIsoCode());
-            session.setProperty("sessionCountryName", cityResponse.getCountry().getName());
-            session.setProperty("sessionCity", cityResponse.getCity().getName());
-            session.setProperty("sessionCityId", cityResponse.getCity().getGeoNameId());
+            if (cityResponse.getCountry().getName() != null) {
+                session.setProperty("sessionCountryCode", cityResponse.getCountry().getIsoCode());
+                session.setProperty("sessionCountryName", cityResponse.getCountry().getName());
+            }
+            if (cityResponse.getCity().getName() != null) {
+                session.setProperty("sessionCity", cityResponse.getCity().getName());
+                session.setProperty("sessionCityId", cityResponse.getCity().getGeoNameId());
+            }
 
             if (cityResponse.getSubdivisions().size() > 0) {
                 session.setProperty("sessionAdminSubDiv1", cityResponse.getSubdivisions().get(0).getGeoNameId());
@@ -155,12 +159,17 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             if (cityResponse.getSubdivisions().size() > 1) {
                 session.setProperty("sessionAdminSubDiv2", cityResponse.getSubdivisions().get(1).getGeoNameId());
             }
-            session.setProperty("sessionIsp", databaseReader.isp(InetAddress.getByName(remoteAddr)).getIsp());
+            String isp = databaseReader.isp(InetAddress.getByName(remoteAddr)).getIsp();
+            if (isp != null) {
+                session.setProperty("sessionIsp", isp);
+            }
 
             Map<String, Double> locationMap = new HashMap<String, Double>();
-            locationMap.put("lat", cityResponse.getLocation().getLatitude());
-            locationMap.put("lon", cityResponse.getLocation().getLongitude());
-            session.setProperty("location", locationMap);
+            if (cityResponse.getLocation().getLatitude() != null && cityResponse.getLocation().getLongitude() != null) {
+                locationMap.put("lat", cityResponse.getLocation().getLatitude());
+                locationMap.put("lon", cityResponse.getLocation().getLongitude());
+                session.setProperty("location", locationMap);
+            }
             return true;
         } catch (IOException | GeoIp2Exception e) {
             logger.debug("Cannot resolve IP", e);
