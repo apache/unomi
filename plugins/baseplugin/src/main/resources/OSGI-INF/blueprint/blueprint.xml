@@ -182,6 +182,13 @@
 
     <service auto-export="interfaces">
         <service-properties>
+            <entry key="actionExecutorId" value="evaluateProfileAge"/>
+        </service-properties>
+        <bean class="org.oasis_open.contextserver.plugins.baseplugin.actions.EvaluateProfileAgeAction"/>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
             <entry key="actionExecutorId" value="incrementInterestsValues"/>
         </service-properties>
         <bean class="org.oasis_open.contextserver.plugins.baseplugin.actions.IncrementInterestsValuesAction"/>

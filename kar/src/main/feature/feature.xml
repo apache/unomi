@@ -42,6 +42,7 @@
         <bundle start-level="75">mvn:com.fasterxml.jackson.module/jackson-module-jaxb-annotations/2.4.0</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider/2.4.0</bundle>
         <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jakarta-regexp/1.4_1</bundle>
+        <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.joda-time/2.3_1</bundle>
         <bundle start-level="75">mvn:org.oasis-open.contextserver/context-server-api/1.0-SNAPSHOT</bundle>
         <bundle start-level="75">mvn:org.oasis-open.contextserver/context-server-persistence-spi/1.0-SNAPSHOT</bundle>
         <bundle start-level="75">mvn:org.oasis-open.contextserver/context-server-persistence-elasticsearch-plugins-security/1.0-SNAPSHOT</bundle>
