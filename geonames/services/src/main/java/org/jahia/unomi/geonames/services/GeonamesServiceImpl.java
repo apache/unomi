@@ -179,13 +179,32 @@ public class GeonamesServiceImpl implements GeonamesService {
 
 
     public PartialList<GeonameEntry> getChildrenEntries(List<String> items, int offset, int size) {
+        Condition andCondition = getItemsInChildrenQuery(items, GeonamesService.CITIES_FEATURE_CODES);
+        Condition featureCodeCondition = ((List<Condition>) andCondition.getParameter("subConditions")).get(0);
+        int level = items.size();
+
+        featureCodeCondition.setParameter("propertyValues", ORDERED_FEATURES.get(level));
+        PartialList<GeonameEntry> r = persistenceService.query(andCondition, null, GeonameEntry.class, offset, size);
+        while (r.size() == 0 && level < ORDERED_FEATURES.size()-1) {
+            level++;
+            featureCodeCondition.setParameter("propertyValues", ORDERED_FEATURES.get(level));
+            r = persistenceService.query(andCondition, null, GeonameEntry.class, offset, size);
+        }
+        return r;
+    }
+
+    public PartialList<GeonameEntry> getChildrenCities(List<String> items, int offset, int size) {
+        return persistenceService.query(getItemsInChildrenQuery(items, GeonamesService.CITIES_FEATURE_CODES), null, GeonameEntry.class, offset, size);
+    }
+
+    private Condition getItemsInChildrenQuery(List<String> items, List<String> featureCodes) {
         List<Condition> l = new ArrayList<Condition>();
         Condition andCondition = new Condition();
         andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
         andCondition.setParameter("operator", "and");
         andCondition.setParameter("subConditions", l);
 
-        Condition featureCodeCondition = getPropertyCondition("featureCode", "propertyValues", GeonamesService.COUNTRY_FEATURE_CODES, "in");
+        Condition featureCodeCondition = getPropertyCondition("featureCode", "propertyValues",  featureCodes, "in");
         l.add(featureCodeCondition);
 
         if (items.size() > 0) {
@@ -196,22 +215,8 @@ public class GeonamesServiceImpl implements GeonamesService {
         }
         if (items.size() > 2) {
             l.add(getPropertyCondition("admin2Code", "propertyValue", items.get(2), "equals"));
-//            l.add(getPropertyCondition("population", "propertyValueInteger", 10000, "greaterThan"));
         }
-
-        return getChildrenEntries(andCondition, featureCodeCondition, offset, size, items.size());
-    }
-
-    public PartialList<GeonameEntry> getChildrenEntries(Condition andCondition, Condition featureCodeCondition, int offset, int size, int level) {
-        featureCodeCondition.setParameter("propertyValues", ORDERED_FEATURES.get(level));
-
-        PartialList<GeonameEntry> r = persistenceService.query(andCondition, null, GeonameEntry.class, offset, size);
-        while (r.size() == 0 && level < ORDERED_FEATURES.size()-1) {
-            level++;
-            featureCodeCondition.setParameter("propertyValues", ORDERED_FEATURES.get(level));
-            r = persistenceService.query(andCondition, null, GeonameEntry.class, offset, size);
-        }
-        return r;
+        return andCondition;
     }
 
     public List<GeonameEntry> getCapitalEntries(String itemId) {

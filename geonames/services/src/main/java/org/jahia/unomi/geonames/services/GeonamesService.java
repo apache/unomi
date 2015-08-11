@@ -22,5 +22,7 @@ public interface GeonamesService {
 
     PartialList<GeonameEntry> getChildrenEntries(List<String> items, int offset, int size);
 
+    PartialList<GeonameEntry> getChildrenCities(List<String> items, int offset, int size);
+
     List<GeonameEntry> getCapitalEntries(String itemId);
 }

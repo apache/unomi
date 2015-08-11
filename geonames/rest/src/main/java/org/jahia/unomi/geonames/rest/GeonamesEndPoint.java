@@ -50,6 +50,18 @@ public class GeonamesEndPoint {
     }
 
     @GET
+    @Path("/cities/{items:.*}")
+    public PartialList<GeonameEntry> getChildrenCities(@PathParam("items") List<PathSegment> items, @HeaderParam("Accept-Language") String language) {
+        List<String> l = new ArrayList<>();
+        for (PathSegment item : items) {
+            l.add(item.getPath());
+        }
+        PartialList<GeonameEntry> list = geonamesService.getChildrenCities(l, 0, 999);
+        translate(list.getList(), new Locale(language));
+        return list;
+    }
+
+    @GET
     @Path("/hierarchy/{id}")
     public List<GeonameEntry> getHierarchy(@PathParam("id") String id, @HeaderParam("Accept-Language") String language) {
         List<GeonameEntry> list = geonamesService.getHierarchy(id);
