@@ -367,7 +367,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Persona savePersona(Persona profile) {
-        persistenceService.save(profile);
+        if(persistenceService.load(profile.getItemId(), Persona.class) == null){
+            Session session = new PersonaSession(UUID.randomUUID().toString(), profile, new Date());
+            persistenceService.save(profile);
+            persistenceService.save(session);
+        } else {
+            persistenceService.save(profile);
+        }
+
         return persistenceService.load(profile.getItemId(), Persona.class);
     }
 
