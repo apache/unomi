@@ -23,6 +23,10 @@ public class GeonamesEndPoint {
 
     private GeonamesService geonamesService;
 
+    public GeonamesEndPoint() {
+        System.out.println("Initializing geonames service endpoint...");
+    }
+
     @WebMethod(exclude = true)
     public void setGeonamesService(GeonamesService geonamesService) {
         this.geonamesService = geonamesService;
