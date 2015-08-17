@@ -27,6 +27,11 @@ public class GeonamesServiceImpl implements GeonamesService {
     private PersistenceService persistenceService;
 
     private String pathToGeonamesDatabase;
+    private Boolean forceDbImport;
+
+    public void setForceDbImport(Boolean forceDbImport) {
+        this.forceDbImport = forceDbImport;
+    }
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
@@ -45,15 +50,21 @@ public class GeonamesServiceImpl implements GeonamesService {
     }
 
     public void stop() {
-
     }
 
     public void importDatabase() {
         if (!persistenceService.createIndex("geonames")) {
-            return;
+            if(forceDbImport) {
+                persistenceService.removeIndex("geonames");
+                persistenceService.createIndex("geonames");
+            }else {
+                return;
+            }
         }
+        logger.info("Geonames index created");
 
         if (pathToGeonamesDatabase == null) {
+            logger.info("No geonames DB provided");
             return;
         }
         final File f = new File(pathToGeonamesDatabase);
@@ -91,9 +102,8 @@ public class GeonamesServiceImpl implements GeonamesService {
                         }
                         logger.info("Geonames database imported");
                     } catch (Exception e) {
-                        e.printStackTrace();
+                       logger.error(e.getMessage(), e);
                     }
-
                 }
             }, 5000);
         }

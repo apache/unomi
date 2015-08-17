@@ -610,6 +610,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
+    public boolean removeIndex(final String indexName) {
+        return new InClassLoaderExecute<Boolean>() {
+            protected Boolean execute(Object... args) {
+                IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(indexName).execute().actionGet();
+                boolean indexExists = indicesExistsResponse.isExists();
+                if (indexExists) {
+                    client.admin().indices().prepareDelete(indexName).execute().actionGet();
+                }
+                return indexExists;
+            }
+        }.executeInClassLoader();
+    }
 
     private void internalCreateIndex(String indexName) {
         client.admin().indices().prepareCreate(indexName)
