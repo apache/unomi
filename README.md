@@ -62,7 +62,8 @@ In order to use it, you need to install the Geonames database into . Get the "al
 http://download.geonames.org/export/dump/
 
 Download it and put it in the "etc" directory, without unzipping it.
-Import should start at the next startup. Import runs in background, but can take about 15 minutes.
+Edit /etc/org.oasis_open.contextserver.geonames.cfg and set request.geonamesDatabase.forceImport to true, import should start right away.
+Otherwise, import should start at the next startup. Import runs in background, but can take about 15 minutes.
 At the end, you should have about 4 million entries in the geonames index.
 
 Deploying into an existing Karaf server
