@@ -197,7 +197,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("lessThan")) {
             return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) < 0;
         } else if (op.equals("lessThanOrEqualTo")) {
-            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) >= 0;
+            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) <= 0;
         } else if (op.equals("between")) {
             List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
             List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
