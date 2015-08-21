@@ -58,13 +58,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.ops4j.pax.cdi</groupId>
-            <artifactId>pax-cdi-api</artifactId>
-            <version>0.7.0</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
           <groupId>com.fasterxml.jackson.core</groupId>
           <artifactId>jackson-databind</artifactId>
           <version>${version.jackson.core}</version>

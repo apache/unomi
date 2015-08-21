@@ -99,8 +99,6 @@ on your disk and copy all the files from the lib/sigar directory into Karaf's li
        feature:install -v war
        feature:repo-add cxf 2.7.11
        feature:install -v cxf/2.7.11
-       feature:install -v openwebbeans
-       feature:install -v pax-cdi-web-openwebbeans
     ```
 
 4. Create a new etc/org.apache.cxf.osgi.cfg file and put the following property inside :
