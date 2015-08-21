@@ -27,14 +27,10 @@ import ognl.Ognl;
 import ognl.OgnlContext;
 import ognl.OgnlException;
 import ognl.enhance.ExpressionAccessor;
-
 import org.apache.commons.beanutils.BeanUtilsBean;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.ElasticsearchParseException;
-import org.elasticsearch.common.base.Function;
-import org.elasticsearch.common.collect.Lists;
-import org.elasticsearch.common.collect.Sets;
 import org.elasticsearch.common.joda.DateMathParser;
 import org.elasticsearch.index.mapper.core.DateFieldMapper;
 import org.oasis_open.contextserver.api.Event;
@@ -289,7 +285,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                     }
                 }));
             } catch (ElasticsearchParseException e) {
-                // Not a date
+                logger.warn("unable to parse date " + value.toString(), e);
             }
         }
         return null;
