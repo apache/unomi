@@ -88,7 +88,7 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
                 location.put("lon", 6.1282508);
                 session.setProperty("location", location);
             }
-            session.setProperty("countryAndCity", session.getProperty("countryName") + "@@" + session.getProperty("city"));
+            session.setProperty("countryAndCity", session.getProperty("sessionCountryName") + "@@" + session.getProperty("sessionCity"));
         } catch (Exception e) {
             logger.error("Cannot lookup IP", e);
         }
