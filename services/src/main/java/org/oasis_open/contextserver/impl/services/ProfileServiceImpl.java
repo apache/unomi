@@ -682,7 +682,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         });
 
         for (PropertyType propertyType : allPropertyTypes) {
-            if (propertyType.getAutomaticMappingsFrom().contains(propertyName)) {
+            if (propertyType.getAutomaticMappingsFrom() != null && propertyType.getAutomaticMappingsFrom().contains(propertyName)) {
                 l.add(propertyType);
             }
         }
