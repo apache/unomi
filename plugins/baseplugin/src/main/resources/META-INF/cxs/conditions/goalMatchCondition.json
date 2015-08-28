@@ -7,7 +7,7 @@
             "comparisonOperator": "exists"
         }
     },
-    "tags": [ "sessionCondition", "profileCondition", "event" ],
+    "tags": [ "profileCondition", "event" ],
     "parameters": [
         {
             "id": "goalId",
