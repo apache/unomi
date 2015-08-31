@@ -173,8 +173,9 @@ public class GeonamesServiceImpl implements GeonamesService {
 
         Condition geoLocation = new Condition();
         geoLocation.setConditionType(definitionsService.getConditionType("geoLocationByPointSessionCondition"));
-        geoLocation.setParameter("latitude", Double.parseDouble(lat));
-        geoLocation.setParameter("longitude", Double.parseDouble(lon));
+        geoLocation.setParameter("type", "circle");
+        geoLocation.setParameter("circleLatitude", Double.parseDouble(lat));
+        geoLocation.setParameter("circleLongitude", Double.parseDouble(lon));
         geoLocation.setParameter("distance", GEOCODING_MAX_DISTANCE);
         l.add(geoLocation);
 

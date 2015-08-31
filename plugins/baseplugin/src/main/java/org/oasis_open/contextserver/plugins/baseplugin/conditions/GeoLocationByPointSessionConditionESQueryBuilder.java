@@ -33,24 +33,33 @@ import java.util.Map;
 public class GeoLocationByPointSessionConditionESQueryBuilder implements ConditionESQueryBuilder {
     @Override
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        Double lat = (Double) condition.getParameter("latitude");
-        Double lon = (Double) condition.getParameter("longitude");
+        String type = (String) condition.getParameter("type");
 
-        Double lat2 = (Double) condition.getParameter("latitude2");
-        Double lon2 = (Double) condition.getParameter("longitude2");
+        if("circle".equals(type)) {
+            Double circleLatitude = (Double) condition.getParameter("circleLatitude");
+            Double circleLongitude = (Double) condition.getParameter("circleLongitude");
+            String distance = condition.getParameter("distance").toString();
 
-        if (lat2 != null && lon2 != null) {
-            return FilterBuilders.geoBoundingBoxFilter("location")
-                    .bottomLeft(Math.min(lat, lat2), Math.min(lon, lon2))
-                    .topRight(Math.max(lat, lat2), Math.max(lon, lon2));
+            if(circleLatitude != null && circleLongitude != null && distance != null) {
+                return FilterBuilders.geoDistanceFilter("location")
+                        .lat(circleLatitude)
+                        .lon(circleLongitude)
+                        .distance(distance);
+            }
+        } else if("rectangle".equals(type)) {
+            Double rectLatitudeNE = (Double) condition.getParameter("rectLatitudeNE");
+            Double rectLongitudeNE = (Double) condition.getParameter("rectLongitudeNE");
+            Double rectLatitudeSW = (Double) condition.getParameter("rectLatitudeSW");
+            Double rectLongitudeSW = (Double) condition.getParameter("rectLongitudeSW");
+
+            if(rectLatitudeNE != null && rectLongitudeNE != null && rectLatitudeSW != null && rectLongitudeSW != null) {
+                return FilterBuilders.geoBoundingBoxFilter("location")
+                        .topLeft(rectLatitudeNE, rectLongitudeNE)
+                        .bottomRight(rectLatitudeSW, rectLongitudeSW);
+            }
         }
 
-        String distance = condition.getParameter("distance").toString();
-
-        return FilterBuilders.geoDistanceFilter("location")
-                .lat(lat)
-                .lon(lon)
-                .distance(distance);
+        return null;
     }
 
 }

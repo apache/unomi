@@ -41,26 +41,30 @@ public class GeoLocationByPointSessionConditionEvaluator implements ConditionEva
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
         try {
-            Double latitude1 = (Double) condition.getParameter("latitude");
-            Double longitude1 = (Double) condition.getParameter("longitude");
-
+            String type = (String) condition.getParameter("type");
             Double latitudeProperty = Double.parseDouble(BeanUtils.getProperty(item, "properties.location.lat"));
             Double longitudeProperty = Double.parseDouble(BeanUtils.getProperty(item, "properties.location.lon"));
 
-            if (condition.getParameter("latitude2") != null && condition.getParameter("longitude2") != null) {
-                Double latitude2 = (Double) condition.getParameter("latitude2");
-                Double longitude2 = (Double) condition.getParameter("longitude2");
+            if("circle".equals(type)) {
+                Double circleLatitude = (Double) condition.getParameter("circleLatitude");
+                Double circleLongitude = (Double) condition.getParameter("circleLongitude");
+                DistanceUnit.Distance distance = DistanceUnit.Distance.parseDistance(condition.getParameter("distance").toString());
 
-                return latitudeProperty < Math.max(latitude1, latitude2)  &&
-                        latitudeProperty > Math.min(latitude1, latitude2) &&
-                        longitudeProperty < Math.max(longitude1, longitude2) &&
-                        longitudeProperty > Math.min(longitude1, longitude2);
+                double d = GeoDistance.DEFAULT.calculate(circleLatitude, circleLongitude, latitudeProperty, longitudeProperty, distance.unit);
+                return d < distance.value;
+            } else if("rectangle".equals(type)) {
+                Double rectLatitudeNE = (Double) condition.getParameter("rectLatitudeNE");
+                Double rectLongitudeNE = (Double) condition.getParameter("rectLongitudeNE");
+                Double rectLatitudeSW = (Double) condition.getParameter("rectLatitudeSW");
+                Double rectLongitudeSW = (Double) condition.getParameter("rectLongitudeSW");
+
+                if(rectLatitudeNE != null && rectLongitudeNE != null && rectLatitudeSW != null && rectLongitudeSW != null) {
+                    return latitudeProperty < Math.max(rectLatitudeNE, rectLatitudeSW)  &&
+                            latitudeProperty > Math.min(rectLatitudeNE, rectLatitudeSW) &&
+                            longitudeProperty < Math.max(rectLongitudeNE, rectLongitudeSW) &&
+                            longitudeProperty > Math.min(rectLongitudeNE, rectLongitudeSW);
+                }
             }
-
-            DistanceUnit.Distance distance = DistanceUnit.Distance.parseDistance(condition.getParameter("distance").toString());
-
-            double d = GeoDistance.DEFAULT.calculate(latitude1, longitude1, latitudeProperty, longitudeProperty, distance.unit);
-            return d < distance.value;
         } catch (Exception e) {
             logger.debug("Cannot get properties", e);
         }
