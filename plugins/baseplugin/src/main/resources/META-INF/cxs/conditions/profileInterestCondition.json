@@ -3,7 +3,7 @@
     "parentCondition" : {
         "type": "profilePropertyCondition",
         "parameterValues": {
-            "propertyName": "script::'properties.interests.'+interestName",
+            "propertyName": "script::'properties.interests.'+interestName.toLowerCase()",
             "propertyValueInteger": "parameter::value",
             "comparisonOperator": "greaterThan"
         }
