@@ -319,7 +319,7 @@ public class ContextServlet extends HttpServlet {
 
     private void processOverrides(ContextRequest contextRequest, Profile profile, Session session) {
         if (contextRequest.getSegmentOverrides() != null && contextRequest.getSegmentOverrides().size() > 0) {
-            Set<String> segments = profile.getSegments();
+            Set<String> segments = new HashSet<>();
             for (String segmentOverride : contextRequest.getSegmentOverrides()) {
                 if (segmentOverride == null) {
                     continue;
@@ -334,7 +334,7 @@ public class ContextServlet extends HttpServlet {
         }
 
         if (contextRequest.getProfilePropertiesOverrides() != null && contextRequest.getProfilePropertiesOverrides().size() > 0) {
-            Map<String,Object> profileProperties = profile.getProperties();
+            Map<String,Object> profileProperties = new HashMap<>();
             for (Map.Entry<String,Object> profilePropertyOverride : contextRequest.getProfilePropertiesOverrides().entrySet()) {
                 if (profilePropertyOverride.getKey() == null) {
                     continue;
@@ -349,7 +349,7 @@ public class ContextServlet extends HttpServlet {
         }
 
         if (contextRequest.getSessionPropertiesOverrides() != null && contextRequest.getSessionPropertiesOverrides().size() > 0) {
-            Map<String,Object> sessionProperties = session.getProperties();
+            Map<String,Object> sessionProperties = new HashMap<>();
             for (Map.Entry<String,Object> sessionPropertyOverride : contextRequest.getSessionPropertiesOverrides().entrySet()) {
                 if (sessionPropertyOverride.getKey() == null) {
                     continue;
