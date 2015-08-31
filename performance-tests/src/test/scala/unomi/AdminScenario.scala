@@ -55,14 +55,15 @@ object AdminScenario {
       .body(ELFileBody("admin/campaigns/average.json"))
       .check(jsonPath("$.._sum").find.exists))
 
-    .exec(http("Events").get("/cxs/campaigns/${campaignId}/events")
-      .headers(adminHeaders)
-      .check(jsonPath("$..totalSize").find.exists))
-
     .exec(http("Timeline").post("/cxs/query/session/timeStamp")
       .headers(adminHeaders)
       .body(ELFileBody("admin/campaigns/timeline.json"))
       .check(jsonPath("$.._all").find.exists))
+
+    .exec(http("Events").post("/cxs/campaigns/events/query")
+      .headers(adminHeaders)
+      .body(ELFileBody("admin/campaigns/events.json"))
+      .check(jsonPath("$..totalSize").find.exists))
 
     .foreach("${goalIds}", "goalId") {
       exec(http("Goal report").post("/cxs/goals/${goalId}/report")
@@ -74,7 +75,12 @@ object AdminScenario {
     .exec(http("Timeline primary goal").post("/cxs/query/session/timeStamp")
       .headers(adminHeaders)
       .body(ELFileBody("admin/campaigns/timeline-primary-goal.json"))
-      .check(jsonPath("$.._all").find.exists));
+      .check(jsonPath("$.._all").find.exists))
+      
+    .exec(http("Events 2").post("/cxs/campaigns/events/query")
+      .headers(adminHeaders)
+      .body(ELFileBody("admin/campaigns/events2.json"))
+      .check(jsonPath("$..totalSize").find.exists));
 
   // view the engaged users for the picked campaign ID
   val campaignEngaged = feed(requestsFeed)
@@ -82,14 +88,18 @@ object AdminScenario {
       .headers(adminHeaders)
       .check(jsonPath("$..id").find.is("profileTags")))
 
-    //    exec(http("Profile conditions").get("/cxs/definitions/conditions/tags/profileCondition")
-    //      .headers(adminHeaders)
-    //      .check(jsonPath("$..id").find.is("booleanCondition")))
-    //
     .exec(http("Existing profile properties").get("/cxs/profiles/existingProperties?tagId=profileProperties&itemType=profile")
       .headers(adminHeaders)
       .check(jsonPath("$..itemId").find.exists))
-
+      
+    .exec(http("Profile conditions").get("/cxs/definitions/conditions/tags/profileCondition")
+      .headers(adminHeaders)
+      .check(jsonPath("$..id").find.is("booleanCondition")))
+    
+    .exec(http("Profile conditions").get("/cxs/definitions/conditions/tags/usableInPastEventCondition")
+      .headers(adminHeaders)
+      .check(jsonPath("$..id").find.exists))
+    
     .exec(http("Profile search").post("/cxs/profiles/search")
       .headers(adminHeaders)
       .body(ELFileBody("admin/campaigns/engaged-users.json"))

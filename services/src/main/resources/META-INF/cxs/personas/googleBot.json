@@ -4,8 +4,7 @@
         "properties": {
             "description": "Represents a Google bot",
             "firstName": "Google",
-            "lastName": "Bot",
-            "persona": true
+            "lastName": "Bot"
         },
         "segments": []
     },

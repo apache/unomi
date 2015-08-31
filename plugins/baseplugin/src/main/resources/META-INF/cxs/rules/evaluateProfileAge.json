@@ -1,0 +1,23 @@
+{
+  "metadata" : {
+    "id": "_ed2tvbd9p_evaluateProfileAge.json",
+    "name": "Evaluate profile age",
+    "description" : "Evaluate age when a profile is modified",
+    "readOnly":true
+  },
+
+  "condition" : {
+    "type": "profileUpdatedEventCondition",
+    "parameterValues": {
+    }
+  },
+
+  "actions" : [
+    {
+      "type": "evaluateProfileAgeAction",
+      "parameterValues": {
+      }
+    }
+  ]
+
+}

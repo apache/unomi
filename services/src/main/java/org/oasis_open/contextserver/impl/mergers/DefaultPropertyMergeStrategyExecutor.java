@@ -22,9 +22,9 @@ package org.oasis_open.contextserver.impl.mergers;
  * #L%
  */
 
+import org.oasis_open.contextserver.api.Profile;
 import org.oasis_open.contextserver.api.PropertyMergeStrategyExecutor;
 import org.oasis_open.contextserver.api.PropertyType;
-import org.oasis_open.contextserver.api.Profile;
 
 import java.util.List;
 
@@ -33,8 +33,7 @@ public class DefaultPropertyMergeStrategyExecutor implements PropertyMergeStrate
         boolean modified = false;
         for (Profile profileToMerge : profilesToMerge) {
             if (profileToMerge.getProperty(propertyName) != null &&
-                    profileToMerge.getProperty(propertyName).toString().length() > 0 &&
-                    targetProfile.getProperty(propertyName) == null) {
+                    profileToMerge.getProperty(propertyName).toString().length() > 0) {
                 targetProfile.setProperty(propertyName, profileToMerge.getProperty(propertyName));
                 modified = true;
             }

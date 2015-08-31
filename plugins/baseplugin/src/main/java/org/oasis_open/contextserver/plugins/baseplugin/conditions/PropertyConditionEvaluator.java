@@ -27,14 +27,10 @@ import ognl.Ognl;
 import ognl.OgnlContext;
 import ognl.OgnlException;
 import ognl.enhance.ExpressionAccessor;
-
 import org.apache.commons.beanutils.BeanUtilsBean;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.ElasticsearchParseException;
-import org.elasticsearch.common.base.Function;
-import org.elasticsearch.common.collect.Lists;
-import org.elasticsearch.common.collect.Sets;
 import org.elasticsearch.common.joda.DateMathParser;
 import org.elasticsearch.index.mapper.core.DateFieldMapper;
 import org.oasis_open.contextserver.api.Event;
@@ -197,14 +193,20 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("lessThan")) {
             return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) < 0;
         } else if (op.equals("lessThanOrEqualTo")) {
-            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) >= 0;
+            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) <= 0;
         } else if (op.equals("between")) {
             List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
             List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
             List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");
-            return  compare(actualValue, null, expectedValuesDate != null ? getDate(expectedValuesDate.get(0)) : null, expectedValuesInteger != null ? (Integer) expectedValuesInteger.get(0) : null, expectedValuesDateExpr != null ? (String) expectedValuesDateExpr.get(0) : null) >= 0
+            return compare(actualValue, null,
+                    (expectedValuesDate != null && expectedValuesDate.size() >= 1) ? getDate(expectedValuesDate.get(0)) : null,
+                    (expectedValuesInteger != null && expectedValuesInteger.size() >= 1) ? (Integer) expectedValuesInteger.get(0) : null,
+                    (expectedValuesDateExpr != null && expectedValuesDateExpr.size() >= 1) ? (String) expectedValuesDateExpr.get(0) : null) >= 0
                     &&
-                    compare(actualValue, null, expectedValuesDate != null ? getDate(expectedValuesDate.get(1)) : null, expectedValuesInteger != null ? (Integer) expectedValuesInteger.get(1) : null, expectedValuesDateExpr != null ? (String) expectedValuesDateExpr.get(1) : null) <= 0;
+                    compare(actualValue, null,
+                            (expectedValuesDate != null && expectedValuesDate.size() >= 2) ? getDate(expectedValuesDate.get(1)) : null,
+                            (expectedValuesInteger != null && expectedValuesInteger.size() >= 2) ? (Integer) expectedValuesInteger.get(1) : null,
+                            (expectedValuesDateExpr != null && expectedValuesDateExpr.size() >= 2) ? (String) expectedValuesDateExpr.get(1) : null) <= 0;
         } else if (op.equals("contains")) {
             return actualValue.toString().contains(expectedValue);
         } else if (op.equals("startsWith")) {
@@ -283,7 +285,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                     }
                 }));
             } catch (ElasticsearchParseException e) {
-                // Not a date
+                logger.warn("unable to parse date " + value.toString(), e);
             }
         }
         return null;

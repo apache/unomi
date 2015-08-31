@@ -23,6 +23,10 @@ public class GeonamesEndPoint {
 
     private GeonamesService geonamesService;
 
+    public GeonamesEndPoint() {
+        System.out.println("Initializing geonames service endpoint...");
+    }
+
     @WebMethod(exclude = true)
     public void setGeonamesService(GeonamesService geonamesService) {
         this.geonamesService = geonamesService;
@@ -45,6 +49,18 @@ public class GeonamesEndPoint {
             l.add(item.getPath());
         }
         PartialList<GeonameEntry> list = geonamesService.getChildrenEntries(l, 0, 999);
+        translate(list.getList(), new Locale(language));
+        return list;
+    }
+
+    @GET
+    @Path("/cities/{items:.*}")
+    public PartialList<GeonameEntry> getChildrenCities(@PathParam("items") List<PathSegment> items, @HeaderParam("Accept-Language") String language) {
+        List<String> l = new ArrayList<>();
+        for (PathSegment item : items) {
+            l.add(item.getPath());
+        }
+        PartialList<GeonameEntry> list = geonamesService.getChildrenCities(l, 0, 999);
         translate(list.getList(), new Locale(language));
         return list;
     }

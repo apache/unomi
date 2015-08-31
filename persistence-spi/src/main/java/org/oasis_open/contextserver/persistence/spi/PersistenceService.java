@@ -92,4 +92,6 @@ public interface PersistenceService {
     Map<String, Double> getSingleValuesMetrics(Condition condition, String[] metrics, String field, String type);
 
     boolean createIndex(final String indexName);
+
+    boolean removeIndex(final String indexName);
 }

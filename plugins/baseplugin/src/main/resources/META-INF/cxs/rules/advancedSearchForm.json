@@ -1,0 +1,34 @@
+{
+  "metadata": {
+    "id": "advancedSearchForm",
+    "name": "Advanced search form submit detection",
+    "description": "Advanced search form submit detection",
+    "readOnly": false
+  },
+  "condition": {
+    "parameterValues": {
+      "formId": "advancedSearchForm"
+    },
+    "type": "formEventCondition"
+  },
+  "actions": [
+    {
+      "type": "sendEventAction",
+      "parameterValues": {
+        "eventType": "search",
+        "eventTarget": {
+          "itemId": "advancedSearchForm",
+          "itemType": "form",
+          "scope": "eventProperty::target.scope",
+          "properties": {}
+        },
+        "eventProperties": {
+          "origin": "eventProperty::source.properties.pageInfo.pagePath",
+          "language": "eventProperty::source.properties.pageInfo.language",
+          "originForm": "eventProperty::target.itemId",
+          "keyword": "script::event.properties['src_terms[0].term'].toLowerCase()"
+        }
+      }
+    }
+  ]
+}

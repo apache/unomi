@@ -27,6 +27,11 @@ public class GeonamesServiceImpl implements GeonamesService {
     private PersistenceService persistenceService;
 
     private String pathToGeonamesDatabase;
+    private Boolean forceDbImport;
+
+    public void setForceDbImport(Boolean forceDbImport) {
+        this.forceDbImport = forceDbImport;
+    }
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
@@ -45,15 +50,21 @@ public class GeonamesServiceImpl implements GeonamesService {
     }
 
     public void stop() {
-
     }
 
     public void importDatabase() {
         if (!persistenceService.createIndex("geonames")) {
-            return;
+            if(forceDbImport) {
+                persistenceService.removeIndex("geonames");
+                persistenceService.createIndex("geonames");
+            }else {
+                return;
+            }
         }
+        logger.info("Geonames index created");
 
         if (pathToGeonamesDatabase == null) {
+            logger.info("No geonames DB provided");
             return;
         }
         final File f = new File(pathToGeonamesDatabase);
@@ -91,9 +102,8 @@ public class GeonamesServiceImpl implements GeonamesService {
                         }
                         logger.info("Geonames database imported");
                     } catch (Exception e) {
-                        e.printStackTrace();
+                       logger.error(e.getMessage(), e);
                     }
-
                 }
             }, 5000);
         }
@@ -163,8 +173,9 @@ public class GeonamesServiceImpl implements GeonamesService {
 
         Condition geoLocation = new Condition();
         geoLocation.setConditionType(definitionsService.getConditionType("geoLocationByPointSessionCondition"));
-        geoLocation.setParameter("latitude", Double.parseDouble(lat));
-        geoLocation.setParameter("longitude", Double.parseDouble(lon));
+        geoLocation.setParameter("type", "circle");
+        geoLocation.setParameter("circleLatitude", Double.parseDouble(lat));
+        geoLocation.setParameter("circleLongitude", Double.parseDouble(lon));
         geoLocation.setParameter("distance", GEOCODING_MAX_DISTANCE);
         l.add(geoLocation);
 
@@ -179,13 +190,32 @@ public class GeonamesServiceImpl implements GeonamesService {
 
 
     public PartialList<GeonameEntry> getChildrenEntries(List<String> items, int offset, int size) {
+        Condition andCondition = getItemsInChildrenQuery(items, GeonamesService.CITIES_FEATURE_CODES);
+        Condition featureCodeCondition = ((List<Condition>) andCondition.getParameter("subConditions")).get(0);
+        int level = items.size();
+
+        featureCodeCondition.setParameter("propertyValues", ORDERED_FEATURES.get(level));
+        PartialList<GeonameEntry> r = persistenceService.query(andCondition, null, GeonameEntry.class, offset, size);
+        while (r.size() == 0 && level < ORDERED_FEATURES.size()-1) {
+            level++;
+            featureCodeCondition.setParameter("propertyValues", ORDERED_FEATURES.get(level));
+            r = persistenceService.query(andCondition, null, GeonameEntry.class, offset, size);
+        }
+        return r;
+    }
+
+    public PartialList<GeonameEntry> getChildrenCities(List<String> items, int offset, int size) {
+        return persistenceService.query(getItemsInChildrenQuery(items, GeonamesService.CITIES_FEATURE_CODES), null, GeonameEntry.class, offset, size);
+    }
+
+    private Condition getItemsInChildrenQuery(List<String> items, List<String> featureCodes) {
         List<Condition> l = new ArrayList<Condition>();
         Condition andCondition = new Condition();
         andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
         andCondition.setParameter("operator", "and");
         andCondition.setParameter("subConditions", l);
 
-        Condition featureCodeCondition = getPropertyCondition("featureCode", "propertyValues", GeonamesService.COUNTRY_FEATURE_CODES, "in");
+        Condition featureCodeCondition = getPropertyCondition("featureCode", "propertyValues",  featureCodes, "in");
         l.add(featureCodeCondition);
 
         if (items.size() > 0) {
@@ -196,22 +226,8 @@ public class GeonamesServiceImpl implements GeonamesService {
         }
         if (items.size() > 2) {
             l.add(getPropertyCondition("admin2Code", "propertyValue", items.get(2), "equals"));
-//            l.add(getPropertyCondition("population", "propertyValueInteger", 10000, "greaterThan"));
         }
-
-        return getChildrenEntries(andCondition, featureCodeCondition, offset, size, items.size());
-    }
-
-    public PartialList<GeonameEntry> getChildrenEntries(Condition andCondition, Condition featureCodeCondition, int offset, int size, int level) {
-        featureCodeCondition.setParameter("propertyValues", ORDERED_FEATURES.get(level));
-
-        PartialList<GeonameEntry> r = persistenceService.query(andCondition, null, GeonameEntry.class, offset, size);
-        while (r.size() == 0 && level < ORDERED_FEATURES.size()-1) {
-            level++;
-            featureCodeCondition.setParameter("propertyValues", ORDERED_FEATURES.get(level));
-            r = persistenceService.query(andCondition, null, GeonameEntry.class, offset, size);
-        }
-        return r;
+        return andCondition;
     }
 
     public List<GeonameEntry> getCapitalEntries(String itemId) {

@@ -29,6 +29,7 @@
                              update-strategy="reload">
         <cm:default-properties>
             <cm:property name="request.geonamesDatabase.location" value="file:${karaf.etc}/allCountries.zip"/>
+            <cm:property name="request.geonamesDatabase.forceImport" value="false"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -44,7 +45,7 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsService"/>
         <property name="pathToGeonamesDatabase" value="${request.geonamesDatabase.location}"/>
-
+        <property name="forceDbImport" value="${request.geonamesDatabase.forceImport}"/>
     </bean>
     <service id="geonamesService" ref="geonamesServiceImpl" auto-export="interfaces"/>
 

@@ -17,7 +17,7 @@ class AdminSimulation extends Simulation {
     .contentTypeHeader("text/plain;charset=UTF-8")
     .userAgentHeader("Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:24.0) Gecko/20100101 Firefox/24.0")
 
-  //   setUp(AdminScenario.scnSingle.inject(atOnceUsers(1)).protocols(httpProtocol))
+//     setUp(AdminScenario.scnSingle.inject(atOnceUsers(1)).protocols(httpProtocol))
 
   val m = Map(
     AdminScenario.scn -> Parameters.numberOfConcurrentAdminUsers)

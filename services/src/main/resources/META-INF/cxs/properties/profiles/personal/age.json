@@ -1,0 +1,19 @@
+{
+  "metadata": {
+    "id": "age",
+    "name": "Age"
+  },
+  "type": "integer",
+  "tags": ["personalProfileProperties"],
+  "defaultValue": "",
+  "numericRanges": [
+    {"key":"*_10", "to" : 10 },
+    {"key":"11_20", "from" : 10, "to" : 20 },
+    {"key":"21_30", "from" : 20, "to" : 30 },
+    {"key":"31_40", "from" : 30, "to" : 40 },
+    {"key":"41_50", "from" : 40, "to" : 50 },
+    {"key":"51_*", "from" : 50 }
+  ],
+  "automaticMappingsFrom": [ ],
+  "rank": "501.0"
+}

@@ -22,6 +22,14 @@ package org.oasis_open.contextserver.impl.actions;
  * #L%
  */
 
+import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.mvel2.MVEL;
@@ -35,22 +43,73 @@ import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Serializable;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-
 public class ActionExecutorDispatcher {
     private static final Logger logger = LoggerFactory.getLogger(ActionExecutorDispatcher.class.getName());
+    private static final String VALUE_NAME_SEPARATOR = "::";
 
     private BundleContext bundleContext;
 
     private Map<String, ActionExecutor> executors = new ConcurrentHashMap<>();
     private Map<Long, List<String>> executorsByBundle = new ConcurrentHashMap<>();
-    private Map<String,Serializable> mvelExpressions = new ConcurrentHashMap<>();
+    private final Map<String, Serializable> mvelExpressions = new ConcurrentHashMap<>();
+    private final Map<String, ValueExtractor> valueExtractors = new HashMap<>(11);
 
+    private interface ValueExtractor {
+        Object extract(String valueAsString, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException;
+    }
 
     public ActionExecutorDispatcher() {
-
+        valueExtractors.put("profileProperty", new ValueExtractor() {
+            @Override
+            public Object extract(String valueAsString, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+                return PropertyUtils.getProperty(event.getProfile(), "properties." + valueAsString);
+            }
+        });
+        valueExtractors.put("simpleProfileProperty", new ValueExtractor() {
+            @Override
+            public Object extract(String valueAsString, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+                return event.getProfile().getProperty(valueAsString);
+            }
+        });
+        valueExtractors.put("sessionProperty", new ValueExtractor() {
+            @Override
+            public Object extract(String valueAsString, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+                return PropertyUtils.getProperty(event.getSession(), "properties." + valueAsString);
+            }
+        });
+        valueExtractors.put("simpleSessionProperty", new ValueExtractor() {
+            @Override
+            public Object extract(String valueAsString, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+                return event.getSession().getProperty(valueAsString);
+            }
+        });
+        valueExtractors.put("eventProperty", new ValueExtractor() {
+            @Override
+            public Object extract(String valueAsString, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+                return PropertyUtils.getProperty(event, valueAsString);
+            }
+        });
+        valueExtractors.put("simpleEventProperty", new ValueExtractor() {
+            @Override
+            public Object extract(String valueAsString, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+                return event.getProperty(valueAsString);
+            }
+        });
+        valueExtractors.put("script", new ValueExtractor() {
+            @Override
+            public Object extract(String valueAsString, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+                if (!mvelExpressions.containsKey(valueAsString)) {
+                    ParserConfiguration parserConfiguration = new ParserConfiguration();
+                    parserConfiguration.setClassLoader(getClass().getClassLoader());
+                    mvelExpressions.put(valueAsString, MVEL.compileExpression(valueAsString, new ParserContext(parserConfiguration)));
+                }
+                Map<String, Object> ctx = new HashMap<>();
+                ctx.put("event", event);
+                ctx.put("session", event.getSession());
+                ctx.put("profile", event.getProfile());
+                return MVEL.executeExpression(mvelExpressions.get(valueAsString), ctx);
+            }
+        });
     }
 
 
@@ -85,36 +144,20 @@ public class ActionExecutorDispatcher {
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> parseMap(Event event, Map<String, Object> map) {
-        Map<String, Object> values = new HashMap<String, Object>();
+        Map<String, Object> values = new HashMap<>();
         for (Map.Entry<String, Object> entry : map.entrySet()) {
             Object value = entry.getValue();
             if (value instanceof String) {
                 String s = (String) value;
                 try {
-                    if (s.startsWith("profileProperty::")) {
-                        value = PropertyUtils.getProperty(event.getProfile(), "properties." + StringUtils.substringAfter(s, "profileProperty::"));
-                    } else if (s.startsWith("simpleProfileProperty::")) {
-                        value = event.getProfile().getProperty(StringUtils.substringAfter(s, "simpleProfileProperty::"));
-                    } else if (s.startsWith("sessionProperty::")) {
-                        value = PropertyUtils.getProperty(event.getSession(), "properties." + StringUtils.substringAfter(s, "sessionProperty::"));
-                    } else if (s.startsWith("simpleSessionProperty::")) {
-                        value = event.getSession().getProperty(StringUtils.substringAfter(s, "simpleSessionProperty::"));
-                    } else if (s.startsWith("eventProperty::")) {
-                        value = PropertyUtils.getProperty(event, StringUtils.substringAfter(s, "eventProperty::"));
-                    } else if (s.startsWith("simpleEventProperty::")) {
-                        value = event.getProperty(StringUtils.substringAfter(s, "simpleEventProperty::"));
-                    } else if (s.startsWith("script::")) {
-                        String script = StringUtils.substringAfter(s, "script::");
-                        if (!mvelExpressions.containsKey(script)) {
-                            ParserConfiguration parserConfiguration = new ParserConfiguration();
-                            parserConfiguration.setClassLoader(getClass().getClassLoader());
-                            mvelExpressions.put(script,MVEL.compileExpression(script, new ParserContext(parserConfiguration)));
+                    // check if we have special values
+                    if (s.contains(VALUE_NAME_SEPARATOR)) {
+                        final String valueType = StringUtils.substringBefore(s, VALUE_NAME_SEPARATOR);
+                        final String valueAsString = StringUtils.substringAfter(s, VALUE_NAME_SEPARATOR);
+                        final ValueExtractor extractor = valueExtractors.get(valueType);
+                        if (extractor != null) {
+                            value = extractor.extract(valueAsString, event);
                         }
-                        Map<String, Object> ctx = new HashMap<String, Object>();
-                        ctx.put("event", event);
-                        ctx.put("session", event.getSession());
-                        ctx.put("profile", event.getProfile());
-                        value = MVEL.executeExpression(mvelExpressions.get(script), ctx);
                     }
                 } catch (UnsupportedOperationException e) {
                     throw e;
@@ -135,13 +178,7 @@ public class ActionExecutorDispatcher {
             Object value = entry.getValue();
             if (value instanceof String) {
                 String s = (String) value;
-                if (s.startsWith("eventProperty::") ||
-                        s.startsWith("profileProperty::") ||
-                        s.startsWith("sessionProperty::") ||
-                        s.startsWith("simpleEventProperty::") ||
-                        s.startsWith("simpleProfileProperty::") ||
-                        s.startsWith("simpleSessionProperty::") ||
-                        s.startsWith("script::")) {
+                if (s.contains(VALUE_NAME_SEPARATOR) && valueExtractors.containsKey(StringUtils.substringBefore(s, VALUE_NAME_SEPARATOR))) {
                     return true;
                 }
             } else if (value instanceof Map) {

@@ -100,8 +100,7 @@ object UserScenario {
     .body(ELFileBody("Search_request.json")))
     .exec(pauseAndUpdateTimestamp)
 
-  val scn = scenario("User").during(Parameters.totalTime) {
-    feed(usersFeed)
+  val scnRun = feed(usersFeed)
       .exec(flagNewUser)
       .repeat("${numberOfSessions}") {
       feed(sessionsFeed).feed(userAgentFeed).feed(ipListFeed)
@@ -118,7 +117,11 @@ object UserScenario {
       }
         .exec(flushSessionCookies)
     }
-      .exec(flushCookieJar)
+      .exec(flushCookieJar);
+  
+  val scn = scenario("User").during(Parameters.totalTime) {
+    scnRun
   }
 
+  val scnSingle = scenario("User").exec(scnRun);
 }

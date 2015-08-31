@@ -62,6 +62,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private Integer purgeSessionsAndEventsTime = 0;
     private Integer purgeProfileInterval = 0;
 
+    private Timer allPropertyTypesTimer;
+
     private Timer purgeProfileTimer;
 
     private List<PropertyType> allPropertyTypes;
@@ -92,12 +94,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             }
         }
         bundleContext.addBundleListener(this);
-        initializePurge();
+        //initializePurge();
+        schedulePropertyTypeLoad();
     }
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
         cancelPurge();
+        cancelPropertyTypeLoad();
     }
 
     private void processBundleStartup(BundleContext bundleContext) {
@@ -131,6 +135,29 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         this.purgeProfileInterval = purgeProfileInterval;
     }
 
+    private void schedulePropertyTypeLoad() {
+        allPropertyTypesTimer = new Timer();
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    allPropertyTypes = persistenceService.getAllItems(PropertyType.class);
+                } catch (Exception e) {
+                    logger.error(e.getMessage(), e);
+                }
+            }
+        };
+        allPropertyTypesTimer.scheduleAtFixedRate(task, 0, 5000);
+        logger.info("Scheduled task for property type loading each 5s");
+    }
+
+    private void cancelPropertyTypeLoad() {
+        if (allPropertyTypesTimer != null) {
+            allPropertyTypesTimer.cancel();
+            logger.info("Cancelled task for property type loading");
+        }
+    }
+    
     private void initializePurge() {
         logger.info("Profile purge: Initializing");
 
@@ -189,16 +216,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                     logger.debug("Profile purge: purge executed in {} ms", System.currentTimeMillis() - t);
                 }
             };
-//            purgeProfileTimer.scheduleAtFixedRate(task, getDay(1).getTime(), purgeProfileInterval);
-
-
-            task = new TimerTask() {
-                @Override
-                public void run() {
-                    allPropertyTypes = persistenceService.getAllItems(PropertyType.class);
-                }
-            };
-            purgeProfileTimer.scheduleAtFixedRate(task, 0, 1000);
+            purgeProfileTimer.scheduleAtFixedRate(task, getDay(1).getTime(), purgeProfileInterval);
 
             logger.info("Profile purge: purge scheduled with an interval of {} days", purgeProfileInterval);
         } else {
@@ -367,7 +385,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Persona savePersona(Persona profile) {
-        persistenceService.save(profile);
+        if(persistenceService.load(profile.getItemId(), Persona.class) == null){
+            Session session = new PersonaSession(UUID.randomUUID().toString(), profile, new Date());
+            persistenceService.save(profile);
+            persistenceService.save(session);
+        } else {
+            persistenceService.save(profile);
+        }
+
         return persistenceService.load(profile.getItemId(), Persona.class);
     }
 
@@ -657,7 +682,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         });
 
         for (PropertyType propertyType : allPropertyTypes) {
-            if (propertyType.getAutomaticMappingsFrom().contains(propertyName)) {
+            if (propertyType.getAutomaticMappingsFrom() != null && propertyType.getAutomaticMappingsFrom().contains(propertyName)) {
                 l.add(propertyType);
             }
         }

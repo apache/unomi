@@ -5,24 +5,39 @@
     "tags": [ "geographic", "sessionCondition" ],
     "parameters": [
         {
-            "id": "latitude",
+          "id": "type",
+          "type": "string",
+          "multivalued": false
+        },
+        {
+            "id": "rectLatitudeNE",
             "type": "string",
             "multivalued": false
         },
         {
-            "id": "longitude",
+            "id": "rectLongitudeNE",
             "type": "string",
             "multivalued": false
         },
         {
-            "id": "latitude2",
+            "id": "rectLatitudeSW",
             "type": "string",
             "multivalued": false
         },
         {
-            "id": "longitude2",
+            "id": "rectLongitudeSW",
             "type": "string",
             "multivalued": false
+        },
+        {
+          "id": "circleLatitude",
+          "type": "string",
+          "multivalued": false
+        },
+        {
+          "id": "circleLongitude",
+          "type": "string",
+          "multivalued": false
         },
         {
             "id": "distance",
