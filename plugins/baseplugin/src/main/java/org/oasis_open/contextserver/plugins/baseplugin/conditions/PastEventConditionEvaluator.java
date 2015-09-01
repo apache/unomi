@@ -101,8 +101,8 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
             count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
         }
 
-        Integer minimumEventCount = !parameters.containsKey("minimumEventCount")  ? 0 : (Integer) parameters.get("minimumEventCount");
-        Integer maximumEventCount = !parameters.containsKey("maximumEventCount")  ? Integer.MAX_VALUE : (Integer) parameters.get("maximumEventCount");
+        Integer minimumEventCount = parameters.get("minimumEventCount") == null  ? 0 : (Integer) parameters.get("minimumEventCount");
+        Integer maximumEventCount = parameters.get("maximumEventCount") == null  ? Integer.MAX_VALUE : (Integer) parameters.get("maximumEventCount");
 
         return (minimumEventCount == 0 && maximumEventCount == Integer.MAX_VALUE && count > 0) ||
                 (count >= minimumEventCount && count <= maximumEventCount);
