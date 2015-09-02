@@ -22,6 +22,8 @@ package org.oasis_open.contextserver.api;
  * #L%
  */
 
+import org.oasis_open.contextserver.api.actions.ActionPostExecutor;
+
 import javax.xml.bind.annotation.XmlTransient;
 import java.util.*;
 
@@ -40,6 +42,7 @@ public class Event extends Item implements TimestampedItem {
 
     private transient Profile profile;
     private transient Session session;
+    private transient List<ActionPostExecutor> actionPostExecutors;
 
     private String scope;
 
@@ -71,6 +74,8 @@ public class Event extends Item implements TimestampedItem {
         this.timeStamp = timestamp;
 
         this.properties = new HashMap<String, Object>();
+
+        actionPostExecutors = new ArrayList<>();
     }
 
     public Event(String eventType, Session session, Profile profile, String scope, Item source, Item target, Map<String, Object> properties, Date timestamp) {
@@ -166,5 +171,13 @@ public class Event extends Item implements TimestampedItem {
 
     public void setTarget(Item target) {
         this.target = target;
+    }
+
+    public List<ActionPostExecutor> getActionPostExecutors() {
+        return actionPostExecutors;
+    }
+
+    public void setActionPostExecutors(List<ActionPostExecutor> actionPostExecutors) {
+        this.actionPostExecutors = actionPostExecutors;
     }
 }

@@ -24,6 +24,7 @@ package org.oasis_open.contextserver.impl.services;
 
 import org.apache.commons.lang3.StringUtils;
 import org.oasis_open.contextserver.api.*;
+import org.oasis_open.contextserver.api.actions.ActionPostExecutor;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.services.DefinitionsService;
 import org.oasis_open.contextserver.api.services.EventListenerService;
@@ -89,10 +90,9 @@ public class EventServiceImpl implements EventService {
                     changes |= eventListenerService.onEvent(event);
                 }
             }
-
-            if (session != null && session.getProfile() != null && !session.getProfile().getItemId().equals(profile.getItemId())) {
-                // this can happen when profiles are merged for example.
-                profile = session.getProfile();
+            // At the end of the processing event execute the post executor actions
+            for (ActionPostExecutor actionPostExecutor : event.getActionPostExecutors()) {
+                changes |= actionPostExecutor.execute() ? changes : NO_CHANGE;
             }
 
             if ((changes & PROFILE_UPDATED) == PROFILE_UPDATED) {
@@ -220,10 +220,9 @@ public class EventServiceImpl implements EventService {
     }
 
     public void unbind(ServiceReference<EventListenerService> serviceReference) {
-        if(serviceReference!=null) {
+        if (serviceReference != null) {
             EventListenerService eventListenerService = bundleContext.getService(serviceReference);
             eventListeners.remove(eventListenerService);
         }
     }
-
 }

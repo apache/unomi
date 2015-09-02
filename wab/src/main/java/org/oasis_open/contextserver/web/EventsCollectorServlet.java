@@ -129,6 +129,11 @@ public class EventsCollectorServlet extends HttpServlet {
                 eventToSend.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                 logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
                 int eventChanged = eventService.send(eventToSend);
+                //if the event execution changes the profile
+                if ((eventChanged & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
+                    profile = eventToSend.getProfile();
+                    session.setProfile(profile);
+                }
                 changes |= eventChanged;
             }
         }

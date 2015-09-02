@@ -157,15 +157,15 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             logger.info("Cancelled task for property type loading");
         }
     }
-    
+
     private void initializePurge() {
         logger.info("Profile purge: Initializing");
 
-        if(purgeProfileInactiveTime > 0 || purgeProfileExistTime > 0 || purgeSessionsAndEventsTime > 0) {
-            if(purgeProfileInactiveTime > 0) {
+        if (purgeProfileInactiveTime > 0 || purgeProfileExistTime > 0 || purgeSessionsAndEventsTime > 0) {
+            if (purgeProfileInactiveTime > 0) {
                 logger.info("Profile purge: Profile with no visits since {} days, will be purged", purgeProfileInactiveTime);
             }
-            if(purgeProfileExistTime > 0) {
+            if (purgeProfileExistTime > 0) {
                 logger.info("Profile purge: Profile created since {} days, will be purged", purgeProfileExistTime);
             }
 
@@ -176,10 +176,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                     long t = System.currentTimeMillis();
                     logger.debug("Profile purge: Purge triggered");
 
-                    if(purgeProfileQuery == null){
+                    if (purgeProfileQuery == null) {
                         ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
                         ConditionType booleanCondition = definitionsService.getConditionType("booleanCondition");
-                        if (profilePropertyConditionType == null || booleanCondition == null){
+                        if (profilePropertyConditionType == null || booleanCondition == null) {
                             // definition service not yet fully instantiate
                             return;
                         }
@@ -188,19 +188,19 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                         purgeProfileQuery.setParameter("operator", "or");
                         List<Condition> subConditions = new ArrayList<>();
 
-                        if(purgeProfileInactiveTime > 0) {
+                        if (purgeProfileInactiveTime > 0) {
                             Condition inactiveTimeCondition = new Condition(profilePropertyConditionType);
-                            inactiveTimeCondition.setParameter("propertyName","lastVisit");
-                            inactiveTimeCondition.setParameter("comparisonOperator","lessThanOrEqualTo");
-                            inactiveTimeCondition.setParameter("propertyValueDateExpr","now-"+purgeProfileInactiveTime+"d");
+                            inactiveTimeCondition.setParameter("propertyName", "lastVisit");
+                            inactiveTimeCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+                            inactiveTimeCondition.setParameter("propertyValueDateExpr", "now-" + purgeProfileInactiveTime + "d");
                             subConditions.add(inactiveTimeCondition);
                         }
 
-                        if(purgeProfileExistTime > 0) {
+                        if (purgeProfileExistTime > 0) {
                             Condition existTimeCondition = new Condition(profilePropertyConditionType);
-                            existTimeCondition.setParameter("propertyName","firstVisit");
-                            existTimeCondition.setParameter("comparisonOperator","lessThanOrEqualTo");
-                            existTimeCondition.setParameter("propertyValueDateExpr","now-"+purgeProfileExistTime+"d");
+                            existTimeCondition.setParameter("propertyName", "firstVisit");
+                            existTimeCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+                            existTimeCondition.setParameter("propertyValueDateExpr", "now-" + purgeProfileExistTime + "d");
                             subConditions.add(existTimeCondition);
                         }
 
@@ -225,7 +225,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     private void cancelPurge() {
-        if(purgeProfileTimer != null) {
+        if (purgeProfileTimer != null) {
             purgeProfileTimer.cancel();
         }
         logger.info("Profile purge: Purge unscheduled");
@@ -288,7 +288,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         Set<PropertyType> profileProperties = getPropertyTypeByTag(tagId, true);
         Map<String, Map<String, Object>> itemMapping = persistenceService.getMapping(itemType);
 
-        if (itemMapping == null || itemMapping.isEmpty() || itemMapping.get("properties") == null || itemMapping.get("properties").get("properties") == null){
+        if (itemMapping == null || itemMapping.isEmpty() || itemMapping.get("properties") == null || itemMapping.get("properties").get("properties") == null) {
             return filteredProperties;
         }
 
@@ -314,7 +314,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         for (int i = 0; i < propertyTypes.length; i++) {
             PropertyType propertyType = propertyTypes[i];
             sb.append(propertyType.getMetadata().getId());
-            if(i < propertyTypes.length - 1) {
+            if (i < propertyTypes.length - 1) {
                 sb.append(";");
             } else {
                 sb.append("\n");
@@ -325,12 +325,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         for (Profile profile : profiles.getList()) {
             for (int i = 0; i < propertyTypes.length; i++) {
                 PropertyType propertyType = propertyTypes[i];
-                if(profile.getProperties().get(propertyType.getMetadata().getId()) != null){
+                if (profile.getProperties().get(propertyType.getMetadata().getId()) != null) {
                     handleExportProperty(sb, profile.getProperties().get(propertyType.getMetadata().getId()), propertyType);
-                }else {
+                } else {
                     sb.append("");
                 }
-                if(i < propertyTypes.length - 1) {
+                if (i < propertyTypes.length - 1) {
                     sb.append(";");
                 } else {
                     sb.append("\n");
@@ -343,17 +343,17 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     // TODO may be moved this in a specific Export Utils Class and improve it to handle date format, ...
     private void handleExportProperty(StringBuilder sb, Object propertyValue, PropertyType propertyType) {
-        if(propertyValue instanceof Collection && propertyType.isMultivalued()){
+        if (propertyValue instanceof Collection && propertyType.isMultivalued()) {
             Collection propertyValues = (Collection) propertyValue;
-            if(propertyValues.size() > 0) {
+            if (propertyValues.size() > 0) {
                 Object[] propertyValuesArray = propertyValues.toArray();
                 for (int i = 0; i < propertyValuesArray.length; i++) {
                     Object o = propertyValuesArray[i];
-                    if(o instanceof String && i == 0){
+                    if (o instanceof String && i == 0) {
                         sb.append("\"");
                     }
                     sb.append(propertyValue.toString());
-                    if(o instanceof String && i == propertyValuesArray.length - 1){
+                    if (o instanceof String && i == propertyValuesArray.length - 1) {
                         sb.append("\"");
                     } else {
                         sb.append(",");
@@ -385,7 +385,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Persona savePersona(Persona profile) {
-        if(persistenceService.load(profile.getItemId(), Persona.class) == null){
+        if (persistenceService.load(profile.getItemId(), Persona.class) == null) {
             Session session = new PersonaSession(UUID.randomUUID().toString(), profile, new Date());
             persistenceService.save(profile);
             persistenceService.save(session);
@@ -410,67 +410,38 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
     }
 
-    public boolean mergeProfilesOnProperty(Profile currentProfile, Session currentSession, String propertyName, String propertyValue) {
-
-        Condition propertyCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        propertyCondition.setParameter("comparisonOperator", "equals");
-        propertyCondition.setParameter("propertyName", propertyName);
-        propertyCondition.setParameter("propertyValue", propertyValue);
-
-        Condition excludeMergedProfilesCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        excludeMergedProfilesCondition.setParameter("comparisonOperator", "missing");
-        excludeMergedProfilesCondition.setParameter("propertyName", "mergedWith");
-
-        Condition c = new Condition(definitionsService.getConditionType("booleanCondition"));
-        c.setParameter("operator", "and");
-        c.setParameter("subConditions", Arrays.asList(propertyCondition, excludeMergedProfilesCondition));
-
-        List<Profile> profilesToMerge = persistenceService.query(c, "properties.firstVisit", Profile.class);
-
-        if (!profilesToMerge.contains(currentProfile)) {
-            profilesToMerge.add(currentProfile);
-        }
-
-        if (profilesToMerge.size() == 1) {
-            return false;
-        }
-
-        logger.info("Merging profiles for "+propertyName + "=" + propertyValue);
-
-        Profile masterProfile = profilesToMerge.get(0);
+    public Profile mergeProfiles(Profile masterProfile, List<Profile> profilesToMerge) {
 
         // now let's remove all the already merged profiles from the list.
-        List<Profile> filteredProfilesToMerge = new ArrayList<Profile>();
+        List<Profile> filteredProfilesToMerge = new ArrayList<>();
 
         for (Profile filteredProfile : profilesToMerge) {
-            if (!filteredProfile.getItemId().equals(masterProfile.getItemId()) && (
-                    filteredProfile.getMergedWith() == null || !filteredProfile.getMergedWith().equals(masterProfile.getItemId()))) {
+            if (!filteredProfile.getItemId().equals(masterProfile.getItemId())) {
                 filteredProfilesToMerge.add(filteredProfile);
             }
         }
 
         if (filteredProfilesToMerge.isEmpty()) {
-            return false;
+            return masterProfile;
         }
 
         profilesToMerge = filteredProfilesToMerge;
 
-        Set<String> allProfileProperties = new LinkedHashSet<String>();
+        Set<String> allProfileProperties = new LinkedHashSet<>();
         for (Profile profile : profilesToMerge) {
             allProfileProperties.addAll(profile.getProperties().keySet());
         }
 
         Collection<PropertyType> profilePropertyTypes = getAllPropertyTypes("profiles");
-        Map<String, PropertyType> profilePropertyTypeById = new HashMap<String, PropertyType>();
+        Map<String, PropertyType> profilePropertyTypeById = new HashMap<>();
         for (PropertyType propertyType : profilePropertyTypes) {
             profilePropertyTypeById.put(propertyType.getMetadata().getId(), propertyType);
         }
-        Set<String> profileIdsToMerge = new TreeSet<String>();
+        Set<String> profileIdsToMerge = new TreeSet<>();
         for (Profile profileToMerge : profilesToMerge) {
             profileIdsToMerge.add(profileToMerge.getItemId());
         }
         logger.info("Merging profiles " + profileIdsToMerge + " into profile " + masterProfile.getItemId());
-        boolean updated = false;
 
         for (String profileProperty : allProfileProperties) {
             PropertyType propertyType = profilePropertyTypeById.get(profileProperty);
@@ -498,7 +469,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 matchingPropertyMergeStrategyExecutors = bundleContext.getServiceReferences(PropertyMergeStrategyExecutor.class, propertyMergeStrategyType.getFilter());
                 for (ServiceReference<PropertyMergeStrategyExecutor> propertyMergeStrategyExecutorReference : matchingPropertyMergeStrategyExecutors) {
                     PropertyMergeStrategyExecutor propertyMergeStrategyExecutor = bundleContext.getService(propertyMergeStrategyExecutorReference);
-                    updated |= propertyMergeStrategyExecutor.mergeProperty(profileProperty, propertyType, profilesToMerge, masterProfile);
+                    propertyMergeStrategyExecutor.mergeProperty(profileProperty, propertyType, profilesToMerge, masterProfile);
                 }
             } catch (InvalidSyntaxException e) {
                 logger.error("Error retrieving strategy implementation", e);
@@ -508,41 +479,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
         // we now have to merge the profile's segments
         for (Profile profile : profilesToMerge) {
-            updated |= masterProfile.getSegments().addAll(profile.getSegments());
+            masterProfile.getSegments().addAll(profile.getSegments());
         }
 
-        // Refresh index now to ensure we find all sessions/events
-        persistenceService.refresh();
-        // we must now retrieve all the session associated with all the profiles and associate them with the master profile
-        for (Profile profile : profilesToMerge) {
-            List<Session> sessions = persistenceService.query("profileId", profile.getItemId(), null, Session.class);
-            if (currentSession.getProfileId().equals(profile.getItemId()) && !sessions.contains(currentSession)) {
-                sessions.add(currentSession);
-            }
-            for (Session session : sessions) {
-                persistenceService.update(session.getItemId(), session.getTimeStamp(), Session.class, "profileId", masterProfile.getItemId());
-            }
-
-            List<Event> events = persistenceService.query("profileId", profile.getItemId(), null, Event.class);
-            for (Event event : events) {
-                persistenceService.update(event.getItemId(), event.getTimeStamp(), Event.class, "profileId", masterProfile.getItemId());
-            }
-        }
-
-        // we must mark all the profiles that we merged into the master as merged with the master, and they will
-        // be deleted upon next load
-        for (Profile profile : profilesToMerge) {
-            profile.setMergedWith(masterProfile.getItemId());
-            persistenceService.update(profile.getItemId(), null, Profile.class, "mergedWith", masterProfile.getItemId());
-        }
-
-        if (!currentProfile.getItemId().equals(masterProfile.getItemId())) {
-            persistenceService.save(masterProfile);
-            currentSession.setProfile(masterProfile);
-            saveSession(currentSession);
-        }
-
-        return updated;
+        return masterProfile;
     }
 
     public PartialList<Session> getProfileSessions(String profileId, String query, int offset, int size, String sortBy) {
@@ -642,7 +582,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         Collection<PropertyType> props = persistenceService.getAllItems(PropertyType.class, 0, -1, "rank").getList();
 
         HashMap<String, Collection<PropertyType>> propertyTypes = new HashMap<>();
-        for (PropertyType prop : props){
+        for (PropertyType prop : props) {
             if (!propertyTypes.containsKey(prop.getTarget())) {
                 propertyTypes.put(prop.getTarget(), new LinkedHashSet<PropertyType>());
             }
@@ -748,7 +688,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             }
         }
     }
-
 
 
     public void bundleChanged(BundleEvent event) {

@@ -26,10 +26,7 @@ import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.Query;
 
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Set;
+import java.util.*;
 
 public interface ProfileService {
 
@@ -41,7 +38,7 @@ public interface ProfileService {
 
     PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue, int offset, int size, String sortBy);
 
-    boolean mergeProfilesOnProperty(Profile currentProfile, Session currentSession, String propertyName, String propertyValue);
+    Profile mergeProfiles(Profile masterProfile, List<Profile> profilesToMerge);
 
     Profile load(String profileId);
 

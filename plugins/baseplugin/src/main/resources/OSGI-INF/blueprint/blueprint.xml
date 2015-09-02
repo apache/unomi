@@ -219,6 +219,9 @@
         </service-properties>
         <bean class="org.oasis_open.contextserver.plugins.baseplugin.actions.MergeProfilesOnPropertyAction">
             <property name="profileService" ref="profileService"/>
+            <property name="eventService" ref="eventService"/>
+            <property name="persistenceService" ref="persistenceService"/>
+            <property name="definitionsService" ref="definitionsService"/>
         </bean>
     </service>
 
