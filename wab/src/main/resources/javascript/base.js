@@ -81,7 +81,7 @@ cxs.loadXMLDoc = function (url, successCallBack) {
         if (xhr.readyState == 4 && xhr.status == 200) {
             successCallBack(xhr);
         }
-    }
+    };
     xhr.send();
 };
 
@@ -90,8 +90,8 @@ cxs.loadXMLDoc = function (url, successCallBack) {
  * @param event JSONObject: {eventType:"", properties: {}}
  * @param successCallBack
  */
-cxs.collectEvent = function (event, successCallBack) {
-    this.collectEvents({events: [event]}, successCallBack);
+cxs.collectEvent = function (event, successCallBack, errorCallback) {
+    this.collectEvents({events: [event]}, successCallBack, errorCallback);
 };
 
 /**
@@ -99,7 +99,7 @@ cxs.collectEvent = function (event, successCallBack) {
  * @param events JSONObject: {events: [{eventType:"", properties: {}}, ...]}
  * @param successCallBack
  */
-cxs.collectEvents = function(events, successCallBack) {
+cxs.collectEvents = function (events, successCallBack, errorCallback) {
     data = JSON.stringify(events);
     var url = window.digitalData.contextServerPublicUrl + "/eventcollector" + "?sessionId=" + cxs.sessionId;
     var xhr = new XMLHttpRequest();
@@ -115,9 +115,17 @@ cxs.collectEvents = function(events, successCallBack) {
         xhr.open("POST", url);
     }
     xhr.onreadystatechange = function () {
-        if (xhr.readyState == 4 && xhr.status == 200) {
+        if (xhr.readyState != 4) {
+            return;
+        }
+        if (xhr.status == 200) {
             var jsonResponse = JSON.parse(xhr.responseText);
             successCallBack(xhr);
+        } else {
+            console.log("contextserver: " + xhr.status + " ERROR: " + xhr.statusText);
+            if (errorCallback) {
+                errorCallback(xhr);
+            }
         }
     };
     xhr.setRequestHeader("Content-Type", "text/plain;charset=UTF-8"); // Use text/plain to avoid CORS preflight
