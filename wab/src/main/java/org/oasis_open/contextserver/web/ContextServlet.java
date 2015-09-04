@@ -318,49 +318,16 @@ public class ContextServlet extends HttpServlet {
     }
 
     private void processOverrides(ContextRequest contextRequest, Profile profile, Session session) {
-        if (contextRequest.getSegmentOverrides() != null && contextRequest.getSegmentOverrides().size() > 0) {
-            Set<String> segments = new HashSet<>();
-            for (String segmentOverride : contextRequest.getSegmentOverrides()) {
-                if (segmentOverride == null) {
-                    continue;
-                }
-                if (segmentOverride.startsWith(PROFILE_OVERRIDE_MARKER)) {
-                    segments.remove(segmentOverride.substring(PROFILE_OVERRIDE_MARKER.length()));
-                } else {
-                    segments.add(segmentOverride);
-                }
-            }
-            profile.setSegments(segments);
+        if (contextRequest.getSegmentOverrides() != null) {
+            profile.setSegments(contextRequest.getSegmentOverrides());
         }
 
-        if (contextRequest.getProfilePropertiesOverrides() != null && contextRequest.getProfilePropertiesOverrides().size() > 0) {
-            Map<String,Object> profileProperties = new HashMap<>();
-            for (Map.Entry<String,Object> profilePropertyOverride : contextRequest.getProfilePropertiesOverrides().entrySet()) {
-                if (profilePropertyOverride.getKey() == null) {
-                    continue;
-                }
-                if (PROFILE_OVERRIDE_MARKER.equals(profilePropertyOverride.getValue())) {
-                    profileProperties.remove(profilePropertyOverride.getKey());
-                } else {
-                    profileProperties.put(profilePropertyOverride.getKey(), profilePropertyOverride.getValue());
-                }
-            }
-            profile.setProperties(profileProperties); // we do this just in case a cache is behind this
+        if (contextRequest.getProfilePropertiesOverrides() != null) {
+            profile.setProperties(contextRequest.getProfilePropertiesOverrides());
         }
 
-        if (contextRequest.getSessionPropertiesOverrides() != null && contextRequest.getSessionPropertiesOverrides().size() > 0) {
-            Map<String,Object> sessionProperties = new HashMap<>();
-            for (Map.Entry<String,Object> sessionPropertyOverride : contextRequest.getSessionPropertiesOverrides().entrySet()) {
-                if (sessionPropertyOverride.getKey() == null) {
-                    continue;
-                }
-                if (PROFILE_OVERRIDE_MARKER.equals(sessionPropertyOverride.getValue())) {
-                    sessionProperties.remove(sessionPropertyOverride.getKey());
-                } else {
-                    sessionProperties.put(sessionPropertyOverride.getKey(), sessionPropertyOverride.getValue());
-                }
-            }
-            session.setProperties(sessionProperties); // we do this just in case a cache is behind this
+        if (contextRequest.getSessionPropertiesOverrides() != null) {
+            session.setProperties(contextRequest.getSessionPropertiesOverrides()); // we do this just in case a cache is behind this
         }
     }
 
