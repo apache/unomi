@@ -256,7 +256,7 @@ public class ContextServlet extends HttpServlet {
             throws IOException {
         int changes = EventService.NO_CHANGE;
         // execute provided events if any
-        if(contextRequest.getEvents() != null) {
+        if(contextRequest.getEvents() != null && !(profile instanceof Persona)) {
             for (Event event : contextRequest.getEvents()){
                 if(event.getEventType() != null) {
                     Event eventToSend;
@@ -312,7 +312,11 @@ public class ContextServlet extends HttpServlet {
             }
         }
 
-        data.setTrackedConditions(rulesService.getTrackedConditions(contextRequest.getSource()));
+        if(!(profile instanceof Persona)) {
+            data.setTrackedConditions(rulesService.getTrackedConditions(contextRequest.getSource()));
+        } else {
+            data.setTrackedConditions(Collections.<Condition>emptySet());
+        }
 
         return changes;
     }
