@@ -104,7 +104,6 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
         Integer minimumEventCount = parameters.get("minimumEventCount") == null  ? 0 : (Integer) parameters.get("minimumEventCount");
         Integer maximumEventCount = parameters.get("maximumEventCount") == null  ? Integer.MAX_VALUE : (Integer) parameters.get("maximumEventCount");
 
-        return (minimumEventCount == 0 && maximumEventCount == Integer.MAX_VALUE && count > 0) ||
-                (count >= minimumEventCount && count <= maximumEventCount);
+        return count > 0 && (count >= minimumEventCount && count <= maximumEventCount);
     }
 }
