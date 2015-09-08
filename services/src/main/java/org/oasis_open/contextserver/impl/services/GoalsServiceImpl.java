@@ -453,6 +453,10 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     public void setCampaign(Campaign campaign) {
         ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition());
 
+        if(rulesService.getRule(campaign.getMetadata().getId() + "EntryEvent") != null) {
+            rulesService.removeRule(campaign.getMetadata().getId() + "EntryEvent");
+        }
+
         if (campaign.getMetadata().isEnabled()) {
             if (campaign.getEntryCondition() != null) {
                 createRule(campaign, campaign.getEntryCondition());
@@ -461,8 +465,6 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
         persistenceService.save(campaign);
     }
-
-
 
     public GoalReport getGoalReport(String goalId) {
         return getGoalReport(goalId, null);
