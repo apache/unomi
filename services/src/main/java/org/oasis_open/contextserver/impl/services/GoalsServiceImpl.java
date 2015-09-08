@@ -446,6 +446,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         for(Metadata m : getCampaignGoalMetadatas(id)) {
             removeGoal(m.getId());
         }
+        rulesService.removeRule(id + "EntryEvent");
         persistenceService.remove(id, Campaign.class);
     }
 
