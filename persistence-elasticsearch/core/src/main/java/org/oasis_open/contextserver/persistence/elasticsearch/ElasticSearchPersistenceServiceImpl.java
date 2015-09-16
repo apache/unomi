@@ -26,6 +26,7 @@ import org.elasticsearch.action.admin.cluster.node.info.NodeInfo;
 import org.elasticsearch.action.admin.cluster.node.info.NodesInfoResponse;
 import org.elasticsearch.action.admin.cluster.node.stats.NodeStats;
 import org.elasticsearch.action.admin.cluster.node.stats.NodesStatsResponse;
+import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.admin.indices.stats.IndicesStatsResponse;
@@ -269,13 +270,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
                 if (!indexExists) {
                     logger.info("{} index doesn't exist yet, creating it...", indexName);
-                    internalCreateIndex(indexName);
-                }
-
-                for (Map.Entry<String, String> entry : mappings.entrySet()) {
-                    if (!itemsMonthlyIndexed.contains(entry.getKey()) && !indexNames.containsKey(entry.getKey())) {
-                        createMapping(entry.getKey(), entry.getValue(), indexName);
+                    Map<String,String> indexMappings = new HashMap<String,String>();
+                    for (Map.Entry<String, String> entry : mappings.entrySet()) {
+                        if (!itemsMonthlyIndexed.contains(entry.getKey()) && !indexNames.containsKey(entry.getKey())) {
+                            indexMappings.put(entry.getKey(), entry.getValue());
+                        }
                     }
+
+                    internalCreateIndex(indexName, indexMappings);
                 }
 
                 client.admin().indices().preparePutTemplate(indexName + "_monthlyindex")
@@ -376,18 +378,20 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if (checkAndCreate) {
             IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(monthlyIndexName).execute().actionGet();
             boolean indexExists = indicesExistsResponse.isExists();
-
             if (!indexExists) {
-                logger.info("{} index doesn't exist yet, creating it...", indexName);
-                internalCreateIndex(monthlyIndexName);
+                logger.info("{} index doesn't exist yet, creating it...", monthlyIndexName);
+
+                Map<String,String> indexMappings = new HashMap<String,String>();
                 for (Map.Entry<String, String> entry : mappings.entrySet()) {
                     if (itemsMonthlyIndexed.contains(entry.getKey())) {
-                        createMapping(entry.getKey(), entry.getValue(), monthlyIndexName);
+                        indexMappings.put(entry.getKey(), entry.getValue());
                     }
                 }
+
+                internalCreateIndex(monthlyIndexName, indexMappings);
+                logger.info("{} index created.", monthlyIndexName);
             }
         }
-
         return monthlyIndexName;
     }
 
@@ -596,14 +600,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(indexName).execute().actionGet();
                 boolean indexExists = indicesExistsResponse.isExists();
                 if (!indexExists) {
-                    internalCreateIndex(indexName);
-
+                    Map<String,String> indexMappings = new HashMap<String,String>();
                     for (Map.Entry<String, String> entry : mappings.entrySet()) {
                         if (indexNames.containsKey(entry.getKey()) && indexNames.get(entry.getKey()).equals(indexName)) {
-                            createMapping(entry.getKey(), entry.getValue(), indexName);
+                            indexMappings.put(entry.getKey(), entry.getValue());
                         }
                     }
-
+                    internalCreateIndex(indexName, indexMappings);
                 }
                 return !indexExists;
             }
@@ -623,8 +626,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
-    private void internalCreateIndex(String indexName) {
-        client.admin().indices().prepareCreate(indexName)
+    private void internalCreateIndex(String indexName, Map<String,String> mappings) {
+        CreateIndexRequestBuilder builder = client.admin().indices().prepareCreate(indexName)
                 .setSettings("{\n" +
                         "    \"analysis\": {\n" +
                         "      \"tokenizer\": {\n" +
@@ -642,8 +645,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         "        }\n" +
                         "      }\n" +
                         "    }\n" +
-                        "}\n")
-                .execute().actionGet();
+                        "}\n");
+
+        for (Map.Entry<String, String> entry : mappings.entrySet()) {
+            builder.addMapping(entry.getKey(), entry.getValue());
+        }
+
+        builder.execute().actionGet();
     }
 
 
