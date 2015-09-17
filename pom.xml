@@ -188,6 +188,7 @@
         <module>wab</module>
         <module>plugins</module>
         <module>lists-extension</module>
+        <module>privacy-extension</module>
         <module>geonames</module>
         <module>kar</module>
     </modules>
