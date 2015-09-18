@@ -1,4 +1,4 @@
-package org.oasis_open.contextserver.privacy;
+package org.oasis_open.contextserver.api;
 
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.List;

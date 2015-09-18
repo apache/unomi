@@ -1,4 +1,4 @@
-package org.oasis_open.contextserver.privacy;
+package org.oasis_open.contextserver.api;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
@@ -9,7 +9,6 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class EventInfo {
 
     private String name;
-    private String description;
     private Long occurences;
 
     public EventInfo() {
@@ -21,14 +20,6 @@ public class EventInfo {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 
     public Long getOccurences() {

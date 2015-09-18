@@ -1,14 +1,15 @@
 package org.oasis_open.contextserver.privacy.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
-import org.oasis_open.contextserver.privacy.PrivacyService;
-import org.oasis_open.contextserver.privacy.ServerInfo;
+import org.oasis_open.contextserver.api.services.PrivacyService;
+import org.oasis_open.contextserver.api.ServerInfo;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.List;
 
 /**
  * Created by loom on 10.09.15.
@@ -38,6 +39,40 @@ public class PrivacyServiceEndPoint {
     @Path("/profiles/{profileId}")
     public Response deleteProfileData(@PathParam("profileId") String profileId) {
         privacyService.deleteProfileData(profileId);
+        return Response.ok().build();
+    }
+
+    @GET
+    @Path("/profiles/{profileId}/anonymous")
+    public Boolean isAnonymous(@PathParam("profileId") String profileId) {
+        return privacyService.isAnonymous(profileId);
+    }
+
+    @POST
+    @Path("/profiles/{profileId}/anonymous")
+    public Response activateAnonymousSurfing(@PathParam("profileId") String profileId) {
+        privacyService.setAnonymous(profileId, true);
+        return Response.ok().build();
+    }
+
+    @DELETE
+    @Path("/profiles/{profileId}/anonymous")
+    public Response deactivateAnonymousSurfing(@PathParam("profileId") String profileId) {
+        privacyService.setAnonymous(profileId, false);
+        return Response.ok().build();
+    }
+
+    @GET
+    @Path("/profiles/{profileId}/eventFilters")
+    public List<String> getEventFilters(@PathParam("profileId") String profileId) {
+        return privacyService.getFilteredEventTypes(profileId);
+    }
+
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("/profiles/{profileId}/eventFilters")
+    public Response setEventFilters(@PathParam("profileId") String profileId, List<String> eventFilters) {
+        privacyService.setFilteredEventTypes(profileId, eventFilters);
         return Response.ok().build();
     }
 

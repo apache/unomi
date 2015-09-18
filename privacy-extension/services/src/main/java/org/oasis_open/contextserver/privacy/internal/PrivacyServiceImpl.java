@@ -9,9 +9,9 @@ import org.oasis_open.contextserver.api.services.EventService;
 import org.oasis_open.contextserver.api.services.ProfileService;
 import org.oasis_open.contextserver.persistence.spi.PersistenceService;
 import org.oasis_open.contextserver.persistence.spi.aggregate.TermsAggregate;
-import org.oasis_open.contextserver.privacy.EventInfo;
-import org.oasis_open.contextserver.privacy.PrivacyService;
-import org.oasis_open.contextserver.privacy.ServerInfo;
+import org.oasis_open.contextserver.api.EventInfo;
+import org.oasis_open.contextserver.api.services.PrivacyService;
+import org.oasis_open.contextserver.api.ServerInfo;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -56,7 +56,6 @@ public class PrivacyServiceImpl implements PrivacyService {
         for (Map.Entry<String,Long> eventTypeEntry : eventTypeCounts.entrySet()) {
             EventInfo eventInfo = new EventInfo();
             eventInfo.setName(eventTypeEntry.getKey());
-            eventInfo.setDescription(eventTypeEntry.getKey() + " occured " + eventTypeEntry.getValue().toString() + " times");
             eventInfo.setOccurences(eventTypeEntry.getValue());
             eventTypes.add(eventInfo);
         }
@@ -85,22 +84,43 @@ public class PrivacyServiceImpl implements PrivacyService {
     }
 
     @Override
-    public Boolean surfAnonymously(String profileId) {
+    public Boolean setAnonymous(String profileId, boolean anonymous) {
         Profile profile = profileService.load(profileId);
         if (profile == null) {
             return false;
         }
-        return null;
+        profile.setProperty("anonymous", anonymous);
+        profileService.save(profile);
+        return true;
+    }
+
+    public Boolean isAnonymous(String profileId) {
+        Profile profile = profileService.load(profileId);
+        if (profile == null) {
+            return null;
+        }
+        Boolean anonymous = (Boolean) profile.getProperty("anonymous");
+        return anonymous;
     }
 
     @Override
     public List<String> getFilteredEventTypes(String profileId) {
-        return null;
+        Profile profile = profileService.load(profileId);
+        if (profile == null) {
+            return new ArrayList<String>();
+        }
+        return (List<String>) profile.getProperty("filteredEventTypes");
     }
 
     @Override
     public Boolean setFilteredEventTypes(String profileId, List<String> eventTypes) {
-        return null;
+        Profile profile = profileService.load(profileId);
+        if (profile == null) {
+            return null;
+        }
+        profile.setProperty("filteredEventTypes", eventTypes);
+        profileService.save(profile);
+        return true;
     }
 
     @Override

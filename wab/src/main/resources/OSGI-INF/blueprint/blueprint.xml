@@ -29,6 +29,7 @@
     <reference id="profileService" interface="org.oasis_open.contextserver.api.services.ProfileService"/>
     <reference id="eventService" interface="org.oasis_open.contextserver.api.services.EventService"/>
     <reference id="rulesService" interface="org.oasis_open.contextserver.api.services.RulesService"/>
+    <reference id="privacyService" interface="org.oasis_open.contextserver.api.services.PrivacyService"/>
 
     <bean id="contextServlet" class="org.oasis_open.contextserver.web.ContextServlet">
         <property name="profileService" ref="profileService"/>
@@ -49,6 +50,7 @@
     <bean id="eventsCollectorServlet" class="org.oasis_open.contextserver.web.EventsCollectorServlet">
         <property name="profileService" ref="profileService"/>
         <property name="eventService" ref="eventService"/>
+        <property name="privacyService" ref="privacyService" />
     </bean>
     <service id="eventsCollectorServletService" auto-export="interfaces" ref="eventsCollectorServlet">
         <service-properties>

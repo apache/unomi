@@ -72,7 +72,7 @@
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
-    <reference id="privacyService" interface="org.oasis_open.contextserver.privacy.PrivacyService"/>
+    <reference id="privacyService" interface="org.oasis_open.contextserver.api.services.PrivacyService"/>
 
     <bean id="privacyServiceEndPoint" class="org.oasis_open.contextserver.privacy.rest.PrivacyServiceEndPoint">
         <property name="privacyService" ref="privacyService"/>

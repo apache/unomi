@@ -1,4 +1,6 @@
-package org.oasis_open.contextserver.privacy;
+package org.oasis_open.contextserver.api.services;
+
+import org.oasis_open.contextserver.api.ServerInfo;
 
 import java.util.List;
 
@@ -7,11 +9,15 @@ import java.util.List;
  */
 public interface PrivacyService {
 
+    public static final String GLOBAL_ANONYMOUS_PROFILE_ID = "global-anonymous-profile";
+
     ServerInfo getServerInfo();
 
     Boolean deleteProfileData(String profileId);
 
-    Boolean surfAnonymously(String profileId);
+    Boolean setAnonymous(String profileId, boolean anonymous);
+
+    Boolean isAnonymous(String profileId);
 
     List<String> getFilteredEventTypes(String profileId);
 
