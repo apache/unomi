@@ -24,7 +24,7 @@
         },
         "eventProperties": {
           "origin": "eventProperty::source.properties.pageInfo.pagePath",
-          "language": "eventProperty::source.properties.pageInfo.language",
+          "language": "script::event.properties['src_languages.values'].toLowerCase()",
           "originForm": "eventProperty::target.itemId",
           "keyword": "script::event.properties['src_terms[0].term'].toLowerCase()"
         }
