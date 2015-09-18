@@ -66,6 +66,24 @@ public class PrivacyServiceImpl implements PrivacyService {
     }
 
     @Override
+    public Boolean deleteProfile(String profileId) {
+        Profile profile = profileService.load(profileId);
+        if (profile == null) {
+            return false;
+        }
+        // we simply overwrite the existing profile with an empty one.
+        Profile emptyProfile = new Profile(profileId);
+        profileService.save(emptyProfile);
+        return true;
+    }
+
+    @Override
+    public Boolean anonymizeBrowsingData(String profileId) {
+        // @todo to be implemented, not sure how yet
+        return null;
+    }
+
+    @Override
     public Boolean deleteProfileData(String profileId) {
         Condition eventPropertyCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
         eventPropertyCondition.setParameter("propertyName", "profileId");

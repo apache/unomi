@@ -37,8 +37,19 @@ public class PrivacyServiceEndPoint {
 
     @DELETE
     @Path("/profiles/{profileId}")
-    public Response deleteProfileData(@PathParam("profileId") String profileId) {
-        privacyService.deleteProfileData(profileId);
+    public Response deleteProfileData(@PathParam("profileId") String profileId, @QueryParam("withData") @DefaultValue("false") boolean withData) {
+        if (withData) {
+            privacyService.deleteProfileData(profileId);
+        } else {
+            privacyService.deleteProfile(profileId);
+        }
+        return Response.ok().build();
+    }
+
+    @POST
+    @Path("/profiles/{profileId}/anonymize")
+    public Response anonymizeBrowsingData(@PathParam("profileId") String profileId) {
+        privacyService.anonymizeBrowsingData(profileId);
         return Response.ok().build();
     }
 

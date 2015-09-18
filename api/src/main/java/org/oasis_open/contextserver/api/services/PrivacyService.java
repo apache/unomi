@@ -13,6 +13,10 @@ public interface PrivacyService {
 
     ServerInfo getServerInfo();
 
+    Boolean deleteProfile(String profileId);
+
+    Boolean anonymizeBrowsingData(String profileId);
+
     Boolean deleteProfileData(String profileId);
 
     Boolean setAnonymous(String profileId, boolean anonymous);
