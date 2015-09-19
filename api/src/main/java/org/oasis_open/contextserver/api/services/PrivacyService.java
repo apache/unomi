@@ -15,7 +15,7 @@ public interface PrivacyService {
 
     Boolean deleteProfile(String profileId);
 
-    Boolean anonymizeBrowsingData(String profileId);
+    String anonymizeBrowsingData(String profileId);
 
     Boolean deleteProfileData(String profileId);
 

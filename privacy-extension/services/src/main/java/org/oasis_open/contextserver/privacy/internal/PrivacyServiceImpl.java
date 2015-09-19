@@ -13,10 +13,7 @@ import org.oasis_open.contextserver.api.EventInfo;
 import org.oasis_open.contextserver.api.services.PrivacyService;
 import org.oasis_open.contextserver.api.ServerInfo;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by loom on 10.09.15.
@@ -78,9 +75,29 @@ public class PrivacyServiceImpl implements PrivacyService {
     }
 
     @Override
-    public Boolean anonymizeBrowsingData(String profileId) {
-        // @todo to be implemented, not sure how yet
-        return null;
+    public String anonymizeBrowsingData(String profileId) {
+        Profile profile = profileService.load(profileId);
+        if (profile == null) {
+            return profileId;
+        }
+        Profile newProfile = new Profile(UUID.randomUUID().toString());
+        // first we copy all the profile data to the new Profile
+        newProfile.setMergedWith(profile.getMergedWith());
+        newProfile.setProperties(profile.getProperties());
+        newProfile.setScores(profile.getScores());
+        newProfile.setSegments(profile.getSegments());
+        newProfile.setSystemProperties(profile.getSystemProperties());
+        newProfile.setScope(profile.getScope());
+        profileService.save(newProfile);
+        // then we clear the old profile of all data
+        profile.setMergedWith(null);
+        profile.setProperties(new HashMap<String, Object>());
+        profile.setScores(new HashMap<String, Integer>());
+        profile.setSegments(new HashSet<String>());
+        profile.setSystemProperties(new HashMap<String, Object>());
+        profile.setScope(null);
+        profileService.save(profile);
+        return newProfile.getItemId();
     }
 
     @Override

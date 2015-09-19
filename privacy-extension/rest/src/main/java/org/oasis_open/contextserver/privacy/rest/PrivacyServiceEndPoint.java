@@ -8,6 +8,7 @@ import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
 import java.util.List;
 
@@ -49,8 +50,14 @@ public class PrivacyServiceEndPoint {
     @POST
     @Path("/profiles/{profileId}/anonymize")
     public Response anonymizeBrowsingData(@PathParam("profileId") String profileId) {
-        privacyService.anonymizeBrowsingData(profileId);
-        return Response.ok().build();
+        String newProfileId = privacyService.anonymizeBrowsingData(profileId);
+        if (!profileId.equals(newProfileId)) {
+            return Response.ok()
+                    .cookie(new NewCookie("context-profile-id", newProfileId, "/", null, null, NewCookie.DEFAULT_MAX_AGE, false))
+                    .entity(newProfileId)
+                    .build();
+        }
+        return Response.serverError().build();
     }
 
     @GET
