@@ -94,7 +94,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             }
         }
         bundleContext.addBundleListener(this);
-        //initializePurge();
+        initializePurge();
         schedulePropertyTypeLoad();
     }
 
@@ -213,10 +213,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                         persistenceService.purge(getMonth(-purgeSessionsAndEventsTime).getTime());
                     }
 
-                    logger.debug("Profile purge: purge executed in {} ms", System.currentTimeMillis() - t);
+                    logger.info("Profile purge: purge executed in {} ms", System.currentTimeMillis() - t);
                 }
             };
-            purgeProfileTimer.scheduleAtFixedRate(task, getDay(1).getTime(), purgeProfileInterval);
+            purgeProfileTimer.scheduleAtFixedRate(task, getDay(1).getTime(), purgeProfileInterval * 24L * 60L * 60L * 1000L);
 
             logger.info("Profile purge: purge scheduled with an interval of {} days", purgeProfileInterval);
         } else {
