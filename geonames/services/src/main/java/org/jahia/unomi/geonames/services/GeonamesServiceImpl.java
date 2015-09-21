@@ -54,14 +54,16 @@ public class GeonamesServiceImpl implements GeonamesService {
 
     public void importDatabase() {
         if (!persistenceService.createIndex("geonames")) {
-            if(forceDbImport) {
+            if (forceDbImport) {
                 persistenceService.removeIndex("geonames");
                 persistenceService.createIndex("geonames");
-            }else {
+                logger.info("Geonames index removed and recreated");
+            } else if (persistenceService.getAllItemsCount("geonameEntry") > 0){
                 return;
             }
+        } else {
+            logger.info("Geonames index created");
         }
-        logger.info("Geonames index created");
 
         if (pathToGeonamesDatabase == null) {
             logger.info("No geonames DB provided");
@@ -102,7 +104,7 @@ public class GeonamesServiceImpl implements GeonamesService {
                         }
                         logger.info("Geonames database imported");
                     } catch (Exception e) {
-                       logger.error(e.getMessage(), e);
+                        logger.error(e.getMessage(), e);
                     }
                 }
             }, 5000);
@@ -196,7 +198,7 @@ public class GeonamesServiceImpl implements GeonamesService {
 
         featureCodeCondition.setParameter("propertyValues", ORDERED_FEATURES.get(level));
         PartialList<GeonameEntry> r = persistenceService.query(andCondition, null, GeonameEntry.class, offset, size);
-        while (r.size() == 0 && level < ORDERED_FEATURES.size()-1) {
+        while (r.size() == 0 && level < ORDERED_FEATURES.size() - 1) {
             level++;
             featureCodeCondition.setParameter("propertyValues", ORDERED_FEATURES.get(level));
             r = persistenceService.query(andCondition, null, GeonameEntry.class, offset, size);
@@ -215,7 +217,7 @@ public class GeonamesServiceImpl implements GeonamesService {
         andCondition.setParameter("operator", "and");
         andCondition.setParameter("subConditions", l);
 
-        Condition featureCodeCondition = getPropertyCondition("featureCode", "propertyValues",  featureCodes, "in");
+        Condition featureCodeCondition = getPropertyCondition("featureCode", "propertyValues", featureCodes, "in");
         l.add(featureCodeCondition);
 
         if (items.size() > 0) {
@@ -248,7 +250,7 @@ public class GeonamesServiceImpl implements GeonamesService {
             featureCodes = Arrays.asList("PPLA", "PPLC");
             l.add(getPropertyCondition("admin1Code", "propertyValue", entry.getAdmin1Code(), "equals"));
         } else if (ADM2_FEATURE_CODES.contains(entry.getFeatureCode())) {
-            featureCodes = Arrays.asList("PPLA2","PPLA", "PPLC");
+            featureCodes = Arrays.asList("PPLA2", "PPLA", "PPLC");
             l.add(getPropertyCondition("admin1Code", "propertyValue", entry.getAdmin1Code(), "equals"));
             l.add(getPropertyCondition("admin2Code", "propertyValue", entry.getAdmin2Code(), "equals"));
         } else {
