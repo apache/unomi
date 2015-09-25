@@ -347,7 +347,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         for (Rule r : allRules) {
             Condition trackedCondition = definitionsService.extractConditionByTag(r.getCondition(), "trackedCondition");
             if(trackedCondition != null){
-                Condition sourceEventPropertyCondition = definitionsService.extractConditionByTag(r.getCondition(), "sourceEventProperty");
+                Condition sourceEventPropertyCondition = definitionsService.extractConditionByTag(r.getCondition(), "sourceEventCondition");
                 if(source != null && sourceEventPropertyCondition != null) {
                     ParserHelper.resolveConditionType(definitionsService, sourceEventPropertyCondition);
                     if(persistenceService.testMatch(sourceEventPropertyCondition, source)){
