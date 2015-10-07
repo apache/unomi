@@ -68,14 +68,23 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             return EventService.NO_CHANGE;
         }
 
-        session.setProperty("remoteAddr", httpServletRequest.getRemoteAddr());
-        session.setProperty("remoteHost", httpServletRequest.getRemoteHost());
+        String remoteAddr = httpServletRequest.getRemoteAddr();
+        String remoteAddrParameter = httpServletRequest.getParameter("remoteAddr");
+        String xff = httpServletRequest.getHeader("X-Forwarded-For");
+        if (remoteAddrParameter != null && remoteAddrParameter.length() > 0) {
+            remoteAddr = remoteAddrParameter;
+        } else if (xff != null && !xff.equals("")) {
+            if (xff.indexOf(',') > -1) {
+                xff = xff.substring(0, xff.indexOf(','));
+            }
+            remoteAddr = xff;
+        }
 
+        session.setProperty("remoteAddr", remoteAddr);
+        session.setProperty("remoteHost", httpServletRequest.getRemoteHost());
         try {
-            if (httpServletRequest.getParameter("remoteAddr") != null && httpServletRequest.getParameter("remoteAddr").length() > 0) {
-                ipLookup(httpServletRequest.getParameter("remoteAddr"), session);
-            } else if (!httpServletRequest.getRemoteAddr().equals("127.0.0.1") && IPV4.matcher(httpServletRequest.getRemoteAddr()).matches()) {
-                ipLookup(httpServletRequest.getRemoteAddr(), session);
+            if (!remoteAddr.equals("127.0.0.1") && IPV4.matcher(remoteAddr).matches()) {
+                ipLookup(remoteAddr, session);
             } else {
                 session.setProperty("sessionCountryCode", "CH");
                 session.setProperty("sessionCountryName", "Switzerland");
