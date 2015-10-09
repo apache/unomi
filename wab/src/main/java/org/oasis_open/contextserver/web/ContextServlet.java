@@ -40,6 +40,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
@@ -113,6 +114,11 @@ public class ContextServlet extends HttpServlet {
         }
 
         String sessionId = request.getParameter("sessionId");
+
+        if (cookieProfileId == null && sessionId == null && personaId == null) {
+            ((HttpServletResponse)response).sendError(HttpServletResponse.SC_BAD_REQUEST);
+            return;
+        }
 
         boolean profileCreated = false;
 
