@@ -58,7 +58,7 @@ public class GeonamesServiceImpl implements GeonamesService {
                 persistenceService.removeIndex("geonames");
                 persistenceService.createIndex("geonames");
                 logger.info("Geonames index removed and recreated");
-            } else if (persistenceService.getAllItemsCount("geonameEntry") > 0){
+            } else if (persistenceService.getAllItemsCount(GeonameEntry.ITEM_TYPE) > 0) {
                 return;
             }
         } else {
