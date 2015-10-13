@@ -458,12 +458,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                     logger.warn("Couldn't resolve default strategy, ignoring property merge for property " + profileProperty);
                     continue;
                 } else {
+                    // todo: improper algorithm… it is possible that the defaultMergeStrategy couldn't be resolved here
                     logger.warn("Couldn't resolve strategy " + propertyMergeStrategyId + " for property " + profileProperty + ", using default strategy instead");
                     propertyMergeStrategyId = "defaultMergeStrategy";
                     propertyMergeStrategyType = definitionsService.getPropertyMergeStrategyType(propertyMergeStrategyId);
                 }
             }
 
+            // todo: find a way to avoid resolving PropertyMergeStrategyExecutor every time?
             Collection<ServiceReference<PropertyMergeStrategyExecutor>> matchingPropertyMergeStrategyExecutors;
             try {
                 matchingPropertyMergeStrategyExecutors = bundleContext.getServiceReferences(PropertyMergeStrategyExecutor.class, propertyMergeStrategyType.getFilter());
@@ -591,14 +593,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return propertyTypes;
     }
 
-    public Set<PropertyType> getPropertyTypeByTag(String tag, boolean recursive) {
+    public Set<PropertyType> getPropertyTypeByTag(String tag, boolean includeFromSubtags) {
         Set<PropertyType> propertyTypes = new LinkedHashSet<PropertyType>();
         Collection<PropertyType> directPropertyTypes = persistenceService.query("tags", tag, "rank", PropertyType.class);
 
         if (directPropertyTypes != null) {
             propertyTypes.addAll(directPropertyTypes);
         }
-        if (recursive) {
+        if (includeFromSubtags) {
             for (Tag subTag : definitionsService.getTag(tag).getSubTags()) {
                 Set<PropertyType> childPropertyTypes = getPropertyTypeByTag(subTag.getId(), true);
                 propertyTypes.addAll(childPropertyTypes);

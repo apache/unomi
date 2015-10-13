@@ -25,6 +25,9 @@ package org.oasis_open.contextserver.api;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
 
+/**
+ * A superclass for all {@link Item}s that bear {@link Metadata}.
+ */
 public abstract class MetadataItem extends Item {
     private static final long serialVersionUID = -2459510107927663510L;
     protected Metadata metadata;
@@ -37,7 +40,12 @@ public abstract class MetadataItem extends Item {
         this.metadata = metadata;
     }
 
-    @XmlElement(name="metadata")
+    /**
+     * Retrieves the associated Metadata
+     *
+     * @return the associated Metadata
+     */
+    @XmlElement(name = "metadata")
     public Metadata getMetadata() {
         return metadata;
     }

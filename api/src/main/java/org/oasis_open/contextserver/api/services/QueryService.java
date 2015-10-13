@@ -22,19 +22,61 @@ package org.oasis_open.contextserver.api.services;
  * #L%
  */
 
+import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.AggregateQuery;
 
 import java.util.Map;
 
+/**
+ * A service to perform queries.
+ */
 public interface QueryService {
 
-    Map<String, Long> getAggregate(String type, String property);
+    /**
+     * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and aggregated by possible values of the specified
+     * property.
+     *
+     * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
+     * @param property the property we're aggregating on, i.e. for each possible value of this property, we are counting how many items of the specified type have that value
+     * @return a Map associating a specific value of the property to the cardinality of items with that value
+     */
+    Map<String, Long> getAggregate(String itemType, String property);
 
-    Map<String, Long> getAggregate(String type, String property, AggregateQuery query);
+    /**
+     * TODO: rework, this method is confusing since it either behaves like {@link #getAggregate(String, String)} if query is null but completely differently if it isn't
+     *
+     * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and aggregated by possible values of the specified
+     * property or, if the specified query is not {@code null}, perform that aggregate query.
+     *
+     * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
+     * @param property the property we're aggregating on, i.e. for each possible value of this property, we are counting how many items of the specified type have that value
+     * @param query    the {@link AggregateQuery} specifying the aggregation that should be perfomed
+     * @return a Map associating a specific value of the property to the cardinality of items with that value
+     */
+    Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query);
 
-    long getQueryCount(String type, Condition condition);
+    /**
+     * Retrieves the number of items of the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and matching the specified {@link Condition}.
+     *
+     * @param condition the condition the items must satisfy
+     * @param itemType  the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
+     * @return the number of items of the specified type
+     * @see Item Item for a discussion of {@code ITEM_TYPE}
+     */
+    long getQueryCount(String itemType, Condition condition);
 
-    Map<String,Double> getMetric(String type, String property, String metricType, Condition condition);
+    /**
+     * Retrieves the specified metrics for the specified field of items of the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and matching the
+     * specified {@link Condition}.
+     *
+     * @param condition                the condition the items must satisfy
+     * @param slashConcatenatedMetrics a String specifying which metrics should be computed, separated by a slash ({@code /}) (possible values: {@code sum} for the sum of the
+     *                                 values, {@code avg} for the average of the values, {@code min} for the minimum value and {@code max} for the maximum value)
+     * @param property                 the name of the field for which the metrics should be computed
+     * @param type                     the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
+     * @return a Map associating computed metric name as key to its associated value
+     */
+    Map<String, Double> getMetric(String type, String property, String slashConcatenatedMetrics, Condition condition);
 
 }

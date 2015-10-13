@@ -302,13 +302,13 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         return pluginTypes;
     }
 
-    public Set<ConditionType> getConditionTypesByTag(Tag tag, boolean recursive) {
+    public Set<ConditionType> getConditionTypesByTag(Tag tag, boolean includeFromSubtags) {
         Set<ConditionType> conditionTypes = new LinkedHashSet<ConditionType>();
         Set<ConditionType> directConditionTypes = conditionTypeByTag.get(tag);
         if (directConditionTypes != null) {
             conditionTypes.addAll(directConditionTypes);
         }
-        if (recursive) {
+        if (includeFromSubtags) {
             for (Tag subTag : tag.getSubTags()) {
                 Set<ConditionType> childConditionTypes = getConditionTypesByTag(subTag, true);
                 conditionTypes.addAll(childConditionTypes);
@@ -325,13 +325,13 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         return actionTypeById.values();
     }
 
-    public Set<ActionType> getActionTypeByTag(Tag tag, boolean recursive) {
+    public Set<ActionType> getActionTypeByTag(Tag tag, boolean includeFromSubtags) {
         Set<ActionType> actionTypes = new LinkedHashSet<ActionType>();
         Set<ActionType> directActionTypes = actionTypeByTag.get(tag);
         if (directActionTypes != null) {
             actionTypes.addAll(directActionTypes);
         }
-        if (recursive) {
+        if (includeFromSubtags) {
             for (Tag subTag : tag.getSubTags()) {
                 Set<ActionType> childActionTypes = getActionTypeByTag(subTag, true);
                 actionTypes.addAll(childActionTypes);
@@ -348,13 +348,13 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         return valueTypeById.values();
     }
 
-    public Set<ValueType> getValueTypeByTag(Tag tag, boolean recursive) {
+    public Set<ValueType> getValueTypeByTag(Tag tag, boolean includeFromSubtags) {
         Set<ValueType> valueTypes = new LinkedHashSet<ValueType>();
         Set<ValueType> directValueTypes = valueTypeByTag.get(tag);
         if (directValueTypes != null) {
             valueTypes.addAll(directValueTypes);
         }
-        if (recursive) {
+        if (includeFromSubtags) {
             for (Tag subTag : tag.getSubTags()) {
                 Set<ValueType> childValueTypes = getValueTypeByTag(subTag, true);
                 valueTypes.addAll(childValueTypes);

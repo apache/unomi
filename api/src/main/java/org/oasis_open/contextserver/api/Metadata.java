@@ -25,8 +25,16 @@ package org.oasis_open.contextserver.api;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+/**
+ * A class providing information about context server entities.
+ *
+ * @see MetadataItem
+ */
 public class Metadata implements Comparable<Metadata> {
 
+    /**
+     * Default scope, gathers default entities and can also be used to share entities across scopes.
+     */
     public static final String SYSTEM_SCOPE = "systemscope";
     private String id;
     private String name;
@@ -56,6 +64,11 @@ public class Metadata implements Comparable<Metadata> {
         this.id = id;
     }
 
+    /**
+     * Retrieves the identifier for the entity associated with this Metadata
+     *
+     * @return the identifier
+     */
     public String getId() {
         return id;
     }
@@ -76,6 +89,11 @@ public class Metadata implements Comparable<Metadata> {
         this.description = description;
     }
 
+    /**
+     * Retrieves the scope for the entity associated with this Metadata
+     * @return the scope for the entity associated with this Metadata
+     * @see Item Item for a deeper discussion on scopes
+     */
     public String getScope() {
         return scope;
     }
@@ -84,6 +102,10 @@ public class Metadata implements Comparable<Metadata> {
         this.scope = scope;
     }
 
+    /**
+     * Retrieves a set of {@link Tag} names associated with this Metadata
+     * @return a set of {@link Tag} names associated with this Metadata
+     */
     public Set<String> getTags() {
         return tags;
     }
@@ -92,6 +114,10 @@ public class Metadata implements Comparable<Metadata> {
         this.tags = tagIDs;
     }
 
+    /**
+     * Whether the associated entity is considered active by the context server, in particular to check if rules need to be created / triggered
+     * @return {@code true} if the associated entity is enabled, {@code false} otherwise
+     */
     public boolean isEnabled() {
         return enabled;
     }
@@ -100,6 +126,11 @@ public class Metadata implements Comparable<Metadata> {
         this.enabled = enabled;
     }
 
+    /**
+     * Whether the associated entity is waiting on additional plugins to become available to be able to properly perform its function.
+     *
+     * @return {@code true} if plugins are missing, {@code false} otherwise
+     */
     public boolean isMissingPlugins() {
         return missingPlugins;
     }
@@ -108,6 +139,10 @@ public class Metadata implements Comparable<Metadata> {
         this.missingPlugins = missingPlugins;
     }
 
+    /**
+     * Whether the associated entity is considered for internal purposes only and should therefore be hidden to accessing UIs.
+     * @return {@code true} if the associated entity needs to be hidden, {@code false} otherwise
+     */
     public boolean isHidden() {
         return hidden;
     }
@@ -116,6 +151,11 @@ public class Metadata implements Comparable<Metadata> {
         this.hidden = hidden;
     }
 
+    /**
+     * Whether the associated entity can be accessed but not modified.
+     *
+     * @return {@code true} if the associated entity can be accessed but not modified, {@code false} otherwise
+     */
     public boolean isReadOnly() {
         return readOnly;
     }

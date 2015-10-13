@@ -55,12 +55,12 @@ public class QueryServiceImpl implements QueryService {
     }
 
     @Override
-    public Map<String, Long> getAggregate(String type, String property) {
-        return persistenceService.aggregateQuery(null, new TermsAggregate(property), type);
+    public Map<String, Long> getAggregate(String itemType, String property) {
+        return persistenceService.aggregateQuery(null, new TermsAggregate(property), itemType);
     }
 
     @Override
-    public Map<String, Long> getAggregate(String type, String property, AggregateQuery query) {
+    public Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query) {
         if (query != null) {
             // resolve condition
             if (query.getCondition() != null) {
@@ -75,40 +75,40 @@ public class QueryServiceImpl implements QueryService {
                     if (aggregateType.equals("date")) {
                         String interval = (String) query.getAggregate().getParameters().get("interval");
                         String format = (String) query.getAggregate().getParameters().get("format");
-                        return persistenceService.aggregateQuery(query.getCondition(), new DateAggregate(property, interval, format), type);
+                        return persistenceService.aggregateQuery(query.getCondition(), new DateAggregate(property, interval, format), itemType);
                     } else if (aggregateType.equals("dateRange") && query.getAggregate().getDateRanges() != null && query.getAggregate().getDateRanges().size() > 0) {
                         String format = (String) query.getAggregate().getParameters().get("format");
-                        return persistenceService.aggregateQuery(query.getCondition(), new DateRangeAggregate(query.getAggregate().getProperty(), format, query.getAggregate().getDateRanges()), type);
+                        return persistenceService.aggregateQuery(query.getCondition(), new DateRangeAggregate(query.getAggregate().getProperty(), format, query.getAggregate().getDateRanges()), itemType);
                     } else if (aggregateType.equals("numericRange") && query.getAggregate().getNumericRanges() != null && query.getAggregate().getNumericRanges().size() > 0) {
-                        return persistenceService.aggregateQuery(query.getCondition(), new NumericRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().getNumericRanges()), type);
+                        return persistenceService.aggregateQuery(query.getCondition(), new NumericRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().getNumericRanges()), itemType);
                     } else if (aggregateType.equals("ipRange") && query.getAggregate().ipRanges() != null && query.getAggregate().ipRanges().size() > 0) {
-                        return persistenceService.aggregateQuery(query.getCondition(), new IpRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().ipRanges()), type);
+                        return persistenceService.aggregateQuery(query.getCondition(), new IpRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().ipRanges()), itemType);
                     }
                 }
             }
 
             // fall back on terms aggregate
-            return persistenceService.aggregateQuery(query.getCondition(), new TermsAggregate(property), type);
+            return persistenceService.aggregateQuery(query.getCondition(), new TermsAggregate(property), itemType);
         }
 
-        return getAggregate(type, property);
+        return getAggregate(itemType, property);
     }
 
     @Override
-    public Map<String, Double> getMetric(String type, String property, String metricType, Condition condition) {
+    public Map<String, Double> getMetric(String type, String property, String slashConcatenatedMetrics, Condition condition) {
         if (condition.getConditionType() == null) {
             ParserHelper.resolveConditionType(definitionsService, condition);
         }
-        return persistenceService.getSingleValuesMetrics(condition, metricType.split("/"), property, type);
+        return persistenceService.getSingleValuesMetrics(condition, slashConcatenatedMetrics.split("/"), property, type);
     }
 
     @Override
-    public long getQueryCount(String type, Condition condition) {
+    public long getQueryCount(String itemType, Condition condition) {
         try {
             if (condition.getConditionType() == null) {
                 ParserHelper.resolveConditionType(definitionsService, condition);
             }
-            return persistenceService.queryCount(condition, type);
+            return persistenceService.queryCount(condition, itemType);
         } catch (Exception e) {
             logger.warn("Invalid query", e);
             return 0;

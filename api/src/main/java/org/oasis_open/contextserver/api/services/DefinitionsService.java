@@ -22,45 +22,162 @@ package org.oasis_open.contextserver.api.services;
  * #L%
  */
 
-import org.oasis_open.contextserver.api.*;
+import org.oasis_open.contextserver.api.PluginType;
+import org.oasis_open.contextserver.api.PropertyMergeStrategyType;
+import org.oasis_open.contextserver.api.Tag;
+import org.oasis_open.contextserver.api.ValueType;
 import org.oasis_open.contextserver.api.actions.ActionType;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.conditions.ConditionType;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
+/**
+ * A service to retrieve definition information about core context server entities such as conditions, actions and values.
+ */
 public interface DefinitionsService {
+    /**
+     * Retrieves all known tags.
+     *
+     * @return the set of all known tags
+     */
     Set<Tag> getAllTags();
 
+    /**
+     * Retrieves the set of all root tags from which all other tags are derived via sub-tags.
+     *
+     * @return the set of all root tags
+     */
     Set<Tag> getRootTags();
 
+    /**
+     * Retrieves the tag with the specified identifier.
+     *
+     * @param tagId the identifier of the tag to retrieve
+     * @return the tag with the specified identifier
+     */
     Tag getTag(String tagId);
 
+    /**
+     * Retrieves all condition types.
+     *
+     * @return a Collection of all collection types
+     */
     Collection<ConditionType> getAllConditionTypes();
 
-    Set<ConditionType> getConditionTypesByTag(Tag tag, boolean recursive);
+    /**
+     * Retrieves the set of condition types with the specified tag also retrieving condition types from sub-tags if so specified.
+     *
+     * @param tag                the tag marking the condition types we want to retrieve
+     * @param includeFromSubtags {@code true} if we want to also include condition types marked by sub-tags of the specified tag
+     * @return the set of condition types with the specified tag (and its sub-tags, if specified)
+     */
+    Set<ConditionType> getConditionTypesByTag(Tag tag, boolean includeFromSubtags);
 
+    /**
+     * Retrieves the condition type associated with the specified identifier.
+     *
+     * @param id the identifier of the condition type to retrieve
+     * @return the condition type associated with the specified identifier or {@code null} if no such condition type exists
+     */
     ConditionType getConditionType(String id);
 
+    /**
+     * Retrieves all known action types.
+     *
+     * @return all known action types
+     */
     Collection<ActionType> getAllActionTypes();
 
-    Set<ActionType> getActionTypeByTag(Tag tag, boolean recursive);
+    /**
+     * Retrieves the set of action types with the specified tag also retrieving action types from sub-tags if so specified.
+     *
+     * @param tag                the tag marking the action types we want to retrieve
+     * @param includeFromSubtags {@code true} if we want to also include action types marked by sub-tags of the specified tag
+     * @return the set of action types with the specified tag (and its sub-tags, if specified)
+     */
+    Set<ActionType> getActionTypeByTag(Tag tag, boolean includeFromSubtags);
 
+    /**
+     * Retrieves the action type associated with the specified identifier.
+     *
+     * @param id the identifier of the action type to retrieve
+     * @return the action type associated with the specified identifier or {@code null} if no such action type exists
+     */
     ActionType getActionType(String id);
 
+    /**
+     * Retrieves all known value types.
+     *
+     * @return all known value types
+     */
     Collection<ValueType> getAllValueTypes();
 
-    Set<ValueType> getValueTypeByTag(Tag tag, boolean recursive);
+    /**
+     * Retrieves the set of value types with the specified tag also retrieving value types from sub-tags if so specified.
+     *
+     * @param tag                the tag marking the value types we want to retrieve
+     * @param includeFromSubtags {@code true} if we want to also include value types marked by sub-tags of the specified tag
+     * @return the set of value types with the specified tag (and its sub-tags, if specified)
+     */
+    Set<ValueType> getValueTypeByTag(Tag tag, boolean includeFromSubtags);
 
+    /**
+     * Retrieves the value type associated with the specified identifier.
+     *
+     * @param id the identifier of the value type to retrieve
+     * @return the value type associated with the specified identifier or {@code null} if no such value type exists
+     */
     ValueType getValueType(String id);
 
+    /**
+     * Retrieves a Map of plugin identifier to a list of plugin types defined by that particular plugin.
+     *
+     * @return a Map of plugin identifier to a list of plugin types defined by that particular plugin
+     */
     Map<Long, List<PluginType>> getTypesByPlugin();
 
+    /**
+     * Retrieves the property merge strategy type associated with the specified identifier.
+     *
+     * @param id the identifier of the property merge strategy type to retrieve
+     * @return the property merge strategy type associated with the specified identifier or {@code null} if no such property merge strategy type exists
+     */
     PropertyMergeStrategyType getPropertyMergeStrategyType(String id);
 
+    /**
+     * Retrieves all conditions of the specified type from the specified root condition.
+     *
+     * TODO: remove?
+     *
+     * @param rootCondition the condition from which we want to extract all conditions with the specified type
+     * @param typeId the identifier of the condition type we want conditions to extract to match
+     * @return a set of conditions contained in the specified root condition and matching the specified condition type or an empty set if no such condition exists
+     */
     Set<Condition> extractConditionsByType(Condition rootCondition, String typeId);
 
+    /**
+     * Retrieves a condition matching the specified tag identifier from the specified root condition.
+     *
+     * TODO: remove from API and move to a different class?
+     * TODO: purpose and behavior not clear
+     *
+     * @param rootCondition
+     * @param tagId
+     * @return
+     */
     Condition extractConditionByTag(Condition rootCondition, String tagId);
 
+    /**
+     * Resolves (if possible) the {@link ConditionType}s for the specified condition and its sub-conditions (if any) from the type identifiers existing on the specified condition
+     *
+     * TODO: remove from API and move to a different class?
+     *
+     * @param rootCondition the condition for which we want to resolve the condition types from the existing condition type identifiers
+     * @return {@code true}
+     */
     boolean resolveConditionType(Condition rootCondition);
 }

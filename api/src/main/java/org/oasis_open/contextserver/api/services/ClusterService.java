@@ -27,14 +27,29 @@ import org.oasis_open.contextserver.api.ClusterNode;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * A service to access information about the context server's cluster.
+ *
+ * TODO: rename to something less specific like ContextRuntimeService?
+ */
 public interface ClusterService {
 
+    /**
+     * Retrieves the list of available nodes for this context server instance.
+     *
+     * @return a list of {@link ClusterNode}
+     */
     List<ClusterNode> getClusterNodes();
 
+    /**
+     * Removes all data before the specified date from the context server.
+     *
+     * @param date the Date before which all data needs to be removed
+     */
     void purge(final Date date);
 
     /**
-     * Removes all data associated with the provided scope
+     * Removes all data associated with the provided scope.
      *
      * @param scope the scope for which we want to remove data
      */

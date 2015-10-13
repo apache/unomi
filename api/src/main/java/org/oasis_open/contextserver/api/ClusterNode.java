@@ -25,7 +25,7 @@ package org.oasis_open.contextserver.api;
 import java.io.Serializable;
 
 /**
- * Represents the information about a cluster node
+ * Information about a cluster node.
  */
 public class ClusterNode implements Serializable {
 

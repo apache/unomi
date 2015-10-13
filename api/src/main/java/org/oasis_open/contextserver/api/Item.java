@@ -27,6 +27,17 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 
+/**
+ * A context server tracked entity. All tracked entities need to extend this class so as to provide the minimal information the context server needs to be able to track such
+ * entities and operate on them. Items are persisted according to their type (structure) and identifier (identity). Of note, all Item subclasses <strong>must</strong> define a
+ * public String constant named {@code ITEM_TYPE} that is used to identify the type of a specific Item via {@link #getItemType}. It is therefore important that
+ * {@code ITEM_TYPE} be unique across all persisted type of Items. Similarly, since Items are persisted according to their type, an Item's identifier must be unique among
+ * Items of the same type.
+ * <p/>
+ * Additionally, Items are also gathered by scope which allow the context server to group together Items that are related (usually pertaining to a given site being analyzed,
+ * though scopes could span across site depending on the desired analysis granularity). Scopes allow clients accessing the context server to filter data. The context server
+ * defines a built-in scope ({@link Metadata#SYSTEM_SCOPE}) that clients can use to share data across scopes.
+ */
 public abstract class Item implements Serializable {
     private static final Logger logger = LoggerFactory.getLogger(Item.class.getName());
 
@@ -39,7 +50,7 @@ public abstract class Item implements Serializable {
         try {
             this.itemType = (String) this.getClass().getField("ITEM_TYPE").get(null);
         } catch (IllegalAccessException | NoSuchFieldException e) {
-            logger.error("Cannot get item type",e);
+            logger.error("Item implementations must provide a public String constant named ITEM_TYPE to uniquely identify this Item for the persistence service.", e);
         }
     }
 
@@ -49,6 +60,11 @@ public abstract class Item implements Serializable {
     }
 
 
+    /**
+     * Retrieves the Item's identifier used to uniquely identify this Item when persisted or when referred to. An Item's identifier must be unique among Items with the same type.
+     *
+     * @return a String representation of the identifier, no particular format is prescribed as long as it is guaranteed unique for this particular Item.
+     */
     public String getItemId() {
         return itemId;
     }
@@ -57,6 +73,12 @@ public abstract class Item implements Serializable {
         this.itemId = itemId;
     }
 
+    /**
+     * Retrieves the Item's type used to assert metadata and structure common to Items of this type, notably for persistence purposes. The Item's type <strong>must</strong>
+     * match the value defined by the implementation's {@code ITEM_TYPE} public constant.
+     *
+     * @return a String representation of this Item's type, must equal the {@code ITEM_TYPE} value
+     */
     public String getItemType() {
         return itemType;
     }
@@ -65,6 +87,11 @@ public abstract class Item implements Serializable {
         this.itemType = itemType;
     }
 
+    /**
+     * Retrieves the Item's scope.
+     *
+     * @return the Item's scope name
+     */
     public String getScope() {
         return scope;
     }

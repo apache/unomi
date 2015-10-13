@@ -131,7 +131,7 @@ public class PropertyTypeChoiceListValue extends ChoiceListValue implements Plug
      * @param valueType
      *            the required property value type
      * @param multivalued
-     *            <code>true</code> if the property supports multiple values; <code>false</code> - in case it is a single value property
+     *            {@code true} if the property supports multiple values; {@code false} - in case it is a single value property
      */
     public PropertyTypeChoiceListValue(String id, String name, String valueType, boolean multivalued) {
         super(id, name);
@@ -149,7 +149,7 @@ public class PropertyTypeChoiceListValue extends ChoiceListValue implements Plug
      * @param valueType
      *            the required property value type
      * @param multivalued
-     *            <code>true</code> if the property supports multiple values; <code>false</code> - in case it is a single value property
+     *            {@code true} if the property supports multiple values; {@code false} - in case it is a single value property
      * @param pluginId
      *            the PropertyType PluginId to retrieve bundle
      */
@@ -171,8 +171,8 @@ public class PropertyTypeChoiceListValue extends ChoiceListValue implements Plug
 
     /**
      * Indicates if the property supports multiple values.
-     * 
-     * @return <code>true</code> if the property supports multiple values; <code>false</code> - in case it is a single value property
+     *
+     * @return {@code true} if the property supports multiple values; {@code false} - in case it is a single value property
      */
     public boolean isMultivalued() {
         return multivalued;
@@ -182,7 +182,7 @@ public class PropertyTypeChoiceListValue extends ChoiceListValue implements Plug
      * Sets the indicator if the property supports multiple values.
      * 
      * @param multivalued
-     *            <code>true</code> if the property supports multiple values; <code>false</code> - in case it is a single value property
+     *            {@code true} if the property supports multiple values; {@code false} - in case it is a single value property
      */
     public void setMultivalued(boolean multivalued) {
         this.multivalued = multivalued;

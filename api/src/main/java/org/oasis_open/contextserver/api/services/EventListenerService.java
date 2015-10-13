@@ -25,13 +25,27 @@ package org.oasis_open.contextserver.api.services;
 import org.oasis_open.contextserver.api.Event;
 
 /**
- * @todo maybe we should add a canHandle method to avoid calling listeners that don't care about all events and
- * optimize performance
+ * A service that gets notified (via {@link #onEvent(Event)}) whenever an event it can handle as decided by {@link #canHandle(Event)} occurs in the context server.
  */
 public interface EventListenerService {
 
+    /**
+     * Whether or not this listener can handle the specified event.
+     *
+     * @param event the event to be handled
+     * @return {@code true} if this listener can handle the specified event, {@code false} otherwise
+     */
     boolean canHandle(Event event);
 
+    /**
+     * Handles the specified event.
+     *
+     * @param event the event to be handled
+     * @return the result of the event handling as combination of {@link EventService} flags, to be checked using bitwise AND (&amp;) operator
+     * @see EventService#NO_CHANGE
+     * @see EventService#PROFILE_UPDATED
+     * @see EventService#SESSION_UPDATED
+     */
     int onEvent(Event event);
 
 }

@@ -23,25 +23,62 @@ package org.oasis_open.contextserver.api.services;
  */
 
 import org.oasis_open.contextserver.api.Item;
+import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.rules.Rule;
-import org.oasis_open.contextserver.api.Metadata;
 
 import java.util.Set;
 
+/**
+ * A service to access and operate on {@link Rule}s.
+ */
 public interface RulesService {
 
+    /**
+     * Retrieves the metadata for all known rules.
+     *
+     * @return the Set of known metadata
+     */
     Set<Metadata> getRuleMetadatas();
 
+    /**
+     * Retrieves rule metadatas for rules matching the specified {@link Query}.
+     *
+     * @param query the query the rules which metadata we want to retrieve must match
+     * @return a {@link PartialList} of rules metadata for the rules matching the specified query
+     */
     PartialList<Metadata> getRuleMetadatas(Query query);
 
+    /**
+     * Retrieves the rule identified by the specified identifier.
+     *
+     * @param ruleId the identifier of the rule we want to retrieve
+     * @return the rule identified by the specified identifier or {@code null} if no such rule exists.
+     */
     Rule getRule(String ruleId);
 
+    /**
+     * Persists the specified rule to the context server.
+     *
+     * @param rule the rule to be persisted
+     */
     void setRule(Rule rule);
 
+    /**
+     * Deletes the rule identified by the specified identifier.
+     *
+     * @param ruleId the identifier of the rule we want to delete
+     */
     void removeRule(String ruleId);
 
+    /**
+     * Retrieves tracked conditions (rules with a condition marked with the {@code trackedCondition} tag and which {@code sourceEventCondition} matches the specified item) for the
+     * specified item.
+     *
+     * @param item the item which tracked conditions we want to retrieve
+     * @return the Set of tracked conditions for the specified item
+     */
     Set<Condition> getTrackedConditions(Item item);
 }
