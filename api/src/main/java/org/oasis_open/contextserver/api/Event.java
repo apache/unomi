@@ -173,6 +173,7 @@ public class Event extends Item implements TimestampedItem {
         this.target = target;
     }
 
+    @XmlTransient
     public List<ActionPostExecutor> getActionPostExecutors() {
         return actionPostExecutors;
     }
