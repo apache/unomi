@@ -801,7 +801,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> List<T> query(final Condition query, String sortBy, final Class<T> clazz) {
-        return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz, 0, -1, null).getList();
+        return query(query, sortBy, clazz, 0, -1).getList();
     }
 
     @Override
