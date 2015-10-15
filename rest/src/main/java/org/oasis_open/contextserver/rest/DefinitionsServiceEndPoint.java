@@ -41,6 +41,7 @@ import java.util.*;
 /**
  * A JAX-RS endpoint to retrieve definition information about core context server entities such as conditions, actions and values.
  */
+@Path("/definitions")
 @WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @CrossOriginResourceSharing(

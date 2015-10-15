@@ -39,6 +39,7 @@ import java.util.List;
 /**
  * A JAX-RS endpoint to manage {@link Segment}s.
  */
+@Path("/segments")
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
