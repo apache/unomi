@@ -33,11 +33,11 @@ Deploying the generated package
 
 The "package" sub-project generates a pre-configured Apache Karaf installation that is the simplest way to get started.
 Simply uncompress the package/target/context-server-package-VERSION.tar.gz (for Linux or Mac OS X) or
- package/target/context-server-package-VERSION.tar.gz (for Windows) archive into the directory of your choice.
+ package/target/context-server-package-VERSION.zip (for Windows) archive into the directory of your choice.
  
 You can then start the server simply by using the command on UNIX/Linux/MacOS X : 
 
-    bin/karaf start    
+    ./bin/karaf start    
     
 or on Windows shell : 
 
