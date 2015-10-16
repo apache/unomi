@@ -43,28 +43,6 @@ or on Windows shell :
 
     bin\karaf.bat start
     
-Installing the MaxMind GeoIPLite2 IP lookup database
-----------------------------------------------------
-
-The Context Server requires an IP database in order to resolve IP addresses to user location.
-The GeoLite2 database can be downloaded from MaxMind here :
-http://dev.maxmind.com/geoip/geoip2/geolite2/
-
-Simply download the GeoLite2-City.mmdb file into the "etc" directory.
-
-Installing Geonames database
-----------------------------
-
-Context server includes a geocoding service based on the geonames database ( http://www.geonames.org/ ). It can be
-used to create conditions on countries or cities.
-
-In order to use it, you need to install the Geonames database into . Get the "allCountries.zip" database from here :
-http://download.geonames.org/export/dump/
-
-Download it and put it in the "etc" directory, without unzipping it.
-Edit /etc/org.oasis_open.contextserver.geonames.cfg and set request.geonamesDatabase.forceImport to true, import should start right away.
-Otherwise, import should start at the next startup. Import runs in background, but can take about 15 minutes.
-At the end, you should have about 4 million entries in the geonames index.
 
 Deploying into an existing Karaf server
 ---------------------------------------
@@ -101,7 +79,7 @@ on your disk and copy all the files from the lib/sigar directory into Karaf's li
        feature:install -v cxf/2.7.11
     ```
 
-4. Create a new etc/org.apache.cxf.osgi.cfg file and put the following property inside :
+4. Create a new $MY_KARAF_HOME/etc/org.apache.cxf.osgi.cfg file and put the following property inside :
 
     ```
        org.apache.cxf.servlet.context=/cxs
@@ -113,15 +91,38 @@ on your disk and copy all the files from the lib/sigar directory into Karaf's li
       cp kar/target/context-server-kar-1.0-SNAPSHOT.kar ~/java/deployments/unomi/apache-karaf-3.0.1/deploy/
     ```
    
-6. If all went smoothly, you should be able to access the context script here : http://localhost:8181/context.js
- You should see a digitalData object populated with some values. If not something went wrong during the install.
+6. If all went smoothly, you should be able to access the context script here : http://localhost:8181/cxs/cluster .
+ You should be able to login with karaf / karaf and see basic server information. If not something went wrong during the install.
+
+Installing the MaxMind GeoIPLite2 IP lookup database
+----------------------------------------------------
+
+The Context Server requires an IP database in order to resolve IP addresses to user location.
+The GeoLite2 database can be downloaded from MaxMind here :
+http://dev.maxmind.com/geoip/geoip2/geolite2/
+
+Simply download the GeoLite2-City.mmdb file into the "etc" directory.
+
+Installing Geonames database
+----------------------------
+
+Context server includes a geocoding service based on the geonames database ( http://www.geonames.org/ ). It can be
+used to create conditions on countries or cities.
+
+In order to use it, you need to install the Geonames database into . Get the "allCountries.zip" database from here :
+http://download.geonames.org/export/dump/
+
+Download it and put it in the "etc" directory, without unzipping it.
+Edit $MY_KARAF_HOME/etc/org.oasis_open.contextserver.geonames.cfg and set request.geonamesDatabase.forceImport to true, import should start right away.
+Otherwise, import should start at the next startup. Import runs in background, but can take about 15 minutes.
+At the end, you should have about 4 million entries in the geonames index.
  
 Changing the default configuration
 ----------------------------------
 
-If you want to change the default configuration, you can perform any modification you want in the karaf/etc directory.
+If you want to change the default configuration, you can perform any modification you want in the $MY_KARAF_HOME/etc directory.
 
-The context server configuration is kept in the etc/org.oasis_open.contextserver.web.cfg . It defines the
+The context server configuration is kept in the $MY_KARAF_HOME/etc/org.oasis_open.contextserver.web.cfg . It defines the
 addresses and port where it can be found :
 
     contextserver.address=localhost
@@ -134,7 +135,7 @@ BEFORE you start the server for the first time, or you will loose all the data y
 
 To change the cluster name, first create a file called 
 
-    etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg
+    $MY_KARAF_HOME/etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg
 
 with the following contents:
 
@@ -144,7 +145,7 @@ with the following contents:
 
 And replace the cluster.name parameter here by your cluster name.
 
-You can also put an elasticsearch configuration file in etc/elasticsearch.yml ,
+You can also put an elasticsearch configuration file in $MY_KARAF_HOME/etc/elasticsearch.yml ,
 and put any standard ElasticSearch configuration options in this last file.
 
 If you want your context server to be a client only on a cluster of elasticsearch nodes, just set the node.data property
@@ -158,11 +159,11 @@ By default, the login/password for the REST API full administrative access is "k
 
 The generated package is also configured with a default SSL certificate. You can change it by following these steps :
 
-1. Replace the existing keystore in /etc/keystore by your own certificate :
+1. Replace the existing keystore in $MY_KARAF_HOME/etc/keystore by your own certificate :
  
     http://wiki.eclipse.org/Jetty/Howto/Configure_SSL
     
-2. Update the keystore and certificate password in /etc/custom.properties file :
+2. Update the keystore and certificate password in $MY_KARAF_HOME/etc/custom.properties file :
  
 ```
     org.osgi.service.http.secure.enabled = true
@@ -238,7 +239,7 @@ Cluster setup
 -------------
 
 Context server relies on Elasticsearch to discover and configure its cluster. You just need to install multiple context
-servers on the same network, and enable the discovery protocol in etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg file :
+servers on the same network, and enable the discovery protocol in $MY_KARAF_HOME/etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg file :
 
     discovery.zen.ping.multicast.enabled=true
 
@@ -287,12 +288,12 @@ Node C :
 
 ### Specific configuration
 If multicast is not allowed on your network, you'll need to switch to unicast protocol and manually configure the server IPs. This can be
-done by disabling the elasticsearch automatic discovery in etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg :
+done by disabling the elasticsearch automatic discovery in $MY_KARAF_HOME/etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg :
 
     discovery.zen.ping.multicast.enabled=false
 
 
-And then set the property discovery.zen.ping.unicast.hosts in etc/elasticsearch.yml files :
+And then set the property discovery.zen.ping.unicast.hosts in $MY_KARAF_HOME/etc/elasticsearch.yml files :
 
 
     discovery.zen.ping.unicast.hosts: [‘192.168.0.1:9300', ‘192.168.0.2:9300']
@@ -390,7 +391,7 @@ The default username/password is
 You should really change this default username/password as soon as possible. To do so, simply modify the following
 file : 
 
-    etc/users.properties
+    $MY_KARAF_HOME/etc/users.properties
 
 For your context servers, and for any standalone ElasticSearch nodes you will need to open the following ports for proper
 node-to-node communication : 9200 (ElasticSearch REST API), 9300 (ElasticSearch TCP transport)
@@ -409,7 +410,7 @@ By default the Context Server limits to connections to port 9200 and 9300 to the
 (this is done using a custom plugin for ElasticSearch, that you may find here : 
 https://github.com/Jahia/unomi/tree/master/context-server/persistence-elasticsearch/plugins/security)
 
-You can adjust this setting by using the following setting in the etc/elasticsearch.yml file : 
+You can adjust this setting by using the following setting in the $MY_KARAF_HOME/etc/elasticsearch.yml file : 
 
     security.ipranges: localhost,127.0.0.1,::1,10.0.1.0-10.0.1.255
 
