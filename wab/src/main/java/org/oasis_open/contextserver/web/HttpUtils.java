@@ -112,12 +112,15 @@ public class HttpUtils {
         return baseRequestURL;
     }
 
-    public static void sendProfileCookie(Profile profile, ServletResponse response, String profileIdCookieName) {
+    public static void sendProfileCookie(Profile profile, ServletResponse response, String profileIdCookieName, String profileIdCookieDomain) {
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
             if (!(profile instanceof Persona)) {
                 Cookie profileIdCookie = new Cookie(profileIdCookieName, profile.getItemId());
                 profileIdCookie.setPath("/");
+                if (profileIdCookieDomain != null && !profileIdCookieDomain.equals("")) {
+                    profileIdCookie.setDomain(profileIdCookieDomain);
+                }
                 profileIdCookie.setMaxAge(cookieAgeInSeconds);
                 httpServletResponse.addCookie(profileIdCookie);
             }

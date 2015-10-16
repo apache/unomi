@@ -63,6 +63,7 @@ public class ContextServlet extends HttpServlet {
     private RulesService rulesService;
 
     private String profileIdCookieName = "context-profile-id";
+    private String profileIdCookieDomain;
 //    private String personaIdCookieName = "context-persona-id";
 
 
@@ -161,7 +162,7 @@ public class ContextServlet extends HttpServlet {
                         // or if we merged the profiles and somehow this cookie didn't get updated.
                         profile = createNewProfile(null, response, timestamp);
                         profileCreated = true;
-                        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName);
+                        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain);
                     } else {
                         profile = checkMergedProfile(response, profile, session);
                     }
@@ -169,7 +170,7 @@ public class ContextServlet extends HttpServlet {
 
             } else if (cookieProfileId == null || !cookieProfileId.equals(profile.getItemId())) {
                 // profile if stored in session but not in cookie
-                HttpUtils.sendProfileCookie(profile, response, profileIdCookieName);
+                HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain);
             }
             // associate profile with session
             if (sessionId != null && session == null) {
@@ -247,7 +248,7 @@ public class ContextServlet extends HttpServlet {
                     session.setProfile(profile);
                     profileService.saveSession(session);
                 }
-                HttpUtils.sendProfileCookie(profile, response, profileIdCookieName);
+                HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain);
             } else {
                 logger.warn("Couldn't find merged profile" + profileId + ", falling back to profile " + profileToDelete.getItemId());
                 profile = profileToDelete;
@@ -349,7 +350,7 @@ public class ContextServlet extends HttpServlet {
         }
         profile = new Profile(profileId);
         profile.setProperty("firstVisit", timestamp);
-        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName);
+        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain);
         return profile;
     }
 
@@ -367,5 +368,9 @@ public class ContextServlet extends HttpServlet {
 
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
+    }
+
+    public void setProfileIdCookieDomain(String profileIdCookieDomain) {
+        this.profileIdCookieDomain = profileIdCookieDomain;
     }
 }

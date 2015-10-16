@@ -30,11 +30,20 @@
     <reference id="eventService" interface="org.oasis_open.contextserver.api.services.EventService"/>
     <reference id="rulesService" interface="org.oasis_open.contextserver.api.services.RulesService"/>
 
+    <cm:property-placeholder persistent-id="org.oasis_open.contextserver.web"
+                             update-strategy="reload" placeholder-prefix="${web.">
+        <cm:default-properties>
+            <cm:property name="contextserver.domain" value=""/>
+        </cm:default-properties>
+    </cm:property-placeholder>
+
     <bean id="contextServlet" class="org.oasis_open.contextserver.web.ContextServlet">
         <property name="profileService" ref="profileService"/>
         <property name="eventService" ref="eventService"/>
         <property name="rulesService" ref="rulesService"/>
+        <property name="profileIdCookieDomain" value="${web.contextserver.domain}" />
     </bean>
+
     <service id="contextServletService" auto-export="interfaces" ref="contextServlet">
         <service-properties>
             <entry key="urlPatterns">
