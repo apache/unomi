@@ -177,4 +177,18 @@ public class PrivacyServiceImpl implements PrivacyService {
     public Boolean setDeniedPropertyDistribution(String profileId, List<String> propertyNames) {
         return null;
     }
+
+    @Override
+    public Boolean removeProperty(String profileId, String propertyName) {
+        Profile profile = profileService.load(profileId);
+        if (profile == null) {
+            return null;
+        }
+        if (!profile.getProperties().containsKey(propertyName)) {
+            return false;
+        }
+        Object propertyValue = profile.getProperties().remove(propertyName);
+        profileService.save(profile);
+        return true;
+    }
 }

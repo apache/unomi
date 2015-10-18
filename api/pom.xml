@@ -9,6 +9,7 @@
     </parent>
 
     <artifactId>context-server-api</artifactId>
+    <name>Unomi Context Server :: Specification Api</name>
     <packaging>bundle</packaging>
 
 </project>

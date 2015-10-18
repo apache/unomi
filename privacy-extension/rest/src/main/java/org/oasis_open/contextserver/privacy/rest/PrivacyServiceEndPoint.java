@@ -94,4 +94,11 @@ public class PrivacyServiceEndPoint {
         return Response.ok().build();
     }
 
+    @DELETE
+    @Path("/profiles/{profileId}/properties/{propertyName}")
+    public Response removeProperty(@PathParam("profileId") String profileId, @PathParam("propertyName") String propertyName) {
+        privacyService.removeProperty(profileId, propertyName);
+        return Response.ok().build();
+    }
+
 }

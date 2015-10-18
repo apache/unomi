@@ -35,4 +35,6 @@ public interface PrivacyService {
 
     Boolean setDeniedPropertyDistribution(String profileId, List<String> propertyNames);
 
+    Boolean removeProperty(String profileId, String propertyName);
+
 }
