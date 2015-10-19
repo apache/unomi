@@ -418,8 +418,8 @@ Step 3 : Follow industry recommended best practices for securing ElasticSearch
 
 You may find more valuable recommendations here : 
 
-- https://www.found.no/foundation/elasticsearch-security/
-- http://www.elasticsearch.org/blog/scripting-security/
+- https://www.elastic.co/blog/found-elasticsearch-security
+- https://www.elastic.co/blog/scripting-security
     
 Step 4 : Setup a proxy in front of the context server
 
