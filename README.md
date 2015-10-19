@@ -52,7 +52,7 @@ environment if you intend to re-deploy the context server KAR iteratively.
 
 Additional requirements:
 * Apache Karaf 3.0.2+, http://karaf.apache.org
-* Local copy of the ElasticSearch ZIP package, available here : http://www.elasticsearch.org
+* Local copy of the Elasticsearch ZIP package, available here : http://www.elasticsearch.org
 
 1. Before deploying, make sure that you have Apache Karaf properly installed. You will also have to increase the
 default maximum memory size and perm gen size by adjusting the following environment values in the bin/setenv(.bat)
@@ -67,7 +67,7 @@ files (at the end of the file):
     ```
     
 2. You will also need to have the Hyperic Sigar native libraries in your Karaf installation, so in order to this
-go to the ElasticSearch website (http://www.elasticsearch.org)  and download the ZIP package. Decompress it somewhere 
+go to the Elasticsearch website (http://www.elasticsearch.org)  and download the ZIP package. Decompress it somewhere 
 on your disk and copy all the files from the lib/sigar directory into Karaf's lib/sigar directory 
 (must be created first) EXCEPT THE SIGAR.JAR file.
 
@@ -130,7 +130,7 @@ addresses and port where it can be found :
     contextserver.secureAddress=localhost
     contextserver.securePort=9443
 
-If you need to specify an ElasticSearch cluster name that is different than the default, it is recommended to do this
+If you need to specify an Elasticsearch cluster name that is different than the default, it is recommended to do this
 BEFORE you start the server for the first time, or you will loose all the data you have stored previously.
 
 To change the cluster name, first create a file called 
@@ -146,7 +146,7 @@ with the following contents:
 And replace the cluster.name parameter here by your cluster name.
 
 You can also put an elasticsearch configuration file in $MY_KARAF_HOME/etc/elasticsearch.yml ,
-and put any standard ElasticSearch configuration options in this last file.
+and put any standard Elasticsearch configuration options in this last file.
 
 If you want your context server to be a client only on a cluster of elasticsearch nodes, just set the node.data property
 to false.
@@ -362,7 +362,7 @@ secure environment for running your context server.
 
 Step 1: Install and configure a firewall 
 
-You should setup a firewall around your cluster of context servers and/or ElasticSearch nodes. If you have an 
+You should setup a firewall around your cluster of context servers and/or Elasticsearch nodes. If you have an 
 application-level firewall you should only allow the following connections open to the whole world : 
 
  - http://localhost:8181/context.js
@@ -393,8 +393,8 @@ file :
 
     $MY_KARAF_HOME/etc/users.properties
 
-For your context servers, and for any standalone ElasticSearch nodes you will need to open the following ports for proper
-node-to-node communication : 9200 (ElasticSearch REST API), 9300 (ElasticSearch TCP transport)
+For your context servers, and for any standalone Elasticsearch nodes you will need to open the following ports for proper
+node-to-node communication : 9200 (Elasticsearch REST API), 9300 (Elasticsearch TCP transport)
 
 Of course any ports listed here are the default ports configured in each server, you may adjust them if needed.
 
@@ -407,14 +407,14 @@ By default the Context Server limits to connections to port 9200 and 9300 to the
     - ::1
     - the current subnet (i.e., 192.168.1.0-192.168.1.255)
     
-(this is done using a custom plugin for ElasticSearch, that you may find here : 
+(this is done using a custom plugin for Elasticsearch, that you may find here : 
 https://github.com/Jahia/unomi/tree/master/context-server/persistence-elasticsearch/plugins/security)
 
 You can adjust this setting by using the following setting in the $MY_KARAF_HOME/etc/elasticsearch.yml file : 
 
     security.ipranges: localhost,127.0.0.1,::1,10.0.1.0-10.0.1.255
 
-Step 3 : Follow industry recommended best practices for securing ElasticSearch
+Step 3 : Follow industry recommended best practices for securing Elasticsearch
 
 You may find more valuable recommendations here : 
 
