@@ -24,6 +24,14 @@ package org.oasis_open.contextserver.api;
 
 import java.util.Date;
 
+/**
+ * A context-server entity that is timestamped.
+ */
 public interface TimestampedItem {
+    /**
+     * Retrieves the associated timestamp.
+     *
+     * @return the associated timestamp
+     */
     Date getTimeStamp();
 }

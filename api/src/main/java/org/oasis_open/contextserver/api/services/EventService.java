@@ -93,7 +93,7 @@ public interface EventService {
      * @param query      a String to perform full text filtering on events matching the other conditions
      * @param offset     zero or a positive integer specifying the position of the first event in the total ordered collection of matching events
      * @param size       a positive integer specifying how many matching events should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy     a String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in
+     * @param sortBy     an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in
      *                   the String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
      *                   a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @return a {@link PartialList} of matching events

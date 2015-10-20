@@ -85,18 +85,36 @@ public class ProfileServiceEndPoint {
         this.localizationHelper = localizationHelper;
     }
 
+    /**
+     * Retrieves the number of unique profiles.
+     *
+     * @return the number of unique profiles.
+     */
     @GET
     @Path("/count")
     public long getAllProfilesCount() {
         return profileService.getAllProfilesCount();
     }
 
+    /**
+     * Retrieves profiles matching the specified query.
+     *
+     * @param query a {@link Query} specifying which elements to retrieve
+     * @return a {@link PartialList} of profiles instances matching the specified query
+     */
     @POST
+    @Consumes(MediaType.APPLICATION_JSON)
     @Path("/search")
     public PartialList<Profile> getProfiles(Query query) {
         return profileService.search(query, Profile.class);
     }
 
+    /**
+     * Retrieves an export of profiles matching the specified query as a downloadable file using the comma-separated values (CSV) format.
+     *
+     * @param query a String JSON representation of the query the profiles to export should match
+     * @return a Response object configured to allow caller to download the CSV export file
+     */
     @GET
     @Path("/export")
     @Produces("text/csv")
@@ -113,6 +131,12 @@ public class ProfileServiceEndPoint {
         }
     }
 
+    /**
+     * A version of {@link #getExportProfiles(String)} suitable to be called from an HTML form.
+     *
+     * @param query a form-encoded representation of the query the profiles to export should match
+     * @return a Response object configured to allow caller to download the CSV export file
+     */
     @GET
     @Path("/export")
     @Produces("text/csv")
@@ -130,33 +154,73 @@ public class ProfileServiceEndPoint {
         }
     }
 
+    /**
+     * Update all profiles in batch according to the specified {@link BatchUpdate}
+     *
+     * @param update the batch update specification
+     */
     @POST
     @Path("/batchProfilesUpdate")
     public void batchProfilesUpdate(BatchUpdate update) {
         profileService.batchProfilesUpdate(update);
     }
 
+    /**
+     * Retrieves the profile identified by the specified identifier.
+     *
+     * @param profileId the identifier of the profile to retrieve
+     * @return the profile identified by the specified identifier or {@code null} if no such profile exists
+     */
     @GET
     @Path("/{profileId}")
     public Profile load(@PathParam("profileId") String profileId) {
         return profileService.load(profileId);
     }
 
+    /**
+     * Saves the specified profile in the context server, sending a {@code profileUpdated} event.
+     *
+     * @param profile the profile to be saved
+     * @return the newly saved profile
+     */
     @POST
     @Path("/")
     public Profile save(Profile profile) {
+        // TODO: check that the profile was actually updated correctly before sending the event
         Event profileUpdated = new Event("profileUpdated", null, profile, null, null, profile, new Date());
         profileUpdated.setPersistent(false);
         eventService.send(profileUpdated);
         return profileService.save(profile);
     }
 
+    /**
+     * Removes the profile (or persona if the {@code persona} query parameter is set to {@code true}) identified by the specified identifier.
+     *
+     * @param profileId the identifier of the profile or persona to delete
+     * @param persona   {@code true} if the specified identifier is supposed to refer to a persona, {@code false} if it is supposed to refer to a profile
+     */
     @DELETE
     @Path("/{profileId}")
     public void delete(@PathParam("profileId") String profileId, @QueryParam("persona") @DefaultValue("false") boolean persona) {
         profileService.delete(profileId, false);
     }
 
+    /**
+     * Retrieves the sessions associated with the profile identified by the specified identifier that match the specified query (if specified), ordered according to the specified
+     * {@code sortBy} String and and paged: only {@code size} of them are retrieved, starting with the {@code offset}-th one.
+     *
+     * TODO: use a Query object instead of distinct parameter?
+     *
+     * @param profileId the identifier of the profile we want to retrieve sessions from
+     * @param query     a String of text used for fulltext filtering which sessions we are interested in or {@code null} (or an empty String) if we want to retrieve all sessions
+     * @param offset    zero or a positive integer specifying the position of the first session in the total ordered collection of matching sessions
+     * @param size      a positive integer specifying how many matching sessions should be retrieved or {@code -1} if all of them should be retrieved
+     * @param sortBy    an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *                  elements according to the property order in the
+     *                  String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
+     *                  a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * @return a {@link PartialList} of matching sessions
+     */
     @GET
     @Path("/{profileId}/sessions")
     public PartialList<Session> getProfileSessions(@PathParam("profileId") String profileId,
@@ -167,6 +231,12 @@ public class ProfileServiceEndPoint {
         return profileService.getProfileSessions(profileId, query, offset, size, sortBy);
     }
 
+    /**
+     * Retrieves the list of segment metadata for the segments the specified profile is a member of.
+     *
+     * @param profileId the identifier of the profile for which we want to retrieve the segment metadata
+     * @return the (possibly empty) list of segment metadata for the segments the specified profile is a member of
+     */
     @GET
     @Path("/{profileId}/segments")
     public List<Metadata> getProfileSegments(@PathParam("profileId") String profileId) {
@@ -174,42 +244,83 @@ public class ProfileServiceEndPoint {
         return segmentService.getSegmentMetadatasForProfile(profile);
     }
 
+    /**
+     * TODO
+     *
+     * @param fromPropertyTypeId
+     * @return
+     */
     @GET
     @Path("/properties/mappings/{fromPropertyTypeId}")
     public String getPropertyTypeMapping(@PathParam("fromPropertyTypeId") String fromPropertyTypeId) {
         return profileService.getPropertyTypeMapping(fromPropertyTypeId);
     }
 
+    /**
+     * Retrieves {@link Persona} matching the specified query.
+     *
+     * @param query a {@link Query} specifying which elements to retrieve
+     * @return a {@link PartialList} of Persona instances matching the specified query
+     */
     @POST
     @Path("/personas/search")
     public PartialList<Persona> getPersonas(Query query) {
         return profileService.search(query, Persona.class);
     }
 
+    /**
+     * Retrieves the {@link Persona} identified by the specified identifier.
+     *
+     * @param personaId the identifier of the persona to retrieve
+     * @return the persona identified by the specified identifier or {@code null} if no such persona exists
+     */
     @GET
     @Path("/personas/{personaId}")
     public Persona loadPersona(@PathParam("personaId") String personaId) {
         return profileService.loadPersona(personaId);
     }
 
+    /**
+     * Retrieves the persona identified by the specified identifier and all its associated sessions
+     *
+     * @param personaId the identifier of the persona to retrieve
+     * @return a {@link PersonaWithSessions} instance with the persona identified by the specified identifier and all its associated sessions
+     */
     @GET
     @Path("/personasWithSessions/{personaId}")
     public PersonaWithSessions loadPersonaWithSessions(@PathParam("personaId") String personaId) {
         return profileService.loadPersonaWithSessions(personaId);
     }
 
+    /**
+     * Persists the specified {@link Persona} in the context server.
+     *
+     * @param persona the persona to persist
+     * @return the newly persisted persona
+     */
     @POST
     @Path("/personas")
     public Persona savePersona(Persona persona) {
         return profileService.savePersona(persona);
     }
 
+    /**
+     * Removes the persona identified by the specified identifier.
+     *
+     * @param personaId the identifier of the persona to delete
+     */
     @DELETE
     @Path("/personas/{personaId}")
     public void deletePersona(@PathParam("personaId") String personaId) {
         profileService.delete(personaId, true);
     }
 
+    /**
+     * Creates a persona with the specified identifier and automatically creates an associated session with it.
+     *
+     * @param personaId the identifier to use for the new persona
+     * @return the newly created persona
+     */
     @PUT
     @Path("/personas/{personaId}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -217,6 +328,19 @@ public class ProfileServiceEndPoint {
         return profileService.createPersona(personaId);
     }
 
+    /**
+     * Retrieves the sessions associated with the persona identified by the specified identifier, ordered according to the specified {@code sortBy} String and and paged: only
+     * {@code size} of them are retrieved, starting with the {@code offset}-th one.
+     *
+     * @param personaId the persona id
+     * @param offset    zero or a positive integer specifying the position of the first session in the total ordered collection of matching sessions
+     * @param size      a positive integer specifying how many matching sessions should be retrieved or {@code -1} if all of them should be retrieved
+     * @param sortBy    an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *                  elements according to the property order in the
+     *                  String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
+     *                  a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * @return a {@link PartialList} of sessions for the persona identified by the specified identifier
+     */
     @GET
     @Path("/personas/{personaId}/sessions")
     public PartialList<Session> getPersonaSessions(@PathParam("personaId") String personaId,
@@ -226,18 +350,47 @@ public class ProfileServiceEndPoint {
         return profileService.getPersonaSessions(personaId, offset, size, sortBy);
     }
 
+    /**
+     * Retrieves the session identified by the specified identifier.
+     *
+     * @param sessionId the identifier of the session to be retrieved
+     * @param dateHint  a Date helping in identifying where the item is located
+     * @return the session identified by the specified identifier
+     */
     @GET
     @Path("/sessions/{sessionId}")
     public Session loadSession(@PathParam("sessionId") String sessionId, @QueryParam("dateHint") String dateHint) throws ParseException {
         return profileService.loadSession(sessionId, dateHint != null ? new SimpleDateFormat("yyyy-MM").parse(dateHint) : null);
     }
 
+    /**
+     * Saves the specified session.
+     *
+     * @param session the session to be saved
+     * @return the newly saved session
+     */
     @POST
     @Path("/sessions/{sessionId}")
     public Session saveSession(Session session) {
         return profileService.saveSession(session);
     }
 
+    /**
+     * Retrieves {@link Event}s for the {@link org.oasis_open.contextserver.api.Session} identified by the provided session identifier, matching any of the provided event types,
+     * ordered according to the specified {@code sortBy} String and paged: only {@code size} of them are retrieved, starting with the {@code offset}-th one.
+     * If a {@code query} is provided, a full text search is performed on the matching events to further filter them.
+     *
+     * @param sessionId  the identifier of the user session we're considering
+     * @param eventTypes an array of event type names; the events to retrieve should at least match one of these
+     * @param query      a String to perform full text filtering on events matching the other conditions
+     * @param offset     zero or a positive integer specifying the position of the first event in the total ordered collection of matching events
+     * @param size       a positive integer specifying how many matching events should be retrieved or {@code -1} if all of them should be retrieved
+     * @param sortBy     an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *                   elements according to the property order in
+     *                   the String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
+     *                   a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * @return a {@link PartialList} of matching events
+     */
     @GET
     @Path("/sessions/{sessionId}/events")
     public PartialList<Event> getSessionEvents(@PathParam("sessionId") String sessionId,
@@ -259,6 +412,15 @@ public class ProfileServiceEndPoint {
         return profileService.matchCondition(condition, profile, session);
     }
 
+    /**
+     * Retrieves the existing property types for the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and with the specified tag.
+     *
+     * TODO: move to a different class
+     *
+     * @param tagId    the tag we're interested in
+     * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
+     * @return all property types defined for the specified item type and with the specified tag
+     */
     @GET
     @Path("/existingProperties")
     public Collection<PropertyType> getExistingProperties(@QueryParam("tagId") String tagId, @QueryParam("itemType") String itemType, @HeaderParam("Accept-Language") String language) {
@@ -266,18 +428,45 @@ public class ProfileServiceEndPoint {
         return properties;
     }
 
+    /**
+     * Retrieves all known property types.
+     *
+     * TODO: move to a different class
+     *
+     * @param language TODO unused
+     * @return a Map associating targets as keys to related {@link PropertyType}s
+     */
     @GET
     @Path("/properties")
     public Map<String, Collection<PropertyType>> getPropertyTypes(@HeaderParam("Accept-Language") String language) {
         return profileService.getAllPropertyTypes();
     }
 
+    /**
+     * Retrieves all the property types associated with the specified target.
+     *
+     * TODO: move to a different class
+     *
+     * @param target   the target for which we want to retrieve the associated property types
+     * @param language TODO unused
+     * @return a collection of all the property types associated with the specified target
+     */
     @GET
     @Path("/properties/{target}")
     public Collection<PropertyType> getPropertyTypesByTarget(@PathParam("target") String target, @HeaderParam("Accept-Language") String language) {
         return profileService.getAllPropertyTypes(target);
     }
 
+    /**
+     * Retrieves all property types with the specified tags also retrieving property types with sub-tags of the specified tags if so specified.
+     *
+     * TODO: move to a different class
+     * TODO: passing a list of tags via a comma-separated list is not very RESTful
+     *
+     * @param tags      a comma-separated list of tag identifiers
+     * @param recursive {@code true} if sub-tags of the specified tag should also be considered, {@code false} otherwise
+     * @return a Set of the property types with the specified tag
+     */
     @GET
     @Path("/properties/tags/{tagId}")
     public Collection<PropertyType> getPropertyTypeByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
@@ -289,12 +478,28 @@ public class ProfileServiceEndPoint {
         return results;
     }
 
+    /**
+     * Persists the specified property type in the context server.
+     *
+     * TODO: move to a different class
+     *
+     * @param property the property type to persist
+     * @return {@code true} if the property type was properly created, {@code false} otherwise (for example, if the property type already existed
+     */
     @POST
     @Path("/properties")
     public boolean createPropertyType(PropertyType property) {
         return profileService.createPropertyType(property);
     }
 
+    /**
+     * Deletes the property type identified by the specified identifier.
+     *
+     * TODO: move to a different class
+     *
+     * @param propertyId the identifier of the property type to delete
+     * @return {@code true} if the property type was properly deleted, {@code false} otherwise
+     */
     @DELETE
     @Path("/properties/{propertyId}")
     public boolean deleteProperty(@PathParam("propertyId") String propertyId) {

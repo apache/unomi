@@ -45,7 +45,7 @@ public interface SegmentService {
      *
      * @param offset zero or a positive integer specifying the position of the first element in the total ordered collection of matching elements
      * @param size   a positive integer specifying how many matching elements should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy a String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
+     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
      *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
      *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @return a {@link PartialList} of segment metadata
@@ -61,7 +61,7 @@ public interface SegmentService {
      * @param scope  the scope for which we want to retrieve segment metadata
      * @param offset zero or a positive integer specifying the position of the first element in the total ordered collection of matching elements
      * @param size   a positive integer specifying how many matching elements should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy a String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
+     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
      *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
      *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @return a {@link PartialList} of segment metadata
@@ -121,7 +121,7 @@ public interface SegmentService {
      * @param segmentID the identifier of the segment for which we want to retrieve matching profiles
      * @param offset    zero or a positive integer specifying the position of the first element in the total ordered collection of matching elements
      * @param size      a positive integer specifying how many matching elements should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy    a String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
+     * @param sortBy    an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
      *                  String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
      *                  a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @return a {@link PartialList} of profiles matching the specified segment
@@ -157,7 +157,7 @@ public interface SegmentService {
      * Retrieves the list of segment metadata for the segments the specified profile is a member of.
      *
      * @param profile the profile for which we want to retrieve the segment metadata
-     * @return the list of segment metadata for the segments the specified profile is a member of
+     * @return the (possibly empty) list of segment metadata for the segments the specified profile is a member of
      */
     List<Metadata> getSegmentMetadatasForProfile(Profile profile);
 

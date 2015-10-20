@@ -26,6 +26,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * A time-bounded interaction between a user (via their associated {@link Profile}) and a unomi-enabled application. A session represents a sequence of operations the user
+ * performed during its duration. In the context of web applications, sessions are usually linked to HTTP sessions.
+ */
 public class Session extends Item implements TimestampedItem {
 
     private static final long serialVersionUID = 4628640198281687336L;

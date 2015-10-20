@@ -54,9 +54,10 @@ public interface PersistenceService {
      *
      * @param <T>    the type of the {@link Item}s we want to retrieve
      * @param clazz  the {@link Item} subclass of entities we want to retrieve
-     * @param offset zero or a positive integer specifying the position of the first item in the total ordered collection of matching item
+     * @param offset zero or a positive integer specifying the position of the first item in the total ordered collection of matching items
      * @param size   a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy a String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
+     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *               elements according to the property order in the
      *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
      *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @return a {@link PartialList} of pages items with the given type
@@ -163,6 +164,7 @@ public interface PersistenceService {
 
     /**
      * TODO
+     *
      * @param item
      * @return
      */
@@ -192,7 +194,8 @@ public interface PersistenceService {
      * @param <T>         the type of the Item subclass we want to retrieve
      * @param fieldName   the name of the field which we want items to have the specified values
      * @param fieldValues the values the items to retrieve should have for the specified field
-     * @param sortBy      a String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
+     * @param sortBy      an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *                    elements according to the property order in the
      *                    String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
      *                    a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @param clazz       the {@link Item} subclass of the items we want to retrieve
@@ -206,7 +209,8 @@ public interface PersistenceService {
      * @param <T>        the type of the Item subclass we want to retrieve
      * @param fieldName  the name of the field which we want items to have the specified value
      * @param fieldValue the value the items to retrieve should have for the specified field
-     * @param sortBy     a String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
+     * @param sortBy     an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *                   elements according to the property order in the
      *                   String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
      *                   a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @param clazz      the {@link Item} subclass of the items we want to retrieve
@@ -222,11 +226,12 @@ public interface PersistenceService {
      * @param fieldName  the name of the field which we want items to have the specified value
      * @param fieldValue the value the items to retrieve should have for the specified field
      * @param fulltext   the text that the item must have in one of its fields to be considered a match
-     * @param sortBy     a String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
+     * @param sortBy     an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *                   elements according to the property order in the
      *                   String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
      *                   a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @param clazz      the {@link Item} subclass of the items we want to retrieve
-     * @param offset     zero or a positive integer specifying the position of the first item in the total ordered collection of matching item
+     * @param offset     zero or a positive integer specifying the position of the first item in the total ordered collection of matching items
      * @param size       a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved
      * @return a {@link PartialList} of items matching the specified criteria
      */
@@ -238,11 +243,12 @@ public interface PersistenceService {
      *
      * @param <T>      the type of the Item subclass we want to retrieve
      * @param fulltext the text that the item must have in one of its fields to be considered a match
-     * @param sortBy   a String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
+     * @param sortBy   an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *                 elements according to the property order in the
      *                 String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
      *                 a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @param clazz    the {@link Item} subclass of the items we want to retrieve
-     * @param offset   zero or a positive integer specifying the position of the first item in the total ordered collection of matching item
+     * @param offset   zero or a positive integer specifying the position of the first item in the total ordered collection of matching items
      * @param size     a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved
      * @return a {@link PartialList} of items matching the specified criteria
      */
@@ -261,11 +267,12 @@ public interface PersistenceService {
      *
      * @param <T>    the type of the Item subclass we want to retrieve
      * @param query  the {@link Condition} the items must satisfy to be retrieved
-     * @param sortBy a String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
+     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *               elements according to the property order in the
      *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
      *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @param clazz  the {@link Item} subclass of the items we want to retrieve
-     * @param offset zero or a positive integer specifying the position of the first item in the total ordered collection of matching item
+     * @param offset zero or a positive integer specifying the position of the first item in the total ordered collection of matching items
      * @param size   a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved
      * @return a {@link PartialList} of items matching the specified criteria
      */
@@ -278,11 +285,12 @@ public interface PersistenceService {
      * @param <T>      the type of the Item subclass we want to retrieve
      * @param fulltext the text that the item must have in one of its fields to be considered a match
      * @param query    the {@link Condition} the items must satisfy to be retrieved
-     * @param sortBy   a String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
+     * @param sortBy   an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *                 elements according to the property order in the
      *                 String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
      *                 a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @param clazz    the {@link Item} subclass of the items we want to retrieve
-     * @param offset   zero or a positive integer specifying the position of the first item in the total ordered collection of matching item
+     * @param offset   zero or a positive integer specifying the position of the first item in the total ordered collection of matching items
      * @param size     a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved
      * @return a {@link PartialList} of items matching the specified criteria
      */
@@ -338,11 +346,11 @@ public interface PersistenceService {
      * @param s      the name of the range property we want items to retrieve to be included between the specified start and end points
      * @param from   the beginning of the range we want to consider
      * @param to     the end of the range we want to consider
-     * @param sortBy a String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
-     *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *               elements according to the property order in the String, considering each in turn and moving on to the next one in case of equality of all preceding ones.
+     *               Each property name is optionally followed by a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @param clazz  the {@link Item} subclass of the items we want to retrieve
-     * @param offset zero or a positive integer specifying the position of the first item in the total ordered collection of matching item
+     * @param offset zero or a positive integer specifying the position of the first item in the total ordered collection of matching items
      * @param size   a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved
      * @return a {@link PartialList} of items matching the specified criteria
      */

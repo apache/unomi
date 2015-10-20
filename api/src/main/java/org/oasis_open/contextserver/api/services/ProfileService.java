@@ -69,7 +69,7 @@ public interface ProfileService {
      * @param propertyValue the value of the property we want profiles to have
      * @param offset        zero or a positive integer specifying the position of the first profile in the total ordered collection of matching profiles
      * @param size          a positive integer specifying how many matching profiles should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy        a String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to  the property order in
+     * @param sortBy        an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to  the property order in
      *                      the String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally
      *                      followed by a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @return a {@link PartialList} of matching profiles
@@ -117,10 +117,10 @@ public interface ProfileService {
      * TODO: use a Query object instead of distinct parameter
      *
      * @param profileId the identifier of the profile we want to retrieve sessions from
-     * @param query     the query filtering which sessions we are interested in or {@code null} (or an empty String) if we want to retrieve all sessions
+     * @param query     a String of text used for fulltext filtering which sessions we are interested in or {@code null} (or an empty String) if we want to retrieve all sessions
      * @param offset    zero or a positive integer specifying the position of the first session in the total ordered collection of matching sessions
      * @param size      a positive integer specifying how many matching sessions should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy    a String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
+     * @param sortBy    an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
      *                  String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
      *                  a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @return a {@link PartialList} of matching sessions
@@ -189,7 +189,7 @@ public interface ProfileService {
      * Retrieves the persona identified by the specified identifier and all its associated sessions
      *
      * @param personaId the identifier of the persona to retrieve
-     * @return a {@link PersonaWithSessions} instance with the persona identified by the specified identifier
+     * @return a {@link PersonaWithSessions} instance with the persona identified by the specified identifier and all its associated sessions
      */
     PersonaWithSessions loadPersonaWithSessions(String personaId);
 
@@ -208,7 +208,7 @@ public interface ProfileService {
      * @param personaId the persona id
      * @param offset    zero or a positive integer specifying the position of the first session in the total ordered collection of matching sessions
      * @param size      a positive integer specifying how many matching sessions should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy    a String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
+     * @param sortBy    an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
      *                  String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
      *                  a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @return a {@link PartialList} of sessions for the persona identified by the specified identifier
@@ -229,6 +229,7 @@ public interface ProfileService {
      * Retrieves all known property types.
      *
      * TODO: move to a different class
+     * TODO: use Map instead of HashMap
      *
      * @return a Map associating targets as keys to related {@link PropertyType}s
      */
