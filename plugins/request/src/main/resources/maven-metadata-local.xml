@@ -1,26 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  #%L
-  Context Server Plugin - Provides request reading actions
-  $Id:$
-  $HeadURL:$
-  %%
-  Copyright (C) 2014 - 2015 Jahia Solutions
-  %%
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-  
-       http://www.apache.org/licenses/LICENSE-2.0
-  
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-  #L%
-  -->
-
 <metadata modelVersion="1.1.0">
   <groupId>org.oasis-open.contextserver</groupId>
   <artifactId>context-server-plugins-request</artifactId>
@@ -29,13 +7,13 @@
     <snapshot>
       <localCopy>true</localCopy>
     </snapshot>
-    <lastUpdated>20140922080909</lastUpdated>
+    <lastUpdated>20151021131454</lastUpdated>
     <snapshotVersions>
       <snapshotVersion>
         <classifier>requestcfg</classifier>
         <extension>cfg</extension>
         <value>1.0.0-SNAPSHOT</value>
-        <updated>20140922080909</updated>
+        <updated>20151021131454</updated>
       </snapshotVersion>
     </snapshotVersions>
   </versioning>

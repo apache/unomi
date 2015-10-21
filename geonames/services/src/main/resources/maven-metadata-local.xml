@@ -7,13 +7,13 @@
     <snapshot>
       <localCopy>true</localCopy>
     </snapshot>
-    <lastUpdated>20151021125326</lastUpdated>
+    <lastUpdated>20151021131454</lastUpdated>
     <snapshotVersions>
       <snapshotVersion>
         <classifier>geonamescfg</classifier>
         <extension>cfg</extension>
         <value>1.0.0-SNAPSHOT</value>
-        <updated>20151021125326</updated>
+        <updated>20151021131454</updated>
       </snapshotVersion>
     </snapshotVersions>
   </versioning>
