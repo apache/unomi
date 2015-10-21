@@ -28,6 +28,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * An incoming request for context information from clients of the context server.
+ */
 public class ContextRequest {
 
     private Item source;
@@ -42,8 +45,8 @@ public class ContextRequest {
     // test different filter results.
 
     private Set<String> segmentOverrides;
-    private Map<String,Object> profilePropertiesOverrides;
-    private Map<String,Object> sessionPropertiesOverrides;
+    private Map<String, Object> profilePropertiesOverrides;
+    private Map<String, Object> sessionPropertiesOverrides;
 
     public Item getSource() {
         return source;

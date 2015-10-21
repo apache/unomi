@@ -25,7 +25,7 @@ package org.oasis_open.contextserver.api.conditions.initializers;
 import java.util.List;
 
 /**
- * Defines an initializer for a list of options.
+ * An initializer for a list of options.
  */
 public interface ChoiceListInitializer {
 

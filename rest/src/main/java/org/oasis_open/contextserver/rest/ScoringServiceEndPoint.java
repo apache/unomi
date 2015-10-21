@@ -23,6 +23,7 @@ package org.oasis_open.contextserver.rest;
  */
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
+import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.segments.Scoring;
@@ -34,6 +35,9 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.Set;
 
+/**
+ * A JAX-RS endpoint to manage {@link Scoring}s
+ */
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
@@ -48,35 +52,66 @@ public class ScoringServiceEndPoint {
         System.out.println("Initializing scoring service endpoint...");
     }
 
-    @WebMethod(exclude=true)
+    @WebMethod(exclude = true)
     public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
     }
 
+    /**
+     * Retrieves the set of all scoring metadata.
+     *
+     * @return the set of all scoring metadata
+     */
     @GET
     @Path("/")
     public Set<Metadata> getScoringMetadatas() {
         return segmentService.getScoringMetadatas();
     }
 
+    /**
+     * Retrieves the set of scoring metadata for scorings matching the specified query.
+     *
+     * @param query the query the scorings must match for their metadata to be retrieved
+     * @return the set of scoring metadata for scorings matching the specified query
+     */
     @POST
     @Path("/query")
     public Set<Metadata> getScoringMetadatas(Query query) {
         return segmentService.getScoringMetadatas(query);
     }
 
+    /**
+     * Retrieves the scoring identified by the specified identifier.
+     *
+     * @param scoringId the identifier of the scoring to be retrieved
+     * @return the scoring identified by the specified identifier or {@code null} if no such scoring exists
+     */
     @GET
     @Path("/{scoringID}")
     public Scoring getScoringDefinition(@PathParam("scoringID") String scoringId) {
         return segmentService.getScoringDefinition(scoringId);
     }
 
+    /**
+     * Persists the specified scoring in the context server.
+     *
+     * @param scoring the scoring to be persisted
+     */
     @POST
     @Path("/")
     public void setScoringDefinition(Scoring scoring) {
         segmentService.setScoringDefinition(scoring);
     }
 
+    /**
+     * Creates a scoring with the specified scope, identifier, name and description from form-encoded data.
+     *
+     * @param scope              the scope for the new scoring
+     * @param scoringId          the identifier for the new scoring
+     * @param scoringName        the name of the new scoring
+     * @param scoringDescription the description of the new scoring
+     * @see Item Item's description for a discussion of scope
+     */
     @PUT
     @Path("/{scope}/{scoringID}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -84,12 +119,22 @@ public class ScoringServiceEndPoint {
         segmentService.createScoringDefinition(scope, scoringId, scoringName, scoringDescription);
     }
 
+    /**
+     * Deletes the scoring identified by the specified identifier from the context server.
+     *
+     * @param scoringId the identifier of the scoring to be deleted
+     */
     @DELETE
     @Path("/{scoringID}")
     public void removeScoringDefinition(@PathParam("scoringID") String scoringId) {
         segmentService.removeScoringDefinition(scoringId);
     }
 
+    /**
+     * TODO: remove
+     *
+     * @deprecated not needed anymore
+     */
     @GET
     @Path("/resetQueries")
     public void resetQueries() {

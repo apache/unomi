@@ -35,6 +35,9 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.Set;
 
+/**
+ * A JAX-RS endpoint to manage {@link Rule}s.
+ */
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
@@ -54,36 +57,68 @@ public class RulesServiceEndPoint {
         this.rulesService = rulesService;
     }
 
+    /**
+     * Retrieves the metadata for all known rules.
+     *
+     * @return the Set of known metadata
+     */
     @GET
     @Path("/")
     public Set<Metadata> getRuleMetadatas() {
         return rulesService.getRuleMetadatas();
     }
 
+    /**
+     * Persists the specified rule to the context server.
+     *
+     * @param rule the rule to be persisted
+     */
     @POST
     @Path("/")
     public void setRule(Rule rule) {
         rulesService.setRule(rule);
     }
 
+    /**
+     * Retrieves rule metadatas for rules matching the specified {@link Query}.
+     *
+     * @param query the query the rules which metadata we want to retrieve must match
+     * @return a {@link PartialList} of rules metadata for the rules matching the specified query
+     */
     @POST
     @Path("/query")
     public PartialList<Metadata> getRuleMetadatas(Query query) {
         return rulesService.getRuleMetadatas(query);
     }
 
+    /**
+     * Retrieves the rule identified by the specified identifier.
+     *
+     * @param ruleId the identifier of the rule we want to retrieve
+     * @return the rule identified by the specified identifier or {@code null} if no such rule exists.
+     */
     @GET
     @Path("/{ruleId}")
     public Rule getRule( @PathParam("ruleId") String ruleId) {
         return rulesService.getRule(ruleId);
     }
 
+    /**
+     * Deletes the rule identified by the specified identifier.
+     *
+     * @param ruleId the identifier of the rule we want to delete
+     */
     @DELETE
     @Path("/{ruleId}")
     public void removeRule(@PathParam("ruleId") String ruleId) {
         rulesService.removeRule(ruleId);
     }
 
+    /**
+     * TODO: remove
+     *
+     * @deprecated not needed anymore
+     */
     @GET
     @Path("/resetQueries")
     public void resetQueries() {

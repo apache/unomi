@@ -30,12 +30,16 @@ import org.oasis_open.contextserver.api.campaigns.CampaignDetail;
 import org.oasis_open.contextserver.api.campaigns.events.CampaignEvent;
 import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.services.GoalsService;
+
 import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.Set;
 
+/**
+ * A JAX-RS endpoint to manage {@link Campaign}s and related information.
+ */
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
@@ -55,60 +59,115 @@ public class CampaignsServiceEndPoint {
         this.goalsService = goalsService;
     }
 
+    /**
+     * Retrieves the set of Metadata associated with existing campaigns.
+     *
+     * @return the set of Metadata associated with existing campaigns
+     */
     @GET
     @Path("/")
     public Set<Metadata> getCampaignMetadatas() {
         return goalsService.getCampaignMetadatas();
     }
 
+    /**
+     * Saves the specified campaign in the context server and creates associated {@link org.oasis_open.contextserver.api.rules.Rule}s if the campaign is enabled.
+     *
+     * @param campaign the Campaign to be saved
+     */
     @POST
     @Path("/")
     public void setCampaignDefinition(Campaign campaign) {
         goalsService.setCampaign(campaign);
     }
 
+    /**
+     * Retrieves the set of Metadata associated with existing campaign matching the specified {@link Query}
+     *
+     * @param query the Query used to filter the campagins which metadata we want to retrieve
+     * @return the set of Metadata associated with existing campaigns matching the specified {@link Query}
+     */
     @POST
     @Path("/query")
     public Set<Metadata> getCampaignMetadatas(Query query) {
         return goalsService.getCampaignMetadatas(query);
     }
 
+    /**
+     * Retrieves campaign details for campaigns matching the specified query.
+     *
+     * @param query the query specifying which campaigns to retrieve
+     * @return a {@link PartialList} of campaign details for the campaigns matching the specified query
+     */
     @POST
     @Path("/query/detailed")
     public PartialList<CampaignDetail> getCampaignDetails(Query query) {
         return goalsService.getCampaignDetails(query);
     }
 
+    /**
+     * Retrieves the {@link CampaignDetail} associated with the campaign identified with the specified identifier
+     *
+     * @param campaignID the identifier of the campaign for which we want to retrieve the details
+     * @return the CampaignDetail for the campaign identified by the specified identifier or {@code null} if no such campaign exists
+     */
     @GET
     @Path("/{campaignID}/detailed")
     public CampaignDetail getCampaignDetail(@PathParam("campaignID") String campaignID) {
         return goalsService.getCampaignDetail(campaignID);
     }
 
+    /**
+     * Retrieves the campaign identified by the specified identifier
+     *
+     * @param campaignID the identifier of the campaign we want to retrieve
+     * @return the campaign associated with the specified identifier or {@code null} if no such campaign exists
+     */
     @GET
     @Path("/{campaignID}")
     public Campaign getCampaignDefinition(@PathParam("campaignID") String campaignID) {
         return goalsService.getCampaign(campaignID);
     }
 
+    /**
+     * Removes the campaign associated with the specified identifier, also removing associated rules if needed.
+     *
+     * @param campaignID the identifier of the campaign to be removed
+     */
     @DELETE
     @Path("/{campaignID}")
     public void removeCampaignDefinition(@PathParam("campaignID") String campaignID) {
         goalsService.removeCampaign(campaignID);
     }
 
+    /**
+     * Saves the specified campaign event in the context server.
+     *
+     * @param campaignEvent the CampaignEvent to be saved
+     */
     @POST
     @Path("/event")
     public void setCampaignEventDefinition(CampaignEvent campaignEvent) {
         goalsService.setCampaignEvent(campaignEvent);
     }
 
+    /**
+     * Removes the campaign event associated with the specified identifier.
+     *
+     * @param campaignEventID the identifier of the campaign event to be removed
+     */
     @DELETE
     @Path("/event/{eventId}")
     public void removeCampaignEventDefinition(@PathParam("eventId") String campaignEventID) {
         goalsService.removeCampaignEvent(campaignEventID);
     }
 
+    /**
+     * Retrieves {@link CampaignEvent}s matching the specified query.
+     *
+     * @param query the Query specifying which CampaignEvents to retrieve
+     * @return a {@link PartialList} of campaign events matching the specified query
+     */
     @POST
     @Path("/events/query")
     public PartialList<CampaignEvent> getCampaignEvents(Query query) {

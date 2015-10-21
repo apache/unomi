@@ -22,8 +22,12 @@ package org.oasis_open.contextserver.rest;
  * #L%
  */
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
 
+/**
+ * A representation of an {@link org.oasis_open.contextserver.api.actions.ActionType} better suited for definitions.
+ */
 public class RESTActionType {
     private String id;
     private String name;

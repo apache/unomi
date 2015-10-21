@@ -40,6 +40,7 @@ public interface QueryService {
      * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
      * @param property the property we're aggregating on, i.e. for each possible value of this property, we are counting how many items of the specified type have that value
      * @return a Map associating a specific value of the property to the cardinality of items with that value
+     * @see Item Item for a discussion of {@code ITEM_TYPE}
      */
     Map<String, Long> getAggregate(String itemType, String property);
 
@@ -53,6 +54,7 @@ public interface QueryService {
      * @param property the property we're aggregating on, i.e. for each possible value of this property, we are counting how many items of the specified type have that value
      * @param query    the {@link AggregateQuery} specifying the aggregation that should be perfomed
      * @return a Map associating a specific value of the property to the cardinality of items with that value
+     * @see Item Item for a discussion of {@code ITEM_TYPE}
      */
     Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query);
 
@@ -76,6 +78,7 @@ public interface QueryService {
      * @param property                 the name of the field for which the metrics should be computed
      * @param type                     the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
      * @return a Map associating computed metric name as key to its associated value
+     * @see Item Item for a discussion of {@code ITEM_TYPE}
      */
     Map<String, Double> getMetric(String type, String property, String slashConcatenatedMetrics, Condition condition);
 
