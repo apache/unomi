@@ -23,6 +23,12 @@
 		<jahia.plugin.version>4.3</jahia.plugin.version>
     </properties>
 
+    <scm>
+        <connection>scm:git:git@github.com:Jahia/unomi.git</connection>
+        <url>https://github.com/Jahia/unomi</url>
+        <developerConnection>scm:git:git@github.com:Jahia/unomi.git</developerConnection>
+    </scm>
+
     <distributionManagement>
         <repository>
             <id>jahia-releases</id>
