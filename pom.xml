@@ -218,7 +218,16 @@
                             <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         </instructions>
                     </configuration>
-            </plugin>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-release-plugin</artifactId>
+					<version>2.5.3</version>
+					<configuration>
+						<autoVersionSubmodules>true</autoVersionSubmodules>
+						<releaseProfiles>integration-tests,performance-tests,generate-package</releaseProfiles>
+					</configuration>
+				</plugin>
             </plugins>
         </pluginManagement>
         <plugins>
