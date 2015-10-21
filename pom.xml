@@ -5,7 +5,7 @@
     <groupId>org.oasis-open.contextserver</groupId>
     <artifactId>context-server</artifactId>
     <name>Context Server root project</name>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <inceptionYear>2014</inceptionYear>
     <organization>

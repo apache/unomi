@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.oasis-open.contextserver</groupId>
         <artifactId>context-server</artifactId>
-        <version>1.0-SNAPSHOT</version>
+        <version>1.0.0-SNAPSHOT</version>
     </parent>
     <artifactId>context-server-itests</artifactId>
     <name>Context Server Integration Tests</name>
@@ -14,19 +14,19 @@
             <groupId>org.oasis-open.contextserver</groupId>
             <artifactId>context-server-kar</artifactId>
             <classifier>features</classifier>
-            <version>1.0-SNAPSHOT</version>
+            <version>1.0.0-SNAPSHOT</version>
             <type>xml</type>
         </dependency>
         <dependency>
             <groupId>org.oasis-open.contextserver</groupId>
             <artifactId>context-server-persistence-spi</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>1.0.0-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.oasis-open.contextserver</groupId>
             <artifactId>context-server-wab</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>1.0.0-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
         

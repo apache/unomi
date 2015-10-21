@@ -5,7 +5,7 @@
     <parent>
         <artifactId>cxs-lists-extension</artifactId>
         <groupId>org.jahia.unomi</groupId>
-        <version>1.0-SNAPSHOT</version>
+        <version>1.0.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -16,14 +16,14 @@
         <dependency>
             <groupId>org.oasis-open.contextserver</groupId>
             <artifactId>context-server-api</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>1.0.0-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.jahia.unomi</groupId>
             <artifactId>cxs-lists-extension-services</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>1.0.0-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
 
@@ -71,7 +71,7 @@
         <dependency>
             <groupId>org.oasis-open.contextserver</groupId>
             <artifactId>context-server-persistence-spi</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>1.0.0-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
