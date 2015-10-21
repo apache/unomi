@@ -38,7 +38,7 @@
                 <configuration>
                     <instructions>
                         <Fragment-Host>
-                            org.oasis-open.contextserver-persistence-elasticsearch-core;bundle-version="[1,2)"
+                            org.oasis-open.contextserver.context-server-persistence-elasticsearch-core;bundle-version="[1,2)"
                         </Fragment-Host>
                     </instructions>
                 </configuration>

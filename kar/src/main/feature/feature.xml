@@ -45,7 +45,6 @@
         <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.joda-time/2.3_1</bundle>
         <bundle start-level="75">mvn:org.oasis-open.contextserver/context-server-api/1.0-SNAPSHOT</bundle>
         <bundle start-level="75">mvn:org.oasis-open.contextserver/context-server-persistence-spi/1.0-SNAPSHOT</bundle>
-        <bundle start-level="75">mvn:org.oasis-open.contextserver/context-server-persistence-elasticsearch-plugins-security/1.0-SNAPSHOT</bundle>
         <bundle start-level="76">mvn:org.oasis-open.contextserver/context-server-persistence-elasticsearch-core/1.0-SNAPSHOT</bundle>
         <bundle start-level="77">mvn:org.oasis-open.contextserver/context-server-services/1.0-SNAPSHOT</bundle>
         <bundle start-level="77">mvn:org.jahia.unomi/cxs-lists-extension-services/1.0-SNAPSHOT</bundle>
