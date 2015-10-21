@@ -24,6 +24,7 @@ package org.oasis_open.contextserver.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.oasis_open.contextserver.api.Metadata;
+import org.oasis_open.contextserver.api.PartialList;
 import org.oasis_open.contextserver.api.query.Query;
 import org.oasis_open.contextserver.api.segments.Scoring;
 import org.oasis_open.contextserver.api.services.SegmentService;
@@ -32,7 +33,7 @@ import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import java.util.Set;
+import java.util.List;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
@@ -55,13 +56,13 @@ public class ScoringServiceEndPoint {
 
     @GET
     @Path("/")
-    public Set<Metadata> getScoringMetadatas() {
-        return segmentService.getScoringMetadatas();
+    public List<Metadata> getScoringMetadatas() {
+        return segmentService.getScoringMetadatas(0, 50, null).getList();
     }
 
     @POST
     @Path("/query")
-    public Set<Metadata> getScoringMetadatas(Query query) {
+    public PartialList<Metadata> getScoringMetadatas(Query query) {
         return segmentService.getScoringMetadatas(query);
     }
 
@@ -93,7 +94,7 @@ public class ScoringServiceEndPoint {
     @GET
     @Path("/resetQueries")
     public void resetQueries() {
-        for (Metadata metadata : segmentService.getScoringMetadatas()) {
+        for (Metadata metadata : segmentService.getScoringMetadatas(0, 50, null).getList()) {
             Scoring s = segmentService.getScoringDefinition(metadata.getId());
             segmentService.setScoringDefinition(s);
         }

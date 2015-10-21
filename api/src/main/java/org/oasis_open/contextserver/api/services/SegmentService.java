@@ -166,7 +166,7 @@ public interface SegmentService {
      *
      * @return the set of all scoring metadata
      */
-    Set<Metadata> getScoringMetadatas();
+    PartialList<Metadata> getScoringMetadatas(int offset, int size, String sortBy);
 
     /**
      * Retrieves the set of scoring metadata for scorings matching the specified query.
@@ -174,7 +174,7 @@ public interface SegmentService {
      * @param query the query the scorings must match for their metadata to be retrieved
      * @return the set of scoring metadata for scorings matching the specified query
      */
-    Set<Metadata> getScoringMetadatas(Query query);
+    PartialList<Metadata> getScoringMetadatas(Query query);
 
     /**
      * Retrieves the scoring identified by the specified identifier.

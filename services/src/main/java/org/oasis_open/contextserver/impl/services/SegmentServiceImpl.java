@@ -249,12 +249,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     }
 
     public PartialList<Metadata> getSegmentMetadatas(int offset, int size, String sortBy) {
-        PartialList<Segment> segments = persistenceService.getAllItems(Segment.class, offset, size, sortBy);
-        List<Metadata> details = new LinkedList<>();
-        for (Segment definition : segments.getList()) {
-            details.add(definition.getMetadata());
-        }
-        return new PartialList<>(details, segments.getOffset(), segments.getPageSize(), segments.getTotalSize());
+        return getMetadatas(offset, size, sortBy, Segment.class);
     }
 
     public PartialList<Metadata> getSegmentMetadatas(String scope, int offset, int size, String sortBy) {
@@ -267,16 +262,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     }
 
     public PartialList<Metadata> getSegmentMetadatas(Query query) {
-        if(query.isForceRefresh()){
-            persistenceService.refresh();
-        }
-        definitionsService.resolveConditionType(query.getCondition());
-        PartialList<Segment> segments = persistenceService.query(query.getCondition(), query.getSortby(), Segment.class, query.getOffset(), query.getLimit());
-        List<Metadata> details = new LinkedList<>();
-        for (Segment definition : segments.getList()) {
-            details.add(definition.getMetadata());
-        }
-        return new PartialList<>(details, segments.getOffset(), segments.getPageSize(), segments.getTotalSize());
+        return getMetadatas(query, Segment.class);
     }
 
     private List<Segment> getAllSegmentDefinitions() {
@@ -493,21 +479,12 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         return metadatas;
     }
 
-    public Set<Metadata> getScoringMetadatas() {
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Scoring scoring : persistenceService.getAllItems(Scoring.class, 0, 50, null).getList()) {
-            descriptions.add(scoring.getMetadata());
-        }
-        return descriptions;
+    public PartialList<Metadata> getScoringMetadatas(int offset, int size, String sortBy) {
+       return getMetadatas(offset, size, sortBy, Scoring.class);
     }
 
-    public Set<Metadata> getScoringMetadatas(Query query) {
-        definitionsService.resolveConditionType(query.getCondition());
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Scoring definition : persistenceService.query(query.getCondition(), query.getSortby(), Scoring.class, query.getOffset(), query.getLimit()).getList()) {
-            descriptions.add(definition.getMetadata());
-        }
-        return descriptions;
+    public PartialList<Metadata> getScoringMetadatas(Query query) {
+        return getMetadatas(query, Scoring.class);
     }
 
     private List<Scoring> getAllScoringDefinitions() {
@@ -771,5 +748,26 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         this.taskExecutionPeriod = taskExecutionPeriod;
     }
 
+    private <T extends MetadataItem> PartialList<Metadata> getMetadatas(int offset, int size, String sortBy, Class<T> clazz) {
+        PartialList<T> items = persistenceService.getAllItems(clazz, offset, size, sortBy);
+        List<Metadata> details = new LinkedList<>();
+        for (T definition : items.getList()) {
+            details.add(definition.getMetadata());
+        }
+        return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize());
+    }
+
+    private <T extends MetadataItem> PartialList<Metadata> getMetadatas(Query query, Class<T> clazz) {
+        if(query.isForceRefresh()){
+            persistenceService.refresh();
+        }
+        definitionsService.resolveConditionType(query.getCondition());
+        PartialList<T> items = persistenceService.query(query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit());
+        List<Metadata> details = new LinkedList<>();
+        for (T definition : items.getList()) {
+            details.add(definition.getMetadata());
+        }
+        return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize());
+    }
 
 }
