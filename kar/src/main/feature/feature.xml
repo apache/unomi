@@ -22,18 +22,18 @@
   -->
 
 <features xmlns="http://karaf.apache.org/xmlns/features/v1.2.0" name="context-server-kar">
-    <feature description="context-server-kar" version="1.0.0-SNAPSHOT" name="context-server-kar"
+    <feature description="context-server-kar" version="${project.version}" name="context-server-kar"
              start-level="75">
         <feature>war</feature>
         <feature version="[2.7.11,3)">cxf</feature>
         <feature>openwebbeans</feature>
         <feature>pax-cdi-web-openwebbeans</feature>
-        <configfile finalname="/etc/org.oasis_open.contextserver.web.cfg">mvn:org.oasis-open.contextserver/context-server-wab/1.0.0-SNAPSHOT/cfg/contextservercfg</configfile>
-        <configfile finalname="/etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg">mvn:org.oasis-open.contextserver/context-server-persistence-elasticsearch-core/1.0.0-SNAPSHOT/cfg/elasticsearchcfg</configfile>
-        <configfile finalname="/etc/org.oasis_open.contextserver.plugins.request.cfg">mvn:org.oasis-open.contextserver/context-server-plugins-request/1.0.0-SNAPSHOT/cfg/requestcfg</configfile>
-        <configfile finalname="/etc/org.oasis_open.contextserver.services.cfg">mvn:org.oasis-open.contextserver/context-server-services/1.0.0-SNAPSHOT/cfg/servicescfg</configfile>
-        <configfile finalname="/etc/org.oasis_open.contextserver.geonames.cfg">mvn:org.jahia.unomi/cxs-geonames-services/1.0.0-SNAPSHOT/cfg/geonamescfg</configfile>
-        <configfile finalname="/etc/elasticsearch.yml">mvn:org.oasis-open.contextserver/context-server-persistence-elasticsearch-core/1.0.0-SNAPSHOT/yml/elasticsearchconfig</configfile>
+        <configfile finalname="/etc/org.oasis_open.contextserver.web.cfg">mvn:org.oasis-open.contextserver/context-server-wab/${project.version}/cfg/contextservercfg</configfile>
+        <configfile finalname="/etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg">mvn:org.oasis-open.contextserver/context-server-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
+        <configfile finalname="/etc/org.oasis_open.contextserver.plugins.request.cfg">mvn:org.oasis-open.contextserver/context-server-plugins-request/${project.version}/cfg/requestcfg</configfile>
+        <configfile finalname="/etc/org.oasis_open.contextserver.services.cfg">mvn:org.oasis-open.contextserver/context-server-services/${project.version}/cfg/servicescfg</configfile>
+        <configfile finalname="/etc/org.oasis_open.contextserver.geonames.cfg">mvn:org.jahia.unomi/cxs-geonames-services/${project.version}/cfg/geonamescfg</configfile>
+        <configfile finalname="/etc/elasticsearch.yml">mvn:org.oasis-open.contextserver/context-server-persistence-elasticsearch-core/${project.version}/yml/elasticsearchconfig</configfile>
         <bundle start-level="75">mvn:commons-io/commons-io/2.4</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-core/2.4.0</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-databind/2.4.0</bundle>
@@ -43,14 +43,14 @@
         <bundle start-level="75">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider/2.4.0</bundle>
         <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jakarta-regexp/1.4_1</bundle>
         <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.joda-time/2.3_1</bundle>
-        <bundle start-level="75">mvn:org.oasis-open.contextserver/context-server-api/1.0.0-SNAPSHOT</bundle>
-        <bundle start-level="75">mvn:org.oasis-open.contextserver/context-server-persistence-spi/1.0.0-SNAPSHOT</bundle>
-        <bundle start-level="76">mvn:org.oasis-open.contextserver/context-server-persistence-elasticsearch-core/1.0.0-SNAPSHOT</bundle>
-        <bundle start-level="77">mvn:org.oasis-open.contextserver/context-server-services/1.0.0-SNAPSHOT</bundle>
-        <bundle start-level="77">mvn:org.jahia.unomi/cxs-lists-extension-services/1.0.0-SNAPSHOT</bundle>
-        <bundle start-level="77">mvn:org.jahia.unomi/cxs-lists-extension-rest/1.0.0-SNAPSHOT</bundle>
-        <bundle start-level="77">mvn:org.jahia.unomi/cxs-geonames-services/1.0.0-SNAPSHOT</bundle>
-        <bundle start-level="77">mvn:org.jahia.unomi/cxs-geonames-rest/1.0.0-SNAPSHOT</bundle>
-        <bundle start-level="78">mvn:org.oasis-open.contextserver/context-server-rest/1.0.0-SNAPSHOT</bundle>
+        <bundle start-level="75">mvn:org.oasis-open.contextserver/context-server-api/${project.version}</bundle>
+        <bundle start-level="75">mvn:org.oasis-open.contextserver/context-server-persistence-spi/${project.version}</bundle>
+        <bundle start-level="76">mvn:org.oasis-open.contextserver/context-server-persistence-elasticsearch-core/${project.version}</bundle>
+        <bundle start-level="77">mvn:org.oasis-open.contextserver/context-server-services/${project.version}</bundle>
+        <bundle start-level="77">mvn:org.jahia.unomi/cxs-lists-extension-services/${project.version}</bundle>
+        <bundle start-level="77">mvn:org.jahia.unomi/cxs-lists-extension-rest/${project.version}</bundle>
+        <bundle start-level="77">mvn:org.jahia.unomi/cxs-geonames-services/${project.version}</bundle>
+        <bundle start-level="77">mvn:org.jahia.unomi/cxs-geonames-rest/${project.version}</bundle>
+        <bundle start-level="78">mvn:org.oasis-open.contextserver/context-server-rest/${project.version}</bundle>
     </feature>
 </features>
