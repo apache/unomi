@@ -1,15 +1,19 @@
 {
   "metadata": {
     "id": "_6q67tamg9_testScoring",
-    "name": "Test scoring",
+    "name": "Men and/or 42+",
     "scope": "ACMESPACE",
     "description": "Test scoring"
   },
   "elements": [
     {
       "condition": {
-        "parameterValues": {},
-        "type": "matchAllCondition"
+        "parameterValues": {
+          "propertyName": "properties.age",
+          "comparisonOperator": "greaterThanOrEqualTo",
+          "propertyValueInteger": 42
+        },
+        "type": "profilePropertyCondition"
       },
       "value": 50
     },
