@@ -3,26 +3,26 @@
     <parent>
         <groupId>org.jahia.unomi</groupId>
         <artifactId>cxs-geonames</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.1-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>cxs-geonames-services</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <dependencies>
         <dependency>
             <groupId>org.oasis-open.contextserver</groupId>
             <artifactId>context-server-api</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.oasis-open.contextserver</groupId>
             <artifactId>context-server-persistence-spi</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
