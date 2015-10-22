@@ -22,8 +22,10 @@ package org.oasis_open.contextserver.api.actions;
  * #L%
  */
 
+import org.oasis_open.contextserver.api.rules.Rule;
+
 /**
- * Interface for action callback to be executed after all the actions been processed
+ * An action to be executed after all {@link Rule}-derived have been processed.
  */
 public interface ActionPostExecutor {
     boolean execute();

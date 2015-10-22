@@ -25,25 +25,50 @@ package org.oasis_open.contextserver.api;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * A generic extension of Item for context server extensions, properties are stored in a Map.
+ */
 public class CustomItem extends Item {
     private static final long serialVersionUID = -7178914125308851922L;
 
+    /**
+     * The constant ITEM_TYPE.
+     */
     public static final String ITEM_TYPE = "custom";
 
     private Map<String,Object> properties = new HashMap<String,Object>();
 
+    /**
+     * Instantiates a new Custom item.
+     */
     public CustomItem() {
     }
 
+    /**
+     * Instantiates a new Custom item.
+     *
+     * @param itemId   the item id
+     * @param itemType the item type
+     */
     public CustomItem(String itemId, String itemType) {
         super(itemId);
         this.itemType = itemType;
     }
 
+    /**
+     * Retrieves this CustomItem's properties.
+     *
+     * @return a Map of the item's properties associating the property name as key to its value.
+     */
     public Map<String, Object> getProperties() {
         return properties;
     }
 
+    /**
+     * Sets the properties.
+     *
+     * @param properties the properties
+     */
     public void setProperties(Map<String, Object> properties) {
         this.properties = properties;
     }
