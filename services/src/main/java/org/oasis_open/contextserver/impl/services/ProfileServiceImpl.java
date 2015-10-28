@@ -310,6 +310,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         PropertyType[] propertyTypes = profileProperties.toArray(new PropertyType[profileProperties.size()]);
         PartialList<Profile> profiles = search(query, Profile.class);
 
+        sb.append("profileId;");
         // headers
         for (int i = 0; i < propertyTypes.length; i++) {
             PropertyType propertyType = propertyTypes[i];
@@ -323,6 +324,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
         // rows
         for (Profile profile : profiles.getList()) {
+            sb.append(profile.getItemId());
+            sb.append(";");
             for (int i = 0; i < propertyTypes.length; i++) {
                 PropertyType propertyType = propertyTypes[i];
                 if (profile.getProperties().get(propertyType.getMetadata().getId()) != null) {
