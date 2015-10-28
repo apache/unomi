@@ -27,11 +27,16 @@ import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.conditions.Condition;
 import org.oasis_open.contextserver.api.query.AggregateQuery;
 import org.oasis_open.contextserver.api.services.QueryService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.Map;
 
 /**
@@ -45,6 +50,7 @@ import java.util.Map;
         allowCredentials = true
 )
 public class QueryServiceEndPoint {
+    private static final Logger logger = LoggerFactory.getLogger(QueryServiceEndPoint.class.getName());
 
     private QueryService queryService;
 
@@ -116,14 +122,28 @@ public class QueryServiceEndPoint {
      * Retrieves the number of items of the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and matching the specified {@link Condition}.
      *
      * @param condition the condition the items must satisfy
+     * @param validate optional parameter, in case of draft condition that have missing required parameters an IllegalArgumentException is throw
+     *                 and this end point will return status code 400, to avoid that you can set validate to false.
      * @param type      the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
-     * @return the number of items of the specified type
+     * @param response  the httpServletResponse
+     * @return the number of items of the specified type.
+     *         0 and status code 400 in case of IllegalArgumentException (bad condition) and validate null or true
+     *         0 and status code 200 in case of IllegalArgumentException (bad condition) and validate false
      * @see Item Item for a discussion of {@code ITEM_TYPE}
      */
     @POST
     @Path("/{type}/count")
-    public long getQueryCount(@PathParam("type") String type, Condition condition) {
-        return queryService.getQueryCount(type, condition);
+    public long getQueryCount(@PathParam("type") String type, @QueryParam("validate") Boolean validate, Condition condition,  @Context final HttpServletResponse response) {
+        long count = 0;
+        try {
+            count = queryService.getQueryCount(type, condition);
+        } catch (IllegalArgumentException e) {
+            if(validate == null || validate) {
+                logger.error(e.getMessage(), e);
+                response.setStatus(Response.Status.BAD_REQUEST.getStatusCode());
+            }
+        }
+        return count;
     }
 
 }
