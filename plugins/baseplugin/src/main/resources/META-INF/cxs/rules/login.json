@@ -30,12 +30,6 @@
                 "mergeProfilePropertyName": "j:nodename"
             },
             "type": "mergeProfilesOnPropertyAction"
-        },
-        {
-            "parameterValues": {
-                "mergeProfilePropertyName": "username"
-            },
-            "type": "mergeProfilesOnPropertyAction"
         }
     ]
 }
