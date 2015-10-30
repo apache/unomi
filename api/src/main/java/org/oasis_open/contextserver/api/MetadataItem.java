@@ -41,7 +41,7 @@ public abstract class MetadataItem extends Item {
     }
 
     /**
-     * Retrieves the associated Metadata
+     * Retrieves the associated Metadata.
      *
      * @return the associated Metadata
      */

@@ -26,8 +26,6 @@ import java.util.List;
 
 /**
  * A request for events to be processed.
- *
- * @see EventsCollectorRequest
  */
 public class EventsCollectorRequest {
     private List<Event> events;

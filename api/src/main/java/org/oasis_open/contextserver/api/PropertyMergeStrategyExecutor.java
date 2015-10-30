@@ -25,11 +25,18 @@ package org.oasis_open.contextserver.api;
 import java.util.List;
 
 /**
- * Classes implementing this interface will implement an algorithm to merge profile properties based on different strategies
- * such as "adding integers", "using oldest value", "using most recent value", "merging lists", etc...
+ * A strategy algorithm to merge profile properties such as "adding integers", "using oldest value", "using most recent value", "merging lists", etc...
  */
 public interface PropertyMergeStrategyExecutor {
-
+    /**
+     * Merges the value of the property identified by the specified name and type from the specified profiles into the specified target profile.
+     *
+     * @param propertyName    the name of the property to be merged
+     * @param propertyType    the type of the property to be merged
+     * @param profilesToMerge a List of profiles to merge
+     * @param targetProfile   the target profile into which the specified profiles will be merged
+     * @return {@code true} if the target profile was successfully modified as the result of the merge, {@code false} otherwise
+     */
     boolean mergeProperty(String propertyName, PropertyType propertyType, List<Profile> profilesToMerge, Profile targetProfile);
 
 }

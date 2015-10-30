@@ -22,10 +22,23 @@ package org.oasis_open.contextserver.api;
  * #L%
  */
 
+/**
+ * The interface for unomi plugins.
+ */
 public interface PluginType {
 
+    /**
+     * Retrieves the plugin identifier, corresponding to the identifier of the OSGi bundle implementing the plugin.
+     *
+     * @return the plugin identifier, corresponding to the identifier of the OSGi bundle implementing the plugin
+     */
     long getPluginId();
 
+    /**
+     * Associates this plugin with its associated OSGi bundle identifier.
+     *
+     * @param pluginId the OSGi bundle identifier associated with this plugin
+     */
     void setPluginId(long pluginId);
 
 }

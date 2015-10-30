@@ -34,8 +34,8 @@ import java.io.Serializable;
  * {@code ITEM_TYPE} be unique across all persisted type of Items. Similarly, since Items are persisted according to their type, an Item's identifier must be unique among
  * Items of the same type.
  * <p/>
- * Additionally, Items are also gathered by scope which allow the context server to group together Items that are related (usually pertaining to a given site being analyzed,
- * though scopes could span across site depending on the desired analysis granularity). Scopes allow clients accessing the context server to filter data. The context server
+ * Additionally, Items are also gathered by scope allowing the context server to group together related Items (usually pertaining to a given site being analyzed,
+ * though scopes could span across sites depending on the desired analysis granularity). Scopes allow clients accessing the context server to filter data. The context server
  * defines a built-in scope ({@link Metadata#SYSTEM_SCOPE}) that clients can use to share data across scopes.
  */
 public abstract class Item implements Serializable {
