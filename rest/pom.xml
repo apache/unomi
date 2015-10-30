@@ -80,6 +80,18 @@
             <version>1.0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
+        <!--<dependency>
+            <groupId>io.swagger</groupId>
+            <artifactId>swagger-core</artifactId>
+            <scope>compile</scope>
+            <version>1.5.3</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>javax.ws.rs</groupId>
+                    <artifactId>jsr311-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>-->
     </dependencies>
 
     <build>
@@ -99,6 +111,40 @@
                             &lt;!&ndash; Domain of the deployed project, defaults to example.com &ndash;&gt;
                             &lt;!&ndash;<deployedDomain>example.com</deployedDomain>&ndash;&gt;
                         </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.github.kongchen</groupId>
+                <artifactId>swagger-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <apiSources>
+                        <apiSource>
+                            <springmvc>false</springmvc>
+                            <locations>org.oasis_open.contextserver.rest</locations>
+                            <templatePath>${basedir}/api-doc-template/markdown.hbs</templatePath>
+                            <outputPath>${basedir}/generated/document.html</outputPath>
+                            <swaggerDirectory>generated/swagger-ui</swaggerDirectory>
+                            <info>
+                                <title>Documentation for Apache unomi's RESTful API</title>
+                                <version>${project.version}</version>
+                            </info>
+                            <securityDefinitions>
+                                <securityDefinition>
+                                    <name>MybasicAuth</name>
+                                    <type>basic</type>
+                                </securityDefinition>
+                            </securityDefinitions>
+                        </apiSource>
+                    </apiSources>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>-->
