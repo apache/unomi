@@ -30,6 +30,15 @@ import java.util.Set;
 
 /**
  * A user profile gathering all known information about a given user as well as segments it is part of and scores.
+ * <p/>
+ * Contrary to other unomi {@link Item}s, profiles are not part of a scope since we want to be able to track the associated user across applications. For this reason, data
+ * collected for a given profile in a specific scope is still available to any scoped item that accesses the profile information.
+ * <p/>
+ * It is interesting to note that there is not necessarily a one to one mapping between users and profiles as users can be captured across applications and different observation
+ * contexts. As identifying information might not be available in all contexts in which data is collected, resolving profiles to a single physical user can become complex because
+ * physical users are not observed directly. Rather, their portrait is progressively patched together and made clearer as unomi captures more and more traces of their actions.
+ * Unomi will merge related profiles as soon as collected data permits positive association between distinct profiles, usually as a result of the user performing some identifying
+ * action in a context where the user hadn’t already been positively identified.
  *
  * @see org.oasis_open.contextserver.api.segments.Segment
  */
@@ -109,18 +118,19 @@ public class Profile extends Item {
     }
 
     /**
-     * TODO
+     * Retrieves a Map of system property name - value pairs for this profile. System properties can be used by implementations to store non-user visible properties needed for
+     * internal purposes.
      *
-     * @return the system properties
+     * @return a Map of system property name - value pairs for this profile
      */
     public Map<String, Object> getSystemProperties() {
         return systemProperties;
     }
 
     /**
-     * TODO
+     * Specifies the system property name - value pairs for this profile.
      *
-     * @param systemProperties the system properties
+     * @param systemProperties a Map of system property name - value pairs for this profile
      */
     public void setSystemProperties(Map<String, Object> systemProperties) {
         this.systemProperties = systemProperties;

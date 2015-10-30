@@ -29,7 +29,10 @@ import java.util.*;
 
 /**
  * An event that can be processed and evaluated by the context server. Events can be triggered by clients following user actions or can also be issued internally in the context
- * server in response to another event.
+ * server in response to another event. Conceptually, an event can be seen as a sentence, the event's type being the verb, the source the subject and the target the object.
+ *
+ * Source and target can be any unomi item but are not limited to them. In particular, as long as they can be described using properties and unomi’s type mechanism and can be
+ * processed either natively or via extension plugins, source and target can represent just about anything.
  */
 public class Event extends Item implements TimestampedItem {
 
