@@ -36,6 +36,8 @@ public class Session extends Item implements TimestampedItem {
 
     /**
      * The Session ITEM_TYPE.
+     *
+     * @see Item for a discussion of ITEM_TYPE
      */
     public static final String ITEM_TYPE = "session";
 

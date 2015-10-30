@@ -26,26 +26,52 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
+/**
+ * A scoring dimension along profiles can be evaluated and associated value to be assigned.
+ */
 @XmlRootElement
 public class ScoringElement {
     private Condition condition;
     private int value;
 
+    /**
+     * Instantiates a new Scoring element.
+     */
     public ScoringElement() {
     }
 
+    /**
+     * Retrieves the condition.
+     *
+     * @return the condition
+     */
     public Condition getCondition() {
         return condition;
     }
 
+    /**
+     * Sets the condition.
+     *
+     * @param condition the condition
+     */
     public void setCondition(Condition condition) {
         this.condition = condition;
     }
 
+    /**
+     * Retrieves the value.
+     *
+     * @return the value
+     */
     public int getValue() {
         return value;
     }
 
+    /**
+     * Sets the value.
+     *
+     * @param value the value
+     */
     public void setValue(int value) {
         this.value = value;
     }

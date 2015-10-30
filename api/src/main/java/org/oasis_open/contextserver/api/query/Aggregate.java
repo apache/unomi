@@ -27,6 +27,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * A specification for an aggregate as part of {@link AggregateQuery}s
+ */
 public class Aggregate {
     private String type;
     private String property;

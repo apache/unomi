@@ -40,7 +40,7 @@ public class Event extends Item implements TimestampedItem {
     /**
      * The Event ITEM_TYPE.
      *
-     * @see Item
+     * @see Item for a discussion of ITEM_TYPE
      */
     public static final String ITEM_TYPE = "event";
     /**

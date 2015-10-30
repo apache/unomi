@@ -34,7 +34,7 @@ import java.io.Serializable;
 import java.util.*;
 
 /**
- * Represents a node in the segment definition expression tree
+ * A condition type definition.
  */
 @XmlRootElement
 public class ConditionType implements PluginType, Serializable {
@@ -51,18 +51,37 @@ public class ConditionType implements PluginType, Serializable {
     private List<Parameter> parameters = new ArrayList<Parameter>();
     private Rule autoCreateRule;
 
+    /**
+     * Instantiates a new Condition type.
+     */
     public ConditionType() {
     }
 
+    /**
+     * Instantiates a new Condition type with the specified identifier and .
+     *
+     * @param id      the id
+     * @param nameKey the name key
+     */
     public ConditionType(String id, String nameKey) {
         this.id = id;
         this.nameKey = nameKey;
     }
 
+    /**
+     * Retrieves the id.
+     *
+     * @return the id
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Retrieves the name key.
+     *
+     * @return the name key
+     */
     public String getNameKey() {
         if (nameKey == null) {
             nameKey = "condition." + id + ".name";
@@ -70,10 +89,20 @@ public class ConditionType implements PluginType, Serializable {
         return nameKey;
     }
 
+    /**
+     * Sets the name key.
+     *
+     * @param nameKey the name key
+     */
     public void setNameKey(String nameKey) {
         this.nameKey = nameKey;
     }
 
+    /**
+     * Retrieves the description key.
+     *
+     * @return the description key
+     */
     public String getDescriptionKey() {
         if (descriptionKey == null) {
             descriptionKey = "condition." + id + ".description";
@@ -81,6 +110,11 @@ public class ConditionType implements PluginType, Serializable {
         return descriptionKey;
     }
 
+    /**
+     * Sets the description key.
+     *
+     * @param descriptionKey the description key
+     */
     public void setDescriptionKey(String descriptionKey) {
         this.descriptionKey = descriptionKey;
     }
@@ -94,61 +128,131 @@ public class ConditionType implements PluginType, Serializable {
         this.pluginId = pluginId;
     }
 
+    /**
+     * Retrieves the condition evaluator.
+     *
+     * @return the condition evaluator
+     */
     public String getConditionEvaluator() {
         return conditionEvaluator;
     }
 
+    /**
+     * Sets the condition evaluator.
+     *
+     * @param conditionEvaluator the condition evaluator
+     */
     public void setConditionEvaluator(String conditionEvaluator) {
         this.conditionEvaluator = conditionEvaluator;
     }
 
+    /**
+     * Retrieves the query builder.
+     *
+     * @return the query builder
+     */
     public String getQueryBuilder() {
         return queryBuilder;
     }
 
+    /**
+     * Sets the query builder.
+     *
+     * @param queryBuilder the query builder
+     */
     public void setQueryBuilder(String queryBuilder) {
         this.queryBuilder = queryBuilder;
     }
 
+    /**
+     * Retrieves the parent condition.
+     *
+     * @return the parent condition
+     */
     public Condition getParentCondition() {
         return parentCondition;
     }
 
+    /**
+     * Sets the parent condition.
+     *
+     * @param parentCondition the parent condition
+     */
     public void setParentCondition(Condition parentCondition) {
         this.parentCondition = parentCondition;
     }
 
-    @XmlElement(name = "tags")
-    public Set<String> getTagIDs() {
-        return tagIDs;
-    }
-
-    public void setTagIDs(Set<String> tagIDs) {
-        this.tagIDs = tagIDs;
-    }
-
+    /**
+     * Retrieves the tags used by this PropertyType.
+     *
+     * @return the tags used by this PropertyType
+     */
     @XmlTransient
     public Set<Tag> getTags() {
         return tags;
     }
 
+    /**
+     * Sets the tags used by this PropertyType.
+     *
+     * @param tags the tags used by this PropertyType
+     */
     public void setTags(Set<Tag> tags) {
         this.tags = tags;
     }
 
+    /**
+     * Retrieves the identifiers of the tags used by this PropertyType.
+     *
+     * @return the identifiers of the tags used by this PropertyType
+     */
+    @XmlElement(name = "tags")
+    public Set<String> getTagIDs() {
+        return tagIDs;
+    }
+
+    /**
+     * Sets the identifiers of the tags used by this PropertyType.
+     *
+     * @param tagIds the identifiers of the tags used by this PropertyType
+     */
+    public void setTagIDs(Set<String> tagIds) {
+        this.tagIDs = tagIds;
+    }
+
+    /**
+     * Retrieves the defined {@link Parameter}s for this ConditionType.
+     *
+     * @return a List of the defined {@link Parameter}s for this ConditionType
+     */
     @XmlElement(name = "parameters")
     public List<Parameter> getParameters() {
         return parameters;
     }
 
+    /**
+     * Sets the List of the defined {@link Parameter}s for this ConditionType.
+     *
+     * @param parameters a List of the defined {@link Parameter}s for this ConditionType
+     */
     public void setParameters(List<Parameter> parameters) {
         this.parameters = parameters;
     }
 
+    /**
+     * Retrieves the auto create rule.
+     *
+     * @return the auto create rule
+     */
     public Rule getAutoCreateRule() {
         return autoCreateRule;
     }
 
+    /**
+     * Sets the auto create rule.
+     *
+     * @param autoCreateRule the auto create rule
+     */
     public void setAutoCreateRule(Rule autoCreateRule) {
         this.autoCreateRule = autoCreateRule;
     }

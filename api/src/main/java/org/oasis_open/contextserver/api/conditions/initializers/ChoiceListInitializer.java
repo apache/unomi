@@ -31,9 +31,8 @@ public interface ChoiceListInitializer {
 
     /**
      * Returns a list of options for this choice list.
-     * 
-     * @param context
-     *            a context object containing supporting information
+     *
+     * @param context a context object containing supporting information
      * @return a list of options for this choice list
      */
     List<ChoiceListValue> getValues(Object context);

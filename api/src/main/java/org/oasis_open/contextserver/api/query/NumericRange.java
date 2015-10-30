@@ -22,6 +22,9 @@ package org.oasis_open.contextserver.api.query;
  * #L%
  */
 
+/**
+ * A numeric range.
+ */
 public class NumericRange {
     public NumericRange() {
     }

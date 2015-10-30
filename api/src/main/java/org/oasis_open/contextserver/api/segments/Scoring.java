@@ -22,31 +22,59 @@ package org.oasis_open.contextserver.api.segments;
  * #L%
  */
 
+import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.MetadataItem;
 
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.List;
 
+/**
+ * A set of conditions associated with a value to assign to profiles when matching so that they can be scored along that dimension. Each {@link ScoringElement} is evaluated and
+ * the {@link org.oasis_open.contextserver.api.Profile}'s score is incremented with the associated value.
+ */
 @XmlRootElement
 public class Scoring extends MetadataItem {
     private static final long serialVersionUID = 6351058906259967559L;
 
+    /**
+     * The Scoring ITEM_TYPE.
+     *
+     * @see Item for a discussion of ITEM_TYPE
+     */
     public static final String ITEM_TYPE = "scoring";
 
     private List<ScoringElement> elements;
 
+    /**
+     * Instantiates a new Scoring.
+     */
     public Scoring() {
     }
 
+    /**
+     * Instantiates a new Scoring with the specified metadata.
+     *
+     * @param metadata the metadata
+     */
     public Scoring(Metadata metadata) {
         super(metadata);
     }
 
+    /**
+     * Retrieves the details of this Scoring.
+     *
+     * @return the elements
+     */
     public List<ScoringElement> getElements() {
         return elements;
     }
 
+    /**
+     * Sets the elements.
+     *
+     * @param elements the elements
+     */
     public void setElements(List<ScoringElement> elements) {
         this.elements = elements;
     }
