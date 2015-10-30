@@ -35,7 +35,9 @@ import java.util.*;
  */
 public class PropertyType extends MetadataItem {
     /**
-     * The constant ITEM_TYPE.
+     * The PropertyType ITEM_TYPE.
+     *
+     * @see Item for a discussion of ITEM_TYPE
      */
     public static final String ITEM_TYPE = "propertyType";
 
@@ -71,7 +73,9 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Retrieves the target for this property type, indicating the type of elements this property type is defined for. For example, for property types attached to profiles, {@code
-     * target} would be {@code "proofiles"}.
+     * target} would be {@code "profiles"}.
+     *
+     * TODO: deprecated?
      *
      * @return the target for this property type
      */
@@ -81,6 +85,8 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Sets the target for this property type.
+     *
+     * TODO: deprecated?
      *
      * @param target the target for this property type, indicating the type of elements this property type is defined for
      */

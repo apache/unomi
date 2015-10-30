@@ -22,19 +22,23 @@ package org.oasis_open.contextserver.api.campaigns.events;
  * #L%
  */
 
+import org.oasis_open.contextserver.api.Item;
 import org.oasis_open.contextserver.api.Metadata;
 import org.oasis_open.contextserver.api.MetadataItem;
 
 import java.util.Date;
 
 /**
- * Created by IntelliJ IDEA.
+ * A specific campaign event to help analyzing your key performance indicators by marking specific dates during your campaign.
  *
- * @author : rincevent
- * @since : JAHIA 6.1
- * Created : 17/03/15
+ * @author : rincevent Created : 17/03/15
  */
 public class CampaignEvent extends MetadataItem {
+    /**
+     * The CampaignEvent ITEM_TYPE.
+     *
+     * @see Item for a discussion of ITEM_TYPE
+     */
     public static final String ITEM_TYPE = "campaignevent";
     private static final long serialVersionUID = -20151703L;
     private Date eventDate;
@@ -43,49 +47,107 @@ public class CampaignEvent extends MetadataItem {
     private String currency;
     private String timezone;
 
+    /**
+     * Instantiates a new Campaign event.
+     */
     public CampaignEvent() {
     }
 
+    /**
+     * Instantiates a new Campaign event with the specified metadata.
+     *
+     * @param metadata the metadata
+     */
     public CampaignEvent(Metadata metadata) {
         super(metadata);
     }
 
+    /**
+     * Retrieves the cost associated with this campaign event.
+     *
+     * @return the cost associated with this campaign event
+     */
     public Double getCost() {
         return cost;
     }
 
+    /**
+     * Sets the cost.
+     *
+     * @param cost the cost
+     */
     public void setCost(Double cost) {
         this.cost = cost;
     }
 
+    /**
+     * Retrieves the currency.
+     *
+     * @return the currency
+     */
     public String getCurrency() {
         return currency;
     }
 
+    /**
+     * Sets the currency.
+     *
+     * @param currency the currency
+     */
     public void setCurrency(String currency) {
         this.currency = currency;
     }
 
+    /**
+     * Retrieves the event date.
+     *
+     * @return the event date
+     */
     public Date getEventDate() {
         return eventDate;
     }
 
+    /**
+     * Sets the event date.
+     *
+     * @param eventDate the event date
+     */
     public void setEventDate(Date eventDate) {
         this.eventDate = eventDate;
     }
 
+    /**
+     * Retrieves the identifier of the associated {@link org.oasis_open.contextserver.api.campaigns.Campaign}.
+     *
+     * @return the identifier of the associated {@link org.oasis_open.contextserver.api.campaigns.Campaign}
+     */
     public String getCampaignId() {
         return campaignId;
     }
 
+    /**
+     * Sets the campaign id.
+     *
+     * @param campaignId the campaign id
+     */
     public void setCampaignId(String campaignId) {
         this.campaignId = campaignId;
     }
 
+    /**
+     * Retrieves the timezone.
+     *
+     * @return the timezone
+     */
     public String getTimezone() {
         return timezone;
     }
 
+    /**
+     * Sets the timezone.
+     *
+     * @param timezone the timezone
+     */
     public void setTimezone(String timezone) {
         this.timezone = timezone;
     }

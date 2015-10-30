@@ -49,7 +49,7 @@ public class Profile extends Item {
     /**
      * The Profile ITEM_TYPE
      *
-     * @see Item
+     * @see Item for a discussion of ITEM_TYPE
      */
     public static final String ITEM_TYPE = "profile";
 

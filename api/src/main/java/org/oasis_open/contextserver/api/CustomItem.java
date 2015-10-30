@@ -32,7 +32,8 @@ public class CustomItem extends Item {
     private static final long serialVersionUID = -7178914125308851922L;
 
     /**
-     * The constant ITEM_TYPE.
+     * The CustomItem ITEM_TYPE.
+     * @see Item for a discussion of ITEM_TYPE
      */
     public static final String ITEM_TYPE = "custom";
 

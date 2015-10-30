@@ -25,51 +25,98 @@ package org.oasis_open.contextserver.api.actions;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
-
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * An action that can be executed as a consequence of a {@link org.oasis_open.contextserver.api.rules.Rule} being triggered. An action is characterized by its associated {@link
+ * ActionType} and parameter values.
+ */
 @XmlRootElement
 public class Action {
-    protected ActionType actionType;
-    protected String actionTypeId;
+    private ActionType actionType;
+    private String actionTypeId;
+    private Map<String, Object> parameterValues = new HashMap<>();
 
-    protected Map<String,Object> parameterValues = new HashMap<String, Object>();
-
+    /**
+     * Instantiates a new Action.
+     */
     public Action() {
     }
 
+    /**
+     * Instantiates a new Action with the specified {@link ActionType}
+     *
+     * @param actionType the action's type
+     */
     public Action(ActionType actionType) {
         setActionType(actionType);
     }
 
+    /**
+     * Retrieves the action's type.
+     *
+     * @return the action's type
+     */
     @XmlTransient
     public ActionType getActionType() {
         return actionType;
     }
 
+    /**
+     * Sets the action's type.
+     *
+     * @param actionType the action's type
+     */
     public void setActionType(ActionType actionType) {
         this.actionType = actionType;
         this.actionTypeId = actionType.getId();
     }
 
-    @XmlElement(name="type")
+    /**
+     * Retrieves the identifier of the associated action type.
+     *
+     * @return the identifier of the associated action type
+     */
+    @XmlElement(name = "type")
     public String getActionTypeId() {
         return actionTypeId;
     }
 
+    /**
+     * Sets the identifier of the associated action type.
+     *
+     * @param actionTypeId the identifier of the associated action type
+     */
     public void setActionTypeId(String actionTypeId) {
         this.actionTypeId = actionTypeId;
     }
 
+    /**
+     * Retrieves the parameter values as a Map of parameter name - associated value pairs.
+     *
+     * @return a Map of parameter name - associated value pairs
+     */
     public Map<String, Object> getParameterValues() {
         return parameterValues;
     }
 
+    /**
+     * Sets the parameter identified by the specified name to the specified value. If a parameter with that name already exists, replaces its value, otherwise adds the new
+     * parameter with the specified name and value.
+     *
+     * @param name  the name of the parameter to set
+     * @param value the value of the parameter
+     */
     public void setParameter(String name, Object value) {
         parameterValues.put(name, value);
     }
 
+    /**
+     * Sets the parameter values as a Map of parameter name - associated value pairs.
+     *
+     * @param parameterValues the parameter values as a Map of parameter name - associated value pairs
+     */
     public void setParameterValues(Map<String, Object> parameterValues) {
         this.parameterValues = parameterValues;
     }

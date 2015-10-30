@@ -25,10 +25,17 @@ package org.oasis_open.contextserver.api.actions;
 import org.oasis_open.contextserver.api.Event;
 
 /**
- * The common interface for all action executors
+ * A piece of code that performs a specified {@link Action}, given a triggering {@link Event}
  */
 public interface ActionExecutor {
 
+    /**
+     * Executes a specified {@link Action}, given a triggering {@link Event}.
+     *
+     * @param action the {@link Action} to execute
+     * @param event  the {@link Event} that triggered the action
+     * @return an integer status corresponding to what happened as defined by public constants of {@link org.oasis_open.contextserver.api.services.EventService}
+     */
     int execute(Action action, Event event);
 
 }

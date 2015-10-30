@@ -22,6 +22,9 @@ package org.oasis_open.contextserver.api.query;
  * #L%
  */
 
+/**
+ * An IP address range.
+ */
 public class IpRange {
     public IpRange() {
     }

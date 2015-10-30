@@ -25,6 +25,9 @@ package org.oasis_open.contextserver.api.goals;
 import java.io.Serializable;
 import java.util.List;
 
+/**
+ * Report information about a {@link Goal}.
+ */
 public class GoalReport implements Serializable {
     private static final long serialVersionUID = -9150361970326342064L;
     private Stat globalStats;
@@ -49,6 +52,9 @@ public class GoalReport implements Serializable {
         this.split = split;
     }
 
+    /**
+     * Statistics
+     */
     public static class Stat implements Serializable {
         private static final long serialVersionUID = 4306277648074263098L;
         private String key;
