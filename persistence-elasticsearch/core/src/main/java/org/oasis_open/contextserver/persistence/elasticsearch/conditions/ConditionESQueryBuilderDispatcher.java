@@ -79,6 +79,10 @@ public class ConditionESQueryBuilderDispatcher {
     }
 
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context) {
+        if(condition == null || condition.getConditionType() == null) {
+            throw new IllegalArgumentException("Condition is null or doesn't have type, impossible to build filter");
+        }
+
         String queryBuilderKey = condition.getConditionType().getQueryBuilder();
         if (queryBuilderKey == null && condition.getConditionType().getParentCondition() != null) {
             context.putAll(condition.getParameterValues());
