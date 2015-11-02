@@ -30,8 +30,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 import java.util.List;
 
 /**
- * A set of conditions associated with a value to assign to profiles when matching so that they can be scored along that dimension. Each {@link ScoringElement} is evaluated and
- * the {@link org.oasis_open.contextserver.api.Profile}'s score is incremented with the associated value.
+ * A set of conditions associated with a value to assign to {@link org.oasis_open.contextserver.api.Profile}s when matching so that the associated users can be scored along that
+ * dimension. Each {@link ScoringElement} is evaluated and matching profiles' scores are incremented with the associated value.
  */
 @XmlRootElement
 public class Scoring extends MetadataItem {
