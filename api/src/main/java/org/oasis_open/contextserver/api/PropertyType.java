@@ -31,7 +31,7 @@ import javax.xml.bind.annotation.XmlTransient;
 import java.util.*;
 
 /**
- * A user-defined property definition.
+ * A user-defined profile or session property, specifying how possible values are constrained, if the value is multi-valued (a vector of values as opposed to a scalar value).
  */
 public class PropertyType extends MetadataItem {
     /**

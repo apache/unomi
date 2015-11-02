@@ -31,7 +31,14 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 import java.util.List;
 
 /**
- * A conditional set of actions to be executed in response to incoming events.
+ * A conditional set of actions to be executed in response to incoming events. Triggering of rules is guarded by a condition: the rule is only triggered if the associated
+ * condition ({@link #getCondition()}) is satisfied. Once a rule triggers, a list of actions ({@link #getActions()} can be performed as consequences.
+ *
+ * When rules trigger, a specific event is raised so that other parts of unomi can react to it accordingly. We can control how that event should be raised using
+ * {@link #isRaiseEventOnlyOnceForProfile()} and {@link #isRaiseEventOnlyOnceForSession()}.
+ *
+ * We could also specify a priority for our rule in case it needs to be executed before other ones when similar conditions match. This is accomplished using the
+ * {@link #getPriority()} property.
  */
 public class Rule extends MetadataItem {
 
