@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.oasis-open.contextserver</groupId>
         <artifactId>context-server</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.0</version>
     </parent>
 
     <artifactId>context-server-persistence-elasticsearch</artifactId>

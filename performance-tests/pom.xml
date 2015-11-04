@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.oasis-open.contextserver</groupId>
         <artifactId>context-server</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.0</version>
     </parent>
     <artifactId>context-server-performance-tests</artifactId>
     <name>Context Server Performance Tests</name>
@@ -22,7 +22,7 @@
         <dependency>
             <groupId>org.oasis-open.contextserver</groupId>
             <artifactId>context-server-wab</artifactId>
-            <version>1.0.1-SNAPSHOT</version>
+            <version>1.0.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>

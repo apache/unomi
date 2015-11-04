@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.oasis-open.contextserver</groupId>
         <artifactId>context-server-persistence-elasticsearch</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.0</version>
     </parent>
 
     <artifactId>context-server-persistence-elasticsearch-core</artifactId>
@@ -21,13 +21,13 @@
         <dependency>
             <groupId>org.oasis-open.contextserver</groupId>
             <artifactId>context-server-api</artifactId>
-            <version>1.0.1-SNAPSHOT</version>
+            <version>1.0.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.oasis-open.contextserver</groupId>
             <artifactId>context-server-persistence-spi</artifactId>
-            <version>1.0.1-SNAPSHOT</version>
+            <version>1.0.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
