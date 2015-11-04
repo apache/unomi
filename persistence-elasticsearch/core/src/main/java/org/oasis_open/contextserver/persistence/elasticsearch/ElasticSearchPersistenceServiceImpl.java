@@ -52,6 +52,7 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.*;
 import org.elasticsearch.indices.IndexMissingException;
 import org.elasticsearch.node.Node;
+import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.*;
@@ -556,6 +557,31 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.executeInClassLoader();
     }
 
+    @Override
+    public boolean update(final String itemId, final Date dateHint, final Class<?> clazz, final String script, final Map<String, Object> scriptParams) {
+        return new InClassLoaderExecute<Boolean>() {
+            protected Boolean execute(Object... args) {
+                try {
+                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
+
+                    String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
+                            (itemsMonthlyIndexed.contains(itemType) && dateHint != null ? getMonthlyIndex(dateHint) : indexName);
+
+                    client.prepareUpdate(index, itemType, itemId).setScript(script, ScriptService.ScriptType.INLINE).setScriptParams(scriptParams)
+                            .execute()
+                            .actionGet();
+                    return true;
+                } catch (IndexMissingException e) {
+                    logger.debug("No index found for itemType=" + clazz.getName() + "itemId=" + itemId, e);
+                } catch (NoSuchFieldException e) {
+                    logger.error("Error updating item " + itemId, e);
+                } catch (IllegalAccessException e) {
+                    logger.error("Error updating item " + itemId, e);
+                }
+                return false;
+            }
+        }.executeInClassLoader();
+    }
 
     @Override
     public <T extends Item> boolean remove(final String itemId, final Class<T> clazz) {

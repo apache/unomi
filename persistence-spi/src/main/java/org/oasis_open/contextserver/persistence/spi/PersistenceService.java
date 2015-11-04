@@ -97,6 +97,19 @@ public interface PersistenceService {
     boolean update(String itemId, Date dateHint, Class<?> clazz, String propertyName, Object propertyValue);
 
     /**
+     * Updates the item of the specified class and identified by the specified identifier with a new property value for the specified property name. Same as
+     * {@code update(itemId, dateHint, clazz, Collections.singletonMap(propertyName, propertyValue))}
+     *
+     * @param itemId        the identifier of the item we want to update
+     * @param dateHint      a Date helping in identifying where the item is located
+     * @param clazz         the Item subclass of the item to update
+     * @param script        inline script
+     * @param scriptParams  script params
+     * @return {@code true} if the update was successful, {@code false} otherwise
+     */
+    boolean update(String itemId, Date dateHint, Class<?> clazz, String script, Map<String, Object> scriptParams);
+
+    /**
      * Retrieves the item identified with the specified identifier and with the specified Item subclass if it exists.
      *
      * @param <T>    the type of the Item subclass we want to retrieve
