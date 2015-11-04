@@ -4,7 +4,7 @@
     <groupId>org.oasis-open.contextserver</groupId>
     <artifactId>context-server</artifactId>
     <name>Context Server root project</name>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <inceptionYear>2014</inceptionYear>
     <organization>
@@ -26,7 +26,7 @@
         <connection>scm:git:git@github.com:Jahia/unomi.git</connection>
         <url>https://github.com/Jahia/unomi</url>
         <developerConnection>scm:git:git@github.com:Jahia/unomi.git</developerConnection>
-      <tag>1_0_0</tag>
+      <tag>HEAD</tag>
   </scm>
 
     <distributionManagement>
