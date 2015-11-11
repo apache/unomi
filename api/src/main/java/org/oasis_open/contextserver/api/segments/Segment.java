@@ -30,7 +30,9 @@ import org.oasis_open.contextserver.api.conditions.Condition;
 import javax.xml.bind.annotation.XmlRootElement;
 
 /**
- * A dynamically evaluated group of similar users. Users matching a segment's condition are automatically added to the segment
+ * A dynamically evaluated group of similar profiles in order to categorize the associated users. To be considered part of a given segment, users must satisfies
+ * the segment’s condition. If they match, users are automatically added to the segment. Similarly, if at any given point during, they cease to satisfy the segment’s condition,
+ * they are automatically removed from it.
  */
 @XmlRootElement
 public class Segment extends MetadataItem {

@@ -34,7 +34,10 @@ import java.io.Serializable;
 import java.util.*;
 
 /**
- * A condition type definition.
+ * ConditionTypes define new conditions that can be applied to items (for example to decide whether a rule needs to be triggered or if a profile is considered as taking part in a
+ * campaign) or to perform queries against the stored unomi data. They may be implemented in Java when attempting to define a particularly complex test or one that can better be
+ * optimized by coding it. They may also be defined as combination of other conditions. A simple condition  could be: “User is male”, while a more generic condition with
+ * parameters may test whether a given property has a specific value: “User property x has value y”.
  */
 @XmlRootElement
 public class ConditionType implements PluginType, Serializable {
