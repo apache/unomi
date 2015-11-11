@@ -48,7 +48,12 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
     }
 
     public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        Condition eventCondition = (Condition) condition.getParameter("eventCondition");
+        Condition eventCondition;
+        try {
+            eventCondition = (Condition) condition.getParameter("eventCondition");
+        } catch (ClassCastException e) {
+            throw new IllegalArgumentException("Empty eventCondition");
+        }
         if (eventCondition == null) {
             throw new IllegalArgumentException("No eventCondition");
         }

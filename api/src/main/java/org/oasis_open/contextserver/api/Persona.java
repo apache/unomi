@@ -23,8 +23,8 @@ package org.oasis_open.contextserver.api;
  */
 
 /**
- * A persona is a "virtual" profile used to represent categories of profiles, and may also be used to test
- * how a personalized experience would look like using this virtual profile.
+ * A persona is a "virtual" profile used to represent categories of profiles, and may also be used to test how a personalized experience would look like using this virtual profile.
+ * A persona can define predefined properties and sessions. Persona definition make it possible to “emulate” a certain type of profile, e.g : US visitor, non-US visitor, etc.
  */
 public class Persona extends Profile {
 

@@ -22,13 +22,19 @@ package org.oasis_open.contextserver.api;
  * #L%
  */
 
-import org.oasis_open.contextserver.api.Event;
-
 import java.util.List;
 
+/**
+ * A request for events to be processed.
+ */
 public class EventsCollectorRequest {
     private List<Event> events;
 
+    /**
+     * Retrieves the events to be processed.
+     *
+     * @return the events to be processed
+     */
     public List<Event> getEvents() {
         return events;
     }

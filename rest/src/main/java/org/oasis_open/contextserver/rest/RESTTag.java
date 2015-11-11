@@ -25,6 +25,9 @@ package org.oasis_open.contextserver.rest;
 import java.util.Collection;
 import java.util.TreeSet;
 
+/**
+ * A representation of a {@link org.oasis_open.contextserver.api.Tag} better suited for definitions.
+ */
 public class RESTTag {
     private String id;
     private String name;

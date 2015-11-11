@@ -104,15 +104,10 @@ public class QueryServiceImpl implements QueryService {
 
     @Override
     public long getQueryCount(String itemType, Condition condition) {
-        try {
-            if (condition.getConditionType() == null) {
-                ParserHelper.resolveConditionType(definitionsService, condition);
-            }
-            return persistenceService.queryCount(condition, itemType);
-        } catch (Exception e) {
-            logger.warn("Invalid query", e);
-            return 0;
+        if (condition.getConditionType() == null) {
+            ParserHelper.resolveConditionType(definitionsService, condition);
         }
+        return persistenceService.queryCount(condition, itemType);
     }
 
 

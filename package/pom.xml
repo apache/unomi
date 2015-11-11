@@ -1,11 +1,10 @@
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>org.oasis-open.contextserver</groupId>
         <artifactId>context-server</artifactId>
-        <version>1.0-SNAPSHOT</version>
+        <version>1.0.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>context-server-package</artifactId>
@@ -63,7 +62,7 @@
         <dependency>
             <groupId>org.oasis-open.contextserver</groupId>
             <artifactId>context-server-kar</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>1.0.1-SNAPSHOT</version>
             <classifier>features</classifier>
             <type>xml</type>
             <scope>runtime</scope>
@@ -122,7 +121,7 @@
                                 <artifactItem>
                                     <groupId>org.oasis-open.contextserver</groupId>
                                     <artifactId>context-server-wab</artifactId>
-                                    <version>1.0-SNAPSHOT</version>
+                                    <version>${project.version}</version>
                                     <classifier>contextservercfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>
@@ -133,7 +132,7 @@
                                 <artifactItem>
                                     <groupId>org.oasis-open.contextserver</groupId>
                                     <artifactId>context-server-persistence-elasticsearch-core</artifactId>
-                                    <version>1.0-SNAPSHOT</version>
+                                    <version>${project.version}</version>
                                     <classifier>elasticsearchcfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>
@@ -144,7 +143,7 @@
                                 <artifactItem>
                                     <groupId>org.oasis-open.contextserver</groupId>
                                     <artifactId>context-server-persistence-elasticsearch-core</artifactId>
-                                    <version>1.0-SNAPSHOT</version>
+                                    <version>${project.version}</version>
                                     <classifier>elasticsearchconfig</classifier>
                                     <type>yml</type>
                                     <outputDirectory>
@@ -155,7 +154,7 @@
                                 <artifactItem>
                                     <groupId>org.oasis-open.contextserver</groupId>
                                     <artifactId>context-server-plugins-request</artifactId>
-                                    <version>1.0-SNAPSHOT</version>
+                                    <version>${project.version}</version>
                                     <classifier>requestcfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>

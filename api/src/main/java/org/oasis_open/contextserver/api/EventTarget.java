@@ -25,6 +25,9 @@ package org.oasis_open.contextserver.api;
 import java.io.Serializable;
 import java.util.Map;
 
+/**
+ * TODO: REMOVE
+ */
 public class EventTarget implements Serializable {
     private static final long serialVersionUID = 6370790894348364803L;
     private String id;

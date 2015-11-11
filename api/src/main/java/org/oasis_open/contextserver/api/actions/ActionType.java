@@ -31,6 +31,11 @@ import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 import java.util.*;
 
+/**
+ * ActionTypes define new actions that can be used as consequences of Rules being triggered. When a rule triggers, it creates new actions based on the event data and the rule
+ * internal processes, providing values for parameters defined in the associated ActionType. Example actions include: “Set user property x to value y” or “Send a message to service
+ * x”.
+ */
 public class ActionType implements PluginType, Serializable {
 
     private static final long serialVersionUID = -3522958600710010934L;
@@ -43,29 +48,58 @@ public class ActionType implements PluginType, Serializable {
     private long pluginId;
     private List<Parameter> parameters = new ArrayList<Parameter>();
 
+    /**
+     * Instantiates a new Action type.
+     */
     public ActionType() {
     }
 
+    /**
+     * Instantiates a new Action type.
+     *
+     * @param id      the id
+     * @param nameKey the name key
+     */
     public ActionType(String id, String nameKey) {
         this.id = id;
         this.nameKey = nameKey;
     }
 
+    /**
+     * Retrieves the id.
+     *
+     * @return the id
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Retrieves the {@link java.util.ResourceBundle} key used to localize this ActionType's name.
+     *
+     * @return the {@link java.util.ResourceBundle} key used to localize this ActionType's name
+     */
     public String getNameKey() {
         if (nameKey == null) {
-            nameKey = "action." +  id + ".name";
+            nameKey = "action." + id + ".name";
         }
         return nameKey;
     }
 
+    /**
+     * Sets the name key.
+     *
+     * @param nameKey the name key
+     */
     public void setNameKey(String nameKey) {
         this.nameKey = nameKey;
     }
 
+    /**
+     * Retrieves the {@link java.util.ResourceBundle} key used to localize this ActionType's description.
+     *
+     * @return the {@link java.util.ResourceBundle} key used to localize this ActionType's name
+     */
     public String getDescriptionKey() {
         if (descriptionKey == null) {
             descriptionKey = "action." + id + ".description";
@@ -73,6 +107,11 @@ public class ActionType implements PluginType, Serializable {
         return descriptionKey;
     }
 
+    /**
+     * Sets the description key.
+     *
+     * @param descriptionKey the description key
+     */
     public void setDescriptionKey(String descriptionKey) {
         this.descriptionKey = descriptionKey;
     }
@@ -86,36 +125,76 @@ public class ActionType implements PluginType, Serializable {
         this.pluginId = pluginId;
     }
 
+    /**
+     * Retrieves the action executor.
+     *
+     * @return the action executor
+     */
     public String getActionExecutor() {
         return actionExecutor;
     }
 
+    /**
+     * Sets the action executor.
+     *
+     * @param actionExecutor the action executor
+     */
     public void setActionExecutor(String actionExecutor) {
         this.actionExecutor = actionExecutor;
     }
 
-    @XmlElement(name = "tags")
-    public Set<String> getTagIds() {
-        return tagIds;
-    }
-
-    public void setTagIds(Set<String> tagIds) {
-        this.tagIds = tagIds;
-    }
-
+    /**
+     * Retrieves the tags used by this ActionType.
+     *
+     * @return the tags used by this ActionType
+     */
     @XmlTransient
     public Set<Tag> getTags() {
         return tags;
     }
 
+    /**
+     * Sets the tags used by this ActionType.
+     *
+     * @param tags the tags used by this ActionType
+     */
     public void setTags(Set<Tag> tags) {
         this.tags = tags;
     }
 
+    /**
+     * Retrieves the identifiers of the tags used by this ActionType.
+     *
+     * @return the identifiers of the tags used by this ActionType
+     */
+    @XmlElement(name = "tags")
+    public Set<String> getTagIds() {
+        return tagIds;
+    }
+
+    /**
+     * Sets the identifiers of the tags used by this ActionType.
+     *
+     * @param tagIds the identifiers of the tags used by this ActionType
+     */
+    public void setTagIds(Set<String> tagIds) {
+        this.tagIds = tagIds;
+    }
+
+    /**
+     * Retrieves the parameters.
+     *
+     * @return the parameters
+     */
     public List<Parameter> getParameters() {
         return parameters;
     }
 
+    /**
+     * Sets the parameters.
+     *
+     * @param parameters the parameters
+     */
     public void setParameters(List<Parameter> parameters) {
         this.parameters = parameters;
     }

@@ -24,6 +24,9 @@ package org.oasis_open.contextserver.rest;
 
 import java.util.Collection;
 
+/**
+ * A representation of a {@link org.oasis_open.contextserver.api.ValueType} better suited for definitions.
+ */
 public class RESTValueType {
 
     private String id;

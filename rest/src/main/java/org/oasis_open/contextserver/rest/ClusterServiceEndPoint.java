@@ -29,6 +29,7 @@ import org.oasis_open.contextserver.api.services.ClusterService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
@@ -37,6 +38,9 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
+/**
+ * A JAX-RS endpoint to access information about the context server's cluster.
+ */
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
@@ -55,20 +59,32 @@ public class ClusterServiceEndPoint {
         System.out.println("Initializing cluster service endpoint...");
     }
 
+    @WebMethod(exclude = true)
     public void setClusterService(ClusterService clusterService) {
         this.clusterService = clusterService;
     }
 
+    @WebMethod(exclude = true)
     public void setMessageContext(MessageContext messageContext) {
         this.messageContext = messageContext;
     }
 
+    /**
+     * Retrieves the list of available nodes for this context server instance.
+     *
+     * @return a list of {@link ClusterNode}
+     */
     @GET
     @Path("/")
     public List<ClusterNode> getClusterNodes() {
         return clusterService.getClusterNodes();
     }
 
+    /**
+     * Removes all data before the specified date from the context server.
+     *
+     * @param date the Date before which all data needs to be removed
+     */
     @GET
     @Path("/purge/{date}")
     public void purge(@PathParam("date") String date) {
@@ -79,6 +95,11 @@ public class ClusterServiceEndPoint {
         }
     }
 
+    /**
+     * Removes all data associated with the provided scope.
+     *
+     * @param scope the scope for which we want to remove data
+     */
     @DELETE
     @Path("{scope}")
     public void deleteScopedData(@PathParam("scope") String scope) {

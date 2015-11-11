@@ -26,6 +26,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.oasis_open.contextserver.api.*;
 import org.oasis_open.contextserver.api.services.EventService;
+import org.oasis_open.contextserver.api.services.PrivacyService;
 import org.oasis_open.contextserver.api.services.ProfileService;
 import org.oasis_open.contextserver.persistence.spi.CustomObjectMapper;
 import org.slf4j.Logger;
@@ -38,6 +39,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
+import java.util.List;
 
 public class EventsCollectorServlet extends HttpServlet {
     private static final Logger logger = LoggerFactory.getLogger(EventsCollectorServlet.class.getName());
@@ -46,6 +48,7 @@ public class EventsCollectorServlet extends HttpServlet {
 
     private EventService eventService;
     private ProfileService profileService;
+    private PrivacyService privacyService;
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -103,6 +106,22 @@ public class EventsCollectorServlet extends HttpServlet {
             return;
         }
 
+        Profile realProfile = profile;
+        Boolean profileIsAnonymous = privacyService.isAnonymous(profile.getItemId());
+        if (profileIsAnonymous != null && profileIsAnonymous.booleanValue()) {
+            // we are surfing anonymously, we must use the global anonymous profile if it exists, or create it if
+            // it doesn't.
+            Profile anonymousProfile = profileService.load(PrivacyService.GLOBAL_ANONYMOUS_PROFILE_ID);
+            if (anonymousProfile == null) {
+                anonymousProfile = new Profile(PrivacyService.GLOBAL_ANONYMOUS_PROFILE_ID);
+                profileService.save(profile);
+            }
+            realProfile = profile;
+            profile = anonymousProfile;
+        }
+
+        List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile.getItemId());
+
         ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
         JsonFactory factory = mapper.getFactory();
         EventsCollectorRequest events = null;
@@ -125,6 +144,12 @@ public class EventsCollectorServlet extends HttpServlet {
                 } else {
                     eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(), event.getTarget(), timestamp);
                 }
+
+                if (filteredEventTypes != null && filteredEventTypes.contains(event.getEventType())) {
+                    logger.debug("Profile is filtering event type {}", event.getEventType());
+                    continue;
+                }
+
                 eventToSend.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                 eventToSend.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                 logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
@@ -157,5 +182,9 @@ public class EventsCollectorServlet extends HttpServlet {
 
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;
+    }
+
+    public void setPrivacyService(PrivacyService privacyService) {
+        this.privacyService = privacyService;
     }
 }

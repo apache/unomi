@@ -28,11 +28,11 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Represents a tag on a condition
+ * A simple label used to classify all other objects inside unomi. A tag can define sub-tags.
  */
 public class Tag implements PluginType, Comparable<Tag> {
 
-    Set<Tag> subTags = new TreeSet<Tag>();
+    private Set<Tag> subTags = new TreeSet<>();
     private String id;
     private String nameKey;
     private String descriptionKey;
@@ -41,9 +41,20 @@ public class Tag implements PluginType, Comparable<Tag> {
     private long pluginId;
     private boolean hidden = false;
 
+    /**
+     * Instantiates a new Tag.
+     */
     public Tag() {
     }
 
+    /**
+     * Instantiates a new Tag.
+     *
+     * @param id             the identifier
+     * @param nameKey        the {@link java.util.ResourceBundle} key used to localize this Tag's name
+     * @param descriptionKey the {@link java.util.ResourceBundle} key used to localize this Tag's description
+     * @param parentId       the identifier of this Tag's parent Tag
+     */
     public Tag(String id, String nameKey, String descriptionKey, String parentId) {
         this.id = id;
         this.nameKey = nameKey;
@@ -51,10 +62,20 @@ public class Tag implements PluginType, Comparable<Tag> {
         this.parentId = parentId;
     }
 
+    /**
+     * Retrieves this Tag's identifier.
+     *
+     * @return the id
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Retrieves the {@link java.util.ResourceBundle} key used to localize this Tag's name.
+     *
+     * @return the {@link java.util.ResourceBundle} key used to localize this Tag's name
+     */
     public String getNameKey() {
         if (nameKey == null) {
             nameKey = "tag." + id + ".name";
@@ -62,6 +83,11 @@ public class Tag implements PluginType, Comparable<Tag> {
         return nameKey;
     }
 
+    /**
+     * Retrieves the {@link java.util.ResourceBundle} key used to localize this Tag's description.
+     *
+     * @return the {@link java.util.ResourceBundle} key used to localize this Tag's name
+     */
     public String getDescriptionKey() {
         if (descriptionKey == null) {
             descriptionKey = "tag." + id + ".description";
@@ -69,31 +95,66 @@ public class Tag implements PluginType, Comparable<Tag> {
         return descriptionKey;
     }
 
+    /**
+     * Retrieves the identifier of this Tag's parent Tag.
+     *
+     * @return the identifier of this Tag's parent Tag
+     */
     @XmlElement(name = "parent")
     public String getParentId() {
         return parentId;
     }
 
+    /**
+     * Retrieves the sub tags.
+     *
+     * @return the sub tags
+     */
     public Set<Tag> getSubTags() {
         return subTags;
     }
 
+    /**
+     * Sets the sub tags.
+     *
+     * @param subTags the sub tags
+     */
     public void setSubTags(Set<Tag> subTags) {
         this.subTags = subTags;
     }
 
+    /**
+     * Retrieves the rank of this PropertyType for ordering purpose.
+     *
+     * @return the rank of this PropertyType for ordering purpose
+     */
     public double getRank() {
         return rank;
     }
 
+    /**
+     * Specifies the rank of this PropertyType for ordering purpose.
+     *
+     * @param rank the rank of this PropertyType for ordering purpose
+     */
     public void setRank(double rank) {
         this.rank = rank;
     }
 
+    /**
+     * Whether this Tag is considered for internal purposes only and should therefore be hidden to accessing UIs.
+     *
+     * @return {@code true} if the Tag needs to be hidden, {@code false} otherwise
+     */
     public boolean isHidden() {
         return hidden;
     }
 
+    /**
+     * Specifies whether this Tag is hidden.
+     *
+     * @param hidden {@code true} if the Tag needs to be hidden, {@code false} otherwise
+     */
     public void setHidden(boolean hidden) {
         this.hidden = hidden;
     }

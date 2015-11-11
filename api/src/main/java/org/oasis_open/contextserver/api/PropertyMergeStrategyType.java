@@ -24,6 +24,9 @@ package org.oasis_open.contextserver.api;
 
 import javax.xml.bind.annotation.XmlTransient;
 
+/**
+ * A unomi plugin that defines a new property merge strategy.
+ */
 public class PropertyMergeStrategyType implements PluginType {
 
     private String id;
@@ -31,6 +34,11 @@ public class PropertyMergeStrategyType implements PluginType {
 
     private long pluginId;
 
+    /**
+     * Retrieves the identifier for this PropertyMergeStrategyType.
+     *
+     * @return the identifier for this PropertyMergeStrategyType
+     */
     public String getId() {
         return id;
     }
@@ -39,6 +47,13 @@ public class PropertyMergeStrategyType implements PluginType {
         this.id = id;
     }
 
+    /**
+     * Retrieves the OSGi filter used to identify the implementation associated with this PropertyMergeStrategyType. Filters take the following form:
+     * {@code (propertyMergeStrategyExecutorId=&lt;id&gt;)} where {@code id} corresponds to the value of the {@code propertyMergeStrategyExecutorId} service property in the
+     * Blueprint service definition for this PropertyMergeStrategyType.
+     *
+     * @return the filter string used to identify the implementation associated with this PropertyMergeStrategyType
+     */
     public String getFilter() {
         return filter;
     }

@@ -22,7 +22,9 @@ package org.oasis_open.contextserver.api.query;
  * #L%
  */
 
-
+/**
+ * A data range.
+ */
 public class DateRange {
     public DateRange() {
     }

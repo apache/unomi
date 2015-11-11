@@ -22,6 +22,9 @@ package org.oasis_open.contextserver.api;
  * #L%
  */
 
+/**
+ * TODO: REMOVE
+ */
 public class EventSource {
     private String scope;
     private String id;

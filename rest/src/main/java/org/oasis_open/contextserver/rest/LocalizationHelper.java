@@ -42,6 +42,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.ResourceBundle;
 
+/**
+ * A helper class to provide localized versions of context server entities.
+ */
 public class LocalizationHelper {
 
     private static final Logger logger = LoggerFactory.getLogger(LocalizationHelper.class.getName());
@@ -49,6 +52,13 @@ public class LocalizationHelper {
     private BundleContext bundleContext;
     private ResourceBundleHelper resourceBundleHelper;
 
+    /**
+     * Creates {@link RESTConditionType}s, localized using the specified language, based on the specified {@link ConditionType}s.
+     *
+     * @param conditionTypes the {@link ConditionType}s to be localized
+     * @param language       the language to use to localize {@link ConditionType}s
+     * @return a collection of {@link RESTConditionType}s based on the specified {@link ConditionType}s and localized using the specified language
+     */
     public Collection<RESTConditionType> generateConditions(Collection<ConditionType> conditionTypes, String language) {
         List<RESTConditionType> result = new ArrayList<RESTConditionType>();
         if (conditionTypes == null) {
@@ -60,6 +70,13 @@ public class LocalizationHelper {
         return result;
     }
 
+    /**
+     * Creates {@link RESTActionType}s, localized using the specified language, based on the specified {@link ActionType}s.
+     *
+     * @param actionTypes the {@link ActionType}s to be localized
+     * @param language    the language to use to localize {@link ActionType}s
+     * @return a collection of {@link RESTActionType}s based on the specified {@link ActionType}s and localized using the specified language
+     */
     public Collection<RESTActionType> generateActions(Collection<ActionType> actionTypes, String language) {
         List<RESTActionType> result = new ArrayList<RESTActionType>();
         if (actionTypes == null) {
@@ -71,6 +88,13 @@ public class LocalizationHelper {
         return result;
     }
 
+    /**
+     * Creates a {@link RESTConditionType} based on the specified {@link ConditionType} and localized using the specified language.
+     *
+     * @param conditionType the {@link ConditionType} to be localized
+     * @param language      the language to use to localize {@link ConditionType}
+     * @return a {@link RESTConditionType} based on the specified {@link ConditionType} and localized using the specified language
+     */
     public RESTConditionType generateCondition(ConditionType conditionType, String language) {
         RESTConditionType result = new RESTConditionType();
         result.setId(conditionType.getId());
@@ -88,6 +112,13 @@ public class LocalizationHelper {
         return result;
     }
 
+    /**
+     * Creates a {@link RESTActionType} based on the specified {@link ActionType} and localized using the specified language.
+     *
+     * @param actionType the {@link ActionType} to be localized
+     * @param language   the language to use to localize {@link ActionType}
+     * @return a {@link RESTActionType} based on the specified {@link ActionType} and localized using the specified language
+     */
     public RESTActionType generateAction(ActionType actionType, String language) {
         RESTActionType result = new RESTActionType();
         result.setId(actionType.getId());
@@ -107,6 +138,13 @@ public class LocalizationHelper {
         return result;
     }
 
+    /**
+     * Creates a {@link RESTParameter} based on the specified {@link Parameter} and localized using the specified {@link ResourceBundle}.
+     *
+     * @param parameter the {@link Parameter} to be localized
+     * @param bundle    the {@link ResourceBundle} used to localize the {@link Parameter}'s choice list values if needed
+     * @return a {@link RESTParameter} based on the specified {@link ActionType} and localized using the specified {@link ResourceBundle}
+     */
     public RESTParameter generateParameter(Parameter parameter, ResourceBundle bundle) {
         RESTParameter result = new RESTParameter();
         result.setId(parameter.getId());
@@ -139,11 +177,18 @@ public class LocalizationHelper {
                     }
                 }
             } catch (InvalidSyntaxException e) {
-                logger.error("Invalid filter",e);
+                logger.error("Invalid filter", e);
             }
         }
     }
 
+    /**
+     * Creates {@link RESTValueType}s, localized using the specified language, based on the specified {@link ValueType}s.
+     *
+     * @param valueTypes the {@link ValueType}s to be localized
+     * @param language   the language to use to localize {@link ValueType}s
+     * @return a collection of {@link RESTValueType}s based on the specified {@link ValueType}s and localized using the specified language
+     */
     public Collection<RESTValueType> generateValueTypes(Collection<ValueType> valueTypes, String language) {
         List<RESTValueType> result = new ArrayList<RESTValueType>();
         if (valueTypes == null) {
@@ -155,6 +200,13 @@ public class LocalizationHelper {
         return result;
     }
 
+    /**
+     * Creates a {@link RESTValueType} based on the specified {@link ValueType} and localized using the specified language.
+     *
+     * @param valueType the {@link ValueType} to be localized
+     * @param language  the language to use to localize {@link ValueType}
+     * @return a {@link RESTValueType} based on the specified {@link ValueType} and localized using the specified language
+     */
     public RESTValueType generateValueType(ValueType valueType, String language) {
         RESTValueType result = new RESTValueType();
         result.setId(valueType.getId());
@@ -166,10 +218,21 @@ public class LocalizationHelper {
         return result;
     }
 
+    /**
+     * Same as generateTages(tags, language, false).
+     */
     public Collection<RESTTag> generateTags(Collection<Tag> tags, String language) {
         return generateTags(tags, language, false);
     }
 
+    /**
+     * Creates {@link RESTTag}s, localized using the specified language, based on the specified {@link Tag}s.
+     *
+     * @param tags         the {@link Tag}s to be localized
+     * @param language     the language to use to localize {@link Tag}s
+     * @param filterHidden {@code true} to filter out hidden tags, {@code false} otherwise
+     * @return a collection of {@link RESTTag}s based on the specified {@link Tag}s and localized using the specified language
+     */
     public Collection<RESTTag> generateTags(Collection<Tag> tags, String language, boolean filterHidden) {
         List<RESTTag> result = new ArrayList<RESTTag>();
         for (Tag tag : tags) {
@@ -181,10 +244,21 @@ public class LocalizationHelper {
         return result;
     }
 
+    /**
+     * Same as generateTag(tag, language, false).
+     */
     public RESTTag generateTag(Tag tag, String language) {
         return generateTag(tag, language, false);
     }
 
+    /**
+     * Creates a {@link RESTTag}, localized using the specified language, based on the specified {@link Tag}.
+     *
+     * @param tag          the {@link Tag} to be localized
+     * @param language     the language to use to localize the {@link Tag}
+     * @param filterHidden {@code true} to filter out hidden sub-tags, {@code false} otherwise
+     * @return a {@link RESTTag} based on the specified {@link Tag} and localized using the specified language
+     */
     public RESTTag generateTag(Tag tag, String language, boolean filterHidden) {
         if (filterHidden && tag.isHidden()) {
             return null;

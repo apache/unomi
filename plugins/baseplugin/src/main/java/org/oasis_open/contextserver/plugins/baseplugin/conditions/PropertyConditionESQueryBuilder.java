@@ -46,6 +46,10 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         String op = (String) condition.getParameter("comparisonOperator");
         String name = (String) condition.getParameter("propertyName");
 
+        if(op == null || name == null){
+            throw new IllegalArgumentException("Impossible to build ES filter, condition is not valid, comparisonOperator and propertyName properties should be provided");
+        }
+
         String expectedValue = ConditionContextHelper.foldToASCII((String) condition.getParameter("propertyValue"));
         Object expectedValueInteger = condition.getParameter("propertyValueInteger");
         Object expectedValueDate = condition.getParameter("propertyValueDate");
@@ -62,43 +66,71 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
 
         switch (op) {
             case "equals":
+                checkRequiredValue(value, name, op, false);
                 return FilterBuilders.termFilter(name, value);
             case "notEquals":
+                checkRequiredValue(value, name, op, false);
                 return FilterBuilders.notFilter(FilterBuilders.termFilter(name, value));
             case "greaterThan":
+                checkRequiredValue(value, name, op, false);
                 return FilterBuilders.rangeFilter(name).gt(value);
             case "greaterThanOrEqualTo":
+                checkRequiredValue(value, name, op, false);
                 return FilterBuilders.rangeFilter(name).gte(value);
             case "lessThan":
+                checkRequiredValue(value, name, op, false);
                 return FilterBuilders.rangeFilter(name).lt(value);
             case "lessThanOrEqualTo":
+                checkRequiredValue(value, name, op, false);
                 return FilterBuilders.rangeFilter(name).lte(value);
             case "between":
+                checkRequiredValuesSize(values, name, op, 2);
                 return FilterBuilders.rangeFilter(name).gte(values.get(0)).lte(values.get(1));
             case "exists":
                 return FilterBuilders.existsFilter(name);
             case "missing":
                 return FilterBuilders.missingFilter(name);
             case "contains":
+                checkRequiredValue(expectedValue, name, op, false);
                 return FilterBuilders.regexpFilter(name, ".*" + expectedValue + ".*");
             case "startsWith":
+                checkRequiredValue(expectedValue, name, op, false);
                 return FilterBuilders.prefixFilter(name, expectedValue);
             case "endsWith":
+                checkRequiredValue(expectedValue, name, op, false);
                 return FilterBuilders.regexpFilter(name, ".*" + expectedValue);
             case "matchesRegex":
+                checkRequiredValue(expectedValue, name, op, false);
                 return FilterBuilders.regexpFilter(name, expectedValue);
             case "in":
+                checkRequiredValue(values, name, op, true);
                 return FilterBuilders.inFilter(name, values.toArray());
             case "notIn":
+                checkRequiredValue(values, name, op, true);
                 return FilterBuilders.notFilter(FilterBuilders.inFilter(name, values.toArray()));
             case "all":
+                checkRequiredValue(values, name, op, true);
                 return FilterBuilders.termsFilter(name, values.toArray()).execution("and");
             case "isDay":
+                checkRequiredValue(value, name, op, false);
                 return getIsSameDayRange(value, name);
             case "isNotDay":
+                checkRequiredValue(value, name, op, false);
                 return FilterBuilders.notFilter(getIsSameDayRange(value, name));
         }
         return null;
+    }
+
+    private void checkRequiredValuesSize(List<?> values, String name, String operator, int expectedSize) {
+        if(values == null || values.size() != expectedSize) {
+            throw new IllegalArgumentException("Impossible to build ES filter, missing " + expectedSize + " values for a condition using comparisonOperator: " + operator + ", and propertyName: " + name);
+        }
+    }
+
+    private void checkRequiredValue(Object value, String name, String operator, boolean multiple) {
+        if(value == null) {
+            throw new IllegalArgumentException("Impossible to build ES filter, missing value" + (multiple ? "s" : "") + " for condition using comparisonOperator: " + operator + ", and propertyName: " + name);
+        }
     }
 
     private FilterBuilder getIsSameDayRange (Object value, String name) {

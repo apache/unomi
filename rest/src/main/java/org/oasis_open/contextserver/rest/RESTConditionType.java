@@ -22,8 +22,14 @@ package org.oasis_open.contextserver.rest;
  * #L%
  */
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.TreeSet;
 
+/**
+ * A representation of a {@link org.oasis_open.contextserver.api.conditions.ConditionType} better suited for definitions.
+ */
 public class RESTConditionType {
     private String id;
     private String name;

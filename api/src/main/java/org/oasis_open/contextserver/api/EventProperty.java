@@ -94,7 +94,7 @@ package org.oasis_open.contextserver.api;
 import java.io.Serializable;
 
 /**
- * Represents event property object.
+ * An event property.
  *
  * @author Sergiy Shyrkov
  */
@@ -136,18 +136,38 @@ public class EventProperty implements Serializable {
         }
     }
 
+    /**
+     * Retrieves the identifier for this EventProperty.
+     *
+     * @return the identifier for this EventProperty
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Retrieves the type.
+     *
+     * @return the value type
+     */
     public String getValueType() {
         return valueType;
     }
 
+    /**
+     * Sets the identifier.
+     *
+     * @param id the id
+     */
     public void setId(String id) {
         this.id = id;
     }
 
+    /**
+     * Sets the value type.
+     *
+     * @param type the type
+     */
     public void setValueType(String type) {
         this.valueType = type;
     }

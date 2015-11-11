@@ -29,6 +29,9 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.TreeSet;
 
+/**
+ * A value type to be used to constrain property values.
+ */
 @XmlRootElement
 public class ValueType implements PluginType {
 
@@ -36,24 +39,47 @@ public class ValueType implements PluginType {
     private String nameKey;
     private String descriptionKey;
     private long pluginId;
-    private Set<Tag> tags = new TreeSet<Tag>();
-    private Set<String> tagIds = new LinkedHashSet<String>();
+    private Set<Tag> tags = new TreeSet<>();
+    private Set<String> tagIds = new LinkedHashSet<>();
 
+    /**
+     * Instantiates a new Value type.
+     */
     public ValueType() {
     }
 
+    /**
+     * Instantiates a new Value type with the specified identifier.
+     *
+     * @param id the identifier
+     */
     public ValueType(String id) {
         this.id = id;
     }
 
+    /**
+     * Retrieves this ValueType's identifier.
+     *
+     * @return this ValueType's identifier
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Sets this ValueType's identifier.
+     *
+     * @param id this ValueType's identifier
+     */
     public void setId(String id) {
         this.id = id;
     }
 
+    /**
+     * Retrieves the {@link java.util.ResourceBundle} key used to localize this ValueType's name.
+     *
+     * @return the {@link java.util.ResourceBundle} key used to localize this ValueType's name
+     */
     public String getNameKey() {
         if (nameKey == null) {
             nameKey = "type." + id;
@@ -61,10 +87,20 @@ public class ValueType implements PluginType {
         return nameKey;
     }
 
+    /**
+     * Sets the name key.
+     *
+     * @param nameKey the name key
+     */
     public void setNameKey(String nameKey) {
         this.nameKey = nameKey;
     }
 
+    /**
+     * Retrieves the {@link java.util.ResourceBundle} key used to localize this ValueType's description.
+     *
+     * @return the {@link java.util.ResourceBundle} key used to localize this ValueType's name
+     */
     public String getDescriptionKey() {
         if (descriptionKey == null) {
             descriptionKey = "type." + id + ".description";
@@ -72,6 +108,11 @@ public class ValueType implements PluginType {
         return descriptionKey;
     }
 
+    /**
+     * Sets the description key.
+     *
+     * @param descriptionKey the description key
+     */
     public void setDescriptionKey(String descriptionKey) {
         this.descriptionKey = descriptionKey;
     }
@@ -85,20 +126,40 @@ public class ValueType implements PluginType {
         this.pluginId = pluginId;
     }
 
+    /**
+     * Retrieves the tags used by this ValueType.
+     *
+     * @return the tags used by this ValueType
+     */
     @XmlTransient
     public Set<Tag> getTags() {
         return tags;
     }
 
+    /**
+     * Sets the tags used by this ValueType.
+     *
+     * @param tags the tags used by this ValueType
+     */
     public void setTags(Set<Tag> tags) {
         this.tags = tags;
     }
 
+    /**
+     * Retrieves the identifiers of the tags used by this ValueType.
+     *
+     * @return the identifiers of the tags used by this ValueType
+     */
     @XmlElement(name = "tags")
     public Set<String> getTagIds() {
         return tagIds;
     }
 
+    /**
+     * Sets the identifiers of the tags used by this ValueType.
+     *
+     * @param tagIds the identifiers of the tags used by this ValueType
+     */
     public void setTagIds(Set<String> tagIds) {
         this.tagIds = tagIds;
     }

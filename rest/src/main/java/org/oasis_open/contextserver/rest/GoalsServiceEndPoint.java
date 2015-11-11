@@ -36,6 +36,9 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.Set;
 
+/**
+ * A JAX-RS endpoint to manage {@link Goal}s and related information.
+ */
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
@@ -51,6 +54,11 @@ public class GoalsServiceEndPoint {
         this.goalsService = goalsService;
     }
 
+    /**
+     * Retrieves the set of Metadata associated with existing goals.
+     *
+     * @return the set of Metadata associated with existing goals
+     */
     @GET
     @Path("/")
     public Set<Metadata> getGoalMetadatas() {
@@ -58,36 +66,71 @@ public class GoalsServiceEndPoint {
     }
 
 
+    /**
+     * Saves the specified goal in the context server and creates associated {@link org.oasis_open.contextserver.api.rules.Rule}s if the goal is enabled.
+     *
+     * @param goal the Goal to be saved
+     */
     @POST
     @Path("/")
     public void setGoal(Goal goal) {
         goalsService.setGoal(goal);
     }
 
+    /**
+     * Retrieves the set of Metadata associated with existing goals matching the specified {@link Query}
+     *
+     * @param query the Query used to filter the Goals which metadata we want to retrieve
+     * @return the set of Metadata associated with existing goals matching the specified {@link Query}
+     */
     @POST
     @Path("/query")
     public Set<Metadata> getGoalMetadatas(Query query) {
         return goalsService.getGoalMetadatas(query);
     }
 
+    /**
+     * Retrieves the goal associated with the specified identifier.
+     *
+     * @param goalId the identifier of the goal to retrieve
+     * @return the goal associated with the specified identifier or {@code null} if no such goal exists
+     */
     @GET
     @Path("/{goalId}")
     public Goal getGoal(@PathParam("goalId") String goalId) {
         return goalsService.getGoal(goalId);
     }
 
+    /**
+     * Removes the goal associated with the specified identifier, also removing associated rules if needed.
+     *
+     * @param goalId the identifier of the goal to be removed
+     */
     @DELETE
     @Path("/{goalId}")
     public void removeGoal(@PathParam("goalId") String goalId) {
         goalsService.removeGoal(goalId);
     }
 
+    /**
+     * Retrieves the report for the goal identified with the specified identifier.
+     *
+     * @param goalId the identifier of the goal which report we want to retrieve
+     * @return the report for the specified goal
+     */
     @GET
     @Path("/{goalID}/report")
     public GoalReport getGoalReport(@PathParam("goalID") String goalId) {
         return goalsService.getGoalReport(goalId);
     }
 
+    /**
+     * Retrieves the report for the goal identified with the specified identifier, considering only elements determined by the specified {@link AggregateQuery}.
+     *
+     * @param goalId the identifier of the goal which report we want to retrieve
+     * @param query  an {@link AggregateQuery} to further specify which elements of the report we want
+     * @return the report for the specified goal and query
+     */
     @POST
     @Path("/{goalID}/report")
     public GoalReport getGoalReport(@PathParam("goalID") String goalId, AggregateQuery query) {

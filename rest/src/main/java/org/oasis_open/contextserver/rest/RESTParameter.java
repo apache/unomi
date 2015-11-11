@@ -27,6 +27,9 @@ import org.oasis_open.contextserver.api.conditions.initializers.ChoiceListValue;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * A representation of a {@link org.oasis_open.contextserver.api.Parameter} better suited for definitions.
+ */
 public class RESTParameter {
     private String id;
     private String type;
