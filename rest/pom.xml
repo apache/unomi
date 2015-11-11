@@ -76,22 +76,6 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.raml.plugins</groupId>
-                <artifactId>jaxrs-raml-maven-plugin</artifactId>
-                <version>1.3.4-SNAPSHOT</version>
-                <configuration>
-
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>generate-raml</goal>
-                        </goals>
-                        <phase>process-classes</phase>
-                    </execution>
-                </executions>
-            </plugin>
         </plugins>
     </build>
 
