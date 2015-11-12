@@ -376,3 +376,4 @@ action.auto_create_index: false
 
 ################################## Thread Pool ###############################
 threadpool.index.queue_size: 1000
+script.engine.groovy.inline.update: on
