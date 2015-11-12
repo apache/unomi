@@ -28,7 +28,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * A simple label used to classify all other objects inside unomi. A tag can define sub-tags.
+ * A tag to help categorize entities. A tag can have sub-tags.
  */
 public class Tag implements PluginType, Comparable<Tag> {
 

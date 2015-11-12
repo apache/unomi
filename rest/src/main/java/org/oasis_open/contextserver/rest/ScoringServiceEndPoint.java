@@ -38,6 +38,7 @@ import java.util.Set;
 /**
  * A JAX-RS endpoint to manage {@link Scoring}s
  */
+@Path("/scoring")
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(

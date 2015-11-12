@@ -32,9 +32,7 @@ import java.io.Serializable;
 import java.util.*;
 
 /**
- * ActionTypes define new actions that can be used as consequences of Rules being triggered. When a rule triggers, it creates new actions based on the event data and the rule
- * internal processes, providing values for parameters defined in the associated ActionType. Example actions include: “Set user property x to value y” or “Send a message to service
- * x”.
+ * A type definition for {@link Action}s.
  */
 public class ActionType implements PluginType, Serializable {
 
