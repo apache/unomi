@@ -34,7 +34,6 @@ import java.util.Set;
 /**
  * A JAX-RS endpoint to manage {@link Goal}s and related information.
  */
-@Path("/goals")
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(

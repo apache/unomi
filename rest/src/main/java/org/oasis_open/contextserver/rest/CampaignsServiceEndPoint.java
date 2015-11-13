@@ -35,7 +35,6 @@ import java.util.Set;
 /**
  * A JAX-RS endpoint to manage {@link Campaign}s and related information.
  */
-@Path("/campaigns")
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(

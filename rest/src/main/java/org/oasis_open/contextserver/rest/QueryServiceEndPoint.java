@@ -37,7 +37,6 @@ import java.util.Map;
 /**
  * A JAX-RS endpoint to perform queries against context-server data.
  */
-@Path("/query")
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(

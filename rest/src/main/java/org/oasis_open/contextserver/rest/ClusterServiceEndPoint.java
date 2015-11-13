@@ -36,7 +36,6 @@ import java.util.List;
 /**
  * A JAX-RS endpoint to access information about the context server's cluster.
  */
-@Path("/cluster")
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(

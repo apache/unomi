@@ -33,7 +33,6 @@ import java.util.Set;
 /**
  * A JAX-RS endpoint to manage {@link Rule}s.
  */
-@Path("/rules")
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
