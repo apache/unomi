@@ -20,14 +20,35 @@
 
     <groupId>org.oasis-open.contextserver</groupId>
     <artifactId>context-server</artifactId>
-    <name>Context Server root project</name>
+    <name>Apache Unomi</name>
+    <description>Unomi is a reference implementation of the OASIS Context Server specification currently being worked on by the OASIS Context Server Technical Committee. It provides a high-performance user profile and event tracking server.</description>
+    <url>http://unomi.incubator.apache.org</url>
     <version>2.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <inceptionYear>2014</inceptionYear>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
     <organization>
-        <name>Jahia Solutions</name>
-        <url>http://www.jahia.com</url>
+        <name>Apache Software Foundation</name>
+        <url>http://www.apache.org</url>
     </organization>
+
+    <issueManagement>
+        <system>JIRA</system>
+        <url>https://issues.apache.org/jira/browse/UNOMI</url>
+    </issueManagement>
+
+    <ciManagement>
+        <system>Jenkins</system>
+        <url>https://builds.apache.org/job/unomi</url>
+    </ciManagement>
+
+    <inceptionYear>2014</inceptionYear>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -39,14 +60,160 @@
 		<jahia.plugin.version>4.3</jahia.plugin.version>
     </properties>
 
+    <mailingLists>
+        <mailingList>
+            <name>unomi-dev</name>
+            <subscribe>dev-subscribe@unomi.incubator.apache.org</subscribe>
+            <unsubscribe>dev-unsubscribe@unomi.incubator.apache.org</unsubscribe>
+            <post>dev@unomi.incubator.apache.org</post>
+            <archive>http://mail-archives.apache.org/mod_mbox/incubator-unomi-dev/</archive>
+        </mailingList>
+        <mailingList>
+            <name>unomi-commits</name>
+            <subscribe>commits-subscribe@unomi.incubator.apache.org</subscribe>
+            <unsubscribe>commits-unsubscribe@unomi.incubator.apache.org</unsubscribe>
+            <post>commits@unomi.incubator.apache.org</post>
+            <archive>http://mail-archives.apache.org/mod_mbox/incubator-unomi-commits/</archive>
+        </mailingList>
+    </mailingLists>
+
+    <!--scm>
+        <connection>scm:https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</connection>
+        <developerConnection>scm:https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</developerConnection>
+        <tag>HEAD</tag>
+        <url>https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</url>
+    </scm-->
+
     <scm>
         <connection>scm:git:git@github.com:Jahia/unomi.git</connection>
         <url>https://github.com/Jahia/unomi</url>
         <developerConnection>scm:git:git@github.com:Jahia/unomi.git</developerConnection>
       <tag>HEAD</tag>
-  </scm>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>jbonofre</id>
+            <name>Jean-Baptiste Onofré</name>
+            <email>jbonofre@apache.org</email>
+            <timezone>+1</timezone>
+            <roles>
+                <role>champion</role>
+                <role>committer</role>
+                <role>PPMC</role>
+            </roles>
+            <organization>Talend</organization>
+            <organizationUrl>http://www.talend.com</organizationUrl>
+        </developer>
+        <developer>
+            <id>shuber</id>
+            <name>Serge Huber</name>
+            <email>shuber@apache.org</email>
+            <timezone>+1</timezone>
+            <roles>
+                <role>committer</role>
+                <role>PPMC</role>
+            </roles>
+            <organization>Jahia</organization>
+            <organizationUrl>http://www.jahia.com</organizationUrl>
+        </developer>
+        <developer>
+            <id>bdelacretaz</id>
+            <name>Bertrand Delacretaz</name>
+            <email>bdelacretaz@apache.org</email>
+            <timezone>+1</timezone>
+            <roles>
+                <role>Mentor</role>
+                <role>PPMC</role>
+            </roles>
+            <organization>Adobe</organization>
+        </developer>
+        <developer>
+            <id>rvs</id>
+            <name>Roman Shaposhnik</name>
+            <email>rvs@apache.org</email>
+            <roles>
+                <role>Mentor</role>
+                <role>PPMC</role>
+            </roles>
+            <organization>Pivotal</organization>
+        </developer>
+        <developer>
+            <id>mattmann</id>
+            <name>Chris Mattmann</name>
+            <email>mattmann@apache.org</email>
+            <roles>
+                <role>Mentor</role>
+                <role>PPMC</role>
+            </roles>
+            <organization>NASA JPL</organization>
+        </developer>
+        <developer>
+            <id>draier</id>
+            <name>Thomas Draier</name>
+            <email>draier@apache.org</email>
+            <roles>
+                <role>committer</role>
+                <role>PPMC</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Sergiy Shyrkov</name>
+            <roles>
+                <role>committer</role>
+                <role>PPMC</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Kevan Jahanshahi</name>
+            <roles>
+                <role>committer</role>
+                <role>PPMC</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Cédric Mailleux</name>
+            <roles>
+                <role>committer</role>
+                <role>PPMC</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Régis Mora</name>
+            <roles>
+                <role>committer</role>
+                <role>PPMC</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Quentin Lamerand</name>
+            <roles>
+                <role>committer</role>
+                <role>PPMC</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Chris Laprun</name>
+            <roles>
+                <role>committer</role>
+                <role>PPMC</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>David Griffon</name>
+            <roles>
+                <role>committer</role>
+                <role>PPMC</role>
+            </roles>
+        </developer>
+    </developers>
 
     <distributionManagement>
+        <site>
+            <id>website</id>
+            <!-- we put a fake URL here for staging to work -->
+            <url>scp://www.mycompany.com/www/docs/project/</url>
+        </site>
         <repository>
             <id>jahia-releases</id>
             <url>https://devtools.jahia.com/nexus/content/repositories/jahia-releases</url>
@@ -269,6 +436,34 @@
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
                 <extensions>true</extensions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-scm-publish-plugin</artifactId>
+                <version>1.0-beta-2</version>
+                <configuration>
+                    <checkinComment>[scm-publish] Updating Unomi website</checkinComment>
+                    <pubScmUrl>scm:svn:https://svn.apache.org/repos/asf/incubator/unomi/website/</pubScmUrl>
+                    <content>${project.build.directory}/site</content>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+                <version>3.3</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>lt.velykis.maven.skins</groupId>
+                        <artifactId>reflow-velocity-tools</artifactId>
+                        <version>1.1.1</version>
+                    </dependency>
+                    <!-- Reflow skin requires Velocity >= 1.7  -->
+                    <dependency>
+                        <groupId>org.apache.velocity</groupId>
+                        <artifactId>velocity</artifactId>
+                        <version>1.7</version>
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
 

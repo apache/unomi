@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one or more
+  ~ contributor license agreements.  See the NOTICE file distributed with
+  ~ this work for additional information regarding copyright ownership.
+  ~ The ASF licenses this file to You under the Apache License, Version 2.0
+  ~ (the "License"); you may not use this file except in compliance with
+  ~ the License.  You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<project xmlns="http://maven.apache.org/DECORATION/1.6.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/DECORATION/1.6.0 http://maven.apache.org/xsd/decoration-1.6.0.xsd">
+    <skin>
+        <groupId>lt.velykis.maven.skins</groupId>
+        <artifactId>reflow-maven-skin</artifactId>
+        <version>1.1.1</version>
+    </skin>
+    <bannerLeft>
+        <name>Apache Unomi</name>
+        <src>images/apache-unomi-380x85.png</src>
+        <href>http://unomi.incubator.apache.org/</href>
+    </bannerLeft>
+
+    <poweredBy>
+        <logo name="Karaf" href="http://karaf.apache.org/"
+              img="http://karaf.apache.org/images/karaf-logo.png"/>
+    </poweredBy>
+
+    <custom>
+        <reflowSkin>
+            <!-- Make this to 'false' for local development, i.e. file:// URLs -->
+            <protocolRelativeURLs>false</protocolRelativeURLs>
+            <smoothScroll>true</smoothScroll>
+            <theme>default</theme>
+            <highlightJs>true</highlightJs>
+            <highlightJsTheme>github</highlightJsTheme>
+            <absoluteResourceURL>http://unomi.incubator.apache.org/</absoluteResourceURL>
+            <brand>
+                <name><![CDATA[
+                    <img src="images/unomi-86x20.png" />
+                ]]></name>
+                <href>http://unomi.incubator.apache.org</href>
+            </brand>
+            <slogan>Reference implementation of the OASIS Context Server specification</slogan>
+            <titleTemplate>%2$s | %1$s</titleTemplate>
+            <toc>top</toc>
+            <topNav>Download|reports</topNav>
+            <bottomNav>
+                <column>Main|Download</column>
+                <column>Documentation</column>
+                <column>reports|modules</column>
+            </bottomNav>
+            <bottomDescription>
+                Powered by Apache Karaf
+            </bottomDescription>
+            <pages>
+                <index project="project-id">
+                    <shortTitle>Welcome</shortTitle>
+                    <breadcrumbs>false</breadcrumbs>
+                    <toc>false</toc>
+                    <sections>
+                        <carousel />
+                        <body />
+                        <sidebar />
+                        <thumbs>2</thumbs>
+                        <columns>3</columns>
+                    </sections>
+                </index>
+                <developer-info>
+                    <toc>sidebar</toc>
+                </developer-info>
+            </pages>
+        </reflowSkin>
+    </custom>
+
+    <body>
+
+        <links>
+            <item name="Download" href="skin/index.html#Usage" />
+        </links>
+
+        <menu name="Main" inherit="top">
+            <item name="Home" href="./" />
+            <item name="Release notes" href="release-notes.html" />
+        </menu>
+
+        <menu name="parent" ref="parent"/>
+        <menu ref="modules"/>
+        <menu ref="reports"/>
+    </body>
+
+</project>
