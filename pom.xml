@@ -444,7 +444,6 @@
                 <configuration>
                     <checkinComment>[scm-publish] Updating Unomi website</checkinComment>
                     <pubScmUrl>scm:svn:https://svn.apache.org/repos/asf/incubator/unomi/website/</pubScmUrl>
-                    <content>${project.build.directory}/site</content>
                 </configuration>
             </plugin>
             <plugin>
