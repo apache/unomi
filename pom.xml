@@ -409,6 +409,7 @@
                                 <exclude>**/foo</exclude>
                                 <exclude>**/org.ops4j.pax.exam.TestContainerFactory</exclude>
                                 <exclude>**/maven-metadata-local.xml</exclude>
+                                <exclude>**/src/test/resources/data/*.txt</exclude>
                                 <!--manual resources -->
                                 <exclude>**/*.css</exclude>
                                 <exclude>**/*.ssp</exclude>
@@ -423,6 +424,12 @@
                                 <exclude>.repository/**</exclude>
                                 <!-- jar files -->
                                 <exclude>**/*.jar</exclude>
+                                <!-- Empty CDI descriptor file -->
+                                <exclude>**/src/main/webapp/WEB-INF/beans.xml</exclude>
+                                <!-- Web application robots.txt file -->
+                                <exclude>**/src/main/webapp/robots.txt</exclude>
+                                <!-- Elastic search configuration files with (mostly) default configuration -->
+                                <exclude>**/src/main/resources/elasticsearch.yml</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
