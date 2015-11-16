@@ -51,7 +51,7 @@
             <slogan>Reference implementation of the OASIS Context Server specification</slogan>
             <titleTemplate>%2$s | %1$s</titleTemplate>
             <toc>top</toc>
-            <topNav>Download|reports</topNav>
+            <topNav>Main|Download|reports</topNav>
             <bottomNav>
                 <column>Main|Download</column>
                 <column>Documentation</column>
@@ -88,7 +88,8 @@
 
         <menu name="Main" inherit="top">
             <item name="Home" href="./" />
-            <item name="Release notes" href="release-notes.html" />
+            <item name="Configuration" href="configuration.html" />
+            <item name="Cluster setup" href="clustering.html" />
         </menu>
 
         <menu name="parent" ref="parent"/>
