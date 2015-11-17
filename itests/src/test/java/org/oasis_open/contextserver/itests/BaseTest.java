@@ -66,8 +66,8 @@ public abstract class BaseTest {
                 .type("xml")
                 .versionAsInProject();
         MavenUrlReference contextServerRepo = maven()
-                .groupId("org.oasis-open.contextserver")
-                .artifactId("context-server-kar")
+                .groupId("org.apache.unomi")
+                .artifactId("unomi-kar")
                 .classifier("features")
                 .type("xml")
                 .versionAsInProject();
@@ -87,7 +87,7 @@ public abstract class BaseTest {
                 features(karafCxfRepo, "cxf"),
                 features(karafStandardRepo, "openwebbeans"),
                 features(karafStandardRepo, "pax-cdi-web-openwebbeans"),
-                features(contextServerRepo, "context-server-kar"),
+                features(contextServerRepo, "unomi-kar"),
                 // we need to wrap the HttpComponents libraries ourselves since the OSGi bundles provided by the project are incorrect
                 wrappedBundle(mavenBundle("org.apache.httpcomponents",
                         "httpcore").versionAsInProject()),

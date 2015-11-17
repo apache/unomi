@@ -34,8 +34,8 @@ Deploying the generated package
 -------------------------------
 
 The "package" sub-project generates a pre-configured Apache Karaf installation that is the simplest way to get started.
-Simply uncompress the package/target/context-server-package-VERSION.tar.gz (for Linux or Mac OS X) or
- package/target/context-server-package-VERSION.zip (for Windows) archive into the directory of your choice.
+Simply uncompress the package/target/unomi-VERSION.tar.gz (for Linux or Mac OS X) or
+ package/target/unomi-VERSION.zip (for Windows) archive into the directory of your choice.
  
 You can then start the server simply by using the command on UNIX/Linux/MacOS X : 
 
@@ -90,7 +90,7 @@ on your disk and copy all the files from the lib/sigar directory into Karaf's li
 5. Copy the following KAR to the Karaf deploy directory, as in this example line:
 
     ```
-      cp kar/target/context-server-kar-1.0.0-SNAPSHOT.kar ~/java/deployments/unomi/apache-karaf-3.0.1/deploy/
+      cp kar/target/unomi-kar-1.0.0-SNAPSHOT.kar ~/java/deployments/unomi/apache-karaf-3.0.1/deploy/
     ```
    
 6. If all went smoothly, you should be able to access the context script here : http://localhost:8181/cxs/cluster .

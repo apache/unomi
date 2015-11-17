@@ -61,8 +61,8 @@ public class PrivacyServiceImpl implements PrivacyService {
     @Override
     public ServerInfo getServerInfo() {
         ServerInfo serverInfo = new ServerInfo();
-        serverInfo.setServerIdentifier("Jahia Unomi");
-        serverInfo.setServerVersion("1.0.0.SNAPSHOT");
+        serverInfo.setServerIdentifier("Apache Unomi");
+        serverInfo.setServerVersion("2.0.0.incubating-SNAPSHOT");
 
         // let's retrieve all the event types the server has seen.
         Map<String,Long> eventTypeCounts = persistenceService.aggregateQuery(null, new TermsAggregate("eventType"), Event.ITEM_TYPE);

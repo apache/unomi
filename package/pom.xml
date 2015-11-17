@@ -19,14 +19,14 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.oasis-open.contextserver</groupId>
-        <artifactId>context-server</artifactId>
-        <version>2.0.0-SNAPSHOT</version>
+        <groupId>org.apache.unomi</groupId>
+        <artifactId>unomi-root</artifactId>
+        <version>2.0.0-incubating-SNAPSHOT</version>
     </parent>
 
-    <artifactId>context-server-package</artifactId>
+    <artifactId>unomi</artifactId>
     <packaging>pom</packaging>
-    <name>Unomi :: Distribution Package</name>
+    <name>Apache Unomi :: Distribution Package</name>
     <description>Packaged distributions of the Apache Unomi Context Server</description>
 
     <properties>
@@ -78,9 +78,9 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
-            <groupId>org.oasis-open.contextserver</groupId>
-            <artifactId>context-server-kar</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-kar</artifactId>
+            <version>2.0.0-incubating-SNAPSHOT</version>
             <classifier>features</classifier>
             <type>xml</type>
             <scope>runtime</scope>
@@ -137,10 +137,10 @@
                         <configuration>
                             <artifactItems>
                                 <artifactItem>
-                                    <groupId>org.oasis-open.contextserver</groupId>
-                                    <artifactId>context-server-wab</artifactId>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-wab</artifactId>
                                     <version>${project.version}</version>
-                                    <classifier>contextservercfg</classifier>
+                                    <classifier>unomicfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>
                                         ${project.build.directory}/assembly/etc
@@ -148,8 +148,8 @@
                                     <destFileName>org.oasis_open.contextserver.web.cfg</destFileName>
                                 </artifactItem>
                                 <artifactItem>
-                                    <groupId>org.oasis-open.contextserver</groupId>
-                                    <artifactId>context-server-persistence-elasticsearch-core</artifactId>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-persistence-elasticsearch-core</artifactId>
                                     <version>${project.version}</version>
                                     <classifier>elasticsearchcfg</classifier>
                                     <type>cfg</type>
@@ -159,8 +159,8 @@
                                     <destFileName>org.oasis_open.contextserver.persistence.elasticsearch.cfg</destFileName>
                                 </artifactItem>
                                 <artifactItem>
-                                    <groupId>org.oasis-open.contextserver</groupId>
-                                    <artifactId>context-server-persistence-elasticsearch-core</artifactId>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-persistence-elasticsearch-core</artifactId>
                                     <version>${project.version}</version>
                                     <classifier>elasticsearchconfig</classifier>
                                     <type>yml</type>
@@ -170,8 +170,8 @@
                                     <destFileName>elasticsearch.yml</destFileName>
                                 </artifactItem>
                                 <artifactItem>
-                                    <groupId>org.oasis-open.contextserver</groupId>
-                                    <artifactId>context-server-plugins-request</artifactId>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-plugins-request</artifactId>
                                     <version>${project.version}</version>
                                     <classifier>requestcfg</classifier>
                                     <type>cfg</type>
@@ -221,7 +221,7 @@
                         <feature>cxf</feature>
                         <feature>openwebbeans</feature>
                         <feature>pax-cdi-web-openwebbeans</feature>
-                        <feature>context-server-kar</feature>
+                        <feature>unomi-kar</feature>
                     </bootFeatures>
                 </configuration>
             </plugin>

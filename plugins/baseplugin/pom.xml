@@ -19,13 +19,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.oasis-open.contextserver</groupId>
-        <artifactId>context-server-plugins</artifactId>
-        <version>2.0.0-SNAPSHOT</version>
+        <groupId>org.apache.unomi</groupId>
+        <artifactId>unomi-plugins</artifactId>
+        <version>2.0.0-incubating-SNAPSHOT</version>
     </parent>
 
-    <artifactId>context-server-plugins-base</artifactId>
-    <name>Unomi :: Plugins :: Base Actions and Conditions</name>
+    <artifactId>unomi-plugins-base</artifactId>
+    <name>Apache Unomi :: Plugins :: Base Actions and Conditions</name>
     <description>Base actions and conditions plugin for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
@@ -58,15 +58,15 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.oasis-open.contextserver</groupId>
-            <artifactId>context-server-persistence-elasticsearch-core</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-elasticsearch-core</artifactId>
+            <version>2.0.0-incubating-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.oasis-open.contextserver</groupId>
-            <artifactId>context-server-persistence-spi</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-spi</artifactId>
+            <version>2.0.0-incubating-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

@@ -21,28 +21,28 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>cxs-privacy-extension</artifactId>
-        <groupId>org.jahia.unomi</groupId>
-        <version>2.0.0-SNAPSHOT</version>
+        <groupId>org.apache.unomi</groupId>
+        <version>2.0.0-incubating-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>cxs-privacy-extension-rest</artifactId>
-    <name>Unomi :: Extensions :: Privacy :: REST API</name>
+    <name>Apache Unomi :: Extensions :: Privacy :: REST API</name>
     <description>Privacy management extension REST API for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
     <dependencies>
         <dependency>
-            <groupId>org.oasis-open.contextserver</groupId>
-            <artifactId>context-server-api</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-api</artifactId>
+            <version>2.0.0-incubating-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
-            <groupId>org.jahia.unomi</groupId>
+            <groupId>org.apache.unomi</groupId>
             <artifactId>cxs-privacy-extension-services</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <version>2.0.0-incubating-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
 
@@ -88,9 +88,9 @@
             <version>2.4.0</version>
         </dependency>
         <dependency>
-            <groupId>org.oasis-open.contextserver</groupId>
-            <artifactId>context-server-persistence-spi</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-spi</artifactId>
+            <version>2.0.0-incubating-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

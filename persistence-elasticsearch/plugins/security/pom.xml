@@ -19,13 +19,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.oasis-open.contextserver</groupId>
-        <artifactId>context-server-persistence-elasticsearch-plugins</artifactId>
-        <version>2.0.0-SNAPSHOT</version>
+        <groupId>org.apache.unomi</groupId>
+        <artifactId>unomi-persistence-elasticsearch-plugins</artifactId>
+        <version>2.0.0-incubating-SNAPSHOT</version>
     </parent>
 
-    <artifactId>context-server-persistence-elasticsearch-plugins-security</artifactId>
-    <name>Unomi :: Persistence :: ElasticSearch :: Plugins :: Security</name>
+    <artifactId>unomi-persistence-elasticsearch-plugins-security</artifactId>
+    <name>Apache Unomi :: Persistence :: ElasticSearch :: Plugins :: Security</name>
     <description>ElasticSearch persistence implementation security plugin for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
@@ -56,7 +56,7 @@
                 <configuration>
                     <instructions>
                         <Fragment-Host>
-                            org.oasis-open.contextserver.context-server-persistence-elasticsearch-core;bundle-version="[1,2)"
+                            org.apache.unomi.unomi-persistence-elasticsearch-core;bundle-version="[1,2)"
                         </Fragment-Host>
                     </instructions>
                 </configuration>

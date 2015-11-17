@@ -26,7 +26,7 @@
     <reference id="rulesService" interface="org.oasis_open.contextserver.api.services.RulesService"/>
     <reference id="privacyService" interface="org.oasis_open.contextserver.api.services.PrivacyService"/>
 
-    <cm:property-placeholder persistent-id="org.oasis_open.contextserver.web"
+    <cm:property-placeholder persistent-id="org.apache.unomi.web"
                              update-strategy="reload" placeholder-prefix="${web.">
         <cm:default-properties>
             <cm:property name="contextserver.domain" value=""/>

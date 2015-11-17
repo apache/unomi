@@ -19,21 +19,21 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.oasis-open.contextserver</groupId>
-        <artifactId>context-server</artifactId>
-        <version>2.0.0-SNAPSHOT</version>
+        <groupId>org.apache.unomi</groupId>
+        <artifactId>unomi-root</artifactId>
+        <version>2.0.0-incubating-SNAPSHOT</version>
     </parent>
 
-    <artifactId>context-server-services</artifactId>
-    <name>Unomi :: Core Services</name>
+    <artifactId>unomi-services</artifactId>
+    <name>Apache Unomi :: Core Services</name>
     <description>Apache Unomi Context Server Core Services</description>
     <packaging>bundle</packaging>
 
     <dependencies>
         <dependency>
-            <groupId>org.oasis-open.contextserver</groupId>
-            <artifactId>context-server-api</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-api</artifactId>
+            <version>2.0.0-incubating-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
 
@@ -52,9 +52,9 @@
         </dependency>
 
         <dependency>
-            <groupId>org.oasis-open.contextserver</groupId>
-            <artifactId>context-server-persistence-spi</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-spi</artifactId>
+            <version>2.0.0-incubating-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
 
@@ -185,7 +185,7 @@
                             <artifacts>
                                 <artifact>
                                     <file>
-                                        src/main/resources/org.oasis_open.contextserver.services.cfg
+                                        src/main/resources/org.apache.unomi.services.cfg
                                     </file>
                                     <type>cfg</type>
                                     <classifier>servicescfg</classifier>

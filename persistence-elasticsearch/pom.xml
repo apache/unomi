@@ -19,13 +19,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.oasis-open.contextserver</groupId>
-        <artifactId>context-server</artifactId>
-        <version>2.0.0-SNAPSHOT</version>
+        <groupId>org.apache.unomi</groupId>
+        <artifactId>unomi-root</artifactId>
+        <version>2.0.0-incubating-SNAPSHOT</version>
     </parent>
 
-    <artifactId>context-server-persistence-elasticsearch</artifactId>
-    <name>Unomi :: Persistence :: ElasticSearch</name>
+    <artifactId>unomi-persistence-elasticsearch</artifactId>
+    <name>Apache Unomi :: Persistence :: ElasticSearch</name>
     <description>ElasticSearch persistence implementation for the Apache Unomi Context Server</description>
     <packaging>pom</packaging>
 

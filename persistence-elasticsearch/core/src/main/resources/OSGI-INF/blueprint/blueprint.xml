@@ -27,7 +27,7 @@
 
   http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
 
-    <cm:property-placeholder persistent-id="org.oasis_open.contextserver.persistence.elasticsearch"
+    <cm:property-placeholder persistent-id="org.apache.unomi.persistence.elasticsearch"
                              update-strategy="reload" placeholder-prefix="${es.">
         <cm:default-properties>
             <cm:property name="cluster.name" value="contextElasticSearch"/>

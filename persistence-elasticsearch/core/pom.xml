@@ -19,13 +19,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.oasis-open.contextserver</groupId>
-        <artifactId>context-server-persistence-elasticsearch</artifactId>
-        <version>2.0.0-SNAPSHOT</version>
+        <groupId>org.apache.unomi</groupId>
+        <artifactId>unomi-persistence-elasticsearch</artifactId>
+        <version>2.0.0-incubating-SNAPSHOT</version>
     </parent>
 
-    <artifactId>context-server-persistence-elasticsearch-core</artifactId>
-    <name>Unomi :: Persistence :: ElasticSearch :: Core</name>
+    <artifactId>unomi-persistence-elasticsearch-core</artifactId>
+    <name>Apache Unomi :: Persistence :: ElasticSearch :: Core</name>
     <description>Core ElasticSearch persistence implementation for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
@@ -38,15 +38,15 @@
         </dependency>
 
         <dependency>
-            <groupId>org.oasis-open.contextserver</groupId>
-            <artifactId>context-server-api</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-api</artifactId>
+            <version>2.0.0-incubating-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.oasis-open.contextserver</groupId>
-            <artifactId>context-server-persistence-spi</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-spi</artifactId>
+            <version>2.0.0-incubating-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -303,7 +303,7 @@
                             <artifacts>
                                 <artifact>
                                     <file>
-                                        src/main/resources/org.oasis_open.contextserver.persistence.elasticsearch.cfg
+                                        src/main/resources/org.apache.unomi.persistence.elasticsearch.cfg
                                     </file>
                                     <type>cfg</type>
                                     <classifier>elasticsearchcfg</classifier>
