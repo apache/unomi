@@ -20,7 +20,7 @@
 
     <groupId>org.oasis-open.contextserver</groupId>
     <artifactId>context-server</artifactId>
-    <name>Apache Unomi</name>
+    <name>Unomi :: Root Project</name>
     <description>Unomi is a reference implementation of the OASIS Context Server specification currently being worked on by the OASIS Context Server Technical Committee. It provides a high-performance user profile and event tracking server.</description>
     <url>http://unomi.incubator.apache.org</url>
     <version>2.0.0-SNAPSHOT</version>

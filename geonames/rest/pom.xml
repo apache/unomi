@@ -25,6 +25,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>cxs-geonames-rest</artifactId>
+    <name>Unomi :: Extensions :: Geonames Database :: REST API</name>
+    <description>REST API for the Apache Unomi Context Server extension that integrates with the Geonames database</description>
     <packaging>bundle</packaging>
 
     <dependencies>

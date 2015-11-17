@@ -25,7 +25,8 @@
     </parent>
 
     <artifactId>context-server-plugins-base</artifactId>
-    <name>Context Server Plugin - Provides all base actions and conditions</name>
+    <name>Unomi :: Plugins :: Base Actions and Conditions</name>
+    <description>Base actions and conditions plugin for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
     <dependencies>

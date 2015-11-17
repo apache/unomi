@@ -25,6 +25,8 @@
     </parent>
 
     <artifactId>context-server-kar</artifactId>
+    <name>Unomi :: Karaf KAR package</name>
+    <description>Apache Karaf KAR package for the Apache Unomi Context Server</description>
     <packaging>kar</packaging>
 
     <dependencies>

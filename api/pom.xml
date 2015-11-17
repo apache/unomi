@@ -25,7 +25,8 @@
     </parent>
 
     <artifactId>context-server-api</artifactId>
-    <name>Unomi Context Server :: Specification Api</name>
+    <name>Unomi :: Specification API</name>
+    <description>Main API of the Apache Unomi Context server</description>
     <packaging>bundle</packaging>
 
 </project>

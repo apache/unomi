@@ -26,7 +26,8 @@
     </parent>
 
     <artifactId>context-server-plugins-hover-event</artifactId>
-    <name>Context Server Plugin - Hover event support</name>
+    <name>Unomi :: Plugins :: Hover event support</name>
+    <description>Mouse hover event support plugin for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
     <dependencies>

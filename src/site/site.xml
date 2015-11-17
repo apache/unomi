@@ -22,11 +22,11 @@
         <artifactId>reflow-maven-skin</artifactId>
         <version>1.1.1</version>
     </skin>
-    <bannerLeft>
+    <!--bannerLeft>
         <name>Apache Unomi</name>
         <src>images/apache-unomi-380x85.png</src>
         <href>http://unomi.incubator.apache.org/</href>
-    </bannerLeft>
+    </bannerLeft-->
 
     <poweredBy>
         <logo name="Karaf" href="http://karaf.apache.org/"
@@ -48,14 +48,15 @@
                 ]]></name>
                 <href>http://unomi.incubator.apache.org</href>
             </brand>
-            <slogan>Reference implementation of the OASIS Context Server specification</slogan>
+            <!--slogan>Reference implementation of the OASIS Context Server specification</slogan-->
             <titleTemplate>%2$s | %1$s</titleTemplate>
-            <toc>top</toc>
-            <topNav>Main|Download|reports</topNav>
+            <toc>sidebar</toc>
+            <!--tocTopMax>6</tocTopMax-->
+            <topNav>Documentation|Download</topNav>
             <bottomNav>
-                <column>Main|Download</column>
                 <column>Documentation</column>
-                <column>reports|modules</column>
+                <column>modules</column>
+                <column>reports</column>
             </bottomNav>
             <bottomDescription>
                 Powered by Apache Karaf
@@ -76,6 +77,27 @@
                 <developer-info>
                     <toc>sidebar</toc>
                 </developer-info>
+                <source-repository>
+                    <highlightJs>false</highlightJs>
+                </source-repository>
+                <issue-tracking>
+                    <highlightJs>false</highlightJs>
+                    <toc>false</toc>
+                </issue-tracking>
+                <license>
+                    <highlightJs>false</highlightJs>
+                    <toc>false</toc>
+                </license>
+                <!-- Disable ToC for some Maven reports -->
+                <project-info>
+                    <toc>false</toc>
+                </project-info>
+                <github-report>
+                    <toc>false</toc>
+                </github-report>
+                <dependencies>
+                    <tocTopMax>4</tocTopMax>
+                </dependencies>
             </pages>
         </reflowSkin>
     </custom>
@@ -83,11 +105,12 @@
     <body>
 
         <links>
-            <item name="Download" href="skin/index.html#Usage" />
+            <item name="Download" href="download.html" />
         </links>
 
-        <menu name="Main" inherit="top">
+        <menu name="Documentation" inherit="top">
             <item name="Home" href="./" />
+            <item name="Building and deploying" href="building-and-deploying.html" />
             <item name="Configuration" href="configuration.html" />
             <item name="Cluster setup" href="clustering.html" />
         </menu>

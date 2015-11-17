@@ -27,7 +27,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>cxs-privacy-extension-rest</artifactId>
-    <name>Unomi Context Server :: Extensions :: Privacy :: Rest API</name>
+    <name>Unomi :: Extensions :: Privacy :: REST API</name>
+    <description>Privacy management extension REST API for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
     <dependencies>

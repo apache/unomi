@@ -25,7 +25,8 @@
     </parent>
 
     <artifactId>context-server-plugins-mail</artifactId>
-    <name>Context Server Plugin - Mail notifications actions</name>
+    <name>Unomi :: Plugins :: Mail notifications actions</name>
+    <description>Mail notification action plugin for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
     <dependencies>

@@ -25,6 +25,8 @@
     </parent>
 
     <artifactId>context-server-plugins</artifactId>
+    <name>Unomi :: Plugins</name>
+    <description>Apache Unomi Context Server plugins</description>
     <packaging>pom</packaging>
 
     <modules>

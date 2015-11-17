@@ -26,7 +26,8 @@
     </parent>
 
     <artifactId>context-server-plugins-tracked-event</artifactId>
-    <name>Context Server Plugin - Provides conditions for events that need to be tracked</name>
+    <name>Unomi :: Plugins :: Conditions for events that need to be tracked</name>
+    <description>Tracked event conditions plugin for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
     <dependencies>

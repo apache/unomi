@@ -25,6 +25,8 @@
     </parent>
 
     <artifactId>context-server-services</artifactId>
+    <name>Unomi :: Core Services</name>
+    <description>Apache Unomi Context Server Core Services</description>
     <packaging>bundle</packaging>
 
     <dependencies>

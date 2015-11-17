@@ -25,7 +25,8 @@
     </parent>
 
     <artifactId>context-server-plugins-optimization-test</artifactId>
-    <name>Context Server Plugin - Provides rules and actions specific to optimization tests (A/B testing)</name>
+    <name>Unomi :: Plugins :: Rules and Actions for optimization tests (A/B testing)</name>
+    <description>Optimization testing (A/B testing) plugin for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
 </project>

@@ -25,6 +25,8 @@
     </parent>
 
     <artifactId>context-server-persistence-elasticsearch-core</artifactId>
+    <name>Unomi :: Persistence :: ElasticSearch :: Core</name>
+    <description>Core ElasticSearch persistence implementation for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
     <dependencies>

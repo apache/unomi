@@ -32,6 +32,8 @@
 
     <groupId>org.jahia.unomi</groupId>
     <artifactId>cxs-lists-extension</artifactId>
+    <name>Unomi :: Extensions :: Lists</name>
+    <description>List extension for the Apache Unomi Context Server</description>
     <version>2.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 </project>

@@ -25,6 +25,8 @@
     </parent>
 
     <artifactId>context-server-rest</artifactId>
+    <name>Unomi :: REST API</name>
+    <description>Apache Unomi Context Server REST API</description>
     <packaging>bundle</packaging>
 
     <pluginRepositories>

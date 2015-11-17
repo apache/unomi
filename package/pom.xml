@@ -26,7 +26,8 @@
 
     <artifactId>context-server-package</artifactId>
     <packaging>pom</packaging>
-    <name>Apache Karaf Context Server Distribution</name>
+    <name>Unomi :: Distribution Package</name>
+    <description>Packaged distributions of the Apache Unomi Context Server</description>
 
     <properties>
         <appendedResourcesDirectory>${basedir}/../etc/appended-resources</appendedResourcesDirectory>

@@ -25,7 +25,8 @@
     </parent>
 
     <artifactId>context-server-plugins-request</artifactId>
-    <name>Context Server Plugin - Provides request reading actions</name>
+    <name>Unomi :: Plugins :: Request reading actions</name>
+    <description>Request reading actions plugin for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
     <dependencies>

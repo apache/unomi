@@ -25,6 +25,8 @@
     </parent>
 
     <artifactId>context-server-persistence-elasticsearch-plugins-security</artifactId>
+    <name>Unomi :: Persistence :: ElasticSearch :: Plugins :: Security</name>
+    <description>ElasticSearch persistence implementation security plugin for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
     <dependencies>

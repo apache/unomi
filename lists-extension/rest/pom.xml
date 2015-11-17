@@ -25,6 +25,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>cxs-lists-extension-rest</artifactId>
+    <name>Unomi :: Extensions :: Lists :: REST API</name>
+    <description>List extension REST API for the Apache Unomi Context Server</description>
+
     <packaging>bundle</packaging>
 
     <dependencies>

@@ -32,6 +32,8 @@
 
     <groupId>org.jahia.unomi</groupId>
     <artifactId>cxs-geonames</artifactId>
+    <name>Unomi :: Extensions :: Geonames Database</name>
+    <description>Apache Unomi Context Server extension that integrates with the Geonames database</description>
     <version>2.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 </project>

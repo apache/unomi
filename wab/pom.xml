@@ -25,6 +25,8 @@
     </parent>
 
     <artifactId>context-server-wab</artifactId>
+    <name>Unomi :: Core Web Application</name>
+    <description>Apache Unomi Context Server Core Web application</description>
     <packaging>bundle</packaging>
 
     <dependencies>

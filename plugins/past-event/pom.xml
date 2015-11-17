@@ -26,7 +26,8 @@
     </parent>
 
     <artifactId>context-server-plugins-past-event</artifactId>
-    <name>Context Server Plugin - Provides conditions based on past events</name>
+    <name>Unomi :: Plugins :: Conditions based on past events</name>
+    <description>Past event conditions plugin for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
     <dependencies>
