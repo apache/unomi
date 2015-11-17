@@ -449,13 +449,17 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
         List<Scoring> allScoring = this.allScoring;
         for (Scoring scoring : allScoring) {
-            int score = 0;
-            for (ScoringElement scoringElement : scoring.getElements()) {
-                if (persistenceService.testMatch(scoringElement.getCondition(), profile)) {
-                    score += scoringElement.getValue();
+            if (scoring.getMetadata().isEnabled()) {
+                int score = 0;
+                for (ScoringElement scoringElement : scoring.getElements()) {
+                    if (persistenceService.testMatch(scoringElement.getCondition(), profile)) {
+                        score += scoringElement.getValue();
+                    }
+                }
+                if (score > 0) {
+                    scores.put(scoring.getMetadata().getId(), score);
                 }
             }
-            scores.put(scoring.getMetadata().getId(), score);
         }
 
         return new SegmentsAndScores(segments, scores);
