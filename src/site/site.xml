@@ -15,7 +15,7 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<project xmlns="http://maven.apache.org/DECORATION/1.6.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/DECORATION/1.6.0"
          xsi:schemaLocation="http://maven.apache.org/DECORATION/1.6.0 http://maven.apache.org/xsd/decoration-1.6.0.xsd">
     <skin>
         <groupId>lt.velykis.maven.skins</groupId>
@@ -32,6 +32,8 @@
         <logo name="Karaf" href="http://karaf.apache.org/"
               img="http://karaf.apache.org/images/karaf-logo.png"/>
     </poweredBy>
+
+    <googleAnalyticsAccountId>UA-70313240-1</googleAnalyticsAccountId>
 
     <custom>
         <reflowSkin>
