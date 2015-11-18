@@ -15,7 +15,8 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -121,11 +122,11 @@
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Embed-Directory>WEB-INF/lib</Embed-Directory>
                         <Import-Package>
-                            org.oasis_open.contextserver.api,
-                            org.oasis_open.contextserver.api.conditions,
-                            org.oasis_open.contextserver.api.segments,
-                            org.oasis_open.contextserver.api.rules,
-                            org.oasis_open.contextserver.api.query,
+                            org.apache.unomi.api,
+                            org.apache.unomi.api.conditions,
+                            org.apache.unomi.api.segments,
+                            org.apache.unomi.api.rules,
+                            org.apache.unomi.api.query,
                             *
                         </Import-Package>
                         <Web-ContextPath>/</Web-ContextPath>

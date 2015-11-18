@@ -16,14 +16,14 @@
   ~ limitations under the License.
   -->
 
-<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd">
 
-    <service interface="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
+    <service interface="ConditionESQueryBuilder">
         <service-properties>
             <entry key="queryBuilderId" value="hoverEventConditionESQueryBuilder" />
         </service-properties>
-        <bean class="org.oasis_open.contextserver.plugins.events.hover.querybuilders.HoverEventConditionESQueryBuilder" />
+        <bean class="org.apache.unomi.plugins.events.hover.querybuilders.HoverEventConditionESQueryBuilder"/>
     </service>
 
 </blueprint>

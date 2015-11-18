@@ -23,20 +23,21 @@ Changing the default configuration
 
 If you want to change the default configuration, you can perform any modification you want in the $MY_KARAF_HOME/etc directory.
 
-The context server configuration is kept in the $MY_KARAF_HOME/etc/org.oasis_open.contextserver.web.cfg . It defines the
+The context server configuration is kept in the $MY_KARAF_HOME/etc/org.apache.unomi.web.cfg . It defines the
 addresses and port where it can be found :
 
     contextserver.address=localhost
     contextserver.port=8181
     contextserver.secureAddress=localhost
     contextserver.securePort=9443
+    contextserver.domain=apache.org
 
 If you need to specify an Elasticsearch cluster name that is different than the default, it is recommended to do this
 BEFORE you start the server for the first time, or you will loose all the data you have stored previously.
 
 To change the cluster name, first create a file called 
 
-    $MY_KARAF_HOME/etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg
+    $MY_KARAF_HOME/etc/org.apache.unomi.persistence.elasticsearch.cfg
 
 with the following contents:
 
@@ -71,7 +72,7 @@ In order to use it, you need to install the Geonames database into . Get the "al
 http://download.geonames.org/export/dump/
 
 Download it and put it in the "etc" directory, without unzipping it.
-Edit $MY_KARAF_HOME/etc/org.oasis_open.contextserver.geonames.cfg and set request.geonamesDatabase.forceImport to true, import should start right away.
+Edit $MY_KARAF_HOME/etc/org.apache.unomi.geonames.cfg and set request.geonamesDatabase.forceImport to true, import should start right away.
 Otherwise, import should start at the next startup. Import runs in background, but can take about 15 minutes.
 At the end, you should have about 4 million entries in the geonames index.
  
@@ -186,3 +187,87 @@ Step 4 : Setup a proxy in front of the context server
 
 As an alternative to an application-level firewall, you could also route all traffic to the context server through
 a proxy, and use it to filter any communication.
+
+Integrating with an Apache HTTP web server
+------------------------------------------
+
+If you want to setup an Apache HTTP web server in from of Apache Unomi, here is an example configuration using 
+mod_proxy.
+
+In your Unomi package directory, in /etc/org.apache.unomi.web.cfg for unomi.apache.org
+   
+   contextserver.address=unomi.apache.org
+   contextserver.port=80
+   contextserver.secureAddress=unomi.apache.org
+   contextserver.securePort=443
+   contextserver.domain=apache.org
+
+Main virtual host config:
+
+    <VirtualHost *:80>
+            Include /var/www/vhosts/unomi.apache.org/conf/common.conf
+    </VirtualHost>
+    
+    <IfModule mod_ssl.c>
+        <VirtualHost *:443>
+            Include /var/www/vhosts/unomi.apache.org/conf/common.conf
+    
+            SSLEngine on
+    
+            SSLCertificateFile    /var/www/vhosts/unomi.apache.org/conf/ssl/24d5b9691e96eafa.crt
+            SSLCertificateKeyFile /var/www/vhosts/unomi.apache.org/conf/ssl/apache.org.key
+            SSLCertificateChainFile /var/www/vhosts/unomi.apache.org/conf/ssl/gd_bundle-g2-g1.crt
+    
+    
+            <FilesMatch "\.(cgi|shtml|phtml|php)$">
+                    SSLOptions +StdEnvVars
+            </FilesMatch>
+            <Directory /usr/lib/cgi-bin>
+                    SSLOptions +StdEnvVars
+            </Directory>
+            BrowserMatch "MSIE [2-6]" \
+                    nokeepalive ssl-unclean-shutdown \
+                    downgrade-1.0 force-response-1.0
+            BrowserMatch "MSIE [17-9]" ssl-unclean-shutdown
+    
+        </VirtualHost>
+    </IfModule>
+    
+common.conf:
+
+    ServerName unomi.apache.org
+    ServerAdmin webmaster@apache.org
+    
+    DocumentRoot /var/www/vhosts/unomi.apache.org/html
+    CustomLog /var/log/apache2/access-unomi.apache.org.log combined
+    <Directory />
+            Options FollowSymLinks
+            AllowOverride None
+    </Directory>
+    <Directory /var/www/vhosts/unomi.apache.org/html>
+            Options FollowSymLinks MultiViews
+            AllowOverride None
+            Order allow,deny
+            allow from all
+    </Directory>
+    <Location /cxs>
+        Order deny,allow
+        deny from all
+        allow from 88.198.26.2
+        allow from www.apache.org
+    </Location>
+    
+    RewriteEngine On
+    RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK)
+    RewriteRule .* - [F]
+    ProxyPreserveHost On
+    ProxyPass /server-status !
+    ProxyPass /robots.txt !
+    
+    RewriteCond %{HTTP_USER_AGENT} Googlebot [OR]
+    RewriteCond %{HTTP_USER_AGENT} msnbot [OR]
+    RewriteCond %{HTTP_USER_AGENT} Slurp
+    RewriteRule ^.* - [F,L]
+    
+    ProxyPass / http://localhost:8181/ connectiontimeout=20 timeout=300 ttl=120
+    ProxyPassReverse / http://localhost:8181/

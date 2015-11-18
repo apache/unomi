@@ -21,7 +21,7 @@
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
   http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
 
-    <cm:property-placeholder persistent-id="org.oasis_open.contextserver.plugins.mail"
+    <cm:property-placeholder persistent-id="org.apache.unomi.plugins.mail"
                              update-strategy="reload">
         <cm:default-properties>
             <cm:property name="mail.server.hostname" value="smtp.gmail.com"/>
@@ -34,7 +34,7 @@
 
     <!-- Action executors -->
 
-    <bean id="sendMailActionImpl" class="org.oasis_open.contextserver.plugins.mail.actions.SendMailAction">
+    <bean id="sendMailActionImpl" class="org.apache.unomi.plugins.mail.actions.SendMailAction">
         <property name="mailServerHostName" value="${mail.server.hostname}"/>
         <property name="mailServerPort" value="${mail.server.port}"/>
         <property name="mailServerUsername" value="${mail.server.username}"/>

@@ -30,14 +30,15 @@
     </cm:property-placeholder>
 
     <reference id="persistenceService"
-               interface="org.oasis_open.contextserver.persistence.spi.PersistenceService"/>
+               interface="org.apache.unomi.persistence.spi.PersistenceService"/>
 
-    <reference id="definitionsService" interface="org.oasis_open.contextserver.api.services.DefinitionsService"/>
+    <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
 
 
     <!-- User List service -->
 
-    <bean id="geonamesServiceImpl" class="org.jahia.unomi.geonames.services.GeonamesServiceImpl" init-method="start" destroy-method="stop">
+    <bean id="geonamesServiceImpl" class="org.apache.unomi.geonames.services.GeonamesServiceImpl" init-method="start"
+          destroy-method="stop">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsService"/>
         <property name="pathToGeonamesDatabase" value="${request.geonamesDatabase.location}"/>

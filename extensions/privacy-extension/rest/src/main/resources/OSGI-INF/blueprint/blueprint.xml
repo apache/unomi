@@ -30,7 +30,7 @@
     </cxf:bus>
 
     <bean id="cors-filter" class="org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter"/>
-    <bean id="jacksonMapper" class="org.oasis_open.contextserver.persistence.spi.CustomObjectMapper"/>
+    <bean id="jacksonMapper" class="org.apache.unomi.persistence.spi.CustomObjectMapper"/>
     <bean id="jaxb-provider" class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider">
         <argument index="0" ref="jacksonMapper" type="com.fasterxml.jackson.databind.ObjectMapper "/>
         <argument index="1" type="com.fasterxml.jackson.jaxrs.cfg.Annotations[]">
@@ -65,9 +65,9 @@
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
-    <reference id="privacyService" interface="org.oasis_open.contextserver.api.services.PrivacyService"/>
+    <reference id="privacyService" interface="org.apache.unomi.api.services.PrivacyService"/>
 
-    <bean id="privacyServiceEndPoint" class="org.oasis_open.contextserver.privacy.rest.PrivacyServiceEndPoint">
+    <bean id="privacyServiceEndPoint" class="org.apache.unomi.privacy.rest.PrivacyServiceEndPoint">
         <property name="privacyService" ref="privacyService"/>
     </bean>
 </blueprint>

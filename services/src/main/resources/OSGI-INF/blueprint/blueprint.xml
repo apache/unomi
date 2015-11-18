@@ -16,8 +16,9 @@
   ~ limitations under the License.
   -->
 
-<blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+<blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
            xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
+           xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
            http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
 
@@ -32,18 +33,18 @@
     </cm:property-placeholder>
 
     <reference id="persistenceService"
-               interface="org.oasis_open.contextserver.persistence.spi.PersistenceService"/>
+               interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="httpService" interface="org.osgi.service.http.HttpService"/>
 
     <!-- Service definitions -->
 
-    <bean id="definitionsServiceImpl" class="org.oasis_open.contextserver.impl.services.DefinitionsServiceImpl"
+    <bean id="definitionsServiceImpl" class="org.apache.unomi.services.services.DefinitionsServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
     <service id="definitionsService" ref="definitionsServiceImpl" auto-export="interfaces"/>
 
-    <bean id="eventServiceImpl" class="org.oasis_open.contextserver.impl.services.EventServiceImpl">
+    <bean id="eventServiceImpl" class="org.apache.unomi.services.services.EventServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="profileService" ref="profileServiceImpl"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
@@ -60,7 +61,7 @@
     </bean>
     <service id="eventService" ref="eventServiceImpl" auto-export="interfaces"/>
 
-    <bean id="goalsServiceImpl" class="org.oasis_open.contextserver.impl.services.GoalsServiceImpl"
+    <bean id="goalsServiceImpl" class="org.apache.unomi.services.services.GoalsServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
@@ -70,11 +71,11 @@
     <service id="goalsService" ref="goalsServiceImpl" auto-export="interfaces"/>
 
     <bean id="actionExecutorDispatcherImpl"
-          class="org.oasis_open.contextserver.impl.actions.ActionExecutorDispatcher">
+          class="org.apache.unomi.services.actions.ActionExecutorDispatcher">
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
 
-    <bean id="rulesServiceImpl" class="org.oasis_open.contextserver.impl.services.RulesServiceImpl"
+    <bean id="rulesServiceImpl" class="org.apache.unomi.services.services.RulesServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
@@ -84,7 +85,7 @@
     </bean>
     <service id="rulesService" ref="rulesServiceImpl" auto-export="interfaces"/>
 
-    <bean id="segmentServiceImpl" class="org.oasis_open.contextserver.impl.services.SegmentServiceImpl"
+    <bean id="segmentServiceImpl" class="org.apache.unomi.services.services.SegmentServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
@@ -94,7 +95,7 @@
     </bean>
     <service id="segmentService" ref="segmentServiceImpl" auto-export="interfaces"/>
 
-    <bean id="profileServiceImpl" class="org.oasis_open.contextserver.impl.services.ProfileServiceImpl"
+    <bean id="profileServiceImpl" class="org.apache.unomi.services.services.ProfileServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
@@ -107,7 +108,7 @@
     </bean>
     <service id="profileService" ref="profileServiceImpl" auto-export="interfaces"/>
 
-    <bean id="queryServiceImpl" class="org.oasis_open.contextserver.impl.services.QueryServiceImpl"
+    <bean id="queryServiceImpl" class="org.apache.unomi.services.services.QueryServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
@@ -121,7 +122,7 @@
         <service-properties>
             <entry key="initializerId" value="comparisonOperator"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.conditions.initializers.ComparisonOperatorChoiceListInitializer">
+        <bean class="org.apache.unomi.services.conditions.initializers.ComparisonOperatorChoiceListInitializer">
             <property name="bundleContext" ref="blueprintBundleContext"/>
         </bean>
     </service>
@@ -130,7 +131,7 @@
         <service-properties>
             <entry key="initializerId" value="eventProperty"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.conditions.initializers.EventPropertyChoiceListInitializer">
+        <bean class="org.apache.unomi.services.conditions.initializers.EventPropertyChoiceListInitializer">
             <property name="eventService" ref="eventServiceImpl"/>
         </bean>
     </service>
@@ -139,7 +140,7 @@
         <service-properties>
             <entry key="initializerId" value="segments"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.conditions.initializers.SegmentsChoiceListInitializer">
+        <bean class="org.apache.unomi.services.conditions.initializers.SegmentsChoiceListInitializer">
             <property name="segmentService" ref="segmentServiceImpl"/>
         </bean>
     </service>
@@ -148,7 +149,7 @@
         <service-properties>
             <entry key="initializerId" value="eventTypeId"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.conditions.initializers.EventTypeIdChoiceListInitializer">
+        <bean class="org.apache.unomi.services.conditions.initializers.EventTypeIdChoiceListInitializer">
             <property name="eventService" ref="eventServiceImpl"/>
         </bean>
     </service>
@@ -157,14 +158,14 @@
         <service-properties>
             <entry key="initializerId" value="country"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.conditions.initializers.CountryChoiceListInitializer"/>
+        <bean class="org.apache.unomi.services.conditions.initializers.CountryChoiceListInitializer"/>
     </service>
 
     <service auto-export="interfaces">
         <service-properties>
             <entry key="initializerId" value="goals"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.conditions.initializers.GoalsChoiceListInitializer">
+        <bean class="org.apache.unomi.services.conditions.initializers.GoalsChoiceListInitializer">
             <property name="goalsService" ref="goalsServiceImpl"/>
         </bean>
     </service>
@@ -172,7 +173,7 @@
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
     <reference-list id="eventListenerServices"
-                    interface="org.oasis_open.contextserver.api.services.EventListenerService"
+                    interface="org.apache.unomi.api.services.EventListenerService"
                     availability="optional">
         <reference-listener
                 bind-method="bind" unbind-method="unbind" ref="eventServiceImpl"/>
@@ -184,7 +185,7 @@
         <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="defaultPropertyMergeStrategyExecutor"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.mergers.DefaultPropertyMergeStrategyExecutor">
+        <bean class="org.apache.unomi.services.mergers.DefaultPropertyMergeStrategyExecutor">
         </bean>
     </service>
 
@@ -192,7 +193,7 @@
         <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="addPropertyMergeStrategyExecutor"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.mergers.AddPropertyMergeStrategyExecutor">
+        <bean class="org.apache.unomi.services.mergers.AddPropertyMergeStrategyExecutor">
         </bean>
     </service>
 
@@ -200,7 +201,7 @@
         <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="mostRecentPropertyMergeStrategyExecutor"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.mergers.MostRecentPropertyMergeStrategyExecutor">
+        <bean class="org.apache.unomi.services.mergers.MostRecentPropertyMergeStrategyExecutor">
         </bean>
     </service>
 
@@ -208,7 +209,7 @@
         <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="oldestPropertyMergeStrategyExecutor"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.mergers.OldestPropertyMergeStrategyExecutor">
+        <bean class="org.apache.unomi.services.mergers.OldestPropertyMergeStrategyExecutor">
         </bean>
     </service>
 
@@ -216,7 +217,7 @@
         <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="nonEmptyPropertyMergeStrategyExecutor"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.impl.mergers.NonEmptyPropertyMergeStrategyExecutor">
+        <bean class="org.apache.unomi.services.mergers.NonEmptyPropertyMergeStrategyExecutor">
         </bean>
     </service>
 

@@ -16,15 +16,16 @@
   ~ limitations under the License.
   -->
 
-<blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+<blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
            xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
+           xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
            http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
 
-    <reference id="profileService" interface="org.oasis_open.contextserver.api.services.ProfileService"/>
-    <reference id="eventService" interface="org.oasis_open.contextserver.api.services.EventService"/>
-    <reference id="rulesService" interface="org.oasis_open.contextserver.api.services.RulesService"/>
-    <reference id="privacyService" interface="org.oasis_open.contextserver.api.services.PrivacyService"/>
+    <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
+    <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
+    <reference id="rulesService" interface="org.apache.unomi.api.services.RulesService"/>
+    <reference id="privacyService" interface="org.apache.unomi.api.services.PrivacyService"/>
 
     <cm:property-placeholder persistent-id="org.apache.unomi.web"
                              update-strategy="reload" placeholder-prefix="${web.">
@@ -33,7 +34,7 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
-    <bean id="contextServlet" class="org.oasis_open.contextserver.web.ContextServlet">
+    <bean id="contextServlet" class="org.apache.unomi.web.ContextServlet">
         <property name="profileService" ref="profileService"/>
         <property name="eventService" ref="eventService"/>
         <property name="rulesService" ref="rulesService"/>
@@ -51,7 +52,7 @@
         </service-properties>
     </service>
 
-    <bean id="eventsCollectorServlet" class="org.oasis_open.contextserver.web.EventsCollectorServlet">
+    <bean id="eventsCollectorServlet" class="org.apache.unomi.web.EventsCollectorServlet">
         <property name="profileService" ref="profileService"/>
         <property name="eventService" ref="eventService"/>
         <property name="privacyService" ref="privacyService" />

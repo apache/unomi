@@ -42,7 +42,7 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
-    <cm:property-placeholder persistent-id="org.oasis_open.contextserver.web"
+    <cm:property-placeholder persistent-id="org.apache.unomi.web"
                              update-strategy="reload" placeholder-prefix="${web.">
         <cm:default-properties>
             <cm:property name="contextserver.address" value="localhost"/>
@@ -54,23 +54,23 @@
 
     <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl">
         <interfaces>
-            <value>org.oasis_open.contextserver.persistence.spi.PersistenceService</value>
-            <value>org.oasis_open.contextserver.api.services.ClusterService</value>
+            <value>org.apache.unomi.persistence.spi.PersistenceService</value>
+            <value>org.apache.unomi.api.services.ClusterService</value>
         </interfaces>
     </service>
 
     <bean id="conditionESQueryBuilderDispatcher"
-          class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher">
+          class="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher">
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
 
     <bean id="conditionEvaluatorDispatcherImpl"
-          class="org.oasis_open.contextserver.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher">
+          class="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher">
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
 
     <bean id="elasticSearchPersistenceServiceImpl"
-          class="org.oasis_open.contextserver.persistence.elasticsearch.ElasticSearchPersistenceServiceImpl"
+          class="org.apache.unomi.persistence.elasticsearch.ElasticSearchPersistenceServiceImpl"
           init-method="start"
           destroy-method="stop">
         <property name="bundleContext" ref="blueprintBundleContext"/>

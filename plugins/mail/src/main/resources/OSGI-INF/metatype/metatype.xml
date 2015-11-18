@@ -18,7 +18,7 @@
 
 <metatype:MetaData xmlns:metatype="http://www.osgi.org/xmlns/metatype/v1.0.0" localization="OSGI-INF/metatype/metatype">
 
-    <OCD description="FileInstaller" name="org.oasis_open.contextserver.plugins.mail" id="org.oasis_open.contextserver.plugins.mail">
+    <OCD description="FileInstaller" name="org.apache.unomi.plugins.mail" id="org.apache.unomi.plugins.mail">
 
         <AD name="%mail.server.hostname.name" description="%mail.server.hostname.description" id="mail.server.hostname" required="true" type="String" default="smtp.gmail.com"/>
         <AD name="%mail.server.port.name" description="%mail.server.port.description" id="mail.server.port" required="true" type="Integer" default="425"/>
@@ -28,8 +28,8 @@
 
     </OCD>
 
-    <Designate pid="org.oasis_open.contextserver.plugins.mail">
-        <Object ocdref="org.oasis_open.contextserver.plugins.mail"/>
+    <Designate pid="org.apache.unomi.plugins.mail">
+        <Object ocdref="org.apache.unomi.plugins.mail"/>
     </Designate>
 
 </metatype:MetaData>

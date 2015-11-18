@@ -19,7 +19,7 @@ Cluster setup
 =============
 
 Context server relies on Elasticsearch to discover and configure its cluster. You just need to install multiple context
-servers on the same network, and enable the discovery protocol in $MY_KARAF_HOME/etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg file :
+servers on the same network, and enable the discovery protocol in $MY_KARAF_HOME/etc/org.apache.unomi.persistence.elasticsearch.cfg file :
 
     discovery.zen.ping.multicast.enabled=true
 
@@ -68,7 +68,7 @@ Node C :
 
 ### Specific configuration
 If multicast is not allowed on your network, you'll need to switch to unicast protocol and manually configure the server IPs. This can be
-done by disabling the elasticsearch automatic discovery in $MY_KARAF_HOME/etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg :
+done by disabling the elasticsearch automatic discovery in $MY_KARAF_HOME/etc/org.apache.unomi.persistence.elasticsearch.cfg :
 
     discovery.zen.ping.multicast.enabled=false
 

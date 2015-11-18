@@ -130,7 +130,7 @@ In order to use it, you need to install the Geonames database into . Get the "al
 http://download.geonames.org/export/dump/
 
 Download it and put it in the "etc" directory, without unzipping it.
-Edit $MY_KARAF_HOME/etc/org.oasis_open.contextserver.geonames.cfg and set request.geonamesDatabase.forceImport to true, import should start right away.
+Edit $MY_KARAF_HOME/etc/org.apache.unomi.geonames.cfg and set request.geonamesDatabase.forceImport to true, import should start right away.
 Otherwise, import should start at the next startup. Import runs in background, but can take about 15 minutes.
 At the end, you should have about 4 million entries in the geonames index.
  
@@ -139,7 +139,7 @@ Changing the default configuration
 
 If you want to change the default configuration, you can perform any modification you want in the $MY_KARAF_HOME/etc directory.
 
-The context server configuration is kept in the $MY_KARAF_HOME/etc/org.oasis_open.contextserver.web.cfg . It defines the
+The context server configuration is kept in the $MY_KARAF_HOME/etc/org.apache.unomi.web.cfg . It defines the
 addresses and port where it can be found :
 
     contextserver.address=localhost
@@ -152,7 +152,7 @@ BEFORE you start the server for the first time, or you will loose all the data y
 
 To change the cluster name, first create a file called 
 
-    $MY_KARAF_HOME/etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg
+    $MY_KARAF_HOME/etc/org.apache.unomi.persistence.elasticsearch.cfg
 
 with the following contents:
 
@@ -256,7 +256,7 @@ Cluster setup
 -------------
 
 Context server relies on Elasticsearch to discover and configure its cluster. You just need to install multiple context
-servers on the same network, and enable the discovery protocol in $MY_KARAF_HOME/etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg file :
+servers on the same network, and enable the discovery protocol in $MY_KARAF_HOME/etc/org.apache.unomi.persistence.elasticsearch.cfg file :
 
     discovery.zen.ping.multicast.enabled=true
 
@@ -305,7 +305,7 @@ Node C :
 
 ### Specific configuration
 If multicast is not allowed on your network, you'll need to switch to unicast protocol and manually configure the server IPs. This can be
-done by disabling the elasticsearch automatic discovery in $MY_KARAF_HOME/etc/org.oasis_open.contextserver.persistence.elasticsearch.cfg :
+done by disabling the elasticsearch automatic discovery in $MY_KARAF_HOME/etc/org.apache.unomi.persistence.elasticsearch.cfg :
 
     discovery.zen.ping.multicast.enabled=false
 

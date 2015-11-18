@@ -32,7 +32,7 @@
     <!-- Action executors -->
 
     <bean id="requestHeaderToProfilePropertyActionImpl"
-          class="org.oasis_open.contextserver.plugins.request.actions.RequestHeaderToProfilePropertyAction">
+          class="org.apache.unomi.plugins.request.actions.RequestHeaderToProfilePropertyAction">
     </bean>
     <service id="requestHeaderToProfilePropertyAction" ref="requestHeaderToProfilePropertyActionImpl"
              auto-export="interfaces">
@@ -42,7 +42,7 @@
     </service>
 
     <bean id="requestParameterToProfilePropertyActionImpl"
-          class="org.oasis_open.contextserver.plugins.request.actions.RequestParameterToProfilePropertyAction">
+          class="org.apache.unomi.plugins.request.actions.RequestParameterToProfilePropertyAction">
     </bean>
     <service id="RequestParameterToProfilePropertyAction" ref="requestParameterToProfilePropertyActionImpl"
              auto-export="interfaces">
@@ -55,7 +55,7 @@
         <service-properties>
             <entry key="actionExecutorId" value="setRemoteHostInfo"/>
         </service-properties>
-        <bean class="org.oasis_open.contextserver.plugins.request.actions.SetRemoteHostInfoAction"
+        <bean class="org.apache.unomi.plugins.request.actions.SetRemoteHostInfoAction"
               init-method="postConstruct">
             <property name="pathToGeoLocationDatabase" value="${request.ipDatabase.location}"/>
         </bean>
