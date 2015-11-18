@@ -443,6 +443,29 @@ Step 4 : Setup a proxy in front of the context server
 As an alternative to an application-level firewall, you could also route all traffic to the context server through
 a proxy, and use it to filter any communication.
 
+Checking the license status
+---------------------------
+
+We have a new profile to check the license headers, you can perform a full project check with the following command:
+ 
+    mvn clean install -P generate-package,integration-tests,performance-tests,rat
+    
+Generating the Maven documentation site
+---------------------------------------
+
+To generate the site use : 
+
+    mvn site site:stage
+    
+You will then find a full generate site in the target/staging directory
+
+To upload the site to the Apache website, simply run after the above command has completed:
+
+    mvn scm-publish:publish-scm
+    
+This operation takes a little bit of time, so don't interrupt it even if you're waiting for a while for it to complete
+(usually takes about 16 minutes !)
+
 Todo
 ----
 
