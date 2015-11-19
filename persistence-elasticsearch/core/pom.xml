@@ -97,11 +97,11 @@
             <artifactId>spatial4j</artifactId>
             <version>0.4.1</version>
         </dependency>
-        <dependency>
+        <!--dependency>
             <groupId>com.vividsolutions</groupId>
             <artifactId>jts</artifactId>
             <version>1.13</version>
-        </dependency>
+        </dependency-->
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy-all</artifactId>
@@ -184,6 +184,7 @@
                             com.thoughtworks.qdox;resolution:=optional,
                             com.thoughtworks.qdox.model;resolution:=optional,
                             com.thoughtworks.xstream;resolution:=optional,
+                            com.vividsolutions.jts.*;resolution:=optional,
                             groovyjarjarasm.asm.tree.analysis;resolution:=optional,
                             javax.accessibility;resolution:=optional,
                             javax.annotation;resolution:=optional,
