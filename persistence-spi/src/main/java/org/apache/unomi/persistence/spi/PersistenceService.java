@@ -102,7 +102,7 @@ public interface PersistenceService {
      * @param scriptParams  script params
      * @return {@code true} if the update was successful, {@code false} otherwise
      */
-    boolean update(String itemId, Date dateHint, Class<?> clazz, String script, Map<String, Object> scriptParams);
+    boolean updateWithScript(String itemId, Date dateHint, Class<?> clazz, String script, Map<String, Object> scriptParams);
 
     /**
      * Retrieves the item identified with the specified identifier and with the specified Item subclass if it exists.
