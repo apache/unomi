@@ -46,7 +46,7 @@
             <absoluteResourceURL>http://unomi.incubator.apache.org/</absoluteResourceURL>
             <brand>
                 <name><![CDATA[
-                    <img src="images/unomi-86x20.png" />
+                    <img src="http://unomi.incubator.apache.org/images/unomi-86x20.png" />
                 ]]></name>
                 <href>http://unomi.incubator.apache.org</href>
             </brand>
