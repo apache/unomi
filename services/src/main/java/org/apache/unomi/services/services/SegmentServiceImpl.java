@@ -694,14 +694,14 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         scriptParams.put("scoringId", scoring.getItemId());
 
         for (Profile profileToRemove : previousProfiles) {
-            persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "ctx._source.scores.remove(scoringId)", scriptParams);
+            persistenceService.updateWithScript(profileToRemove.getItemId(), null, Profile.class, "ctx._source.scores.remove(scoringId)", scriptParams);
         }
         if(scoring.getMetadata().isEnabled()) {
             String script = "if (ctx._source.scores.containsKey(scoringId)) { ctx._source.scores[scoringId] += scoringValue } else { ctx._source.scores[scoringId] = scoringValue }";
             for (ScoringElement element : scoring.getElements()) {
                 scriptParams.put("scoringValue", element.getValue());
                 for (Profile p : persistenceService.query(element.getCondition(), null, Profile.class)) {
-                    persistenceService.update(p.getItemId(), null, Profile.class, script, scriptParams);
+                    persistenceService.updateWithScript(p.getItemId(), null, Profile.class, script, scriptParams);
                 }
             }
         }
@@ -720,7 +720,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         scriptParams.put("scoringId", scoringId);
 
         for (Profile profileToRemove : previousProfiles) {
-            persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "ctx._source.scores.remove(scoringId)", scriptParams);
+            persistenceService.updateWithScript(profileToRemove.getItemId(), null, Profile.class, "ctx._source.scores.remove(scoringId)", scriptParams);
         }
         logger.info("Profiles updated in {}", System.currentTimeMillis()-t);
     }
