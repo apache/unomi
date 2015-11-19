@@ -51,9 +51,11 @@ interacting with any system. Using the context, events may be sent to the contex
 These rules will executing matching actions that may either perform context updates or even sent data to external
 systems such as BigData frameworks.
 
-### License
+### Articles & slides
 
-The source code is available under the Apache License V2 and is copyrighted 2014-2015 Jahia Solutions
+* [Linux.com : Unomi: A Bridge Between Privacy and Digital Marketing](http://www.linux.com/news/enterprise/cloud-computing/858418-unomi-a-bridge-between-privacy-and-digital-marketing)
+* [Introducing Apache Unomi, JavaOne 2015](http://www.slideshare.net/sergehuber/introducing-apache-unomi-javaone-2015-session) This presentation has a cool example of integrating Apache Unomi with IoT devices (Internet of Things) such as beacons, smartphones and even televisions
+* [Apache Unomi In-depth, ApacheCon EU 2015](http://www.slideshare.net/sergehuber/apache-unomi-in-depth-apachecon-eu-2015-session)
 
 ### Requirements
 
