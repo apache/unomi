@@ -116,6 +116,7 @@
             <item name="Building and deploying" href="building-and-deploying.html" />
             <item name="Configuration" href="configuration.html" />
             <item name="Cluster setup" href="clustering.html" />
+            <item name="Concepts" href="concepts.html"/>
         </menu>
 
         <menu name="parent" ref="parent"/>
