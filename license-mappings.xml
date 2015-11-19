@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<license-lookup xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                xmlns="https://source.jasig.org/schemas/maven-notice-plugin/license-lookup"
+                xsi:schemaLocation="https://source.jasig.org/schemas/maven-notice-plugin/license-lookup https://source.jasig.org/schemas/maven-notice-plugin/license-lookup/license-lookup-v1.0.xsd">
+    <artifact>
+        <groupId>org.eclipse</groupId>
+        <artifactId>org.eclipse.osgi</artifactId>
+        <version>3.8.2.v20130124-134944</version>
+        <license>Eclipse Public License, Version 1.0</license>
+    </artifact>
+</license-lookup>

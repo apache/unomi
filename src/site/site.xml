@@ -54,9 +54,9 @@
             <titleTemplate>%2$s | %1$s</titleTemplate>
             <toc>sidebar</toc>
             <!--tocTopMax>6</tocTopMax-->
-            <topNav>Documentation|Download</topNav>
+            <topNav>Documentation|Source</topNav>
             <bottomNav>
-                <column>Documentation</column>
+                <column>Source</column>
                 <column>modules</column>
                 <column>reports</column>
             </bottomNav>
@@ -107,7 +107,8 @@
     <body>
 
         <links>
-            <item name="Download" href="download.html" />
+            <item name="Source" href="https://github.com/Jahia/unomi"/>
+            <item name="Privacy" href="privacy-policy.html"/>
         </links>
 
         <menu name="Documentation" inherit="top">
