@@ -27,7 +27,7 @@ import javax.servlet.http.HttpServletRequest;
 /**
  * Copies a request header value to a profile property
  *
- * @todo add support for multi-valued parameters or storing values as a list
+ * TODO add support for multi-valued parameters or storing values as a list
  */
 public class RequestHeaderToProfilePropertyAction implements ActionExecutor {
     public int execute(Action action, Event event) {

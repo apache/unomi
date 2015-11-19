@@ -32,16 +32,16 @@ import java.util.Set;
  * An incoming request for context information from clients of the context server. This allows clients to specify which type of information they are interested in getting from
  * the context server as well as specify incoming events or content filtering or property/segment overrides for personalization or impersonation. This conditions what the
  * context server will return with its response.
- * <p/>
+ * <p>
  * Events that are generated on the client as part of its functioning can be specified in the client as part of its request for contextual data. The context server will deliver
  * these events to {@link EventListenerService}s to be processed. In particular, the {@link
  * RulesService} will trigger any applicable {@link Rule} which in turn might trigger {@link
  * Action}s. An appropriate Event is also triggered when a Rule matches so that other rules can react to it. Finally, an event will also
  * be emitted if the user {@link Profile} has been updated as part of the event processing.
- * <p/>
+ * <p>
  * A client wishing to perform content personalization might also specify filtering condition to be evaluated by the context server so that it can tell the client
  * whether the content associated with the filter should be activated for this profile/session.
- * <p/>
+ * <p>
  * It is also possible to clients wishing to perform user impersonation to specify properties or segment to override the proper ones so as to emulate a specific profile, in
  * which case the overridden value will temporarily replace the proper values so that all rules will be evaluated with these values instead of the proper ones.
  *

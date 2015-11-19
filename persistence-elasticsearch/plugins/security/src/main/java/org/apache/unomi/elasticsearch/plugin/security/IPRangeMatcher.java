@@ -36,7 +36,7 @@ import java.util.List;
 /**
  * A class that enables to get an IP range from CIDR specification. It supports
  * both IPv4 and IPv6.
- * <p/>
+ * <p>
  * This class was adapted from the CIDRUtils code at https://github.com/edazdarevic/CIDRUtils
  * and support for IP ranges was added.
  */

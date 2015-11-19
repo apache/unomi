@@ -28,10 +28,10 @@ import java.util.Set;
 
 /**
  * A user profile gathering all known information about a given user as well as segments it is part of and scores.
- * <p/>
+ * <p>
  * Contrary to other unomi {@link Item}s, profiles are not part of a scope since we want to be able to track the associated user across applications. For this reason, data
  * collected for a given profile in a specific scope is still available to any scoped item that accesses the profile information.
- * <p/>
+ * <p>
  * It is interesting to note that there is not necessarily a one to one mapping between users and profiles as users can be captured across applications and different observation
  * contexts. As identifying information might not be available in all contexts in which data is collected, resolving profiles to a single physical user can become complex because
  * physical users are not observed directly. Rather, their portrait is progressively patched together and made clearer as unomi captures more and more traces of their actions.
@@ -49,11 +49,11 @@ public class Profile extends Item {
      */
     public static final String ITEM_TYPE = "profile";
     private static final long serialVersionUID = -7409439322939712238L;
-    private Map<String, Object> properties = new HashMap<String, Object>();
+    private Map<String, Object> properties = new HashMap<>();
 
-    private Map<String, Object> systemProperties = new HashMap<String, Object>();
+    private Map<String, Object> systemProperties = new HashMap<>();
 
-    private Set<String> segments = new HashSet<String>();
+    private Set<String> segments = new HashSet<>();
 
     private Map<String, Integer> scores;
 

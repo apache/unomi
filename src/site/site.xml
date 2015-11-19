@@ -117,6 +117,7 @@
             <item name="Configuration" href="configuration.html" />
             <item name="Cluster setup" href="clustering.html" />
             <item name="Concepts" href="concepts.html"/>
+            <item name="Javadoc" href="./apidocs/index.html"/>
         </menu>
 
         <menu name="parent" ref="parent"/>
