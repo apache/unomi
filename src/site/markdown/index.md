@@ -21,11 +21,11 @@
 
 ### In a few words
 
-Apache unomi is the reference implementation of the upcoming OASIS Context Server (CXS) standard 
+Apache Unomi is the reference implementation of the upcoming OASIS Context Server (CXS) standard 
 (https://www.oasis-open.org/committees/cxs/) to help standardize personalization of online experience
 while promoting ethical web experience management and increased user privacy controls.
 
-Apache unomi gathers information about users actions, information that is processed and stored by unomi services. 
+Apache Unomi gathers information about users actions, information that is processed and stored by Unomi services. 
 The collected information can then be used to personalize content, derive insights on user behavior, categorize the 
 profiles into segments along user-definable dimensions or acted upon by algorithms.
 
