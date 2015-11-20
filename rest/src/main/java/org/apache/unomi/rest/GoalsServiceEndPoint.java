@@ -37,6 +37,7 @@ import java.util.Set;
  */
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
         allowCredentials = true

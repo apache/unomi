@@ -43,6 +43,7 @@ import java.util.*;
  */
 @WebService
 @Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
         allowCredentials = true
@@ -101,7 +102,6 @@ public class ProfileServiceEndPoint {
      * @return a {@link PartialList} of profiles instances matching the specified query
      */
     @POST
-    @Consumes(MediaType.APPLICATION_JSON)
     @Path("/search")
     public PartialList<Profile> getProfiles(Query query) {
         return profileService.search(query, Profile.class);
@@ -354,6 +354,7 @@ public class ProfileServiceEndPoint {
      * @param sessionId the identifier of the session to be retrieved
      * @param dateHint  a Date helping in identifying where the item is located
      * @return the session identified by the specified identifier
+     * @throws ParseException if the date hint cannot be parsed as a proper {@link Date} object
      */
     @GET
     @Path("/sessions/{sessionId}")
@@ -417,6 +418,7 @@ public class ProfileServiceEndPoint {
      *
      * @param tagId    the tag we're interested in
      * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
+     * @param language the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
      * @return all property types defined for the specified item type and with the specified tag
      */
     @GET
@@ -431,7 +433,7 @@ public class ProfileServiceEndPoint {
      *
      * TODO: move to a different class
      *
-     * @param language TODO unused
+     * @param language the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
      * @return a Map associating targets as keys to related {@link PropertyType}s
      */
     @GET
@@ -446,7 +448,7 @@ public class ProfileServiceEndPoint {
      * TODO: move to a different class
      *
      * @param target   the target for which we want to retrieve the associated property types
-     * @param language TODO unused
+     * @param language the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
      * @return a collection of all the property types associated with the specified target
      */
     @GET
@@ -463,6 +465,7 @@ public class ProfileServiceEndPoint {
      *
      * @param tags      a comma-separated list of tag identifiers
      * @param recursive {@code true} if sub-tags of the specified tag should also be considered, {@code false} otherwise
+     * @param language  the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
      * @return a Set of the property types with the specified tag
      */
     @GET
