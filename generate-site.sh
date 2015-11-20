@@ -19,3 +19,6 @@
 ################################################################################
 echo Generating site...
 mvn site site:stage -P integration-tests,performance-tests
+cd rest
+mvn package
+cd -

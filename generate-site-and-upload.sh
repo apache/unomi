@@ -19,6 +19,9 @@
 ################################################################################
 echo Generating site...
 mvn clean install site site:stage -P integration-tests,performance-tests
+cd rest
+mvn package
+cd -
 echo Committing site to Apache SVN...
 mvn scm-publish:publish-scm
 echo Site generation and upload completed.

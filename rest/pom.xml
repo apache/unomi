@@ -191,7 +191,7 @@
                         <title>Documentation for Apache Unomi's RESTful API ${project.version}</title>
                         <html>
                             <!-- optional html configuration -->
-                            <location>${project.parent.build.directory}/site/rest-api-doc</location>
+                            <location>${project.parent.build.directory}/staging/rest-api-doc</location>
                         </html>
                         <raml></raml>
                     </output>

@@ -102,7 +102,7 @@
             <item name="Configuration" href="configuration.html" />
             <item name="Cluster setup" href="clustering.html" />
             <item name="Concepts" href="concepts.html"/>
-            <!--<item name="REST API documentation" href="./unomi-rest/rest-api-doc/index.html"/>-->
+            <item name="REST API documentation" href="./rest-api-doc/index.html"/>
             <item name="API Javadoc" href="./unomi-api/apidocs/index.html"/>
         </menu>
 
