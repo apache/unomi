@@ -22,11 +22,6 @@
         <artifactId>reflow-maven-skin</artifactId>
         <version>1.1.1</version>
     </skin>
-    <!--bannerLeft>
-        <name>Apache Unomi</name>
-        <src>images/apache-unomi-380x85.png</src>
-        <href>http://unomi.incubator.apache.org/</href>
-    </bannerLeft-->
 
     <poweredBy>
         <logo name="Karaf" href="http://karaf.apache.org/"
@@ -54,9 +49,9 @@
             <titleTemplate>%2$s | %1$s</titleTemplate>
             <toc>sidebar</toc>
             <!--tocTopMax>6</tocTopMax-->
-            <topNav>Documentation|Standard|Contribute|Privacy</topNav>
+            <topNav>Documentation|Standard|Contribute|Privacy|Community</topNav>
             <bottomNav>
-                <column>Documentation|Standard|Contribute|Privacy</column>
+                <column>Documentation|Standard|Contribute|Privacy|Community</column>
                 <column>modules</column>
                 <column>reports</column>
             </bottomNav>
@@ -64,16 +59,11 @@
                 Powered by Apache Karaf
             </bottomDescription>
             <pages>
-                <index project="project-id">
+                <index project="unomi-root">
                     <shortTitle>Welcome</shortTitle>
-                    <breadcrumbs>false</breadcrumbs>
-                    <toc>false</toc>
                     <sections>
-                        <carousel />
                         <body />
                         <sidebar />
-                        <thumbs>2</thumbs>
-                        <columns>3</columns>
                     </sections>
                 </index>
                 <developer-info>
@@ -112,8 +102,8 @@
             <item name="Configuration" href="configuration.html" />
             <item name="Cluster setup" href="clustering.html" />
             <item name="Concepts" href="concepts.html"/>
-            <item name="REST API documentation" href="./rest-api-doc/index.html"/>
-            <item name="Javadoc" href="./apidocs/index.html"/>
+            <!--item name="REST API documentation" href="./rest-api-doc/index.html"/>
+            <item name="Javadoc" href="./apidocs/index.html"/-->
         </menu>
 
         <menu name="parent" ref="parent"/>
@@ -134,7 +124,12 @@
             <item name="Issues" href="issue-tracking.html"/>
         </menu>
 
-        <footer></footer>
+        <menu name="Community" inherit="top">
+            <item name="Mailing lists" href="mail-lists.html"/>
+            <item name="Team" href="team-list.html"/>
+            <item name="Maturity model report card" href="maturity-model-report.html"/>
+        </menu>
+
     </body>
 
 </project>
