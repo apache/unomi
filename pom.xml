@@ -390,6 +390,8 @@
                             <reportFile>${project.build.directory}/${project.build.finalName}.rat</reportFile>
                             <excludeSubProjects>false</excludeSubProjects>
                             <excludes>
+                                <exclude>**/NOTICE.template</exclude>
+                                <exclude>**/NOTICE-generated</exclude>
                                 <exclude>**/target/**/*</exclude>
                                 <!-- GIT files -->
                                 <exclude>**/.git/**/*</exclude>
