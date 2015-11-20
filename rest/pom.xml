@@ -208,7 +208,21 @@
                             </sourceDirs>
                         </externalSources>
                     </restModel>
-                    <!-- insert other configuration here (optional) -->
+                    <analysis>
+                        <checks>
+                            <JAVADOC_MISSING_SUMMARY>warn</JAVADOC_MISSING_SUMMARY>
+                            <JAVADOC_MISSING_INTERFACEDOCUMENTATION>warn</JAVADOC_MISSING_INTERFACEDOCUMENTATION>
+                            <JAVADOC_MISSING_PARAMETER_DOCUMENTATION>warn</JAVADOC_MISSING_PARAMETER_DOCUMENTATION>
+                            <JAVADOC_MISSING_EXCEPTION_DOCUMENTATION>warn</JAVADOC_MISSING_EXCEPTION_DOCUMENTATION>
+                            <JAVADOC_MISSING_AUTHORS>ignore</JAVADOC_MISSING_AUTHORS>
+                            <JAXRS_MISSING_PRODUCES>warn</JAXRS_MISSING_PRODUCES>
+                            <JAXRS_MISSING_CONSUMES>warn</JAXRS_MISSING_CONSUMES>
+                            <JAXRS_MISSING_PATH_PARAM>warn</JAXRS_MISSING_PATH_PARAM>
+                            <REST_UNMAPPED_EXCEPTION>warn</REST_UNMAPPED_EXCEPTION>
+                            <UNREACHABLE_RESOURCE>warn</UNREACHABLE_RESOURCE>
+                            <PARTIAL_RESOURCE_OVERLAP>warn</PARTIAL_RESOURCE_OVERLAP>
+                        </checks>
+                    </analysis>
                 </configuration>
             </plugin>
         </plugins>
