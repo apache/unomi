@@ -29,6 +29,18 @@ Apache unomi gathers information about users actions, information that is proces
 The collected information can then be used to personalize content, derive insights on user behavior, categorize the 
 profiles into segments along user-definable dimensions or acted upon by algorithms.
 
+### News
+
+- 2015-11-13 Initial web site created
+- 2015-10-20 JIRA, mailing lists, git, website space created.
+- 2015-10-05 Project enters incubation.
+
+### Articles & slides
+
+* [Linux.com : Unomi: A Bridge Between Privacy and Digital Marketing](http://www.linux.com/news/enterprise/cloud-computing/858418-unomi-a-bridge-between-privacy-and-digital-marketing)
+* [Introducing Apache Unomi, JavaOne 2015](http://www.slideshare.net/sergehuber/introducing-apache-unomi-javaone-2015-session) This presentation has a cool example of integrating Apache Unomi with IoT devices (Internet of Things) such as beacons, smartphones and even televisions
+* [Apache Unomi In-depth, ApacheCon EU 2015](http://www.slideshare.net/sergehuber/apache-unomi-in-depth-apachecon-eu-2015-session)
+
 ### Features
 
 ![Unomi features](images/unomi-features.png)
@@ -50,12 +62,6 @@ Unomi is an implementation of the Context Server, and therefore always provider 
 interacting with any system. Using the context, events may be sent to the context server that will trigger rules. 
 These rules will executing matching actions that may either perform context updates or even sent data to external
 systems such as BigData frameworks.
-
-### Articles & slides
-
-* [Linux.com : Unomi: A Bridge Between Privacy and Digital Marketing](http://www.linux.com/news/enterprise/cloud-computing/858418-unomi-a-bridge-between-privacy-and-digital-marketing)
-* [Introducing Apache Unomi, JavaOne 2015](http://www.slideshare.net/sergehuber/introducing-apache-unomi-javaone-2015-session) This presentation has a cool example of integrating Apache Unomi with IoT devices (Internet of Things) such as beacons, smartphones and even televisions
-* [Apache Unomi In-depth, ApacheCon EU 2015](http://www.slideshare.net/sergehuber/apache-unomi-in-depth-apachecon-eu-2015-session)
 
 ### Requirements
 

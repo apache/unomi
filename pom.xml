@@ -444,6 +444,7 @@
                     <plugin>
                         <groupId>org.jasig.maven</groupId>
                         <artifactId>maven-notice-plugin</artifactId>
+                        <!--version>1.0.7-SNAPSHOT</version-->
                         <version>1.0.6</version>
                         <executions>
                             <execution>
@@ -456,11 +457,34 @@
                         <configuration>
                             <fileName>NOTICE-generated</fileName>
                             <generateChildNotices>false</generateChildNotices>
-                            <noticeMessage><![CDATA[
-This product includes the software {0}.
-Licensed under the {1}.
-_
-                            ]]></noticeMessage>
+                            <!-- The following options are only available in the fork here : https://github.com/Jasig/maven-notice-plugin/pull/4 . If it gets accepted we can reactivate -->
+                            <!--licenseNameAliases>
+                                <property>
+                                    <name>Apache License, Version 2.0</name>
+                                    <value>The Apache Software License, Version 2.0</value>
+                                </property>
+                                <property>
+                                    <name>Apache 2</name>
+                                    <value>The Apache Software License, Version 2.0</value>
+                                </property>
+                                <property>
+                                    <name>ALv2</name>
+                                    <value>The Apache Software License, Version 2.0</value>
+                                </property>
+                                <property>
+                                    <name>Apache 2.0 License</name>
+                                    <value>The Apache Software License, Version 2.0</value>
+                                </property>
+                                <property>
+                                    <name>Apache License 2.0</name>
+                                    <value>The Apache Software License, Version 2.0</value>
+                                </property>
+                                <property>
+                                    <name>Apache License Version 2.0</name>
+                                    <value>The Apache Software License, Version 2.0</value>
+                                </property>
+                            </licenseNameAliases>
+                            <noticeMessage>\nThis product includes the software {0}.\nLicensed under the {1}.\n{7}</noticeMessage-->
                             <noticeTemplate>NOTICE.template</noticeTemplate>
                             <licenseMapping>
                                 <param>https://source.jasig.org/licenses/license-mappings.xml</param>

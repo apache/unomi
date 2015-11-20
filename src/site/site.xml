@@ -54,9 +54,9 @@
             <titleTemplate>%2$s | %1$s</titleTemplate>
             <toc>sidebar</toc>
             <!--tocTopMax>6</tocTopMax-->
-            <topNav>Documentation|Source</topNav>
+            <topNav>Documentation|Standard|Contribute|Privacy</topNav>
             <bottomNav>
-                <column>Source</column>
+                <column>Documentation|Standard|Contribute|Privacy</column>
                 <column>modules</column>
                 <column>reports</column>
             </bottomNav>
@@ -106,11 +106,6 @@
 
     <body>
 
-        <links>
-            <item name="Source" href="https://github.com/Jahia/unomi"/>
-            <item name="Privacy" href="privacy-policy.html"/>
-        </links>
-
         <menu name="Documentation" inherit="top">
             <item name="Home" href="./" />
             <item name="Building and deploying" href="building-and-deploying.html" />
@@ -124,6 +119,22 @@
         <menu name="parent" ref="parent"/>
         <menu ref="modules"/>
         <menu ref="reports"/>
+
+        <menu name="Standard" inherit="top">
+            <item name="OASIS Context Server Technical Committee" href="https://www.oasis-open.org/committees/cxs/"/>
+        </menu>
+
+        <menu name="Privacy" inherit="bottom">
+            <item name="Site policy" href="privacy-policy.html"/>
+        </menu>
+
+        <menu name="Contribute" inherit="bottom">
+            <item name="Mailing lists" href="mail-lists.html"/>
+            <item name="Source" href="source-repository.html"/>
+            <item name="Issues" href="issue-tracking.html"/>
+        </menu>
+
+        <footer></footer>
     </body>
 
 </project>
