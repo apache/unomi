@@ -202,6 +202,11 @@
                                 <item>src/main/resources/OSGI-INF/blueprint/blueprint.xml</item>
                             </cxfServiceConfig>
                         </restFramework>
+                        <externalSources>
+                            <sourceDirs>
+                                <sourceDir>../api/src/main/java</sourceDir>
+                            </sourceDirs>
+                        </externalSources>
                     </restModel>
                     <!-- insert other configuration here (optional) -->
                 </configuration>
