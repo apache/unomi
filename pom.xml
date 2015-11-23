@@ -80,18 +80,11 @@
         </mailingList>
     </mailingLists>
 
-    <!--scm>
+    <scm>
         <connection>scm:https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</connection>
         <developerConnection>scm:https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</developerConnection>
         <tag>HEAD</tag>
         <url>https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</url>
-    </scm-->
-
-    <scm>
-        <connection>scm:git:git@github.com:Jahia/unomi.git</connection>
-        <url>https://github.com/Jahia/unomi</url>
-        <developerConnection>scm:git:git@github.com:Jahia/unomi.git</developerConnection>
-        <tag>HEAD</tag>
     </scm>
 
     <developers>
