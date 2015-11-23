@@ -22,7 +22,7 @@ A public project that implements the Context Server specification
 
 License
 -------
-The source code is available under the Apache License V2 and is copyrighted 2014-2015 Jahia Solutions
+The source code is available under the Apache License V2
 
 Requirements
 ------------
@@ -425,7 +425,7 @@ By default the Context Server limits to connections to port 9200 and 9300 to the
     - the current subnet (i.e., 192.168.1.0-192.168.1.255)
     
 (this is done using a custom plugin for Elasticsearch, that you may find here : 
-https://github.com/Jahia/unomi/tree/master/context-server/persistence-elasticsearch/plugins/security)
+https://git-wip-us.apache.org/repos/asf/incubator-unomi/context-server/persistence-elasticsearch/plugins/security)
 
 You can adjust this setting by using the following setting in the $MY_KARAF_HOME/etc/elasticsearch.yml file : 
 

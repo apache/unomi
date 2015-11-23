@@ -68,7 +68,6 @@
         <version.jackson.jaxb>2.4.0</version.jackson.jaxb> <!-- version used by CXF -->
         <version.karaf>3.0.2</version.karaf>
         <version.pax.exam>4.4.0</version.pax.exam>
-        <jahia.plugin.version>4.3</jahia.plugin.version>
     </properties>
 
     <mailingLists>
@@ -479,11 +478,6 @@
     <build>
         <pluginManagement>
             <plugins>
-                <plugin>
-                    <groupId>org.jahia.server</groupId>
-                    <artifactId>jahia-maven-plugin</artifactId>
-                    <version>${jahia.plugin.version}</version>
-                </plugin>
                 <plugin>
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-bundle-plugin</artifactId>
