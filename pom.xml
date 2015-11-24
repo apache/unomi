@@ -211,6 +211,15 @@
         </developer>
     </developers>
 
+    <distributionManagement>
+        <site>
+            <id>website</id>
+            <!-- we put a fake URL here for staging to work -->
+            <url>scp://www.mycompany.com/www/docs/project/</url>
+        </site>
+    </distributionManagement>
+
+
     <profiles>
         <profile>
             <id>integration-tests</id>

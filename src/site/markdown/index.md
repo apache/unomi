@@ -31,6 +31,7 @@ profiles into segments along user-definable dimensions or acted upon by algorith
 
 ### News
 
+- 2015-11-23 Initial code base import in [Git repository](source-repository.html) 
 - 2015-11-20 Added [Apache Maturity Model report page](maturity-model-report.html)
 - 2015-11-13 Initial web site created
 - 2015-10-20 JIRA, mailing lists, git, website space created.
