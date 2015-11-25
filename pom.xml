@@ -242,6 +242,14 @@
             </modules>
         </profile>
 
+        <repositories>
+           <repository>
+               <id>smx.m2</id>
+	       <name>Apache ServiceMix M2</name>
+               <url>http://svn.apache.org/repos/asf/servicemix/m2-repo/</url>
+           </repository>
+        </repositories>
+
         <profile>
             <id>checkstyle</id>
             <build>
