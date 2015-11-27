@@ -91,7 +91,7 @@
     <build>
         <resources>
             <resource>
-                <directory>${project.basedir}/../..</directory>
+                <directory>${project.basedir}/..</directory>
                 <filtering>false</filtering>
                 <includes>
                     <include>README*</include>
