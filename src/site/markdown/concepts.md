@@ -147,14 +147,14 @@ Being built on top of Apache Karaf, Unomi leverages OSGi to support plugins. A U
 
 [Blueprint](http://aries.apache.org/modules/blueprint.html) is used to declare what the plugin provides and inject any required dependency. The Blueprint file is located, as usual, at `OSGI-INF/blueprint/blueprint.xml` in the bundle JAR file.
 
-The plugin otherwise follows a regular maven project layout and must use the following parent in its POM file, using the appropriate Unomi version:
+The plugin otherwise follows a regular maven project layout and should depend on the Unomi API maven artifact:
 
 ```xml
-<parent>
-   <groupId>org.oasis-open.contextserver</groupId>
-   <artifactId>context-server-plugins</artifactId>
-   <version>...</version>
-</parent>
+<dependency>
+    <groupId>org.apache.unomi</groupId>
+    <artifactId>unomi-api</artifactId>
+    <version>...</version>
+</dependency>
 ```
 
 Some plugins consists only of JSON definitions that are used to instantiate the appropriate structures at runtime while some more involved plugins provide code that extends Unomi in deeper ways.
