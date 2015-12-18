@@ -481,6 +481,7 @@
         <module>plugins</module>
         <module>extensions</module>
         <module>kar</module>
+        <module>samples</module>
     </modules>
 
     <dependencies>
