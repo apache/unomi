@@ -137,15 +137,38 @@
                 };
 
                 contextRequest(function (response) {
-                    console.log("Profile sucessfully updated with tweetNB = " + response.profileProperties.tweetNb + " and tweetedFrom = " + response.profileProperties.tweetedFrom);
-                    console.log(response);
+                    var element = document.querySelector('#tweetNB');
+                    element.setAttribute("value", response.profileProperties.tweetNb);
+                    var list = document.querySelector("#tweetedFrom");
+                    list.innerHTML = '';
+                    var tweetedFrom = response.profileProperties.tweetedFrom;
+                    for (var index in tweetedFrom) {
+                        var entry = document.createElement('li');
+                        entry.appendChild(document.createTextNode(tweetedFrom[index]));
+                        list.appendChild(entry);
+                    }
+                    element = document.querySelector("#response");
+                    element.appendChild(document.createTextNode(JSON.stringify(response)));
                 }, defaultErrorCallback, contextPayload);
             });
         });
-
     </script>
 </head>
 <body>
 <a href="https://twitter.com/share" class="twitter-share-button" data-via="jahia" data-related="jahia" data-hashtags="jahia">Tweet</a>
+<ul>
+    <li>
+        <label for="tweetNB">Number of tweets:</label>
+        <input id="tweetNB" readonly value="0">
+    </li>
+    <li>
+        <label for="tweetedFrom">Tweeted from URLs:</label>
+        <ul id="tweetedFrom"></ul>
+    </li>
+    <li>
+        <label for="response">Raw response:</label>
+        <pre id="response"></pre>
+    </li>
+</ul>
 </body>
 </html>
