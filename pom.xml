@@ -243,13 +243,6 @@
         </profile>
 
         <profile>
-            <id>generate-package</id>
-            <modules>
-                <module>package</module>
-            </modules>
-        </profile>
-
-        <profile>
             <id>checkstyle</id>
             <build>
                 <plugins>
@@ -481,6 +474,7 @@
         <module>extensions</module>
         <module>kar</module>
         <module>samples</module>
+        <module>package</module>
     </modules>
 
     <dependencies>
@@ -510,9 +504,11 @@
                     <artifactId>maven-release-plugin</artifactId>
                     <version>2.5.3</version>
                     <configuration>
+                        <useReleaseProfile>false</useReleaseProfile>
                         <autoVersionSubmodules>true</autoVersionSubmodules>
                         <preparationGoals>clean install</preparationGoals>
-                        <releaseProfiles>integration-tests,performance-tests,generate-package</releaseProfiles>
+                        <goals>deploy</goals>
+                        <arguments>-Prelease,integration-tests</arguments>
                     </configuration>
                 </plugin>
             </plugins>
