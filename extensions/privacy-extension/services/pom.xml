@@ -20,27 +20,27 @@
     <parent>
         <artifactId>cxs-privacy-extension</artifactId>
         <groupId>org.apache.unomi</groupId>
-        <version>1.0.0-incubating-SNAPSHOT</version>
+        <version>1.0.0-incubating</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>cxs-privacy-extension-services</artifactId>
     <name>Apache Unomi :: Extensions :: Privacy :: Services</name>
     <description>Privacy management extension service implementation for the Apache Unomi Context Server</description>
-    <version>1.0.0-incubating-SNAPSHOT</version>
+    <version>1.0.0-incubating</version>
     <packaging>bundle</packaging>
 
     <dependencies>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
-            <version>1.0.0-incubating-SNAPSHOT</version>
+            <version>1.0.0-incubating</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-spi</artifactId>
-            <version>1.0.0-incubating-SNAPSHOT</version>
+            <version>1.0.0-incubating</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
