@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-persistence-elasticsearch-plugins</artifactId>
-        <version>1.0.0-incubating-SNAPSHOT</version>
+        <version>1.0.0-incubating</version>
     </parent>
 
     <artifactId>unomi-persistence-elasticsearch-plugins-security</artifactId>
