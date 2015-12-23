@@ -47,7 +47,7 @@ profiles into segments along user-definable dimensions or acted upon by algorith
 
 ![Unomi features](images/unomi-features.png)
 
-* Simple REST API for retrieving the profile context and collecting user-triggered events (page view, click, downloads, etc...)
+* Simple entry-point to retrieve the profile context and collecting user-triggered events (page view, click, downloads, etc...)
 * Full & simple REST API for Context Server administration
 * Highly scalable architecture
 * Fully OSGi compliant application
@@ -60,10 +60,9 @@ profiles into segments along user-definable dimensions or acted upon by algorith
 
 ![Unomi input output](images/unomi-input-output.png)
 
-Unomi is an implementation of the Context Server, and therefore always provider the context of the current user 
-interacting with any system. Using the context, events may be sent to the context server that will trigger rules. 
-These rules will executing matching actions that may either perform context updates or even sent data to external
-systems such as BigData frameworks.
+Unomi provides the context of the current user interacting with any Unomi-aware system. Using this context, Unomi-connected systems can
+send events to the context server. These events might, in turn, trigger rules that perform actions that can update the current context,
+interact with external systems or pretty much anything that can be implemented using the Unomi API.
 
 ### Requirements
 
