@@ -17,7 +17,60 @@
 
 # Getting started with Unomi
 
-This document assumes that you are familiar with Unomi's concepts.
+We will first get you up and running with an example. We will then lift the corner of the cover somewhat and explain in greater details what just happened.
+
+## Prerequisites
+This document assumes that you are already familiar with Unomi's [concepts](concepts.html). On the technical side, we also assume working knowledge of [git](https://git-scm.com/) to be able to retrieve the code for Unomi and the example. Additionnally, you will require a working Java 7 or above install. Refer to http://www.oracle.com/technetwork/java/javase/ for details on how to download and install Java SE 7 or greater.
+
+## Running Unomi
+
+### Building Unomi
+
+1. Get the code: `git clone https://git-wip-us.apache.org/repos/asf/incubator-unomi.git`
+2. Build and install according to the [instructions](building-and-deploying.html) and install Unomi.
+
+### Start Unomi
+Start Unomi according to the [instructions](building-and-deploying.html#Deploying_the_generated_package). Once you have Karaf running,
+ you should wait until you see the following messages on the Karaf console:
+
+```
+Initializing user list service endpoint...
+Initializing geonames service endpoint...
+Initializing segment service endpoint...
+Initializing scoring service endpoint...
+Initializing campaigns service endpoint...
+Initializing rule service endpoint...
+Initializing profile service endpoint...
+Initializing cluster service endpoint...
+```
+
+This indicates that all the Unomi services are started and ready to react to requests. You can then open a browser and go to `http://localhost:8181/cxs` to see the list of
+available RESTful services or retrieve an initial context at `http://localhost:8181/context.json` (which isn't very useful at this point).
+
+### Building the tweet button sample
+In your local copy of the Unomi repository and run:
+
+```
+cd samples/tweet-button-plugin
+mvn clean install
+```
+
+This will compile and create the OSGi bundle that can be deployed on Unomi to extend it.
+
+### Deploying the tweet button sample
+In standard Karaf fashion, you will need to copy the sample bundle to your Karaf `deploy` directory.
+
+If you are using the packaged version of Unomi (as opposed to deploying it to your own Karaf version), you can simply run, assuming your current directory is `samples/tweet-button-plugin` and that you uncompressed the archive in the directory it was created:
+
+```
+cp target/tweet-button-plugin-1.0.0-incubating-SNAPSHOT.jar ../../package/target/unomi-1.0.0-incubating-SNAPSHOT/deploy
+```
+
+
+### Testing the sample
+You can now go to http://localhost:8181/index.html to test the sample code. The page is very simple, you will see a Twitter button, which, once clicked, will open a new window to tweet about the current page.  The original page should be updated with the new values of the properties coming from Unomi. Additionnally, the raw JSON response is displayed.
+
+We will now explain in greater details some concepts and see how the example works.
 
 ## Interacting with the context server
 There are essentially two modalities to interact with the context server, reflecting different types of Unomi users: context server clients and context server integrators.
@@ -40,7 +93,7 @@ Below is an example of asynchronously loading the initial context using the java
     if (document.getElementById(id)) return;
     js = document.createElement(elementToCreate);
     js.id = id;
-    js.src = "http://localhost:8181/context.js";
+    js.src = 'http://localhost:8181/context.js';
     fjs.parentNode.insertBefore(js, fjs);
 }(document, 'script', 'context'));
 
@@ -56,7 +109,7 @@ On the other hand, the `cxs` top level object contains interesting contextual in
 ```json
 {
   "profileId":<identifier of the profile associated with the current user>,
-  "sessionId":<identifier of the current user's session>,
+  "sessionId":<identifier of the current user session>,
   "profileProperties":<requested profile properties, if any>,
   "sessionProperties":<requested session properties, if any>,
   "profileSegments":<segments the profile is part of if requested>,
@@ -73,10 +126,9 @@ We will look at the details of the context request and response later.
 We will examine how a simple HTML page can interact with Unomi to enrich a user's profile. The use case we will follow is a rather simple one: we want to react to Twitter events by associating information to their profile. We will record the number of times the user tweeted (as a `tweetNb` profile integer property) as well as the URLs they tweeted from (as a `tweetedFrom` multi-valued string profile property). We will accomplish this using a simple HTML page on which we position a standard "Tweet" button. A javascript script will use the Twitter API to react to clicks on this button and update the user profile using a `ContextServlet` request triggering a custom event. This event will, in turn, trigger a Unomi action on the server implemented using a Unomi plugin, a standard extension point for the server.
 
 ## HTML page
-The code for the HTML page with our Tweet button can be found at: [https://github.com/metacosm/unomi-tweet-button/tree/no-df](https://github.com/metacosm/unomi-tweet-button/tree/no-df)
-(`no-df` branch).
+The code for the HTML page with our Tweet button can be found at https://github.com/apache/incubator-unomi/blob/master/wab/src/main/webapp/index.html.
 
-This HTML page is fairly straightforward: we create a tweet button using the Twitter API and import a javascript `twitterButton.js` script that performs the actual logic.
+This HTML page is fairly straightforward: we create a tweet button using the Twitter API while a Javascript script performs the actual logic.
 
 ## Javascript
 
@@ -215,15 +267,20 @@ var contextPayload = {
 The `tweetEvent` event type is not defined by default in Unomi. This is where our Unomi plugin comes into play since we need to tell Unomi how to react when it encounters such events.
 
 ### Unomi plugin overview
->As previously mentioned, the Unomi plugin can be found at [https://github.com/metacosm/unomi-tweet-button-plugin](https://github.com/metacosm/unomi-tweet-button-plugin).
 
-In order to react to `tweetEvent` events, we will define a new Unomi rule since this is exactly what Unomi rules are supposed to do. Rules are guarded by conditions and if these conditions match, the associated set of actions will be executed. In our case, we want our new rule ([`incrementTweetNumber`](https://github.com/metacosm/unomi-tweet-button-plugin/blob/master/src/main/resources/META-INF/cxs/rules/incrementTweetNumber.json)) to only react to `tweetEvent` events and we want it to perform the profile update accordingly: create the property types for our custom properties if they don't exist and update them. To do so, we will create a custom action ([`incrementTweetNumberAction`](https://github.com/metacosm/unomi-tweet-button-plugin/blob/master/src/main/resources/META-INF/cxs/actions/incrementTweetNumberAction.json)) that will be triggered any time our rule matches. An action is some custom code that is deployed in the context server and can access the Unomi API to perform what it is that it needs to do.
+In order to react to `tweetEvent` events, we will define a new Unomi rule since this is exactly what Unomi rules are supposed to do. Rules are guarded by conditions and if these
+ conditions match, the associated set of actions will be executed. In our case, we want our new
+ [`incrementTweetNumber`](https://github.com/apache/incubator-unomi/blob/master/samples/tweet-button-plugin/src/main/resources/META-INF/cxs/rules/incrementTweetNumber.json) rule to only react to `tweetEvent` events and
+  we want it to perform the profile update accordingly: create the property types for our custom properties if they don't exist and update them. To do so, we will create a
+  custom
+  [`incrementTweetNumberAction`](https://github.com/apache/incubator-unomi/blob/master/samples/tweet-button-plugin/src/main/resources/META-INF/cxs/actions/incrementTweetNumberAction.json) action that will be triggered any time our rule matches. An action is some custom code that is deployed in the context server and can access the
+  Unomi API to perform what it is that it needs to do.
 
 
 ### Rule definition
-Let's look at how our custom ([`incrementTweetNumber`](https://github.com/metacosm/unomi-tweet-button-plugin/blob/master/src/main/resources/META-INF/cxs/rules/incrementTweetNumber.json)) rule is defined:
+Let's look at how our custom [`incrementTweetNumber`](https://github.com/apache/incubator-unomi/blob/master/samples/tweet-button-plugin/src/main/resources/META-INF/cxs/rules/incrementTweetNumber.json) rule is defined:
 
-```javascript
+```json
 {
   "metadata": {
     "id": "smp:incrementTweetNumber",
@@ -257,7 +314,7 @@ We then tell Unomi which condition should trigger the rule via the `condition` p
 Finally, we specify a list of actions that should be performed as consequences of the rule matching. We only need one action of type `incrementTweetNumberAction` that doesn't require any parameters.
 
 ### Action definition
-Let's now look at our custom [`incrementTweetNumberAction`](https://github.com/metacosm/unomi-tweet-button-plugin/blob/master/src/main/resources/META-INF/cxs/actions/incrementTweetNumberAction.json) action type definition:
+Let's now look at our custom [`incrementTweetNumberAction`](https://github.com/apache/incubator-unomi/blob/master/samples/tweet-button-plugin/src/main/resources/META-INF/cxs/actions/incrementTweetNumberAction.json) action type definition:
 
 ```json
 {
@@ -275,7 +332,7 @@ We specify the identifier for the action type, a list of tags if needed: here we
 Finally, we provide a mysterious `actionExecutor` identifier: `incrementTweetNumber`.
 
 ### Action executor definition
-The action executor references the actual implementation of the action as defined in our [blueprint definition](https://github.com/metacosm/unomi-tweet-button-plugin/blob/master/src/main/resources/OSGI-INF/blueprint/blueprint.xml):
+The action executor references the actual implementation of the action as defined in our [blueprint definition](https://github.com/apache/incubator-unomi/blob/master/samples/tweet-button-plugin/src/main/resources/OSGI-INF/blueprint/blueprint.xml):
 
 ```xml
 <blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -299,7 +356,8 @@ The action executor references the actual implementation of the action as define
 In standard Blueprint fashion, we specify that we will need the `profileService` defined by Unomi and then define a service of our own to be exported for Unomi to use. Our service specifies one property: `actionExecutorId` which matches the identifier we specified in our action definition. We then inject the profile service in our executor and we're done for the configuration side of things!
 
 ### Action executor implementation
-Our action executor definition specifies that the bean providing the service is implemented in the [`org.apache.unomi.examples.unomi_tweet_button_plugin.actions.IncrementTweetNumberAction`](https://github.com/metacosm/unomi-tweet-button-plugin/blob/master/src/main/java/org/apache/unomi/examples/unomi_tweet_button_plugin/actions/IncrementTweetNumberAction.java) class. This class implements the Unomi `ActionExecutor` interface which provides a single `int execute(Action action, Event event)` method: the executor gets the action instance to execute along with the event that triggered it, performs its work and returns an integer status corresponding to what happened as defined by public constants of the `EventService` interface of Unomi: `NO_CHANGE`, `SESSION_UPDATED` or `PROFILE_UPDATED`.
+Our action executor definition specifies that the bean providing the service is implemented in the [`org.apache.unomi.samples.tweet_button_plugin.actions
+.IncrementTweetNumberAction`](https://github.com/apache/incubator-unomi/blob/master/samples/tweet-button-plugin/src/main/java/org/apache/unomi/samples/tweet_button_plugin/actions/IncrementTweetNumberAction.java) class. This class implements the Unomi `ActionExecutor` interface which provides a single `int execute(Action action, Event event)` method: the executor gets the action instance to execute along with the event that triggered it, performs its work and returns an integer status corresponding to what happened as defined by public constants of the `EventService` interface of Unomi: `NO_CHANGE`, `SESSION_UPDATED` or `PROFILE_UPDATED`.
 
 Let's now look at the implementation of the method:
 

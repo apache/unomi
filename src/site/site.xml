@@ -99,7 +99,7 @@
         <menu name="Documentation" inherit="top">
             <item name="Home" href="./" />
             <item name="Building and deploying" href="building-and-deploying.html" />
-            <!--<item name="Getting started" href="getting-started.html" />-->
+            <item name="Getting started" href="getting-started.html"/>
             <item name="Configuration" href="configuration.html" />
             <item name="Cluster setup" href="clustering.html" />
             <item name="Concepts" href="concepts.html"/>

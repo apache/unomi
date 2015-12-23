@@ -38,7 +38,7 @@ Simply uncompress the `package/target/unomi-VERSION.tar.gz` (for Linux or Mac OS
  
 You can then start the server simply by using the command on UNIX/Linux/MacOS X : 
 
-    ./bin/karaf start    
+    ./bin/karaf start
     
 or on Windows shell : 
 
