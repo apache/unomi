@@ -21,8 +21,8 @@ echo Building...
 mvn clean install -P generate-package,integration-tests,performance-tests
 pushd package/target
 echo Uncompressing Unomi package...
-tar zxvf unomi-2.0.0-incubating-SNAPSHOT.tar.gz
-cd unomi-2.0.0-incubating-SNAPSHOT/bin
+tar zxvf unomi-1.0.0-incubating-SNAPSHOT.tar.gz
+cd unomi-1.0.0-incubating-SNAPSHOT/bin
 echo Starting Unomi...
 ./karaf debug
 popd

@@ -1,0 +1,20 @@
+{
+  "metadata": {
+    "id": "smp:incrementTweetNumber",
+    "name": "Increment tweet number",
+    "description": "Increments the number of times a user has tweeted after they click on a tweet button"
+  },
+  "raiseEventOnlyOnceForSession": false,
+  "condition": {
+    "type": "eventTypeCondition",
+    "parameterValues": {
+      "eventTypeId": "tweetEvent"
+    }
+  },
+  "actions": [
+    {
+      "type": "incrementTweetNumberAction",
+      "parameterValues": {}
+    }
+  ]
+}

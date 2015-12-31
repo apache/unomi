@@ -18,9 +18,8 @@ Building
 ========
 
 Simply type at the root of the project:
-```
-  mvn clean install -P generate-package
-```
+
+    mvn clean install -P generate-package
 
 The Maven build process will generate both a standalone package you can use directly to start the context server
 (see "Deploying the generated package") or a KAR file that you can then deploy using a manual deployment process into
@@ -34,8 +33,8 @@ Deploying the generated package
 -------------------------------
 
 The "package" sub-project generates a pre-configured Apache Karaf installation that is the simplest way to get started.
-Simply uncompress the package/target/unomi-VERSION.tar.gz (for Linux or Mac OS X) or
- package/target/unomi-VERSION.zip (for Windows) archive into the directory of your choice.
+Simply uncompress the `package/target/unomi-VERSION.tar.gz` (for Linux or Mac OS X) or
+ `package/target/unomi-VERSION.zip` (for Windows) archive into the directory of your choice.
  
 You can then start the server simply by using the command on UNIX/Linux/MacOS X : 
 
@@ -53,8 +52,8 @@ This is only needed if you didn't use the generated package. Also, this is the p
 environment if you intend to re-deploy the context server KAR iteratively.
 
 Additional requirements:
-* Apache Karaf 3.0.2+, http://karaf.apache.org
-* Local copy of the Elasticsearch ZIP package, available here : http://www.elasticsearch.org
+ - Apache Karaf 3.0.2+, http://karaf.apache.org
+ - Local copy of the Elasticsearch ZIP package, available here : http://www.elasticsearch.org
 
 1. Before deploying, make sure that you have Apache Karaf properly installed. You will also have to increase the
 default maximum memory size and perm gen size by adjusting the following environment values in the bin/setenv(.bat)
@@ -73,7 +72,7 @@ go to the Elasticsearch website (http://www.elasticsearch.org)  and download the
 on your disk and copy all the files from the lib/sigar directory into Karaf's lib/sigar directory 
 (must be created first) EXCEPT THE SIGAR.JAR file.
 
-3. Install the WAR support, CXF and CDI (OpenWebBeans) into Karaf by doing the following in the Karaf command line:
+3. Install the WAR support, CXF into Karaf by doing the following in the Karaf command line:
 
     ```
        feature:install -v war
