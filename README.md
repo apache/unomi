@@ -15,38 +15,22 @@
   ~ limitations under the License.
   -->
 
-Context Server
-==============
+Apache Unomi
+============
 
-A public project that implements the Context Server specification
+An Apache project that implements the Context Server specification
 
 License
 -------
 The source code is available under the Apache License V2
 
-Requirements
-------------
-* JDK 7 or later, http://www.oracle.com/technetwork/java/javase/downloads/index.html
-* Maven 3.0+, http://maven.apache.org
+Building from source code
+-------------------------
 
-Building
---------
+See the instructions in the BUILDING file provided in the source code package
 
-Simply type at the root of the project:
-```
-  mvn clean install -P generate-package
-```
-
-The Maven build process will generate both a standalone package you can use directly to start the context server
-(see "Deploying the generated package") or a KAR file that you can then deploy using a manual deployment process into
-an already installed Apache Karaf server (see "Deploying into an existing Karaf server")
-
-If you want to build and run the integration tests, you should instead use : 
-
-    mvn -P integration-tests clean install
-
-Deploying the generated package
--------------------------------
+Deploying the generated binary package
+--------------------------------------
 
 The "package" sub-project generates a pre-configured Apache Karaf installation that is the simplest way to get started.
 Simply uncompress the package/target/unomi-VERSION.tar.gz (for Linux or Mac OS X) or

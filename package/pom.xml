@@ -96,7 +96,6 @@
                     <include>README*</include>
                     <include>RELEASE*</include>
                     <include>LICENSE</include>
-                    <include>NOTICE</include>
                 </includes>
             </resource>
             <resource>

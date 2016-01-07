@@ -230,6 +230,9 @@
     <profiles>
         <profile>
             <id>integration-tests</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <modules>
                 <module>itests</module>
             </modules>
@@ -237,6 +240,9 @@
 
         <profile>
             <id>performance-tests</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <modules>
                 <module>performance-tests</module>
             </modules>
@@ -244,6 +250,9 @@
 
         <profile>
             <id>checkstyle</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
             <build>
                 <plugins>
                     <plugin>
@@ -334,6 +343,9 @@
         </profile>
         <profile>
             <id>rat</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <build>
                 <plugins>
                     <plugin>
@@ -510,6 +522,11 @@
                         <goals>deploy</goals>
                         <arguments>-Papache-release,integration-tests</arguments>
                     </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>build-helper-maven-plugin</artifactId>
+                    <version>1.10</version>
                 </plugin>
             </plugins>
         </pluginManagement>
