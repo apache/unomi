@@ -432,7 +432,7 @@ Checking the license status
 
 We have a new profile to check the license headers, you can perform a full project check with the following command:
  
-    mvn clean install -P generate-package,integration-tests,performance-tests,rat
+    mvn clean install -P integration-tests,performance-tests,rat
     
 Generating the Maven documentation site
 ---------------------------------------

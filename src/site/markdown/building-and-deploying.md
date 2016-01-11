@@ -19,7 +19,7 @@ Building
 
 Simply type at the root of the project:
 
-    mvn clean install -P generate-package
+    mvn clean install
 
 The Maven build process will generate both a standalone package you can use directly to start the context server
 (see "Deploying the generated package") or a KAR file that you can then deploy using a manual deployment process into
