@@ -29,6 +29,7 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -37,6 +38,8 @@ import java.util.List;
 public class IncrementTweetNumberAction implements ActionExecutor {
     private static final String TWEET_NB_PROPERTY = "tweetNb";
     private static final String TWEETED_FROM_PROPERTY = "tweetedFrom";
+    private static final String TARGET = "profiles";
+
     private ProfileService service;
 
     public int execute(Action action, Event event) {
@@ -48,11 +51,15 @@ public class IncrementTweetNumberAction implements ActionExecutor {
             // create tweet number property type
             PropertyType propertyType = new PropertyType(new Metadata(event.getScope(), TWEET_NB_PROPERTY, TWEET_NB_PROPERTY, "Number of times a user tweeted"));
             propertyType.setValueTypeId("integer");
+            propertyType.setTagIds(Collections.singleton("social"));
+            propertyType.setTarget(TARGET);
             service.createPropertyType(propertyType);
 
             // create tweeted from property type
             propertyType = new PropertyType(new Metadata(event.getScope(), TWEETED_FROM_PROPERTY, TWEETED_FROM_PROPERTY, "The list of pages a user tweeted from"));
             propertyType.setValueTypeId("string");
+            propertyType.setTagIds(Collections.singleton("social"));
+            propertyType.setTarget(TARGET);
             propertyType.setMultivalued(true);
             service.createPropertyType(propertyType);
 
