@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
-        <version>1.0.0-incubating</version>
+        <version>1.0.1-incubating-SNAPSHOT</version>
     </parent>
 
     <artifactId>unomi-wab</artifactId>
@@ -44,13 +44,13 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
-            <version>1.0.0-incubating</version>
+            <version>1.0.1-incubating-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-spi</artifactId>
-            <version>1.0.0-incubating</version>
+            <version>1.0.1-incubating-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
 
