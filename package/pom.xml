@@ -125,8 +125,27 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>2.9</version>
+                <version>2.10</version>
                 <executions>
+                    <execution>
+                        <id>unpack-sigar</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.elasticsearch</groupId>
+                                    <artifactId>elasticsearch</artifactId>
+                                    <version>${elasticsearch.version}</version>
+                                    <type>tar.gz</type>
+                                    <includes>**/lib/sigar/**</includes>
+                                    <outputDirectory>${project.build.directory}/assembly</outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>copy</id>
                         <phase>package</phase>
@@ -185,6 +204,27 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-karaf</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <move todir="${project.build.directory}/assembly/lib/sigar">
+                                    <fileset dir="${project.build.directory}/assembly/elasticsearch-${elasticsearch.version}/lib/sigar" />
+                                </move>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.karaf.tooling</groupId>
                 <artifactId>karaf-maven-plugin</artifactId>

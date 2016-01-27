@@ -30,7 +30,6 @@
     <packaging>pom</packaging>
 
     <properties>
-        <elasticsearch.version>1.6.2</elasticsearch.version>
     </properties>
 
     <modules>

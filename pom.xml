@@ -67,6 +67,7 @@
         <version.jackson.jaxb>2.4.0</version.jackson.jaxb> <!-- version used by CXF -->
         <version.karaf>3.0.2</version.karaf>
         <version.pax.exam>4.4.0</version.pax.exam>
+        <elasticsearch.version>1.6.2</elasticsearch.version>
     </properties>
 
     <mailingLists>
