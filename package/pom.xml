@@ -95,7 +95,8 @@
                 <includes>
                     <include>README*</include>
                     <include>RELEASE*</include>
-                    <include>LICENSE</include>
+                    <include>LICENSE*</include>
+                    <include>DISCLAIMER*</include>
                 </includes>
             </resource>
             <resource>
