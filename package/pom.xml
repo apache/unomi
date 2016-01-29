@@ -95,7 +95,6 @@
                 <includes>
                     <include>README*</include>
                     <include>RELEASE*</include>
-                    <include>LICENSE*</include>
                     <include>DISCLAIMER*</include>
                 </includes>
             </resource>
@@ -220,6 +219,7 @@
                                 <move todir="${project.build.directory}/assembly/lib/sigar">
                                     <fileset dir="${project.build.directory}/assembly/elasticsearch-${elasticsearch.version}/lib/sigar" />
                                 </move>
+                                <delete dir="${project.build.directory}/assembly/elasticsearch-${elasticsearch.version}" />
                             </target>
                         </configuration>
                     </execution>

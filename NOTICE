@@ -1,5 +1,5 @@
 Apache Unomi (incubating)
-Copyright 2015 The Apache Software Foundation
+Copyright 2016 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
@@ -11,8 +11,3 @@ This product includes software developed by
 Edin Dazdarevic (edin.dazdarevic@gmail.com).
 Copyright (c) 2013 Edin Dazdarevic (edin.dazdarevic@gmail.com)
 Licensed under the MIT License.
-
-This product includes the software Hyperic Sigar
-Licensed under the Apache Software License 2.0.
-Copyright (c) 2004-2011 VMware, Inc.
-
