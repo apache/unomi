@@ -192,16 +192,14 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
         while (predefinedRuleEntries.hasMoreElements()) {
             URL predefinedSegmentURL = predefinedRuleEntries.nextElement();
-            logger.debug("Found predefined segment at " + predefinedSegmentURL + ", loading... ");
+            logger.debug("Found predefined rule at " + predefinedSegmentURL + ", loading... ");
 
             try {
                 Rule rule = CustomObjectMapper.getObjectMapper().readValue(predefinedSegmentURL, Rule.class);
                 if (rule.getMetadata().getScope() == null) {
                     rule.getMetadata().setScope("systemscope");
                 }
-                if (getRule(rule.getMetadata().getId()) == null) {
-                    setRule(rule);
-                }
+                setRule(rule);
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
             }
