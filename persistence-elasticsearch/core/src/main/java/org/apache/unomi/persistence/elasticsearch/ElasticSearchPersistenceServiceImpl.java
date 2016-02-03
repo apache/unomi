@@ -342,7 +342,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     @Override
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {
-            case BundleEvent.STARTED:
+            case BundleEvent.STARTING:
                 if (event.getBundle() != null && event.getBundle().getRegisteredServices() != null) {
                     for (ServiceReference<?> reference : event.getBundle().getRegisteredServices()) {
                         Object service = bundleContext.getService(reference);
@@ -414,13 +414,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     if (itemsMonthlyIndexed.contains(name)) {
                         createMapping(name, content.toString(), indexName + "-*");
                     } else if (indexNames.containsKey(name)) {
-                        createMapping(name, content.toString(), indexNames.get(name));
+                        if (client.admin().indices().prepareExists(indexNames.get(name)).execute().actionGet().isExists()) {
+                            createMapping(name, content.toString(), indexNames.get(name));
+                        }
                     } else {
                         createMapping(name, content.toString(), indexName);
                     }
                 }
             } catch (Exception e) {
-                logger.error("Error while loading segment definition " + predefinedMappingURL, e);
+                logger.error("Error while loading mapping definition " + predefinedMappingURL, e);
             }
         }
     }

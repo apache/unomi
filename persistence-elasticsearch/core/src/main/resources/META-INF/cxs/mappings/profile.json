@@ -1,18 +1,40 @@
 {
-    "profile": {
-        "_all" : {"enabled" : true},
-        "dynamic_templates": [
-            {
-                "all": {
-                    "match": "*",
-                    "match_mapping_type": "string",
-                    "mapping": {
-                        "type": "string",
-                        "analyzer": "folding",
-                        "include_in_all" : true
-                    }
-                }
-            }
-        ]
+  "profile": {
+    "_all": {
+      "enabled": true
+    },
+    "dynamic_templates": [
+      {
+        "all": {
+          "match": "*",
+          "match_mapping_type": "string",
+          "mapping": {
+            "type": "string",
+            "analyzer": "folding",
+            "include_in_all": true
+          }
+        }
+      }
+    ],
+    "properties": {
+      "itemId": {
+        "type": "string",
+        "analyzer": "folding",
+        "include_in_all": true
+      },
+      "itemType": {
+        "type": "string",
+        "analyzer": "folding",
+        "include_in_all": true
+      },
+      "properties": {
+        "properties": {
+          "firstVisit": {
+            "type": "date",
+            "format": "dateOptionalTime"
+          }
+        }
+      }
     }
+  }
 }

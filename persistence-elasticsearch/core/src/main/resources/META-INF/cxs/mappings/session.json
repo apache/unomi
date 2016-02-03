@@ -1,31 +1,58 @@
 {
-    "session": {
-        "dynamic_templates": [
-            {
-                "all": {
-                    "match": "*",
-                    "match_mapping_type": "string",
-                    "mapping": {
-                        "type": "string",
-                        "analyzer": "folding"
-                    }
-                }
-            }
-        ],
-        "properties": {
-            "timeStamp": {
-                "type": "date"
-            },
-            "lastEventDate": {
-                "type": "date"
-            },
-            "properties": {
-                "properties": {
-                    "location": {
-                        "type": "geo_point"
-                    }
-                }
-            }
+  "session": {
+    "dynamic_templates": [
+      {
+        "all": {
+          "match": "*",
+          "match_mapping_type": "string",
+          "mapping": {
+            "type": "string",
+            "analyzer": "folding"
+          }
         }
+      }
+    ],
+    "properties": {
+      "duration": {
+        "type": "long"
+      },
+      "itemId": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "itemType": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "lastEventDate": {
+        "type": "date",
+        "format": "dateOptionalTime"
+      },
+      "profileId": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "properties": {
+        "properties": {
+          "location": {
+            "type": "geo_point"
+          }
+        }
+      },
+      "scope": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "size": {
+        "type": "long"
+      },
+      "systemProperties": {
+        "type": "object"
+      },
+      "timeStamp": {
+        "type": "date",
+        "format": "dateOptionalTime"
+      }
     }
+  }
 }
