@@ -38,6 +38,7 @@
         <property name="profileService" ref="profileService"/>
         <property name="eventService" ref="eventService"/>
         <property name="rulesService" ref="rulesService"/>
+        <property name="privacyService" ref="privacyService" />
         <property name="profileIdCookieDomain" value="${web.contextserver.domain}" />
     </bean>
 

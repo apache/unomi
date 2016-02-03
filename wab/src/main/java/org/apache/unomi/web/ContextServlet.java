@@ -23,6 +23,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
@@ -53,6 +54,7 @@ public class ContextServlet extends HttpServlet {
     private ProfileService profileService;
     private EventService eventService;
     private RulesService rulesService;
+    private PrivacyService privacyService;
 
     private String profileIdCookieName = "context-profile-id";
     private String profileIdCookieDomain;
@@ -253,17 +255,25 @@ public class ContextServlet extends HttpServlet {
 
     private int handleRequest(ContextRequest contextRequest, Profile profile, Session session, ContextResponse data, ServletRequest request, ServletResponse response, Date timestamp)
             throws IOException {
+        List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile.getItemId());
+
+        String thirdPartyId = eventService.authenticateThirdPartyServer(((HttpServletRequest)request).getHeader("X-Unomi-Peer"), request.getRemoteAddr());
+
         int changes = EventService.NO_CHANGE;
         // execute provided events if any
         if(contextRequest.getEvents() != null && !(profile instanceof Persona)) {
             for (Event event : contextRequest.getEvents()){
                 if(event.getEventType() != null) {
-                    Event eventToSend;
-                    if(event.getProperties() != null){
-                        eventToSend = new Event(event.getEventType(), session, profile, contextRequest.getSource().getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp);
-                    } else {
-                        eventToSend = new Event(event.getEventType(), session, profile, contextRequest.getSource().getScope(), event.getSource(), event.getTarget(), timestamp);
+                    Event eventToSend = new Event(event.getEventType(), session, profile, contextRequest.getSource().getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp);
+                    if (!eventService.isEventAllowed(event, thirdPartyId)) {
+                        logger.debug("Event is not allowed : {}", event.getEventType());
+                        continue;
                     }
+                    if (filteredEventTypes != null && filteredEventTypes.contains(event.getEventType())) {
+                        logger.debug("Profile is filtering event type {}", event.getEventType());
+                        continue;
+                    }
+
                     event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                     logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
@@ -364,5 +374,9 @@ public class ContextServlet extends HttpServlet {
 
     public void setProfileIdCookieDomain(String profileIdCookieDomain) {
         this.profileIdCookieDomain = profileIdCookieDomain;
+    }
+
+    public void setPrivacyService(PrivacyService privacyService) {
+        this.privacyService = privacyService;
     }
 }
