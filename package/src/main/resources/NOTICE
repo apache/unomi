@@ -12,33 +12,402 @@ Edin Dazdarevic (edin.dazdarevic@gmail.com).
 Copyright (c) 2013 Edin Dazdarevic (edin.dazdarevic@gmail.com)
 Licensed under the MIT License.
 
-Notice for karaf-client.jar
-Apache Karaf :: Client
+
+Notice for org.apache.ws.xmlschema
+---------------------------------------------------------------------------------------------------
+Apache WebServices - XmlSchema
+Copyright 2004-2014 The Apache Software Foundation
+
+
+
+Portions Copyright 2006 International Business Machines Corp.
+
+Portions Copyright (C) World Wide Web Consortium 2006, 2007 and licensed under the 
+three-part BSD license.
+
+
+
+Notice for org.apache.karaf.management
+---------------------------------------------------------------------------------------------------
+Apache Karaf :: Management
 Copyright 2007-2014 The Apache Software Foundation
 
 
-Notice for org.apache.karaf.exception-3.0.2.jar
-Apache Karaf :: Exception
+
+Apache Karaf :: Management :: Boot
 Copyright 2007-2014 The Apache Software Foundation
 
 
-Notice for org.apache.servicemix.specs.activation-api-1.1-2.4.0.jar
+
+Notice for org.apache.openwebbeans
+---------------------------------------------------------------------------------------------------
+SPI definition
+Copyright 2008-2014 The Apache Software Foundation
+
+
+
+OSGi plugin
+Copyright 2008-2014 The Apache Software Foundation
+
+
+
+EL 2.2 plugin
+Copyright 2008-2014 The Apache Software Foundation
+
+
+
+OpenWebBeans Core
+Copyright 2008-2014 The Apache Software Foundation
+
+
+
+Web plugin
+Copyright 2008-2014 The Apache Software Foundation
+
+
+
+Notice for org.apache.sshd
+---------------------------------------------------------------------------------------------------
+Apache MINA SSHD
+Copyright 2008-2014 The Apache Software Foundation
+
+
+
+Notice for org.apache.servicemix.bundles
+---------------------------------------------------------------------------------------------------
+Apache ServiceMix :: Bundles :: spring-context
+Copyright 2005-2014 The Apache Software Foundation
+
+
+
 Apache ServiceMix
+Copyright 2005-2012 The Apache Software Foundation
+
+
+
+Apache ServiceMix :: Bundles :: spring-context-support
+Copyright 2005-2014 The Apache Software Foundation
+
+
+
+Apache ServiceMix :: Bundles :: wsdl4j
+Copyright 2005-2013 The Apache Software Foundation
+
+
+
+Streaming API for XML (STAX API 1.0)
+Copyright 2003-2007 The Apache Software Foundation
+
+
+
+Apache ServiceMix :: Bundles :: spring-aop
+Copyright 2005-2014 The Apache Software Foundation
+
+
+
+Apache ServiceMix
+Copyright 2005-2011 The Apache Software Foundation
+
+
+
+Apache XML Commons Resolver
+Copyright 2006 The Apache Software Foundation.
+
+
+Portions of this code are derived from classes placed in the
+public domain by Arbortext on 10 Apr 2000. See:
+http://www.arbortext.com/customer_support/updates_and_technical_notes/catalogs/docs/README.htm
+
+
+
+Apache ServiceMix :: Bundles :: spring-jms
+Copyright 2005-2014 The Apache Software Foundation
+
+
+
+Apache ServiceMix :: Bundles :: xalan
+Copyright 2005-2013 The Apache Software Foundation
+
+
+
+Apache ServiceMix :: Bundles :: xmlbeans
+Copyright 2005-2013 The Apache Software Foundation
+
+
+
+Apache ServiceMix :: Bundles :: saaj-impl
+Copyright 2005-2013 The Apache Software Foundation
+
+
+
+Apache ServiceMix :: Bundles :: FastInfoset
+Copyright 2005-2013 The Apache Software Foundation
+
+
+
+Apache ServiceMix :: Bundles :: joda-time
+Copyright 2005-2014 The Apache Software Foundation
+
+
+
+Apache ServiceMix :: Bundles :: spring-core
+Copyright 2005-2014 The Apache Software Foundation
+
+
+
+Apache ServiceMix :: Bundles :: xercesImpl
+Copyright 2005-2013 The Apache Software Foundation
+
+
+
+Apache ServiceMix :: Bundles :: jakarta-regexp
+Copyright 2005-2013 The Apache Software Foundation
+
+
+
+Apache ServiceMix :: Bundles :: spring-expression
+Copyright 2005-2014 The Apache Software Foundation
+
+
+
+Apache ServiceMix :: Bundles :: cglib
+Copyright 2005-2013 The Apache Software Foundation
+
+
+
+Apache ServiceMix :: Bundles :: spring-beans
+Copyright 2005-2014 The Apache Software Foundation
+
+
+
+Apache ServiceMix :: Bundles :: spring-tx
+Copyright 2005-2014 The Apache Software Foundation
+
+
+
+Notice for commons-lang
+---------------------------------------------------------------------------------------------------
+Apache Commons Lang
+Copyright 2001-2011 The Apache Software Foundation
+
+
+
+Notice for org.apache.karaf.features
+---------------------------------------------------------------------------------------------------
+Apache Karaf :: Features :: Command
 Copyright 2007-2014 The Apache Software Foundation
 
 
-Notice for org.apache.servicemix.specs.jaxp-api-1.4-2.4.0.jar
-   =========================================================================
-   ==  NOTICE file corresponding to section 4(d) of the Apache License,   ==
-   ==  Version 2.0, in this case for the Apache xml-commons xml-apis      ==
-   ==  distribution.                                                      ==
-   =========================================================================
+
+Apache Karaf :: Features :: Core
+Copyright 2007-2014 The Apache Software Foundation
+
+
+
+Notice for org.apache.mina
+---------------------------------------------------------------------------------------------------
+Apache MINA Core
+Copyright 2004-2012 Apache MINA Project
+
+
+
+Notice for org.apache.karaf.kar
+---------------------------------------------------------------------------------------------------
+Apache Karaf :: KAR :: Command
+Copyright 2007-2014 The Apache Software Foundation
+
+
+
+Apache Karaf :: KAR :: Core
+Copyright 2007-2014 The Apache Software Foundation
+
+
+
+Notice for org.apache.karaf.jaas
+---------------------------------------------------------------------------------------------------
+Apache Karaf :: JAAS :: Command
+Copyright 2007-2014 The Apache Software Foundation
+
+
+
+Apache Karaf :: JAAS :: Boot
+Copyright 2007-2014 The Apache Software Foundation
+
+
+
+Apache Karaf :: JAAS :: Modules
+Copyright 2007-2014 The Apache Software Foundation
+
+
+
+Apache Karaf :: JAAS :: Config
+Copyright 2007-2014 The Apache Software Foundation
+
+
+
+Notice for org.apache.karaf.bundle
+---------------------------------------------------------------------------------------------------
+Apache Karaf :: Bundle :: Core
+Copyright 2007-2014 The Apache Software Foundation
+
+
+
+Apache Karaf :: Bundle :: Commands
+Copyright 2007-2014 The Apache Software Foundation
+
+
+
+Apache Karaf :: Bundle :: SpringStateService
+Copyright 2007-2014 The Apache Software Foundation
+
+
+
+Notice for org.apache.karaf.deployer
+---------------------------------------------------------------------------------------------------
+Apache Karaf :: Deployer :: Features
+Copyright 2007-2014 The Apache Software Foundation
+
+
+
+Apache Karaf :: Deployer :: Spring
+Copyright 2007-2014 The Apache Software Foundation
+
+
+
+Apache Karaf :: Deployer :: Karaf Archive (.kar)
+Copyright 2007-2014 The Apache Software Foundation
+
+
+
+Apache Karaf :: Deployer :: Wrap Non OSGi Jar
+Copyright 2007-2014 The Apache Software Foundation
+
+
+
+Apache Karaf :: Deployer :: Blueprint
+Copyright 2007-2014 The Apache Software Foundation
+
+
+
+Notice for joda-time
+---------------------------------------------------------------------------------------------------
+This product includes software developed by
+Joda.org (http://www.joda.org/).
+
+
+
+Notice for org.opensaml
+---------------------------------------------------------------------------------------------------
+Apache ServiceMix :: Bundles :: opensaml
+Copyright 2005-2014 The Apache Software Foundation
+
+
+
+Notice for org.apache.aries
+---------------------------------------------------------------------------------------------------
+Apache Aries
+
+This product includes software developed at
+the OSGi Alliance (http://www.osgi.org/).
+
+
+
+Apache Aries Blueprint CM
+Copyright 2009-2014 The Apache Software Foundation
+
+
+
+Apache Aries Blueprint Core Compatiblity Fragment Bundle
+Copyright 2009-2012 The Apache Software Foundation
+
+
+
+Apache Aries Blueprint Core
+Copyright 2009-2014 The Apache Software Foundation
+
+
+
+Apache Aries Blueprint API
+Copyright 2009-2014 The Apache Software Foundation
+
+
+
+Apache Aries Util
+Copyright 2009-2013 The Apache Software Foundation
+
+
+
+Apache Aries Quiesce API
+Copyright 2009-2012 The Apache Software Foundation
+
+
+
+Apache Aries Proxy API
+Copyright 2009-2014 The Apache Software Foundation
+
+
+
+Apache Aries Proxy Service
+Copyright 2009-2014 The Apache Software Foundation
+
+
+
+Apache Aries JMX API
+Copyright 2009-2014 The Apache Software Foundation
+
+
+
+Apache Aries JMX Blueprint API
+Copyright 2009-2013 The Apache Software Foundation
+
+
+
+Apache Aries JMX Blueprint Core
+Copyright 2009-2013 The Apache Software Foundation
+
+
+
+Apache Aries JMX Whiteboard
+Copyright 2009-2012 The Apache Software Foundation
+
+
+
+Apache Aries JMX Core
+Copyright 2009-2014 The Apache Software Foundation
+
+
+
+Notice for org.springframework.osgi
+---------------------------------------------------------------------------------------------------
+
+   The end-user documentation included with a redistribution, if any,
+   must include the following acknowledgement:
+
+     "This product includes software developed by the Spring Framework
+      Project (http://www.springsource.org)."
+
+   Alternatively, this acknowledgement may appear in the software itself,
+   if and wherever such third-party acknowledgements normally appear.
+
+   The names "Spring" and "Spring Framework" must not be used to
+   endorse or promote products derived from this software without
+   prior written permission. For written permission, please contact
+   enquiries@springsource.com.
+
+
+
+Notice for org.apache.santuario
+---------------------------------------------------------------------------------------------------
+Apache XML Security for Java
+Copyright 2000-2013 The Apache Software Foundation
+
+
+
+Notice for org.apache.servicemix.specs
+---------------------------------------------------------------------------------------------------
 
    Apache XML Commons XML APIs
    Copyright 1999-2009 The Apache Software Foundation.
-
-   This product includes software developed at
-   The Apache Software Foundation (http://www.apache.org/).
 
    Portions of this software were originally based on the following:
      - software copyright (c) 1999, IBM Corporation., http://www.ibm.com.
@@ -46,203 +415,75 @@ Notice for org.apache.servicemix.specs.jaxp-api-1.4-2.4.0.jar
      - software copyright (c) 2000 World Wide Web Consortium, http://www.w3.org
 
 
-Notice for xercesImpl-2.11.0.jar
-   =========================================================================
-   ==  NOTICE file corresponding to section 4(d) of the Apache License,   ==
-   ==  Version 2.0, in this case for the Apache Xerces Java distribution. ==
-   =========================================================================
 
-   Apache Xerces Java
-   Copyright 1999-2010 The Apache Software Foundation
+Notice for org.ops4j.pax.web
+---------------------------------------------------------------------------------------------------
+Pax Web
+Copyright 2007-2009 Open Participation for Java (www.ops4j.org)
 
-   This product includes software developed at
-   The Apache Software Foundation (http://www.apache.org/).
-
-   Portions of this software were originally based on the following:
-     - software copyright (c) 1999, IBM Corporation., http://www.ibm.com.
-     - software copyright (c) 1999, Sun Microsystems., http://www.sun.com.
-     - voluntary contributions made by Paul Eng on behalf of the 
-       Apache Software Foundation that were originally developed at iClick, Inc.,
-       software copyright (c) 1999.
-
-
-Notice for karaf-jaas-boot.jar
-Apache Karaf :: JAAS :: Boot
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for karaf-jmx-boot.jar
-Apache Karaf :: Management :: Boot
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for karaf.jar
-Apache Karaf :: Main
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for jackson-core-2.4.0.jar
-# Jackson JSON processor
-
-Jackson is a high-performance, Free/Open Source JSON processing library.
-It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
-been in development since 2007.
-It is currently developed by a community of developers, as well as supported
-commercially by FasterXML.com.
-
-## Licensing
-
-Jackson core and extension components may licensed under different licenses.
-To find the details that apply to this artifact see the accompanying LICENSE file.
-For more information, including possible other licensing options, contact
-FasterXML.com (http://fasterxml.com).
-
-## Credits
-
-A list of contributors may be found from CREDITS file, which is included
-in some artifacts (usually source distributions); but is always available
-from the source code management (SCM) system project uses.
-
-
-Notice for jackson-databind-2.4.0.jar
-# Jackson JSON processor
-
-Jackson is a high-performance, Free/Open Source JSON processing library.
-It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
-been in development since 2007.
-It is currently developed by a community of developers, as well as supported
-commercially by FasterXML.com.
-
-## Licensing
-
-Jackson core and extension components may be licensed under different licenses.
-To find the details that apply to this artifact see the accompanying LICENSE file.
-For more information, including possible other licensing options, contact
-FasterXML.com (http://fasterxml.com).
-
-## Credits
-
-A list of contributors may be found from CREDITS file, which is included
-in some artifacts (usually source distributions); but is always available
-from the source code management (SCM) system project uses.
-
-
-Notice for commons-io-2.4.jar
-Apache Commons IO
-Copyright 2002-2012 The Apache Software Foundation
-
-
-Notice for commons-lang-2.6.jar
-Apache Commons Lang
-Copyright 2001-2011 The Apache Software Foundation
-
-
-Notice for joda-time-2.2.jar
-=============================================================================
-= NOTICE file corresponding to section 4d of the Apache License Version 2.0 =
-=============================================================================
-This product includes software developed by
-Joda.org (http://www.joda.org/).
-
-
-Notice for org.apache.aries.blueprint.api-1.0.1.jar
-Apache Aries Blueprint API
-Copyright 2009-2014 The Apache Software Foundation
+Licensed under the Apache License 2.0.
 
 This product includes software developed at
-the OSGi Alliance (http://www.osgi.org/).
-
-
-Notice for org.apache.aries.blueprint.cm-1.0.5.jar
-Apache Aries Blueprint CM
-Copyright 2009-2014 The Apache Software Foundation
-
+The OSGi Alliance (http://www.osgi.org).
+Copyright (c) OSGi Alliance (2000, 2007).
+Licensed under the Apache License 2.0.
 
 This product includes software developed at
-the OSGi Alliance (http://www.osgi.org/).
+Mort Bay Consulting Pty. Ltd. (http://www.mortbay.org/jetty).
+Copyright 2000-2009 Mort Bay Consulting Pty. Ltd.
+Licensed under the Apache License 2.0.
 
 
-Notice for org.apache.aries.blueprint.core-1.4.1.jar
-Apache Aries Blueprint Core
-Copyright 2009-2014 The Apache Software Foundation
 
-
-This product includes software developed at
-the OSGi Alliance (http://www.osgi.org/).
-
-
-Notice for org.apache.aries.blueprint.core.compatibility-1.0.0.jar
-Apache Aries Blueprint Core Compatiblity Fragment Bundle
-Copyright 2009-2012 The Apache Software Foundation
-
-
-Notice for org.apache.aries.jmx.api-1.1.1.jar
-Apache Aries JMX API
-Copyright 2009-2014 The Apache Software Foundation
-
+Notice for org.apache.felix
+---------------------------------------------------------------------------------------------------
+Apache Felix
 
 This product includes software developed at
-the OSGi Alliance (http://www.osgi.org/).
+The OSGi Alliance (http://www.osgi.org/).
+Copyright (c) OSGi Alliance (2000, 2009).
+Licensed under the Apache License 2.0. 
 
 
-Notice for org.apache.aries.jmx.blueprint.api-1.1.0.jar
-Apache Aries JMX Blueprint API
-Copyright 2009-2013 The Apache Software Foundation
+Apache Felix Declarative Services
+Copyright 2006-2014 The Apache Software Foundation
 
 
-Notice for org.apache.aries.jmx.blueprint.core-1.1.0.jar
-Apache Aries JMX Blueprint Core
-Copyright 2009-2013 The Apache Software Foundation
+
+Apache Felix File Install
+Copyright 2006-2014 The Apache Software Foundation
 
 
-Notice for org.apache.aries.jmx.core-1.1.2.jar
-Apache Aries JMX Core
-Copyright 2009-2014 The Apache Software Foundation
+
+Apache Felix Metatype Service
+Copyright 2006-2014 The Apache Software Foundation
 
 
-This product includes software developed at
-the OSGi Alliance (http://www.osgi.org/).
+
+Apache Felix Configuration Admin Service
+Copyright 2006-2013 The Apache Software Foundation
 
 
-Notice for org.apache.aries.jmx.whiteboard-1.0.0.jar
-Apache Aries JMX Whiteboard
-Copyright 2009-2012 The Apache Software Foundation
+
+Apache Felix Framework
+Copyright 2006-2013 The Apache Software Foundation
 
 
-Notice for org.apache.aries.util-1.1.0.jar
-Apache Aries Util
-Copyright 2009-2013 The Apache Software Foundation
 
-
-Notice for org.apache.aries.proxy.api-1.0.1.jar
-Apache Aries Proxy API
-Copyright 2009-2014 The Apache Software Foundation
-
-
-Notice for org.apache.aries.proxy.impl-1.0.3.jar
-Apache Aries Proxy Service
-Copyright 2009-2014 The Apache Software Foundation
-
-
-Notice for org.apache.aries.quiesce.api-1.0.0.jar
-Apache Aries Quiesce API
-Copyright 2009-2012 The Apache Software Foundation
-
-
-Notice for cxf-api-2.7.11.jar
+Notice for org.apache.cxf
+---------------------------------------------------------------------------------------------------
 Apache CXF
 Copyright 2006-2014 The Apache Software Foundation
 
 
-Notice for cxf-rt-databinding-aegis-2.7.11.jar
-Apache CXF
-Copyright 2006-2014 The Apache Software Foundation
+
+Portions of the file cxf-utils.js derives from code marked:
+This code was written by Tyler Akins and has been placed in the
+public domain.  It would be nice if you left this header intact.
+Base64 code from Tyler Akins -- http://rumkin.com
 
 
-The product contains code (StaxBuilder.java) that is
-  Copyright (C) 2000-2004 Jason Hunter & Brett McLaughlin.
-  All rights reserved.
-  See the NOTICE.jdom file for additional information
+
  Copyright (C) 2000-2004 Jason Hunter & Brett McLaughlin.
  All rights reserved.
 
@@ -294,139 +535,163 @@ The product contains code (StaxBuilder.java) that is
  on the JDOM Project, please see <http://www.jdom.org/>.
 
 
-Notice for cxf-rt-frontend-jaxws-2.7.11.jar
-Apache CXF
-Copyright 2006-2014 The Apache Software Foundation
-
-
 Java classes (source and binary) under org.apache.cxf.jaxws.javaee
 are generated from schema available here:
 (http://java.sun.com/xml/ns/javaee/javaee_5.xsd)
 
 
-Notice for cxf-rt-javascript-2.7.11.jar
-Apache CXF
-Copyright 2006-2014 The Apache Software Foundation
-
-
-Portions of the file cxf-utils.js derives from code marked:
-This code was written by Tyler Akins and has been placed in the
-public domain.  It would be nice if you left this header intact.
-Base64 code from Tyler Akins -- http://rumkin.com
-
-
-Notice for cxf-rt-ws-policy-2.7.11.jar
-Apache CXF
-Copyright 2006-2014 The Apache Software Foundation
-
-
 This product includes software Copyright University of Southampton IT Innovation Centre, 2009 
-(http://www.it-innovation.soton.ac.uk). 
+(http://www.it-innovation.soton.ac.uk).
 
 
-
-Notice for cxf-xjc-runtime-2.6.2.jar
 Apache CXF XJC Runtime
 Copyright 2006-2013 The Apache Software Foundation
 
 
-Notice for org.apache.felix.configadmin-1.8.0.jar
-Apache Felix Configuration Admin Service
-Copyright 2006-2013 The Apache Software Foundation
+
+Notice for org.apache.karaf
+---------------------------------------------------------------------------------------------------
+Apache Karaf and the following sub-projects:
+Copyright 2007-2014 The Apache Software Foundation
+
+Apache Karaf :: Client
+Apache Karaf :: Exception
+Apache Karaf :: Main
+Apache Karaf :: Package :: Commands
+Apache Karaf :: Package :: Core
+Apache Karaf :: ConfigAdmin :: Commands
+Apache Karaf :: ConfigAdmin :: Core
+Apache Karaf :: Log :: Command
+Apache Karaf :: Log :: Core
+Apache Karaf :: SCR :: Management MBeans
+Apache Karaf :: SCR :: Shell Commands
+Apache Karaf :: Web :: Commands
+Apache Karaf :: Web :: Core
+Apache Karaf :: System :: Shell Commands
+Apache Karaf :: System :: Core
+Apache Karaf :: Shell :: Various Commands
+Apache Karaf :: Shell :: Console
+Apache Karaf :: Shell :: Help System
+Apache Karaf :: Shell :: Table
+Apache Karaf :: Shell :: SSH
+Apache Karaf :: Diagnostic :: Command
+Apache Karaf :: Diagnostic :: Core
+Apache Karaf :: Service :: Guard
+Apache Karaf :: Service :: Command
+Apache Karaf :: Service :: Core
+Apache Karaf :: Instance :: Command
+Apache Karaf :: Instance :: Core
+Apache Karaf :: Wrapper :: Shell Commands
+Apache Karaf :: Wrapper :: Core
+Apache Karaf :: HTTP :: Commands
+Apache Karaf :: HTTP :: Core
+Apache Karaf :: Region :: Core
+Apache Karaf :: Region :: Persistence
+Apache Karaf :: Region :: Shell Commands
 
 
 
-This product includes software developed at
-The OSGi Alliance (http://www.osgi.org/).
-Copyright (c) OSGi Alliance (2000, 2012).
-Licensed under the Apache License 2.0.
+Notice for com.fasterxml.jackson.core
+---------------------------------------------------------------------------------------------------
+# Jackson JSON processor
 
+Jackson is a high-performance, Free/Open Source JSON processing library.
+It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+been in development since 2007.
+It is currently developed by a community of developers, as well as supported
+commercially by FasterXML.com.
 
-Notice for org.apache.felix.fileinstall-3.4.2.jar
-Apache Felix File Install
-Copyright 2006-2014 The Apache Software Foundation
+## Licensing
 
+Jackson core and extension components may licensed under different licenses.
+To find the details that apply to this artifact see the accompanying LICENSE file.
+For more information, including possible other licensing options, contact
+FasterXML.com (http://fasterxml.com).
 
-Notice for org.apache.felix.framework-4.2.1.jar
-Apache Felix Framework
-Copyright 2006-2013 The Apache Software Foundation
+## Credits
 
-
-This product includes software developed at
-The OSGi Alliance (http://www.osgi.org/).
-Copyright (c) OSGi Alliance (2000, 2012).
-Licensed under the Apache License 2.0.
-
-
-Notice for org.apache.felix.metatype-1.0.10.jar
-Apache Felix Metatype Service
-Copyright 2006-2014 The Apache Software Foundation
-
-
-This product includes software developed at
-The OSGi Alliance (http://www.osgi.org/).
-Copyright (c) OSGi Alliance (2000, 2012).
-Licensed under the Apache License 2.0. 
-
-
-Notice for org.apache.felix.scr-1.8.2.jar
-Apache Felix Declarative Services
-Copyright 2006-2014 The Apache Software Foundation
+A list of contributors may be found from CREDITS file, which is included
+in some artifacts (usually source distributions); but is always available
+from the source code management (SCM) system project uses.
 
 
 
-This product includes software developed at
-The OSGi Alliance (http://www.osgi.org/).
-Copyright (c) OSGi Alliance (2000, 2009).
-Licensed under the Apache License 2.0. 
+Notice for commons-io
+---------------------------------------------------------------------------------------------------
+Apache Commons IO
+Copyright 2002-2012 The Apache Software Foundation
 
 
-Notice for geronimo-annotation_1.0_spec-1.1.1.jar
-Apache Geronimo 
-Copyright 2003-2008 The Apache Software Foundation
 
-This product includes software developed by
-The Apache Software Foundation (http://www.apache.org/).
+Notice for org.apache.neethi
+---------------------------------------------------------------------------------------------------
+Apache Neethi
+Copyright 2004-2014 The Apache Software Foundation
 
 
-Notice for geronimo-annotation_1.1_spec-1.0.1.jar
-Annotation 1.1
+
+This product is tested with testcases developed at W3C under the license:
+http://www.w3.org/Consortium/Legal/2002/copyright-documents-20021231
+The source distribution of this product includes those testcases.
+
+
+
+Notice for org.apache.geronimo.specs
+---------------------------------------------------------------------------------------------------
+Apache ServiceMix
+Copyright 2007-2012 The Apache Software Foundation
+
+
+
+Apache Geronimo JSR-303 Bean Validation Spec API
 Copyright 2003-2010 The Apache Software Foundation
 
 
-Notice for geronimo-atinject_1.0_spec-1.0.jar
-Apache Geronimo JSR-330 Spec API
-Copyright 2003-2010 The Apache Software Foundation
 
-
-Notice for geronimo-el_2.2_spec-1.0.3.jar
-Apache Geronimo Expression Language Spec 2.2
-Copyright 2003-2012 The Apache Software Foundation
-
-
-Notice for geronimo-interceptor_1.1_spec-1.0.jar
-Interceptor 1.1
-Copyright 2003-2010 The Apache Software Foundation
-
-
-Notice for geronimo-jaspic_1.0_spec-1.1.jar
-Java Authentication SPI for Containers
-Copyright 2003-2010 The Apache Software Foundation
-
-
-Notice for geronimo-jcdi_1.0_spec-1.0.jar
 Apache Geronimo Java Contexts and Dependency Injection (JSR-299) Spec API
 Copyright 2003-2010 The Apache Software Foundation
 
 
-Notice for geronimo-osgi-registry-1.1.jar
+
+Annotation 1.1
+Copyright 2003-2010 The Apache Software Foundation
+
+
+
+Apache Geronimo JSR-330 Spec API
+Copyright 2003-2010 The Apache Software Foundation
+
+
+
+Apache ServiceMix
+Copyright 2007-2014 The Apache Software Foundation
+
+
+
+Apache Geronimo Expression Language Spec 2.2
+Copyright 2003-2012 The Apache Software Foundation
+
+
+
+Interceptor 1.1
+Copyright 2003-2010 The Apache Software Foundation
+
+
+
 Apache Geronimo OSGI factory registry
 Copyright 2003-2011 The Apache Software Foundation
 
 
-Notice for geronimo-servlet_3.0_spec-1.0.jar
+
+Java Authentication SPI for Containers
+Copyright 2003-2010 The Apache Software Foundation
+
+
+
 Servlet 3.0
 Copyright 2003-2010 The Apache Software Foundation
+
+
 
 
 This product includes software developed by
@@ -439,617 +704,132 @@ University). All Rights Reserved.
 http://www.w3.org/Consortium/Legal/
 
 
-Notice for geronimo-validation_1.0_spec-1.1.jar
-Apache Geronimo JSR-303 Bean Validation Spec API
-Copyright 2003-2010 The Apache Software Foundation
 
-
-Notice for org.apache.karaf.bundle.command-3.0.2.jar
-Apache Karaf :: Bundle :: Commands
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.bundle.core-3.0.2.jar
-Apache Karaf :: Bundle :: Core
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.bundle.springstate-3.0.2.jar
-Apache Karaf :: Bundle :: SpringStateService
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.config.command-3.0.2.jar
-Apache Karaf :: ConfigAdmin :: Commands
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.config.core-3.0.2.jar
-Apache Karaf :: ConfigAdmin :: Core
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.deployer.blueprint-3.0.2.jar
-Apache Karaf :: Deployer :: Blueprint
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.deployer.features-3.0.2.jar
-Apache Karaf :: Deployer :: Features
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.deployer.kar-3.0.2.jar
-Apache Karaf :: Deployer :: Karaf Archive (.kar)
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.deployer.spring-3.0.2.jar
-Apache Karaf :: Deployer :: Spring
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.deployer.wrap-3.0.2.jar
-Apache Karaf :: Deployer :: Wrap Non OSGi Jar
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.diagnostic.command-3.0.2.jar
-Apache Karaf :: Diagnostic :: Command
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.diagnostic.core-3.0.2.jar
-Apache Karaf :: Diagnostic :: Core
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.features.command-3.0.2.jar
-Apache Karaf :: Features :: Command
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.features.core-3.0.2.jar
-Apache Karaf :: Features :: Core
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.http.command-3.0.2.jar
-Apache Karaf :: HTTP :: Commands
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.http.core-3.0.2.jar
-Apache Karaf :: HTTP :: Core
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.instance.command-3.0.2.jar
-Apache Karaf :: Instance :: Command
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.instance.core-3.0.2.jar
-Apache Karaf :: Instance :: Core
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.jaas.command-3.0.2.jar
-Apache Karaf :: JAAS :: Command
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.jaas.config-3.0.2.jar
-Apache Karaf :: JAAS :: Config
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.jaas.modules-3.0.2.jar
-Apache Karaf :: JAAS :: Modules
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.kar.command-3.0.2.jar
-Apache Karaf :: KAR :: Command
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.kar.core-3.0.2.jar
-Apache Karaf :: KAR :: Core
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.log.command-3.0.2.jar
-Apache Karaf :: Log :: Command
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.log.core-3.0.2.jar
-Apache Karaf :: Log :: Core
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.management.server-3.0.2.jar
-Apache Karaf :: Management
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.package.command-3.0.2.jar
-Apache Karaf :: Package :: Commands
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.package.core-3.0.2.jar
-Apache Karaf :: Package :: Core
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.region.command-3.0.2.jar
-Apache Karaf :: Region :: Shell Commands
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.region.core-3.0.2.jar
-Apache Karaf :: Region :: Core
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.region.persist-3.0.2.jar
-Apache Karaf :: Region :: Persistence
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.scr.command-3.0.2.jar
-Apache Karaf :: SCR :: Shell Commands
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.scr.management-3.0.2.jar
-Apache Karaf :: SCR :: Management MBeans
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.service.command-3.0.2.jar
-Apache Karaf :: Service :: Command
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.service.core-3.0.2.jar
-Apache Karaf :: Service :: Core
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.service.guard-3.0.2.jar
-Apache Karaf :: Service :: Guard
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.shell.commands-3.0.2.jar
-Apache Karaf :: Shell :: Various Commands
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.shell.console-3.0.2.jar
-Apache Karaf :: Shell :: Console
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.shell.help-3.0.2.jar
-Apache Karaf :: Shell :: Help System
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.shell.ssh-3.0.2.jar
-Apache Karaf :: Shell :: SSH
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.shell.table-3.0.2.jar
-Apache Karaf :: Shell :: Table
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.system.command-3.0.2.jar
-Apache Karaf :: System :: Shell Commands
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.system.core-3.0.2.jar
-Apache Karaf :: System :: Core
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.web.command-3.0.2.jar
-Apache Karaf :: Web :: Commands
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.web.core-3.0.2.jar
-Apache Karaf :: Web :: Core
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.wrapper.command-3.0.2.jar
-Apache Karaf :: Wrapper :: Shell Commands
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for org.apache.karaf.wrapper.core-3.0.2.jar
-Apache Karaf :: Wrapper :: Core
-Copyright 2007-2014 The Apache Software Foundation
-
-
-Notice for mina-core-2.0.7.jar
-Apache MINA Core
-Copyright 2004-2012 Apache MINA Project
-
-
-Notice for neethi-3.0.3.jar
-Apache Neethi
-Copyright 2004-2014 The Apache Software Foundation
-
-
-This product is tested with testcases developed at W3C under the license:
-http://www.w3.org/Consortium/Legal/2002/copyright-documents-20021231
-The source distribution of this product includes those testcases.
-
-
-Notice for openwebbeans-el22-1.2.6.jar
-EL 2.2 plugin
-Copyright 2008-2014 The Apache Software Foundation
-
-
-Notice for openwebbeans-impl-1.2.6.jar
-OpenWebBeans Core
-Copyright 2008-2014 The Apache Software Foundation
-
-
-Notice for openwebbeans-osgi-1.2.6.jar
-OSGi plugin
-Copyright 2008-2014 The Apache Software Foundation
-
-
-Notice for openwebbeans-spi-1.2.6.jar
-SPI definition
-Copyright 2008-2014 The Apache Software Foundation
-
-
-Notice for openwebbeans-web-1.2.6.jar
-Web plugin
-Copyright 2008-2014 The Apache Software Foundation
-
-
-Notice for xmlsec-1.5.6.jar
-Apache XML Security for Java
-Copyright 2000-2013 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.aopalliance-1.0_6.jar
-Apache ServiceMix
-Copyright 2005-2012 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.bcel-5.2_4.jar
-Apache ServiceMix
-Copyright 2005-2011 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.cglib-3.0_1.jar
-Apache ServiceMix :: Bundles :: cglib
-Copyright 2005-2013 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.fastinfoset-1.2.13_1.jar
-Apache ServiceMix :: Bundles :: FastInfoset
-Copyright 2005-2013 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.jakarta-regexp-1.4_1.jar
-Apache ServiceMix :: Bundles :: jakarta-regexp
-Copyright 2005-2013 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.jaxb-impl-2.2.1.1_2.jar
-// ------------------------------------------------------------------
-// NOTICE file corresponding to the section 4d of The Apache License,                                                                                               
-// Version 2.0, in this case for Streaming API for XML (STAX API 1.0)                                                                                  
-// ------------------------------------------------------------------
-
-Streaming API for XML (STAX API 1.0)
-Copyright 2003-2007 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.joda-time-2.3_1.jar
-Apache ServiceMix :: Bundles :: joda-time
-Copyright 2005-2014 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.opensaml-2.6.1_1.jar
-Apache ServiceMix :: Bundles :: opensaml
-Copyright 2005-2014 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.saaj-impl-1.3.21_1.jar
-Apache ServiceMix :: Bundles :: saaj-impl
-Copyright 2005-2013 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.spring-aop-3.2.11.RELEASE_1.jar
-Apache ServiceMix :: Bundles :: spring-aop
-Copyright 2005-2014 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.spring-beans-3.2.11.RELEASE_1.jar
-Apache ServiceMix :: Bundles :: spring-beans
-Copyright 2005-2014 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.spring-context-3.2.11.RELEASE_1.jar
-Apache ServiceMix :: Bundles :: spring-context
-Copyright 2005-2014 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.spring-context-support-3.2.11.RELEASE_1.jar
-Apache ServiceMix :: Bundles :: spring-context-support
-Copyright 2005-2014 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.spring-core-3.2.11.RELEASE_1.jar
-Apache ServiceMix :: Bundles :: spring-core
-Copyright 2005-2014 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.spring-expression-3.2.11.RELEASE_1.jar
-Apache ServiceMix :: Bundles :: spring-expression
-Copyright 2005-2014 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.spring-jms-3.2.11.RELEASE_1.jar
-Apache ServiceMix :: Bundles :: spring-jms
-Copyright 2005-2014 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.spring-tx-3.2.11.RELEASE_1.jar
-Apache ServiceMix :: Bundles :: spring-tx
-Copyright 2005-2014 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.wsdl4j-1.6.3_1.jar
-Apache ServiceMix :: Bundles :: wsdl4j
-Copyright 2005-2013 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.xalan-2.7.1_7.jar
-Apache ServiceMix :: Bundles :: xalan
-Copyright 2005-2013 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.xerces-2.11.0_1.jar
-Apache ServiceMix :: Bundles :: xercesImpl
-Copyright 2005-2013 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.xmlbeans-2.6.0_2.jar
-Apache ServiceMix :: Bundles :: xmlbeans
-Copyright 2005-2013 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.bundles.xmlresolver-1.2_5.jar
-Apache XML Commons Resolver
-Copyright 2006 The Apache Software Foundation.
-
-
-Portions of this code are derived from classes placed in the
-public domain by Arbortext on 10 Apr 2000. See:
-http://www.arbortext.com/customer_support/updates_and_technical_notes/catalogs/docs/README.htm
-
-
-Notice for org.apache.servicemix.specs.activation-api-1.1-2.2.0.jar
-Apache ServiceMix
-Copyright 2007-2012 The Apache Software Foundation
-
-
-Notice for org.apache.servicemix.specs.stax-api-1.0-2.2.0.jar
 Apache Geronimo 
-Copyright 2003-2006 The Apache Software Foundation
+Copyright 2003-2008 The Apache Software Foundation
 
 This product includes software developed by
 The Apache Software Foundation (http://www.apache.org/).
 
 
-Notice for sshd-core-0.12.0.jar
-Apache MINA SSHD
-Copyright 2008-2014 The Apache Software Foundation
 
-
-Notice for wss4j-1.6.15.jar
-Apache WebServices - WSS4J
-Copyright 2004-2014 The Apache Software Foundation
-
-
-Notice for xmlschema-core-2.1.0.jar
-Apache WebServices - XmlSchema
-Copyright 2004-2014 The Apache Software Foundation
-
-
-Portions Copyright 2006 International Business Machines Corp.
-
-Portions Copyright (C) World Wide Web Consortium 2006, 2007 and licensed under the 
-three-part BSD license.
-
-
-Notice for xbean-asm5-shaded-3.18.jar
+Notice for org.apache.xbean
+---------------------------------------------------------------------------------------------------
 Apache XBean :: ASM 5 shaded (repackaged)
 Copyright 2005-2014 The Apache Software Foundation
 
 
-Notice for xbean-bundleutils-3.18.jar
-Apache XBean OSGI Bundle Utilities
-Copyright 2005-2014 The Apache Software Foundation
 
-
-Notice for xbean-finder-3.18.jar
-Apache XBean :: Classpath Resource Finder
-Copyright 2005-2014 The Apache Software Foundation
-
-
-Notice for xbean-finder-shaded-3.18.jar
 Apache XBean :: Finder shaded (repackaged)
 Copyright 2005-2014 The Apache Software Foundation
 
 
-Notice for xbean-reflect-3.18.jar
+
+Apache XBean :: Classpath Resource Finder
+Copyright 2005-2014 The Apache Software Foundation
+
+
+
+Apache XBean OSGI Bundle Utilities
+Copyright 2005-2014 The Apache Software Foundation
+
+
+
 Apache XBean :: Reflect
 Copyright 2005-2014 The Apache Software Foundation
 
 
-Notice for woodstox-core-asl-4.2.1.jar
-This product currently only contains code developed by authors
-of specific components, as identified by the source code files.
 
-Since product implements StAX API, it has dependencies to StAX API
-classes.
-
-For additional credits (generally to people who reported problems)
-see CREDITS file.
-
-
-Notice for pax-logging-service-1.7.4.jar
+Notice for org.ops4j.pax.logging
+---------------------------------------------------------------------------------------------------
 Apache log4j
 Copyright 2007 The Apache Software Foundation
 
 
-Notice for pax-url-aether-2.2.0.jar
-Apache Maven Wagon :: Providers :: HTTP Shared Library
-Copyright 2003-2013 The Apache Software Foundation
+
+Notice for org.apache.ws.security
+---------------------------------------------------------------------------------------------------
+Apache WebServices - WSS4J
+Copyright 2004-2014 The Apache Software Foundation
 
 
-Notice for pax-web-api-3.1.2.jar
-Pax Web
-Copyright 2007-2009 Open Participation for Java (www.ops4j.org)
+
+Notice for org.apache.unomi
+---------------------------------------------------------------------------------------------------
+Apache Unomi :: Extensions :: Privacy :: Services
+Copyright 2014-2016 Apache Software Foundation
 
 
-I. Included Software
 
-Licensed under the Apache License 2.0.
-
-This product includes software developed at
-The OSGi Alliance (http://www.osgi.org).
-Copyright (c) OSGi Alliance (2000, 2007).
-Licensed under the Apache License 2.0.
+Apache Unomi :: Core Web Application
+Copyright 2014-2016 Apache Software Foundation
 
 
-II. Used Software
 
-This product uses software developed at
-The OSGi Alliance (http://www.osgi.org).
-Copyright (c) OSGi Alliance (2000, 2007).
-Licensed under the Apache License 2.0.
-
-This product uses software developed at
-Mort Bay Consulting Pty. Ltd. (http://www.mortbay.org/jetty).
-Copyright 2000-2009 Mort Bay Consulting Pty. Ltd.
-Licensed under the Apache License 2.0.
+Apache Unomi :: Core Services
+Copyright 2014-2016 Apache Software Foundation
 
 
-III. License Summary
-- Apache License 2.0
+
+Apache Unomi :: Extensions :: Geonames Database :: REST API
+Copyright 2014-2016 Apache Software Foundation
 
 
-Notice for pax-web-deployer-3.1.2.jar
-Pax Web
-Copyright 2007-2009 Open Participation for Java (www.ops4j.org)
+
+Apache Unomi :: Plugins :: Base Actions and Conditions
+Copyright 2014-2016 Apache Software Foundation
 
 
-I. Included Software
 
-Licensed under the Apache License 2.0.
-
-This product includes software developed at
-The OSGi Alliance (http://www.osgi.org).
-Copyright (c) OSGi Alliance (2000, 2007).
-Licensed under the Apache License 2.0.
-
-This product includes software developed at
-Mort Bay Consulting Pty. Ltd. (http://www.mortbay.org/jetty).
-Copyright 2000-2009 Mort Bay Consulting Pty. Ltd.
-Licensed under the Apache License 2.0.
-
-II. Used Software
-
-This product uses software developed at
-The OSGi Alliance (http://www.osgi.org).
-Copyright (c) OSGi Alliance (2000, 2007).
-Licensed under the Apache License 2.0.
+Apache Unomi :: Plugins :: Request reading actions
+Copyright 2014-2016 Apache Software Foundation
 
 
-III. License Summary
-- Apache License 2.0
+
+Apache Unomi :: REST API
+Copyright 2014-2016 Apache Software Foundation
 
 
-Notice for pax-web-jsp-3.1.2.jar
-Pax Web
-Copyright 2007-2009 Open Participation for Java (www.ops4j.org)
+
+Apache Unomi :: Extensions :: Geonames Database :: Service
+Copyright 2014-2016 Apache Software Foundation
 
 
-I. Included Software
 
-Licensed under the Apache License 2.0.
-
-This product includes software developed at
-The Apache Software Foundation (http://www.apache.org/).
-Licensed under the Apache License 2.0.
-
-II. Used Software
-
-This product uses software developed at
-The OSGi Alliance (http://www.osgi.org).
-Copyright (c) OSGi Alliance (2000, 2007).
-Licensed under the Apache License 2.0.
-
-This product uses software developed at
-Mort Bay Consulting Pty. Ltd. (http://www.mortbay.org/jetty).
-Copyright 2000-2009 Mort Bay Consulting Pty. Ltd.
-Licensed under the Apache License 2.0.
+Apache Unomi :: Plugins :: Mail notifications actions
+Copyright 2014-2016 Apache Software Foundation
 
 
-III. License Summary
-- Apache License 2.0
+
+Apache Unomi :: Specification API
+Copyright 2014-2016 Apache Software Foundation
 
 
-Notice for spring-osgi-annotation-1.2.1.jar
-   ==================================================================================
-   == NOTICE file corresponding to section 4 d of the Apache License, Version 2.0, == 
-   == in this case for the Spring Dynamic Modules / Spring OSGi distribution.      ==
-   ==================================================================================
 
-   This product includes software developed by
-   the Apache Software Foundation (http://www.apache.org).
-
-   The end-user documentation included with a redistribution, if any,
-   must include the following acknowledgement:
-
-     "This product includes software developed by the Spring Framework
-      Project (http://www.springsource.org)."
-
-   Alternatively, this acknowledgement may appear in the software itself,
-   if and wherever such third-party acknowledgements normally appear.
-
-   The names "Spring" and "Spring Framework" must not be used to
-   endorse or promote products derived from this software without
-   prior written permission. For written permission, please contact
-   enquiries@springsource.com.
+Apache Unomi :: Persistence :: SPI (Service Provider Interface)
+Copyright 2014-2016 Apache Software Foundation
 
 
-Notice for spring-aop-3.1.4.RELEASE.jar
-Spring Framework 3.1
-Copyright (c) 2002-2011 SpringSource, a division of VMware, Inc.
 
-This product is licensed to you under the Apache License, Version 2.0 (the "License").
-You may not use this product except in compliance with the License.
-
-This product may include a number of subcomponents with separate copyright notices and
-license terms. Your use of the source code for the these subcomponents is subject to
-the terms and conditions of the subcomponent's license, as noted in the LICENSE file.
+Apache Unomi :: Extensions :: Privacy :: REST API
+Copyright 2014-2016 Apache Software Foundation
 
 
+
+Apache Unomi :: Extensions :: Lists :: REST API
+Copyright 2014-2016 Apache Software Foundation
+
+
+
+Apache Unomi :: Extensions :: Lists :: Service
+Copyright 2014-2016 Apache Software Foundation
+
+
+
+Apache Unomi :: Persistence :: ElasticSearch :: Core
+Copyright 2014-2016 Apache Software Foundation
+
+
+
+Apache Unomi :: Plugins :: Rules and Actions for optimization tests (A/B testing)
+Copyright 2014-2016 Apache Software Foundation
