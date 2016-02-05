@@ -342,7 +342,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     @Override
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {
-            case BundleEvent.STARTING:
+            case BundleEvent.STARTED:
                 if (event.getBundle() != null && event.getBundle().getRegisteredServices() != null) {
                     for (ServiceReference<?> reference : event.getBundle().getRegisteredServices()) {
                         Object service = bundleContext.getService(reference);
@@ -354,6 +354,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                     }
                 }
+                break;
+            case BundleEvent.STARTING:
                 loadPredefinedMappings(event.getBundle().getBundleContext(), true);
                 break;
             case BundleEvent.STOPPING:
