@@ -390,6 +390,7 @@
                                 <exclude>**/org.ops4j.pax.exam.TestContainerFactory</exclude>
                                 <exclude>**/maven-metadata-local.xml</exclude>
                                 <exclude>**/src/test/resources/data/*.txt</exclude>
+                                <exclude>**/keystore</exclude>
                                 <!--manual resources -->
                                 <exclude>**/*.css</exclude>
                                 <exclude>**/*.ssp</exclude>
