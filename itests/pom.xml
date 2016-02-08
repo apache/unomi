@@ -20,7 +20,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
-        <version>1.0.0-incubating</version>
+        <version>1.0.1-incubating-SNAPSHOT</version>
     </parent>
     <artifactId>unomi-itests</artifactId>
     <name>Apache Unomi :: Integration Tests</name>
@@ -31,19 +31,19 @@
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-kar</artifactId>
             <classifier>features</classifier>
-            <version>1.0.0-incubating</version>
+            <version>1.0.1-incubating-SNAPSHOT</version>
             <type>xml</type>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-spi</artifactId>
-            <version>1.0.0-incubating</version>
+            <version>1.0.1-incubating-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-wab</artifactId>
-            <version>1.0.0-incubating</version>
+            <version>1.0.1-incubating-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
         
