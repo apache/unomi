@@ -27,12 +27,12 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-extensions</artifactId>
-        <version>1.0.0-incubating-SNAPSHOT</version>
+        <version>1.0.0-incubating</version>
     </parent>
 
     <artifactId>cxs-geonames</artifactId>
     <name>Apache Unomi :: Extensions :: Geonames Database</name>
     <description>Apache Unomi Context Server extension that integrates with the Geonames database</description>
-    <version>1.0.0-incubating-SNAPSHOT</version>
+    <version>1.0.0-incubating</version>
     <packaging>pom</packaging>
 </project>
