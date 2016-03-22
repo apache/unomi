@@ -17,6 +17,14 @@
 
 # Downloading Apache Unomi
 
-## Binaries
+## 1.0.1-incubating
 
-## Source code
+### Binaries
+
+* [tar.gz](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.0.0-incubating/unomi-1.0.0-incubating.tar.gz) ([checksum](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.0.0-incubating/unomi-1.0.0-incubating.tar.gz.asc))
+* [zip](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.0.0-incubating/unomi-1.0.0-incubating.zip) ([checksum](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.0.0-incubating/unomi-1.0.0-incubating.zip.asc))
+
+### Source code
+
+* [tar.gz](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.0.0-incubating/unomi-1.0.0-incubating-src.tar.gz) ([checksum](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.0.0-incubating/unomi-1.0.0-incubating-src.tar.gz.asc))
+* [zip](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.0.0-incubating/unomi-1.0.0-incubating-src.zip) ([checksum](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.0.0-incubating/unomi-1.0.0-incubating-src.zip.asc))
