@@ -17,9 +17,7 @@
 
 package org.apache.unomi.api.conditions;
 
-import org.apache.unomi.api.Parameter;
-import org.apache.unomi.api.PluginType;
-import org.apache.unomi.api.Tag;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.rules.Rule;
 
 import javax.xml.bind.annotation.XmlElement;
@@ -35,19 +33,14 @@ import java.util.*;
  * parameters may test whether a given property has a specific value: “User property x has value y”.
  */
 @XmlRootElement
-public class ConditionType implements PluginType, Serializable {
-    private static final long serialVersionUID = -6965481691241954968L;
-    private String id;
-    private String nameKey;
-    private String descriptionKey;
-    private long pluginId;
+public class ConditionType extends MetadataItem  {
+    public static final String ITEM_TYPE = "conditionType";
+
+    private static final long serialVersionUID = -6965481691241954969L;
     private String conditionEvaluator;
     private String queryBuilder;
     private Condition parentCondition;
-    private Set<Tag> tags = new TreeSet<Tag>();
-    private Set<String> tagIDs = new LinkedHashSet<String>();
     private List<Parameter> parameters = new ArrayList<Parameter>();
-    private Rule autoCreateRule;
 
     /**
      * Instantiates a new Condition type.
@@ -56,74 +49,10 @@ public class ConditionType implements PluginType, Serializable {
     }
 
     /**
-     * Instantiates a new Condition type with the specified identifier and .
-     *
-     * @param id      the id
-     * @param nameKey the name key
+     * Instantiates a new Condition type with the specified metadata
      */
-    public ConditionType(String id, String nameKey) {
-        this.id = id;
-        this.nameKey = nameKey;
-    }
-
-    /**
-     * Retrieves the id.
-     *
-     * @return the id
-     */
-    public String getId() {
-        return id;
-    }
-
-    /**
-     * Retrieves the name key.
-     *
-     * @return the name key
-     */
-    public String getNameKey() {
-        if (nameKey == null) {
-            nameKey = "condition." + id + ".name";
-        }
-        return nameKey;
-    }
-
-    /**
-     * Sets the name key.
-     *
-     * @param nameKey the name key
-     */
-    public void setNameKey(String nameKey) {
-        this.nameKey = nameKey;
-    }
-
-    /**
-     * Retrieves the description key.
-     *
-     * @return the description key
-     */
-    public String getDescriptionKey() {
-        if (descriptionKey == null) {
-            descriptionKey = "condition." + id + ".description";
-        }
-        return descriptionKey;
-    }
-
-    /**
-     * Sets the description key.
-     *
-     * @param descriptionKey the description key
-     */
-    public void setDescriptionKey(String descriptionKey) {
-        this.descriptionKey = descriptionKey;
-    }
-
-    @XmlTransient
-    public long getPluginId() {
-        return pluginId;
-    }
-
-    public void setPluginId(long pluginId) {
-        this.pluginId = pluginId;
+    public ConditionType(Metadata metadata) {
+        super(metadata);
     }
 
     /**
@@ -181,44 +110,6 @@ public class ConditionType implements PluginType, Serializable {
     }
 
     /**
-     * Retrieves the tags used by this PropertyType.
-     *
-     * @return the tags used by this PropertyType
-     */
-    @XmlTransient
-    public Set<Tag> getTags() {
-        return tags;
-    }
-
-    /**
-     * Sets the tags used by this PropertyType.
-     *
-     * @param tags the tags used by this PropertyType
-     */
-    public void setTags(Set<Tag> tags) {
-        this.tags = tags;
-    }
-
-    /**
-     * Retrieves the identifiers of the tags used by this PropertyType.
-     *
-     * @return the identifiers of the tags used by this PropertyType
-     */
-    @XmlElement(name = "tags")
-    public Set<String> getTagIDs() {
-        return tagIDs;
-    }
-
-    /**
-     * Sets the identifiers of the tags used by this PropertyType.
-     *
-     * @param tagIds the identifiers of the tags used by this PropertyType
-     */
-    public void setTagIDs(Set<String> tagIds) {
-        this.tagIDs = tagIds;
-    }
-
-    /**
      * Retrieves the defined {@link Parameter}s for this ConditionType.
      *
      * @return a List of the defined {@link Parameter}s for this ConditionType
@@ -237,24 +128,6 @@ public class ConditionType implements PluginType, Serializable {
         this.parameters = parameters;
     }
 
-    /**
-     * Retrieves the auto create rule.
-     *
-     * @return the auto create rule
-     */
-    public Rule getAutoCreateRule() {
-        return autoCreateRule;
-    }
-
-    /**
-     * Sets the auto create rule.
-     *
-     * @param autoCreateRule the auto create rule
-     */
-    public void setAutoCreateRule(Rule autoCreateRule) {
-        this.autoCreateRule = autoCreateRule;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -262,12 +135,12 @@ public class ConditionType implements PluginType, Serializable {
 
         ConditionType that = (ConditionType) o;
 
-        return id.equals(that.id);
+        return itemId.equals(that.itemId);
 
     }
 
     @Override
     public int hashCode() {
-        return id.hashCode();
+        return itemId.hashCode();
     }
 }

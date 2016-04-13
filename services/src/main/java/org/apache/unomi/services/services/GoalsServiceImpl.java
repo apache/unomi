@@ -103,32 +103,6 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     private void processBundleStop(BundleContext bundleContext) {
-        if (bundleContext == null) {
-            return;
-        }
-        List<PluginType> types = definitionsService.getTypesByPlugin().get(bundleContext.getBundle().getBundleId());
-        List<String> removedConditions = new ArrayList<String>();
-        if (types != null) {
-            for (PluginType type : types) {
-                if (type instanceof ConditionType) {
-                    removedConditions.add(((ConditionType) type).getId());
-                }
-            }
-        }
-        if (!removedConditions.isEmpty()) {
-            for (Goal goal : persistenceService.getAllItems(Goal.class)) {
-                List<String> conditions = ParserHelper.getConditionTypeIds(goal.getTargetEvent());
-                if (goal.getStartEvent() != null) {
-                    conditions.addAll(ParserHelper.getConditionTypeIds(goal.getStartEvent()));
-                }
-
-                if (!Collections.disjoint(conditions, removedConditions)) {
-                    logger.info("Disable goal " + goal.getItemId());
-                    goal.getMetadata().setEnabled(false);
-                    setGoal(goal);
-                }
-            }
-        }
     }
 
     private void loadPredefinedGoals(BundleContext bundleContext) {

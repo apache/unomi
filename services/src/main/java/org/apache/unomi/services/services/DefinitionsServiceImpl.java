@@ -26,6 +26,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -41,13 +42,13 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     private static final Logger logger = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
 
+    private PersistenceService persistenceService;
+
     private Map<String, Tag> tags = new HashMap<>();
     private Set<Tag> rootTags = new LinkedHashSet<>();
     private Map<String, ConditionType> conditionTypeById = new HashMap<>();
     private Map<String, ActionType> actionTypeById = new HashMap<>();
     private Map<String, ValueType> valueTypeById = new HashMap<>();
-    private Map<Tag, Set<ConditionType>> conditionTypeByTag = new HashMap<>();
-    private Map<Tag, Set<ActionType>> actionTypeByTag = new HashMap<>();
     private Map<Tag, Set<ValueType>> valueTypeByTag = new HashMap<>();
     private Map<Long, List<PluginType>> pluginTypes = new HashMap<>();
     private Map<String, PropertyMergeStrategyType> propertyMergeStrategyTypeById = new HashMap<>();
@@ -59,6 +60,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
+    }
+
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
     }
 
     public void postConstruct() {
@@ -99,19 +104,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         List<PluginType> types = pluginTypes.get(bundleContext.getBundle().getBundleId());
         if (types != null) {
             for (PluginType type : types) {
-                if (type instanceof ActionType) {
-                    ActionType actionType = (ActionType) type;
-                    actionTypeById.remove(actionType.getId());
-                    for (Tag tag : actionType.getTags()) {
-                        actionTypeByTag.get(tag).remove(actionType);
-                    }
-                } else if (type instanceof ConditionType) {
-                    ConditionType conditionType = (ConditionType) type;
-                    conditionTypeById.remove(conditionType.getId());
-                    for (Tag tag : conditionType.getTags()) {
-                        conditionTypeByTag.get(tag).remove(conditionType);
-                    }
-                } else if (type instanceof ValueType) {
+                if (type instanceof ValueType) {
                     ValueType valueType = (ValueType) type;
                     valueTypeById.remove(valueType.getId());
                     for (Tag tag : valueType.getTags()) {
@@ -163,38 +156,16 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         if (predefinedConditionEntries == null) {
             return;
         }
-        ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
+
         while (predefinedConditionEntries.hasMoreElements()) {
             URL predefinedConditionURL = predefinedConditionEntries.nextElement();
-            logger.debug("Found predefined conditions at " + predefinedConditionURL + ", loading... ");
+            logger.debug("Found predefined condition at " + predefinedConditionURL + ", loading... ");
 
             try {
                 ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(predefinedConditionURL, ConditionType.class);
-                conditionType.setPluginId(bundleContext.getBundle().getBundleId());
-                conditionTypeById.put(conditionType.getId(), conditionType);
-                pluginTypeArrayList.add(conditionType);
-                for (String tagId : conditionType.getTagIDs()) {
-                    Tag tag = tags.get(tagId);
-                    if (tag != null) {
-                        conditionType.getTags().add(tag);
-                        Set<ConditionType> conditionTypes = conditionTypeByTag.get(tag);
-                        if (conditionTypes == null) {
-                            conditionTypes = new LinkedHashSet<ConditionType>();
-                        }
-                        conditionTypes.add(conditionType);
-                        conditionTypeByTag.put(tag, conditionTypes);
-                    } else {
-                        // we found a tag that is not defined, we will define it automatically
-                        logger.warn("Unknown tag " + tagId + " used in condition definition " + predefinedConditionURL);
-                    }
-                }
-            } catch (Exception e) {
+                setConditionType(conditionType);
+            } catch (IOException e) {
                 logger.error("Error while loading condition definition " + predefinedConditionURL, e);
-            }
-        }
-        for (ConditionType type : conditionTypeById.values()) {
-            if (type.getParentCondition() != null) {
-                ParserHelper.resolveConditionType(this, type.getParentCondition());
             }
         }
     }
@@ -211,24 +182,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
             try {
                 ActionType actionType = CustomObjectMapper.getObjectMapper().readValue(predefinedActionURL, ActionType.class);
-                actionType.setPluginId(bundleContext.getBundle().getBundleId());
-                actionTypeById.put(actionType.getId(), actionType);
-                pluginTypeArrayList.add(actionType);
-                for (String tagId : actionType.getTagIds()) {
-                    Tag tag = tags.get(tagId);
-                    if (tag != null) {
-                        actionType.getTags().add(tag);
-                        Set<ActionType> actionTypes = actionTypeByTag.get(tag);
-                        if (actionTypes == null) {
-                            actionTypes = new LinkedHashSet<>();
-                        }
-                        actionTypes.add(actionType);
-                        actionTypeByTag.put(tag, actionTypes);
-                    } else {
-                        // we found a tag that is not defined, we will define it automatically
-                        logger.warn("Unknown tag " + tagId + " used in action definition " + predefinedActionURL);
-                    }
-                }
+                setActionType(actionType);
             } catch (Exception e) {
                 logger.error("Error while loading action definition " + predefinedActionURL, e);
             }
@@ -289,20 +243,29 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         return completeTag;
     }
 
-    public Collection<ConditionType> getAllConditionTypes() {
-        return conditionTypeById.values();
-    }
-
     public Map<Long, List<PluginType>> getTypesByPlugin() {
         return pluginTypes;
     }
 
+    public Collection<ConditionType> getAllConditionTypes() {
+        Collection<ConditionType> all = persistenceService.getAllItems(ConditionType.class);
+        for (ConditionType type : all) {
+            if (type != null && type.getParentCondition() != null) {
+                ParserHelper.resolveConditionType(this, type.getParentCondition());
+            }
+        }
+        return all;
+    }
+
     public Set<ConditionType> getConditionTypesByTag(Tag tag, boolean includeFromSubtags) {
         Set<ConditionType> conditionTypes = new LinkedHashSet<ConditionType>();
-        Set<ConditionType> directConditionTypes = conditionTypeByTag.get(tag);
-        if (directConditionTypes != null) {
-            conditionTypes.addAll(directConditionTypes);
+        List<ConditionType> directConditionTypes = persistenceService.query("metadata.tags",tag.getId(),null, ConditionType.class);
+        for (ConditionType type : directConditionTypes) {
+            if (type.getParentCondition() != null) {
+                ParserHelper.resolveConditionType(this, type.getParentCondition());
+            }
         }
+        conditionTypes.addAll(directConditionTypes);
         if (includeFromSubtags) {
             for (Tag subTag : tag.getSubTags()) {
                 Set<ConditionType> childConditionTypes = getConditionTypesByTag(subTag, true);
@@ -313,19 +276,35 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     public ConditionType getConditionType(String id) {
-        return conditionTypeById.get(id);
+        ConditionType type = conditionTypeById.get(id);
+        if (type == null) {
+            type = persistenceService.load(id, ConditionType.class);
+            conditionTypeById.put(id, type);
+        }
+        if (type != null && type.getParentCondition() != null) {
+            ParserHelper.resolveConditionType(this, type.getParentCondition());
+        }
+        return type;
+    }
+
+    public void removeConditionType(String id) {
+        persistenceService.remove(id, ConditionType.class);
+        conditionTypeById.remove(id);
+    }
+
+    public void setConditionType(ConditionType conditionType) {
+        conditionTypeById.put(conditionType.getMetadata().getId(), conditionType);
+        persistenceService.save(conditionType);
     }
 
     public Collection<ActionType> getAllActionTypes() {
-        return actionTypeById.values();
+        return persistenceService.getAllItems(ActionType.class);
     }
 
     public Set<ActionType> getActionTypeByTag(Tag tag, boolean includeFromSubtags) {
         Set<ActionType> actionTypes = new LinkedHashSet<ActionType>();
-        Set<ActionType> directActionTypes = actionTypeByTag.get(tag);
-        if (directActionTypes != null) {
-            actionTypes.addAll(directActionTypes);
-        }
+        List<ActionType> directActionTypes = persistenceService.query("metadata.tags",tag.getId(),null, ActionType.class);
+        actionTypes.addAll(directActionTypes);
         if (includeFromSubtags) {
             for (Tag subTag : tag.getSubTags()) {
                 Set<ActionType> childActionTypes = getActionTypeByTag(subTag, true);
@@ -336,7 +315,22 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     public ActionType getActionType(String id) {
-        return actionTypeById.get(id);
+        ActionType type = actionTypeById.get(id);
+        if (type == null) {
+            type = persistenceService.load(id, ActionType.class);
+            actionTypeById.put(id, type);
+        }
+        return type;
+    }
+
+    public void removeActionType(String id) {
+        persistenceService.remove(id, ActionType.class);
+        actionTypeById.remove(id);
+    }
+
+    public void setActionType(ActionType actionType) {
+        actionTypeById.put(actionType.getMetadata().getId(), actionType);
+        persistenceService.save(actionType);
     }
 
     public Collection<ValueType> getAllValueTypes() {
@@ -442,7 +436,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 }
             }
             throw new IllegalArgumentException();
-        } else if (rootCondition.getConditionType() != null && rootCondition.getConditionType().getTagIDs().contains(tagId)) {
+        } else if (rootCondition.getConditionType() != null && rootCondition.getConditionType().getMetadata().getTags().contains(tagId)) {
             return rootCondition;
         } else {
             return null;

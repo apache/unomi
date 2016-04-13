@@ -1,10 +1,19 @@
 {
-  "id": "returningVisitorCondition",
-  "parentCondition" : {
+  "metadata": {
+    "id": "returningVisitorCondition",
+    "name": "returningVisitorCondition",
+    "description": "",
+    "tags": [
+      "demographic",
+      "sessionCondition"
+    ],
+    "readOnly": true
+  },
+  "parentCondition": {
     "type": "booleanCondition",
     "parameterValues": {
-      "operator":"and",
-      "subConditions":[
+      "operator": "and",
+      "subConditions": [
         {
           "type": "sessionPropertyCondition",
           "parameterValues": {
@@ -23,7 +32,6 @@
       ]
     }
   },
-  "tags": [ "demographic", "sessionCondition" ],
   "parameters": [
     {
       "id": "since",

@@ -1,12 +1,19 @@
 {
+  "metadata": {
     "id": "setEventOccurenceCountAction",
-    "actionExecutor": "setEventOccurenceCount",
-    "tags": [ "demographic" ],
-    "parameters": [
-        {
-            "id": "pastEventCondition",
-            "type": "condition",
-            "multivalued": false
-        }
-    ]
+    "name": "setEventOccurenceCountAction",
+    "description": "",
+    "tags": [
+      "demographic"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "setEventOccurenceCount",
+  "parameters": [
+    {
+      "id": "pastEventCondition",
+      "type": "condition",
+      "multivalued": false
+    }
+  ]
 }

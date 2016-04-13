@@ -1,7 +1,14 @@
 {
+  "metadata": {
     "id": "setRemoteHostInfoAction",
-    "actionExecutor": "setRemoteHostInfo",
-    "tags": [ "event" ],
-    "parameters": [
-    ]
+    "name": "setRemoteHostInfoAction",
+    "description": "",
+    "tags": [
+      "event"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "setRemoteHostInfo",
+  "parameters": [
+  ]
 }

@@ -1,28 +1,36 @@
 {
+  "metadata": {
     "id": "sourceEventPropertyCondition",
-    "conditionEvaluator": "sourceEventPropertyConditionEvaluator",
-    "queryBuilder": "sourceEventPropertyConditionESQueryBuilder",
-    "tags": ["sourceEventCondition"],
-    "parameters": [
-        {
-            "id": "id",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "path",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "scope",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "type",
-            "type": "string",
-            "multivalued": false
-        }
-    ]
+    "name": "sourceEventPropertyCondition",
+    "description": "",
+    "tags": [
+      "sourceEventCondition"
+    ],
+    "readOnly": true
+  },
+  "conditionEvaluator": "sourceEventPropertyConditionEvaluator",
+  "queryBuilder": "sourceEventPropertyConditionESQueryBuilder",
+
+  "parameters": [
+    {
+      "id": "id",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "path",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "scope",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "type",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
 }

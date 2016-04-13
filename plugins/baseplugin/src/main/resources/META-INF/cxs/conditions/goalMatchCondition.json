@@ -1,19 +1,28 @@
 {
+  "metadata": {
     "id": "goalMatchCondition",
-    "parentCondition" : {
-        "type": "profilePropertyCondition",
-        "parameterValues": {
-            "propertyName": "script::'systemProperties.goals.'+goalId+'TargetReached'",
-            "comparisonOperator": "exists"
-        }
-    },
-    "tags": [ "profileCondition", "event" ],
-    "parameters": [
-        {
-            "id": "goalId",
-            "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": "(initializerId=goals)"
-        }
-    ]
+    "name": "goalMatchCondition",
+    "description": "",
+    "tags": [
+      "profileCondition",
+      "event"
+    ],
+    "readOnly": true
+  },
+  "parentCondition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "script::'systemProperties.goals.'+goalId+'TargetReached'",
+      "comparisonOperator": "exists"
+    }
+  },
+
+  "parameters": [
+    {
+      "id": "goalId",
+      "type": "string",
+      "multivalued": false,
+      "choiceListInitializerFilter": "(initializerId=goals)"
+    }
+  ]
 }

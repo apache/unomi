@@ -81,6 +81,20 @@ public interface DefinitionsService {
     ConditionType getConditionType(String id);
 
     /**
+     * Stores the condition type
+     *
+     * @param conditionType the condition type to store
+     */
+    void setConditionType(ConditionType conditionType);
+
+    /**
+     * Remove the condition type
+     *
+     * @param id the condition type to remove
+     */
+    void removeConditionType(String id);
+
+    /**
      * Retrieves all known action types.
      *
      * @return all known action types
@@ -103,6 +117,20 @@ public interface DefinitionsService {
      * @return the action type associated with the specified identifier or {@code null} if no such action type exists
      */
     ActionType getActionType(String id);
+
+    /**
+     * Stores the action type
+     *
+     * @param actionType the action type to store
+     */
+    void setActionType(ActionType actionType);
+
+    /**
+     * Remove the action type
+     *
+     * @param id the action type to remove
+     */
+    void removeActionType(String id);
 
     /**
      * Retrieves all known value types.

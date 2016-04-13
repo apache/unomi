@@ -40,6 +40,7 @@
 
     <bean id="definitionsServiceImpl" class="org.apache.unomi.services.services.DefinitionsServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
     <service id="definitionsService" ref="definitionsServiceImpl" auto-export="interfaces"/>

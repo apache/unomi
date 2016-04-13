@@ -1,38 +1,54 @@
 {
-  "id": "geoLocationSessionCondition",
-  "parentCondition" : {
+  "metadata": {
+    "id": "geoLocationSessionCondition",
+    "name": "geoLocationSessionCondition",
+    "description": "",
+    "tags": [
+      "geographic",
+      "sessionCondition"
+    ],
+    "readOnly": true
+  },
+  "parentCondition": {
     "type": "booleanCondition",
     "parameterValues": {
       "operator": "and",
-      "subConditions" : [
+      "subConditions": [
         {
           "type": "profilePropertyCondition",
-          "parameterValues" : {"propertyName": "properties.sessionCountryCode",
+          "parameterValues": {
+            "propertyName": "properties.sessionCountryCode",
             "propertyValue": "parameter::country",
-            "comparisonOperator": "equals"}
+            "comparisonOperator": "equals"
+          }
         },
         {
           "type": "profilePropertyCondition",
-          "parameterValues" : {"propertyName": "properties.sessionAdminSubDiv1",
+          "parameterValues": {
+            "propertyName": "properties.sessionAdminSubDiv1",
             "propertyValue": "parameter::admin1",
-            "comparisonOperator": "equals"}
+            "comparisonOperator": "equals"
+          }
         },
         {
           "type": "profilePropertyCondition",
-          "parameterValues" : {"propertyName": "properties.sessionAdminSubDiv2",
+          "parameterValues": {
+            "propertyName": "properties.sessionAdminSubDiv2",
             "propertyValue": "parameter::admin2",
-            "comparisonOperator": "equals"}
+            "comparisonOperator": "equals"
+          }
         },
         {
           "type": "profilePropertyCondition",
-          "parameterValues" : {"propertyName": "properties.sessionCityId",
+          "parameterValues": {
+            "propertyName": "properties.sessionCityId",
             "propertyValue": "parameter::city",
-            "comparisonOperator": "equals"}
+            "comparisonOperator": "equals"
+          }
         }
       ]
     }
   },
-  "tags": [ "geographic", "sessionCondition" ],
   "parameters": [
     {
       "id": "country",

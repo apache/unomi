@@ -19,14 +19,13 @@ package org.apache.unomi.services.conditions.initializers;
 
 import org.apache.unomi.api.conditions.initializers.ChoiceListInitializer;
 import org.apache.unomi.api.conditions.initializers.ChoiceListValue;
-import org.apache.unomi.api.conditions.initializers.I18nSupport;
 import org.apache.unomi.api.services.EventService;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-public class EventTypeIdChoiceListInitializer implements ChoiceListInitializer, I18nSupport {
+public class EventTypeIdChoiceListInitializer implements ChoiceListInitializer {
 
     EventService eventService;
 

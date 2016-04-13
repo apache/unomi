@@ -1,19 +1,30 @@
 {
+  "metadata": {
     "id": "booleanCondition",
-    "conditionEvaluator": "booleanConditionEvaluator",
-    "queryBuilder": "booleanConditionESQueryBuilder",
-    "tags": [ "logical", "profileCondition", "eventCondition", "sessionCondition" , "sourceEventCondition"],
-    "parameters": [
-        {
-            "id": "operator",
-            "type": "String",
-            "multivalued": false,
-            "defaultValue": "and"
-        },
-        {
-            "id": "subConditions",
-            "type": "Condition",
-            "multivalued": true
-        }
-    ]
+    "name": "booleanCondition",
+    "description": "",
+    "tags": [
+      "logical",
+      "profileCondition",
+      "eventCondition",
+      "sessionCondition",
+      "sourceEventCondition"
+    ],
+    "readOnly": true
+  },
+  "conditionEvaluator": "booleanConditionEvaluator",
+  "queryBuilder": "booleanConditionESQueryBuilder",
+  "parameters": [
+    {
+      "id": "operator",
+      "type": "String",
+      "multivalued": false,
+      "defaultValue": "and"
+    },
+    {
+      "id": "subConditions",
+      "type": "Condition",
+      "multivalued": true
+    }
+  ]
 }

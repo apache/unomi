@@ -1,59 +1,67 @@
 {
+  "metadata": {
     "id": "sessionPropertyCondition",
-    "conditionEvaluator": "propertyConditionEvaluator",
-    "queryBuilder": "propertyConditionESQueryBuilder",
-    "tags": [ "demographic", "sessionCondition" ],
-    "parameters": [
-        {
-            "id": "propertyName",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "comparisonOperator",
-            "type": "comparisonOperator",
-            "multivalued": false,
-            "choiceListInitializerFilter": "(initializerId=comparisonOperator)"
-        },
-        {
-            "id": "propertyValue",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "propertyValueInteger",
-            "type": "integer",
-            "multivalued": false
-        },
-        {
-            "id": "propertyValueDate",
-            "type": "date",
-            "multivalued": false
-        },
-        {
-            "id": "propertyValueDateExpr",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "propertyValues",
-            "type": "string",
-            "multivalued": true
-        },
-        {
-            "id": "propertyValuesInteger",
-            "type": "integer",
-            "multivalued": true
-        },
-        {
-            "id": "propertyValuesDate",
-            "type": "date",
-            "multivalued": true
-        },
-        {
-            "id": "propertyValuesDateExpr",
-            "type": "string",
-            "multivalued": true
-        }
-    ]
+    "name": "sessionPropertyCondition",
+    "description": "",
+    "tags": [
+      "demographic",
+      "sessionCondition"
+    ],
+    "readOnly": true
+  },
+  "conditionEvaluator": "propertyConditionEvaluator",
+  "queryBuilder": "propertyConditionESQueryBuilder",
+  "parameters": [
+    {
+      "id": "propertyName",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "comparisonOperator",
+      "type": "comparisonOperator",
+      "multivalued": false,
+      "choiceListInitializerFilter": "(initializerId=comparisonOperator)"
+    },
+    {
+      "id": "propertyValue",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "propertyValueInteger",
+      "type": "integer",
+      "multivalued": false
+    },
+    {
+      "id": "propertyValueDate",
+      "type": "date",
+      "multivalued": false
+    },
+    {
+      "id": "propertyValueDateExpr",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "propertyValues",
+      "type": "string",
+      "multivalued": true
+    },
+    {
+      "id": "propertyValuesInteger",
+      "type": "integer",
+      "multivalued": true
+    },
+    {
+      "id": "propertyValuesDate",
+      "type": "date",
+      "multivalued": true
+    },
+    {
+      "id": "propertyValuesDateExpr",
+      "type": "string",
+      "multivalued": true
+    }
+  ]
 }

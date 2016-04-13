@@ -19,7 +19,6 @@ package org.apache.unomi.services.conditions.initializers;
 
 import org.apache.unomi.api.conditions.initializers.ChoiceListInitializer;
 import org.apache.unomi.api.conditions.initializers.ChoiceListValue;
-import org.apache.unomi.api.conditions.initializers.I18nSupport;
 import org.osgi.framework.BundleContext;
 
 import java.util.ArrayList;
@@ -28,7 +27,7 @@ import java.util.List;
 /**
  * Initializer for the set of available comparison operators.
  */
-public class ComparisonOperatorChoiceListInitializer implements ChoiceListInitializer, I18nSupport {
+public class ComparisonOperatorChoiceListInitializer implements ChoiceListInitializer {
 
     private List<ChoiceListValue> operators;
 

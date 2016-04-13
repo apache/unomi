@@ -1,8 +1,20 @@
 {
+  "metadata": {
     "id": "matchAllCondition",
-    "conditionEvaluator": "matchAllConditionEvaluator",
-    "queryBuilder": "matchAllConditionESQueryBuilder",
-    "tags": [ "logical", "profileCondition", "eventCondition", "sessionCondition" , "sourceEventCondition"],
-    "parameters": [
-    ]
+    "name": "matchAllCondition",
+    "description": "",
+    "tags": [
+      "logical",
+      "profileCondition",
+      "eventCondition",
+      "sessionCondition",
+      "sourceEventCondition"
+    ],
+    "readOnly": true
+  },
+  "conditionEvaluator": "matchAllConditionEvaluator",
+  "queryBuilder": "matchAllConditionESQueryBuilder",
+
+  "parameters": [
+  ]
 }

@@ -1,27 +1,36 @@
 {
+  "metadata": {
     "id": "sessionDurationCondition",
-    "parentCondition" : {
-        "type": "sessionPropertyCondition",
-        "parameterValues": {
-            "propertyName": "duration",
-            "comparisonOperator": "between",
-            "propertyValuesInteger": [
-                "script::minimumDuration*1000",
-                "script::maximumDuration*1000"
-            ]
-        }
+    "name": "sessionDurationCondition",
+    "description": "",
+    "tags": [
+      "demographic",
+      "sessionCondition"
+    ],
+    "readOnly": true
+  },
+  "parentCondition": {
+    "type": "sessionPropertyCondition",
+    "parameterValues": {
+      "propertyName": "duration",
+      "comparisonOperator": "between",
+      "propertyValuesInteger": [
+        "script::minimumDuration*1000",
+        "script::maximumDuration*1000"
+      ]
+    }
+  },
+
+  "parameters": [
+    {
+      "id": "minimumDuration",
+      "type": "integer",
+      "multivalued": false
     },
-    "tags": [ "demographic", "sessionCondition" ],
-    "parameters": [
-        {
-            "id": "minimumDuration",
-            "type": "integer",
-            "multivalued": false
-        },
-        {
-            "id": "maximumDuration",
-            "type": "integer",
-            "multivalued": false
-        }
-    ]
+    {
+      "id": "maximumDuration",
+      "type": "integer",
+      "multivalued": false
+    }
+  ]
 }

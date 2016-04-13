@@ -1,13 +1,20 @@
 {
+  "metadata": {
     "id": "mergeProfilesOnPropertyAction",
-    "actionExecutor": "mergeProfilesOnProperty",
-    "tags": [ "demographic" ],
-    "parameters": [
-        {
-            "id": "mergeProfilePropertyName",
-            "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": "(initializerId=propertyType)"
-        }
-    ]
+    "name": "mergeProfilesOnPropertyAction",
+    "description": "",
+    "tags": [
+      "demographic"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "mergeProfilesOnProperty",
+  "parameters": [
+    {
+      "id": "mergeProfilePropertyName",
+      "type": "string",
+      "multivalued": false,
+      "choiceListInitializerFilter": "(initializerId=propertyType)"
+    }
+  ]
 }

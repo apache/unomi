@@ -1,24 +1,33 @@
 {
+  "metadata": {
     "id": "profileInterestCondition",
-    "parentCondition" : {
-        "type": "profilePropertyCondition",
-        "parameterValues": {
-            "propertyName": "script::'properties.interests.'+interestName.toLowerCase()",
-            "propertyValueInteger": "parameter::value",
-            "comparisonOperator": "greaterThan"
-        }
+    "name": "profileInterestCondition",
+    "description": "",
+    "tags": [
+      "demographic",
+      "profileCondition"
+    ],
+    "readOnly": true
+  },
+  "parentCondition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "script::'properties.interests.'+interestName.toLowerCase()",
+      "propertyValueInteger": "parameter::value",
+      "comparisonOperator": "greaterThan"
+    }
+  },
+
+  "parameters": [
+    {
+      "id": "interestName",
+      "type": "string",
+      "multivalued": false
     },
-    "tags": [ "demographic", "profileCondition" ],
-    "parameters": [
-        {
-            "id": "interestName",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "value",
-            "type": "integer",
-            "multivalued": false
-        }
-    ]
+    {
+      "id": "value",
+      "type": "integer",
+      "multivalued": false
+    }
+  ]
 }

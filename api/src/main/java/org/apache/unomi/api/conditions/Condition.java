@@ -65,7 +65,7 @@ public class Condition {
      */
     public void setConditionType(ConditionType conditionType) {
         this.conditionType = conditionType;
-        this.conditionTypeId = conditionType.getId();
+        this.conditionTypeId = conditionType.getItemId();
     }
 
     /**
