@@ -21,6 +21,7 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -58,7 +59,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
         andCondition.setParameter("operator", "and");
         andCondition.setParameter("subConditions", l);
 
-        l.add(eventCondition);
+        l.add(ConditionContextHelper.getContextualCondition(eventCondition, context));
 
         Integer numberOfDays = (Integer) condition.getParameter("numberOfDays");
         if (numberOfDays != null) {
