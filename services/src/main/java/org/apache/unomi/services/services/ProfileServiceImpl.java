@@ -525,12 +525,27 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     @Override
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
         ParserHelper.resolveConditionType(definitionsService, condition);
-        Condition profileCondition = definitionsService.extractConditionByTag(condition, "profileCondition");
-        Condition sessionCondition = definitionsService.extractConditionByTag(condition, "sessionCondition");
-        if (profileCondition != null && !persistenceService.testMatch(profileCondition, profile)) {
-            return false;
+
+        if (condition.getConditionTypeId().equals("booleanCondition")) {
+            List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
+            boolean isAnd = "and".equals(condition.getParameter("operator"));
+            for (Condition subCondition : subConditions) {
+                if (isAnd && !matchCondition(subCondition, profile, session)) {
+                    return false;
+                }
+                if (!isAnd && matchCondition(subCondition, profile, session)) {
+                    return true;
+                }
+            }
+            return subConditions.size() > 0 && isAnd;
+        } else {
+            Condition profileCondition = definitionsService.extractConditionByTag(condition, "profileCondition");
+            Condition sessionCondition = definitionsService.extractConditionByTag(condition, "sessionCondition");
+            if (profileCondition != null && !persistenceService.testMatch(profileCondition, profile)) {
+                return false;
+            }
+            return !(sessionCondition != null && !persistenceService.testMatch(sessionCondition, session));
         }
-        return !(sessionCondition != null && !persistenceService.testMatch(sessionCondition, session));
     }
 
     public void batchProfilesUpdate(BatchUpdate update) {

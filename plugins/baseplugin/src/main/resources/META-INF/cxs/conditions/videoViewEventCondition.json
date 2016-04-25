@@ -1,5 +1,16 @@
 {
-  "id": "videoViewEventCondition",
+  "metadata": {
+    "id": "videoViewEventCondition",
+    "name": "videoViewEventCondition",
+    "description": "",
+    "tags": [
+      "event",
+      "eventCondition",
+      "usableInPastEventCondition",
+      "trackedCondition"
+    ],
+    "readOnly": true
+  },
   "parentCondition": {
     "type": "booleanCondition",
     "parameterValues": {
@@ -27,15 +38,9 @@
           }
         }
       ],
-      "operator" : "and"
+      "operator": "and"
     }
   },
-  "tags": [
-    "event",
-    "eventCondition",
-    "usableInPastEventCondition",
-    "trackedCondition"
-  ],
   "parameters": [
     {
       "id": "videoId",

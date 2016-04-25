@@ -49,9 +49,9 @@
             <titleTemplate>%2$s | %1$s</titleTemplate>
             <toc>sidebar</toc>
             <!--tocTopMax>6</tocTopMax-->
-            <topNav>Documentation|Standard|Contribute|Privacy|Community</topNav>
+            <topNav>Download|Documentation|Standard|Contribute|Privacy|Community</topNav>
             <bottomNav>
-                <column>Documentation|Standard|Contribute|Privacy|Community</column>
+                <column>Download|Documentation|Standard|Contribute|Privacy|Community</column>
                 <column>modules</column>
                 <column>reports</column>
             </bottomNav>
@@ -96,10 +96,15 @@
 
     <body>
 
+        <menu name="Download" inherit="top">
+            <item name="Packages" href="download.html" />
+            <item name="License" href="license.html" />
+        </menu>
+
         <menu name="Documentation" inherit="top">
             <item name="Home" href="./" />
             <item name="Building and deploying" href="building-and-deploying.html" />
-            <!--<item name="Getting started" href="getting-started.html" />-->
+            <item name="Getting started" href="getting-started.html"/>
             <item name="Configuration" href="configuration.html" />
             <item name="Cluster setup" href="clustering.html" />
             <item name="Concepts" href="concepts.html"/>

@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 public class EventsCollectorServlet extends HttpServlet {
     private static final Logger logger = LoggerFactory.getLogger(EventsCollectorServlet.class.getName());
@@ -130,16 +131,16 @@ public class EventsCollectorServlet extends HttpServlet {
             return;
         }
 
+        String thirdPartyId = eventService.authenticateThirdPartyServer(((HttpServletRequest)request).getHeader("X-Unomi-Peer"), request.getRemoteAddr());
+
         int changes = 0;
         for (Event event : events.getEvents()){
             if(event.getEventType() != null){
-                Event eventToSend;
-                if(event.getProperties() != null){
-                    eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp);
-                } else {
-                    eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(), event.getTarget(), timestamp);
+                Event eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp);
+                if (!eventService.isEventAllowed(event, thirdPartyId)) {
+                    logger.debug("Event is not allowed : {}", event.getEventType());
+                    continue;
                 }
-
                 if (filteredEventTypes != null && filteredEventTypes.contains(event.getEventType())) {
                     logger.debug("Profile is filtering event type {}", event.getEventType());
                     continue;

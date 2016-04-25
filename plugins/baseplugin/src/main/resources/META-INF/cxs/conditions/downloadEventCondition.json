@@ -1,37 +1,43 @@
 {
+  "metadata": {
     "id": "downloadEventCondition",
-    "parentCondition": {
-        "type": "booleanCondition",
-        "parameterValues": {
-            "subConditions": [
-                {
-                    "type": "eventTypeCondition",
-                    "parameterValues": {
-                        "eventTypeId": "download"
-                    }
-                },
-                {
-                    "type": "eventPropertyCondition",
-                    "parameterValues": {
-                        "propertyName": "target.properties.path",
-                        "propertyValue": "parameter::filePath",
-                        "comparisonOperator": "equals"
-                    }
-                }
-            ],
-            "operator" : "and"
-        }
-    },
+    "name": "downloadEventCondition",
+    "description": "",
     "tags": [
-        "event",
-        "eventCondition",
-        "usableInPastEventCondition"
+      "event",
+      "eventCondition",
+      "usableInPastEventCondition"
     ],
-    "parameters": [
+    "readOnly": true
+  },
+  "parentCondition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "subConditions": [
         {
-            "id": "filePath",
-            "type": "String",
-            "multivalued": false
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "download"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "target.properties.path",
+            "propertyValue": "parameter::filePath",
+            "comparisonOperator": "equals"
+          }
         }
-    ]
+      ],
+      "operator": "and"
+    }
+  },
+
+  "parameters": [
+    {
+      "id": "filePath",
+      "type": "String",
+      "multivalued": false
+    }
+  ]
 }

@@ -1,28 +1,35 @@
 {
+  "metadata": {
     "id": "requestParameterToProfilePropertyAction",
-    "actionExecutor": "requestParameterToProfileProperty",
-    "tags": [ "event" ],
-    "parameters": [
-        {
-            "id": "requestParameterName",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "profilePropertyName",
-            "type": "string",
-            "multivalued": false,
-            "choiceListInitializerFilter": "(initializerId=propertyType)"
-        },
-        {
-            "id": "sessionPropertyName",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "storeAsList",
-            "type": "boolean",
-            "multivalued": false
-        }
-    ]
+    "name": "requestParameterToProfilePropertyAction",
+    "description": "",
+    "tags": [
+      "event"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "requestParameterToProfileProperty",
+  "parameters": [
+    {
+      "id": "requestParameterName",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "profilePropertyName",
+      "type": "string",
+      "multivalued": false,
+      "choiceListInitializerFilter": "(initializerId=propertyType)"
+    },
+    {
+      "id": "sessionPropertyName",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "storeAsList",
+      "type": "boolean",
+      "multivalued": false
+    }
+  ]
 }

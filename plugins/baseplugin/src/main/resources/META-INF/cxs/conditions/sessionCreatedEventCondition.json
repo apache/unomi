@@ -1,12 +1,20 @@
 {
+  "metadata": {
     "id": "sessionCreatedEventCondition",
-    "parentCondition" : {
-        "type": "eventTypeCondition",
-        "parameterValues": {
-            "eventTypeId": "sessionCreated"
-        }
-    },
-    "tags": [ "event", "eventCondition" ],
-    "parameters": [
-    ]
+    "name": "sessionCreatedEventCondition",
+    "description": "",
+    "tags": [
+      "event",
+      "eventCondition"
+    ],
+    "readOnly": true
+  },
+  "parentCondition": {
+    "type": "eventTypeCondition",
+    "parameterValues": {
+      "eventTypeId": "sessionCreated"
+    }
+  },
+  "parameters": [
+  ]
 }

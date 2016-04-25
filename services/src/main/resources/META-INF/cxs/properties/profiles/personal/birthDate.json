@@ -7,12 +7,12 @@
   "tags": ["personalProfileProperties"],
   "defaultValue": "",
   "dateRanges": [
-    {"key":"*_10", "from": "now-10y", "to" : "now" },
-    {"key":"11_20", "from": "now-20y", "to" : "now-11y" },
-    {"key":"21_30", "from": "now-30y", "to" : "now-21y"  },
-    {"key":"31_40", "from": "now-40y", "to" : "now-31y"  },
-    {"key":"41_50", "from": "now-50y", "to" : "now-41y"  },
-    {"key":"51_*", "from": "now-51y"}
+    {"key":"*_10", "from": "now-10y/y" },
+    {"key":"10_20", "from": "now-20y/y", "to" : "now-10y/y" },
+    {"key":"20_30", "from": "now-30y/y", "to" : "now-20y/y"  },
+    {"key":"30_40", "from": "now-40y/y", "to" : "now-30y/y"  },
+    {"key":"40_50", "from": "now-50y/y", "to" : "now-40y/y"  },
+    {"key":"50_*", "to": "now-50y/y"}
   ],
   "automaticMappingsFrom": [ "j:birthDate" ],
   "rank": "502.0"

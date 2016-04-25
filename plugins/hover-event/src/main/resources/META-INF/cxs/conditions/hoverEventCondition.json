@@ -1,17 +1,26 @@
 {
+  "metadata": {
     "id": "hoverEventCondition",
-    "queryBuilder": "hoverEventConditionESQueryBuilder",
-    "tags": [ "event", "eventCondition", "usableInPastEventCondition" ],
-    "parameters": [
-        {
-            "id": "targetId",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "targetPath",
-            "type": "string",
-            "multivalued": false
-        }
-    ]
+    "name": "hoverEventCondition",
+    "description": "",
+    "tags": [
+      "event",
+      "eventCondition",
+      "usableInPastEventCondition"
+    ],
+    "readOnly": true
+  },
+  "queryBuilder": "hoverEventConditionESQueryBuilder",
+  "parameters": [
+    {
+      "id": "targetId",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "targetPath",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
 }

@@ -11,6 +11,75 @@
           }
         }
       }
-    ]
+    ],
+    "properties": {
+      "cost": {
+        "type": "double"
+      },
+      "currency": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "startDate": {
+        "type": "date",
+        "format": "dateOptionalTime"
+      },
+      "endDate": {
+        "type": "date",
+        "format": "dateOptionalTime"
+      },
+      "itemId": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "itemType": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "primaryGoal": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "timezone": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "metadata": {
+        "properties": {
+          "description": {
+            "type": "string",
+            "analyzer": "folding"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "analyzer": "folding"
+          },
+          "missingPlugins": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string",
+            "analyzer": "folding"
+          },
+          "readOnly": {
+            "type": "boolean"
+          },
+          "scope": {
+            "type": "string",
+            "analyzer": "folding"
+          },
+          "tags": {
+            "type": "string",
+            "analyzer": "folding"
+          }
+        }
+      }
+    }
   }
 }

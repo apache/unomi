@@ -1,8 +1,14 @@
 {
+  "metadata": {
     "id": "incrementInterestsValuesAction",
-    "actionExecutor": "incrementInterestsValues",
-    "tags": [ "event" ],
-    "parameters": [
-
-    ]
+    "name": "incrementInterestsValuesAction",
+    "description": "",
+    "tags": [
+      "event"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "incrementInterestsValues",
+  "parameters": [
+  ]
 }

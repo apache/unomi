@@ -21,15 +21,16 @@
     "actions": [
         {
             "parameterValues": {
-
+                "mergeProfilePropertyValue": "eventProperty::target.properties(j:nodename)",
+                "mergeProfilePropertyName": "mergeIdentifier"
             },
-            "type": "allEventToProfilePropertiesAction"
+            "type": "mergeProfilesOnPropertyAction"
         },
         {
             "parameterValues": {
-                "mergeProfilePropertyName": "j:nodename"
+
             },
-            "type": "mergeProfilesOnPropertyAction"
+            "type": "allEventToProfilePropertiesAction"
         }
     ]
 }

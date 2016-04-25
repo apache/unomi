@@ -1,32 +1,39 @@
 {
+  "metadata": {
     "id": "setPropertyAction",
-    "actionExecutor": "setProperty",
-    "tags": [ "demographic" ],
-    "parameters": [
-        {
-            "id": "setPropertyName",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-          "id": "setPropertyValue",
-          "type": "string",
-          "multivalued": false
-        },
-        {
-          "id": "setPropertyValueInteger",
-          "type": "integer",
-          "multivalued": false
-        },
-        {
-            "id": "setPropertyStrategy",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "storeInSession",
-            "type": "boolean",
-            "multivalued": false
-        }
-    ]
+    "name": "setPropertyAction",
+    "description": "",
+    "tags": [
+      "demographic"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "setProperty",
+  "parameters": [
+    {
+      "id": "setPropertyName",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "setPropertyValue",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "setPropertyValueInteger",
+      "type": "integer",
+      "multivalued": false
+    },
+    {
+      "id": "setPropertyStrategy",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "storeInSession",
+      "type": "boolean",
+      "multivalued": false
+    }
+  ]
 }

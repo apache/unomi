@@ -1,22 +1,67 @@
 {
-    "rule": {
-        "dynamic_templates": [
-            {
-                "all": {
-                    "match": "*",
-                    "match_mapping_type": "string",
-                    "mapping": {
-                        "type": "string",
-                        "analyzer": "folding"
-                    }
-                }
-            }
-        ],
-        "properties": {
-            "priority": {
-                "type": "long"
-            }
+  "rule": {
+    "dynamic_templates": [
+      {
+        "all": {
+          "match": "*",
+          "match_mapping_type": "string",
+          "mapping": {
+            "type": "string",
+            "analyzer": "folding"
+          }
         }
-
+      }
+    ],
+    "properties": {
+      "itemId": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "itemType": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "metadata": {
+        "properties": {
+          "description": {
+            "type": "string",
+            "analyzer": "folding"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "analyzer": "folding"
+          },
+          "missingPlugins": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string",
+            "analyzer": "folding"
+          },
+          "readOnly": {
+            "type": "boolean"
+          },
+          "scope": {
+            "type": "string",
+            "analyzer": "folding"
+          }
+        }
+      },
+      "priority": {
+        "type": "long"
+      },
+      "raiseEventOnlyOnceForProfile": {
+        "type": "boolean"
+      },
+      "raiseEventOnlyOnceForSession": {
+        "type": "boolean"
+      }
     }
+  }
 }

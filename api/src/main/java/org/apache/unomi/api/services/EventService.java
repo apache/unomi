@@ -56,6 +56,20 @@ public interface EventService {
     int send(Event event);
 
     /**
+     * Check if the sender is allowed to sent the speecified event. Restricted event must be explicitely allowed for a sender.
+     * @param event
+     * @param thirdPartyId
+     * @return
+     */
+    boolean isEventAllowed(Event event, String thirdPartyId);
+
+    /**
+     * Get the third party server name, if the request is originated from a known peer
+     * @return
+     */
+    String authenticateThirdPartyServer(String key, String ip);
+
+    /**
      * Retrieves the list of available event properties.
      *
      * @return a list of available event properties

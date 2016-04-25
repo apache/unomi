@@ -18,7 +18,7 @@
 #
 ################################################################################
 echo Building...
-mvn clean install -P generate-package,integration-tests,performance-tests
+mvn clean install -P integration-tests,performance-tests
 pushd package/target
 echo Uncompressing Unomi package...
 tar zxvf unomi-1.0.0-incubating-SNAPSHOT.tar.gz

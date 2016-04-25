@@ -24,21 +24,23 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.*;
 
 public class EventServiceImpl implements EventService {
+    private static final Logger logger = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
 
     private List<EventListenerService> eventListeners = new ArrayList<EventListenerService>();
 
     private PersistenceService persistenceService;
-
-    private ProfileService profileService;
 
     private DefinitionsService definitionsService;
 
@@ -46,16 +48,48 @@ public class EventServiceImpl implements EventService {
 
     private Set<String> predefinedEventTypeIds = new LinkedHashSet<String>();
 
+    private Set<String> restrictedEventTypeIds = new LinkedHashSet<String>();
+
+    private Map<String, ThirdPartyServer> thirdPartyServers = new HashMap<>();
+
+    public void setThirdPartyConfiguration(Map<String,String> thirdPartyConfiguration) {
+        this.thirdPartyServers = new HashMap<>();
+        for (Map.Entry<String, String> entry : thirdPartyConfiguration.entrySet()) {
+            String[] keys = StringUtils.split(entry.getKey(),'.');
+            if (keys[0].equals("thirdparty")) {
+                if (!thirdPartyServers.containsKey(keys[1])) {
+                    thirdPartyServers.put(keys[1], new ThirdPartyServer(keys[1]));
+                }
+                ThirdPartyServer thirdPartyServer = thirdPartyServers.get(keys[1]);
+                if (keys[2].equals("allowedEvents")) {
+                    thirdPartyServer.setAllowedEvents(new HashSet<>(Arrays.asList(StringUtils.split(entry.getValue(), ','))));
+                } else if (keys[2].equals("key")) {
+                    thirdPartyServer.setKey(entry.getValue());
+                } else if (keys[2].equals("ipAddresses")) {
+                    Set<InetAddress> inetAddresses = new HashSet<>();
+                    for (String ip : StringUtils.split(entry.getValue(), ',')) {
+                        try {
+                            inetAddresses.add(InetAddress.getByName(ip));
+                        } catch (UnknownHostException e) {
+                            logger.error("Cannot resolve address",e);
+                        }
+                    }
+                    thirdPartyServer.setIpAddresses(inetAddresses);
+                }
+            }
+        }
+    }
+
     public void setPredefinedEventTypeIds(Set<String> predefinedEventTypeIds) {
         this.predefinedEventTypeIds = predefinedEventTypeIds;
     }
 
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
+    public void setRestrictedEventTypeIds(Set<String> restrictedEventTypeIds) {
+        this.restrictedEventTypeIds = restrictedEventTypeIds;
     }
 
-    public void setProfileService(ProfileService profileService) {
-        this.profileService = profileService;
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
     }
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
@@ -64,6 +98,29 @@ public class EventServiceImpl implements EventService {
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
+    }
+
+    public boolean isEventAllowed(Event event, String thirdPartyId) {
+        if (restrictedEventTypeIds.contains(event.getEventType())) {
+            return thirdPartyServers.containsKey(thirdPartyId) && thirdPartyServers.get(thirdPartyId).getAllowedEvents().contains(event.getEventType());
+        }
+        return true;
+    }
+
+    public String authenticateThirdPartyServer(String key, String ip) {
+        if (key != null) {
+            for (Map.Entry<String, ThirdPartyServer> entry : thirdPartyServers.entrySet()) {
+                ThirdPartyServer server = entry.getValue();
+                try {
+                    if (server.getKey().equals(key) && server.getIpAddresses().contains(InetAddress.getByName(ip))) {
+                        return server.getId();
+                    }
+                } catch (UnknownHostException e) {
+                    logger.error("Cannot resolve address",e);
+                }
+            }
+        }
+        return null;
     }
 
     public int send(Event event) {

@@ -184,9 +184,9 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <organizationId>
-                        cfdb448b-0b4a-4416-ab1c-4604ea8907e2
-                    </organizationId>
+                    <license>
+                        cHJvamVjdHxvcmcuYXBhY2hlLnVub21pLnVub21pLXJlc3R8MjAxNi0xMi0zMXx0cnVlfC0xI01Dd0NGRnI4UlhTSVNMdDdXck85ODRwcVo3MFhoY0d0QWhSTU1BNVJBUUNZTkNnVkFPRkpZNGxYeWNIM01RPT0=
+                    </license>
                     <output>
                         <title>Documentation for Apache Unomi's RESTful API ${project.version}</title>
                         <html>

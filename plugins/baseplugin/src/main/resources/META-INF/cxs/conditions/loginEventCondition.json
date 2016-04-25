@@ -1,12 +1,21 @@
 {
+  "metadata": {
     "id": "loginEventCondition",
-    "parentCondition" : {
-        "type": "eventTypeCondition",
-        "parameterValues": {
-            "eventTypeId": "login"
-        }
-    },
-    "tags": [ "event", "eventCondition" ],
-    "parameters": [
-    ]
+    "name": "loginEventCondition",
+    "description": "",
+    "tags": [
+      "event",
+      "eventCondition"
+    ],
+    "readOnly": true
+  },
+  "parentCondition": {
+    "type": "eventTypeCondition",
+    "parameterValues": {
+      "eventTypeId": "login"
+    }
+  },
+
+  "parameters": [
+  ]
 }

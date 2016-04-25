@@ -1,39 +1,45 @@
 {
+  "metadata": {
     "id": "sendMailAction",
-    "actionExecutor": "sendMail",
-    "tags": [ "event" ],
-    "parameters": [
-        {
-            "id": "from",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "to",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "cc",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "bcc",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "subject",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "template",
-            "type": "string",
-            "multivalued": false,
-                    "defaultValue": "Hello $profile.properties.(\"j:firstName\")$ $profile.properties.(\"j:lastName\")$,\nHow are you doing today?"
-        }
-
-    ]
+    "name": "sendMailAction",
+    "description": "",
+    "tags": [
+      "event"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "sendMail",
+  "parameters": [
+    {
+      "id": "from",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "to",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "cc",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "bcc",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "subject",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "template",
+      "type": "string",
+      "multivalued": false,
+      "defaultValue": "Hello $profile.properties.(\"j:firstName\")$ $profile.properties.(\"j:lastName\")$,\nHow are you doing today?"
+    }
+  ]
 }

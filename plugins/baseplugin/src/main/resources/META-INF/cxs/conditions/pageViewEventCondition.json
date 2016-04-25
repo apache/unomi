@@ -1,51 +1,60 @@
 {
+  "metadata": {
     "id": "pageViewEventCondition",
-    "parentCondition": {
-        "type": "booleanCondition",
-        "parameterValues": {
-            "subConditions": [
-                {
-                    "type": "eventTypeCondition",
-                    "parameterValues": {
-                        "eventTypeId": "view"
-                    }
-                },
-                {
-                    "type": "eventPropertyCondition",
-                    "parameterValues": {
-                        "propertyName": "target.properties.pageInfo.pagePath",
-                        "propertyValue": "parameter::pagePath",
-                        "comparisonOperator": "equals"
-                    }
-                },
-                {
-                    "type": "eventPropertyCondition",
-                    "parameterValues": {
-                        "propertyName": "target.properties.pageInfo.language",
-                        "propertyValue": "parameter::language",
-                        "comparisonOperator": "equals"
-                    }
-                }
-            ],
-            "operator" : "and"
+    "name": "pageViewEventCondition",
+    "description": "",
+    "tags": [
+      "event",
+      "eventCondition",
+      "usableInPastEventCondition"
+    ],
+    "readOnly": true
+  },
+  "parentCondition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "subConditions": [
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "view"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "target.properties.pageInfo.pagePath",
+            "propertyValue": "parameter::pagePath",
+            "comparisonOperator": "equals"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "target.properties.pageInfo.language",
+            "propertyValue": "parameter::language",
+            "comparisonOperator": "equals"
+          }
         }
+      ],
+      "operator": "and"
+    }
+  },
+  "parameters": [
+    {
+      "id": "url",
+      "type": "string",
+      "multivalued": false
     },
-    "tags": [ "event", "eventCondition", "usableInPastEventCondition" ],
-    "parameters": [
-        {
-            "id": "url",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "pagePath",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "language",
-            "type": "string",
-            "multivalued": false
-        }
-    ]
+    {
+      "id": "pagePath",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "language",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
 }

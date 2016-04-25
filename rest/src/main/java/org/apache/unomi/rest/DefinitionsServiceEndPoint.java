@@ -143,6 +143,28 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
+     * Stores the condition type
+     *
+     * @param conditionType the condition type to store
+     */
+    @POST
+    @Path("/conditions")
+    public void setConditionType(ConditionType conditionType) {
+        definitionsService.setConditionType(conditionType);
+    }
+
+    /**
+     * Removes the condition type
+     *
+     * @param conditionTypeId the identifier of the action type to delete
+     */
+    @DELETE
+    @Path("/conditions/{conditionTypeId}")
+    public void removeConditionType(@PathParam("conditionTypeId") String conditionTypeId) {
+        definitionsService.removeConditionType(conditionTypeId);
+    }
+
+    /**
      * Retrieves all known action types localized using the specified language.
      *
      * @param language the language to use to localize.
@@ -186,6 +208,28 @@ public class DefinitionsServiceEndPoint {
     public RESTActionType getActionType(@PathParam("actionId") String id, @HeaderParam("Accept-Language") String language) {
         ActionType actionType = definitionsService.getActionType(id);
         return localizationHelper.generateAction(actionType, language);
+    }
+
+    /**
+     * Stores the action type
+     *
+     * @param actionType the action type to store
+     */
+    @POST
+    @Path("/actions")
+    public void setActionType(ActionType actionType) {
+        definitionsService.setActionType(actionType);
+    }
+
+    /**
+     * Removes the action type
+     *
+     * @param actionTypeId the identifier of the action type to delete
+     */
+    @DELETE
+    @Path("/actions/{actionTypeId}")
+    public void removeActionType(@PathParam("actionTypeId") String actionTypeId) {
+        definitionsService.removeActionType(actionTypeId);
     }
 
     /**

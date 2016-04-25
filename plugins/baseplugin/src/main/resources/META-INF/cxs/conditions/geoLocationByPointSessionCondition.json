@@ -1,48 +1,57 @@
 {
+  "metadata": {
     "id": "geoLocationByPointSessionCondition",
-    "conditionEvaluator": "geoLocationByPointSessionConditionEvaluator",
-    "queryBuilder": "geoLocationByPointSessionConditionESQueryBuilder",
-    "tags": [ "geographic", "sessionCondition" ],
-    "parameters": [
-        {
-          "id": "type",
-          "type": "string",
-          "multivalued": false
-        },
-        {
-            "id": "rectLatitudeNE",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "rectLongitudeNE",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "rectLatitudeSW",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-            "id": "rectLongitudeSW",
-            "type": "string",
-            "multivalued": false
-        },
-        {
-          "id": "circleLatitude",
-          "type": "string",
-          "multivalued": false
-        },
-        {
-          "id": "circleLongitude",
-          "type": "string",
-          "multivalued": false
-        },
-        {
-            "id": "distance",
-            "type": "string",
-            "multivalued": false
-        }
-    ]
+    "name": "geoLocationByPointSessionCondition",
+    "description": "",
+    "tags": [
+      "geographic",
+      "sessionCondition"
+    ],
+    "readOnly": true
+  },
+  "conditionEvaluator": "geoLocationByPointSessionConditionEvaluator",
+  "queryBuilder": "geoLocationByPointSessionConditionESQueryBuilder",
+
+  "parameters": [
+    {
+      "id": "type",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "rectLatitudeNE",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "rectLongitudeNE",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "rectLatitudeSW",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "rectLongitudeSW",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "circleLatitude",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "circleLongitude",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "distance",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
 }

@@ -1,0 +1,59 @@
+{
+  "metadata": {
+    "id": "_ajhg9u2s5_sessionAssigned",
+    "name": "Session assigned to a profile",
+    "description": "Update profile visit information",
+    "readOnly":true
+  },
+
+  "condition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "subConditions":[
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "sessionCreated"
+          }
+        },
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "sessionReassigned"
+          }
+        }
+
+        ],
+      "operator":"or"
+
+    }
+  },
+
+  "actions": [
+    {
+      "parameterValues": {
+        "setPropertyName": "properties.previousVisit",
+        "setPropertyValue": "profileProperty::lastVisit",
+        "storeInSession": false
+      },
+      "type": "setPropertyAction"
+    },
+    {
+      "parameterValues": {
+        "setPropertyName": "properties.lastVisit",
+        "setPropertyValue": "now",
+        "storeInSession": false
+      },
+      "type": "setPropertyAction"
+    },
+    {
+      "parameterValues": {
+        "setPropertyName": "properties.nbOfVisits",
+        "setPropertyValue": "script::profile.properties.?nbOfVisits != null ? (profile.properties.nbOfVisits + 1) : 1",
+        "storeInSession": false
+      },
+      "type": "setPropertyAction"
+    }
+  ]
+
+}

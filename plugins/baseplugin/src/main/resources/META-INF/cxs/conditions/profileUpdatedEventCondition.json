@@ -1,12 +1,21 @@
 {
+  "metadata": {
     "id": "profileUpdatedEventCondition",
-    "parentCondition" : {
-        "type": "eventTypeCondition",
-        "parameterValues": {
-            "eventTypeId": "profileUpdated"
-        }
-    },
-    "tags": [ "event", "eventCondition" ],
-    "parameters": [
-    ]
+    "name": "profileUpdatedEventCondition",
+    "description": "",
+    "tags": [
+      "event",
+      "eventCondition"
+    ],
+    "readOnly": true
+  },
+  "parentCondition": {
+    "type": "eventTypeCondition",
+    "parameterValues": {
+      "eventTypeId": "profileUpdated"
+    }
+  },
+
+  "parameters": [
+  ]
 }

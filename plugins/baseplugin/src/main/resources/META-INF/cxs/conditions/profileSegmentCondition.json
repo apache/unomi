@@ -1,25 +1,34 @@
 {
+  "metadata": {
     "id": "profileSegmentCondition",
-    "parentCondition" : {
-        "type": "profilePropertyCondition",
-        "parameterValues": {
-            "propertyName": "segments",
-            "propertyValues": "parameter::segments",
-            "comparisonOperator": "parameter::matchType"
-        }
+    "name": "profileSegmentCondition",
+    "description": "",
+    "tags": [
+      "demographic",
+      "profileCondition"
+    ],
+    "readOnly": true
+  },
+  "parentCondition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "segments",
+      "propertyValues": "parameter::segments",
+      "comparisonOperator": "parameter::matchType"
+    }
+  },
+
+  "parameters": [
+    {
+      "id": "segments",
+      "type": "string",
+      "multivalued": true,
+      "choiceListInitializerFilter": "(initializerId=segments)"
     },
-    "tags": [ "demographic", "profileCondition" ],
-    "parameters": [
-        {
-            "id": "segments",
-            "type": "string",
-            "multivalued": true,
-            "choiceListInitializerFilter": "(initializerId=segments)"
-        },
-        {
-            "id": "matchType",
-            "type": "string",
-            "multivalued": false
-        }
-    ]
+    {
+      "id": "matchType",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
 }

@@ -18,24 +18,19 @@
 package org.apache.unomi.rest;
 
 import org.apache.unomi.api.Parameter;
-import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.Tag;
 import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.conditions.initializers.ChoiceListInitializer;
 import org.apache.unomi.api.conditions.initializers.ChoiceListValue;
-import org.apache.unomi.api.conditions.initializers.I18nSupport;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.ResourceBundle;
+import java.util.*;
 
 /**
  * A helper class to provide localized versions of context server entities.
@@ -92,16 +87,15 @@ public class LocalizationHelper {
      */
     public RESTConditionType generateCondition(ConditionType conditionType, String language) {
         RESTConditionType result = new RESTConditionType();
-        result.setId(conditionType.getId());
+        result.setId(conditionType.getItemId());
 
-        ResourceBundle bundle = resourceBundleHelper.getResourceBundle(conditionType, language);
-        result.setName(resourceBundleHelper.getResourceBundleValue(bundle, conditionType.getNameKey()));
-        result.setDescription(resourceBundleHelper.getResourceBundleValue(bundle, conditionType.getDescriptionKey()));
+        result.setName(conditionType.getMetadata().getName());
+        result.setDescription(conditionType.getMetadata().getDescription());
 
-        result.setTags(conditionType.getTagIDs());
+        result.setTags(conditionType.getMetadata().getTags());
 
         for (Parameter parameter : conditionType.getParameters()) {
-            result.getParameters().add(generateParameter(parameter, bundle));
+            result.getParameters().add(generateParameter(parameter, language));
         }
 
         return result;
@@ -116,17 +110,16 @@ public class LocalizationHelper {
      */
     public RESTActionType generateAction(ActionType actionType, String language) {
         RESTActionType result = new RESTActionType();
-        result.setId(actionType.getId());
+        result.setId(actionType.getItemId());
 
-        ResourceBundle bundle = resourceBundleHelper.getResourceBundle(actionType, language);
-        result.setName(resourceBundleHelper.getResourceBundleValue(bundle, actionType.getNameKey()));
-        result.setDescription(resourceBundleHelper.getResourceBundleValue(bundle, actionType.getDescriptionKey()));
+        result.setName(actionType.getMetadata().getName());
+        result.setDescription(actionType.getMetadata().getDescription());
 
-        result.setTags(actionType.getTagIds());
+        result.setTags(actionType.getMetadata().getTags());
 
         List<RESTParameter> parameters = new ArrayList<RESTParameter>();
         for (Parameter parameter : actionType.getParameters()) {
-            parameters.add(generateParameter(parameter, bundle));
+            parameters.add(generateParameter(parameter, language));
         }
         result.setParameters(parameters);
 
@@ -137,44 +130,34 @@ public class LocalizationHelper {
      * Creates a {@link RESTParameter} based on the specified {@link Parameter} and localized using the specified {@link ResourceBundle}.
      *
      * @param parameter the {@link Parameter} to be localized
-     * @param bundle    the {@link ResourceBundle} used to localize the {@link Parameter}'s choice list values if needed
+     * @param language
      * @return a {@link RESTParameter} based on the specified {@link ActionType} and localized using the specified {@link ResourceBundle}
      */
-    public RESTParameter generateParameter(Parameter parameter, ResourceBundle bundle) {
+    public RESTParameter generateParameter(Parameter parameter, String language) {
         RESTParameter result = new RESTParameter();
         result.setId(parameter.getId());
         result.setDefaultValue(parameter.getDefaultValue());
         result.setMultivalued(parameter.isMultivalued());
         result.setType(parameter.getType());
-
-        localizeChoiceListValues(bundle, result.getChoiceListValues(), parameter.getChoiceListInitializerFilter());
+        result.setChoiceListValues(generateChoiceListValues(parameter.getChoiceListInitializerFilter(), language));
 
         return result;
     }
 
-    public void localizeChoiceListValues(ResourceBundle bundle, List<ChoiceListValue> result, String choiceListInitializerFilter) {
+    public List<ChoiceListValue> generateChoiceListValues(String choiceListInitializerFilter, String language) {
+        List<ChoiceListValue> result = new ArrayList<ChoiceListValue>();
         if (choiceListInitializerFilter != null && choiceListInitializerFilter.length() > 0) {
             try {
                 Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, choiceListInitializerFilter);
                 for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
                     ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
-                    List<ChoiceListValue> options = choiceListInitializer.getValues(bundle.getLocale());
-                    if (choiceListInitializer instanceof I18nSupport) {
-                        for (ChoiceListValue value : options) {
-                            if (value instanceof PluginType) {
-                                result.add(value.localizedCopy(resourceBundleHelper.getResourceBundleValue(resourceBundleHelper.getResourceBundle((PluginType) value, bundle.getLocale().getLanguage()), value.getName())));
-                            } else {
-                                result.add(value.localizedCopy(resourceBundleHelper.getResourceBundleValue(bundle, value.getName())));
-                            }
-                        }
-                    } else {
-                        result.addAll(options);
-                    }
+                    result.addAll(choiceListInitializer.getValues(null));
                 }
             } catch (InvalidSyntaxException e) {
                 logger.error("Invalid filter", e);
             }
         }
+        return result;
     }
 
     /**

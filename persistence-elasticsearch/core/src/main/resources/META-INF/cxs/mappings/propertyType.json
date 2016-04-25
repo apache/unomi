@@ -1,16 +1,113 @@
 {
-    "propertyType": {
-        "dynamic_templates": [
-            {
-                "all": {
-                    "match": "*",
-                    "match_mapping_type": "string",
-                    "mapping": {
-                        "type": "string",
-                        "analyzer": "folding"
-                    }
-                }
-            }
-        ]
+  "propertyType": {
+    "dynamic_templates": [
+      {
+        "all": {
+          "match": "*",
+          "match_mapping_type": "string",
+          "mapping": {
+            "type": "string",
+            "analyzer": "folding"
+          }
+        }
+      }
+    ],
+    "properties": {
+      "automaticMappingsFrom": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "dateRanges": {
+        "properties": {
+          "from": {
+            "type": "string",
+            "analyzer": "folding"
+          },
+          "key": {
+            "type": "string",
+            "analyzer": "folding"
+          },
+          "to": {
+            "type": "string",
+            "analyzer": "folding"
+          }
+        }
+      },
+      "defaultValue": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "itemId": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "itemType": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "mergeStrategy": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "metadata": {
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "analyzer": "folding"
+          },
+          "missingPlugins": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string",
+            "analyzer": "folding"
+          },
+          "readOnly": {
+            "type": "boolean"
+          }
+        }
+      },
+      "multivalued": {
+        "type": "boolean"
+      },
+      "numericRanges": {
+        "properties": {
+          "from": {
+            "type": "double"
+          },
+          "key": {
+            "type": "string",
+            "analyzer": "folding"
+          },
+          "to": {
+            "type": "double"
+          }
+        }
+      },
+      "protected": {
+        "type": "boolean"
+      },
+      "rank": {
+        "type": "double"
+      },
+      "tags": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "target": {
+        "type": "string",
+        "analyzer": "folding"
+      },
+      "type": {
+        "type": "string",
+        "analyzer": "folding"
+      }
     }
+  }
 }

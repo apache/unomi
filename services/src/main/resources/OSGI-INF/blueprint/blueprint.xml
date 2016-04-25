@@ -40,13 +40,13 @@
 
     <bean id="definitionsServiceImpl" class="org.apache.unomi.services.services.DefinitionsServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
     <service id="definitionsService" ref="definitionsServiceImpl" auto-export="interfaces"/>
 
     <bean id="eventServiceImpl" class="org.apache.unomi.services.services.EventServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
-        <property name="profileService" ref="profileServiceImpl"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="predefinedEventTypeIds">
@@ -57,6 +57,19 @@
                 <value>facebookLogin</value>
                 <value>profileUpdated</value>
             </set>
+        </property>
+        <property name="restrictedEventTypeIds">
+            <set>
+                <value>login</value>
+                <value>facebookLogin</value>
+                <value>sessionCreated</value>
+                <value>sessionReassigned</value>
+                <value>profileUpdated</value>
+                <value>ruleFired</value>
+            </set>
+        </property>
+        <property name="thirdPartyConfiguration">
+            <cm:cm-properties persistent-id="org.apache.unomi.thirdparty" update="true" />
         </property>
     </bean>
     <service id="eventService" ref="eventServiceImpl" auto-export="interfaces"/>

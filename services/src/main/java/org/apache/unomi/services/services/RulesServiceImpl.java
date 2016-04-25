@@ -118,29 +118,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         }
         loadPredefinedRules(bundleContext);
 
-        List<PluginType> types = definitionsService.getTypesByPlugin().get(bundleContext.getBundle().getBundleId());
-        List<String> addedConditions = new ArrayList<String>();
-        List<String> addedActions = new ArrayList<String>();
-        if (types != null) {
-            for (PluginType type : types) {
-                if (type instanceof ConditionType) {
-                    addedConditions.add(((ConditionType) type).getId());
-                } else if (type instanceof ActionType) {
-                    addedActions.add(((ActionType) type).getId());
-                }
-            }
-        }
-        if (!addedConditions.isEmpty() || !addedActions.isEmpty()) {
-            for (Rule rule : persistenceService.query("missingPlugins", "true", null, Rule.class)) {
-                boolean succeed = ParserHelper.resolveConditionType(definitionsService, rule.getCondition()) &&
-                        ParserHelper.resolveActionTypes(definitionsService, rule.getActions());
-                if (succeed) {
-                    logger.info("Enable rule " + rule.getItemId());
-                    rule.getMetadata().setMissingPlugins(false);
-                    setRule(rule);
-                }
-            }
-        }
         if (bundleContext.getBundle().getRegisteredServices() != null) {
             for (ServiceReference<?> reference : bundleContext.getBundle().getRegisteredServices()) {
                 Object service = bundleContext.getService(reference);
@@ -155,32 +132,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         if (bundleContext == null) {
             return;
         }
-        List<PluginType> types = definitionsService.getTypesByPlugin().get(bundleContext.getBundle().getBundleId());
-        List<String> removedConditions = new ArrayList<String>();
-        List<String> removedActions = new ArrayList<String>();
-        if (types != null) {
-            for (PluginType type : types) {
-                if (type instanceof ConditionType) {
-                    removedConditions.add(((ConditionType) type).getId());
-                } else if (type instanceof ActionType) {
-                    removedActions.add(((ActionType) type).getId());
-                }
-            }
-        }
-        if (!removedConditions.isEmpty() || !removedActions.isEmpty()) {
-            for (Rule rule : persistenceService.getAllItems(Rule.class)) {
-                List<String> conditions = ParserHelper.getConditionTypeIds(rule.getCondition());
-                List<String> actions = new ArrayList<String>();
-                for (Action action : rule.getActions()) {
-                    actions.add(action.getActionTypeId());
-                }
-                if (!Collections.disjoint(conditions, removedConditions) || !Collections.disjoint(actions, removedActions)) {
-                    logger.info("Disable rule " + rule.getItemId());
-                    rule.getMetadata().setMissingPlugins(true);
-                    setRule(rule);
-                }
-            }
-        }
         actionExecutorDispatcher.removeExecutors(bundleContext.getBundle().getBundleId());
     }
 
@@ -192,16 +143,11 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
         while (predefinedRuleEntries.hasMoreElements()) {
             URL predefinedSegmentURL = predefinedRuleEntries.nextElement();
-            logger.debug("Found predefined segment at " + predefinedSegmentURL + ", loading... ");
+            logger.debug("Found predefined rule at " + predefinedSegmentURL + ", loading... ");
 
             try {
                 Rule rule = CustomObjectMapper.getObjectMapper().readValue(predefinedSegmentURL, Rule.class);
-                if (rule.getMetadata().getScope() == null) {
-                    rule.getMetadata().setScope("systemscope");
-                }
-                if (getRule(rule.getMetadata().getId()) == null) {
-                    setRule(rule);
-                }
+                setRule(rule);
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
             }
@@ -329,6 +275,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     public void setRule(Rule rule) {
+        if (rule.getMetadata().getScope() == null) {
+            rule.getMetadata().setScope("systemscope");
+        }
         Condition condition = rule.getCondition();
         if (condition != null) {
             if (rule.getMetadata().isEnabled() && !rule.getMetadata().isMissingPlugins()) {

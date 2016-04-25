@@ -67,7 +67,7 @@ public class Action {
      */
     public void setActionType(ActionType actionType) {
         this.actionType = actionType;
-        this.actionTypeId = actionType.getId();
+        this.actionTypeId = actionType.getItemId();
     }
 
     /**
