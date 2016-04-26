@@ -125,6 +125,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String port;
     private String secureAddress;
     private String securePort;
+    private Integer defaultQueryLimit = 10;
 
     private Timer timer;
 
@@ -178,6 +179,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setSecurePort(String securePort) {
         this.securePort = securePort;
+    }
+
+    public void setDefaultQueryLimit(Integer defaultQueryLimit) {
+        this.defaultQueryLimit = defaultQueryLimit;
     }
 
     public void setItemsMonthlyIndexed(List<String> itemsMonthlyIndexed) {
@@ -911,7 +916,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             .setFetchSource(true)
                             .setQuery(query)
                             .setFrom(offset);
-                    if (size != -1) {
+                    if (size == Integer.MIN_VALUE) {
+                        requestBuilder.setSize(defaultQueryLimit);
+                    } else if (size != -1) {
                         requestBuilder.setSize(size);
                     } else {
                         requestBuilder.setSize(Integer.MAX_VALUE);
