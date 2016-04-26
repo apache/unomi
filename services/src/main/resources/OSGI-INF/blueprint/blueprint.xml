@@ -112,6 +112,7 @@
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
+        <property name="segmentService" ref="segmentServiceImpl"/>
         <property name="queryService" ref="queryServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="purgeProfileInterval" value="${services.profile.purge.interval}"/>

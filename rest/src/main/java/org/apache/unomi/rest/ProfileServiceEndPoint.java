@@ -118,11 +118,7 @@ public class ProfileServiceEndPoint {
     @Produces("text/csv")
     public Response getExportProfiles(@QueryParam("query") String query) {
         try {
-            Query queryObject = CustomObjectMapper.getObjectMapper().readValue(query, Query.class);
-            Response.ResponseBuilder response = Response.ok(profileService.exportProfilesPropertiesToCsv(queryObject));
-            response.header("Content-Disposition",
-                    "attachment; filename=Profiles_export_" + new SimpleDateFormat("yyyy-MM-dd-HH-mm").format(new Date()) + ".csv");
-            return response.build();
+            return exportProfiles(CustomObjectMapper.getObjectMapper().readValue(query, Query.class));
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
             return Response.serverError().build();
@@ -141,15 +137,28 @@ public class ProfileServiceEndPoint {
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response formExportProfiles(@FormParam("query") String query) {
         try {
-            Query queryObject = CustomObjectMapper.getObjectMapper().readValue(query, Query.class);
-            Response.ResponseBuilder response = Response.ok(profileService.exportProfilesPropertiesToCsv(queryObject));
-            response.header("Content-Disposition",
-                    "attachment; filename=Profiles_export_" + new SimpleDateFormat("yyyy-MM-dd-HH-mm").format(new Date()) + ".csv");
-            return response.build();
+            return exportProfiles(CustomObjectMapper.getObjectMapper().readValue(query, Query.class));
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
             return Response.serverError().build();
         }
+    }
+
+    /**
+     * Retrieves an export of profiles matching the specified query as a downloadable file using the comma-separated values (CSV) format.
+     *
+     * @param query a String JSON representation of the query the profiles to export should match
+     * @return a Response object configured to allow caller to download the CSV export file
+     */
+    @POST
+    @Path("/export")
+    @Produces("text/csv")
+    public Response exportProfiles(Query query) {
+        String toCsv = profileService.exportProfilesPropertiesToCsv(query);
+        Response.ResponseBuilder response = Response.ok(toCsv);
+        response.header("Content-Disposition",
+                "attachment; filename=Profiles_export_" + new SimpleDateFormat("yyyy-MM-dd-HH-mm").format(new Date()) + ".csv");
+        return response.build();
     }
 
     /**
