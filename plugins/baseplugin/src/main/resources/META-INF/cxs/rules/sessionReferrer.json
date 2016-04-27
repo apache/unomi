@@ -12,8 +12,9 @@
         "parameterValues": {
             "subConditions": [
                 {
-                    "type": "pageViewEventCondition",
+                    "type": "eventTypeCondition",
                     "parameterValues": {
+                        "eventTypeId": "view"
                     }
                 },
                 {

@@ -184,13 +184,6 @@
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="actionExecutorId" value="incrementInterestsValues"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.actions.IncrementInterestsValuesAction"/>
-    </service>
-
-    <service auto-export="interfaces">
-        <service-properties>
             <entry key="actionExecutorId" value="setEventOccurenceCount"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.SetEventOccurenceCountAction">

@@ -9,8 +9,9 @@
     "priority": -9,
 
     "condition": {
-        "type": "pageViewEventCondition",
+        "type": "eventTypeCondition",
         "parameterValues": {
+            "eventTypeId": "view"
         }
     },
 
