@@ -130,13 +130,12 @@ public class EventServiceImpl implements EventService {
 
         int changes = NO_CHANGE;
 
-        Profile profile = event.getProfile();
         final Session session = event.getSession();
         if (event.isPersistent() && session != null) {
             session.setLastEventDate(event.getTimeStamp());
         }
 
-        if (profile != null) {
+        if (event.getProfile() != null) {
             for (EventListenerService eventListenerService : eventListeners) {
                 if (eventListenerService.canHandle(event)) {
                     changes |= eventListenerService.onEvent(event);
@@ -148,13 +147,13 @@ public class EventServiceImpl implements EventService {
             }
 
             if ((changes & PROFILE_UPDATED) == PROFILE_UPDATED) {
-                Event profileUpdated = new Event("profileUpdated", session, profile, event.getScope(), event.getSource(), profile, event.getTimeStamp());
+                Event profileUpdated = new Event("profileUpdated", session, event.getProfile(), event.getScope(), event.getSource(), event.getProfile(), event.getTimeStamp());
                 profileUpdated.setPersistent(false);
                 profileUpdated.getAttributes().putAll(event.getAttributes());
                 changes |= send(profileUpdated);
                 if (session != null) {
                     changes |= SESSION_UPDATED;
-                    session.setProfile(profile);
+                    session.setProfile(event.getProfile());
                 }
             }
         }
