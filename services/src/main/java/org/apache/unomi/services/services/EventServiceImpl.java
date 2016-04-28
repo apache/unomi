@@ -62,7 +62,9 @@ public class EventServiceImpl implements EventService {
                 }
                 ThirdPartyServer thirdPartyServer = thirdPartyServers.get(keys[1]);
                 if (keys[2].equals("allowedEvents")) {
-                    thirdPartyServer.setAllowedEvents(new HashSet<>(Arrays.asList(StringUtils.split(entry.getValue(), ','))));
+                    HashSet<String> allowedEvents = new HashSet<>(Arrays.asList(StringUtils.split(entry.getValue(), ',')));
+                    restrictedEventTypeIds.addAll(allowedEvents);
+                    thirdPartyServer.setAllowedEvents(allowedEvents);
                 } else if (keys[2].equals("key")) {
                     thirdPartyServer.setKey(entry.getValue());
                 } else if (keys[2].equals("ipAddresses")) {

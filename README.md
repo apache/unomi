@@ -95,6 +95,59 @@ on your disk and copy all the files from the lib/sigar directory into Karaf's li
 6. If all went smoothly, you should be able to access the context script here : http://localhost:8181/cxs/cluster .
  You should be able to login with karaf / karaf and see basic server information. If not something went wrong during the install.
 
+Configuration
+----------------------------------
+
+Before starting your Unomi server, you need to properly configure it by editing configuration files.
+All unomi configuration files can be found in the $MY_KARAF_HOME/etc directory, named org.apache.unomi.*.cfg .
+
+The $MY_KARAF_HOME/etc/org.apache.unomi.web.cfg file defines the addresses and port where Unomi can be found :
+
+    contextserver.address=localhost
+    contextserver.port=8181
+    contextserver.secureAddress=localhost
+    contextserver.securePort=9443
+
+Addresses must be updated with reachable addresses, as they will be sent to the client by the cluster end point.
+
+If you need to specify an Elasticsearch cluster name that is different than the default, it is recommended to do this
+BEFORE you start the server for the first time, or you will loose all the data you have stored previously.
+
+To change the cluster name, first create a file called
+
+    $MY_KARAF_HOME/etc/org.apache.unomi.persistence.elasticsearch.cfg
+
+with the following contents:
+
+    cluster.name=contextElasticSearch
+    index.name=context
+    elasticSearchConfig=file:${karaf.etc}/elasticsearch.yml
+
+And replace the cluster.name parameter here by your cluster name.
+
+You can also put an elasticsearch configuration file in $MY_KARAF_HOME/etc/elasticsearch.yml ,
+and put any standard Elasticsearch configuration options in this last file.
+
+If you want your context server to be a client only on a cluster of elasticsearch nodes, just set the node.data property
+to false.
+
+Secured events configuration
+---------------------------
+
+If you need to secure some events, that will be sent only by a trusted third party server, you can update the file :
+
+    $MY_KARAF_HOME/etc/org.apache.unomi.thirdparty.cfg
+
+Ususally, login events, which operate on profiles and do merge on protected properties, must be secured. For each
+trusted third party server, you need to add these 3 lines :
+
+thirdparty.provider1.key=secret-key
+thirdparty.provider1.ipAddresses=127.0.0.1,::1
+thirdparty.provider1.allowedEvents=login,download
+
+The events set in allowedEvents will be secured and will only be accepted if the call comes from the specified IP
+address, and if the secret-key is passed in the X-Unomi-Peer header.
+
 Installing the MaxMind GeoIPLite2 IP lookup database
 ----------------------------------------------------
 
@@ -118,40 +171,6 @@ Edit $MY_KARAF_HOME/etc/org.apache.unomi.geonames.cfg and set request.geonamesDa
 Otherwise, import should start at the next startup. Import runs in background, but can take about 15 minutes.
 At the end, you should have about 4 million entries in the geonames index.
  
-Changing the default configuration
-----------------------------------
-
-If you want to change the default configuration, you can perform any modification you want in the $MY_KARAF_HOME/etc directory.
-
-The context server configuration is kept in the $MY_KARAF_HOME/etc/org.apache.unomi.web.cfg . It defines the
-addresses and port where it can be found :
-
-    contextserver.address=localhost
-    contextserver.port=8181
-    contextserver.secureAddress=localhost
-    contextserver.securePort=9443
-
-If you need to specify an Elasticsearch cluster name that is different than the default, it is recommended to do this
-BEFORE you start the server for the first time, or you will loose all the data you have stored previously.
-
-To change the cluster name, first create a file called 
-
-    $MY_KARAF_HOME/etc/org.apache.unomi.persistence.elasticsearch.cfg
-
-with the following contents:
-
-    cluster.name=contextElasticSearch
-    index.name=context
-    elasticSearchConfig=file:${karaf.etc}/elasticsearch.yml
-
-And replace the cluster.name parameter here by your cluster name.
-
-You can also put an elasticsearch configuration file in $MY_KARAF_HOME/etc/elasticsearch.yml ,
-and put any standard Elasticsearch configuration options in this last file.
-
-If you want your context server to be a client only on a cluster of elasticsearch nodes, just set the node.data property
-to false.
-
 REST API Security
 -----------------
 

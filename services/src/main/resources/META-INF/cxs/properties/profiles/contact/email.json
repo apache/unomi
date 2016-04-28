@@ -3,6 +3,6 @@
     "type": "email",
     "tags": ["contactProfileProperties"],
     "defaultValue": "",
-    "automaticMappingsFrom": [ "j:email" ],
+    "automaticMappingsFrom": [ ],
     "rank": "301.0"
 }

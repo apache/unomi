@@ -3,6 +3,6 @@
     "type": "string",
     "tags": [ "basicProfileProperties" ],
     "defaultValue": "",
-    "automaticMappingsFrom": [ "j:lastName" ],
+    "automaticMappingsFrom": [ ],
     "rank": "102.0"
 }

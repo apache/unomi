@@ -3,6 +3,6 @@
     "type": "string",
     "tags": [ "socialProfileProperties" ],
     "defaultValue": "",
-    "automaticMappingsFrom": [ "j:facebookID" ],
+    "automaticMappingsFrom": [ ],
     "rank": "401.0"
 }

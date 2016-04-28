@@ -47,7 +47,7 @@ public class IncrementTweetNumberAction implements ActionExecutor {
             propertyType.setValueTypeId("integer");
             propertyType.setTagIds(Collections.singleton("social"));
             propertyType.setTarget(TARGET);
-            service.createPropertyType(propertyType);
+            service.setPropertyType(propertyType);
 
             // create tweeted from property type
             propertyType = new PropertyType(new Metadata(event.getScope(), TWEETED_FROM_PROPERTY, TWEETED_FROM_PROPERTY, "The list of pages a user tweeted from"));
@@ -55,7 +55,7 @@ public class IncrementTweetNumberAction implements ActionExecutor {
             propertyType.setTagIds(Collections.singleton("social"));
             propertyType.setTarget(TARGET);
             propertyType.setMultivalued(true);
-            service.createPropertyType(propertyType);
+            service.setPropertyType(propertyType);
 
             tweetNb = 0;
             tweetedFrom = new ArrayList<>();

@@ -272,9 +272,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     @Override
-    public boolean createPropertyType(PropertyType property) {
-        if (persistenceService.load(property.getItemId(), PropertyType.class) != null) {
-            return false;
+    public boolean setPropertyType(PropertyType property) {
+        PropertyType previous = null;
+        if ((previous = persistenceService.load(property.getItemId(), PropertyType.class)) != null) {
+            previous.getAutomaticMappingsFrom().addAll(property.getAutomaticMappingsFrom());
+            property = previous;
         }
         return persistenceService.save(property);
     }
@@ -585,7 +587,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return persistenceService.query("target", target, null, PropertyType.class);
     }
 
-    public HashMap<String, Collection<PropertyType>> getAllPropertyTypes() {
+    public Map<String, Collection<PropertyType>> getAllPropertyTypes() {
         Collection<PropertyType> props = persistenceService.getAllItems(PropertyType.class, 0, -1, "rank").getList();
 
         HashMap<String, Collection<PropertyType>> propertyTypes = new HashMap<>();
@@ -685,11 +687,13 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
             try {
                 PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeURL, PropertyType.class);
-                String[] splitPath = predefinedPropertyTypeURL.getPath().split("/");
-                String target = splitPath[4];
-                propertyType.setTarget(target);
+                if (getPropertyType(propertyType.getMetadata().getId()) == null) {
+                    String[] splitPath = predefinedPropertyTypeURL.getPath().split("/");
+                    String target = splitPath[4];
+                    propertyType.setTarget(target);
 
-                persistenceService.save(propertyType);
+                    persistenceService.save(propertyType);
+                }
             } catch (IOException e) {
                 logger.error("Error while loading properties " + predefinedPropertyTypeURL, e);
             }

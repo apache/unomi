@@ -3,6 +3,6 @@
     "type": "string",
     "tags": [ "socialProfileProperties" ],
     "defaultValue": "",
-    "automaticMappingsFrom": [ "j:linkedInID" ],
+    "automaticMappingsFrom": [ ],
     "rank": "402.0"
 }

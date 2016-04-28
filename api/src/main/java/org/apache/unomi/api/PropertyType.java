@@ -43,7 +43,7 @@ public class PropertyType extends MetadataItem {
     private List<DateRange> dateRanges = new ArrayList<>();
     private List<NumericRange> numericRanges = new ArrayList<>();
     private List<IpRange> ipRanges = new ArrayList<>();
-    private Set<String> automaticMappingsFrom;
+    private Set<String> automaticMappingsFrom = new HashSet<>();
     private double rank;
     private String mergeStrategy;
     private Set<Tag> tags = new TreeSet<Tag>();

@@ -498,8 +498,8 @@ public class ProfileServiceEndPoint {
      */
     @POST
     @Path("/properties")
-    public boolean createPropertyType(PropertyType property) {
-        return profileService.createPropertyType(property);
+    public boolean setPropertyType(PropertyType property) {
+        return profileService.setPropertyType(property);
     }
 
     /**

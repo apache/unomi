@@ -3,6 +3,6 @@
     "type": "integer",
     "tags": [ "workProfileProperties" ],
     "defaultValue": "",
-    "automaticMappingsFrom": [ "j:income" ],
+    "automaticMappingsFrom": [ ],
     "rank": "603.0"
 }
