@@ -228,7 +228,7 @@ public interface ProfileService {
      *
      * @return a Map associating targets as keys to related {@link PropertyType}s
      */
-    HashMap<String, Collection<PropertyType>> getAllPropertyTypes();
+    Map<String, Collection<PropertyType>> getAllPropertyTypes();
 
     /**
      * Retrieves all property types with the specified tag also retrieving property types with sub-tags of the specified tag if so specified.
@@ -269,7 +269,7 @@ public interface ProfileService {
      * @param property the property type to persist
      * @return {@code true} if the property type was properly created, {@code false} otherwise (for example, if the property type already existed
      */
-    boolean createPropertyType(PropertyType property);
+    boolean setPropertyType(PropertyType property);
 
     /**
      * Deletes the property type identified by the specified identifier.

@@ -3,6 +3,6 @@
     "type": "string",
     "tags": ["contactProfileProperties"],
     "defaultValue": "",
-    "automaticMappingsFrom": [ "j:city" ],
+    "automaticMappingsFrom": [ ],
     "rank": "304.0"
 }

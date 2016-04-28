@@ -22,9 +22,11 @@ import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
+import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.QueryService;
+import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
@@ -46,6 +48,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private PersistenceService persistenceService;
 
     private DefinitionsService definitionsService;
+
+    private SegmentService segmentService;
 
     private QueryService queryService;
 
@@ -77,6 +81,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
+    }
+
+    public void setSegmentService(SegmentService segmentService) {
+        this.segmentService = segmentService;
     }
 
     public void postConstruct() {
@@ -264,9 +272,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     @Override
-    public boolean createPropertyType(PropertyType property) {
-        if (persistenceService.load(property.getItemId(), PropertyType.class) != null) {
-            return false;
+    public boolean setPropertyType(PropertyType property) {
+        PropertyType previous = null;
+        if ((previous = persistenceService.load(property.getItemId(), PropertyType.class)) != null) {
+            previous.getAutomaticMappingsFrom().addAll(property.getAutomaticMappingsFrom());
+            property = previous;
         }
         return persistenceService.save(property);
     }
@@ -296,9 +306,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return filteredProperties;
     }
 
-
-    // TODO: can be improve to use ES mappings directly to read the existing properties
-    @Override
     public String exportProfilesPropertiesToCsv(Query query) {
         StringBuilder sb = new StringBuilder();
         Set<PropertyType> profileProperties = getExistingProperties("profileProperties", Profile.ITEM_TYPE);
@@ -310,12 +317,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         for (int i = 0; i < propertyTypes.length; i++) {
             PropertyType propertyType = propertyTypes[i];
             sb.append(propertyType.getMetadata().getId());
-            if (i < propertyTypes.length - 1) {
-                sb.append(";");
-            } else {
-                sb.append("\n");
-            }
+            sb.append(";");
         }
+        sb.append("segments\n");
 
         // rows
         for (Profile profile : profiles.getList()) {
@@ -328,14 +332,16 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 } else {
                     sb.append("");
                 }
-                if (i < propertyTypes.length - 1) {
-                    sb.append(";");
-                } else {
-                    sb.append("\n");
-                }
+                sb.append(";");
             }
+            List<String> segmentNames = new ArrayList<String>();
+            for (String segment : profile.getSegments()) {
+                Segment s = segmentService.getSegmentDefinition(segment);
+                segmentNames.add(csvEncode(s.getMetadata().getName()));
+            }
+            sb.append(csvEncode(StringUtils.join(segmentNames, ",")));
+            sb.append('\n');
         }
-
         return sb.toString();
     }
 
@@ -343,30 +349,21 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private void handleExportProperty(StringBuilder sb, Object propertyValue, PropertyType propertyType) {
         if (propertyValue instanceof Collection && propertyType.isMultivalued()) {
             Collection propertyValues = (Collection) propertyValue;
-            if (propertyValues.size() > 0) {
-                Object[] propertyValuesArray = propertyValues.toArray();
-                for (int i = 0; i < propertyValuesArray.length; i++) {
-                    Object o = propertyValuesArray[i];
-                    if (o instanceof String && i == 0) {
-                        sb.append("\"");
-                    }
-                    sb.append(propertyValue.toString());
-                    if (o instanceof String && i == propertyValuesArray.length - 1) {
-                        sb.append("\"");
-                    } else {
-                        sb.append(",");
-                    }
-                }
+            Collection encodedValues = new ArrayList(propertyValues.size());
+            for (Object value : propertyValues) {
+                encodedValues.add(csvEncode(value.toString()));
             }
+            sb.append(csvEncode(StringUtils.join(encodedValues, ",")));
         } else {
-            if (propertyValue instanceof String) {
-                sb.append("\"");
-            }
-            sb.append(propertyValue.toString());
-            if (propertyValue instanceof String) {
-                sb.append("\"");
-            }
+            sb.append(csvEncode(propertyValue.toString()));
         }
+    }
+
+    private String csvEncode(String input) {
+        if (StringUtils.containsAny(input, '\n', '"', ',')) {
+            return "\"" + input.replace("\"","\"\"") + "\"";
+        }
+        return input;
     }
 
     public PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue, int offset, int size, String sortBy) {
@@ -590,7 +587,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return persistenceService.query("target", target, null, PropertyType.class);
     }
 
-    public HashMap<String, Collection<PropertyType>> getAllPropertyTypes() {
+    public Map<String, Collection<PropertyType>> getAllPropertyTypes() {
         Collection<PropertyType> props = persistenceService.getAllItems(PropertyType.class, 0, -1, "rank").getList();
 
         HashMap<String, Collection<PropertyType>> propertyTypes = new HashMap<>();
@@ -690,11 +687,13 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
             try {
                 PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeURL, PropertyType.class);
-                String[] splitPath = predefinedPropertyTypeURL.getPath().split("/");
-                String target = splitPath[4];
-                propertyType.setTarget(target);
+                if (getPropertyType(propertyType.getMetadata().getId()) == null) {
+                    String[] splitPath = predefinedPropertyTypeURL.getPath().split("/");
+                    String target = splitPath[4];
+                    propertyType.setTarget(target);
 
-                persistenceService.save(propertyType);
+                    persistenceService.save(propertyType);
+                }
             } catch (IOException e) {
                 logger.error("Error while loading properties " + predefinedPropertyTypeURL, e);
             }

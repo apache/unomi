@@ -27,7 +27,7 @@ import org.apache.unomi.api.conditions.Condition;
 public class Query {
     private String text;
     private int offset;
-    private int limit;
+    private int limit = Integer.MIN_VALUE;
     private String sortby;
     private Condition condition;
     private boolean forceRefresh;

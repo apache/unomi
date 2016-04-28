@@ -3,6 +3,6 @@
     "type": "string",
     "tags": [ "socialProfileProperties" ],
     "defaultValue": "",
-    "automaticMappingsFrom": [ "j:twitterID" ],
+    "automaticMappingsFrom": [ ],
     "rank": "404.0"
 }

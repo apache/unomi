@@ -39,6 +39,7 @@
             <cm:property name="numberOfReplicas" value="0"/>
             <cm:property name="discovery.zen.ping.multicast.enabled" value="false"/>
             <cm:property name="node.data" value="true"/>
+            <cm:property name="defaultQueryLimit" value="10"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -88,6 +89,7 @@
         <property name="port" value="${web.contextserver.port}"/>
         <property name="secureAddress" value="${web.contextserver.secureAddress}"/>
         <property name="securePort" value="${web.contextserver.securePort}"/>
+        <property name="defaultQueryLimit" value="${es.defaultQueryLimit}"/>
         <property name="elasticSearchConfig" value="${es.elasticSearchConfig}"/>
         <property name="itemsMonthlyIndexed">
             <list>
