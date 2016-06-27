@@ -308,15 +308,25 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     public String exportProfilesPropertiesToCsv(Query query) {
         StringBuilder sb = new StringBuilder();
-        Set<PropertyType> profileProperties = getExistingProperties("profileProperties", Profile.ITEM_TYPE);
-        PropertyType[] propertyTypes = profileProperties.toArray(new PropertyType[profileProperties.size()]);
+        Set<PropertyType> propertyTypes = getExistingProperties("profileProperties", Profile.ITEM_TYPE);
         PartialList<Profile> profiles = search(query, Profile.class);
+
+        HashMap<String, PropertyType> propertyTypesById = new LinkedHashMap<>();
+        for (PropertyType propertyType : propertyTypes) {
+            propertyTypesById.put(propertyType.getMetadata().getId(), propertyType);
+        }
+        for (Profile profile : profiles.getList()) {
+            for (String key : profile.getProperties().keySet()) {
+                if (!propertyTypesById.containsKey(key)) {
+                    propertyTypesById.put(key, null);
+                }
+            }
+        }
 
         sb.append("profileId;");
         // headers
-        for (int i = 0; i < propertyTypes.length; i++) {
-            PropertyType propertyType = propertyTypes[i];
-            sb.append(propertyType.getMetadata().getId());
+        for (String propertyId : propertyTypesById.keySet()) {
+            sb.append(propertyId);
             sb.append(";");
         }
         sb.append("segments\n");
@@ -325,10 +335,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         for (Profile profile : profiles.getList()) {
             sb.append(profile.getItemId());
             sb.append(";");
-            for (int i = 0; i < propertyTypes.length; i++) {
-                PropertyType propertyType = propertyTypes[i];
-                if (profile.getProperties().get(propertyType.getMetadata().getId()) != null) {
-                    handleExportProperty(sb, profile.getProperties().get(propertyType.getMetadata().getId()), propertyType);
+            for (Map.Entry<String, PropertyType> propertyIdAndType : propertyTypesById.entrySet()) {
+                String propertyId = propertyIdAndType.getKey();
+                if (profile.getProperties().get(propertyId) != null) {
+                    handleExportProperty(sb, profile.getProperties().get(propertyId), propertyIdAndType.getValue());
                 } else {
                     sb.append("");
                 }
@@ -347,7 +357,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     // TODO may be moved this in a specific Export Utils Class and improve it to handle date format, ...
     private void handleExportProperty(StringBuilder sb, Object propertyValue, PropertyType propertyType) {
-        if (propertyValue instanceof Collection && propertyType.isMultivalued()) {
+        if (propertyValue instanceof Collection && propertyType != null && propertyType.isMultivalued()) {
             Collection propertyValues = (Collection) propertyValue;
             Collection encodedValues = new ArrayList(propertyValues.size());
             for (Object value : propertyValues) {
