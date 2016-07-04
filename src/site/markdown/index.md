@@ -132,3 +132,13 @@ interact with external systems or pretty much anything that can be implemented u
 
 - Look at possible integration with newsletter management systems such as MailChimp, for example to synchronize profile data with collected info.
 - Integrate with machine learning implementations such as Prediction.io or Apache Mahout
+
+
+### Disclaimer
+
+Apache Unomi is an effort undergoing incubation at The Apache Software Foundation (ASF), sponsored by the Apache Incubator PMC. Incubation is required 
+of all newly accepted projects until a further review indicates that the infrastructure, communications, and decision making process have stabilized 
+in a manner consistent with other successful ASF projects. While incubation status is not necessarily a reflection of the completeness or stability 
+of the code, it does indicate that the project has yet to be fully endorsed by the ASF.
+
+![Unomi is incubating](images/incubator-logo.png)
