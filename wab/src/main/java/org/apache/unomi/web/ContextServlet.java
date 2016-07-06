@@ -58,7 +58,6 @@ public class ContextServlet extends HttpServlet {
 
     private String profileIdCookieName = "context-profile-id";
     private String profileIdCookieDomain;
-//    private String personaIdCookieName = "context-persona-id";
 
 
     @Override
@@ -86,7 +85,6 @@ public class ContextServlet extends HttpServlet {
         Profile profile = null;
 
         String cookieProfileId = null;
-        String cookiePersonaId = null;
         Cookie[] cookies = httpServletRequest.getCookies();
         for (Cookie cookie : cookies) {
             if (profileIdCookieName.equals(cookie.getName())) {
@@ -161,8 +159,7 @@ public class ContextServlet extends HttpServlet {
                         profile = checkMergedProfile(response, profile, session);
                     }
                 }
-
-            } else if (cookieProfileId == null || !cookieProfileId.equals(profile.getItemId())) {
+            } else if ((cookieProfileId == null || !cookieProfileId.equals(profile.getItemId())) && !profile.isAnonymousProfile()) {
                 // profile if stored in session but not in cookie
                 HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain);
             }
@@ -193,6 +190,13 @@ public class ContextServlet extends HttpServlet {
         }
 
         ContextResponse data = new ContextResponse();
+        data.setProfileId(profile.isAnonymousProfile() ? cookieProfileId : profile.getItemId());
+
+        if (privacyService.isRequireAnonymousBrowsing(profile.getItemId())) {
+            profile = privacyService.getAnonymousProfile();
+            session.setProfile(profile);
+            changes = EventService.SESSION_UPDATED;
+        }
 
         if(contextRequest != null){
             changes |= handleRequest(contextRequest, profile, session, data, request, response, timestamp);
@@ -232,7 +236,7 @@ public class ContextServlet extends HttpServlet {
 
     private Profile checkMergedProfile(ServletResponse response, Profile profile, Session session) {
         String profileId;
-        if (profile != null && profile.getMergedWith() != null) {
+        if (profile != null && profile.getMergedWith() != null && !profile.isAnonymousProfile()) {
             profileId = profile.getMergedWith();
             Profile profileToDelete = profile;
             profile = profileService.load(profileId);
@@ -282,8 +286,6 @@ public class ContextServlet extends HttpServlet {
             }
         }
 
-        data.setProfileId(profile.getItemId());
-
         if (contextRequest.isRequireSegments()) {
             data.setProfileSegments(profile.getSegments());
         }
@@ -331,16 +333,18 @@ public class ContextServlet extends HttpServlet {
     }
 
     private void processOverrides(ContextRequest contextRequest, Profile profile, Session session) {
-        if (contextRequest.getSegmentOverrides() != null) {
-            profile.setSegments(contextRequest.getSegmentOverrides());
-        }
+        if (profile instanceof Persona) {
+            if (contextRequest.getSegmentOverrides() != null) {
+                profile.setSegments(contextRequest.getSegmentOverrides());
+            }
 
-        if (contextRequest.getProfilePropertiesOverrides() != null) {
-            profile.setProperties(contextRequest.getProfilePropertiesOverrides());
-        }
+            if (contextRequest.getProfilePropertiesOverrides() != null) {
+                profile.setProperties(contextRequest.getProfilePropertiesOverrides());
+            }
 
-        if (contextRequest.getSessionPropertiesOverrides() != null) {
-            session.setProperties(contextRequest.getSessionPropertiesOverrides()); // we do this just in case a cache is behind this
+            if (contextRequest.getSessionPropertiesOverrides() != null) {
+                session.setProperties(contextRequest.getSessionPropertiesOverrides()); // we do this just in case a cache is behind this
+            }
         }
     }
 

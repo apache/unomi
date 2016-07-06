@@ -23,6 +23,7 @@ import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBui
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -46,7 +47,7 @@ public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
 
         FilterBuilder[] l = new FilterBuilder[conditionCount];
         for (int i = 0; i < conditionCount; i++) {
-            l[i] = dispatcher.buildFilter(conditions.get(i), context);
+            l[i] = dispatcher.buildFilter(conditions.get(i));
         }
 
         return isAndOperator ? FilterBuilders.andFilter(l) : FilterBuilders.orFilter(l);

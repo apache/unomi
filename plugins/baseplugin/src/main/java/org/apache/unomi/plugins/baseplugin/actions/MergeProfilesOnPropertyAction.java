@@ -95,7 +95,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     public int execute(Action action, Event event) {
 
         Profile profile = event.getProfile();
-        if (profile instanceof Persona) {
+        if (profile instanceof Persona || profile.isAnonymousProfile()) {
             return EventService.NO_CHANGE;
         }
 

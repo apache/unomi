@@ -28,6 +28,9 @@ import org.apache.unomi.api.services.EventService;
 public class EventToProfilePropertyAction implements ActionExecutor {
 
     public int execute(Action action, Event event) {
+        if (event.getProfile().isAnonymousProfile()) {
+            return EventService.NO_CHANGE;
+        }
         String eventPropertyName = (String) action.getParameterValues().get("eventPropertyName");
         String profilePropertyName = (String) action.getParameterValues().get("profilePropertyName");
         if (event.getProfile().getProperty(profilePropertyName) == null || !event.getProfile().getProperty(profilePropertyName).equals(event.getProperty(eventPropertyName))) {

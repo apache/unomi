@@ -41,6 +41,9 @@ public class EvaluateProfileSegmentsAction implements ActionExecutor {
 
     @Override
     public int execute(Action action, Event event) {
+        if (event.getProfile().isAnonymousProfile()) {
+            return EventService.NO_CHANGE;
+        }
         boolean updated = false;
         SegmentsAndScores segmentsAndScoringForProfile = segmentService.getSegmentsAndScoresForProfile(event.getProfile());
         Set<String> segments = segmentsAndScoringForProfile.getSegments();

@@ -89,28 +89,28 @@ public class PrivacyServiceImpl implements PrivacyService {
 
     @Override
     public String anonymizeBrowsingData(String profileId) {
-        Profile profile = profileService.load(profileId);
-        if (profile == null) {
-            return profileId;
-        }
-        Profile newProfile = new Profile(UUID.randomUUID().toString());
-        // first we copy all the profile data to the new Profile
-        newProfile.setMergedWith(profile.getMergedWith());
-        newProfile.setProperties(profile.getProperties());
-        newProfile.setScores(profile.getScores());
-        newProfile.setSegments(profile.getSegments());
-        newProfile.setSystemProperties(profile.getSystemProperties());
-        newProfile.setScope(profile.getScope());
-        profileService.save(newProfile);
-        // then we clear the old profile of all data
-        profile.setMergedWith(null);
-        profile.setProperties(new HashMap<String, Object>());
-        profile.setScores(new HashMap<String, Integer>());
-        profile.setSegments(new HashSet<String>());
-        profile.setSystemProperties(new HashMap<String, Object>());
-        profile.setScope(null);
-        profileService.save(profile);
-        return newProfile.getItemId();
+//        Profile profile = profileService.load(profileId);
+//        if (profile == null) {
+//            return profileId;
+//        }
+//        Profile newProfile = new Profile(UUID.randomUUID().toString());
+//        // first we copy all the profile data to the new Profile
+//        newProfile.setMergedWith(profile.getMergedWith());
+//        newProfile.setProperties(profile.getProperties());
+//        newProfile.setScores(profile.getScores());
+//        newProfile.setSegments(profile.getSegments());
+//        newProfile.setSystemProperties(profile.getSystemProperties());
+//        newProfile.setScope(profile.getScope());
+//        profileService.save(newProfile);
+//        // then we clear the old profile of all data
+//        profile.setMergedWith(null);
+//        profile.setProperties(new HashMap<String, Object>());
+//        profile.setScores(new HashMap<String, Integer>());
+//        profile.setSegments(new HashSet<String>());
+//        profile.setSystemProperties(new HashMap<String, Object>());
+//        profile.setScope(null);
+//        profileService.save(profile);
+        return null;
     }
 
     @Override
@@ -132,23 +132,31 @@ public class PrivacyServiceImpl implements PrivacyService {
     }
 
     @Override
-    public Boolean setAnonymous(String profileId, boolean anonymous) {
+    public Boolean setRequireAnonymousBrowsing(String profileId, boolean anonymous) {
         Profile profile = profileService.load(profileId);
         if (profile == null) {
             return false;
         }
-        profile.setProperty("anonymous", anonymous);
+        profile.getSystemProperties().put("requireAnonymousProfile", anonymous);
         profileService.save(profile);
         return true;
     }
 
-    public Boolean isAnonymous(String profileId) {
+    public Boolean isRequireAnonymousBrowsing(String profileId) {
         Profile profile = profileService.load(profileId);
         if (profile == null) {
-            return null;
+            return false;
         }
-        Boolean anonymous = (Boolean) profile.getProperty("anonymous");
-        return anonymous;
+        Boolean anonymous = (Boolean) profile.getSystemProperties().get("requireAnonymousProfile");
+        return anonymous != null && anonymous;
+    }
+
+    public Profile getAnonymousProfile() {
+        String id = UUID.randomUUID().toString();
+        Profile anonymousProfile = new Profile(id);
+        anonymousProfile.getSystemProperties().put("isAnonymousProfile", true);
+        profileService.save(anonymousProfile);
+        return anonymousProfile;
     }
 
     @Override

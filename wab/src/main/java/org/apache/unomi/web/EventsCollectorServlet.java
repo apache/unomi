@@ -35,7 +35,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 public class EventsCollectorServlet extends HttpServlet {
     private static final Logger logger = LoggerFactory.getLogger(EventsCollectorServlet.class.getName());
@@ -102,22 +101,6 @@ public class EventsCollectorServlet extends HttpServlet {
             return;
         }
 
-        Profile realProfile = profile;
-        Boolean profileIsAnonymous = privacyService.isAnonymous(profile.getItemId());
-        if (profileIsAnonymous != null && profileIsAnonymous.booleanValue()) {
-            // we are surfing anonymously, we must use the global anonymous profile if it exists, or create it if
-            // it doesn't.
-            Profile anonymousProfile = profileService.load(PrivacyService.GLOBAL_ANONYMOUS_PROFILE_ID);
-            if (anonymousProfile == null) {
-                anonymousProfile = new Profile(PrivacyService.GLOBAL_ANONYMOUS_PROFILE_ID);
-                profileService.save(profile);
-            }
-            realProfile = profile;
-            profile = anonymousProfile;
-        }
-
-        List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile.getItemId());
-
         ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
         JsonFactory factory = mapper.getFactory();
         EventsCollectorRequest events = null;
@@ -134,6 +117,15 @@ public class EventsCollectorServlet extends HttpServlet {
         String thirdPartyId = eventService.authenticateThirdPartyServer(((HttpServletRequest)request).getHeader("X-Unomi-Peer"), request.getRemoteAddr());
 
         int changes = 0;
+
+        if (privacyService.isRequireAnonymousBrowsing(profile.getItemId())) {
+            profile = privacyService.getAnonymousProfile();
+            session.setProfile(profile);
+            changes = EventService.SESSION_UPDATED;
+        }
+
+        List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile.getItemId());
+
         for (Event event : events.getEvents()){
             if(event.getEventType() != null){
                 Event eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp);
