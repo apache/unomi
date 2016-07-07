@@ -19,7 +19,6 @@
       "id": "profilePropertyName",
       "type": "string",
       "multivalued": false,
-      "choiceListInitializerFilter": "(initializerId=propertyType)"
     },
     {
       "id": "sessionPropertyName",

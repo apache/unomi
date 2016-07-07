@@ -22,8 +22,7 @@
     {
       "id": "segments",
       "type": "string",
-      "multivalued": true,
-      "choiceListInitializerFilter": "(initializerId=segments)"
+      "multivalued": true
     },
     {
       "id": "matchType",

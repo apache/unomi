@@ -21,8 +21,7 @@
     {
       "id": "eventTypeId",
       "type": "String",
-      "multivalued": false,
-      "choiceListInitializerFilter": "(initializerId=eventTypeId)"
+      "multivalued": false
     }
   ]
 }

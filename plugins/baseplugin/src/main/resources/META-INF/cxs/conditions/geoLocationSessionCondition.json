@@ -52,8 +52,7 @@
   "parameters": [
     {
       "id": "country",
-      "type": "string",
-      "choiceListInitializerFilter": "(initializerId=country)"
+      "type": "string"
     },
     {
       "id": "admin1",
