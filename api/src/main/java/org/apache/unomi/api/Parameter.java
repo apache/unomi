@@ -29,7 +29,6 @@ public class Parameter {
     String id;
     String type;
     boolean multivalued = false;
-    String choiceListInitializerFilter;
     String defaultValue = null;
 
     public Parameter() {
@@ -47,8 +46,9 @@ public class Parameter {
         return multivalued;
     }
 
-    public String getChoiceListInitializerFilter() {
-        return choiceListInitializerFilter;
+    @Deprecated
+    public void setChoiceListInitializerFilter(String choiceListInitializerFilter) {
+        // Avoid errors when deploying old definitions
     }
 
     public String getDefaultValue() {

@@ -22,15 +22,14 @@ import org.apache.unomi.api.Tag;
 import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.ConditionType;
-import org.apache.unomi.api.conditions.initializers.ChoiceListInitializer;
-import org.apache.unomi.api.conditions.initializers.ChoiceListValue;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.InvalidSyntaxException;
-import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.ResourceBundle;
 
 /**
  * A helper class to provide localized versions of context server entities.
@@ -139,24 +138,6 @@ public class LocalizationHelper {
         result.setDefaultValue(parameter.getDefaultValue());
         result.setMultivalued(parameter.isMultivalued());
         result.setType(parameter.getType());
-        result.setChoiceListValues(generateChoiceListValues(parameter.getChoiceListInitializerFilter(), language));
-
-        return result;
-    }
-
-    public List<ChoiceListValue> generateChoiceListValues(String choiceListInitializerFilter, String language) {
-        List<ChoiceListValue> result = new ArrayList<ChoiceListValue>();
-        if (choiceListInitializerFilter != null && choiceListInitializerFilter.length() > 0) {
-            try {
-                Collection<ServiceReference<ChoiceListInitializer>> matchingChoiceListInitializerReferences = bundleContext.getServiceReferences(ChoiceListInitializer.class, choiceListInitializerFilter);
-                for (ServiceReference<ChoiceListInitializer> choiceListInitializerReference : matchingChoiceListInitializerReferences) {
-                    ChoiceListInitializer choiceListInitializer = bundleContext.getService(choiceListInitializerReference);
-                    result.addAll(choiceListInitializer.getValues(null));
-                }
-            } catch (InvalidSyntaxException e) {
-                logger.error("Invalid filter", e);
-            }
-        }
         return result;
     }
 

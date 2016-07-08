@@ -194,6 +194,12 @@ public class Profile extends Item {
         this.scores = scores;
     }
 
+    @XmlTransient
+    public boolean isAnonymousProfile() {
+        Boolean anonymous = (Boolean) getSystemProperties().get("isAnonymousProfile");
+        return anonymous != null && anonymous;
+    }
+
     @Override
     public String toString() {
         return new StringBuilder(512).append("{id: \"").append(getItemId()).append("\", segments: ")

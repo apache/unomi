@@ -18,10 +18,6 @@
 package org.apache.unomi.rest;
 
 import org.apache.unomi.api.Parameter;
-import org.apache.unomi.api.conditions.initializers.ChoiceListValue;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * A representation of a {@link Parameter} better suited for definitions.
@@ -31,8 +27,6 @@ public class RESTParameter {
     private String type;
     private boolean multivalued = false;
     private String defaultValue = null;
-    private List<ChoiceListValue> choiceListValues = new ArrayList<ChoiceListValue>();
-
 
     public String getId() {
         return id;
@@ -66,11 +60,4 @@ public class RESTParameter {
         this.defaultValue = defaultValue;
     }
 
-    public List<ChoiceListValue> getChoiceListValues() {
-        return choiceListValues;
-    }
-
-    public void setChoiceListValues(List<ChoiceListValue> choiceListValues) {
-        this.choiceListValues = choiceListValues;
-    }
 }

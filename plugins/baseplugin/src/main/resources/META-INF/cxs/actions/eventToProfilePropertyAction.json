@@ -13,14 +13,12 @@
     {
       "id": "eventPropertyName",
       "type": "string",
-      "multivalued": false,
-      "choiceListInitializerFilter": "(initializerId=eventProperty)"
+      "multivalued": false
     },
     {
       "id": "profilePropertyName",
       "type": "string",
-      "multivalued": false,
-      "choiceListInitializerFilter": "(initializerId=propertyType)"
+      "multivalued": false
     }
   ]
 }

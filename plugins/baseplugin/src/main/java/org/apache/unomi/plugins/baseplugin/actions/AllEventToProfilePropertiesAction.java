@@ -37,6 +37,9 @@ public class AllEventToProfilePropertiesAction implements ActionExecutor {
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public int execute(Action action, Event event) {
+        if (event.getProfile().isAnonymousProfile()) {
+            return EventService.NO_CHANGE;
+        }
         boolean changed = false;
         Map<String, Object> properties = new HashMap<String,Object>();
         if (event.getProperties() != null) {

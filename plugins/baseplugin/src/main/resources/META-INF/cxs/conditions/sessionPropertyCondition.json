@@ -20,8 +20,7 @@
     {
       "id": "comparisonOperator",
       "type": "comparisonOperator",
-      "multivalued": false,
-      "choiceListInitializerFilter": "(initializerId=comparisonOperator)"
+      "multivalued": false
     },
     {
       "id": "propertyValue",

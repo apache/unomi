@@ -17,6 +17,7 @@
 
 package org.apache.unomi.api.services;
 
+import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.ServerInfo;
 
 import java.util.List;
@@ -36,9 +37,11 @@ public interface PrivacyService {
 
     Boolean deleteProfileData(String profileId);
 
-    Boolean setAnonymous(String profileId, boolean anonymous);
+    Boolean setRequireAnonymousBrowsing(String profileId, boolean anonymous);
 
-    Boolean isAnonymous(String profileId);
+    Boolean isRequireAnonymousBrowsing(String profileId);
+
+    Profile getAnonymousProfile();
 
     List<String> getFilteredEventTypes(String profileId);
 

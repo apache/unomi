@@ -36,6 +36,12 @@ public class SetPropertyAction implements ActionExecutor {
     }
 
     public int execute(Action action, Event event) {
+        boolean storeInSession = Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"));
+
+        if (event.getProfile().isAnonymousProfile() && !storeInSession) {
+            return EventService.NO_CHANGE;
+        }
+
         Object propertyValue = action.getParameterValues().get("setPropertyValue");
         Object propertyValueInteger = action.getParameterValues().get("setPropertyValueInteger");
 
@@ -50,7 +56,6 @@ public class SetPropertyAction implements ActionExecutor {
         }
         String propertyName = (String) action.getParameterValues().get("setPropertyName");
 
-        boolean storeInSession = Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"));
 
         Object target = storeInSession ? event.getSession() : event.getProfile();
 

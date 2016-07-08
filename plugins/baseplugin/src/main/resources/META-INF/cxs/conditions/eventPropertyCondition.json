@@ -16,14 +16,12 @@
     {
       "id": "propertyName",
       "type": "string",
-      "multivalued": false,
-      "choiceListInitializerFilter": "(initializerId=eventProperty)"
+      "multivalued": false
     },
     {
       "id": "comparisonOperator",
       "type": "comparisonOperator",
-      "multivalued": false,
-      "choiceListInitializerFilter": "(initializerId=comparisonOperator)"
+      "multivalued": false
     },
     {
       "id": "propertyValue",

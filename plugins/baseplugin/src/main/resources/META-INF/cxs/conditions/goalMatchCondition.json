@@ -21,8 +21,7 @@
     {
       "id": "goalId",
       "type": "string",
-      "multivalued": false,
-      "choiceListInitializerFilter": "(initializerId=goals)"
+      "multivalued": false
     }
   ]
 }

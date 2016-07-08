@@ -80,20 +80,20 @@ public class PrivacyServiceEndPoint {
     @GET
     @Path("/profiles/{profileId}/anonymous")
     public Boolean isAnonymous(@PathParam("profileId") String profileId) {
-        return privacyService.isAnonymous(profileId);
+        return privacyService.isRequireAnonymousBrowsing(profileId);
     }
 
     @POST
     @Path("/profiles/{profileId}/anonymous")
     public Response activateAnonymousSurfing(@PathParam("profileId") String profileId) {
-        privacyService.setAnonymous(profileId, true);
+        privacyService.setRequireAnonymousBrowsing(profileId, true);
         return Response.ok().build();
     }
 
     @DELETE
     @Path("/profiles/{profileId}/anonymous")
     public Response deactivateAnonymousSurfing(@PathParam("profileId") String profileId) {
-        privacyService.setAnonymous(profileId, false);
+        privacyService.setRequireAnonymousBrowsing(profileId, false);
         return Response.ok().build();
     }
 

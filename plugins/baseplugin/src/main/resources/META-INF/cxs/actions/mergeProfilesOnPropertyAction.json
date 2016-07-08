@@ -13,8 +13,7 @@
     {
       "id": "mergeProfilePropertyName",
       "type": "string",
-      "multivalued": false,
-      "choiceListInitializerFilter": "(initializerId=propertyType)"
+      "multivalued": false
     }
   ]
 }
