@@ -110,18 +110,7 @@ public class PrivacyServiceImpl implements PrivacyService {
 
     @Override
     public Boolean deleteProfileData(String profileId) {
-        Condition eventPropertyCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        eventPropertyCondition.setParameter("propertyName", "profileId");
-        eventPropertyCondition.setParameter("propertyValue", profileId);
-        eventPropertyCondition.setParameter("comparisonOperator", "equals");
-        persistenceService.removeByQuery(eventPropertyCondition, Event.class);
-
-        Condition sessionPropertyCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-        sessionPropertyCondition.setParameter("propertyName", "profileId");
-        sessionPropertyCondition.setParameter("propertyValue", profileId);
-        sessionPropertyCondition.setParameter("comparisonOperator", "equals");
-        persistenceService.removeByQuery(sessionPropertyCondition, Session.class);
-
+        anonymizeBrowsingData(profileId);
         profileService.delete(profileId, false);
         return true;
     }

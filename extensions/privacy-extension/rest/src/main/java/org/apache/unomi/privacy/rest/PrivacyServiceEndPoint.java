@@ -66,15 +66,8 @@ public class PrivacyServiceEndPoint {
 
     @POST
     @Path("/profiles/{profileId}/anonymize")
-    public Response anonymizeBrowsingData(@PathParam("profileId") String profileId) {
-        String newProfileId = privacyService.anonymizeBrowsingData(profileId);
-        if (!profileId.equals(newProfileId)) {
-            return Response.ok()
-                    .cookie(new NewCookie("context-profile-id", newProfileId, "/", null, null, NewCookie.DEFAULT_MAX_AGE, false))
-                    .entity(newProfileId)
-                    .build();
-        }
-        return Response.serverError().build();
+    public void anonymizeBrowsingData(@PathParam("profileId") String profileId) {
+        privacyService.anonymizeBrowsingData(profileId);
     }
 
     @GET
@@ -86,15 +79,15 @@ public class PrivacyServiceEndPoint {
     @POST
     @Path("/profiles/{profileId}/anonymous")
     public Response activateAnonymousSurfing(@PathParam("profileId") String profileId) {
-        privacyService.setRequireAnonymousBrowsing(profileId, true);
-        return Response.ok().build();
+        Boolean r = privacyService.setRequireAnonymousBrowsing(profileId, true);
+        return r ? Response.ok().build() : Response.serverError().build();
     }
 
     @DELETE
     @Path("/profiles/{profileId}/anonymous")
     public Response deactivateAnonymousSurfing(@PathParam("profileId") String profileId) {
-        privacyService.setRequireAnonymousBrowsing(profileId, false);
-        return Response.ok().build();
+        Boolean r = privacyService.setRequireAnonymousBrowsing(profileId, false);
+        return r ? Response.ok().build() : Response.serverError().build();
     }
 
     @GET
