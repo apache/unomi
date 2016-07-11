@@ -89,28 +89,23 @@ public class PrivacyServiceImpl implements PrivacyService {
 
     @Override
     public String anonymizeBrowsingData(String profileId) {
-//        Profile profile = profileService.load(profileId);
-//        if (profile == null) {
-//            return profileId;
-//        }
-//        Profile newProfile = new Profile(UUID.randomUUID().toString());
-//        // first we copy all the profile data to the new Profile
-//        newProfile.setMergedWith(profile.getMergedWith());
-//        newProfile.setProperties(profile.getProperties());
-//        newProfile.setScores(profile.getScores());
-//        newProfile.setSegments(profile.getSegments());
-//        newProfile.setSystemProperties(profile.getSystemProperties());
-//        newProfile.setScope(profile.getScope());
-//        profileService.save(newProfile);
-//        // then we clear the old profile of all data
-//        profile.setMergedWith(null);
-//        profile.setProperties(new HashMap<String, Object>());
-//        profile.setScores(new HashMap<String, Integer>());
-//        profile.setSegments(new HashSet<String>());
-//        profile.setSystemProperties(new HashMap<String, Object>());
-//        profile.setScope(null);
-//        profileService.save(profile);
-        return null;
+        Profile profile = profileService.load(profileId);
+        if (profile == null) {
+            return profileId;
+        }
+
+        List<Session> sessions = profileService.getProfileSessions(profileId, null, 0, -1, null).getList();
+        for (Session session : sessions) {
+            Profile newProfile = getAnonymousProfile();
+            session.setProfile(newProfile);
+            persistenceService.save(session);
+            List<Event> events = eventService.searchEvents(session.getItemId(), new String[0], null, 0, -1, null).getList();
+            for (Event event : events) {
+                persistenceService.update(event.getItemId(), event.getTimeStamp(), Event.class, "profileId", newProfile.getItemId());
+            }
+        }
+
+        return profileId;
     }
 
     @Override
