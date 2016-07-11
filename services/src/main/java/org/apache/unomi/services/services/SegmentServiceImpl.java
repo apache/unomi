@@ -659,7 +659,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             persistenceService.updateWithScript(profileToRemove.getItemId(), null, Profile.class, "ctx._source.scores.remove(scoringId)", scriptParams);
         }
         if(scoring.getMetadata().isEnabled()) {
-            String script = "if (ctx._source.scores.containsKey(scoringId)) { ctx._source.scores[scoringId] += scoringValue } else { ctx._source.scores[scoringId] = scoringValue }";
+            String script = "if (ctx._source.scores == null) { ctx._source.scores=[:] } ; if (ctx._source.scores.containsKey(scoringId)) { ctx._source.scores[scoringId] += scoringValue } else { ctx._source.scores[scoringId] = scoringValue }";
             for (ScoringElement element : scoring.getElements()) {
                 scriptParams.put("scoringValue", element.getValue());
                 for (Profile p : persistenceService.query(element.getCondition(), null, Profile.class)) {
