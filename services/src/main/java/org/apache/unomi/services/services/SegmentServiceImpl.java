@@ -407,6 +407,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         }
 
         List<Scoring> allScoring = this.allScoring;
+        Map<String, Integer> scoreModifiers = (Map<String, Integer>) profile.getSystemProperties().get("scoreModifiers");
         for (Scoring scoring : allScoring) {
             if (scoring.getMetadata().isEnabled()) {
                 int score = 0;
@@ -415,8 +416,12 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                         score += scoringElement.getValue();
                     }
                 }
+                String scoringId = scoring.getMetadata().getId();
+                if (scoreModifiers != null && scoreModifiers.containsKey(scoringId) && scoreModifiers.get(scoringId) != null) {
+                    score += scoreModifiers.get(scoringId);
+                }
                 if (score > 0) {
-                    scores.put(scoring.getMetadata().getId(), score);
+                    scores.put(scoringId, score);
                 }
             }
         }
@@ -438,7 +443,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     }
 
     public PartialList<Metadata> getScoringMetadatas(int offset, int size, String sortBy) {
-       return getMetadatas(offset, size, sortBy, Scoring.class);
+        return getMetadatas(offset, size, sortBy, Scoring.class);
     }
 
     public PartialList<Metadata> getScoringMetadatas(Query query) {
