@@ -21,7 +21,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.PrivacyService;
+import org.apache.unomi.api.privacy.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.slf4j.Logger;
@@ -78,26 +78,34 @@ public class EventsCollectorServlet extends HttpServlet {
 
         String sessionId = request.getParameter("sessionId");
         if (sessionId == null) {
+            logger.error("No sessionId found in incoming request, aborting processing. See debug level for more information");
+            if (logger.isDebugEnabled()) {
+                logger.debug("Request dump:" + HttpUtils.dumpRequestInfo(request));
+            }
             return;
         }
 
         Session session = profileService.loadSession(sessionId, timestamp);
         if (session == null) {
+            logger.error("No session found for sessionId={}, aborting request !", sessionId);
             return;
         }
 
         String profileId = session.getProfileId();
         if (profileId == null) {
+            logger.error("No profileId found in session={}, aborting request !", session.getItemId());
             return;
         }
 
         profile = profileService.load(profileId);
         if (profile == null || profile instanceof Persona) {
+            logger.error("No valid profile found or persona found for profileId={}, aborting request !", profileId);
             return;
         }
 
         String payload = HttpUtils.getPayload(request);
-        if(payload == null){
+        if (payload == null){
+            logger.error("No event payload found for request, aborting !", profileId);
             return;
         }
 
@@ -111,6 +119,7 @@ public class EventsCollectorServlet extends HttpServlet {
             return;
         }
         if (events == null || events.getEvents() == null) {
+            logger.error("No events found in payload");
             return;
         }
 

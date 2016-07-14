@@ -23,7 +23,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.PrivacyService;
+import org.apache.unomi.api.privacy.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
@@ -79,6 +79,7 @@ public class ContextServlet extends HttpServlet {
 
         if ("options".equals(httpMethod.toLowerCase())) {
             response.flushBuffer();
+            logger.debug("OPTIONS request received. No context will be returned.");
             return;
         }
 
@@ -110,6 +111,10 @@ public class ContextServlet extends HttpServlet {
 
         if (cookieProfileId == null && sessionId == null && personaId == null) {
             ((HttpServletResponse)response).sendError(HttpServletResponse.SC_BAD_REQUEST);
+            logger.error("Couldn't find cookieProfileId, sessionId or personaId in incoming request! Stopped processing request. See debug level for more information");
+            if (logger.isDebugEnabled()) {
+                logger.debug("Request dump:" + HttpUtils.dumpRequestInfo(httpServletRequest));
+            }
             return;
         }
 
