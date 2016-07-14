@@ -18,14 +18,19 @@
 #
 ################################################################################
 echo Setting up environment...
+DIRNAME=`dirname "$0"`
+PROGNAME=`basename "$0"`
+if [ -f "$DIRNAME/setenv.sh" ]; then
+  . "$DIRNAME/setenv.sh"
+fi
 if [ "x$CONTEXT_SERVER_KARAF_HOME" = "x" ]; then
-    CONTEXT_SERVER_KARAF_HOME=~/java/deployments/context-server/apache-karaf-3.0.2
+    CONTEXT_SERVER_KARAF_HOME=~/java/deployments/context-server/apache-karaf-$KARAF_VERSION
     export CONTEXT_SERVER_KARAF_HOME
 fi
 echo Compiling...
 mvn clean install
 echo Deploying KAR package to $CONTEXT_SERVER_KARAF_HOME/deploy...
-cp kar/target/unomi-kar-1.0.0-SNAPSHOT.kar $CONTEXT_SERVER_KARAF_HOME/deploy/
+cp kar/target/unomi-kar-$UNOMI_VERSION.kar $CONTEXT_SERVER_KARAF_HOME/deploy/
 echo Purging Karaf local Maven repository, exploded KAR directory and temporary directory... 
 rm -rf $CONTEXT_SERVER_KARAF_HOME/data/maven/repository/*
 rm -rf $CONTEXT_SERVER_KARAF_HOME/data/tmp/*

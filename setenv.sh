@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 ################################################################################
 #
 #    Licensed to the Apache Software Foundation (ASF) under one or more
@@ -17,18 +17,6 @@
 #    limitations under the License.
 #
 ################################################################################
-echo Building...
-DIRNAME=`dirname "$0"`
-PROGNAME=`basename "$0"`
-if [ -f "$DIRNAME/setenv.sh" ]; then
-  . "$DIRNAME/setenv.sh"
-fi
-mvn clean install -P integration-tests,performance-tests,rat
-pushd package/target
-echo Uncompressing Unomi package...
-tar zxvf unomi-$UNOMI_VERSION.tar.gz
-cd unomi-$UNOMI_VERSION/bin
-echo Starting Unomi...
-./karaf debug
-popd
-
+export UNOMI_VERSION=`mvn org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate -Dexpression=project.version | grep -Ev '(^\[|Download\w+:)'`
+echo Detected project version=$UNOMI_VERSION
+export KARAF_VERSION=3.0.2
