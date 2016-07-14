@@ -21,7 +21,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.privacy.PrivacyService;
+import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.slf4j.Logger;

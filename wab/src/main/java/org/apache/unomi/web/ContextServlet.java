@@ -23,7 +23,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.privacy.PrivacyService;
+import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
