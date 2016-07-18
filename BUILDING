@@ -52,3 +52,21 @@ Building
 
 3) The distributions will be available under "package/target" directory.
 
+Updating the website
+--------------------
+
+We provide two scripts to generate the website and upload the modifications
+to the live SVN repository. To generate the website and check if everything is in
+place simply launch:
+
+    ./generate-site.sh
+
+The generated site will then be in the target/site directory
+
+Once it is ready to be published to the live site, simply use the following
+command:
+
+    ./generate-site-and-upload.sh SVNusername SVNpassword
+
+Where the required username and password have the proper credentials for the SVN
+Apache repository.

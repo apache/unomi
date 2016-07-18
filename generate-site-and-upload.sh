@@ -17,11 +17,16 @@
 #    limitations under the License.
 #
 ################################################################################
+if [ $# -ne 2 ]
+  then
+    echo "Illegal number of arguments supplied. Syntax should be generate-site-and-upload.sh SVNusername SVNpassword"
+    exit 1
+fi
 echo Generating site...
 mvn clean install site site:stage -P integration-tests,performance-tests
 cd rest
 mvn package
 cd -
 echo Committing site to Apache SVN...
-mvn scm-publish:publish-scm
+mvn scm-publish:publish-scm -Dusername=$1 -Dpassword=$2
 echo Site generation and upload completed.
