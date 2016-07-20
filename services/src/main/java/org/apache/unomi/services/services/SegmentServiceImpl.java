@@ -29,6 +29,7 @@ import org.apache.unomi.api.segments.ScoringElement;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.segments.SegmentsAndScores;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
@@ -56,6 +57,8 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     private PersistenceService persistenceService;
 
     private DefinitionsService definitionsService;
+
+    private EventService eventService;
 
     private RulesService rulesService;
 
@@ -110,6 +113,10 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
+    }
+
+    public void setEventService(EventService eventService) {
+        this.eventService = eventService;
     }
 
     public void setRulesService(RulesService rulesService) {
@@ -669,6 +676,9 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                 scriptParams.put("scoringValue", element.getValue());
                 for (Profile p : persistenceService.query(element.getCondition(), null, Profile.class)) {
                     persistenceService.updateWithScript(p.getItemId(), null, Profile.class, script, scriptParams);
+                    Event profileUpdated = new Event("profileUpdated", null, p, null, null, p, new Date());
+                    profileUpdated.setPersistent(false);
+                    eventService.send(profileUpdated);
                 }
             }
         }
