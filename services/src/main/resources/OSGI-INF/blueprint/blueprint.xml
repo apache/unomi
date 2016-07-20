@@ -100,6 +100,7 @@
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
+        <property name="eventService" ref="eventServiceImpl"/>
         <property name="rulesService" ref="rulesServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="taskExecutionPeriod" value="86400000"/>
