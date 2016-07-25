@@ -29,9 +29,6 @@
     <description>ElasticSearch persistence implementation for the Apache Unomi Context Server</description>
     <packaging>pom</packaging>
 
-    <properties>
-    </properties>
-
     <modules>
         <module>core</module>
         <module>plugins</module>

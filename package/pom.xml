@@ -39,7 +39,6 @@
             <!-- scope is compile so all features (there is only one) are installed into startup.properties and the feature repo itself is not installed -->
             <groupId>org.apache.karaf.features</groupId>
             <artifactId>framework</artifactId>
-            <version>${version.karaf}</version>
             <type>kar</type>
         </dependency>
         <dependency>
@@ -47,7 +46,6 @@
             <groupId>org.apache.karaf.features</groupId>
             <artifactId>standard</artifactId>
             <classifier>features</classifier>
-            <version>${version.karaf}</version>
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
@@ -55,7 +53,6 @@
             <groupId>org.apache.karaf.features</groupId>
             <artifactId>spring</artifactId>
             <classifier>features</classifier>
-            <version>${version.karaf}</version>
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
@@ -63,7 +60,6 @@
             <groupId>org.apache.karaf.features</groupId>
             <artifactId>enterprise</artifactId>
             <classifier>features</classifier>
-            <version>${version.karaf}</version>
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
@@ -72,7 +68,6 @@
             <!-- scope is runtime so the feature repo is listed in the features service config file, and features may be installed using the karaf-maven-plugin configuration -->
             <groupId>org.apache.cxf.karaf</groupId>
             <artifactId>apache-cxf</artifactId>
-            <version>${cxf.version}</version>
             <classifier>features</classifier>
             <type>xml</type>
             <scope>runtime</scope>
@@ -125,7 +120,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>2.10</version>
                 <executions>
                     <execution>
                         <id>unpack-sigar</id>
@@ -229,7 +223,6 @@
             <plugin>
                 <groupId>org.apache.karaf.tooling</groupId>
                 <artifactId>karaf-maven-plugin</artifactId>
-                <version>3.0.2</version>
                 <executions>
                     <execution>
                         <id>install-kar</id>

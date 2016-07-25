@@ -33,6 +33,5 @@
     <artifactId>cxs-geonames</artifactId>
     <name>Apache Unomi :: Extensions :: Geonames Database</name>
     <description>Apache Unomi Context Server extension that integrates with the Geonames database</description>
-    <version>1.1.0-incubating-SNAPSHOT</version>
     <packaging>pom</packaging>
 </project>
