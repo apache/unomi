@@ -638,14 +638,28 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             add.removeAll(previousProfiles);
             previousProfiles.removeAll(newProfiles);
 
+            Map<String, Event> updatedProfiles = new HashMap<>();
+
             for (Profile profileToAdd : add) {
                 profileToAdd.getSegments().add(segment.getItemId());
                 persistenceService.update(profileToAdd.getItemId(), null, Profile.class, "segments", profileToAdd.getSegments());
+                Event profileUpdated = new Event("profileUpdated", null, profileToAdd, null, null, profileToAdd, new Date());
+                profileUpdated.setPersistent(false);
+                updatedProfiles.put(profileToAdd.getItemId(), profileUpdated);
             }
             for (Profile profileToRemove : previousProfiles) {
                 profileToRemove.getSegments().remove(segment.getItemId());
                 persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
+                Event profileUpdated = new Event("profileUpdated", null, profileToRemove, null, null, profileToRemove, new Date());
+                profileUpdated.setPersistent(false);
+                updatedProfiles.put(profileToRemove.getItemId(), profileUpdated);
             }
+
+            Iterator<Map.Entry<String, Event>> entries = updatedProfiles.entrySet().iterator();
+            while (entries.hasNext()) {
+                eventService.send(entries.next().getValue());
+            }
+
         } else {
             List<Profile> previousProfiles = persistenceService.query(segmentCondition, null, Profile.class);
             for (Profile profileToRemove : previousProfiles) {
@@ -672,14 +686,19 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         }
         if(scoring.getMetadata().isEnabled()) {
             String script = "if (ctx._source.scores == null) { ctx._source.scores=[:] } ; if (ctx._source.scores.containsKey(scoringId)) { ctx._source.scores[scoringId] += scoringValue } else { ctx._source.scores[scoringId] = scoringValue }";
+            Map<String, Event> updatedProfiles = new HashMap<>();
             for (ScoringElement element : scoring.getElements()) {
                 scriptParams.put("scoringValue", element.getValue());
                 for (Profile p : persistenceService.query(element.getCondition(), null, Profile.class)) {
                     persistenceService.updateWithScript(p.getItemId(), null, Profile.class, script, scriptParams);
                     Event profileUpdated = new Event("profileUpdated", null, p, null, null, p, new Date());
                     profileUpdated.setPersistent(false);
-                    eventService.send(profileUpdated);
+                    updatedProfiles.put(p.getItemId(), profileUpdated);
                 }
+            }
+            Iterator<Map.Entry<String, Event>> entries = updatedProfiles.entrySet().iterator();
+            while (entries.hasNext()) {
+                eventService.send(entries.next().getValue());
             }
         }
         logger.info("Profiles updated in {}", System.currentTimeMillis()-t);
