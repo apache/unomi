@@ -638,26 +638,19 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             add.removeAll(previousProfiles);
             previousProfiles.removeAll(newProfiles);
 
-            Map<String, Event> updatedProfiles = new HashMap<>();
-
             for (Profile profileToAdd : add) {
                 profileToAdd.getSegments().add(segment.getItemId());
                 persistenceService.update(profileToAdd.getItemId(), null, Profile.class, "segments", profileToAdd.getSegments());
                 Event profileUpdated = new Event("profileUpdated", null, profileToAdd, null, null, profileToAdd, new Date());
                 profileUpdated.setPersistent(false);
-                updatedProfiles.put(profileToAdd.getItemId(), profileUpdated);
+                eventService.send(profileUpdated);
             }
             for (Profile profileToRemove : previousProfiles) {
                 profileToRemove.getSegments().remove(segment.getItemId());
                 persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
                 Event profileUpdated = new Event("profileUpdated", null, profileToRemove, null, null, profileToRemove, new Date());
                 profileUpdated.setPersistent(false);
-                updatedProfiles.put(profileToRemove.getItemId(), profileUpdated);
-            }
-
-            Iterator<Map.Entry<String, Event>> entries = updatedProfiles.entrySet().iterator();
-            while (entries.hasNext()) {
-                eventService.send(entries.next().getValue());
+                eventService.send(profileUpdated);
             }
 
         } else {
