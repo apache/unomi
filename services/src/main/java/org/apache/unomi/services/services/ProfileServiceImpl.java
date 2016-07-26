@@ -610,17 +610,20 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return propertyTypes;
     }
 
-    public Set<PropertyType> getPropertyTypeByTag(String tag, boolean includeFromSubtags) {
+    public Set<PropertyType> getPropertyTypeByTag(String tagId, boolean includeFromSubtags) {
         Set<PropertyType> propertyTypes = new LinkedHashSet<PropertyType>();
-        Collection<PropertyType> directPropertyTypes = persistenceService.query("tags", tag, "rank", PropertyType.class);
+        Collection<PropertyType> directPropertyTypes = persistenceService.query("tags", tagId, "rank", PropertyType.class);
 
         if (directPropertyTypes != null) {
             propertyTypes.addAll(directPropertyTypes);
         }
         if (includeFromSubtags) {
-            for (Tag subTag : definitionsService.getTag(tag).getSubTags()) {
-                Set<PropertyType> childPropertyTypes = getPropertyTypeByTag(subTag.getId(), true);
-                propertyTypes.addAll(childPropertyTypes);
+            Tag tag = definitionsService.getTag(tagId);
+            if (tag != null) {
+                for (Tag subTag : tag.getSubTags()) {
+                    Set<PropertyType> childPropertyTypes = getPropertyTypeByTag(subTag.getId(), true);
+                    propertyTypes.addAll(childPropertyTypes);
+                }
             }
         }
         return propertyTypes;

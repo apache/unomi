@@ -237,9 +237,6 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     public Tag getTag(String tagId) {
         Tag completeTag = tags.get(tagId);
-        if (completeTag == null) {
-            return null;
-        }
         return completeTag;
     }
 

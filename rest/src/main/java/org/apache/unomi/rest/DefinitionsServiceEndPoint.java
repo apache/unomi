@@ -20,6 +20,7 @@ package org.apache.unomi.rest;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.PropertyMergeStrategyType;
+import org.apache.unomi.api.Tag;
 import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.ConditionType;
@@ -86,14 +87,18 @@ public class DefinitionsServiceEndPoint {
      * Retrieves the tag with the specified identifier localized using the specified language.
      *
      * @param language     the language to use to localize.
-     * @param tag          the identifier of the tag to retrieve
+     * @param tagId          the identifier of the tag to retrieve
      * @param filterHidden {@code true} if hidden sub-tags should be filtered out, {@code false} otherwise
      * @return the tag with the specified identifier
      */
     @GET
     @Path("/tags/{tagId}")
-    public RESTTag getTag(@PathParam("tagId") String tag, @QueryParam("filterHidden") @DefaultValue("false") boolean filterHidden, @HeaderParam("Accept-Language") String language) {
-        return localizationHelper.generateTag(definitionsService.getTag(tag), language, filterHidden);
+    public RESTTag getTag(@PathParam("tagId") String tagId, @QueryParam("filterHidden") @DefaultValue("false") boolean filterHidden, @HeaderParam("Accept-Language") String language) {
+        Tag tag = definitionsService.getTag(tagId);
+        if (tag == null) {
+            throw new NotFoundException(new NoSuchElementException(tagId)); // return 404 when tag is not found
+        }
+        return localizationHelper.generateTag(tag, language, filterHidden);
     }
 
     /**
@@ -123,7 +128,10 @@ public class DefinitionsServiceEndPoint {
         String[] tagsArray = tags.split(",");
         Set<ConditionType> results = new LinkedHashSet<>();
         for (String s : tagsArray) {
-            results.addAll(definitionsService.getConditionTypesByTag(definitionsService.getTag(s), recursive));
+            Tag tag = definitionsService.getTag(s);
+            if (tag != null) {
+                results.addAll(definitionsService.getConditionTypesByTag(tag, recursive));
+            }
         }
         return localizationHelper.generateConditions(results, language);
     }
@@ -191,7 +199,10 @@ public class DefinitionsServiceEndPoint {
         String[] tagsArray = tags.split(",");
         Set<ActionType> results = new LinkedHashSet<>();
         for (String s : tagsArray) {
-            results.addAll(definitionsService.getActionTypeByTag(definitionsService.getTag(s), recursive));
+            Tag tag = definitionsService.getTag(s);
+            if (tag != null) {
+                results.addAll(definitionsService.getActionTypeByTag(tag, recursive));
+            }
         }
         return localizationHelper.generateActions(results, language);
     }
@@ -258,7 +269,10 @@ public class DefinitionsServiceEndPoint {
         String[] tagsArray = tags.split(",");
         Set<ValueType> results = new LinkedHashSet<>();
         for (String s : tagsArray) {
-            results.addAll(definitionsService.getValueTypeByTag(definitionsService.getTag(s), recursive));
+            Tag tag = definitionsService.getTag(s);
+            if (tag != null) {
+                results.addAll(definitionsService.getValueTypeByTag(tag, recursive));
+            }
         }
         return localizationHelper.generateValueTypes(results, language);
     }

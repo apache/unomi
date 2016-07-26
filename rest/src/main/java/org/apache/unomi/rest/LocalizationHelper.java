@@ -219,7 +219,7 @@ public class LocalizationHelper {
      * @return a {@link RESTTag} based on the specified {@link Tag} and localized using the specified language
      */
     public RESTTag generateTag(Tag tag, String language, boolean filterHidden) {
-        if (filterHidden && tag.isHidden()) {
+        if (tag == null || (filterHidden && tag.isHidden())) {
             return null;
         }
         RESTTag result = new RESTTag();
