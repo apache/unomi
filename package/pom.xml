@@ -192,6 +192,17 @@
                                     </outputDirectory>
                                     <destFileName>org.apache.unomi.plugins.request.cfg</destFileName>
                                 </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-plugins-mail</artifactId>
+                                    <version>${project.version}</version>
+                                    <classifier>mailcfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>
+                                        ${project.build.directory}/assembly/etc
+                                    </outputDirectory>
+                                    <destFileName>org.apache.unomi.plugins.mail.cfg</destFileName>
+                                </artifactItem>
                             </artifactItems>
                             <!-- other configurations here -->
                         </configuration>

@@ -29,6 +29,7 @@ import org.apache.unomi.api.segments.ScoringElement;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.segments.SegmentsAndScores;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
@@ -56,6 +57,8 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     private PersistenceService persistenceService;
 
     private DefinitionsService definitionsService;
+
+    private EventService eventService;
 
     private RulesService rulesService;
 
@@ -110,6 +113,10 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
+    }
+
+    public void setEventService(EventService eventService) {
+        this.eventService = eventService;
     }
 
     public void setRulesService(RulesService rulesService) {
@@ -634,11 +641,18 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             for (Profile profileToAdd : add) {
                 profileToAdd.getSegments().add(segment.getItemId());
                 persistenceService.update(profileToAdd.getItemId(), null, Profile.class, "segments", profileToAdd.getSegments());
+                Event profileUpdated = new Event("profileUpdated", null, profileToAdd, null, null, profileToAdd, new Date());
+                profileUpdated.setPersistent(false);
+                eventService.send(profileUpdated);
             }
             for (Profile profileToRemove : previousProfiles) {
                 profileToRemove.getSegments().remove(segment.getItemId());
                 persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
+                Event profileUpdated = new Event("profileUpdated", null, profileToRemove, null, null, profileToRemove, new Date());
+                profileUpdated.setPersistent(false);
+                eventService.send(profileUpdated);
             }
+
         } else {
             List<Profile> previousProfiles = persistenceService.query(segmentCondition, null, Profile.class);
             for (Profile profileToRemove : previousProfiles) {
@@ -665,11 +679,19 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         }
         if(scoring.getMetadata().isEnabled()) {
             String script = "if (ctx._source.scores == null) { ctx._source.scores=[:] } ; if (ctx._source.scores.containsKey(scoringId)) { ctx._source.scores[scoringId] += scoringValue } else { ctx._source.scores[scoringId] = scoringValue }";
+            Map<String, Event> updatedProfiles = new HashMap<>();
             for (ScoringElement element : scoring.getElements()) {
                 scriptParams.put("scoringValue", element.getValue());
                 for (Profile p : persistenceService.query(element.getCondition(), null, Profile.class)) {
                     persistenceService.updateWithScript(p.getItemId(), null, Profile.class, script, scriptParams);
+                    Event profileUpdated = new Event("profileUpdated", null, p, null, null, p, new Date());
+                    profileUpdated.setPersistent(false);
+                    updatedProfiles.put(p.getItemId(), profileUpdated);
                 }
+            }
+            Iterator<Map.Entry<String, Event>> entries = updatedProfiles.entrySet().iterator();
+            while (entries.hasNext()) {
+                eventService.send(entries.next().getValue());
             }
         }
         logger.info("Profiles updated in {}", System.currentTimeMillis()-t);
