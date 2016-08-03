@@ -22,24 +22,34 @@ import org.apache.commons.mail.EmailException;
 import org.apache.commons.mail.HtmlEmail;
 import org.apache.commons.mail.ImageHtmlEmail;
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stringtemplate.v4.ST;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 public class SendMailAction implements ActionExecutor {
     private static final Logger logger = LoggerFactory.getLogger(SendMailAction.class.getName());
+
+    private PersistenceService persistenceService;
 
     private String mailServerHostName;
     private int mailServerPort;
     private String mailServerUsername;
     private String mailServerPassword;
     private boolean mailServerSSLOnConnect = true;
+
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
 
     public void setMailServerHostName(String mailServerHostName) {
         this.mailServerHostName = mailServerHostName;
@@ -62,12 +72,33 @@ public class SendMailAction implements ActionExecutor {
     }
 
     public int execute(Action action, Event event) {
+        String notifType = (String) action.getParameterValues().get("notificationType");
+        String notifTypeId = (String) action.getParameterValues().get("notificationTypeId");
+        Boolean notifyOnce = (Boolean) action.getParameterValues().get("notifyOncePerProfile");
         String from = (String) action.getParameterValues().get("from");
         String to = (String) action.getParameterValues().get("to");
         String cc = (String) action.getParameterValues().get("cc");
         String bcc = (String) action.getParameterValues().get("bcc");
         String subject = (String) action.getParameterValues().get("subject");
         String template = (String) action.getParameterValues().get("template");
+
+        Map profileNotif = (HashMap) event.getProfile().getSystemProperties().get("notificationAck");
+        if (profileNotif != null && profileNotif.get(notifType) != null && ((HashMap) profileNotif.get(notifType)).get(notifTypeId) != null) {
+            Integer notifTypeAck = (Integer) ((HashMap) profileNotif.get(notifType) ).get(notifTypeId);
+            if(notifyOnce.booleanValue() && notifTypeAck > 0){
+                logger.info("Notification "+notifType+" already sent for the profile "+event.getProfileId());
+                return EventService.NO_CHANGE;
+            }
+        } else {
+            Map notification = profileNotif!=null?profileNotif:new HashMap();
+            notification.put(notifType, notification.get(notifType)!=null?notification.get(notifType):new HashMap());
+            Integer notifTypeAck = (Integer) ((HashMap) notification.get(notifType) ).get(notifTypeId);
+            if(notifTypeAck == null){
+                ((HashMap) notification.get(notifType) ).put(notifTypeId, 1);
+            }
+            event.getProfile().getSystemProperties().put("notificationAck", notification);
+            persistenceService.update(event.getProfile().getItemId(), null, Profile.class, "systemProperties", event.getProfile().getSystemProperties());
+        }
 
         ST stringTemplate = new ST(template);
         stringTemplate.add("profile", event.getProfile());
