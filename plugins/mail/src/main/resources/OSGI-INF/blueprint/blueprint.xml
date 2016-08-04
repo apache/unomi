@@ -35,6 +35,7 @@
     <!-- Action executors -->
 
     <bean id="sendMailActionImpl" class="org.apache.unomi.plugins.mail.actions.SendMailAction">
+        <property name="persistenceService" ref="persistenceService"/>
         <property name="mailServerHostName" value="${mail.server.hostname}"/>
         <property name="mailServerPort" value="${mail.server.port}"/>
         <property name="mailServerUsername" value="${mail.server.username}"/>
@@ -46,5 +47,8 @@
             <entry key="actionExecutorId" value="sendMail"/>
         </service-properties>
     </service>
+
+    <reference id="persistenceService"
+               interface="org.apache.unomi.persistence.spi.PersistenceService"/>
 
 </blueprint>

@@ -11,6 +11,22 @@
   "actionExecutor": "sendMail",
   "parameters": [
     {
+      "id": "notificationType",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "notificationTypeId",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "notifyOncePerProfile",
+      "type": "boolean",
+      "multivalued": false,
+      "defaultValue": false
+    },
+    {
       "id": "from",
       "type": "string",
       "multivalued": false
