@@ -88,17 +88,22 @@ public class SendMailAction implements ActionExecutor {
             if(notifyOnce.booleanValue() && notifTypeAck > 0){
                 logger.info("Notification "+notifType+" already sent for the profile "+event.getProfileId());
                 return EventService.NO_CHANGE;
+            }else{
+                ((HashMap) profileNotif.get(notifType) ).put(notifTypeId, notifTypeAck+1);
             }
         } else {
-            Map notification = profileNotif!=null?profileNotif:new HashMap();
-            notification.put(notifType, notification.get(notifType)!=null?notification.get(notifType):new HashMap());
-            Integer notifTypeAck = (Integer) ((HashMap) notification.get(notifType) ).get(notifTypeId);
-            if(notifTypeAck == null){
-                ((HashMap) notification.get(notifType) ).put(notifTypeId, 1);
+            if(profileNotif == null){
+                profileNotif = new HashMap();
             }
-            event.getProfile().getSystemProperties().put("notificationAck", notification);
-            persistenceService.update(event.getProfile().getItemId(), null, Profile.class, "systemProperties", event.getProfile().getSystemProperties());
+            profileNotif.put(notifType, profileNotif.get(notifType)!=null?profileNotif.get(notifType):new HashMap());
+            Integer notifTypeAck = (Integer) ((HashMap) profileNotif.get(notifType) ).get(notifTypeId);
+            if(notifTypeAck == null){
+                ((HashMap) profileNotif.get(notifType) ).put(notifTypeId, 1);
+            }
         }
+
+        event.getProfile().getSystemProperties().put("notificationAck", profileNotif);
+        persistenceService.update(event.getProfile().getItemId(), null, Profile.class, "systemProperties", event.getProfile().getSystemProperties());
 
         ST stringTemplate = new ST(template);
         stringTemplate.add("profile", event.getProfile());
