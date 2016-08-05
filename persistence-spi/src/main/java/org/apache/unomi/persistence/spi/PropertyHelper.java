@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -38,6 +39,20 @@ public class PropertyHelper {
 
     public static boolean setProperty(Object target, String propertyName, Object propertyValue, String setPropertyStrategy) {
         try {
+            String parentPropertyName =  null;
+            Object parentTarget = null;
+            if(setPropertyStrategy!=null && setPropertyStrategy.equals("remove")){
+                if(resolver.hasNested(propertyName)) {
+                    parentPropertyName = propertyName.substring(0, propertyName.lastIndexOf('.'));
+                    Object parentPropertyValue = PropertyUtils.getNestedProperty(target, parentPropertyName);
+                    if(parentPropertyValue instanceof HashMap){
+                        ((HashMap)parentPropertyValue).remove(propertyName.substring(propertyName.lastIndexOf('.')+1));
+                        PropertyUtils.setNestedProperty(target, parentPropertyName, parentPropertyValue);
+                        return true;
+                    }
+                }
+                return false;
+            }
             while (resolver.hasNested(propertyName)) {
                 Object v = PropertyUtils.getProperty(target, resolver.next(propertyName));
                 if (v == null) {
