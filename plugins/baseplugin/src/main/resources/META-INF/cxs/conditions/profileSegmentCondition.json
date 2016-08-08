@@ -4,7 +4,7 @@
     "name": "profileSegmentCondition",
     "description": "",
     "tags": [
-      "demographic",
+      "aggregated",
       "profileCondition"
     ],
     "readOnly": true
