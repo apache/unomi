@@ -18,6 +18,7 @@
 package org.apache.unomi.persistence.spi;
 
 import org.apache.commons.beanutils.BeanUtils;
+import org.apache.commons.beanutils.NestedNullException;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.beanutils.expression.DefaultResolver;
 import org.slf4j.Logger;
@@ -44,12 +45,17 @@ public class PropertyHelper {
             if(setPropertyStrategy!=null && setPropertyStrategy.equals("remove")){
                 if(resolver.hasNested(propertyName)) {
                     parentPropertyName = propertyName.substring(0, propertyName.lastIndexOf('.'));
-                    Object parentPropertyValue = PropertyUtils.getNestedProperty(target, parentPropertyName);
-                    if(parentPropertyValue instanceof HashMap){
-                        ((HashMap)parentPropertyValue).remove(propertyName.substring(propertyName.lastIndexOf('.')+1));
-                        PropertyUtils.setNestedProperty(target, parentPropertyName, parentPropertyValue);
-                        return true;
+                    try{
+                        Object parentPropertyValue = PropertyUtils.getNestedProperty(target, parentPropertyName);
+                        if(parentPropertyValue instanceof HashMap){
+                            ((HashMap)parentPropertyValue).remove(propertyName.substring(propertyName.lastIndexOf('.')+1));
+                            PropertyUtils.setNestedProperty(target, parentPropertyName, parentPropertyValue);
+                            return true;
+                        }
+                    } catch(NestedNullException ex){
+                        return false;
                     }
+
                 }
                 return false;
             }
