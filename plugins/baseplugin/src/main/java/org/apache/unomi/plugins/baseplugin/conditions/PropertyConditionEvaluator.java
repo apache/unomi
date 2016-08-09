@@ -41,7 +41,6 @@ import org.slf4j.LoggerFactory;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 /**
@@ -271,7 +270,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         if (value instanceof Date) {
             return ((Date) value);
         } else {
-            DateMathParser parser = new DateMathParser(DateFieldMapper.Defaults.DATE_TIME_FORMATTER, TimeUnit.MILLISECONDS);
+            DateMathParser parser = new DateMathParser(DateFieldMapper.Defaults.DATE_TIME_FORMATTER);
             try {
                 return new Date(parser.parse(value.toString(), new Callable<Long>() {
                     @Override

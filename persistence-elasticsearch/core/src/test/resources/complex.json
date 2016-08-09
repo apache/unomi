@@ -1,0 +1,50 @@
+{
+  "events": [
+    {
+      "scope": "ACMESPACE",
+      "eventType": "form",
+      "source": {
+        "itemType": "page",
+        "scope": "ACMESPACE",
+        "itemId": "${pageId}",
+        "properties": {
+          "pageInfo": {
+            "pageID": "${pageId}",
+            "pageName": "${pageName}",
+            "pagePath": "${pagePath}",
+            "destinationURL": "${destinationURL}",
+            "referringURL": "${previousURL}",
+            "language": "${language}"
+          },
+          "category": {},
+          "attributes": {
+            "colon_in_value" : "this.should.never:match",
+            "newline.test"
+                    : "more.dots",
+            "tricking_the_parser" : "this.should.not\": match.either",
+            "unicode black star": "before\u2605after",
+            "escaping test" : "\"\n\r\t\\"
+          }
+        }
+      },
+      "target": {
+        "itemType": "form",
+        "scope": "ACMESPACE",
+        "itemId": "searchForm"
+      },
+      "properties": {
+        "jcrMethodToCall": "get",
+        "src_originSiteKey": "ACMESPACE",
+        "src_terms[0].term": "${word}",
+        "src_terms[0].applyFilter": "true",
+        "src_terms[0].match": "all_words",
+        "src_terms[0].fields.siteContent": "true",
+        "src_terms[0].fields.tags": "true",
+        "src_terms[0].fields.files": "true",
+        "src_sites.values": "ACMESPACE",
+        "src_sitesForReferences.values": "systemsite",
+        "src_languages.values": "en"
+      }
+    }
+  ]
+}

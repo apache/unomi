@@ -17,6 +17,7 @@
 
 package org.apache.unomi.persistence.elasticsearch;
 
+import com.google.common.collect.UnmodifiableIterator;
 import org.apache.unomi.api.ClusterNode;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.PartialList;
@@ -31,6 +32,7 @@ import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
 import org.elasticsearch.action.admin.cluster.node.info.NodeInfo;
+import org.elasticsearch.action.admin.cluster.node.info.NodesInfoRequest;
 import org.elasticsearch.action.admin.cluster.node.info.NodesInfoResponse;
 import org.elasticsearch.action.admin.cluster.node.stats.NodeStats;
 import org.elasticsearch.action.admin.cluster.node.stats.NodesStatsResponse;
@@ -40,26 +42,29 @@ import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.admin.indices.stats.IndicesStatsResponse;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.deletebyquery.DeleteByQueryAction;
+import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
+import org.elasticsearch.action.deletebyquery.DeleteByQueryResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.percolate.PercolateResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
-import org.elasticsearch.action.support.nodes.NodesOperationRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.Requests;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
-import org.elasticsearch.common.collect.UnmodifiableIterator;
-import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsException;
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.index.query.*;
-import org.elasticsearch.indices.IndexMissingException;
+import org.elasticsearch.index.IndexNotFoundException;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.node.Node;
+import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
@@ -68,8 +73,8 @@ import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregation;
 import org.elasticsearch.search.aggregations.bucket.filter.Filter;
 import org.elasticsearch.search.aggregations.bucket.global.Global;
-import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogram;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramBuilder;
+import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramInterval;
 import org.elasticsearch.search.aggregations.bucket.missing.MissingBuilder;
 import org.elasticsearch.search.aggregations.bucket.range.RangeBuilder;
 import org.elasticsearch.search.aggregations.bucket.range.date.DateRangeBuilder;
@@ -86,10 +91,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -99,8 +107,32 @@ import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 @SuppressWarnings("rawtypes")
 public class ElasticSearchPersistenceServiceImpl implements PersistenceService, ClusterService, SynchronousBundleListener {
 
-    public static final long MILLIS_PER_DAY = 24L * 60L * 60L * 1000L;
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
+
+    public static final String DISCOVERY_ZEN_PING_MULTICAST_ENABLED = "discovery.zen.ping.multicast.enabled";
+    public static final String CONTEXTSERVER_ADDRESS = "contextserver.address";
+    public static final String CONTEXTSERVER_PORT = "contextserver.port";
+    public static final String CONTEXTSERVER_SECURE_ADDRESS = "contextserver.secureAddress";
+    public static final String CONTEXTSERVER_SECURE_PORT = "contextserver.securePort";
+    public static final String KARAF_HOME = "karaf.home";
+    public static final String ELASTICSEARCH_HOME_DIRECTORY = "elasticsearch";
+    public static final String ELASTICSEARCH_PLUGINS_DIRECTORY = ELASTICSEARCH_HOME_DIRECTORY + "/plugins";
+    public static final String ELASTICSEARCH_DATA_DIRECTORY = ELASTICSEARCH_HOME_DIRECTORY + "/data";
+    public static final String INDEX_NUMBER_OF_REPLICAS = "index.number_of_replicas";
+    public static final String INDEX_NUMBER_OF_SHARDS = "index.number_of_shards";
+    public static final String NODE_CONTEXTSERVER_ADDRESS = "node.contextserver.address";
+    public static final String NODE_CONTEXTSERVER_PORT = "node.contextserver.port";
+    public static final String NODE_CONTEXTSERVER_SECURE_ADDRESS = "node.contextserver.secureAddress";
+    public static final String NODE_CONTEXTSERVER_SECURE_PORT = "node.contextserver.securePort";
+    public static final String NUMBER_OF_SHARDS = "number_of_shards";
+    public static final String NUMBER_OF_REPLICAS = "number_of_replicas";
+    public static final String CLUSTER_NAME = "cluster.name";
+    public static final String NODE_DATA = "node.data";
+    public static final String PATH_DATA = "path.data";
+    public static final String PATH_HOME = "path.home";
+    public static final String PATH_PLUGINS = "path.plugins";
+    public static final String INDEX_MAX_RESULT_WINDOW = "index.max_result_window";
+
     private Node node;
     private Client client;
     private String clusterName;
@@ -220,12 +252,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 Map<String, String> settings = null;
                 if (elasticSearchConfig != null && elasticSearchConfig.length() > 0) {
                     try {
-                        URL elasticSearchConfigURL = new URL(elasticSearchConfig);
-                        Settings.Builder settingsBuilder = ImmutableSettings.builder().loadFromUrl(elasticSearchConfigURL);
+                        URI elasticSearchConfigURI = new URI(elasticSearchConfig);
+                        Settings.Builder settingsBuilder = Settings.builder().loadFromPath(Paths.get(elasticSearchConfigURI));
                         settings = settingsBuilder.build().getAsMap();
-                        logger.info("Successfully loaded ElasticSearch configuration from " + elasticSearchConfigURL);
-                    } catch (MalformedURLException e) {
-                        logger.error("Error in ElasticSearch configuration URL ", e);
+                        logger.info("Successfully loaded ElasticSearch configuration from " + elasticSearchConfigURI);
+                    } catch (URISyntaxException e) {
+                        logger.error("Error in ElasticSearch configuration URI ", e);
                     } catch (SettingsException se) {
                         logger.info("Error trying to load settings from " + elasticSearchConfig + ": " + se.getMessage() + " (activate debug mode for exception details)");
                         if (logger.isDebugEnabled()) {
@@ -234,25 +266,34 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                 }
 
-                address = System.getProperty("contextserver.address", address);
-                port = System.getProperty("contextserver.port", port);
-                secureAddress = System.getProperty("contextserver.secureAddress", secureAddress);
-                securePort = System.getProperty("contextserver.securePort", securePort);
+                address = System.getProperty(CONTEXTSERVER_ADDRESS, address);
+                port = System.getProperty(CONTEXTSERVER_PORT, port);
+                secureAddress = System.getProperty(CONTEXTSERVER_SECURE_ADDRESS, secureAddress);
+                securePort = System.getProperty(CONTEXTSERVER_SECURE_PORT, securePort);
 
-                ImmutableSettings.Builder settingsBuilder = ImmutableSettings.builder();
+                Settings.Builder settingsBuilder = Settings.builder();
                 if (settings != null) {
                     settingsBuilder.put(settings);
                 }
 
-                settingsBuilder.put("cluster.name", clusterName)
-                        .put("node.data", nodeData)
-                        .put("discovery.zen.ping.multicast.enabled", discoveryEnabled)
-                        .put("index.number_of_replicas", numberOfReplicas)
-                        .put("index.number_of_shards", numberOfShards)
-                        .put("node.contextserver.address", address)
-                        .put("node.contextserver.port", port)
-                        .put("node.contextserver.secureAddress", secureAddress)
-                        .put("node.contextserver.securePort", securePort);
+                String karafHome = System.getProperty(KARAF_HOME);
+                File pluginsFile = new File(getConfig(settings, PATH_PLUGINS, new File(new File(karafHome), ELASTICSEARCH_PLUGINS_DIRECTORY).getAbsolutePath()));
+                File homeFile = new File(getConfig(settings, PATH_HOME, new File(new File(karafHome), ELASTICSEARCH_HOME_DIRECTORY).getAbsolutePath()));
+                File dataFile = new File(getConfig(settings, PATH_DATA, new File(new File(karafHome), ELASTICSEARCH_DATA_DIRECTORY).getAbsolutePath()));
+
+                settingsBuilder.put(CLUSTER_NAME, clusterName)
+                        .put(NODE_DATA, nodeData)
+                        .put(PATH_DATA, dataFile.getAbsolutePath())
+                        .put(PATH_HOME, homeFile.getAbsolutePath())
+                        .put(PATH_PLUGINS, pluginsFile.getAbsolutePath())
+                        .put(DISCOVERY_ZEN_PING_MULTICAST_ENABLED, discoveryEnabled)
+                        .put(INDEX_NUMBER_OF_REPLICAS, numberOfReplicas)
+                        .put(INDEX_NUMBER_OF_SHARDS, numberOfShards)
+                        .put(NODE_CONTEXTSERVER_ADDRESS, address)
+                        .put(NODE_CONTEXTSERVER_PORT, port)
+                        .put(NODE_CONTEXTSERVER_SECURE_ADDRESS, secureAddress)
+                        .put(NODE_CONTEXTSERVER_SECURE_PORT, securePort)
+                        .put(INDEX_MAX_RESULT_WINDOW, "2147483647");
 
                 node = nodeBuilder().settings(settingsBuilder).node();
                 client = node.client();
@@ -284,9 +325,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 client.admin().indices().preparePutTemplate(indexName + "_monthlyindex")
                         .setTemplate(indexName + "-*")
                         .setOrder(1)
-                        .setSettings(ImmutableSettings.settingsBuilder()
-                                .put("number_of_shards", Integer.parseInt(monthlyIndexNumberOfShards))
-                                .put("number_of_replicas", Integer.parseInt(monthlyIndexNumberOfReplicas))
+                        .setSettings(Settings.settingsBuilder()
+                                .put(NUMBER_OF_SHARDS, Integer.parseInt(monthlyIndexNumberOfShards))
+                                .put(NUMBER_OF_REPLICAS, Integer.parseInt(monthlyIndexNumberOfReplicas))
                                 .build()).execute().actionGet();
 
                 getMonthlyIndex(new Date(), true);
@@ -442,7 +483,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public long getAllItemsCount(String itemType) {
-        return queryCount(FilterBuilders.matchAllFilter(), itemType);
+        return queryCount(QueryBuilders.matchAllQuery(), itemType);
     }
 
     @Override
@@ -477,19 +518,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 .actionGet();
                         if (response.isExists()) {
                             String sourceAsString = response.getSourceAsString();
-                            final T value = CustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
+                            final T value = CustomObjectMapper.getObjectMapper().readValue(FieldDotEscaper.unescapeJson(sourceAsString), clazz);
                             value.setItemId(response.getId());
                             return value;
                         } else {
                             return null;
                         }
                     }
-                } catch (IndexMissingException e) {
-                    logger.debug("No index found for itemType=" + clazz.getName() + "itemId=" + itemId, e);
+                } catch (IndexNotFoundException e) {
+                    logger.debug("No index found for itemType=" + clazz.getName() + " itemId=" + itemId, e);
                 } catch (IllegalAccessException e) {
-                    logger.error("Error loading itemType=" + clazz.getName() + "itemId=" + itemId, e);
+                    logger.error("Error loading itemType=" + clazz.getName() + " itemId=" + itemId, e);
                 } catch (Exception t) {
-                    logger.error("Error loading itemType=" + clazz.getName() + "itemId=" + itemId, t);
+                    logger.error("Error loading itemType=" + clazz.getName() + " itemId=" + itemId, t);
                 }
                 return null;
             }
@@ -504,6 +545,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) {
                 try {
                     String source = CustomObjectMapper.getObjectMapper().writeValueAsString(item);
+                    Set<String> modifiedNames = new LinkedHashSet<>();
+                    source = FieldDotEscaper.escapeJson(source, modifiedNames);
+                    if (modifiedNames.size() > 0) {
+                        logger.warn("Found JSON property names with dot characters not allowed by ElasticSearch 2.x={} in item {}", modifiedNames, item);
+                    }
                     String itemType = item.getItemType();
                     String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
                             (itemsMonthlyIndexed.contains(itemType) ? getMonthlyIndex(((TimestampedItem) item).getTimeStamp()) : indexName);
@@ -514,7 +560,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                     try {
                         indexBuilder.execute().actionGet();
-                    } catch (IndexMissingException e) {
+                    } catch (IndexNotFoundException e) {
                         if (itemsMonthlyIndexed.contains(itemType)) {
                             getMonthlyIndex(((TimestampedItem) item).getTimeStamp(), true);
                             indexBuilder.execute().actionGet();
@@ -545,11 +591,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
                             (itemsMonthlyIndexed.contains(itemType) && dateHint != null ? getMonthlyIndex(dateHint) : indexName);
 
-                    client.prepareUpdate(index, itemType, itemId).setDoc(source)
+                    client.prepareUpdate(index, itemType, itemId).setDoc(FieldDotEscaper.escapeMap(source))
                             .execute()
                             .actionGet();
                     return true;
-                } catch (IndexMissingException e) {
+                } catch (IndexNotFoundException e) {
                     logger.debug("No index found for itemType=" + clazz.getName() + "itemId=" + itemId, e);
                 } catch (NoSuchFieldException e) {
                     logger.error("Error updating item " + itemId, e);
@@ -571,11 +617,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
                             (itemsMonthlyIndexed.contains(itemType) && dateHint != null ? getMonthlyIndex(dateHint) : indexName);
 
-                    client.prepareUpdate(index, itemType, itemId).setScript(script, ScriptService.ScriptType.INLINE).setScriptParams(scriptParams)
+                    Script actualScript = new Script(script, ScriptService.ScriptType.INLINE, null, scriptParams);
+                    client.prepareUpdate(index, itemType, itemId).setScript(actualScript)
                             .execute()
                             .actionGet();
                     return true;
-                } catch (IndexMissingException e) {
+                } catch (IndexNotFoundException e) {
                     logger.debug("No index found for itemType=" + clazz.getName() + "itemId=" + itemId, e);
                 } catch (NoSuchFieldException e) {
                     logger.error("Error updating item " + itemId, e);
@@ -612,9 +659,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
 
-                    client.prepareDeleteByQuery(getIndexNameForQuery(itemType))
+                    DeleteByQueryResponse rsp = new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
+                            .setIndices(getIndexNameForQuery(itemType))
                             .setQuery(conditionESQueryBuilderDispatcher.getQueryBuilder(query))
-                            .execute().actionGet();
+                            .execute()
+                            .actionGet();
+
                     return true;
                 } catch (Exception e) {
                     logger.error("Cannot remove by query", e);
@@ -817,8 +867,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             final Class<? extends Item> clazz = item.getClass();
             String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
 
-            FilterBuilder builder = FilterBuilders.andFilter(
-                    FilterBuilders.idsFilter(itemType).ids(item.getItemId()),
+            QueryBuilder builder = QueryBuilders.andQuery(
+                    QueryBuilders.idsQuery(itemType).ids(item.getItemId()),
                     conditionESQueryBuilderDispatcher.buildFilter(query));
             return queryCount(builder, itemType) > 0;
         } catch (IllegalAccessException e) {
@@ -882,7 +932,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return queryCount(conditionESQueryBuilderDispatcher.buildFilter(query), itemType);
     }
 
-    private long queryCount(final FilterBuilder filter, final String itemType) {
+    private long queryCount(final QueryBuilder filter, final String itemType) {
         return new InClassLoaderExecute<Long>() {
 
             @Override
@@ -960,7 +1010,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         results.add(value);
                     }
                 } catch (Exception t) {
-                    logger.error("Error loading itemType=" + clazz.getName() + "query=" + query, t);
+                    logger.error("Error loading itemType=" + clazz.getName() + " query=" + query + " sortBy=" + sortBy, t);
                 }
 
                 return new PartialList<T>(results, offset, size, totalHits);
@@ -987,7 +1037,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     AggregationBuilder bucketsAggregation = null;
                     if (aggregate instanceof DateAggregate) {
                         DateAggregate dateAggregate = (DateAggregate) aggregate;
-                        DateHistogramBuilder dateHistogramBuilder = AggregationBuilders.dateHistogram("buckets").field(aggregate.getField()).interval(new DateHistogram.Interval((dateAggregate.getInterval())));
+                        DateHistogramBuilder dateHistogramBuilder = AggregationBuilders.dateHistogram("buckets").field(aggregate.getField()).interval(new DateHistogramInterval((dateAggregate.getInterval())));
                         if (dateAggregate.getFormat() != null) {
                             dateHistogramBuilder.format(dateAggregate.getFormat());
                         }
@@ -1073,7 +1123,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     if (aggregations.get("buckets") != null) {
                         MultiBucketsAggregation terms = aggregations.get("buckets");
                         for (MultiBucketsAggregation.Bucket bucket : terms.getBuckets()) {
-                            results.put(bucket.getKey(), bucket.getDocCount());
+                            results.put(bucket.getKeyAsString(), bucket.getDocCount());
                         }
                         SingleBucketAggregation missing = aggregations.get("missing");
                         if (missing.getDocCount() > 0) {
@@ -1116,7 +1166,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected List<ClusterNode> execute(Object... args) {
                 Map<String, ClusterNode> clusterNodes = new LinkedHashMap<String, ClusterNode>();
 
-                NodesInfoResponse nodesInfoResponse = client.admin().cluster().prepareNodesInfo(NodesOperationRequest.ALL_NODES)
+                NodesInfoResponse nodesInfoResponse = client.admin().cluster().prepareNodesInfo(NodesInfoRequest.ALL_NODES)
                         .setSettings(true)
                         .execute()
                         .actionGet();
@@ -1135,8 +1185,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                 }
 
-                NodesStatsResponse nodesStatsResponse = client.admin().cluster().prepareNodesStats(NodesOperationRequest.ALL_NODES)
+                NodesStatsResponse nodesStatsResponse = client.admin().cluster().prepareNodesStats(NodesInfoRequest.ALL_NODES)
                         .setOs(true)
+                        .setJvm(true)
                         .setProcess(true)
                         .execute()
                         .actionGet();
@@ -1152,8 +1203,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             clusterNode.setCpuLoad(nodeStats.getProcess().getCpu().getPercent());
                         }
                         if (nodeStats.getOs() != null) {
-                            clusterNode.setLoadAverage(nodeStats.getOs().getLoadAverage());
-                            clusterNode.setUptime(nodeStats.getOs().getUptime().getMillis());
+                            clusterNode.setLoadAverage(new double[] { nodeStats.getOs().getLoadAverage() });
+                            clusterNode.setUptime(nodeStats.getJvm().getUptime().getMillis());
                         }
                     }
                 }
@@ -1335,5 +1386,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-
+    private String getConfig(Map<String,String> settings, String key,
+                             String defaultValue) {
+        if (settings != null && settings.get(key) != null) {
+            return settings.get(key);
+        }
+        return defaultValue;
+    }
 }

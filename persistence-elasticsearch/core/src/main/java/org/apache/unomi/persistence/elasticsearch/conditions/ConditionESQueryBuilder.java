@@ -18,12 +18,12 @@
 package org.apache.unomi.persistence.elasticsearch.conditions;
 
 import org.apache.unomi.api.conditions.Condition;
-import org.elasticsearch.index.query.FilterBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
 
 import java.util.Map;
 
 public interface ConditionESQueryBuilder {
 
-    FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher);
+    QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher);
 
 }
