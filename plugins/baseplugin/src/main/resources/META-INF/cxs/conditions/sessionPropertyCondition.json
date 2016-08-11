@@ -4,7 +4,7 @@
     "name": "sessionPropertyCondition",
     "description": "",
     "tags": [
-      "demographic",
+      "event",
       "sessionCondition"
     ],
     "readOnly": true

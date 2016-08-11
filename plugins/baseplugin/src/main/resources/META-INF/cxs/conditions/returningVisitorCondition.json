@@ -4,7 +4,7 @@
     "name": "returningVisitorCondition",
     "description": "",
     "tags": [
-      "demographic",
+      "event",
       "sessionCondition"
     ],
     "readOnly": true
