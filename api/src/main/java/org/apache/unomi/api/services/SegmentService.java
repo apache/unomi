@@ -22,6 +22,7 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.query.Query;
+import org.apache.unomi.api.segments.DependentMetadata;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.segments.SegmentsAndScores;
@@ -88,25 +89,23 @@ public interface SegmentService {
     /**
      * Removes the segment definition identified by the specified identifier. We can specify that we want the operation to be validated beforehand so that we can
      * know if any other segment that might use the segment we're trying to delete as a condition might be impacted. If {@code validate} is set to {@code false}, no
-     * validation is performed. If set to {@code true}, we will first check if any segment depends on the one we're trying to delete and if so we will not delete the
-     * segment but rather return the list of the metadata of the impacted segments. If no dependents are found, then we properly delete the segment.
+     * validation is performed. If set to {@code true}, we will first check if any segment or scoring depends on the segment we're trying to delete and if so we will not delete the
+     * segment but rather return the list of the metadata of the impacted items. If no dependents are found, then we properly delete the segment.
      *
      * @param segmentId the identifier of the segment we want to delete
      * @param validate  whether or not to perform validation
-     * @return a list of impacted segment metadata if any or an empty list if no such impacted segments are found or validation was skipped
+     * @return a list of impacted segment metadata if any or an empty list if none were found or validation was skipped
      */
-    List<Metadata> removeSegmentDefinition(String segmentId, boolean validate);
+    DependentMetadata removeSegmentDefinition(String segmentId, boolean validate);
 
     /**
-     * Retrieves the list of segment metadata of segments depending on the segment identified by the specified identifier. A segment is depending on another one if it includes
-     * that segment as part of its condition for profile matching.
+     * Retrieves the list of Segment and Scoring metadata depending on the specified segment.
+     * A segment or scoring is depending on a segment if it includes a profileSegmentCondition with a test on this segment.
      *
-     * TODO: Rename to something clearer, maybe getDependentSegmentMetadata?
-     *
-     * @param segmentId the identifier of the segment which impact we want to evaluate
-     * @return a list of metadata of segments depending on the specified segment
+     * @param segmentId the segment identifier
+     * @return a list of Segment/Scoring Metadata depending on the specified segment
      */
-    List<Metadata> getImpactedSegmentMetadata(String segmentId);
+    DependentMetadata getSegmentDependentMetadata(String segmentId);
 
     /**
      * Retrieves a list of profiles matching the conditions defined by the segment identified by the specified identifier, ordered according to the specified {@code sortBy}
@@ -197,10 +196,24 @@ public interface SegmentService {
     void createScoringDefinition(String scope, String scoringId, String name, String description);
 
     /**
-     * Deletes the scoring identified by the specified identifier from the context server.
+     * Removes the scoring definition identified by the specified identifier. We can specify that we want the operation to be validated beforehand so that we can
+     * know if any other segment that might use the segment we're trying to delete as a condition might be impacted. If {@code validate} is set to {@code false}, no
+     * validation is performed. If set to {@code true}, we will first check if any segment or scoring depends on the scoring we're trying to delete and if so we will not delete the
+     * scoring but rather return the list of the metadata of the impacted items. If no dependents are found, then we properly delete the scoring.
      *
-     * @param scoringId the identifier of the scoring to be deleted
+     * @param scoringId the identifier of the scoring we want to delete
+     * @param validate  whether or not to perform validation
+     * @return a list of impacted items metadata if any or an empty list if none were found or validation was skipped
      */
-    void removeScoringDefinition(String scoringId);
+    DependentMetadata removeScoringDefinition(String scoringId, boolean validate);
+
+    /**
+     * Retrieves the list of Segment and Scoring metadata depending on the specified scoring.
+     * A segment or scoring is depending on a segment if it includes a scoringCondition with a test on this scoring.
+     *
+     * @param scoringId the segment identifier
+     * @return a list of Segment/Scoring Metadata depending on the specified scoring
+     */
+    DependentMetadata getScoringDependentMetadata(String scoringId);
 
 }
