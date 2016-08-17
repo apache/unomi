@@ -516,4 +516,15 @@ public class ProfileServiceEndPoint {
         return profileService.deletePropertyType(propertyId);
     }
 
+    /**
+     * Retrieves sessions matching the specified query.
+     *
+     * @param query a {@link Query} specifying which elements to retrieve
+     * @return a {@link PartialList} of sessions matching the specified query
+     */
+    @POST
+    @Path("/search/sessions")
+    public PartialList<Session> searchSession(Query query) {
+        return profileService.searchSessions(query);
+    }
 }

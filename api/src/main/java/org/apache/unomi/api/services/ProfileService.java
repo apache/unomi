@@ -46,6 +46,14 @@ public interface ProfileService {
     <T extends Profile> PartialList<T> search(Query query, Class<T> clazz);
 
     /**
+     * Retrieves sessions matching the specified query.
+     *
+     * @param query a {@link Query} specifying which elements to retrieve
+     * @return a {@link PartialList} of sessions matching the specified query
+     */
+    PartialList<Session> searchSessions(Query query);
+
+    /**
      * Creates a String containing comma-separated values (CSV) formatted version of profiles matching the specified query.
      *
      * @param query the query specifying which profiles to export

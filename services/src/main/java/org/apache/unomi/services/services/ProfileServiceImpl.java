@@ -256,6 +256,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public <T extends Profile> PartialList<T> search(Query query, final Class<T> clazz) {
+        return doSearch(query, clazz);
+    }
+
+    public PartialList<Session> searchSessions(Query query) {
+        return doSearch(query, Session.class);
+    }
+
+    private <T extends Item> PartialList<T> doSearch(Query query, Class<T> clazz) {
         if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition())) {
             if (StringUtils.isNotBlank(query.getText())) {
                 return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit());
