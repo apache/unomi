@@ -18,8 +18,6 @@
 package org.apache.unomi.privacy.internal;
 
 import org.apache.unomi.api.*;
-import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
@@ -34,16 +32,12 @@ import java.util.*;
 public class PrivacyServiceImpl implements PrivacyService {
 
     private PersistenceService persistenceService;
-    private DefinitionsService definitionsService;
     private ProfileService profileService;
     private EventService eventService;
+    private List<String> defaultDeniedProperties;
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
-    }
-
-    public void setDefinitionsService(DefinitionsService definitionsService) {
-        this.definitionsService = definitionsService;
     }
 
     public void setProfileService(ProfileService profileService) {
@@ -52,6 +46,14 @@ public class PrivacyServiceImpl implements PrivacyService {
 
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
+    }
+
+    public void setDefaultDeniedProperties(List<String> defaultDeniedProperties) {
+        this.defaultDeniedProperties = defaultDeniedProperties;
+    }
+
+    public void setDefaultDeniedProperties(String defaultDeniedProperties) {
+        this.defaultDeniedProperties = Arrays.asList(defaultDeniedProperties.split(","));
     }
 
     @Override
@@ -88,15 +90,35 @@ public class PrivacyServiceImpl implements PrivacyService {
     }
 
     @Override
-    public String anonymizeBrowsingData(String profileId) {
+    public Boolean anonymizeProfile(String profileId) {
         Profile profile = profileService.load(profileId);
         if (profile == null) {
-            return profileId;
+            return false;
+        }
+        boolean res = profile.getProperties().keySet().removeAll(getDeniedProperties(profile.getItemId()));
+
+        Event profileUpdated = new Event("profileUpdated", null, profile, null, null, profile, new Date());
+        profileUpdated.setPersistent(false);
+        eventService.send(profileUpdated);
+
+        profileService.save(profile);
+
+        return res;
+    }
+
+    @Override
+    public Boolean anonymizeBrowsingData(String profileId) {
+        Profile profile = profileService.load(profileId);
+        if (profile == null) {
+            return false;
         }
 
         List<Session> sessions = profileService.getProfileSessions(profileId, null, 0, -1, null).getList();
+        if (sessions.isEmpty()) {
+            return false;
+        }
         for (Session session : sessions) {
-            Profile newProfile = getAnonymousProfile();
+            Profile newProfile = getAnonymousProfile(session.getProfile());
             session.setProfile(newProfile);
             persistenceService.save(session);
             List<Event> events = eventService.searchEvents(session.getItemId(), new String[0], null, 0, -1, null).getList();
@@ -105,7 +127,7 @@ public class PrivacyServiceImpl implements PrivacyService {
             }
         }
 
-        return profileId;
+        return true;
     }
 
     @Override
@@ -135,10 +157,11 @@ public class PrivacyServiceImpl implements PrivacyService {
         return anonymous != null && anonymous;
     }
 
-    public Profile getAnonymousProfile() {
-        String id = UUID.randomUUID().toString();
-        Profile anonymousProfile = new Profile(id);
+    public Profile getAnonymousProfile(Profile profile) {
+        Profile anonymousProfile = new Profile(UUID.randomUUID().toString());
         anonymousProfile.getSystemProperties().put("isAnonymousProfile", true);
+        anonymousProfile.getProperties().putAll(profile.getProperties());
+        anonymousProfile.getProperties().keySet().removeAll(getDeniedProperties(profile.getItemId()));
         profileService.save(anonymousProfile);
         return anonymousProfile;
     }
@@ -165,7 +188,7 @@ public class PrivacyServiceImpl implements PrivacyService {
 
     @Override
     public List<String> getDeniedProperties(String profileId) {
-        return null;
+        return defaultDeniedProperties;
     }
 
     @Override

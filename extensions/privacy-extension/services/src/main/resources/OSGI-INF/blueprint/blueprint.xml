@@ -17,7 +17,15 @@
   -->
 
 <blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd">
+
+    <cm:property-placeholder persistent-id="org.apache.unomi.privacy"
+                             update-strategy="reload">
+        <cm:default-properties>
+            <cm:property name="defaultDeniedProperties" value="firstName,lastName"/>
+        </cm:default-properties>
+    </cm:property-placeholder>
 
     <reference id="persistenceService"
                interface="org.apache.unomi.persistence.spi.PersistenceService"/>
@@ -32,9 +40,9 @@
 
     <bean id="privacyServiceImpl" class="org.apache.unomi.privacy.internal.PrivacyServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
-        <property name="definitionsService" ref="definitionsService"/>
         <property name="eventService" ref="eventService" />
         <property name="profileService" ref="profileService" />
+        <property name="defaultDeniedProperties" value="${defaultDeniedProperties}" />
     </bean>
     <service id="privacyService" ref="privacyServiceImpl" auto-export="interfaces"/>
 </blueprint>

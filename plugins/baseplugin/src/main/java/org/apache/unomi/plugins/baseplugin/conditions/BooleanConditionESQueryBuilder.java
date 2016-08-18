@@ -47,7 +47,7 @@ public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
 
         FilterBuilder[] l = new FilterBuilder[conditionCount];
         for (int i = 0; i < conditionCount; i++) {
-            l[i] = dispatcher.buildFilter(conditions.get(i));
+            l[i] = dispatcher.buildFilter(conditions.get(i), context);
         }
 
         return isAndOperator ? FilterBuilders.andFilter(l) : FilterBuilders.orFilter(l);

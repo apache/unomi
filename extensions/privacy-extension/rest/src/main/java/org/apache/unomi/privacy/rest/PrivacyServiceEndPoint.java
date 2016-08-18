@@ -66,8 +66,8 @@ public class PrivacyServiceEndPoint {
 
     @POST
     @Path("/profiles/{profileId}/anonymize")
-    public void anonymizeBrowsingData(@PathParam("profileId") String profileId) {
-        privacyService.anonymizeBrowsingData(profileId);
+    public void anonymizeProfile(@PathParam("profileId") String profileId) {
+        privacyService.anonymizeProfile(profileId);
     }
 
     @GET

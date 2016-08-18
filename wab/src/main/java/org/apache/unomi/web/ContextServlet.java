@@ -143,7 +143,7 @@ public class ContextServlet extends HttpServlet {
                 if (session != null) {
                     profileId = session.getProfileId();
                     profile = profileService.load(profileId);
-                    profile = checkMergedProfile(response, profile, session);
+                    profile = checkMergedOrAnonymizedProfile(response, profile, session);
                 }
             }
             if (profile == null) {
@@ -161,7 +161,7 @@ public class ContextServlet extends HttpServlet {
                         profileCreated = true;
                         HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain);
                     } else {
-                        profile = checkMergedProfile(response, profile, session);
+                        profile = checkMergedOrAnonymizedProfile(response, profile, session);
                     }
                 }
             } else if ((cookieProfileId == null || !cookieProfileId.equals(profile.getItemId())) && !profile.isAnonymousProfile()) {
@@ -198,9 +198,11 @@ public class ContextServlet extends HttpServlet {
         data.setProfileId(profile.isAnonymousProfile() ? cookieProfileId : profile.getItemId());
 
         if (privacyService.isRequireAnonymousBrowsing(profile.getItemId())) {
-            profile = privacyService.getAnonymousProfile();
-            session.setProfile(profile);
-            changes = EventService.SESSION_UPDATED;
+            if (!session.getProfile().isAnonymousProfile()) {
+                profile = privacyService.getAnonymousProfile(profile);
+                session.setProfile(profile);
+                changes = EventService.SESSION_UPDATED;
+            }
         }
 
         if(contextRequest != null){
@@ -239,10 +241,9 @@ public class ContextServlet extends HttpServlet {
         responseWriter.flush();
     }
 
-    private Profile checkMergedProfile(ServletResponse response, Profile profile, Session session) {
-        String profileId;
+    private Profile checkMergedOrAnonymizedProfile(ServletResponse response, Profile profile, Session session) {
         if (profile != null && profile.getMergedWith() != null && !profile.isAnonymousProfile()) {
-            profileId = profile.getMergedWith();
+            String profileId = profile.getMergedWith();
             Profile profileToDelete = profile;
             profile = profileService.load(profileId);
             if (profile != null) {
@@ -259,6 +260,16 @@ public class ContextServlet extends HttpServlet {
                 profileService.save(profile);
             }
         }
+        if (profile != null && !profile.isAnonymousProfile() && privacyService.isRequireAnonymousBrowsing(profile.getItemId())) {
+            if (session == null || !session.getProfile().isAnonymousProfile()) {
+                profile = privacyService.getAnonymousProfile(profile);
+                if (session != null) {
+                    session.setProfile(profile);
+                    profileService.saveSession(session);
+                }
+            }
+        }
+
         return profile;
     }
 

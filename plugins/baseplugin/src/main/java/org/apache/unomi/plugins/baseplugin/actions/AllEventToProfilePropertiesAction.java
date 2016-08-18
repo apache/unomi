@@ -22,6 +22,7 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 
 import java.util.HashMap;
@@ -30,16 +31,18 @@ import java.util.Map;
 public class AllEventToProfilePropertiesAction implements ActionExecutor {
 
     private ProfileService profileService;
+    private PrivacyService privacyService;
 
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;
     }
 
+    public void setPrivacyService(PrivacyService privacyService) {
+        this.privacyService = privacyService;
+    }
+
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public int execute(Action action, Event event) {
-        if (event.getProfile().isAnonymousProfile()) {
-            return EventService.NO_CHANGE;
-        }
         boolean changed = false;
         Map<String, Object> properties = new HashMap<String,Object>();
         if (event.getProperties() != null) {
@@ -58,12 +61,11 @@ public class AllEventToProfilePropertiesAction implements ActionExecutor {
         for (Map.Entry<String, Object> entry : properties.entrySet()) {
             if (event.getProfile().getProperty(entry.getKey()) == null || !event.getProfile().getProperty(entry.getKey()).equals(event.getProperty(entry.getKey()))) {
                 String propertyMapping = profileService.getPropertyTypeMapping(entry.getKey());
-                if (propertyMapping != null) {
-                    event.getProfile().setProperty(propertyMapping, entry.getValue());
-                } else {
-                    event.getProfile().setProperty(entry.getKey(), entry.getValue());
+                String propertyName = (propertyMapping != null) ? propertyMapping : entry.getKey();
+                if (!event.getProfile().isAnonymousProfile() || !privacyService.getDeniedProperties(event.getProfileId()).contains(propertyName)) {
+                    event.getProfile().setProperty(propertyName, entry.getValue());
+                    changed = true;
                 }
-                changed = true;
             }
         }
         return changed ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;

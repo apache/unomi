@@ -128,7 +128,7 @@ public class EventsCollectorServlet extends HttpServlet {
         int changes = 0;
 
         if (privacyService.isRequireAnonymousBrowsing(profile.getItemId())) {
-            profile = privacyService.getAnonymousProfile();
+            profile = privacyService.getAnonymousProfile(profile);
             session.setProfile(profile);
             changes = EventService.SESSION_UPDATED;
         }

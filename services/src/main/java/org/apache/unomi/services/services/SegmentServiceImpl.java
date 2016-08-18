@@ -418,7 +418,12 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         if (segment == null) {
             return new PartialList<Profile>();
         }
-        return persistenceService.query(segment.getCondition(), sortBy, Profile.class, offset, size);
+        Condition segmentCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        segmentCondition.setParameter("propertyName", "segments");
+        segmentCondition.setParameter("comparisonOperator", "equals");
+        segmentCondition.setParameter("propertyValue", segmentID);
+
+        return persistenceService.query(segmentCondition, sortBy, Profile.class, offset, size);
     }
 
     public long getMatchingIndividualsCount(String segmentID) {
@@ -426,14 +431,12 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             return 0;
         }
 
-        Condition excludeMergedProfilesCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
-        excludeMergedProfilesCondition.setParameter("propertyName", "mergedWith");
-        excludeMergedProfilesCondition.setParameter("comparisonOperator", "missing");
-        Condition condition = new Condition(definitionsService.getConditionType("booleanCondition"));
-        condition.setParameter("operator", "and");
-        condition.setParameter("subConditions", Arrays.asList(getSegmentDefinition(segmentID).getCondition(), excludeMergedProfilesCondition));
+        Condition segmentCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        segmentCondition.setParameter("propertyName", "segments");
+        segmentCondition.setParameter("comparisonOperator", "equals");
+        segmentCondition.setParameter("propertyValue", segmentID);
 
-        return persistenceService.queryCount(condition, Profile.ITEM_TYPE);
+        return persistenceService.queryCount(segmentCondition, Profile.ITEM_TYPE);
     }
 
     public Boolean isProfileInSegment(Profile profile, String segmentId) {

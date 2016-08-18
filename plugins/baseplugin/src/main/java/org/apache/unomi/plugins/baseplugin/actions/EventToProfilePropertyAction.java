@@ -21,18 +21,27 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.PrivacyService;
 
 /**
  * A action to copy an event property to a profile property
  */
 public class EventToProfilePropertyAction implements ActionExecutor {
 
+    private PrivacyService privacyService;
+
+    public void setPrivacyService(PrivacyService privacyService) {
+        this.privacyService = privacyService;
+    }
+
     public int execute(Action action, Event event) {
-        if (event.getProfile().isAnonymousProfile()) {
-            return EventService.NO_CHANGE;
-        }
         String eventPropertyName = (String) action.getParameterValues().get("eventPropertyName");
         String profilePropertyName = (String) action.getParameterValues().get("profilePropertyName");
+
+        if (event.getProfile().isAnonymousProfile() && privacyService.getDeniedProperties(event.getProfileId()).contains(profilePropertyName)) {
+            return EventService.NO_CHANGE;
+        }
+
         if (event.getProfile().getProperty(profilePropertyName) == null || !event.getProfile().getProperty(profilePropertyName).equals(event.getProperty(eventPropertyName))) {
             event.getProfile().setProperty(profilePropertyName, event.getProperty(eventPropertyName));
             return EventService.PROFILE_UPDATED;
