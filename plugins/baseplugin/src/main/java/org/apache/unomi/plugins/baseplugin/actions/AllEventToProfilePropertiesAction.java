@@ -62,10 +62,8 @@ public class AllEventToProfilePropertiesAction implements ActionExecutor {
             if (event.getProfile().getProperty(entry.getKey()) == null || !event.getProfile().getProperty(entry.getKey()).equals(event.getProperty(entry.getKey()))) {
                 String propertyMapping = profileService.getPropertyTypeMapping(entry.getKey());
                 String propertyName = (propertyMapping != null) ? propertyMapping : entry.getKey();
-                if (!event.getProfile().isAnonymousProfile() || !privacyService.getDeniedProperties(event.getProfileId()).contains(propertyName)) {
-                    event.getProfile().setProperty(propertyName, entry.getValue());
-                    changed = true;
-                }
+                event.getProfile().setProperty(propertyName, entry.getValue());
+                changed = true;
             }
         }
         return changed ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;

@@ -216,6 +216,7 @@
             <property name="eventService" ref="eventService"/>
             <property name="persistenceService" ref="persistenceService"/>
             <property name="definitionsService" ref="definitionsService"/>
+            <property name="privacyService" ref="privacyService"/>
         </bean>
     </service>
 

@@ -40,11 +40,6 @@ public class SetPropertyAction implements ActionExecutor {
 
         String propertyName = (String) action.getParameterValues().get("setPropertyName");
 
-        if (event.getProfile().isAnonymousProfile() && !storeInSession
-                && privacyService.getDeniedProperties(event.getProfileId()).contains(propertyName)) {
-            return EventService.NO_CHANGE;
-        }
-
         Object propertyValue = action.getParameterValues().get("setPropertyValue");
         Object propertyValueInteger = action.getParameterValues().get("setPropertyValueInteger");
 

@@ -158,11 +158,11 @@ public class PrivacyServiceImpl implements PrivacyService {
     }
 
     public Profile getAnonymousProfile(Profile profile) {
-        Profile anonymousProfile = new Profile(UUID.randomUUID().toString());
+        Profile anonymousProfile = new Profile();
         anonymousProfile.getSystemProperties().put("isAnonymousProfile", true);
         anonymousProfile.getProperties().putAll(profile.getProperties());
         anonymousProfile.getProperties().keySet().removeAll(getDeniedProperties(profile.getItemId()));
-        profileService.save(anonymousProfile);
+//        profileService.save(anonymousProfile);
         return anonymousProfile;
     }
 

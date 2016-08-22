@@ -390,6 +390,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Profile save(Profile profile) {
+        if (profile.getItemId() == null) {
+            return null;
+        }
         persistenceService.save(profile);
         return persistenceService.load(profile.getItemId(), Profile.class);
     }
@@ -527,6 +530,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Session saveSession(Session session) {
+        if (session.getItemId() == null) {
+            return null;
+        }
         return persistenceService.save(session) ? session : null;
     }
 

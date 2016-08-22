@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -74,8 +75,6 @@ public class EventsCollectorServlet extends HttpServlet {
 
         HttpUtils.setupCORSHeaders(request, response);
 
-        Profile profile = null;
-
         String sessionId = request.getParameter("sessionId");
         if (sessionId == null) {
             logger.error("No sessionId found in incoming request, aborting processing. See debug level for more information");
@@ -91,21 +90,34 @@ public class EventsCollectorServlet extends HttpServlet {
             return;
         }
 
-        String profileId = session.getProfileId();
-        if (profileId == null) {
-            logger.error("No profileId found in session={}, aborting request !", session.getItemId());
-            return;
-        }
+        String profileIdCookieName = "context-profile-id";
 
-        profile = profileService.load(profileId);
-        if (profile == null || profile instanceof Persona) {
-            logger.error("No valid profile found or persona found for profileId={}, aborting request !", profileId);
-            return;
+        Profile sessionProfile = session.getProfile();
+        Profile profile = null;
+        if (sessionProfile.getItemId() != null) {
+            // Reload up-to-date profile
+            profile = profileService.load(sessionProfile.getItemId());
+            if (profile == null || profile instanceof Persona) {
+                logger.error("No valid profile found or persona found for profileId={}, aborting request !", session.getProfileId());
+                return;
+            }
+        } else {
+            // Session uses anonymous profile, try to find profile from cookie
+            Cookie[] cookies = request.getCookies();
+            for (Cookie cookie : cookies) {
+                if (profileIdCookieName.equals(cookie.getName())) {
+                    profile = profileService.load(cookie.getValue());
+                }
+            }
+            if (profile == null) {
+                logger.error("No valid profile found or persona found for profileId={}, aborting request !", session.getProfileId());
+                return;
+            }
         }
 
         String payload = HttpUtils.getPayload(request);
         if (payload == null){
-            logger.error("No event payload found for request, aborting !", profileId);
+            logger.error("No event payload found for request, aborting !");
             return;
         }
 
@@ -127,17 +139,16 @@ public class EventsCollectorServlet extends HttpServlet {
 
         int changes = 0;
 
-        if (privacyService.isRequireAnonymousBrowsing(profile.getItemId())) {
-            profile = privacyService.getAnonymousProfile(profile);
-            session.setProfile(profile);
-            changes = EventService.SESSION_UPDATED;
-        }
-
         List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile.getItemId());
 
         for (Event event : events.getEvents()){
             if(event.getEventType() != null){
                 Event eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp);
+                if (sessionProfile.isAnonymousProfile()) {
+                    // Do not keep track of profile in event
+                    eventToSend.setProfileId(null);
+                }
+
                 if (!eventService.isEventAllowed(event, thirdPartyId)) {
                     logger.debug("Event is not allowed : {}", event.getEventType());
                     continue;
@@ -149,12 +160,11 @@ public class EventsCollectorServlet extends HttpServlet {
 
                 eventToSend.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                 eventToSend.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
+                logger.debug("Received event " + event.getEventType() + " for profile=" + sessionProfile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
                 int eventChanged = eventService.send(eventToSend);
                 //if the event execution changes the profile
                 if ((eventChanged & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
                     profile = eventToSend.getProfile();
-                    session.setProfile(profile);
                 }
                 changes |= eventChanged;
             }

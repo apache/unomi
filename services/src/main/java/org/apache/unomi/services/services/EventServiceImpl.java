@@ -153,7 +153,7 @@ public class EventServiceImpl implements EventService {
                 profileUpdated.setPersistent(false);
                 profileUpdated.getAttributes().putAll(event.getAttributes());
                 changes |= send(profileUpdated);
-                if (session != null) {
+                if (session != null && session.getProfileId() != null) {
                     changes |= SESSION_UPDATED;
                     session.setProfile(event.getProfile());
                 }
