@@ -156,7 +156,11 @@ public class ContextServlet extends HttpServlet {
                 session = profileService.loadSession(sessionId, timestamp);
                 if (session != null) {
                     sessionProfile = session.getProfile();
-
+                    if (!profile.isAnonymousProfile() && !sessionProfile.isAnonymousProfile() && !profile.getItemId().equals(sessionProfile.getItemId())) {
+                        // Session user has been switched, profile id in cookie is not uptodate
+                        profile = sessionProfile;
+                        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain);
+                    }
                     if (privacyService.isRequireAnonymousBrowsing(profile.getItemId()) && sessionProfile.isAnonymousProfile()) {
                         // User wants to browse anonymously, anonymous profile is already set.
                     } else if (privacyService.isRequireAnonymousBrowsing(profile.getItemId()) && !sessionProfile.isAnonymousProfile()) {
