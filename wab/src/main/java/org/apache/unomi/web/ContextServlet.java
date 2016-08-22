@@ -156,24 +156,29 @@ public class ContextServlet extends HttpServlet {
                 session = profileService.loadSession(sessionId, timestamp);
                 if (session != null) {
                     sessionProfile = session.getProfile();
-                    if (!profile.isAnonymousProfile() && !sessionProfile.isAnonymousProfile() && !profile.getItemId().equals(sessionProfile.getItemId())) {
+                    boolean anonymousProfile = sessionProfile.isAnonymousProfile();
+
+                    if (!profile.isAnonymousProfile() && !anonymousProfile && !profile.getItemId().equals(sessionProfile.getItemId())) {
                         // Session user has been switched, profile id in cookie is not uptodate
                         profile = sessionProfile;
                         HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain);
                     }
-                    if (privacyService.isRequireAnonymousBrowsing(profile.getItemId()) && sessionProfile.isAnonymousProfile()) {
+
+                    Boolean requireAnonymousBrowsing = privacyService.isRequireAnonymousBrowsing(profile.getItemId());
+
+                    if (requireAnonymousBrowsing && anonymousProfile) {
                         // User wants to browse anonymously, anonymous profile is already set.
-                    } else if (privacyService.isRequireAnonymousBrowsing(profile.getItemId()) && !sessionProfile.isAnonymousProfile()) {
+                    } else if (requireAnonymousBrowsing && !anonymousProfile) {
                         // User wants to browse anonymously, update the sessionProfile to anonymous profile
                         sessionProfile = privacyService.getAnonymousProfile(profile);
                         session.setProfile(sessionProfile);
                         changes = EventService.SESSION_UPDATED;
-                    } else if (!privacyService.isRequireAnonymousBrowsing(profile.getItemId()) && sessionProfile.isAnonymousProfile()) {
+                    } else if (!requireAnonymousBrowsing && anonymousProfile) {
                         // User does not want to browse anonymously anymore, update the sessionProfile to real profile
                         sessionProfile = profile;
                         session.setProfile(sessionProfile);
                         changes = EventService.SESSION_UPDATED;
-                    } else if (!privacyService.isRequireAnonymousBrowsing(profile.getItemId()) && !sessionProfile.isAnonymousProfile()) {
+                    } else if (!requireAnonymousBrowsing && !anonymousProfile) {
                         // User does not want to browse anonymously, use the real profile. Check that session contains the current profile.
                         sessionProfile = profile;
                         if (!session.getProfileId().equals(sessionProfile.getItemId())) {
@@ -350,6 +355,8 @@ public class ContextServlet extends HttpServlet {
         } else {
             data.setTrackedConditions(Collections.<Condition>emptySet());
         }
+
+        data.setAnonymousBrowsing(privacyService.isRequireAnonymousBrowsing(profile.getItemId()));
 
         return changes;
     }

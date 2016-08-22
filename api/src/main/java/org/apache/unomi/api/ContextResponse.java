@@ -48,6 +48,8 @@ public class ContextResponse implements Serializable {
 
     private Set<Condition> trackedConditions;
 
+    private boolean anonymousBrowsing;
+
     /**
      * Retrieves the profile identifier associated with the profile of the user on behalf of which the client performed the context request.
      *
@@ -184,5 +186,21 @@ public class ContextResponse implements Serializable {
      */
     public void setTrackedConditions(Set<Condition> trackedConditions) {
         this.trackedConditions = trackedConditions;
+    }
+
+    /**
+     * Retrieves the current status of anonymous browsing, as set by the privacy service
+     * @return anonymous browsing status
+     */
+    public boolean isAnonymousBrowsing() {
+        return anonymousBrowsing;
+    }
+
+    /**
+     * Set the user anonymous browsing status
+     * @param anonymousBrowsing
+     */
+    public void setAnonymousBrowsing(boolean anonymousBrowsing) {
+        this.anonymousBrowsing = anonymousBrowsing;
     }
 }

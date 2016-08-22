@@ -78,7 +78,10 @@ public class PrivacyServiceEndPoint {
 
     @POST
     @Path("/profiles/{profileId}/anonymousBrowsing")
-    public Response activateAnonymousBrowsing(@PathParam("profileId") String profileId) {
+    public Response activateAnonymousBrowsing(@PathParam("profileId") String profileId, @QueryParam("anonymizePastBrowsing") @DefaultValue("false") boolean past) {
+        if (past) {
+            privacyService.anonymizeBrowsingData(profileId);
+        }
         Boolean r = privacyService.setRequireAnonymousBrowsing(profileId, true);
         return r ? Response.ok().build() : Response.serverError().build();
     }
