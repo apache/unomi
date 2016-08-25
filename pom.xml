@@ -827,6 +827,8 @@
         <module>plugins</module>
         <module>extensions</module>
         <module>kar</module>
+        <module>samples</module>
+        <module>package</module>
     </modules>
 
     <dependencies>
