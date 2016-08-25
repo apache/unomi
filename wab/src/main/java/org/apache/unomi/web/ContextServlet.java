@@ -182,9 +182,9 @@ public class ContextServlet extends HttpServlet {
                         // User does not want to browse anonymously, use the real profile. Check that session contains the current profile.
                         sessionProfile = profile;
                         if (!session.getProfileId().equals(sessionProfile.getItemId())) {
-                            session.setProfile(sessionProfile);
                             changes = EventService.SESSION_UPDATED;
                         }
+                        session.setProfile(sessionProfile);
                     }
                 }
             }
@@ -295,7 +295,8 @@ public class ContextServlet extends HttpServlet {
         if(contextRequest.getEvents() != null && !(profile instanceof Persona)) {
             for (Event event : contextRequest.getEvents()){
                 if(event.getEventType() != null) {
-                    Event eventToSend = new Event(event.getEventType(), session, session.getProfile(), contextRequest.getSource().getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp);
+                    Profile sessionProfile = session.getProfile();
+                    Event eventToSend = new Event(event.getEventType(), session, sessionProfile, contextRequest.getSource().getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp);
                     if (!eventService.isEventAllowed(event, thirdPartyId)) {
                         logger.debug("Event is not allowed : {}", event.getEventType());
                         continue;
@@ -303,6 +304,10 @@ public class ContextServlet extends HttpServlet {
                     if (filteredEventTypes != null && filteredEventTypes.contains(event.getEventType())) {
                         logger.debug("Profile is filtering event type {}", event.getEventType());
                         continue;
+                    }
+                    if (sessionProfile.isAnonymousProfile()) {
+                        // Do not keep track of profile in event
+                        event.setProfileId(null);
                     }
 
                     event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);

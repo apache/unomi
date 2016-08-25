@@ -144,6 +144,14 @@ public class PrivacyServiceImpl implements PrivacyService {
             return false;
         }
         profile.getSystemProperties().put("requireAnonymousProfile", anonymous);
+        if (anonymous) {
+            profile.getSystemProperties().remove("goals");
+            profile.getSystemProperties().remove("pastEvents");
+        }
+        Event profileUpdated = new Event("profileUpdated", null, profile, null, null, profile, new Date());
+        profileUpdated.setPersistent(false);
+        eventService.send(profileUpdated);
+
         profileService.save(profile);
         return true;
     }
