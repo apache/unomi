@@ -299,7 +299,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         Set<PropertyType> filteredProperties = new LinkedHashSet<PropertyType>();
         // TODO: here we limit the result to the definition we have, but what if some properties haven't definition but exist in ES mapping ?
         Set<PropertyType> profileProperties = getPropertyTypeByTag(tagId, true);
-        Map<String, Map<String, Object>> itemMapping = persistenceService.getMapping(itemType);
+        Map<String, Map<String, Object>> itemMapping = persistenceService.getPropertiesMapping(itemType);
 
         if (itemMapping == null || itemMapping.isEmpty() || itemMapping.get("properties") == null || itemMapping.get("properties").get("properties") == null) {
             return filteredProperties;
