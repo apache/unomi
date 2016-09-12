@@ -766,35 +766,40 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return false;
     }
 
-    private boolean merge(Map<String,Object> target, Map<String,Object> object) {
+    private boolean merge(Map<String, Object> target, Map<String, Object> object) {
         boolean changed = false;
-        for (Map.Entry<String, Object> previousEntry : object.entrySet()) {
-            if (previousEntry.getValue() != null) {
-                if (previousEntry.getValue() instanceof Collection) {
-                    Collection currentCollection = (Collection) target.get(previousEntry.getKey());
+        for (Map.Entry<String, Object> newEntry : object.entrySet()) {
+            if (newEntry.getValue() != null) {
+                if (newEntry.getValue() instanceof Collection) {
+                    Collection currentCollection = (Collection) target.get(newEntry.getKey());
                     if (currentCollection != null) {
-                        if (!currentCollection.containsAll((Collection) previousEntry.getValue())) {
-                            changed |= currentCollection.addAll((Collection) previousEntry.getValue());
+                        if (!currentCollection.containsAll((Collection) newEntry.getValue())) {
+                            changed |= currentCollection.addAll((Collection) newEntry.getValue());
                         }
                     } else {
-                        target.put(previousEntry.getKey(), previousEntry.getValue());
+                        target.put(newEntry.getKey(), newEntry.getValue());
                         changed = true;
                     }
-                } else if (previousEntry.getValue() instanceof Map) {
-                    Map<String,Object> currentMap = (Map) target.get(previousEntry.getKey());
+                } else if (newEntry.getValue() instanceof Map) {
+                    Map<String,Object> currentMap = (Map) target.get(newEntry.getKey());
                     if (currentMap == null) {
-                        target.put(previousEntry.getKey(), previousEntry.getValue());
+                        target.put(newEntry.getKey(), newEntry.getValue());
                         changed = true;
                     } else {
-                        changed |= merge(currentMap, (Map) previousEntry.getValue());
+                        changed |= merge(currentMap, (Map) newEntry.getValue());
                     }
-                } else if (previousEntry.getValue().getClass().getPackage().getName().equals("java.lang")) {
-                    if (previousEntry.getValue() != null && !previousEntry.getValue().equals(target.get(previousEntry.getKey()))) {
-                        target.put(previousEntry.getKey(), previousEntry.getValue());
+                } else if (newEntry.getValue().getClass().getPackage().getName().equals("java.lang")) {
+                    if (newEntry.getValue() != null && !newEntry.getValue().equals(target.get(newEntry.getKey()))) {
+                        target.put(newEntry.getKey(), newEntry.getValue());
                         changed = true;
                     }
                 } else {
-                    changed |= merge(target.get(previousEntry.getKey()), previousEntry.getValue());
+                    changed |= merge(target.get(newEntry.getKey()), newEntry.getValue());
+                }
+            } else {
+                if (target.containsKey(newEntry.getKey())) {
+                    target.remove(newEntry.getKey());
+                    changed = true;
                 }
             }
         }
