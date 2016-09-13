@@ -297,10 +297,20 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 node = nodeBuilder().settings(settingsBuilder).node();
                 client = node.client();
+                logger.info("Waiting for ElasticSearch to start...");
+
+                client.admin().cluster().prepareHealth()
+                        .setWaitForGreenStatus()
+                        .get();
+
+                logger.info("Cluster status is GREEN");
+
                 // @todo is there a better way to detect index existence than to wait for it to startup ?
                 boolean indexExists = false;
                 int tries = 0;
+
                 while (!indexExists && tries < 20) {
+
                     IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(indexName).execute().actionGet();
                     indexExists = indicesExistsResponse.isExists();
                     tries++;
@@ -320,6 +330,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
 
                     internalCreateIndex(indexName, indexMappings);
+                } else {
+                    logger.info("Found index {}, ElasticSearch started successfully.", indexName);
                 }
 
                 client.admin().indices().preparePutTemplate(indexName + "_monthlyindex")
@@ -365,6 +377,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }, 10000L, 24L * 60L * 60L * 1000L);
+
+        logger.info(this.getClass().getName() + " service started successfully.");
     }
 
     public void stop() {
