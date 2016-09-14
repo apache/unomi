@@ -66,26 +66,29 @@ public class PrivacyServiceEndPoint {
 
     @POST
     @Path("/profiles/{profileId}/anonymize")
-    public void anonymizeBrowsingData(@PathParam("profileId") String profileId) {
-        privacyService.anonymizeBrowsingData(profileId);
+    public void anonymizeProfile(@PathParam("profileId") String profileId) {
+        privacyService.anonymizeProfile(profileId);
     }
 
     @GET
-    @Path("/profiles/{profileId}/anonymous")
-    public Boolean isAnonymous(@PathParam("profileId") String profileId) {
+    @Path("/profiles/{profileId}/anonymousBrowsing")
+    public Boolean isAnonymousBrowsing(@PathParam("profileId") String profileId) {
         return privacyService.isRequireAnonymousBrowsing(profileId);
     }
 
     @POST
-    @Path("/profiles/{profileId}/anonymous")
-    public Response activateAnonymousSurfing(@PathParam("profileId") String profileId) {
+    @Path("/profiles/{profileId}/anonymousBrowsing")
+    public Response activateAnonymousBrowsing(@PathParam("profileId") String profileId, @QueryParam("anonymizePastBrowsing") @DefaultValue("false") boolean past) {
+        if (past) {
+            privacyService.anonymizeBrowsingData(profileId);
+        }
         Boolean r = privacyService.setRequireAnonymousBrowsing(profileId, true);
         return r ? Response.ok().build() : Response.serverError().build();
     }
 
     @DELETE
-    @Path("/profiles/{profileId}/anonymous")
-    public Response deactivateAnonymousSurfing(@PathParam("profileId") String profileId) {
+    @Path("/profiles/{profileId}/anonymousBrowsing")
+    public Response deactivateAnonymousBrowsing(@PathParam("profileId") String profileId) {
         Boolean r = privacyService.setRequireAnonymousBrowsing(profileId, false);
         return r ? Response.ok().build() : Response.serverError().build();
     }

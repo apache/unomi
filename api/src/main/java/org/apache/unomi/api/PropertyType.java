@@ -44,12 +44,12 @@ public class PropertyType extends MetadataItem {
     private List<NumericRange> numericRanges = new ArrayList<>();
     private List<IpRange> ipRanges = new ArrayList<>();
     private Set<String> automaticMappingsFrom = new HashSet<>();
-    private double rank;
+    private Double rank;
     private String mergeStrategy;
     private Set<Tag> tags = new TreeSet<Tag>();
     private Set<String> tagIds = new LinkedHashSet<String>();
-    private boolean multivalued;
-    private boolean protekted = false;
+    private Boolean multivalued;
+    private Boolean protekted;
 
     /**
      * Instantiates a new Property type.
@@ -210,7 +210,7 @@ public class PropertyType extends MetadataItem {
      *
      * @return the rank of this PropertyType for ordering purpose
      */
-    public double getRank() {
+    public Double getRank() {
         return rank;
     }
 
@@ -219,7 +219,7 @@ public class PropertyType extends MetadataItem {
      *
      * @param rank the rank of this PropertyType for ordering purpose
      */
-    public void setRank(double rank) {
+    public void setRank(Double rank) {
         this.rank = rank;
     }
 
@@ -300,7 +300,7 @@ public class PropertyType extends MetadataItem {
      *
      * @return {@code true} if properties of this type should be multi-valued, {@code false} otherwise
      */
-    public boolean isMultivalued() {
+    public Boolean isMultivalued() {
         return multivalued;
     }
 
@@ -309,7 +309,7 @@ public class PropertyType extends MetadataItem {
      *
      * @param multivalued {@code true} if properties of this type should be multi-valued, {@code false} otherwise
      */
-    public void setMultivalued(boolean multivalued) {
+    public void setMultivalued(Boolean multivalued) {
         this.multivalued = multivalued;
     }
 
@@ -320,7 +320,7 @@ public class PropertyType extends MetadataItem {
      *
      * @return {@code true} if properties of this type are protected, {@code false} otherwise
      */
-    public boolean isProtected() {
+    public Boolean isProtected() {
         return protekted;
     }
 

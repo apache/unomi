@@ -13,7 +13,7 @@
     "type": "profilePropertyCondition",
     "parameterValues": {
       "propertyName": "script::'systemProperties.goals.'+goalId+'TargetReached'",
-      "comparisonOperator": "exists"
+      "comparisonOperator": "parameter::comparisonOperator"
     }
   },
 
@@ -22,6 +22,12 @@
       "id": "goalId",
       "type": "string",
       "multivalued": false
+    },
+    {
+      "id": "comparisonOperator",
+      "type": "string",
+      "multivalued": false,
+      "defaultValue": "exists"
     }
   ]
 }

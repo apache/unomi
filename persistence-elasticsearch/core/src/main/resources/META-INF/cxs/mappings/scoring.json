@@ -1,5 +1,5 @@
 {
-  "userList": {
+  "scoring": {
     "dynamic_templates": [
       {
         "all": {
@@ -48,6 +48,10 @@
             "type": "boolean"
           },
           "scope": {
+            "type": "string",
+            "analyzer": "folding"
+          },
+          "tags": {
             "type": "string",
             "analyzer": "folding"
           }

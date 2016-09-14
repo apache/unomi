@@ -332,6 +332,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     internalCreateIndex(indexName, indexMappings);
                 } else {
                     logger.info("Found index {}, ElasticSearch started successfully.", indexName);
+                    for (Map.Entry<String, String> entry : mappings.entrySet()) {
+                        createMapping(entry.getKey(), entry.getValue());
+                    }
                 }
 
                 client.admin().indices().preparePutTemplate(indexName + "_monthlyindex")
@@ -471,17 +474,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 while ((l = reader.readLine()) != null) {
                     content.append(l);
                 }
-                mappings.put(name, content.toString());
+                String mappingSource = content.toString();
+                mappings.put(name, mappingSource);
                 if (createMapping) {
-                    if (itemsMonthlyIndexed.contains(name)) {
-                        createMapping(name, content.toString(), indexName + "-*");
-                    } else if (indexNames.containsKey(name)) {
-                        if (client.admin().indices().prepareExists(indexNames.get(name)).execute().actionGet().isExists()) {
-                            createMapping(name, content.toString(), indexNames.get(name));
-                        }
-                    } else {
-                        createMapping(name, content.toString(), indexName);
-                    }
+                    createMapping(name, mappingSource);
                 }
             } catch (Exception e) {
                 logger.error("Error while loading mapping definition " + predefinedMappingURL, e);
@@ -749,17 +745,29 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
 
-    private boolean createMapping(final String type, final String source, final String indexName) {
+    private void createMapping(final String type, final String source, final String indexName) {
         client.admin().indices()
                 .preparePutMapping(indexName)
                 .setType(type)
                 .setSource(source)
                 .execute().actionGet();
-        return true;
     }
 
     @Override
-    public Map<String, Map<String, Object>> getMapping(final String itemType) {
+    public void createMapping(String type, String source) {
+        if (itemsMonthlyIndexed.contains(type)) {
+            createMapping(type, source, indexName + "-*");
+        } else if (indexNames.containsKey(type)) {
+            if (client.admin().indices().prepareExists(indexNames.get(type)).execute().actionGet().isExists()) {
+                createMapping(type, source, indexNames.get(type));
+            }
+        } else {
+            createMapping(type, source, indexName);
+        }
+    }
+
+    @Override
+    public Map<String, Map<String, Object>> getPropertiesMapping(final String itemType) {
         return new InClassLoaderExecute<Map<String, Map<String, Object>>>() {
             @SuppressWarnings("unchecked")
             protected Map<String, Map<String, Object>> execute(Object... args) {

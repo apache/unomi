@@ -21,13 +21,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
-import org.apache.unomi.api.segments.Scoring;
-import org.apache.unomi.api.segments.ScoringElement;
-import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.api.segments.SegmentsAndScores;
+import org.apache.unomi.api.segments.*;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RulesService;
@@ -253,23 +249,26 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         updateExistingProfilesForSegment(segment);
     }
 
-    private void checkIfSegmentIsImpacted(Segment segment, Condition condition, String segmentToDeleteId, Set<Segment> impactedSegments) {
+    private boolean checkSegmentDeletionImpact(Condition condition, String segmentToDeleteId) {
         if(condition != null) {
             @SuppressWarnings("unchecked")
             final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
             if (subConditions != null) {
                 for (Condition subCondition : subConditions) {
-                    checkIfSegmentIsImpacted(segment, subCondition, segmentToDeleteId, impactedSegments);
+                    if (checkSegmentDeletionImpact(subCondition, segmentToDeleteId)) {
+                        return true;
+                    }
                 }
             } else if ("profileSegmentCondition".equals(condition.getConditionTypeId())) {
                 @SuppressWarnings("unchecked")
                 final List<String> referencedSegmentIds = (List<String>) condition.getParameter("segments");
 
                 if (referencedSegmentIds.indexOf(segmentToDeleteId) >= 0) {
-                    impactedSegments.add(segment);
+                    return true;
                 }
             }
         }
+        return false;
     }
 
     /**
@@ -280,13 +279,13 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
      * @param segmentId the segment id to remove in the condition
      * @return updated condition
      */
-    private Condition updateImpactedCondition(Condition condition, String segmentId) {
+    private Condition updateSegmentDependentCondition(Condition condition, String segmentId) {
         if ("booleanCondition".equals(condition.getConditionTypeId())) {
             @SuppressWarnings("unchecked")
             final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
             List<Condition> updatedSubConditions = new LinkedList<>();
             for (Condition subCondition : subConditions) {
-                Condition updatedCondition = updateImpactedCondition(subCondition, segmentId);
+                Condition updatedCondition = updateSegmentDependentCondition(subCondition, segmentId);
                 if(updatedCondition != null) {
                     updatedSubConditions.add(updatedCondition);
                 }
@@ -316,26 +315,45 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         return condition;
     }
 
-    private Set<Segment> getImpactedSegments(String segmentId) {
+    private Set<Segment> getSegmentDependentSegments(String segmentId) {
         Set<Segment> impactedSegments = new HashSet<>(this.allSegments.size());
         for (Segment segment : this.allSegments) {
-            checkIfSegmentIsImpacted(segment, segment.getCondition(), segmentId, impactedSegments);
+            if (checkSegmentDeletionImpact(segment.getCondition(), segmentId)) {
+                impactedSegments.add(segment);
+            }
         }
         return impactedSegments;
     }
 
-    public List<Metadata> getImpactedSegmentMetadata(String segmentId) {
-        List<Metadata> details = new LinkedList<>();
-        for (Segment definition : getImpactedSegments(segmentId)) {
-            details.add(definition.getMetadata());
+    private Set<Scoring> getSegmentDependentScorings(String segmentId) {
+        Set<Scoring> impactedScoring = new HashSet<>(this.allScoring.size());
+        for (Scoring scoring : this.allScoring) {
+            for (ScoringElement element : scoring.getElements()) {
+                if (checkSegmentDeletionImpact(element.getCondition(), segmentId)) {
+                    impactedScoring.add(scoring);
+                    break;
+                }
+            }
         }
-
-        return details;
+        return impactedScoring;
     }
 
-    public List<Metadata> removeSegmentDefinition(String segmentId, boolean validate) {
-        Set<Segment> impactedSegments = getImpactedSegments(segmentId);
-        if (!validate || impactedSegments.isEmpty()) {
+    public DependentMetadata getSegmentDependentMetadata(String segmentId) {
+        List<Metadata> segments = new LinkedList<>();
+        List<Metadata> scorings = new LinkedList<>();
+        for (Segment definition : getSegmentDependentSegments(segmentId)) {
+            segments.add(definition.getMetadata());
+        }
+        for (Scoring definition : getSegmentDependentScorings(segmentId)) {
+            scorings.add(definition.getMetadata());
+        }
+        return new DependentMetadata(segments, scorings);
+    }
+
+    public DependentMetadata removeSegmentDefinition(String segmentId, boolean validate) {
+        Set<Segment> impactedSegments = getSegmentDependentSegments(segmentId);
+        Set<Scoring> impactedScorings = getSegmentDependentScorings(segmentId);
+        if (!validate || (impactedSegments.isEmpty() && impactedScorings.isEmpty())) {
             // update profiles
             Condition segmentCondition = new Condition();
             segmentCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
@@ -351,7 +369,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
             // update impacted segments
             for (Segment segment : impactedSegments) {
-                Condition updatedCondition = updateImpactedCondition(segment.getCondition(), segmentId);
+                Condition updatedCondition = updateSegmentDependentCondition(segment.getCondition(), segmentId);
                 segment.setCondition(updatedCondition);
                 if(updatedCondition == null) {
                     clearAutoGeneratedRules(persistenceService.query("linkedItems", segment.getMetadata().getId(), null, Rule.class), segment.getMetadata().getId());
@@ -360,16 +378,38 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                 setSegmentDefinition(segment);
             }
 
+            // update impacted scorings
+            for (Scoring scoring : impactedScorings) {
+                List<ScoringElement> updatedScoringElements = new ArrayList<>();
+                for (ScoringElement scoringElement : scoring.getElements()) {
+                    Condition updatedCondition = updateSegmentDependentCondition(scoringElement.getCondition(), segmentId);
+                    if (updatedCondition != null) {
+                        scoringElement.setCondition(updatedCondition);
+                        updatedScoringElements.add(scoringElement);
+                    }
+                }
+                scoring.setElements(updatedScoringElements);
+                if (updatedScoringElements.isEmpty()) {
+                    clearAutoGeneratedRules(persistenceService.query("linkedItems", scoring.getMetadata().getId(), null, Rule.class), scoring.getMetadata().getId());
+                    scoring.getMetadata().setEnabled(false);
+                }
+                setScoringDefinition(scoring);
+            }
+
             persistenceService.remove(segmentId, Segment.class);
             List<Rule> previousRules = persistenceService.query("linkedItems", segmentId, null, Rule.class);
             clearAutoGeneratedRules(previousRules, segmentId);
         }
 
-        List<Metadata> metadata = new LinkedList<>();
+        List<Metadata> segments = new LinkedList<>();
+        List<Metadata> scorings = new LinkedList<>();
         for (Segment definition : impactedSegments) {
-            metadata.add(definition.getMetadata());
+            segments.add(definition.getMetadata());
         }
-        return metadata;
+        for (Scoring definition : impactedScorings) {
+            scorings.add(definition.getMetadata());
+        }
+        return new DependentMetadata(segments, scorings);
     }
 
 
@@ -378,7 +418,12 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         if (segment == null) {
             return new PartialList<Profile>();
         }
-        return persistenceService.query(segment.getCondition(), sortBy, Profile.class, offset, size);
+        Condition segmentCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        segmentCondition.setParameter("propertyName", "segments");
+        segmentCondition.setParameter("comparisonOperator", "equals");
+        segmentCondition.setParameter("propertyValue", segmentID);
+
+        return persistenceService.query(segmentCondition, sortBy, Profile.class, offset, size);
     }
 
     public long getMatchingIndividualsCount(String segmentID) {
@@ -386,14 +431,12 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             return 0;
         }
 
-        Condition excludeMergedProfilesCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
-        excludeMergedProfilesCondition.setParameter("propertyName", "mergedWith");
-        excludeMergedProfilesCondition.setParameter("comparisonOperator", "missing");
-        Condition condition = new Condition(definitionsService.getConditionType("booleanCondition"));
-        condition.setParameter("operator", "and");
-        condition.setParameter("subConditions", Arrays.asList(getSegmentDefinition(segmentID).getCondition(), excludeMergedProfilesCondition));
+        Condition segmentCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        segmentCondition.setParameter("propertyName", "segments");
+        segmentCondition.setParameter("comparisonOperator", "equals");
+        segmentCondition.setParameter("propertyValue", segmentID);
 
-        return persistenceService.queryCount(condition, Profile.ITEM_TYPE);
+        return persistenceService.queryCount(segmentCondition, Profile.ITEM_TYPE);
     }
 
     public Boolean isProfileInSegment(Profile profile, String segmentId) {
@@ -489,6 +532,21 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         // make sure we update the name and description metadata that might not match, so first we remove the entry from the map
         persistenceService.save(scoring);
 
+        persistenceService.createMapping(Profile.ITEM_TYPE, String.format(
+                "{\n" +
+                "    \"profile\": {\n" +
+                "        \"properties\" : {\n" +
+                "            \"scores\": {\n" +
+                "                \"properties\": {\n" +
+                "                    \"%s\": {\n" +
+                "                        \"type\": \"long\"\n" +
+                "                    }\n" +
+                "                }\n" +
+                "            }\n" +
+                "        }\n" +
+                "    }\n" +
+                "}\n", scoring.getItemId()));
+
         updateExistingProfilesForScoring(scoring);
     }
 
@@ -504,10 +562,146 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         setScoringDefinition(scoring);
     }
 
-    public void removeScoringDefinition(String scoringId) {
-        persistenceService.remove(scoringId, Scoring.class);
+    private boolean checkScoringDeletionImpact(Condition condition, String scoringToDeleteId) {
+        if(condition != null) {
+            @SuppressWarnings("unchecked")
+            final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
+            if (subConditions != null) {
+                for (Condition subCondition : subConditions) {
+                    if (checkScoringDeletionImpact(subCondition, scoringToDeleteId)) {
+                        return true;
+                    }
+                }
+            } else if ("scoringCondition".equals(condition.getConditionTypeId())) {
+                if (scoringToDeleteId.equals(condition.getParameter("scoringPlanId"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
-        updateExistingProfilesForRemovedScoring(scoringId);
+    /**
+     * Return an updated condition that do not contain a condition on the scoringId anymore
+     * it's remove the unnecessary boolean condition (if a condition is the only one of a boolean the boolean will be remove and the subcondition returned)
+     * it's return null when there is no more condition after (if the condition passed was only a scoring condition on the scoringId)
+     * @param condition the condition to update
+     * @param scoringId the scoring id to remove in the condition
+     * @return updated condition
+     */
+    private Condition updateScoringDependentCondition(Condition condition, String scoringId) {
+        if ("booleanCondition".equals(condition.getConditionTypeId())) {
+            @SuppressWarnings("unchecked")
+            final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
+            List<Condition> updatedSubConditions = new LinkedList<>();
+            for (Condition subCondition : subConditions) {
+                Condition updatedCondition = updateScoringDependentCondition(subCondition, scoringId);
+                if(updatedCondition != null) {
+                    updatedSubConditions.add(updatedCondition);
+                }
+            }
+            if(!updatedSubConditions.isEmpty()){
+                if(updatedSubConditions.size() == 1) {
+                    return updatedSubConditions.get(0);
+                } else {
+                    condition.setParameter("subConditions", updatedSubConditions);
+                    return condition;
+                }
+            } else {
+                return null;
+            }
+        } else if ("scoringCondition".equals(condition.getConditionTypeId())
+                && scoringId.equals(condition.getParameter("scoringPlanId"))) {
+            return null;
+        }
+        return condition;
+    }
+
+    private Set<Segment> getScoringDependentSegments(String scoringId) {
+        Set<Segment> impactedSegments = new HashSet<>(this.allSegments.size());
+        for (Segment segment : this.allSegments) {
+            if (checkScoringDeletionImpact(segment.getCondition(), scoringId)) {
+                impactedSegments.add(segment);
+            }
+        }
+        return impactedSegments;
+    }
+
+    private Set<Scoring> getScoringDependentScorings(String scoringId) {
+        Set<Scoring> impactedScoring = new HashSet<>(this.allScoring.size());
+        for (Scoring scoring : this.allScoring) {
+            for (ScoringElement element : scoring.getElements()) {
+                if (checkScoringDeletionImpact(element.getCondition(), scoringId)) {
+                    impactedScoring.add(scoring);
+                    break;
+                }
+            }
+        }
+        return impactedScoring;
+    }
+
+    public DependentMetadata getScoringDependentMetadata(String scoringId) {
+        List<Metadata> segments = new LinkedList<>();
+        List<Metadata> scorings = new LinkedList<>();
+        for (Segment definition : getScoringDependentSegments(scoringId)) {
+            segments.add(definition.getMetadata());
+        }
+        for (Scoring definition : getScoringDependentScorings(scoringId)) {
+            scorings.add(definition.getMetadata());
+        }
+        return new DependentMetadata(segments, scorings);
+    }
+
+    public DependentMetadata removeScoringDefinition(String scoringId, boolean validate) {
+        Set<Segment> impactedSegments = getScoringDependentSegments(scoringId);
+        Set<Scoring> impactedScorings = getScoringDependentScorings(scoringId);
+        if (!validate || (impactedSegments.isEmpty() && impactedScorings.isEmpty())) {
+            // update profiles
+            updateExistingProfilesForRemovedScoring(scoringId);
+
+            // update impacted segments
+            for (Segment segment : impactedSegments) {
+                Condition updatedCondition = updateScoringDependentCondition(segment.getCondition(), scoringId);
+                segment.setCondition(updatedCondition);
+                if(updatedCondition == null) {
+                    clearAutoGeneratedRules(persistenceService.query("linkedItems", segment.getMetadata().getId(), null, Rule.class), segment.getMetadata().getId());
+                    segment.getMetadata().setEnabled(false);
+                }
+                setSegmentDefinition(segment);
+            }
+
+            // update impacted scorings
+            for (Scoring scoring : impactedScorings) {
+                List<ScoringElement> updatedScoringElements = new ArrayList<>();
+                for (ScoringElement scoringElement : scoring.getElements()) {
+                    Condition updatedCondition = updateScoringDependentCondition(scoringElement.getCondition(), scoringId);
+                    if (updatedCondition != null) {
+                        scoringElement.setCondition(updatedCondition);
+                        updatedScoringElements.add(scoringElement);
+                    }
+                }
+                scoring.setElements(updatedScoringElements);
+                if (updatedScoringElements.isEmpty()) {
+                    clearAutoGeneratedRules(persistenceService.query("linkedItems", scoring.getMetadata().getId(), null, Rule.class), scoring.getMetadata().getId());
+                    scoring.getMetadata().setEnabled(false);
+                }
+                setScoringDefinition(scoring);
+            }
+
+            persistenceService.remove(scoringId, Scoring.class);
+            List<Rule> previousRules = persistenceService.query("linkedItems", scoringId, null, Rule.class);
+            clearAutoGeneratedRules(previousRules, scoringId);
+        }
+
+        List<Metadata> segments = new LinkedList<>();
+        List<Metadata> scorings = new LinkedList<>();
+        for (Segment definition : impactedSegments) {
+            segments.add(definition.getMetadata());
+        }
+        for (Scoring definition : impactedScorings) {
+            scorings.add(definition.getMetadata());
+        }
+        return new DependentMetadata(segments, scorings);
     }
 
     public void updateAutoGeneratedRules(Metadata metadata, Condition condition) {
@@ -675,7 +869,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         scriptParams.put("scoringId", scoring.getItemId());
 
         for (Profile profileToRemove : previousProfiles) {
-            persistenceService.updateWithScript(profileToRemove.getItemId(), null, Profile.class, "ctx._source.scores.remove(scoringId)", scriptParams);
+            persistenceService.updateWithScript(profileToRemove.getItemId(), null, Profile.class, "if (ctx._source.systemProperties.scoreModifiers == null) { ctx._source.systemProperties.scoreModifiers=[:] } ; if (ctx._source.systemProperties.scoreModifiers.containsKey(scoringId)) { ctx._source.scores[scoringId] = ctx._source.systemProperties.scoreModifiers[scoringId] } else { ctx._source.scores.remove(scoringId) }", scriptParams);
         }
         if(scoring.getMetadata().isEnabled()) {
             String script = "if (ctx._source.scores == null) { ctx._source.scores=[:] } ; if (ctx._source.scores.containsKey(scoringId)) { ctx._source.scores[scoringId] += scoringValue } else { ctx._source.scores[scoringId] = scoringValue }";

@@ -1,0 +1,40 @@
+{
+  "metadata": {
+    "id": "scoringCondition",
+    "name": "scoringCondition",
+    "description": "",
+    "tags": [
+      "aggregated",
+      "profileCondition"
+    ],
+    "readOnly": true
+  },
+  "parentCondition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "script::'scores.'+scoringPlanId",
+      "propertyValueInteger": "parameter::scoreValue",
+      "comparisonOperator": "parameter::comparisonOperator"
+    }
+  },
+  "parameters": [
+    {
+      "id": "scoringPlanId",
+      "type": "string",
+      "multivalued": false,
+      "defaultValue": ""
+    },
+    {
+      "id": "scoreValue",
+      "type": "integer",
+      "multivalued": false,
+      "defaultValue": 0
+    },
+    {
+      "id": "comparisonOperator",
+      "type": "string",
+      "multivalued": false,
+      "defaultValue": "greaterThanOrEqualTo"
+    }
+  ]
+}

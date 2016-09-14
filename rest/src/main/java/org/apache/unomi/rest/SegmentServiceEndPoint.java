@@ -22,6 +22,7 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.query.Query;
+import org.apache.unomi.api.segments.DependentMetadata;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.SegmentService;
 
@@ -110,18 +111,16 @@ public class SegmentServiceEndPoint {
     }
 
     /**
-     * Retrieves the list of segment metadata of segments depending on the segment identified by the specified identifier. A segment is depending on another one if it includes
-     * that segment as part of its condition for profile matching.
+     * Retrieves the list of Segment and Scoring metadata depending on the specified segment.
+     * A segment or scoring is depending on a segment if it includes a profileSegmentCondition with a test on this segment.
      *
-     * TODO: rename?
-     *
-     * @param segmentId the identifier of the segment which impact we want to evaluate
-     * @return a list of metadata of segments depending on the specified segment
+     * @param segmentId the segment identifier
+     * @return a list of Segment/Scoring Metadata depending on the specified segment
      */
     @GET
     @Path("/{segmentID}/impacted")
-    public List<Metadata> getSegmentImpacted(@PathParam("segmentID") String segmentId) {
-        return segmentService.getImpactedSegmentMetadata(segmentId);
+    public DependentMetadata getSegmentDependentMetadata(@PathParam("segmentID") String segmentId) {
+        return segmentService.getSegmentDependentMetadata(segmentId);
     }
 
     /**
@@ -162,16 +161,16 @@ public class SegmentServiceEndPoint {
     /**
      * Removes the segment definition identified by the specified identifier. We can specify that we want the operation to be validated beforehand so that we can
      * know if any other segment that might use the segment we're trying to delete as a condition might be impacted. If {@code validate} is set to {@code false}, no
-     * validation is performed. If set to {@code true}, we will first check if any segment depends on the one we're trying to delete and if so we will not delete the
-     * segment but rather return the list of the metadata of the impacted segments. If no dependents are found, then we properly delete the segment.
+     * validation is performed. If set to {@code true}, we will first check if any segment or scoring depends on the segment we're trying to delete and if so we will not delete the
+     * segment but rather return the list of the metadata of the impacted items. If no dependents are found, then we properly delete the segment.
      *
      * @param segmentId the identifier of the segment we want to delete
      * @param validate  whether or not to perform validation
-     * @return a list of impacted segment metadata if any or an empty list if no such impacted segments are found or validation was skipped
+     * @return a list of impacted segment metadata if any or an empty list if none were found or validation was skipped
      */
     @DELETE
     @Path("/{segmentID}")
-    public List<Metadata> removeSegmentDefinition(@PathParam("segmentID") String segmentId, @QueryParam("validate") boolean validate) {
+    public DependentMetadata removeSegmentDefinition(@PathParam("segmentID") String segmentId, @QueryParam("validate") boolean validate) {
         return segmentService.removeSegmentDefinition(segmentId, validate);
     }
 

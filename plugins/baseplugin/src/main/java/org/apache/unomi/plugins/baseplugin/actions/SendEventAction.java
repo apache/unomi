@@ -45,6 +45,7 @@ public class SendEventAction implements ActionExecutor {
 //            BeanUtils.populate(targetItem, target);
 
         Event subEvent = new Event(eventType, event.getSession(), event.getProfile(), event.getScope(), event, target, event.getTimeStamp());
+        subEvent.setProfileId(event.getProfileId());
         subEvent.getAttributes().putAll(event.getAttributes());
         subEvent.getProperties().putAll(eventProperties);
 

@@ -28,6 +28,7 @@ import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
@@ -55,6 +56,8 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     private EventService eventService;
 
     private DefinitionsService definitionsService;
+
+    private PrivacyService privacyService;
 
     public void setCookieAgeInSeconds(int cookieAgeInSeconds) {
         this.cookieAgeInSeconds = cookieAgeInSeconds;
@@ -86,6 +89,10 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
     public DefinitionsService getDefinitionsService() {
         return definitionsService;
+    }
+
+    public void setPrivacyService(PrivacyService privacyService) {
+        this.privacyService = privacyService;
     }
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
@@ -152,9 +159,9 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             event.setProfileId(profile.getItemId());
             event.setProfile(profile);
 
-            event.getSession().setProfile(profile);
+            currentSession.setProfile(profile);
 
-            eventService.send(new Event("sessionReassigned", event.getSession(), profile, event.getScope(), event, event.getSession(), event.getTimeStamp()));
+            eventService.send(new Event("sessionReassigned", currentSession, profile, event.getScope(), event, currentSession, event.getTimeStamp()));
 
             return EventService.PROFILE_UPDATED + EventService.SESSION_UPDATED;
         } else {
@@ -175,19 +182,28 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             }
 
             // Use oldest profile for master profile
-            Profile masterProfile = profileService.mergeProfiles(profiles.get(0), profiles);
+            final Profile masterProfile = profileService.mergeProfiles(profiles.get(0), profiles);
 
             // Profile has changed
             if (!masterProfile.getItemId().equals(profileId)) {
                 HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
-                sendProfileCookie(event.getSession().getProfile(), httpServletResponse);
+                sendProfileCookie(currentSession.getProfile(), httpServletResponse);
                 final String masterProfileId = masterProfile.getItemId();
 
                 // At the end of the merge, we must set the merged profile as profile event to process other Actions
                 event.setProfileId(masterProfileId);
                 event.setProfile(masterProfile);
 
-                event.getSession().setProfile(masterProfile);
+                currentSession.setProfile(masterProfile);
+                if (privacyService.isRequireAnonymousBrowsing(profileId)) {
+                    privacyService.setRequireAnonymousBrowsing(masterProfileId, true);
+                }
+                final Boolean anonymousBrowsing = privacyService.isRequireAnonymousBrowsing(masterProfileId);
+                if (anonymousBrowsing) {
+                    currentSession.setProfile(privacyService.getAnonymousProfile(masterProfile));
+                    event.setProfileId(null);
+                    persistenceService.save(event);
+                }
 
                 event.getActionPostExecutors().add(new ActionPostExecutor() {
                     @Override
@@ -197,16 +213,16 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                                 String profileId = profile.getItemId();
                                 if (!StringUtils.equals(profileId, masterProfileId)) {
                                     List<Session> sessions = persistenceService.query("profileId", profileId, null, Session.class);
-                                    if (currentSession.getProfileId().equals(profileId) && !sessions.contains(currentSession)) {
+                                    if (masterProfileId.equals(profileId) && !sessions.contains(currentSession)) {
                                         sessions.add(currentSession);
                                     }
                                     for (Session session : sessions) {
-                                        persistenceService.update(session.getItemId(), session.getTimeStamp(), Session.class, "profileId", masterProfileId);
+                                        persistenceService.update(session.getItemId(), session.getTimeStamp(), Session.class, "profileId", anonymousBrowsing ? null : masterProfileId);
                                     }
 
                                     List<Event> events = persistenceService.query("profileId", profileId, null, Event.class);
                                     for (Event event : events) {
-                                        persistenceService.update(event.getItemId(), event.getTimeStamp(), Event.class, "profileId", masterProfileId);
+                                        persistenceService.update(event.getItemId(), event.getTimeStamp(), Event.class, "profileId", anonymousBrowsing ? null : masterProfileId);
                                     }
                                     // we must mark all the profiles that we merged into the master as merged with the master, and they will
                                     // be deleted upon next load

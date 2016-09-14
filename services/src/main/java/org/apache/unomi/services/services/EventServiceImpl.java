@@ -18,7 +18,10 @@
 package org.apache.unomi.services.services;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.EventProperty;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.Session;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
@@ -153,7 +156,7 @@ public class EventServiceImpl implements EventService {
                 profileUpdated.setPersistent(false);
                 profileUpdated.getAttributes().putAll(event.getAttributes());
                 changes |= send(profileUpdated);
-                if (session != null) {
+                if (session != null && session.getProfileId() != null) {
                     changes |= SESSION_UPDATED;
                     session.setProfile(event.getProfile());
                 }
@@ -164,7 +167,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public List<EventProperty> getEventProperties() {
-        Map<String, Map<String, Object>> mappings = persistenceService.getMapping(Event.ITEM_TYPE);
+        Map<String, Map<String, Object>> mappings = persistenceService.getPropertiesMapping(Event.ITEM_TYPE);
         List<EventProperty> props = new ArrayList<>(mappings.size());
         getEventProperties(mappings, props, "");
         return props;

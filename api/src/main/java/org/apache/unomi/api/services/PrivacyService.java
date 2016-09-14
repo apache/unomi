@@ -27,13 +27,13 @@ import java.util.List;
  */
 public interface PrivacyService {
 
-    String GLOBAL_ANONYMOUS_PROFILE_ID = "global-anonymous-profile";
-
     ServerInfo getServerInfo();
 
     Boolean deleteProfile(String profileId);
 
-    String anonymizeBrowsingData(String profileId);
+    Boolean anonymizeProfile(String profileId);
+
+    Boolean anonymizeBrowsingData(String profileId);
 
     Boolean deleteProfileData(String profileId);
 
@@ -41,7 +41,7 @@ public interface PrivacyService {
 
     Boolean isRequireAnonymousBrowsing(String profileId);
 
-    Profile getAnonymousProfile();
+    Profile getAnonymousProfile(Profile profile);
 
     List<String> getFilteredEventTypes(String profileId);
 

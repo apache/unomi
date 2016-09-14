@@ -66,13 +66,9 @@ public class ContextServlet extends HttpServlet {
         if (request.getParameter("timestamp") != null) {
             timestamp.setTime(Long.parseLong(request.getParameter("timestamp")));
         }
-        // first we must retrieve the context for the current visitor, and build a Javascript object to attach to the
-        // script output.
-        String profileId;
 
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
         String httpMethod = httpServletRequest.getMethod();
-//        logger.debug(HttpUtils.dumpRequestInfo(httpServletRequest));
 
         // set up CORS headers as soon as possible so that errors are not misconstrued on the client for CORS errors
         HttpUtils.setupCORSHeaders(httpServletRequest, response);
@@ -84,6 +80,7 @@ public class ContextServlet extends HttpServlet {
         }
 
         Profile profile = null;
+        Profile sessionProfile = null;
 
         String cookieProfileId = null;
         Cookie[] cookies = httpServletRequest.getCookies();
@@ -118,8 +115,6 @@ public class ContextServlet extends HttpServlet {
             return;
         }
 
-        boolean profileCreated = false;
-
         ContextRequest contextRequest = null;
         String scope = null;
         String stringPayload = HttpUtils.getPayload(httpServletRequest);
@@ -138,76 +133,103 @@ public class ContextServlet extends HttpServlet {
         int changes = EventService.NO_CHANGE;
 
         if (profile == null) {
-            if (sessionId != null) {
-                session = profileService.loadSession(sessionId, timestamp);
-                if (session != null) {
-                    profileId = session.getProfileId();
-                    profile = profileService.load(profileId);
-                    profile = checkMergedProfile(response, profile, session);
-                }
-            }
-            if (profile == null) {
-                // profile not stored in session
-                if (cookieProfileId == null) {
-                    // no profileId cookie was found, we generate a new one and create the profile in the profile service
+            boolean profileCreated = false;
+
+            // Not a persona, resolve profile now
+            if (cookieProfileId == null) {
+                // no profileId cookie was found, we generate a new one and create the profile in the profile service
+                profile = createNewProfile(null, response, timestamp);
+                profileCreated = true;
+            } else {
+                profile = profileService.load(cookieProfileId);
+                if (profile == null) {
+                    // this can happen if we have an old cookie but have reset the server,
+                    // or if we merged the profiles and somehow this cookie didn't get updated.
                     profile = createNewProfile(null, response, timestamp);
                     profileCreated = true;
                 } else {
-                    profile = profileService.load(cookieProfileId);
-                    if (profile == null) {
-                        // this can happen if we have an old cookie but have reset the server,
-                        // or if we merged the profiles and somehow this cookie didn't get updated.
-                        profile = createNewProfile(null, response, timestamp);
-                        profileCreated = true;
+                    profile = checkMergedProfile(response, profile, session);
+                }
+            }
+
+            if (sessionId != null) {
+                session = profileService.loadSession(sessionId, timestamp);
+                if (session != null) {
+                    sessionProfile = session.getProfile();
+                    boolean anonymousProfile = sessionProfile.isAnonymousProfile();
+
+                    if (!profile.isAnonymousProfile() && !anonymousProfile && !profile.getItemId().equals(sessionProfile.getItemId())) {
+                        // Session user has been switched, profile id in cookie is not uptodate
+                        profile = sessionProfile;
                         HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain);
-                    } else {
-                        profile = checkMergedProfile(response, profile, session);
+                    }
+
+                    Boolean requireAnonymousBrowsing = privacyService.isRequireAnonymousBrowsing(profile.getItemId());
+
+                    if (requireAnonymousBrowsing && anonymousProfile) {
+                        // User wants to browse anonymously, anonymous profile is already set.
+                    } else if (requireAnonymousBrowsing && !anonymousProfile) {
+                        // User wants to browse anonymously, update the sessionProfile to anonymous profile
+                        sessionProfile = privacyService.getAnonymousProfile(profile);
+                        session.setProfile(sessionProfile);
+                        changes = EventService.SESSION_UPDATED;
+                    } else if (!requireAnonymousBrowsing && anonymousProfile) {
+                        // User does not want to browse anonymously anymore, update the sessionProfile to real profile
+                        sessionProfile = profile;
+                        session.setProfile(sessionProfile);
+                        changes = EventService.SESSION_UPDATED;
+                    } else if (!requireAnonymousBrowsing && !anonymousProfile) {
+                        // User does not want to browse anonymously, use the real profile. Check that session contains the current profile.
+                        sessionProfile = profile;
+                        if (!session.getProfileId().equals(sessionProfile.getItemId())) {
+                            changes = EventService.SESSION_UPDATED;
+                        }
+                        session.setProfile(sessionProfile);
                     }
                 }
-            } else if ((cookieProfileId == null || !cookieProfileId.equals(profile.getItemId())) && !profile.isAnonymousProfile()) {
-                // profile if stored in session but not in cookie
-                HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain);
             }
-            // associate profile with session
-            if (sessionId != null && session == null) {
-                session = new Session(sessionId, profile, timestamp, scope);
-                changes |= EventService.SESSION_UPDATED;
-                Event event = new Event("sessionCreated", session, profile, scope, null, session, timestamp);
 
-                event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
-                event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
-                changes |= eventService.send(event);
+            if (session == null) {
+                sessionProfile = privacyService.isRequireAnonymousBrowsing(profile.getItemId()) ? privacyService.getAnonymousProfile(profile) : profile;
+                session = new Session(sessionId, sessionProfile, timestamp, scope);
+
+                if (sessionId != null) {
+                    // Only save session and send event if a session id was provided, otherise keep transient session
+                    changes |= EventService.SESSION_UPDATED;
+                    Event event = new Event("sessionCreated", session, profile, scope, null, session, timestamp);
+                    if (sessionProfile.isAnonymousProfile()) {
+                        // Do not keep track of profile in event
+                        event.setProfileId(null);
+                    }
+                    event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
+                    event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
+                    logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
+                    changes |= eventService.send(event);
+                }
             }
-        }
 
-        if (profileCreated) {
-            changes |= EventService.PROFILE_UPDATED;
+            if (profileCreated) {
+                changes |= EventService.PROFILE_UPDATED;
 
-            Event profileUpdated = new Event("profileUpdated", session, profile, scope, null, profile, timestamp);
-            profileUpdated.setPersistent(false);
-            profileUpdated.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
-            profileUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
+                Event profileUpdated = new Event("profileUpdated", session, profile, scope, null, profile, timestamp);
+                profileUpdated.setPersistent(false);
+                profileUpdated.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
+                profileUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
 
-            logger.debug("Received event {} for profile={} {} target={} timestamp={}", profileUpdated.getEventType(), profile.getItemId(),
-                    session != null ? " session=" + session.getItemId() : "", profileUpdated.getTarget(), timestamp);
-            changes |= eventService.send(profileUpdated);
+                logger.debug("Received event {} for profile={} {} target={} timestamp={}", profileUpdated.getEventType(), profile.getItemId(),
+                        session != null ? " session=" + session.getItemId() : "", profileUpdated.getTarget(), timestamp);
+                changes |= eventService.send(profileUpdated);
+            }
         }
 
         ContextResponse data = new ContextResponse();
-        data.setProfileId(profile.isAnonymousProfile() ? cookieProfileId : profile.getItemId());
+        data.setProfileId(profile.getItemId());
 
-        if (privacyService.isRequireAnonymousBrowsing(profile.getItemId())) {
-            profile = privacyService.getAnonymousProfile();
-            session.setProfile(profile);
-            changes = EventService.SESSION_UPDATED;
-        }
-
-        if(contextRequest != null){
+        if (contextRequest != null){
             changes |= handleRequest(contextRequest, profile, session, data, request, response, timestamp);
         }
 
-        if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED && profile != null) {
+        if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
             profileService.save(profile);
         }
         if ((changes & EventService.SESSION_UPDATED) == EventService.SESSION_UPDATED && session != null) {
@@ -240,9 +262,8 @@ public class ContextServlet extends HttpServlet {
     }
 
     private Profile checkMergedProfile(ServletResponse response, Profile profile, Session session) {
-        String profileId;
-        if (profile != null && profile.getMergedWith() != null && !profile.isAnonymousProfile()) {
-            profileId = profile.getMergedWith();
+        if (profile.getMergedWith() != null && !privacyService.isRequireAnonymousBrowsing(profile.getItemId()) && !profile.isAnonymousProfile()) {
+            String profileId = profile.getMergedWith();
             Profile profileToDelete = profile;
             profile = profileService.load(profileId);
             if (profile != null) {
@@ -259,6 +280,7 @@ public class ContextServlet extends HttpServlet {
                 profileService.save(profile);
             }
         }
+
         return profile;
     }
 
@@ -273,7 +295,8 @@ public class ContextServlet extends HttpServlet {
         if(contextRequest.getEvents() != null && !(profile instanceof Persona)) {
             for (Event event : contextRequest.getEvents()){
                 if(event.getEventType() != null) {
-                    Event eventToSend = new Event(event.getEventType(), session, profile, contextRequest.getSource().getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp);
+                    Profile sessionProfile = session.getProfile();
+                    Event eventToSend = new Event(event.getEventType(), session, sessionProfile, contextRequest.getSource().getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp);
                     if (!eventService.isEventAllowed(event, thirdPartyId)) {
                         logger.debug("Event is not allowed : {}", event.getEventType());
                         continue;
@@ -282,10 +305,14 @@ public class ContextServlet extends HttpServlet {
                         logger.debug("Profile is filtering event type {}", event.getEventType());
                         continue;
                     }
+                    if (sessionProfile.isAnonymousProfile()) {
+                        // Do not keep track of profile in event
+                        event.setProfileId(null);
+                    }
 
                     event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                    logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
+                    logger.debug("Received event " + event.getEventType() + " for profile=" + session.getProfileId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
                     changes |= eventService.send(eventToSend);
                 }
             }
@@ -333,6 +360,8 @@ public class ContextServlet extends HttpServlet {
         } else {
             data.setTrackedConditions(Collections.<Condition>emptySet());
         }
+
+        data.setAnonymousBrowsing(privacyService.isRequireAnonymousBrowsing(profile.getItemId()));
 
         return changes;
     }

@@ -17,6 +17,8 @@
 
 package org.apache.unomi.services.services;
 
+import org.apache.commons.beanutils.BeanUtils;
+import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
@@ -249,13 +251,18 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public long getAllProfilesCount() {
-        Condition condition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
-        condition.setParameter("propertyName", "mergedWith");
-        condition.setParameter("comparisonOperator", "missing");
-        return persistenceService.queryCount(condition, Profile.ITEM_TYPE);
+        return persistenceService.getAllItemsCount(Profile.ITEM_TYPE);
     }
 
     public <T extends Profile> PartialList<T> search(Query query, final Class<T> clazz) {
+        return doSearch(query, clazz);
+    }
+
+    public PartialList<Session> searchSessions(Query query) {
+        return doSearch(query, Session.class);
+    }
+
+    private <T extends Item> PartialList<T> doSearch(Query query, Class<T> clazz) {
         if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition())) {
             if (StringUtils.isNotBlank(query.getText())) {
                 return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit());
@@ -273,12 +280,13 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     @Override
     public boolean setPropertyType(PropertyType property) {
-        PropertyType previous = null;
-        if ((previous = persistenceService.load(property.getItemId(), PropertyType.class)) != null) {
-            previous.getAutomaticMappingsFrom().addAll(property.getAutomaticMappingsFrom());
-            property = previous;
+        PropertyType previousProperty = persistenceService.load(property.getItemId(), PropertyType.class);
+        if (previousProperty == null) {
+            return persistenceService.save(property);
+        } else if (merge(previousProperty, property)) {
+            return persistenceService.save(previousProperty);
         }
-        return persistenceService.save(property);
+        return false;
     }
 
     @Override
@@ -291,7 +299,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         Set<PropertyType> filteredProperties = new LinkedHashSet<PropertyType>();
         // TODO: here we limit the result to the definition we have, but what if some properties haven't definition but exist in ES mapping ?
         Set<PropertyType> profileProperties = getPropertyTypeByTag(tagId, true);
-        Map<String, Map<String, Object>> itemMapping = persistenceService.getMapping(itemType);
+        Map<String, Map<String, Object>> itemMapping = persistenceService.getPropertiesMapping(itemType);
 
         if (itemMapping == null || itemMapping.isEmpty() || itemMapping.get("properties") == null || itemMapping.get("properties").get("properties") == null) {
             return filteredProperties;
@@ -357,7 +365,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     // TODO may be moved this in a specific Export Utils Class and improve it to handle date format, ...
     private void handleExportProperty(StringBuilder sb, Object propertyValue, PropertyType propertyType) {
-        if (propertyValue instanceof Collection && propertyType != null && propertyType.isMultivalued()) {
+        if (propertyValue instanceof Collection && propertyType != null && propertyType.isMultivalued() != null && propertyType.isMultivalued() ) {
             Collection propertyValues = (Collection) propertyValue;
             Collection encodedValues = new ArrayList(propertyValues.size());
             for (Object value : propertyValues) {
@@ -385,8 +393,22 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Profile save(Profile profile) {
+        if (profile.getItemId() == null) {
+            return null;
+        }
         persistenceService.save(profile);
         return persistenceService.load(profile.getItemId(), Profile.class);
+    }
+
+    public boolean saveOrmerge(Profile profile) {
+        Profile previousProfile = persistenceService.load(profile.getItemId(), Profile.class);
+        if (previousProfile == null) {
+            return persistenceService.save(profile);
+        } else if (merge(previousProfile, profile)) {
+            return persistenceService.save(previousProfile);
+        }
+
+        return false;
     }
 
     public Persona savePersona(Persona profile) {
@@ -522,6 +544,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Session saveSession(Session session) {
+        if (session.getItemId() == null) {
+            return null;
+        }
         return persistenceService.save(session) ? session : null;
     }
 
@@ -723,6 +748,57 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 processBundleStop(event.getBundle().getBundleContext());
                 break;
         }
+    }
+
+    private <T> boolean merge(T target, T object) {
+        if (object != null) {
+            try {
+                Map<String,Object> objectValues = PropertyUtils.describe(object);
+                Map<String,Object> targetValues = PropertyUtils.describe(target);
+                if (merge(targetValues, objectValues)) {
+                    BeanUtils.populate(target, targetValues);
+                    return true;
+                }
+            } catch (ReflectiveOperationException e) {
+                logger.error("Cannot merge properties",e);
+            }
+        }
+        return false;
+    }
+
+    private boolean merge(Map<String,Object> target, Map<String,Object> object) {
+        boolean changed = false;
+        for (Map.Entry<String, Object> previousEntry : object.entrySet()) {
+            if (previousEntry.getValue() != null) {
+                if (previousEntry.getValue() instanceof Collection) {
+                    Collection currentCollection = (Collection) target.get(previousEntry.getKey());
+                    if (currentCollection != null) {
+                        if (!currentCollection.containsAll((Collection) previousEntry.getValue())) {
+                            changed |= currentCollection.addAll((Collection) previousEntry.getValue());
+                        }
+                    } else {
+                        target.put(previousEntry.getKey(), previousEntry.getValue());
+                        changed = true;
+                    }
+                } else if (previousEntry.getValue() instanceof Map) {
+                    Map<String,Object> currentMap = (Map) target.get(previousEntry.getKey());
+                    if (currentMap == null) {
+                        target.put(previousEntry.getKey(), previousEntry.getValue());
+                        changed = true;
+                    } else {
+                        changed |= merge(currentMap, (Map) previousEntry.getValue());
+                    }
+                } else if (previousEntry.getValue().getClass().getPackage().getName().equals("java.lang")) {
+                    if (previousEntry.getValue() != null && !previousEntry.getValue().equals(target.get(previousEntry.getKey()))) {
+                        target.put(previousEntry.getKey(), previousEntry.getValue());
+                        changed = true;
+                    }
+                } else {
+                    changed |= merge(target.get(previousEntry.getKey()), previousEntry.getValue());
+                }
+            }
+        }
+        return changed;
     }
 
 }

@@ -168,7 +168,14 @@ public interface PersistenceService {
      * @param itemType
      * @return
      */
-    Map<String, Map<String, Object>> getMapping(String itemType);
+    Map<String, Map<String, Object>> getPropertiesMapping(String itemType);
+
+    /**
+     * Create mapping
+     * @param type
+     * @param source
+     */
+    void createMapping(String type, String source);
 
     /**
      * TODO

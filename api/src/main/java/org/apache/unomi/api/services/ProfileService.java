@@ -46,6 +46,14 @@ public interface ProfileService {
     <T extends Profile> PartialList<T> search(Query query, Class<T> clazz);
 
     /**
+     * Retrieves sessions matching the specified query.
+     *
+     * @param query a {@link Query} specifying which elements to retrieve
+     * @return a {@link PartialList} of sessions matching the specified query
+     */
+    PartialList<Session> searchSessions(Query query);
+
+    /**
      * Creates a String containing comma-separated values (CSV) formatted version of profiles matching the specified query.
      *
      * @param query the query specifying which profiles to export
@@ -96,6 +104,14 @@ public interface ProfileService {
      * @return the newly saved profile
      */
     Profile save(Profile profile);
+
+    /**
+     * Merge the specified profile properties in an existing profile,or save new profile if it does not exist yet
+     *
+     * @param profile the profile to be saved
+     * @return the newly saved profile
+     */
+    boolean saveOrmerge(Profile profile);
 
     /**
      * Removes the profile (or persona if the {@code persona} parameter is set to {@code true}) identified by the specified identifier.

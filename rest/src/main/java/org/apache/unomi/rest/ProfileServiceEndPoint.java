@@ -193,11 +193,13 @@ public class ProfileServiceEndPoint {
     @POST
     @Path("/")
     public Profile save(Profile profile) {
-        // TODO: check that the profile was actually updated correctly before sending the event
-        Event profileUpdated = new Event("profileUpdated", null, profile, null, null, profile, new Date());
-        profileUpdated.setPersistent(false);
-        eventService.send(profileUpdated);
-        return profileService.save(profile);
+        if (profileService.saveOrmerge(profile)) {
+            Event profileUpdated = new Event("profileUpdated", null, profile, null, null, profile, new Date());
+            profileUpdated.setPersistent(false);
+            eventService.send(profileUpdated);
+        }
+
+        return profile;
     }
 
     /**
@@ -516,4 +518,15 @@ public class ProfileServiceEndPoint {
         return profileService.deletePropertyType(propertyId);
     }
 
+    /**
+     * Retrieves sessions matching the specified query.
+     *
+     * @param query a {@link Query} specifying which elements to retrieve
+     * @return a {@link PartialList} of sessions matching the specified query
+     */
+    @POST
+    @Path("/search/sessions")
+    public PartialList<Session> searchSession(Query query) {
+        return profileService.searchSessions(query);
+    }
 }
