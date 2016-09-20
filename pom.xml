@@ -15,8 +15,7 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -24,7 +23,7 @@
         <groupId>org.apache</groupId>
         <artifactId>apache</artifactId>
         <version>15</version>
-        <relativePath/>
+        <relativePath />
     </parent>
 
     <groupId>org.apache.unomi</groupId>
@@ -35,7 +34,7 @@
         provides a high-performance user profile and event tracking server.
     </description>
     <url>http://unomi.incubator.apache.org</url>
-    <version>1.1.0-incubating-SNAPSHOT</version>
+    <version>1.1.0-incubating</version>
     <packaging>pom</packaging>
 
     <licenses>
@@ -100,7 +99,7 @@
     <scm>
         <connection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</connection>
         <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</developerConnection>
-        <tag>HEAD</tag>
+        <tag>unomi-root-1.1.0-incubating</tag>
         <url>https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</url>
     </scm>
 
@@ -291,33 +290,32 @@
                             <checkstyleRules>
                                 <module name="Checker">
                                     <module name="TreeWalker">
-                                        <module name="JavadocType"/>
+                                        <module name="JavadocType" />
                                         <module name="JavadocMethod">
-                                            <property name="scope" value="public"/>
-                                            <property name="allowMissingPropertyJavadoc" value="true"/>
+                                            <property name="scope" value="public" />
+                                            <property name="allowMissingPropertyJavadoc" value="true" />
                                         </module>
-                                        <module name="UnusedImports"/>
+                                        <module name="UnusedImports" />
                                         <module name="ConstantName">
-                                            <property name="applyToProtected" value="false"/>
-                                            <property name="applyToPackage" value="false"/>
-                                            <property name="applyToPrivate" value="false"/>
+                                            <property name="applyToProtected" value="false" />
+                                            <property name="applyToPackage" value="false" />
+                                            <property name="applyToPrivate" value="false" />
                                         </module>
                                         <module name="EmptyBlock">
-                                            <property name="option" value="text"/>
+                                            <property name="option" value="text" />
                                         </module>
-                                        <module name="NeedBraces"/>
-                                        <module name="EqualsHashCode"/>
+                                        <module name="NeedBraces" />
+                                        <module name="EqualsHashCode" />
                                         <module name="MagicNumber">
-                                            <property name="ignoreNumbers"
-                                                      value=" -1, 0, 1, 2, 3, 17, 24, 31, 37, 60, 255, 256, 1000"/>
+                                            <property name="ignoreNumbers" value=" -1, 0, 1, 2, 3, 17, 24, 31, 37, 60, 255, 256, 1000" />
                                         </module>
-                                        <module name="SimplifyBooleanReturn"/>
+                                        <module name="SimplifyBooleanReturn" />
                                         <module name="IllegalCatch">
-                                            <property name="illegalClassNames" value=" java.lang.Throwable"/>
+                                            <property name="illegalClassNames" value=" java.lang.Throwable" />
                                         </module>
-                                        <module name="MultipleVariableDeclarations"/>
-                                        <module name="OneStatementPerLine"/>
-                                        <module name="RedundantModifier"/>
+                                        <module name="MultipleVariableDeclarations" />
+                                        <module name="OneStatementPerLine" />
+                                        <module name="RedundantModifier" />
                                     </module>
                                 </module>
                             </checkstyleRules>
