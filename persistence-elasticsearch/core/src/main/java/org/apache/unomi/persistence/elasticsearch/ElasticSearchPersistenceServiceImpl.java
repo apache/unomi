@@ -572,8 +572,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         indexBuilder.execute().actionGet();
                     } catch (IndexNotFoundException e) {
                         if (itemsMonthlyIndexed.contains(itemType)) {
-                            getMonthlyIndex(((TimestampedItem) item).getTimeStamp(), true);
-                            indexBuilder.execute().actionGet();
+                            Date timeStamp = ((TimestampedItem) item).getTimeStamp();
+                            if (timeStamp != null) {
+                                getMonthlyIndex(timeStamp, true);
+                                indexBuilder.execute().actionGet();
+                            } else {
+                                logger.warn("Missing time stamp on item " + item + " id=" + item.getItemId() + " can't create related monthly index !");
+                            }
                         }
                     }
                     return true;
