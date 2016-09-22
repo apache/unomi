@@ -132,6 +132,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public static final String PATH_HOME = "path.home";
     public static final String PATH_PLUGINS = "path.plugins";
     public static final String INDEX_MAX_RESULT_WINDOW = "index.max_result_window";
+    public static final String MAPPER_ALLOW_DOTS_IN_NAME = "mapper.allow_dots_in_name";
 
     private Node node;
     private Client client;
@@ -280,6 +281,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 File pluginsFile = new File(getConfig(settings, PATH_PLUGINS, new File(new File(karafHome), ELASTICSEARCH_PLUGINS_DIRECTORY).getAbsolutePath()));
                 File homeFile = new File(getConfig(settings, PATH_HOME, new File(new File(karafHome), ELASTICSEARCH_HOME_DIRECTORY).getAbsolutePath()));
                 File dataFile = new File(getConfig(settings, PATH_DATA, new File(new File(karafHome), ELASTICSEARCH_DATA_DIRECTORY).getAbsolutePath()));
+
+                // allow dots in mappings (re-introduced in ElasticSearch 2.4.0)
+                System.setProperty(MAPPER_ALLOW_DOTS_IN_NAME, "true");
 
                 settingsBuilder.put(CLUSTER_NAME, clusterName)
                         .put(NODE_DATA, nodeData)
@@ -528,7 +532,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 .actionGet();
                         if (response.isExists()) {
                             String sourceAsString = response.getSourceAsString();
-                            final T value = CustomObjectMapper.getObjectMapper().readValue(FieldDotEscaper.unescapeJson(sourceAsString), clazz);
+                            final T value = CustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
                             value.setItemId(response.getId());
                             return value;
                         } else {
@@ -555,11 +559,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) {
                 try {
                     String source = CustomObjectMapper.getObjectMapper().writeValueAsString(item);
-                    Set<String> modifiedNames = new LinkedHashSet<>();
-                    source = FieldDotEscaper.escapeJson(source, modifiedNames);
-                    if (modifiedNames.size() > 0) {
-                        logger.warn("Found JSON property names with dot characters not allowed by ElasticSearch 2.x={} in item {}", modifiedNames, item);
-                    }
                     String itemType = item.getItemType();
                     String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
                             (itemsMonthlyIndexed.contains(itemType) ? getMonthlyIndex(((TimestampedItem) item).getTimeStamp()) : indexName);
@@ -606,7 +605,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
                             (itemsMonthlyIndexed.contains(itemType) && dateHint != null ? getMonthlyIndex(dateHint) : indexName);
 
-                    client.prepareUpdate(index, itemType, itemId).setDoc(FieldDotEscaper.escapeMap(source))
+                    client.prepareUpdate(index, itemType, itemId).setDoc(source)
                             .execute()
                             .actionGet();
                     return true;
