@@ -890,13 +890,10 @@ the same directory as this file, for the license terms of the components that
 this product depends on.
 
 -------------------------------------------------------------------------------
-This product contains a modified version of Dave Koelle's Alphanum Algorithm,
-which can be obtained at:
+This product uses a version of Olivier Oudot's compareNatural code, licensed
+under CC BY-SA 3.0:
 
-  * LICENSE:
-    * LICENSE.alphanum.txt (GNU LGPL 2.1 or above)
-  * HOMEPAGE:
-    * http://www.davekoelle.com/alphanum.html
+    *  https://creativecommons.org/licenses/by-sa/3.0/
 
 This product uses a version of Jaroslav Mallat's UAS Data, which can be
 obtained at:
