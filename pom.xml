@@ -239,8 +239,11 @@
             <name>Apache ServiceMix M2</name>
             <url>http://svn.apache.org/repos/asf/servicemix/m2-repo/</url>
         </repository>
+        <repository>
+            <id>jahia.3rdparty</id>
+            <url>https://devtools.jahia.com/nexus/content/repositories/thirdparty-releases/</url>
+        </repository>
     </repositories>
-
 
     <profiles>
         <profile>
