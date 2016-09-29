@@ -34,7 +34,7 @@
         provides a high-performance user profile and event tracking server.
     </description>
     <url>http://unomi.incubator.apache.org</url>
-    <version>1.2.0-incubating-SNAPSHOT</version>
+    <version>1.1.0-incubating</version>
     <packaging>pom</packaging>
 
     <licenses>
@@ -99,7 +99,7 @@
     <scm>
         <connection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</connection>
         <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</developerConnection>
-        <tag>HEAD</tag>
+        <tag>unomi-root-1.1.0-incubating</tag>
         <url>https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</url>
     </scm>
 

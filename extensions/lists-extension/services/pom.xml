@@ -20,7 +20,7 @@
     <parent>
         <artifactId>cxs-lists-extension</artifactId>
         <groupId>org.apache.unomi</groupId>
-        <version>1.2.0-incubating-SNAPSHOT</version>
+        <version>1.1.0-incubating</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -28,20 +28,20 @@
     <name>Apache Unomi :: Extensions :: Lists :: Service</name>
     <description>List extension service implementation for the Apache Unomi Context Server</description>
 
-    <version>1.2.0-incubating-SNAPSHOT</version>
+    <version>1.1.0-incubating</version>
     <packaging>bundle</packaging>
 
     <dependencies>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
-            <version>1.2.0-incubating-SNAPSHOT</version>
+            <version>1.1.0-incubating</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-spi</artifactId>
-            <version>1.2.0-incubating-SNAPSHOT</version>
+            <version>1.1.0-incubating</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

@@ -27,12 +27,12 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-extensions</artifactId>
-        <version>1.2.0-incubating-SNAPSHOT</version>
+        <version>1.1.0-incubating</version>
     </parent>
 
     <artifactId>cxs-privacy-extension</artifactId>
     <name>Apache Unomi :: Extensions :: Privacy</name>
     <description>Privacy management extension for the Apache Unomi Context Server</description>
-    <version>1.2.0-incubating-SNAPSHOT</version>
+    <version>1.1.0-incubating</version>
     <packaging>pom</packaging>
 </project>
