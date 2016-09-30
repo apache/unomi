@@ -774,6 +774,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                     Collection currentCollection = (Collection) target.get(newEntry.getKey());
                     if (currentCollection != null) {
                         if (!currentCollection.containsAll((Collection) newEntry.getValue())) {
+                            currentCollection.clear();
                             changed |= currentCollection.addAll((Collection) newEntry.getValue());
                         }
                     } else {
