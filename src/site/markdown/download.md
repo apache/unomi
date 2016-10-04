@@ -21,10 +21,10 @@
 
 ### Binaries
 
-* [tar.gz](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating.tar.gz) ([checksum](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating.tar.gz.asc))
-* [zip](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating.zip) ([checksum](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating.zip.asc))
+* [tar.gz](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating.tar.gz) ([checksum](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating.tar.gz.md5) - [signature](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating.tar.gz.asc))
+* [zip](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating.zip) ([checksum](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating.zip.md5) - [signature](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating.zip.asc))
 
 ### Source code
 
-* [tar.gz](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating-src.tar.gz) ([checksum](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating-src.tar.gz.asc))
-* [zip](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating-src.zip) ([checksum](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating-src.zip.asc))
+* [tar.gz](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating-src.tar.gz) ([checksum](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating-src.tar.gz.md5) - [signature](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating-src.tar.gz.asc))
+* [zip](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating-src.zip) ([checksum](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating-src.zip.md5) - [signature](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating-src.zip.asc))
