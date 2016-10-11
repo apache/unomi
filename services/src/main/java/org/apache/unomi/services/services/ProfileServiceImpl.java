@@ -771,16 +771,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         for (Map.Entry<String, Object> newEntry : object.entrySet()) {
             if (newEntry.getValue() != null) {
                 if (newEntry.getValue() instanceof Collection) {
-                    Collection currentCollection = (Collection) target.get(newEntry.getKey());
-                    if (currentCollection != null) {
-                        if (!currentCollection.containsAll((Collection) newEntry.getValue())) {
-                            currentCollection.clear();
-                            changed |= currentCollection.addAll((Collection) newEntry.getValue());
-                        }
-                    } else {
-                        target.put(newEntry.getKey(), newEntry.getValue());
-                        changed = true;
-                    }
+                    target.put(newEntry.getKey(), newEntry.getValue());
+                    changed = true;
                 } else if (newEntry.getValue() instanceof Map) {
                     Map<String,Object> currentMap = (Map) target.get(newEntry.getKey());
                     if (currentMap == null) {
