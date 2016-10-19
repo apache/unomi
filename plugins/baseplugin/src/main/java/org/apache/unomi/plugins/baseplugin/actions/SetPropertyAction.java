@@ -41,6 +41,9 @@ public class SetPropertyAction implements ActionExecutor {
         String propertyName = (String) action.getParameterValues().get("setPropertyName");
 
         Object propertyValue = action.getParameterValues().get("setPropertyValue");
+        if(propertyValue == null) {
+            propertyValue = action.getParameterValues().get("setPropertyValueMultiple");
+        }
         Object propertyValueInteger = action.getParameterValues().get("setPropertyValueInteger");
 
         if(propertyValueInteger != null && propertyValue == null) {
