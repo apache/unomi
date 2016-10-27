@@ -45,11 +45,16 @@ public class SetPropertyAction implements ActionExecutor {
             propertyValue = action.getParameterValues().get("setPropertyValueMultiple");
         }
         Object propertyValueInteger = action.getParameterValues().get("setPropertyValueInteger");
+        Object setPropertyValueMultiple = action.getParameterValues().get("setPropertyValueMultiple");
 
-        if(propertyValueInteger != null && propertyValue == null) {
-            propertyValue = PropertyHelper.getInteger(propertyValueInteger);
+        if (propertyValue == null) {
+            if (propertyValueInteger != null) {
+                propertyValue = PropertyHelper.getInteger(propertyValueInteger);
+            }
+            if(setPropertyValueMultiple != null) {
+               propertyValue = setPropertyValueMultiple;
+            }
         }
-
         if (propertyValue != null && propertyValue.equals("now")) {
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
             format.setTimeZone(TimeZone.getTimeZone("UTC"));

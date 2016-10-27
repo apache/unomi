@@ -26,6 +26,11 @@
       "multivalued": false
     },
     {
+      "id": "setPropertyValueMultiple",
+      "type": "string",
+      "multivalued": true
+    },
+    {
       "id": "setPropertyStrategy",
       "type": "string",
       "multivalued": false
