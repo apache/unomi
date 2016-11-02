@@ -32,7 +32,6 @@ import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
-import org.apache.unomi.services.actions.ActionExecutorDispatcher;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,8 +53,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private SegmentService segmentService;
 
     private QueryService queryService;
-
-    private ActionExecutorDispatcher actionExecutorDispatcher;
 
     private Condition purgeProfileQuery;
     private Integer purgeProfileExistTime = 0;
