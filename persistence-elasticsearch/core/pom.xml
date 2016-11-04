@@ -94,12 +94,6 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>com.twitter</groupId>
-            <artifactId>util-core</artifactId>
-            <version>4.0.0</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
             <groupId>org.noggit</groupId>
             <artifactId>noggit</artifactId>
             <version>0.7</version>
@@ -148,6 +142,7 @@
                     <instructions>
                         <Import-Package>
                             com.google.protobuf;resolution:=optional,
+                            com.twitter.util;resolution:=optional,
                             com.vividsolutions.jts.*;resolution:=optional,
                             javax.annotation;resolution:=optional,
                             javax.crypto;resolution:=optional,
