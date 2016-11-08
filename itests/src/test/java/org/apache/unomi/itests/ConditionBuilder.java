@@ -74,11 +74,11 @@ public class ConditionBuilder {
         }
 
         public ComparisonCondition all(Date... values) {
-            return op("all").dateValues(values);
+            return op("hasAllOf").dateValues(values);
         }
 
         public ComparisonCondition all(Integer... values) {
-            return op("all").integerValues(values);
+            return op("hasAllOf").integerValues(values);
         }
 
         public ComparisonCondition contains(String value) {

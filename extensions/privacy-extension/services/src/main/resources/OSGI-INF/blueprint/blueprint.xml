@@ -43,6 +43,7 @@
         <property name="eventService" ref="eventService" />
         <property name="profileService" ref="profileService" />
         <property name="defaultDeniedProperties" value="${defaultDeniedProperties}" />
+        <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
     <service id="privacyService" ref="privacyServiceImpl" auto-export="interfaces"/>
 </blueprint>

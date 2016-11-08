@@ -101,9 +101,15 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
             case "notIn":
                 checkRequiredValue(values, name, op, true);
                 return FilterBuilders.notFilter(FilterBuilders.inFilter(name, values.toArray()));
-            case "all":
+            case "hasAllOf":
                 checkRequiredValue(values, name, op, true);
                 return FilterBuilders.termsFilter(name, values.toArray()).execution("and");
+            case "hasSomeOf":
+                checkRequiredValue(values, name, op, true);
+                return FilterBuilders.termsFilter(name, values.toArray()).execution("or");
+            case "hasNoneOf":
+                checkRequiredValue(values, name, op, true);
+                return FilterBuilders.notFilter(FilterBuilders.termsFilter(name, values.toArray()).execution("or"));
             case "isDay":
                 checkRequiredValue(value, name, op, false);
                 return getIsSameDayRange(value, name);
