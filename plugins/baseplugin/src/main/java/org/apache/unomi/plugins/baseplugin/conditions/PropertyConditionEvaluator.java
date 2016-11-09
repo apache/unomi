@@ -106,12 +106,17 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                     }
                 }
                 break;
-            case "all":
+            case "hasAllOf":
                 for (Object e : expected) {
                     if (!actual.contains(e)) {
                         result = false;
                         break;
                     }
+                }
+                break;
+            case "hasNoneOf":
+                if(!Collections.disjoint(actual, expected)){
+                    return false;
                 }
                 break;
             case "hasSomeOf":
