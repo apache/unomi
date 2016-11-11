@@ -23,6 +23,7 @@ import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
+import org.osgi.framework.BundleContext;
 
 import java.util.*;
 
@@ -35,6 +36,7 @@ public class PrivacyServiceImpl implements PrivacyService {
     private ProfileService profileService;
     private EventService eventService;
     private List<String> defaultDeniedProperties;
+    private BundleContext bundleContext;
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -56,11 +58,15 @@ public class PrivacyServiceImpl implements PrivacyService {
         this.defaultDeniedProperties = Arrays.asList(defaultDeniedProperties.split(","));
     }
 
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
+
     @Override
     public ServerInfo getServerInfo() {
         ServerInfo serverInfo = new ServerInfo();
         serverInfo.setServerIdentifier("Apache Unomi");
-        serverInfo.setServerVersion("2.0.0.incubating-SNAPSHOT");
+        serverInfo.setServerVersion(bundleContext.getBundle().getVersion().toString());
 
         // let's retrieve all the event types the server has seen.
         Map<String,Long> eventTypeCounts = persistenceService.aggregateQuery(null, new TermsAggregate("eventType"), Event.ITEM_TYPE);

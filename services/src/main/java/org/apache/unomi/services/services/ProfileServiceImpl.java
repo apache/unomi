@@ -32,7 +32,6 @@ import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
-import org.apache.unomi.services.actions.ActionExecutorDispatcher;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,8 +53,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private SegmentService segmentService;
 
     private QueryService queryService;
-
-    private ActionExecutorDispatcher actionExecutorDispatcher;
 
     private Condition purgeProfileQuery;
     private Integer purgeProfileExistTime = 0;
@@ -400,7 +397,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return persistenceService.load(profile.getItemId(), Profile.class);
     }
 
-    public boolean saveOrmerge(Profile profile) {
+    public boolean saveOrMerge(Profile profile) {
         Profile previousProfile = persistenceService.load(profile.getItemId(), Profile.class);
         if (previousProfile == null) {
             return persistenceService.save(profile);
@@ -766,35 +763,33 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return false;
     }
 
-    private boolean merge(Map<String,Object> target, Map<String,Object> object) {
+    private boolean merge(Map<String, Object> target, Map<String, Object> object) {
         boolean changed = false;
-        for (Map.Entry<String, Object> previousEntry : object.entrySet()) {
-            if (previousEntry.getValue() != null) {
-                if (previousEntry.getValue() instanceof Collection) {
-                    Collection currentCollection = (Collection) target.get(previousEntry.getKey());
-                    if (currentCollection != null) {
-                        if (!currentCollection.containsAll((Collection) previousEntry.getValue())) {
-                            changed |= currentCollection.addAll((Collection) previousEntry.getValue());
-                        }
-                    } else {
-                        target.put(previousEntry.getKey(), previousEntry.getValue());
-                        changed = true;
-                    }
-                } else if (previousEntry.getValue() instanceof Map) {
-                    Map<String,Object> currentMap = (Map) target.get(previousEntry.getKey());
+        for (Map.Entry<String, Object> newEntry : object.entrySet()) {
+            if (newEntry.getValue() != null) {
+                if (newEntry.getValue() instanceof Collection) {
+                    target.put(newEntry.getKey(), newEntry.getValue());
+                    changed = true;
+                } else if (newEntry.getValue() instanceof Map) {
+                    Map<String,Object> currentMap = (Map) target.get(newEntry.getKey());
                     if (currentMap == null) {
-                        target.put(previousEntry.getKey(), previousEntry.getValue());
+                        target.put(newEntry.getKey(), newEntry.getValue());
                         changed = true;
                     } else {
-                        changed |= merge(currentMap, (Map) previousEntry.getValue());
+                        changed |= merge(currentMap, (Map) newEntry.getValue());
                     }
-                } else if (previousEntry.getValue().getClass().getPackage().getName().equals("java.lang")) {
-                    if (previousEntry.getValue() != null && !previousEntry.getValue().equals(target.get(previousEntry.getKey()))) {
-                        target.put(previousEntry.getKey(), previousEntry.getValue());
+                } else if (newEntry.getValue().getClass().getPackage().getName().equals("java.lang")) {
+                    if (newEntry.getValue() != null && !newEntry.getValue().equals(target.get(newEntry.getKey()))) {
+                        target.put(newEntry.getKey(), newEntry.getValue());
                         changed = true;
                     }
                 } else {
-                    changed |= merge(target.get(previousEntry.getKey()), previousEntry.getValue());
+                    changed |= merge(target.get(newEntry.getKey()), newEntry.getValue());
+                }
+            } else {
+                if (target.containsKey(newEntry.getKey())) {
+                    target.remove(newEntry.getKey());
+                    changed = true;
                 }
             }
         }

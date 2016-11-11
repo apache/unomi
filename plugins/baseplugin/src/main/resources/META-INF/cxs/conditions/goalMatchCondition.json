@@ -21,7 +21,8 @@
     {
       "id": "goalId",
       "type": "string",
-      "multivalued": false
+      "multivalued": false,
+      "defaultValue": ""
     },
     {
       "id": "comparisonOperator",
