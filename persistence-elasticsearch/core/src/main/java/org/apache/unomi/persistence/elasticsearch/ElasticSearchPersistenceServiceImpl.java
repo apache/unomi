@@ -117,12 +117,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public static final String CONTEXTSERVER_PORT = "contextserver.port";
     public static final String CONTEXTSERVER_SECURE_ADDRESS = "contextserver.secureAddress";
     public static final String CONTEXTSERVER_SECURE_PORT = "contextserver.securePort";
-    public static final String CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_NAME = "contextserver.elasticsearch.bulkprocessor.name";
-    public static final String CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_CONCURRENTREQUEST = "contextserver.elasticsearch.bulkprocessor.concurrentRequests";
-    public static final String CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_BULKACTIONS = "contextserver.elasticsearch.bulkprocessor.bulkActions";
-    public static final String CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_BULKSIZE = "contextserver.elasticsearch.bulkprocessor.bulkSize";
-    public static final String CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_FLUSHINTERVAL = "contextserver.elasticsearch.bulkprocessor.flushInterval";
-    public static final String CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_BACKOFFPOLICY = "contextserver.elasticsearch.bulkprocessor.backoffPolicy";
     public static final String KARAF_HOME = "karaf.home";
     public static final String ELASTICSEARCH_HOME_DIRECTORY = "elasticsearch";
     public static final String ELASTICSEARCH_PLUGINS_DIRECTORY = ELASTICSEARCH_HOME_DIRECTORY + "/plugins";
@@ -142,6 +136,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public static final String PATH_PLUGINS = "path.plugins";
     public static final String INDEX_MAX_RESULT_WINDOW = "index.max_result_window";
     public static final String MAPPER_ALLOW_DOTS_IN_NAME = "mapper.allow_dots_in_name";
+    public static final String BULK_PROCESSOR_NAME = "bulkProcessor.name";
+    public static final String BULK_PROCESSOR_CONCURRENT_REQUESTS = "bulkProcessor.concurrentRequests";
+    public static final String BULK_PROCESSOR_BULK_ACTIONS = "bulkProcessor.bulkActions";
+    public static final String BULK_PROCESSOR_BULK_SIZE = "bulkProcessor.bulkSize";
+    public static final String BULK_PROCESSOR_FLUSH_INTERVAL = "bulkProcessor.flushInterval";
+    public static final String BULK_PROCESSOR_BACKOFF_POLICY = "bulkProcessor.backoffPolicy";
 
     private Node node;
     private Client client;
@@ -171,6 +171,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private Integer defaultQueryLimit = 10;
 
     private Timer timer;
+
+    private String bulkProcessorName = "unomi-bulk";
+    private String bulkProcessorConcurrentRequests = "1";
+    private String bulkProcessorBulkActions = "1000";
+    private String bulkProcessorBulkSize= "5MB";
+    private String bulkProcessorFlushInterval = "5s";
+    private String bulkProcessorBackoffPolicy = "exponential";
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -252,6 +259,30 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.conditionESQueryBuilderDispatcher = conditionESQueryBuilderDispatcher;
     }
 
+    public void setBulkProcessorName(String bulkProcessorName) {
+        this.bulkProcessorName = bulkProcessorName;
+    }
+
+    public void setBulkProcessorConcurrentRequests(String bulkProcessorConcurrentRequests) {
+        this.bulkProcessorConcurrentRequests = bulkProcessorConcurrentRequests;
+    }
+
+    public void setBulkProcessorBulkActions(String bulkProcessorBulkActions) {
+        this.bulkProcessorBulkActions = bulkProcessorBulkActions;
+    }
+
+    public void setBulkProcessorBulkSize(String bulkProcessorBulkSize) {
+        this.bulkProcessorBulkSize = bulkProcessorBulkSize;
+    }
+
+    public void setBulkProcessorFlushInterval(String bulkProcessorFlushInterval) {
+        this.bulkProcessorFlushInterval = bulkProcessorFlushInterval;
+    }
+
+    public void setBulkProcessorBackoffPolicy(String bulkProcessorBackoffPolicy) {
+        this.bulkProcessorBackoffPolicy = bulkProcessorBackoffPolicy;
+    }
+
     public void start() {
 
         loadPredefinedMappings(bundleContext, false);
@@ -281,6 +312,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 port = System.getProperty(CONTEXTSERVER_PORT, port);
                 secureAddress = System.getProperty(CONTEXTSERVER_SECURE_ADDRESS, secureAddress);
                 securePort = System.getProperty(CONTEXTSERVER_SECURE_PORT, securePort);
+
+                bulkProcessorName = System.getProperty(BULK_PROCESSOR_NAME, bulkProcessorName);
+                bulkProcessorConcurrentRequests = System.getProperty(BULK_PROCESSOR_CONCURRENT_REQUESTS, bulkProcessorConcurrentRequests);
+                bulkProcessorBulkActions = System.getProperty(BULK_PROCESSOR_BULK_ACTIONS, bulkProcessorBulkActions);
+                bulkProcessorBulkSize = System.getProperty(BULK_PROCESSOR_BULK_SIZE, bulkProcessorBulkSize);
+                bulkProcessorFlushInterval = System.getProperty(BULK_PROCESSOR_FLUSH_INTERVAL, bulkProcessorFlushInterval);
+                bulkProcessorBackoffPolicy = System.getProperty(BULK_PROCESSOR_BACKOFF_POLICY, bulkProcessorBackoffPolicy);
 
                 Settings.Builder settingsBuilder = Settings.builder();
                 if (settings != null) {
@@ -430,37 +468,30 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         // we could add index creation here in the case of index seperation by dates.
                     }
                 });
-        if (System.getProperty(CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_NAME) != null) {
-            String name = System.getProperty(CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_NAME);
-            if (name != null && name.length() > 0) {
-                bulkProcessorBuilder.setName(name);
-            }
+        if (bulkProcessorName != null && bulkProcessorName.length() > 0) {
+            bulkProcessorBuilder.setName(bulkProcessorName);
         }
-        if (System.getProperty(CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_CONCURRENTREQUEST) != null) {
-            String concurrentRequestsStr = System.getProperty(CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_CONCURRENTREQUEST);
-            int concurrentRequests = Integer.parseInt(concurrentRequestsStr);
+        if (bulkProcessorConcurrentRequests != null) {
+            int concurrentRequests = Integer.parseInt(bulkProcessorConcurrentRequests);
             if (concurrentRequests > 1) {
                 bulkProcessorBuilder.setConcurrentRequests(concurrentRequests);
             }
         }
-        if (System.getProperty(CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_BULKACTIONS) != null) {
-            String bulkActionsStr = System.getProperty(CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_BULKACTIONS);
-            int bulkActions = Integer.parseInt(bulkActionsStr);
+        if (bulkProcessorBulkActions != null) {
+            int bulkActions = Integer.parseInt(bulkProcessorBulkActions);
             bulkProcessorBuilder.setBulkActions(bulkActions);
         }
-        if (System.getProperty(CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_BULKSIZE) != null) {
-            String bulkSizeStr = System.getProperty(CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_BULKSIZE);
-            bulkProcessorBuilder.setBulkSize(ByteSizeValue.parseBytesSizeValue(bulkSizeStr, new ByteSizeValue(5, ByteSizeUnit.MB), CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_BULKSIZE));
+        if (bulkProcessorBulkSize != null) {
+            bulkProcessorBuilder.setBulkSize(ByteSizeValue.parseBytesSizeValue(bulkProcessorBulkSize, new ByteSizeValue(5, ByteSizeUnit.MB), BULK_PROCESSOR_BULK_SIZE));
         }
-        if (System.getProperty(CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_FLUSHINTERVAL) != null) {
-            String flushIntervalStr = System.getProperty(CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_FLUSHINTERVAL);
-            bulkProcessorBuilder.setFlushInterval(TimeValue.parseTimeValue(flushIntervalStr, null, CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_FLUSHINTERVAL));
+        if (bulkProcessorFlushInterval != null) {
+            bulkProcessorBuilder.setFlushInterval(TimeValue.parseTimeValue(bulkProcessorFlushInterval, null, BULK_PROCESSOR_FLUSH_INTERVAL));
         } else {
             // in ElasticSearch this defaults to null, but we would like to set a value to 5 seconds by default
             bulkProcessorBuilder.setFlushInterval(new TimeValue(5, TimeUnit.SECONDS));
         }
-        if (System.getProperty(CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_BACKOFFPOLICY) != null) {
-            String backoffPolicyStr = System.getProperty(CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_BACKOFFPOLICY);
+        if (bulkProcessorBackoffPolicy != null) {
+            String backoffPolicyStr = bulkProcessorBackoffPolicy;
             if (backoffPolicyStr != null && backoffPolicyStr.length() > 0) {
                 backoffPolicyStr = backoffPolicyStr.toLowerCase();
                 if ("nobackoff".equals(backoffPolicyStr)) {
@@ -469,7 +500,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     int paramStartPos = backoffPolicyStr.indexOf("constant(" + "constant(".length());
                     int paramEndPos = backoffPolicyStr.indexOf(")", paramStartPos);
                     int paramSeparatorPos = backoffPolicyStr.indexOf(",", paramStartPos);
-                    TimeValue delay = TimeValue.parseTimeValue(backoffPolicyStr.substring(paramStartPos, paramSeparatorPos), new TimeValue(5, TimeUnit.SECONDS), CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_BACKOFFPOLICY );
+                    TimeValue delay = TimeValue.parseTimeValue(backoffPolicyStr.substring(paramStartPos, paramSeparatorPos), new TimeValue(5, TimeUnit.SECONDS), BULK_PROCESSOR_BACKOFF_POLICY);
                     int maxNumberOfRetries = Integer.parseInt(backoffPolicyStr.substring(paramSeparatorPos+1, paramEndPos));
                     bulkProcessorBuilder.setBackoffPolicy(BackoffPolicy.constantBackoff(delay, maxNumberOfRetries));
                 } else if (backoffPolicyStr.startsWith("exponential")) {
@@ -480,7 +511,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         int paramStartPos = backoffPolicyStr.indexOf("exponential(" + "exponential(".length());
                         int paramEndPos = backoffPolicyStr.indexOf(")", paramStartPos);
                         int paramSeparatorPos = backoffPolicyStr.indexOf(",", paramStartPos);
-                        TimeValue delay = TimeValue.parseTimeValue(backoffPolicyStr.substring(paramStartPos, paramSeparatorPos), new TimeValue(5, TimeUnit.SECONDS), CONTEXTSERVER_ELASTICSEARCH_BULKPROCESSOR_BACKOFFPOLICY );
+                        TimeValue delay = TimeValue.parseTimeValue(backoffPolicyStr.substring(paramStartPos, paramSeparatorPos), new TimeValue(5, TimeUnit.SECONDS), BULK_PROCESSOR_BACKOFF_POLICY);
                         int maxNumberOfRetries = Integer.parseInt(backoffPolicyStr.substring(paramSeparatorPos+1, paramEndPos));
                         bulkProcessorBuilder.setBackoffPolicy(BackoffPolicy.exponentialBackoff(delay, maxNumberOfRetries));
                     }
