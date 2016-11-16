@@ -40,6 +40,13 @@
             <cm:property name="discovery.zen.ping.multicast.enabled" value="false"/>
             <cm:property name="node.data" value="true"/>
             <cm:property name="defaultQueryLimit" value="10"/>
+
+            <cm:property name="bulkProcessor.name" value="unomi-bulk" />
+            <cm:property name="bulkProcessor.concurrentRequests" value="1" />
+            <cm:property name="bulkProcessor.bulkActions" value="1000" />
+            <cm:property name="bulkProcessor.bulkSize" value="5MB" />
+            <cm:property name="bulkProcessor.flushInterval" value="5s" />
+            <cm:property name="bulkProcessor.backoffPolicy" value="exponential" />
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -106,6 +113,12 @@
                 <entry key="geonameEntry" value="geonames"/>
             </map>
         </property>
+        <property name="bulkProcessorName" value="${es.bulkProcessor.name}" />
+        <property name="bulkProcessorConcurrentRequests" value="${es.bulkProcessor.concurrentRequests}" />
+        <property name="bulkProcessorBulkActions" value="${es.bulkProcessor.bulkActions}" />
+        <property name="bulkProcessorBulkSize" value="${es.bulkProcessor.bulkSize}" />
+        <property name="bulkProcessorFlushInterval" value="${es.bulkProcessor.flushInterval}" />
+        <property name="bulkProcessorBackoffPolicy" value="${es.bulkProcessor.backoffPolicy}" />
     </bean>
 
 </blueprint>

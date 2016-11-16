@@ -20,8 +20,9 @@ package org.apache.unomi.plugins.events.hover.querybuilders;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.FilterBuilders;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,19 +36,23 @@ public class HoverEventConditionESQueryBuilder implements ConditionESQueryBuilde
     public HoverEventConditionESQueryBuilder() {
     }
 
-    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        List<FilterBuilder> filters = new ArrayList<FilterBuilder>();
-        filters.add(FilterBuilders.termFilter("eventType", "hover"));
+    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+        List<QueryBuilder> queryBuilders = new ArrayList<QueryBuilder>();
+        queryBuilders.add(QueryBuilders.termQuery("eventType", "hover"));
         String targetId = (String) condition.getParameter("targetId");
         String targetPath = (String) condition.getParameter("targetPath");
 
         if (targetId != null && targetId.trim().length() > 0) {
-            filters.add(FilterBuilders.termFilter("target.itemId", targetId));
+            queryBuilders.add(QueryBuilders.termQuery("target.itemId", targetId));
         } else if (targetPath != null && targetPath.trim().length() > 0) {
-            filters.add(FilterBuilders.termFilter("target.properties.pageInfo.pagePath", targetPath));
+            queryBuilders.add(QueryBuilders.termQuery("target.properties.pageInfo.pagePath", targetPath));
         } else {
-            filters.add(FilterBuilders.termFilter("target.itemId", ""));
+            queryBuilders.add(QueryBuilders.termQuery("target.itemId", ""));
         }
-        return FilterBuilders.andFilter(filters.toArray(new FilterBuilder[filters.size()]));
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        for (QueryBuilder queryBuilder : queryBuilders) {
+            boolQueryBuilder.must(queryBuilder);
+        }
+        return boolQueryBuilder;
     }
 }

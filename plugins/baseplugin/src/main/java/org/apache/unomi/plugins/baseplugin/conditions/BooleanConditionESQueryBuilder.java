@@ -20,10 +20,10 @@ package org.apache.unomi.plugins.baseplugin.conditions;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.FilterBuilders;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -33,8 +33,8 @@ import java.util.Map;
 public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
 
     @Override
-    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context,
-            ConditionESQueryBuilderDispatcher dispatcher) {
+    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context,
+                                   ConditionESQueryBuilderDispatcher dispatcher) {
         boolean isAndOperator = "and".equalsIgnoreCase((String) condition.getParameter("operator"));
         @SuppressWarnings("unchecked")
         List<Condition> conditions = (List<Condition>) condition.getParameter("subConditions");
@@ -45,11 +45,15 @@ public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
             return dispatcher.buildFilter(conditions.get(0), context);
         }
 
-        FilterBuilder[] l = new FilterBuilder[conditionCount];
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         for (int i = 0; i < conditionCount; i++) {
-            l[i] = dispatcher.buildFilter(conditions.get(i), context);
+            if (isAndOperator) {
+                boolQueryBuilder.must(dispatcher.buildFilter(conditions.get(i)));
+            } else {
+                boolQueryBuilder.should(dispatcher.buildFilter(conditions.get(i)));
+            }
         }
 
-        return isAndOperator ? FilterBuilders.andFilter(l) : FilterBuilders.orFilter(l);
+        return boolQueryBuilder;
     }
 }

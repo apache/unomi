@@ -812,7 +812,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             }
         }
 
-        logger.info("Profiles past condition updated in {}", System.currentTimeMillis()-t);
+        logger.info("Profiles past condition updated in {}ms", System.currentTimeMillis()-t);
     }
 
     private void updateExistingProfilesForSegment(Segment segment) {
@@ -854,7 +854,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                 persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
             }
         }
-        logger.info("Profiles updated in {}", System.currentTimeMillis()-t);
+        logger.info("Profiles updated in {}ms", System.currentTimeMillis()-t);
     }
 
     private void updateExistingProfilesForScoring(Scoring scoring) {
@@ -888,7 +888,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
                 eventService.send(entries.next().getValue());
             }
         }
-        logger.info("Profiles updated in {}", System.currentTimeMillis()-t);
+        logger.info("Profiles updated in {}ms", System.currentTimeMillis()-t);
     }
 
     private void updateExistingProfilesForRemovedScoring(String scoringId) {
@@ -905,7 +905,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         for (Profile profileToRemove : previousProfiles) {
             persistenceService.updateWithScript(profileToRemove.getItemId(), null, Profile.class, "ctx._source.scores.remove(scoringId)", scriptParams);
         }
-        logger.info("Profiles updated in {}", System.currentTimeMillis()-t);
+        logger.info("Profiles updated in {}ms", System.currentTimeMillis()-t);
     }
 
     private String getMD5(String md5) {

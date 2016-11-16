@@ -20,13 +20,13 @@ package org.apache.unomi.elasticsearch.plugin.security;
 import org.elasticsearch.common.component.LifecycleComponent;
 import org.elasticsearch.common.inject.Module;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.plugins.AbstractPlugin;
+import org.elasticsearch.plugins.Plugin;
 
 import java.util.Collection;
 
-import static org.elasticsearch.common.collect.Lists.newArrayList;
+import static com.google.common.collect.Lists.newArrayList;
 
-public class SecurityPlugin extends AbstractPlugin {
+public class SecurityPlugin extends Plugin {
 
     public SecurityPlugin(Settings settings) {
         super();
@@ -41,17 +41,17 @@ public class SecurityPlugin extends AbstractPlugin {
     }
 
     @Override
-    public Collection<Class<? extends Module>> modules() {
-        Collection<Class<? extends Module>> modules = newArrayList();
+    public Collection<Module> nodeModules() {
+        Collection<Module> modules = newArrayList();
         // if (settings.getAsBoolean("security.enabled", true)) {
-        modules.add(SecurityPluginModule.class);
+        modules.add(new SecurityPluginModule());
         // }
         return modules;
     }
 
     @SuppressWarnings("rawtypes")
     @Override
-    public Collection<Class<? extends LifecycleComponent>> services() {
+    public Collection<Class<? extends LifecycleComponent>> nodeServices() {
         Collection<Class<? extends LifecycleComponent>> services = newArrayList();
         // if (settings.getAsBoolean("security.enabled", true)) {
         services.add(SecurityPluginService.class);
