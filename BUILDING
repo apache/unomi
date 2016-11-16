@@ -70,3 +70,24 @@ command:
 
 Where the required username and password have the proper credentials for the SVN
 Apache repository.
+
+JGitFlow
+--------
+
+We now can use the [JGitFlow Maven plugin](http://jgitflow.bitbucket.org) to make it easier to work with feature,
+hotfix and other types of branches.
+
+For example, to start a feature branch, simply use
+
+    mvn jgitflow:feature-start
+
+This will prompt you for the feature name, and then create a feature branch and update
+all the POMs to have a version that contains the feature name. This makes it then a lot
+easier to integrate with continuous integration systems to generate builds for the
+feature branch.
+
+Once the feature is completed you can use
+
+    mvn jgitflow:feature-finish
+
+To merge the branch into master.
