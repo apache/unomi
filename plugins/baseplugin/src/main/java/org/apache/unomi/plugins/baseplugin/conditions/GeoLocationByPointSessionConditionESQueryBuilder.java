@@ -20,14 +20,14 @@ package org.apache.unomi.plugins.baseplugin.conditions;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.FilterBuilders;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 
 import java.util.Map;
 
 public class GeoLocationByPointSessionConditionESQueryBuilder implements ConditionESQueryBuilder {
     @Override
-    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         String type = (String) condition.getParameter("type");
 
         if("circle".equals(type)) {
@@ -36,7 +36,7 @@ public class GeoLocationByPointSessionConditionESQueryBuilder implements Conditi
             String distance = condition.getParameter("distance").toString();
 
             if(circleLatitude != null && circleLongitude != null && distance != null) {
-                return FilterBuilders.geoDistanceFilter("location")
+                return QueryBuilders.geoDistanceQuery("location")
                         .lat(circleLatitude)
                         .lon(circleLongitude)
                         .distance(distance);
@@ -48,7 +48,7 @@ public class GeoLocationByPointSessionConditionESQueryBuilder implements Conditi
             Double rectLongitudeSW = (Double) condition.getParameter("rectLongitudeSW");
 
             if(rectLatitudeNE != null && rectLongitudeNE != null && rectLatitudeSW != null && rectLongitudeSW != null) {
-                return FilterBuilders.geoBoundingBoxFilter("location")
+                return QueryBuilders.geoBoundingBoxQuery("location")
                         .topLeft(rectLatitudeNE, rectLongitudeNE)
                         .bottomRight(rectLatitudeSW, rectLongitudeSW);
             }

@@ -26,8 +26,8 @@ import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBui
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.FilterBuilders;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 
 import java.util.*;
 
@@ -43,7 +43,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
         this.persistenceService = persistenceService;
     }
 
-    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         Condition eventCondition;
         try {
             eventCondition = (Condition) condition.getParameter("eventCondition");
@@ -84,6 +84,6 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
             }
         }
 
-        return FilterBuilders.idsFilter(Profile.ITEM_TYPE).addIds(ids.toArray(new String[ids.size()]));
+        return QueryBuilders.idsQuery(Profile.ITEM_TYPE).addIds(ids.toArray(new String[ids.size()]));
     }
 }

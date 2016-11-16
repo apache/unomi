@@ -56,10 +56,10 @@ public class SecurityPluginService extends AbstractLifecycleComponent<SecurityPl
         super(settings);
         this.restController = restController;
         this.transportService = transportService;
-        this.publishHost = componentSettings.get("publish_host", settings.get("transport.publish_host", settings.get("transport.host")));
+        this.publishHost = settings.get("publish_host", settings.get("transport.publish_host", settings.get("transport.host")));
         InetAddress publishHostAddress = null;
         try {
-            publishHostAddress = networkService.resolvePublishHostAddress(publishHost);
+            publishHostAddress = networkService.resolvePublishHostAddresses(new String[] { publishHost });
         } catch (IOException e) {
             logger.error("Error trying to resolve publish host address " + publishHost);
         }
