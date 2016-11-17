@@ -143,6 +143,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public static final String BULK_PROCESSOR_BULK_SIZE = "bulkProcessor.bulkSize";
     public static final String BULK_PROCESSOR_FLUSH_INTERVAL = "bulkProcessor.flushInterval";
     public static final String BULK_PROCESSOR_BACKOFF_POLICY = "bulkProcessor.backoffPolicy";
+    public static final String ELASTICSEARCH_NETWORK_HOST = "network.host";
 
     private Node node;
     private Client client;
@@ -348,6 +349,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         .put(NODE_CONTEXTSERVER_SECURE_ADDRESS, secureAddress)
                         .put(NODE_CONTEXTSERVER_SECURE_PORT, securePort)
                         .put(INDEX_MAX_RESULT_WINDOW, "2147483647");
+
+                if (settingsBuilder.get(ELASTICSEARCH_NETWORK_HOST) == null) {
+                    logger.info("Setting ElasticSearch network host address to {}", address);
+                    settingsBuilder.put(ELASTICSEARCH_NETWORK_HOST, address);
+                }
 
                 node = nodeBuilder().settings(settingsBuilder).node();
                 client = node.client();
