@@ -103,6 +103,7 @@ import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
@@ -163,6 +164,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private Map<String,String> indexNames;
     private List<String> itemsMonthlyIndexed;
     private Map<String, String> routingByType;
+    private Set<String> existingIndexNames = new TreeSet<String>();
 
     private String address;
     private String port;
@@ -402,6 +404,23 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 if (client != null && bulkProcessor == null) {
                     bulkProcessor = getBulkProcessor();
                 }
+
+                try {
+                    IndicesStatsResponse indicesStatsResponse = client.admin().indices().prepareStats().all().execute().get();
+                    existingIndexNames = new TreeSet<>(indicesStatsResponse.getIndices().keySet());
+                } catch (InterruptedException e) {
+                    logger.error("Error retrieving indices stats", e);
+                } catch (ExecutionException e) {
+                    logger.error("Error retrieving indices stats", e);
+                }
+
+                logger.info("Waiting for index creation to complete...");
+
+                client.admin().cluster().prepareHealth()
+                        .setWaitForGreenStatus()
+                        .get();
+
+                logger.info("Cluster status is GREEN");
 
                 return null;
             }
