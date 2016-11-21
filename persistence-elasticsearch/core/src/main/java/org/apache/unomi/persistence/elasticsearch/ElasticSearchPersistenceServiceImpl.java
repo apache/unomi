@@ -411,14 +411,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     bulkProcessor = getBulkProcessor();
                 }
 
-                try {
-                    IndicesStatsResponse indicesStatsResponse = client.admin().indices().prepareStats().all().execute().get();
-                    existingIndexNames = new TreeSet<>(indicesStatsResponse.getIndices().keySet());
-                } catch (InterruptedException e) {
-                    logger.error("Error retrieving indices stats", e);
-                } catch (ExecutionException e) {
-                    logger.error("Error retrieving indices stats", e);
-                }
+                refreshExistingIndexNames();
 
                 logger.info("Waiting for index creation to complete...");
 
@@ -457,12 +450,30 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 int thisMonth = gc.get(Calendar.MONTH);
                 gc.add(Calendar.DAY_OF_MONTH, 1);
                 if (gc.get(Calendar.MONTH) != thisMonth) {
-                    getMonthlyIndex(gc.getTime(), true);
+                    String monthlyIndex = getMonthlyIndex(gc.getTime(), true);
+                    existingIndexNames.add(monthlyIndex);
                 }
             }
         }, 10000L, 24L * 60L * 60L * 1000L);
 
         logger.info(this.getClass().getName() + " service started successfully.");
+    }
+
+    private void refreshExistingIndexNames() {
+        new InClassLoaderExecute<Boolean>() {
+            protected Boolean execute(Object... args) {
+                try {
+                    logger.info("Refreshing existing indices list...");
+                    IndicesStatsResponse indicesStatsResponse = client.admin().indices().prepareStats().all().execute().get();
+                    existingIndexNames = new TreeSet<>(indicesStatsResponse.getIndices().keySet());
+                } catch (InterruptedException e) {
+                    logger.error("Error retrieving indices stats", e);
+                } catch (ExecutionException e) {
+                    logger.error("Error retrieving indices stats", e);
+                }
+                return true;
+            }
+        }.executeInClassLoader();
     }
 
     public BulkProcessor getBulkProcessor() {
@@ -490,7 +501,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                           BulkRequest request,
                                           Throwable failure) {
                         logger.error("After Bulk (failure)", failure);
-                        // we could add index creation here in the case of index seperation by dates.
                     }
                 });
         if (bulkProcessorName != null && bulkProcessorName.length() > 0) {
@@ -554,7 +564,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Object execute(Object... args) {
                 logger.info("Closing ElasticSearch persistence backend...");
                 if (bulkProcessor != null) {
-                    bulkProcessor.close();
+                    try {
+                        bulkProcessor.awaitClose(2, TimeUnit.MINUTES);
+                    } catch (InterruptedException e) {
+                        logger.error("Error waiting for bulk operations to flush !", e);
+                    }
                 }
                 node.close();
                 return null;
@@ -730,17 +744,27 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     if (routingByType.containsKey(itemType)) {
                         indexBuilder = indexBuilder.setRouting(routingByType.get(itemType));
                     }
-                    try {
-                        indexBuilder.execute().actionGet();
-                    } catch (IndexNotFoundException e) {
+
+                    if (!existingIndexNames.contains(index)) {
+                        // index probably doesn't exist, unless something else has already created it.
                         if (itemsMonthlyIndexed.contains(itemType)) {
                             Date timeStamp = ((TimestampedItem) item).getTimeStamp();
                             if (timeStamp != null) {
                                 getMonthlyIndex(timeStamp, true);
-                                indexBuilder.execute().actionGet();
                             } else {
                                 logger.warn("Missing time stamp on item " + item + " id=" + item.getItemId() + " can't create related monthly index !");
                             }
+                        } else {
+                            // this is not a timestamped index, should we create it anyway ?
+                            createIndex(index);
+                        }
+                    }
+
+                    try {
+                        indexBuilder.execute().actionGet();
+                    } catch (IndexNotFoundException e) {
+                        if (existingIndexNames.contains(index)) {
+                            existingIndexNames.remove(index);
                         }
                     }
                     return true;
@@ -887,6 +911,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 boolean indexExists = indicesExistsResponse.isExists();
                 if (indexExists) {
                     client.admin().indices().prepareDelete(indexName).execute().actionGet();
+                    existingIndexNames.remove(indexName);
                 }
                 return indexExists;
             }
@@ -919,6 +944,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
 
         builder.execute().actionGet();
+        existingIndexNames.add(indexName);
+
     }
 
 
@@ -1417,6 +1444,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public void refresh() {
         new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {
+                if (bulkProcessor != null) {
+                    bulkProcessor.flush();
+                }
                 client.admin().indices().refresh(Requests.refreshRequest()).actionGet();
                 return true;
             }
