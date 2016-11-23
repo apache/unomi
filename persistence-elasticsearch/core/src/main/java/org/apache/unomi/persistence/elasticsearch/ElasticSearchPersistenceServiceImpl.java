@@ -53,10 +53,12 @@ import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.Requests;
+import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsException;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.DistanceUnit;
@@ -96,9 +98,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.net.*;
 import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -146,6 +146,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public static final String ELASTICSEARCH_NETWORK_HOST = "network.host";
 
     private Node node;
+    private Client nodeClient;
     private Client client;
     private BulkProcessor bulkProcessor;
     private String clusterName;
@@ -356,14 +357,25 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
 
                 node = nodeBuilder().settings(settingsBuilder).node();
-                client = node.client();
+                nodeClient = node.client();
+
                 logger.info("Waiting for ElasticSearch to start...");
 
-                client.admin().cluster().prepareHealth()
+                nodeClient.admin().cluster().prepareHealth()
                         .setWaitForGreenStatus()
                         .get();
 
                 logger.info("Cluster status is GREEN");
+
+                try {
+                    Settings transportSettings = Settings.settingsBuilder()
+                            .put(CLUSTER_NAME, clusterName).build();
+                    client = TransportClient.builder().settings(transportSettings).build()
+                            .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(address), 9300));
+                } catch (UnknownHostException e) {
+                    logger.error("Error resolving address " + address + " ElasticSearch transport client not connected, using internal client instead", e);
+                    client = nodeClient;
+                }
 
                 // @todo is there a better way to detect index existence than to wait for it to startup ?
                 boolean indexExists = false;
@@ -570,6 +582,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         logger.error("Error waiting for bulk operations to flush !", e);
                     }
                 }
+                if (nodeClient != client) {
+                    client.close();
+                }
+                nodeClient.close();
                 node.close();
                 return null;
             }
