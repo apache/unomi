@@ -825,21 +825,25 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         segmentCondition.setParameter("propertyValue", segment.getItemId());
 
         if(segment.getMetadata().isEnabled()) {
+            // the following list can grow really big if the segments are large.
+            // We might want to replace this with scrolling if it becomes huge
+            // (100million profiles)
             List<Profile> previousProfiles = persistenceService.query(segmentCondition, null, Profile.class);
             List<Profile> newProfiles = persistenceService.query(segment.getCondition(), null, Profile.class);
 
-            List<Profile> add = new ArrayList<>(newProfiles);
-            add.removeAll(previousProfiles);
-            previousProfiles.removeAll(newProfiles);
+            Set<Profile> profilesToAdd = new HashSet<>(newProfiles);
+            Set<Profile> profilesToRemove = new HashSet<>(previousProfiles);
+            profilesToAdd.removeAll(previousProfiles);
+            profilesToRemove.removeAll(newProfiles);
 
-            for (Profile profileToAdd : add) {
+            for (Profile profileToAdd : profilesToAdd) {
                 profileToAdd.getSegments().add(segment.getItemId());
                 persistenceService.update(profileToAdd.getItemId(), null, Profile.class, "segments", profileToAdd.getSegments());
                 Event profileUpdated = new Event("profileUpdated", null, profileToAdd, null, null, profileToAdd, new Date());
                 profileUpdated.setPersistent(false);
                 eventService.send(profileUpdated);
             }
-            for (Profile profileToRemove : previousProfiles) {
+            for (Profile profileToRemove : profilesToRemove) {
                 profileToRemove.getSegments().remove(segment.getItemId());
                 persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
                 Event profileUpdated = new Event("profileUpdated", null, profileToRemove, null, null, profileToRemove, new Date());
