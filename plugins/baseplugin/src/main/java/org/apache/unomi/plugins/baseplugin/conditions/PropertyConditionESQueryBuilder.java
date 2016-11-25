@@ -101,7 +101,7 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
             case "notIn":
                 checkRequiredValue(values, name, op, true);
                 return FilterBuilders.notFilter(FilterBuilders.inFilter(name, values.toArray()));
-            case "hasAllOf":
+            case "all":
                 checkRequiredValue(values, name, op, true);
                 return FilterBuilders.termsFilter(name, values.toArray()).execution("and");
             case "hasSomeOf":

@@ -151,9 +151,9 @@ public class ConditionEvaluatorTest extends BaseTest {
                 .parameter("segments", "s10", "s20", "s30").build()));
         assertFalse(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "notIn")
                 .parameter("segments", "s10", "s20", "s2").build()));
-        assertTrue(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "hasAllOf")
+        assertTrue(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "all")
                 .parameter("segments", "s1", "s2").build()));
-        assertFalse(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "hasAllOf")
+        assertFalse(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "all")
                 .parameter("segments", "s1", "s5").build()));
     }
 
