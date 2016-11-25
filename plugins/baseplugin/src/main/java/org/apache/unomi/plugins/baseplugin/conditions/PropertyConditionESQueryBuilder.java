@@ -111,14 +111,14 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
                 return boolQueryBuilder;
             case "hasSomeOf":
                 checkRequiredValue(values, name, op, true);
-                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+                boolQueryBuilder = QueryBuilders.boolQuery();
                 for (Object curValue : values) {
                     boolQueryBuilder.should(QueryBuilders.termQuery(name, curValue));
                 }
                 return boolQueryBuilder;
             case "hasNoneOf":
                 checkRequiredValue(values, name, op, true);
-                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+                boolQueryBuilder = QueryBuilders.boolQuery();
                 for (Object curValue : values) {
                     boolQueryBuilder.mustNot(QueryBuilders.termQuery(name, curValue));
                 }
