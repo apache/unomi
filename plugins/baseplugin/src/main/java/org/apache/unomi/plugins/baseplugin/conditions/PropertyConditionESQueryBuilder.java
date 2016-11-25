@@ -109,6 +109,20 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
                     boolQueryBuilder.must(QueryBuilders.termQuery(name, curValue));
                 }
                 return boolQueryBuilder;
+            case "hasSomeOf":
+                checkRequiredValue(values, name, op, true);
+                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+                for (Object curValue : values) {
+                    boolQueryBuilder.should(QueryBuilders.termQuery(name, curValue));
+                }
+                return boolQueryBuilder;
+            case "hasNoneOf":
+                checkRequiredValue(values, name, op, true);
+                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+                for (Object curValue : values) {
+                    boolQueryBuilder.mustNot(QueryBuilders.termQuery(name, curValue));
+                }
+                return boolQueryBuilder;
             case "isDay":
                 checkRequiredValue(value, name, op, false);
                 return getIsSameDayRange(value, name);

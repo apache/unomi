@@ -113,6 +113,16 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                     }
                 }
                 break;
+            case "hasNoneOf":
+                if(!Collections.disjoint(actual, expected)){
+                    return false;
+                }
+                break;
+            case "hasSomeOf":
+                if(Collections.disjoint(actual, expected)){
+                    return false;
+                }
+                break;
                 
             default:
                 throw new IllegalArgumentException("Unknown comparison operator " + op);
@@ -209,7 +219,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             return actualValue.toString().endsWith(expectedValue);
         } else if (op.equals("matchesRegex")) {
             return expectedValue != null && Pattern.compile(expectedValue).matcher(actualValue.toString()).matches();
-        } else if (op.equals("in") || op.equals("notIn") || op.equals("all")) {
+        } else if (op.equals("in") || op.equals("notIn") || op.equals("hasSomeOf") || op.equals("hasNoneOf") || op.equals("all")) {
             List<?> expectedValues = ConditionContextHelper.foldToASCII((List<?>) condition.getParameter("propertyValues"));
             List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
             List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
