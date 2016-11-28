@@ -133,6 +133,7 @@ interact with external systems or pretty much anything that can be implemented u
 - Look at possible integration with newsletter management systems such as MailChimp, for example to synchronize profile data with collected info.
 - Integrate with machine learning implementations such as Prediction.io or Apache Mahout
 
+---
 
 ### Disclaimer
 
@@ -142,3 +143,12 @@ in a manner consistent with other successful ASF projects. While incubation stat
 of the code, it does indicate that the project has yet to be fully endorsed by the ASF.
 
 ![Unomi is incubating](images/incubator-logo.png)
+
+![Apache Software Foundation](https://www.apache.org/foundation/press/kit/asf_logo_url_small.png)
+
+### Trademarks
+
+Apache Karaf, Apache Mahout, Apache and the Apache feather logo are either registered trademarks or trademarks of The
+ Apache Software Foundation in the United States and other countries.
+ 
+

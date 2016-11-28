@@ -15,8 +15,9 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/DECORATION/1.6.0"
-         xsi:schemaLocation="http://maven.apache.org/DECORATION/1.6.0 http://maven.apache.org/xsd/decoration-1.6.0.xsd">
+<project name="Apache Unomi"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/DECORATION/1.7.0"
+         xsi:schemaLocation="http://maven.apache.org/DECORATION/1.7.0 http://maven.apache.org/xsd/decoration-1.7.0.xsd">
     <skin>
         <groupId>lt.velykis.maven.skins</groupId>
         <artifactId>reflow-maven-skin</artifactId>
@@ -27,6 +28,8 @@
         <logo name="Karaf" href="http://karaf.apache.org/"
               img="http://karaf.apache.org/images/karaf-logo.png"/>
     </poweredBy>
+
+    <version position="none"/>
 
     <googleAnalyticsAccountId>UA-70313240-1</googleAnalyticsAccountId>
 
@@ -61,8 +64,9 @@
             <pages>
                 <index project="unomi-root">
                     <shortTitle>Welcome</shortTitle>
+                    <toc>false</toc>
                     <sections>
-                        <body />
+                        <body/>
                         <sidebar />
                     </sections>
                 </index>
@@ -112,7 +116,6 @@
             <item name="API Javadoc" href="./unomi-api/apidocs/index.html"/>
         </menu>
 
-        <menu name="parent" ref="parent"/>
         <menu ref="modules"/>
         <menu ref="reports"/>
 
@@ -134,6 +137,9 @@
             <item name="Mailing lists" href="mail-lists.html"/>
             <item name="Team" href="team-list.html"/>
             <item name="Maturity model report card" href="maturity-model-report.html"/>
+            <item name="The Apache Software Foundation" href="http://www.apache.org"/>
+            <item name="Sponsorship" href="http://www.apache.org/foundation/sponsorship.html"/>
+            <item name="Thanks" href="http://www.apache.org/foundation/thanks.html"/>
         </menu>
 
     </body>
