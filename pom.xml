@@ -34,7 +34,7 @@
         provides a high-performance user profile and event tracking server.
     </description>
     <url>http://unomi.incubator.apache.org</url>
-    <version>1.2.0-incubating-SNAPSHOT</version>
+    <version>1.2.0-incubating-unomi_70_es_5_x-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <licenses>

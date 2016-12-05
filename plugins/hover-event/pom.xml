@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-plugins</artifactId>
-        <version>1.2.0-incubating-SNAPSHOT</version>
+        <version>1.2.0-incubating-unomi_70_es_5_x-SNAPSHOT</version>
     </parent>
 
     <artifactId>unomi-plugins-hover-event</artifactId>
@@ -33,7 +33,7 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-elasticsearch-core</artifactId>
-            <version>1.2.0-incubating-SNAPSHOT</version>
+            <version>1.2.0-incubating-unomi_70_es_5_x-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
