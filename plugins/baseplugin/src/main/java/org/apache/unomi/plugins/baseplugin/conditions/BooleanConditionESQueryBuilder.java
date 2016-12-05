@@ -23,6 +23,8 @@ import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBui
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -31,6 +33,8 @@ import java.util.Map;
  * ES query builder for boolean conditions.
  */
 public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
+
+    private static final Logger logger = LoggerFactory.getLogger(BooleanConditionESQueryBuilder.class.getName());
 
     @Override
     public QueryBuilder buildQuery(Condition condition, Map<String, Object> context,
@@ -48,9 +52,19 @@ public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         for (int i = 0; i < conditionCount; i++) {
             if (isAndOperator) {
-                boolQueryBuilder.must(dispatcher.buildFilter(conditions.get(i)));
+                QueryBuilder andFilter = dispatcher.buildFilter(conditions.get(i));
+                if (andFilter != null) {
+                    boolQueryBuilder.must(andFilter);
+                } else {
+                    logger.warn("Null filter for boolean AND sub condition " + conditions.get(i));
+                }
             } else {
-                boolQueryBuilder.should(dispatcher.buildFilter(conditions.get(i)));
+                QueryBuilder orFilter = dispatcher.buildFilter(conditions.get(i));
+                if (orFilter != null) {
+                    boolQueryBuilder.should(orFilter);
+                } else {
+                    logger.warn("Null filter for boolean OR sub condition " + conditions.get(i));
+                }
             }
         }
 

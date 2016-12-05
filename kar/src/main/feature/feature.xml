@@ -20,7 +20,7 @@
     <feature description="unomi-kar" version="${project.version}" name="unomi-kar"
              start-level="75">
         <feature>war</feature>
-        <feature version="[2.7.11,3)">cxf</feature>
+        <feature>cxf</feature>
         <feature>openwebbeans</feature>
         <feature>pax-cdi-web-openwebbeans</feature>
         <configfile finalname="/etc/org.apache.unomi.web.cfg">mvn:org.apache.unomi/unomi-wab/${project.version}/cfg/unomicfg</configfile>

@@ -63,12 +63,13 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <cxf.version>2.7.11</cxf.version>
+        <cxf.version>3.0.2</cxf.version>
         <version.jackson.core>2.6.6</version.jackson.core> <!-- version used by CXF -->
         <version.jackson.jaxb>2.6.6</version.jackson.jaxb> <!-- version used by CXF -->
-        <version.karaf>3.0.2</version.karaf>
+        <version.karaf>3.0.8</version.karaf>
+        <version.karaf.cellar>3.0.3</version.karaf.cellar>
         <version.pax.exam>4.9.1</version.pax.exam>
-        <elasticsearch.version>2.4.1</elasticsearch.version>
+        <elasticsearch.version>5.0.1</elasticsearch.version>
 
         <maven.compiler.source>1.7</maven.compiler.source>
         <maven.compiler.target>1.7</maven.compiler.target>
@@ -521,11 +522,6 @@
             <!-- Apache CXF dependencies -->
             <dependency>
                 <groupId>org.apache.cxf</groupId>
-                <artifactId>cxf-rt-core</artifactId>
-                <version>${cxf.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.cxf</groupId>
                 <artifactId>cxf-rt-frontend-jaxws</artifactId>
                 <version>${cxf.version}</version>
             </dependency>
@@ -648,6 +644,25 @@
                 <type>xml</type>
                 <scope>runtime</scope>
             </dependency>
+            <dependency>
+                <groupId>org.apache.karaf.cellar</groupId>
+                <artifactId>apache-karaf-cellar</artifactId>
+                <classifier>features</classifier>
+                <version>${version.karaf.cellar}</version>
+                <type>xml</type>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.karaf.cellar</groupId>
+                <artifactId>org.apache.karaf.cellar.core</artifactId>
+                <version>${version.karaf.cellar}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.karaf.cellar</groupId>
+                <artifactId>org.apache.karaf.cellar.config</artifactId>
+                <version>${version.karaf.cellar}</version>
+            </dependency>
+
             <!-- End of Apache Karaf dependencies -->
 
             <dependency>

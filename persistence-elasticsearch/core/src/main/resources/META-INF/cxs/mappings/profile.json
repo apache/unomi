@@ -1,37 +1,53 @@
 {
   "profile": {
-    "_all": {
-      "enabled": true
-    },
     "dynamic_templates": [
       {
         "all": {
           "match": "*",
-          "match_mapping_type": "string",
+          "match_mapping_type": "text",
           "mapping": {
-            "type": "string",
-            "analyzer": "folding",
-            "include_in_all": true
+            "type": "text",
+            "analyzer": "folding"
           }
         }
       }
     ],
     "properties": {
       "itemId": {
-        "type": "string",
-        "analyzer": "folding",
-        "include_in_all": true
+        "type": "keyword"
       },
       "itemType": {
-        "type": "string",
-        "analyzer": "folding",
-        "include_in_all": true
+        "type": "keyword"
       },
       "properties": {
         "properties": {
+          "j:nodename": {
+            "type": "keyword"
+          },
+          "preferredLanguage": {
+            "type": "keyword"
+          },
           "firstVisit": {
             "type": "date",
             "format": "strict_date_optional_time||epoch_millis"
+          },
+          "lastVisit": {
+            "type": "date",
+            "format": "strict_date_optional_time||epoch_millis"
+          },
+          "previousVisit": {
+            "type": "date",
+            "format": "strict_date_optional_time||epoch_millis"
+          },
+          "nbOfVisits": {
+            "type": "long"
+          }
+        }
+      },
+      "systemProperties" : {
+        "properties" : {
+          "mergeIdentifier" : {
+            "type" : "keyword"
           }
         }
       }

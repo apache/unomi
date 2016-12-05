@@ -22,9 +22,9 @@ import org.elasticsearch.common.inject.Module;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.plugins.Plugin;
 
+import java.util.ArrayList;
 import java.util.Collection;
-
-import static com.google.common.collect.Lists.newArrayList;
+import java.util.Collections;
 
 public class SecurityPlugin extends Plugin {
 
@@ -32,30 +32,22 @@ public class SecurityPlugin extends Plugin {
         super();
     }
 
-    public String name() {
-        return "contextserver-security";
-    }
-
-    public String description() {
-        return "A plugin that provides some basic security to the Context Server elasticsearch HTTP and Transport connectors";
+    @Override
+    public Collection<Module> createGuiceModules() {
+        return Collections.<Module>singletonList(new SecurityPluginModule());
     }
 
     @Override
-    public Collection<Module> nodeModules() {
-        Collection<Module> modules = newArrayList();
-        // if (settings.getAsBoolean("security.enabled", true)) {
-        modules.add(new SecurityPluginModule());
-        // }
-        return modules;
-    }
-
-    @SuppressWarnings("rawtypes")
-    @Override
-    public Collection<Class<? extends LifecycleComponent>> nodeServices() {
-        Collection<Class<? extends LifecycleComponent>> services = newArrayList();
-        // if (settings.getAsBoolean("security.enabled", true)) {
+    @SuppressWarnings("rawtypes") // Plugin use a rawtype
+    public Collection<Class<? extends LifecycleComponent>> getGuiceServiceClasses() {
+        Collection<Class<? extends LifecycleComponent>> services = new ArrayList<>();
         services.add(SecurityPluginService.class);
-        // }
         return services;
     }
+
+    @Override
+    public Settings additionalSettings() {
+        return Settings.EMPTY;
+    }
+
 }

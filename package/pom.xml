@@ -64,14 +64,23 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!--
         <dependency>
-            <!-- scope is runtime so the feature repo is listed in the features service config file, and features may be installed using the karaf-maven-plugin configuration -->
             <groupId>org.apache.cxf.karaf</groupId>
             <artifactId>apache-cxf</artifactId>
             <classifier>features</classifier>
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
+        -->
+        <dependency>
+            <groupId>org.apache.karaf.cellar</groupId>
+            <artifactId>apache-karaf-cellar</artifactId>
+            <classifier>features</classifier>
+            <type>xml</type>
+            <scope>runtime</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-kar</artifactId>
@@ -167,30 +176,8 @@
                                     <artifactItems>
                                         <artifactItem>
                                             <groupId>org.elasticsearch.plugin</groupId>
-                                            <artifactId>delete-by-query</artifactId>
+                                            <artifactId>reindex-client</artifactId>
                                             <version>${elasticsearch.version}</version>
-                                            <type>zip</type>
-                                            <outputDirectory>${project.build.directory}/assembly/elasticsearch/plugins/delete-by-query</outputDirectory>
-                                        </artifactItem>
-                                        <artifactItem>
-                                            <groupId>org.elasticsearch.module</groupId>
-                                            <artifactId>lang-groovy</artifactId>
-                                            <version>${elasticsearch.version}</version>
-                                            <type>zip</type>
-                                            <outputDirectory>${project.build.directory}/assembly/elasticsearch/modules/lang-groovy</outputDirectory>
-                                        </artifactItem>
-                                        <artifactItem>
-                                            <groupId>org.elasticsearch.module</groupId>
-                                            <artifactId>lang-expression</artifactId>
-                                            <version>${elasticsearch.version}</version>
-                                            <type>zip</type>
-                                            <outputDirectory>${project.build.directory}/assembly/elasticsearch/modules/lang-expression</outputDirectory>
-                                        </artifactItem>
-                                        <artifactItem>
-                                            <groupId>org.elasticsearch.module</groupId>
-                                            <artifactId>reindex</artifactId>
-                                            <version>${elasticsearch.version}</version>
-                                            <type>zip</type>
                                             <outputDirectory>${project.build.directory}/assembly/elasticsearch/modules/reindex</outputDirectory>
                                         </artifactItem>
                                     </artifactItems>
@@ -299,6 +286,7 @@
                                 <feature>cxf</feature>
                                 <feature>openwebbeans</feature>
                                 <feature>pax-cdi-web-openwebbeans</feature>
+                                <feature>cellar</feature>
                                 <feature>unomi-kar</feature>
                             </bootFeatures>
                         </configuration>

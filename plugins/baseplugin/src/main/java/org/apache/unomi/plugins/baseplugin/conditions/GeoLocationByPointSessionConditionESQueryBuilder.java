@@ -37,8 +37,7 @@ public class GeoLocationByPointSessionConditionESQueryBuilder implements Conditi
 
             if(circleLatitude != null && circleLongitude != null && distance != null) {
                 return QueryBuilders.geoDistanceQuery("location")
-                        .lat(circleLatitude)
-                        .lon(circleLongitude)
+                        .point(circleLatitude, circleLongitude)
                         .distance(distance);
             }
         } else if("rectangle".equals(type)) {
@@ -49,8 +48,7 @@ public class GeoLocationByPointSessionConditionESQueryBuilder implements Conditi
 
             if(rectLatitudeNE != null && rectLongitudeNE != null && rectLatitudeSW != null && rectLongitudeSW != null) {
                 return QueryBuilders.geoBoundingBoxQuery("location")
-                        .topLeft(rectLatitudeNE, rectLongitudeNE)
-                        .bottomRight(rectLatitudeSW, rectLongitudeSW);
+                        .setCorners(rectLatitudeNE, rectLongitudeNE,rectLatitudeSW, rectLongitudeSW);
             }
         }
 

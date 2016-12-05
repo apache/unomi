@@ -4,9 +4,9 @@
       {
         "all": {
           "match": "*",
-          "match_mapping_type": "string",
+          "match_mapping_type": "text",
           "mapping": {
-            "type": "string",
+            "type": "text",
             "analyzer": "folding"
           }
         }
@@ -17,37 +17,46 @@
         "type": "long"
       },
       "itemId": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "itemType": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "lastEventDate": {
         "type": "date",
         "format": "strict_date_optional_time||epoch_millis"
       },
       "profileId": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
+      },
+      "profile": {
+        "properties": {
+          "itemId": {
+            "type": "keyword"
+          },
+          "itemType": {
+            "type": "keyword"
+          }
+        }
       },
       "properties": {
         "properties": {
           "location": {
             "type": "geo_point"
+          },
+          "pageReferringURL": {
+            "type": "keyword"
+          },
+          "referringURL": {
+            "type": "keyword"
           }
         }
       },
       "scope": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "size": {
         "type": "long"
-      },
-      "systemProperties": {
-        "type": "object"
       },
       "timeStamp": {
         "type": "date",

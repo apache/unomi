@@ -34,7 +34,7 @@ import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorD
 import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.joda.DateMathParser;
-import org.elasticsearch.index.mapper.core.DateFieldMapper;
+import org.elasticsearch.index.mapper.DateFieldMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -280,7 +280,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         if (value instanceof Date) {
             return ((Date) value);
         } else {
-            DateMathParser parser = new DateMathParser(DateFieldMapper.Defaults.DATE_TIME_FORMATTER);
+            DateMathParser parser = new DateMathParser(DateFieldMapper.DEFAULT_DATE_TIME_FORMATTER);
             try {
                 return new Date(parser.parse(value.toString(), new Callable<Long>() {
                     @Override

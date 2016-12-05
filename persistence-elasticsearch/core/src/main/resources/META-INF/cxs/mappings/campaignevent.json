@@ -4,9 +4,9 @@
       {
         "all": {
           "match": "*",
-          "match_mapping_type": "string",
+          "match_mapping_type": "text",
           "mapping": {
-            "type": "string",
+            "type": "text",
             "analyzer": "folding"
           }
         }
@@ -14,36 +14,31 @@
     ],
     "properties": {
       "campaignId": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "cost": {
         "type": "double"
       },
       "currency": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "eventDate": {
         "type": "date",
         "format": "strict_date_optional_time||epoch_millis"
       },
       "itemId": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "itemType": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "timezone": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "metadata": {
         "properties": {
           "description": {
-            "type": "string",
+            "type": "text",
             "analyzer": "folding"
           },
           "enabled": {
@@ -53,22 +48,19 @@
             "type": "boolean"
           },
           "id": {
-            "type": "string",
-            "analyzer": "folding"
+            "type": "keyword"
           },
           "missingPlugins": {
             "type": "boolean"
           },
           "name": {
-            "type": "string",
-            "analyzer": "folding"
+            "type": "keyword"
           },
           "readOnly": {
             "type": "boolean"
           },
           "scope": {
-            "type": "string",
-            "analyzer": "folding"
+            "type": "keyword"
           }
         }
       }

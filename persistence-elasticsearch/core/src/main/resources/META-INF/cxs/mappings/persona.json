@@ -4,13 +4,29 @@
       {
         "all": {
           "match": "*",
-          "match_mapping_type": "string",
+          "match_mapping_type": "text",
           "mapping": {
-            "type": "string",
+            "type": "text",
             "analyzer": "folding"
           }
         }
       }
-    ]
+    ],
+    "properties" : {
+      "properties" : {
+        "properties": {
+          "description": {
+            "type": "text",
+            "analyzer": "folding"
+          },
+          "firstName": {
+            "type": "keyword"
+          },
+          "lastName": {
+            "type": "keyword"
+          }
+        }
+      }
+    }
   }
 }

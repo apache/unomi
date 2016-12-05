@@ -4,9 +4,9 @@
       {
         "all": {
           "match": "*",
-          "match_mapping_type": "string",
+          "match_mapping_type": "text",
           "mapping": {
-            "type": "string",
+            "type": "text",
             "analyzer": "folding"
           }
         }
@@ -14,40 +14,32 @@
     ],
     "properties": {
       "automaticMappingsFrom": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "dateRanges": {
         "properties": {
           "from": {
-            "type": "string",
-            "analyzer": "folding"
+            "type": "keyword"
           },
           "key": {
-            "type": "string",
-            "analyzer": "folding"
+            "type": "keyword"
           },
           "to": {
-            "type": "string",
-            "analyzer": "folding"
+            "type": "keyword"
           }
         }
       },
       "defaultValue": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "itemId": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "itemType": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "mergeStrategy": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "metadata": {
         "properties": {
@@ -58,15 +50,13 @@
             "type": "boolean"
           },
           "id": {
-            "type": "string",
-            "analyzer": "folding"
+            "type": "keyword"
           },
           "missingPlugins": {
             "type": "boolean"
           },
           "name": {
-            "type": "string",
-            "analyzer": "folding"
+            "type": "keyword"
           },
           "readOnly": {
             "type": "boolean"
@@ -82,8 +72,7 @@
             "type": "double"
           },
           "key": {
-            "type": "string",
-            "analyzer": "folding"
+            "type": "keyword"
           },
           "to": {
             "type": "double"
@@ -97,16 +86,14 @@
         "type": "double"
       },
       "tags": {
-        "type": "string",
+        "type": "text",
         "analyzer": "folding"
       },
       "target": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "type": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       }
     }
   }

@@ -18,6 +18,7 @@
 package org.apache.unomi.elasticsearch.plugin.security;
 
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
 import org.elasticsearch.common.inject.Inject;
@@ -37,7 +38,7 @@ import java.util.List;
 /**
  * ElasticSearch plugin that simply rejects connection from non-authorized IP ranges
  */
-public class SecurityPluginService extends AbstractLifecycleComponent<SecurityPluginService> {
+public class SecurityPluginService extends AbstractLifecycleComponent {
 
     private static final Logger logger = LoggerFactory.getLogger(SecurityPluginService.class.getName());
 
@@ -102,7 +103,7 @@ public class SecurityPluginService extends AbstractLifecycleComponent<SecurityPl
     protected void doStart() throws ElasticsearchException {
         restFilter = new RestFilter() {
             @Override
-            public void process(RestRequest request, RestChannel channel, RestFilterChain filterChain) throws Exception {
+            public void process(RestRequest request, RestChannel channel, NodeClient client, RestFilterChain filterChain) throws Exception {
                 logger.info("Processing REST request=" + request + " channel=" + channel);
                 if (request.getRemoteAddress() instanceof InetSocketAddress) {
                     InetSocketAddress inetSocketAddress = (InetSocketAddress) request.getRemoteAddress();
@@ -113,7 +114,7 @@ public class SecurityPluginService extends AbstractLifecycleComponent<SecurityPl
                 } else {
                     logger.warn("Unexpected SocketAddress that is not an InetSocketAddress (but an instance of  " + request.getRemoteAddress().getClass().getName() + "), IP range filtering is DISABLED !");
                 }
-                filterChain.continueProcessing(request, channel);
+                filterChain.continueProcessing(request, channel, client);
             }
         };
         restController.registerFilter(restFilter);

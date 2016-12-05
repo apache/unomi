@@ -2,56 +2,46 @@
   "geonameEntry": {
     "properties": {
       "admin1Code": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "admin2Code": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "admin3Code": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "admin4Code": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "alternatenames": {
-        "type": "string"
+        "type": "keyword"
       },
       "asciiname": {
-        "type": "string"
+        "type": "keyword"
       },
       "cc2": {
-        "type": "string"
+        "type": "keyword"
       },
       "countryCode": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "dem": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "elevation": {
         "type": "long"
       },
       "featureClass": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "featureCode": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "itemId": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "itemType": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "location": {
         "type": "geo_point"
@@ -61,15 +51,13 @@
         "format": "strict_date_optional_time||epoch_millis"
       },
       "name": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "population": {
         "type": "long"
       },
       "timezone": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       }
     }
   }

@@ -178,14 +178,6 @@ public interface PersistenceService {
     void createMapping(String type, String source);
 
     /**
-     * TODO
-     *
-     * @param item
-     * @return
-     */
-    List<String> getMatchingSavedQueries(Item item);
-
-    /**
      * Checks whether the specified item satisfies the provided condition.
      *
      * TODO: rename to isMatching?

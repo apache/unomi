@@ -17,7 +17,13 @@
 
 package org.apache.unomi.persistence.elasticsearch;
 
-import com.google.common.collect.UnmodifiableIterator;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.karaf.cellar.config.ClusterConfigurationEvent;
+import org.apache.karaf.cellar.config.Constants;
+import org.apache.karaf.cellar.core.*;
+import org.apache.karaf.cellar.core.control.SwitchStatus;
+import org.apache.karaf.cellar.core.event.EventProducer;
+import org.apache.karaf.cellar.core.event.EventType;
 import org.apache.unomi.api.ClusterNode;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.PartialList;
@@ -31,33 +37,22 @@ import org.apache.unomi.persistence.elasticsearch.conditions.*;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
-import org.elasticsearch.action.admin.cluster.node.info.NodeInfo;
-import org.elasticsearch.action.admin.cluster.node.info.NodesInfoRequest;
-import org.elasticsearch.action.admin.cluster.node.info.NodesInfoResponse;
-import org.elasticsearch.action.admin.cluster.node.stats.NodeStats;
-import org.elasticsearch.action.admin.cluster.node.stats.NodesStatsResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.admin.indices.stats.IndicesStatsResponse;
 import org.elasticsearch.action.bulk.*;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryAction;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
-import org.elasticsearch.action.percolate.PercolateResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.Requests;
-import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.settings.SettingsException;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.ByteSizeValue;
@@ -67,7 +62,6 @@ import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
-import org.elasticsearch.node.Node;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.SearchHit;
@@ -77,91 +71,86 @@ import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregation;
 import org.elasticsearch.search.aggregations.bucket.filter.Filter;
 import org.elasticsearch.search.aggregations.bucket.global.Global;
-import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramBuilder;
+import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramInterval;
-import org.elasticsearch.search.aggregations.bucket.missing.MissingBuilder;
-import org.elasticsearch.search.aggregations.bucket.range.RangeBuilder;
-import org.elasticsearch.search.aggregations.bucket.range.date.DateRangeBuilder;
-import org.elasticsearch.search.aggregations.bucket.range.ipv4.IPv4RangeBuilder;
+import org.elasticsearch.search.aggregations.bucket.missing.MissingAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.range.RangeAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.range.date.DateRangeAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.range.ip.IpRangeAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.InternalNumericMetricsAggregation;
 import org.elasticsearch.search.sort.GeoDistanceSortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
+import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.SynchronousBundleListener;
+import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.*;
+import javax.management.remote.JMXConnector;
+import javax.management.remote.JMXConnectorFactory;
+import javax.management.remote.JMXServiceURL;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.*;
-import java.nio.file.Paths;
+import java.lang.management.ManagementFactory;
+import java.lang.management.OperatingSystemMXBean;
+import java.lang.management.RuntimeMXBean;
+import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.UnknownHostException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
-
 @SuppressWarnings("rawtypes")
 public class ElasticSearchPersistenceServiceImpl implements PersistenceService, ClusterService, SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
 
-    public static final String DISCOVERY_ZEN_PING_MULTICAST_ENABLED = "discovery.zen.ping.multicast.enabled";
     public static final String CONTEXTSERVER_ADDRESS = "contextserver.address";
     public static final String CONTEXTSERVER_PORT = "contextserver.port";
     public static final String CONTEXTSERVER_SECURE_ADDRESS = "contextserver.secureAddress";
     public static final String CONTEXTSERVER_SECURE_PORT = "contextserver.securePort";
-    public static final String KARAF_HOME = "karaf.home";
-    public static final String ELASTICSEARCH_HOME_DIRECTORY = "elasticsearch";
-    public static final String ELASTICSEARCH_PLUGINS_DIRECTORY = ELASTICSEARCH_HOME_DIRECTORY + "/plugins";
-    public static final String ELASTICSEARCH_DATA_DIRECTORY = ELASTICSEARCH_HOME_DIRECTORY + "/data";
-    public static final String INDEX_NUMBER_OF_REPLICAS = "index.number_of_replicas";
-    public static final String INDEX_NUMBER_OF_SHARDS = "index.number_of_shards";
-    public static final String NODE_CONTEXTSERVER_ADDRESS = "node.contextserver.address";
-    public static final String NODE_CONTEXTSERVER_PORT = "node.contextserver.port";
-    public static final String NODE_CONTEXTSERVER_SECURE_ADDRESS = "node.contextserver.secureAddress";
-    public static final String NODE_CONTEXTSERVER_SECURE_PORT = "node.contextserver.securePort";
     public static final String NUMBER_OF_SHARDS = "number_of_shards";
     public static final String NUMBER_OF_REPLICAS = "number_of_replicas";
     public static final String CLUSTER_NAME = "cluster.name";
-    public static final String NODE_DATA = "node.data";
-    public static final String PATH_DATA = "path.data";
-    public static final String PATH_HOME = "path.home";
-    public static final String PATH_PLUGINS = "path.plugins";
-    public static final String INDEX_MAX_RESULT_WINDOW = "index.max_result_window";
-    public static final String MAPPER_ALLOW_DOTS_IN_NAME = "mapper.allow_dots_in_name";
     public static final String BULK_PROCESSOR_NAME = "bulkProcessor.name";
     public static final String BULK_PROCESSOR_CONCURRENT_REQUESTS = "bulkProcessor.concurrentRequests";
     public static final String BULK_PROCESSOR_BULK_ACTIONS = "bulkProcessor.bulkActions";
     public static final String BULK_PROCESSOR_BULK_SIZE = "bulkProcessor.bulkSize";
     public static final String BULK_PROCESSOR_FLUSH_INTERVAL = "bulkProcessor.flushInterval";
     public static final String BULK_PROCESSOR_BACKOFF_POLICY = "bulkProcessor.backoffPolicy";
-    public static final String ELASTICSEARCH_NETWORK_HOST = "network.host";
+    public static final String KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION = "org.apache.unoni.nodes";
+    public static final String KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS = "publicEndpoints";
+    public static final String KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS = "secureEndpoints";
 
-    private Node node;
-    private Client nodeClient;
     private Client client;
     private BulkProcessor bulkProcessor;
     private String clusterName;
     private String indexName;
     private String monthlyIndexNumberOfShards;
     private String monthlyIndexNumberOfReplicas;
-    private String numberOfShards;
-    private String numberOfReplicas;
-    private Boolean nodeData;
-    private Boolean discoveryEnabled;
     private String elasticSearchConfig = null;
     private BundleContext bundleContext;
     private Map<String, String> mappings = new HashMap<String, String>();
     private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
+    private ClusterManager karafCellarClusterManager;
+    private EventProducer karafCellarEventProducer;
+    private GroupManager karafCellarGroupManager;
+    private String karafCellarGroupName = Configurations.DEFAULT_GROUP_NAME;
+    private ConfigurationAdmin osgiConfigurationAdmin;
+    private String karafJMXUsername = "karaf";
+    private String karafJMXPassword = "karaf";
+    private int karafJMXPort = 1099;
 
     private Map<String,String> indexNames;
     private List<String> itemsMonthlyIndexed;
@@ -201,22 +190,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setMonthlyIndexNumberOfReplicas(String monthlyIndexNumberOfReplicas) {
         this.monthlyIndexNumberOfReplicas = monthlyIndexNumberOfReplicas;
-    }
-
-    public void setDiscoveryEnabled(Boolean discoveryEnabled) {
-        this.discoveryEnabled = discoveryEnabled;
-    }
-
-    public void setNumberOfShards(String numberOfShards) {
-        this.numberOfShards = numberOfShards;
-    }
-
-    public void setNumberOfReplicas(String numberOfReplicas) {
-        this.numberOfReplicas = numberOfReplicas;
-    }
-
-    public void setNodeData(Boolean nodeData) {
-        this.nodeData = nodeData;
     }
 
     public void setAddress(String address) {
@@ -287,6 +260,38 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.bulkProcessorBackoffPolicy = bulkProcessorBackoffPolicy;
     }
 
+    public void setKarafCellarClusterManager(ClusterManager karafCellarClusterManager) {
+        this.karafCellarClusterManager = karafCellarClusterManager;
+    }
+
+    public void setKarafCellarEventProducer(EventProducer karafCellarEventProducer) {
+        this.karafCellarEventProducer = karafCellarEventProducer;
+    }
+
+    public void setKarafCellarGroupManager(GroupManager karafCellarGroupManager) {
+        this.karafCellarGroupManager = karafCellarGroupManager;
+    }
+
+    public void setKarafCellarGroupName(String karafCellarGroupName) {
+        this.karafCellarGroupName = karafCellarGroupName;
+    }
+
+    public void setOsgiConfigurationAdmin(ConfigurationAdmin osgiConfigurationAdmin) {
+        this.osgiConfigurationAdmin = osgiConfigurationAdmin;
+    }
+
+    public void setKarafJMXUsername(String karafJMXUsername) {
+        this.karafJMXUsername = karafJMXUsername;
+    }
+
+    public void setKarafJMXPassword(String karafJMXPassword) {
+        this.karafJMXPassword = karafJMXPassword;
+    }
+
+    public void setKarafJMXPort(int karafJMXPort) {
+        this.karafJMXPort = karafJMXPort;
+    }
+
     public void start() {
 
         loadPredefinedMappings(bundleContext, false);
@@ -294,28 +299,57 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         // on startup
         new InClassLoaderExecute<Object>() {
             public Object execute(Object... args) {
-                logger.info("Starting ElasticSearch persistence backend using cluster name " + clusterName + " and index name " + indexName + "...");
-                Map<String, String> settings = null;
-                if (elasticSearchConfig != null && elasticSearchConfig.length() > 0) {
-                    try {
-                        URI elasticSearchConfigURI = new URI(elasticSearchConfig);
-                        Settings.Builder settingsBuilder = Settings.builder().loadFromPath(Paths.get(elasticSearchConfigURI));
-                        settings = settingsBuilder.build().getAsMap();
-                        logger.info("Successfully loaded ElasticSearch configuration from " + elasticSearchConfigURI);
-                    } catch (URISyntaxException e) {
-                        logger.error("Error in ElasticSearch configuration URI ", e);
-                    } catch (SettingsException se) {
-                        logger.info("Error trying to load settings from " + elasticSearchConfig + ": " + se.getMessage() + " (activate debug mode for exception details)");
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("Exception details", se);
-                        }
-                    }
-                }
+                logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index name " + indexName + "...");
 
                 address = System.getProperty(CONTEXTSERVER_ADDRESS, address);
                 port = System.getProperty(CONTEXTSERVER_PORT, port);
                 secureAddress = System.getProperty(CONTEXTSERVER_SECURE_ADDRESS, secureAddress);
                 securePort = System.getProperty(CONTEXTSERVER_SECURE_PORT, securePort);
+
+                if (karafCellarEventProducer != null && karafCellarClusterManager != null) {
+
+                    boolean setupConfigOk = true;
+                    Group group = karafCellarGroupManager.findGroupByName(karafCellarGroupName);
+                    if (setupConfigOk && group == null) {
+                        logger.error("Cluster group " + karafCellarGroupName + " doesn't exist");
+                        setupConfigOk = false;
+                    }
+
+                    // check if the producer is ON
+                    if (setupConfigOk && karafCellarEventProducer.getSwitch().getStatus().equals(SwitchStatus.OFF)) {
+                        logger.error("Cluster event producer is OFF");
+                        setupConfigOk = false;
+                    }
+
+                    // check if the config pid is allowed
+                    if (setupConfigOk && !isClusterConfigPIDAllowed(group, Constants.CATEGORY, KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION, EventType.OUTBOUND)) {
+                        logger.error("Configuration PID " + KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION + " is blocked outbound for cluster group " + karafCellarGroupName);
+                        setupConfigOk = false;
+                    }
+
+                    if (setupConfigOk) {
+                        Map<String, Properties> configurations = karafCellarClusterManager.getMap(Constants.CONFIGURATION_MAP + Configurations.SEPARATOR + karafCellarGroupName);
+                        org.apache.karaf.cellar.core.Node thisKarafNode = karafCellarClusterManager.getNode();
+                        Properties karafCellarClusterNodeConfiguration = configurations.get(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION);
+                        if (karafCellarClusterNodeConfiguration == null) {
+                            karafCellarClusterNodeConfiguration = new Properties();
+                        }
+                        String publicEndpointsPropValue = karafCellarClusterNodeConfiguration.getProperty(KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, thisKarafNode.getId() + "=" + address + ":" + port);
+                        String secureEndpointsPropValue = karafCellarClusterNodeConfiguration.getProperty(KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, thisKarafNode.getId() + "=" + secureAddress + ":" + securePort);
+                        String[] publicEndpointsArray = publicEndpointsPropValue.split(",");
+                        Set<String> publicEndpoints = new TreeSet<String>(Arrays.asList(publicEndpointsArray));
+                        String[] secureEndpointsArray = secureEndpointsPropValue.split(",");
+                        Set<String> secureEndpoints = new TreeSet<String>(Arrays.asList(secureEndpointsArray));
+                        publicEndpoints.add(thisKarafNode.getId() + "=" + address + ":" + port);
+                        secureEndpoints.add(thisKarafNode.getId() + "=" + secureAddress + ":" + port);
+                        karafCellarClusterNodeConfiguration.setProperty(KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, StringUtils.join(publicEndpoints, ","));
+                        karafCellarClusterNodeConfiguration.setProperty(KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, StringUtils.join(secureEndpoints, ","));
+                        configurations.put(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION, karafCellarClusterNodeConfiguration);
+                        ClusterConfigurationEvent clusterConfigurationEvent = new ClusterConfigurationEvent(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION);
+                        clusterConfigurationEvent.setSourceGroup(group);
+                        karafCellarEventProducer.produce(clusterConfigurationEvent);
+                    }
+                }
 
                 bulkProcessorName = System.getProperty(BULK_PROCESSOR_NAME, bulkProcessorName);
                 bulkProcessorConcurrentRequests = System.getProperty(BULK_PROCESSOR_CONCURRENT_REQUESTS, bulkProcessorConcurrentRequests);
@@ -324,57 +358,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 bulkProcessorFlushInterval = System.getProperty(BULK_PROCESSOR_FLUSH_INTERVAL, bulkProcessorFlushInterval);
                 bulkProcessorBackoffPolicy = System.getProperty(BULK_PROCESSOR_BACKOFF_POLICY, bulkProcessorBackoffPolicy);
 
-                Settings.Builder settingsBuilder = Settings.builder();
-                if (settings != null) {
-                    settingsBuilder.put(settings);
-                }
-
-                String karafHome = System.getProperty(KARAF_HOME);
-                File pluginsFile = new File(getConfig(settings, PATH_PLUGINS, new File(new File(karafHome), ELASTICSEARCH_PLUGINS_DIRECTORY).getAbsolutePath()));
-                File homeFile = new File(getConfig(settings, PATH_HOME, new File(new File(karafHome), ELASTICSEARCH_HOME_DIRECTORY).getAbsolutePath()));
-                File dataFile = new File(getConfig(settings, PATH_DATA, new File(new File(karafHome), ELASTICSEARCH_DATA_DIRECTORY).getAbsolutePath()));
-
-                // allow dots in mappings (re-introduced in ElasticSearch 2.4.0)
-                System.setProperty(MAPPER_ALLOW_DOTS_IN_NAME, "true");
-
-                settingsBuilder.put(CLUSTER_NAME, clusterName)
-                        .put(NODE_DATA, nodeData)
-                        .put(PATH_DATA, dataFile.getAbsolutePath())
-                        .put(PATH_HOME, homeFile.getAbsolutePath())
-                        .put(PATH_PLUGINS, pluginsFile.getAbsolutePath())
-                        .put(DISCOVERY_ZEN_PING_MULTICAST_ENABLED, discoveryEnabled)
-                        .put(INDEX_NUMBER_OF_REPLICAS, numberOfReplicas)
-                        .put(INDEX_NUMBER_OF_SHARDS, numberOfShards)
-                        .put(NODE_CONTEXTSERVER_ADDRESS, address)
-                        .put(NODE_CONTEXTSERVER_PORT, port)
-                        .put(NODE_CONTEXTSERVER_SECURE_ADDRESS, secureAddress)
-                        .put(NODE_CONTEXTSERVER_SECURE_PORT, securePort)
-                        .put(INDEX_MAX_RESULT_WINDOW, "2147483647");
-
-                if (settingsBuilder.get(ELASTICSEARCH_NETWORK_HOST) == null) {
-                    logger.info("Setting ElasticSearch network host address to {}", address);
-                    settingsBuilder.put(ELASTICSEARCH_NETWORK_HOST, address);
-                }
-
-                node = nodeBuilder().settings(settingsBuilder).node();
-                nodeClient = node.client();
-
-                logger.info("Waiting for ElasticSearch to start...");
-
-                nodeClient.admin().cluster().prepareHealth()
-                        .setWaitForGreenStatus()
-                        .get();
-
-                logger.info("Cluster status is GREEN");
-
                 try {
-                    Settings transportSettings = Settings.settingsBuilder()
+                    Settings transportSettings = Settings.builder()
                             .put(CLUSTER_NAME, clusterName).build();
-                    client = TransportClient.builder().settings(transportSettings).build()
+                    client = new PreBuiltTransportClient(transportSettings)
                             .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(address), 9300));
                 } catch (UnknownHostException e) {
                     logger.error("Error resolving address " + address + " ElasticSearch transport client not connected, using internal client instead", e);
-                    client = nodeClient;
                 }
 
                 // @todo is there a better way to detect index existence than to wait for it to startup ?
@@ -412,7 +402,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 client.admin().indices().preparePutTemplate(indexName + "_monthlyindex")
                         .setTemplate(indexName + "-*")
                         .setOrder(1)
-                        .setSettings(Settings.settingsBuilder()
+                        .setSettings(Settings.builder()
                                 .put(NUMBER_OF_SHARDS, Integer.parseInt(monthlyIndexNumberOfShards))
                                 .put(NUMBER_OF_REPLICAS, Integer.parseInt(monthlyIndexNumberOfReplicas))
                                 .build()).execute().actionGet();
@@ -582,11 +572,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         logger.error("Error waiting for bulk operations to flush !", e);
                     }
                 }
-                if (nodeClient != client) {
+                if (client != null) {
                     client.close();
                 }
-                nodeClient.close();
-                node.close();
                 return null;
             }
         }.executeInClassLoader();
@@ -711,7 +699,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
 
                     if (itemsMonthlyIndexed.contains(itemType) && dateHint == null) {
-                        PartialList<T> r = query(QueryBuilders.idsQuery(itemType).ids(itemId), null, clazz, 0, 1, null);
+                        PartialList<T> r = query(QueryBuilders.idsQuery(itemType).addIds(itemId), null, clazz, 0, 1, null);
                         if (r.size() > 0) {
                             return r.get(0);
                         }
@@ -886,11 +874,39 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
 
-                    DeleteByQueryResponse rsp = new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
+                    BulkRequestBuilder deleteByScope = client.prepareBulk();
+
+                    final TimeValue keepAlive = TimeValue.timeValueHours(1);
+                    SearchResponse response = client.prepareSearch(indexName + "*")
                             .setIndices(getIndexNameForQuery(itemType))
+                            .setScroll(keepAlive)
                             .setQuery(conditionESQueryBuilderDispatcher.getQueryBuilder(query))
-                            .execute()
-                            .actionGet();
+                            .setSize(100).execute().actionGet();
+
+                    // Scroll until no more hits are returned
+                    while (true) {
+
+                        for (SearchHit hit : response.getHits().getHits()) {
+                            // add hit to bulk delete
+                            deleteByScope.add(Requests.deleteRequest(hit.index()).type(hit.type()).id(hit.id()));
+                        }
+
+                        response = client.prepareSearchScroll(response.getScrollId()).setScroll(keepAlive).execute().actionGet();
+
+                        // If we have no more hits, exit
+                        if (response.getHits().getHits().length == 0) {
+                            break;
+                        }
+                    }
+
+                    // we're done with the scrolling, delete now
+                    if (deleteByScope.numberOfActions() > 0) {
+                        final BulkResponse deleteResponse = deleteByScope.get();
+                        if (deleteResponse.hasFailures()) {
+                            // do something
+                            logger.debug("Couldn't remove by query " + query + ":\n{}", deleteResponse.buildFailureMessage());
+                        }
+                    }
 
                     return true;
                 } catch (Exception e) {
@@ -995,7 +1011,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> mappings = getMappingsResponse.getMappings();
                 Map<String, Map<String, Object>> propertyMap = new HashMap<>();
                 try {
-                    UnmodifiableIterator<ImmutableOpenMap<String, MappingMetaData>> it = mappings.valuesIt();
+                    Iterator<ImmutableOpenMap<String, MappingMetaData>> it = mappings.valuesIt();
                     while (it.hasNext()) {
                         ImmutableOpenMap<String, MappingMetaData> next = it.next();
                         Map<String, Map<String, Object>> properties = (Map<String, Map<String, Object>>) next.get(itemType).getSourceAsMap().get("properties");
@@ -1030,7 +1046,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     logger.info("Saving query : " + queryName);
                     client.prepareIndex(indexName, ".percolator", queryName)
                             .setSource(query)
-                            .setRefresh(true) // Needed when the query shall be available immediately
+                            .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
                             .execute().actionGet();
                     return true;
                 } catch (Exception e) {
@@ -1057,7 +1073,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 //Index the query = register it in the percolator
                 try {
                     client.prepareDelete(indexName, ".percolator", queryName)
-                            .setRefresh(true) // Needed when the query shall be available immediately
+                            .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
                             .execute().actionGet();
                     return true;
                 } catch (Exception e) {
@@ -1066,36 +1082,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return false;
             }
         }.executeInClassLoader();
-    }
-
-    @Override
-    public List<String> getMatchingSavedQueries(final Item item) {
-        return new InClassLoaderExecute<List<String>>() {
-            protected List<String> execute(Object... args) {
-                List<String> matchingQueries = new ArrayList<String>();
-                try {
-                    String source = CustomObjectMapper.getObjectMapper().writeValueAsString(item);
-
-                    String itemType = item.getItemType();
-
-                    //Percolate
-                    PercolateResponse response = client.preparePercolate()
-                            .setIndices(indexName)
-                            .setDocumentType(itemType)
-                            .setSource("{doc:" + source + "}").execute().actionGet();
-                    //Iterate over the results
-                    for (PercolateResponse.Match match : response) {
-                        //Handle the result which is the name of
-                        //the query in the percolator
-                        matchingQueries.add(match.getId().string());
-                    }
-                } catch (IOException e) {
-                    logger.error("Error getting matching saved queries for item=" + item, e);
-                }
-                return matchingQueries;
-            }
-        }.executeInClassLoader();
-
     }
 
     @Override
@@ -1109,9 +1095,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             final Class<? extends Item> clazz = item.getClass();
             String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
 
-            QueryBuilder builder = QueryBuilders.andQuery(
-                    QueryBuilders.idsQuery(itemType).ids(item.getItemId()),
-                    conditionESQueryBuilderDispatcher.buildFilter(query));
+            QueryBuilder builder = QueryBuilders.boolQuery()
+                    .must(QueryBuilders.idsQuery(itemType).addIds(item.getItemId()))
+                    .must(conditionESQueryBuilderDispatcher.buildFilter(query));
             return queryCount(builder, itemType) > 0;
         } catch (IllegalAccessException e) {
             logger.error("Error getting query for item=" + item, e);
@@ -1181,9 +1167,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Long execute(Object... args) {
                 SearchResponse response = client.prepareSearch(getIndexNameForQuery(itemType))
                         .setTypes(itemType)
-                        .setSearchType(SearchType.COUNT)
+                        .setSize(0)
                         .setQuery(QueryBuilders.matchAllQuery())
-                        .addAggregation(AggregationBuilders.filter("filter").filter(filter))
+                        .addAggregation(AggregationBuilders.filter("filter", filter))
                         .execute()
                         .actionGet();
                 Aggregations searchHits = response.getAggregations();
@@ -1213,7 +1199,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     } else if (size != -1) {
                         requestBuilder.setSize(size);
                     } else {
-                        requestBuilder.setSize(Integer.MAX_VALUE);
+                        // requestBuilder.setSize(Integer.MAX_VALUE);
                     }
                     if (routing != null) {
                         requestBuilder.setRouting(routing);
@@ -1223,7 +1209,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         for (String sortByElement : sortByArray) {
                             if (sortByElement.startsWith("geo:")) {
                                 String[] elements = sortByElement.split(":");
-                                GeoDistanceSortBuilder distanceSortBuilder = SortBuilders.geoDistanceSort(elements[1]).point(Double.parseDouble(elements[2]), Double.parseDouble(elements[3])).unit(DistanceUnit.KILOMETERS);
+                                GeoDistanceSortBuilder distanceSortBuilder = SortBuilders.geoDistanceSort(elements[1], Double.parseDouble(elements[2]), Double.parseDouble(elements[3])).unit(DistanceUnit.KILOMETERS);
                                 if (elements.length > 4 && elements[4].equals("desc")) {
                                     requestBuilder = requestBuilder.addSort(distanceSortBuilder.order(SortOrder.DESC));
                                 } else {
@@ -1270,7 +1256,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 SearchRequestBuilder builder = client.prepareSearch(getIndexNameForQuery(itemType))
                         .setTypes(itemType)
-                        .setSearchType(SearchType.COUNT)
+                        .setSize(0)
                         .setQuery(QueryBuilders.matchAllQuery());
 
                 List<AggregationBuilder> lastAggregation = new ArrayList<AggregationBuilder>();
@@ -1279,13 +1265,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     AggregationBuilder bucketsAggregation = null;
                     if (aggregate instanceof DateAggregate) {
                         DateAggregate dateAggregate = (DateAggregate) aggregate;
-                        DateHistogramBuilder dateHistogramBuilder = AggregationBuilders.dateHistogram("buckets").field(aggregate.getField()).interval(new DateHistogramInterval((dateAggregate.getInterval())));
+                        DateHistogramAggregationBuilder dateHistogramBuilder = AggregationBuilders.dateHistogram("buckets").field(aggregate.getField()).dateHistogramInterval(new DateHistogramInterval((dateAggregate.getInterval())));
                         if (dateAggregate.getFormat() != null) {
                             dateHistogramBuilder.format(dateAggregate.getFormat());
                         }
                         bucketsAggregation = dateHistogramBuilder;
                     } else if (aggregate instanceof NumericRangeAggregate) {
-                        RangeBuilder rangebuilder = AggregationBuilders.range("buckets").field(aggregate.getField());
+                        RangeAggregationBuilder rangebuilder = AggregationBuilders.range("buckets").field(aggregate.getField());
                         for (NumericRange range : ((NumericRangeAggregate) aggregate).getRanges()) {
                             if (range != null) {
                                 if (range.getFrom() != null && range.getTo() != null) {
@@ -1300,19 +1286,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         bucketsAggregation = rangebuilder;
                     } else if (aggregate instanceof DateRangeAggregate) {
                         DateRangeAggregate dateRangeAggregate = (DateRangeAggregate) aggregate;
-                        DateRangeBuilder rangebuilder = AggregationBuilders.dateRange("buckets").field(aggregate.getField());
+                        DateRangeAggregationBuilder rangebuilder = AggregationBuilders.dateRange("buckets").field(aggregate.getField());
                         if (dateRangeAggregate.getFormat() != null) {
                             rangebuilder.format(dateRangeAggregate.getFormat());
                         }
                         for (DateRange range : dateRangeAggregate.getDateRanges()) {
                             if (range != null) {
-                                rangebuilder.addRange(range.getKey(), range.getFrom(), range.getTo());
+                                rangebuilder.addRange(range.getKey(), range.getFrom().toString(), range.getTo().toString());
                             }
                         }
                         bucketsAggregation = rangebuilder;
                     } else if (aggregate instanceof IpRangeAggregate) {
                         IpRangeAggregate ipRangeAggregate = (IpRangeAggregate) aggregate;
-                        IPv4RangeBuilder rangebuilder = AggregationBuilders.ipRange("buckets").field(aggregate.getField());
+                        IpRangeAggregationBuilder rangebuilder = AggregationBuilders.ipRange("buckets").field(aggregate.getField());
                         for (IpRange range : ipRangeAggregate.getRanges()) {
                             if (range != null) {
                                 rangebuilder.addRange(range.getKey(), range.getFrom(), range.getTo());
@@ -1321,10 +1307,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         bucketsAggregation = rangebuilder;
                     } else {
                         //default
-                        bucketsAggregation = AggregationBuilders.terms("buckets").field(aggregate.getField()).size(Integer.MAX_VALUE);
+                        bucketsAggregation = AggregationBuilders.terms("buckets").field(aggregate.getField()).size(5000);
                     }
                     if (bucketsAggregation != null) {
-                        final MissingBuilder missingBucketsAggregation = AggregationBuilders.missing("missing").field(aggregate.getField());
+                        final MissingAggregationBuilder missingBucketsAggregation = AggregationBuilders.missing("missing").field(aggregate.getField());
                         for (AggregationBuilder aggregationBuilder : lastAggregation) {
                             bucketsAggregation.subAggregation(aggregationBuilder);
                             missingBucketsAggregation.subAggregation(aggregationBuilder);
@@ -1334,7 +1320,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
 
                 if (filter != null) {
-                    AggregationBuilder filterAggregation = AggregationBuilders.filter("filter").filter(conditionESQueryBuilderDispatcher.buildFilter(filter));
+                    AggregationBuilder filterAggregation = AggregationBuilders.filter("filter", conditionESQueryBuilderDispatcher.buildFilter(filter));
                     for (AggregationBuilder aggregationBuilder : lastAggregation) {
                         filterAggregation.subAggregation(aggregationBuilder);
                     }
@@ -1408,47 +1394,87 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected List<ClusterNode> execute(Object... args) {
                 Map<String, ClusterNode> clusterNodes = new LinkedHashMap<String, ClusterNode>();
 
-                NodesInfoResponse nodesInfoResponse = client.admin().cluster().prepareNodesInfo(NodesInfoRequest.ALL_NODES)
-                        .setSettings(true)
-                        .execute()
-                        .actionGet();
-                NodeInfo[] nodesInfoArray = nodesInfoResponse.getNodes();
-                for (NodeInfo nodeInfo : nodesInfoArray) {
-                    if (nodeInfo.getSettings().get("node.contextserver.address") != null) {
-                        ClusterNode clusterNode = new ClusterNode();
-                        clusterNode.setHostName(nodeInfo.getHostname());
-                        clusterNode.setHostAddress(nodeInfo.getSettings().get("node.contextserver.address"));
-                        clusterNode.setPublicPort(Integer.parseInt(nodeInfo.getSettings().get("node.contextserver.port")));
-                        clusterNode.setSecureHostAddress(nodeInfo.getSettings().get("node.contextserver.secureAddress"));
-                        clusterNode.setSecurePort(Integer.parseInt(nodeInfo.getSettings().get("node.contextserver.securePort")));
-                        clusterNode.setMaster(nodeInfo.getNode().isMasterNode());
-                        clusterNode.setData(nodeInfo.getNode().isDataNode());
-                        clusterNodes.put(nodeInfo.getNode().getId(), clusterNode);
+                Set<org.apache.karaf.cellar.core.Node> karafCellarNodes = karafCellarClusterManager.listNodes();
+                org.apache.karaf.cellar.core.Node thisKarafNode = karafCellarClusterManager.getNode();
+                Map<String, Properties> clusterConfigurations = karafCellarClusterManager.getMap(Constants.CONFIGURATION_MAP + Configurations.SEPARATOR + karafCellarGroupName);
+                Properties karafCellarClusterNodeConfiguration = clusterConfigurations.get(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION);
+                Map<String, String> publicNodeEndpoints = new TreeMap<>();
+                Map<String, String> secureNodeEndpoints = new TreeMap<>();
+                if (karafCellarClusterNodeConfiguration != null) {
+                    String publicEndpointsPropValue = karafCellarClusterNodeConfiguration.getProperty(KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, thisKarafNode.getId() + "=" + address + ":" + port);
+                    String secureEndpointsPropValue = karafCellarClusterNodeConfiguration.getProperty(KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, thisKarafNode.getId() + "=" + secureAddress + ":" + securePort);
+                    String[] publicEndpointsArray = publicEndpointsPropValue.split(",");
+                    Set<String> publicEndpoints = new TreeSet<String>(Arrays.asList(publicEndpointsArray));
+                    for (String endpoint : publicEndpoints) {
+                        String[] endpointParts = endpoint.split("=");
+                        publicNodeEndpoints.put(endpointParts[0], endpointParts[1]);
+                    }
+                    String[] secureEndpointsArray = secureEndpointsPropValue.split(",");
+                    Set<String> secureEndpoints = new TreeSet<String>(Arrays.asList(secureEndpointsArray));
+                    for (String endpoint : secureEndpoints) {
+                        String[] endpointParts = endpoint.split("=");
+                        secureNodeEndpoints.put(endpointParts[0], endpointParts[1]);
                     }
                 }
+                for (org.apache.karaf.cellar.core.Node karafCellarNode : karafCellarNodes) {
+                    ClusterNode clusterNode = new ClusterNode();
+                    clusterNode.setHostName(karafCellarNode.getHost());
+                    String publicEndpoint = publicNodeEndpoints.get(karafCellarNode.getId());
+                    String[] publicEndpointParts = publicEndpoint.split(":");
+                    clusterNode.setHostAddress(publicEndpointParts[0]);
+                    clusterNode.setPublicPort(Integer.parseInt(publicEndpointParts[1]));
+                    String secureEndpoint = secureNodeEndpoints.get(karafCellarNode.getId());
+                    String[] secureEndpointParts = secureEndpoint.split(":");
+                    clusterNode.setSecureHostAddress(secureEndpointParts[0]);
+                    clusterNode.setSecurePort(Integer.parseInt(secureEndpointParts[1]));
+                    clusterNode.setMaster(false);
+                    clusterNode.setData(false);
+                    try {
+                        // now let's connect to remote JMX service to retrieve information from the runtime and operating system MX beans
+                        JMXServiceURL url = new JMXServiceURL("service:jmx:rmi:///jndi/rmi://"+karafCellarNode.getHost() + ":"+karafJMXPort+"/karaf-root");
+                        Map<String,Object> environment=new HashMap<String,Object>();
+                        if (karafJMXUsername != null && karafJMXPassword != null) {
+                            environment.put(JMXConnector.CREDENTIALS,new String[]{karafJMXUsername,karafJMXPassword});
+                        }
+                        JMXConnector jmxc = JMXConnectorFactory.connect(url, environment);
+                        MBeanServerConnection mbsc = jmxc.getMBeanServerConnection();
+                        final RuntimeMXBean remoteRuntime = ManagementFactory.newPlatformMXBeanProxy(mbsc, ManagementFactory.RUNTIME_MXBEAN_NAME, RuntimeMXBean.class);
+                        clusterNode.setUptime(remoteRuntime.getUptime());
+                        ObjectName operatingSystemMXBeanName = new ObjectName(ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME);
+                        Double processCpuLoad = null;
+                        Double systemCpuLoad = null;
+                        try {
+                            processCpuLoad = (Double) mbsc.getAttribute(operatingSystemMXBeanName, "ProcessCpuLoad");
+                        } catch (MBeanException e) {
+                            e.printStackTrace();
+                        } catch (AttributeNotFoundException e) {
+                            e.printStackTrace();
+                        }
+                        try {
+                            systemCpuLoad = (Double) mbsc.getAttribute(operatingSystemMXBeanName, "SystemCpuLoad");
+                        } catch (MBeanException e) {
+                            e.printStackTrace();
+                        } catch (AttributeNotFoundException e) {
+                            e.printStackTrace();
+                        }
+                        final OperatingSystemMXBean remoteOperatingSystemMXBean = ManagementFactory.newPlatformMXBeanProxy(mbsc, ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME, OperatingSystemMXBean.class);
+                        clusterNode.setLoadAverage(new double[] { remoteOperatingSystemMXBean.getSystemLoadAverage()});
+                        if (systemCpuLoad != null) {
+                            clusterNode.setCpuLoad(systemCpuLoad);
+                        }
 
-                NodesStatsResponse nodesStatsResponse = client.admin().cluster().prepareNodesStats(NodesInfoRequest.ALL_NODES)
-                        .setOs(true)
-                        .setJvm(true)
-                        .setProcess(true)
-                        .execute()
-                        .actionGet();
-                NodeStats[] nodeStatsArray = nodesStatsResponse.getNodes();
-                for (NodeStats nodeStats : nodeStatsArray) {
-                    ClusterNode clusterNode = clusterNodes.get(nodeStats.getNode().getId());
-                    if (clusterNode != null) {
-                        // the following may be null in the case where Sigar didn't initialize properly, for example
-                        // because the native libraries were not installed or if we redeployed the OSGi bundle in which
-                        // case Sigar cannot initialize properly since it tries to reload the native libraries, generates
-                        // an error and doesn't initialize properly.
-                        if (nodeStats.getProcess() != null && nodeStats.getProcess().getCpu() != null) {
-                            clusterNode.setCpuLoad(nodeStats.getProcess().getCpu().getPercent());
-                        }
-                        if (nodeStats.getOs() != null) {
-                            clusterNode.setLoadAverage(new double[] { nodeStats.getOs().getLoadAverage() });
-                            clusterNode.setUptime(nodeStats.getJvm().getUptime().getMillis());
-                        }
+                    } catch (MalformedURLException e) {
+                        logger.error("Error connecting to remote JMX server", e);
+                    } catch (IOException e) {
+                        logger.error("Error retrieving remote JMX data", e);
+                    } catch (MalformedObjectNameException e) {
+                        logger.error("Error retrieving remote JMX data", e);
+                    } catch (InstanceNotFoundException e) {
+                        logger.error("Error retrieving remote JMX data", e);
+                    } catch (ReflectionException e) {
+                        logger.error("Error retrieving remote JMX data", e);
                     }
+                    clusterNodes.put(karafCellarNode.getId(), clusterNode);
                 }
 
                 return new ArrayList<ClusterNode>(clusterNodes.values());
@@ -1486,7 +1512,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         .setFlush(false)
                         .setCompletion(false)
                         .setRefresh(false)
-                        .setSuggest(false)
                         .execute()
                         .actionGet();
 
@@ -1525,7 +1550,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 final TimeValue keepAlive = TimeValue.timeValueHours(1);
                 SearchResponse response = client.prepareSearch(indexName + "*")
-                        .setSearchType(SearchType.SCAN)
                         .setScroll(keepAlive)
                         .setQuery(query)
                         .setSize(100).execute().actionGet();
@@ -1570,9 +1594,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 SearchRequestBuilder builder = client.prepareSearch(getIndexNameForQuery(itemType))
                         .setTypes(itemType)
-                        .setSearchType(SearchType.COUNT)
+                        .setSize(0)
                         .setQuery(QueryBuilders.matchAllQuery());
-                AggregationBuilder filterAggregation = AggregationBuilders.filter("metrics").filter(conditionESQueryBuilderDispatcher.buildFilter(condition));
+                AggregationBuilder filterAggregation = AggregationBuilders.filter("metrics", conditionESQueryBuilderDispatcher.buildFilter(condition));
 
                 if (metrics != null) {
                     for (String metric : metrics) {
@@ -1638,4 +1662,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
         return defaultValue;
     }
+
+    /**
+     * Check if a configuration is allowed.
+     *
+     * @param group the cluster group.
+     * @param category the configuration category constant.
+     * @param pid the configuration PID.
+     * @param type the cluster event type.
+     * @return true if the cluster event type is allowed, false else.
+     */
+    public boolean isClusterConfigPIDAllowed(Group group, String category, String pid, EventType type) {
+        CellarSupport support = new CellarSupport();
+        support.setClusterManager(this.karafCellarClusterManager);
+        support.setGroupManager(this.karafCellarGroupManager);
+        support.setConfigurationAdmin(this.osgiConfigurationAdmin);
+        return support.isAllowed(group, category, pid, type);
+    }
+
 }

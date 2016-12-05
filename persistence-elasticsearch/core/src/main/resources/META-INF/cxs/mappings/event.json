@@ -4,9 +4,9 @@
       {
         "all": {
           "match": "*",
-          "match_mapping_type": "string",
+          "match_mapping_type": "text",
           "mapping": {
-            "type": "string",
+            "type": "text",
             "analyzer": "folding"
           }
         }
@@ -14,34 +14,325 @@
     ],
     "properties": {
       "eventType": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "itemId": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "itemType": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "profileId": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
+      },
+      "properties": {
+        "properties": {
+          "src_terms[0]": {
+            "properties": {
+              "term": {
+                "type": "keyword"
+              }
+            }
+          }
+        }
       },
       "scope": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "sessionId": {
-        "type": "string",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "timeStamp": {
         "type": "date",
         "format": "strict_date_optional_time||epoch_millis"
+      },
+      "source": {
+        "properties": {
+          "eventType": {
+            "type": "keyword"
+          },
+          "itemId": {
+            "type": "keyword"
+          },
+          "itemType": {
+            "type": "keyword"
+          },
+          "profileId": {
+            "type": "keyword"
+          },
+          "properties": {
+            "properties": {
+              "pageInfo": {
+                "properties": {
+                  "destinationURL": {
+                    "type": "keyword"
+                  },
+                  "language": {
+                    "type": "keyword"
+                  },
+                  "pageName": {
+                    "type": "keyword"
+                  },
+                  "pagePath": {
+                    "type": "keyword"
+                  },
+                  "referringURL": {
+                    "type": "keyword"
+                  },
+                  "variant": {
+                    "type": "keyword"
+                  }
+                }
+              }
+            }
+          },
+          "scope": {
+            "type": "keyword"
+          },
+          "sessionId": {
+            "type": "keyword"
+          },
+          "source": {
+            "properties": {
+              "itemId": {
+                "type": "keyword"
+              },
+              "itemType": {
+                "type": "keyword"
+              },
+              "scope": {
+                "type": "keyword"
+              }
+            }
+          },
+          "target": {
+            "properties": {
+              "itemId": {
+                "type": "keyword"
+              },
+              "itemType": {
+                "type": "keyword"
+              },
+              "properties": {
+                "properties": {
+                  "pageInfo": {
+                    "properties": {
+                      "destinationURL": {
+                        "type": "keyword"
+                      },
+                      "language": {
+                        "type": "keyword"
+                      },
+                      "pageName": {
+                        "type": "keyword"
+                      },
+                      "pagePath": {
+                        "type": "keyword"
+                      },
+                      "referringURL": {
+                        "type": "keyword"
+                      },
+                      "variant": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              },
+              "scope": {
+                "type": "keyword"
+              }
+            }
+          },
+          "timeStamp": {
+            "type": "date"
+          }
+        }
+      },
+      "target": {
+        "properties": {
+          "campaignId": {
+            "type": "keyword"
+          },
+          "duration": {
+            "type": "long"
+          },
+          "itemId": {
+            "type": "keyword"
+          },
+          "itemType": {
+            "type": "keyword"
+          },
+          "metadata": {
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "hidden": {
+                "type": "boolean"
+              },
+              "id": {
+                "type": "keyword"
+              },
+              "missingPlugins": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "keyword"
+              },
+              "readOnly": {
+                "type": "boolean"
+              },
+              "scope": {
+                "type": "keyword"
+              },
+              "tags": {
+                "type": "text",
+                "analyzer": "folding",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "profile": {
+            "properties": {
+              "itemId": {
+                "type": "keyword"
+              },
+              "itemType": {
+                "type": "keyword"
+              },
+              "properties": {
+                "properties": {
+                  "firstVisit": {
+                    "type": "date"
+                  }
+                }
+              }
+            }
+          },
+          "profileId": {
+            "type": "keyword"
+          },
+          "properties": {
+            "properties": {
+              "birthDate": {
+                "type": "date"
+              },
+              "email": {
+                "type": "keyword"
+              },
+              "faceBookId": {
+                "type": "keyword"
+              },
+              "firstName": {
+                "type": "keyword"
+              },
+              "gender": {
+                "type": "keyword"
+              },
+              "goalId": {
+                "type": "keyword"
+              },
+              "lastName": {
+                "type": "keyword"
+              },
+              "leadAssignedTo": {
+                "type": "keyword"
+              },
+              "nationality": {
+                "type": "keyword"
+              },
+              "origin": {
+                "type": "keyword"
+              },
+              "pageInfo": {
+                "properties": {
+                  "destinationURL": {
+                    "type": "keyword"
+                  },
+                  "language": {
+                    "type": "keyword"
+                  },
+                  "pageName": {
+                    "type": "keyword"
+                  },
+                  "pagePath": {
+                    "type": "keyword"
+                  },
+                  "referringURL": {
+                    "type": "keyword"
+                  },
+                  "variant": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "path": {
+                "type": "keyword"
+              },
+              "phoneNumber": {
+                "type": "keyword"
+              },
+              "randomNumber": {
+                "type": "long"
+              },
+              "twitterId": {
+                "type": "keyword"
+              },
+              "variantId": {
+                "type": "keyword"
+              },
+              "workspace": {
+                "type": "keyword"
+              }
+            }
+          },
+          "scope": {
+            "type": "keyword"
+          },
+          "size": {
+            "type": "long"
+          },
+          "startEvent": {
+            "properties": {
+              "parameterValues": {
+                "properties": {
+                  "pagePath": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "type": {
+                "type": "keyword"
+              }
+            }
+          },
+          "targetEvent": {
+            "properties": {
+              "parameterValues": {
+                "properties": {
+                  "pagePath": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "type": {
+                "type": "keyword"
+              }
+            }
+          },
+          "timeStamp": {
+            "type": "date"
+          }
+        }
       }
     }
   }
 }
+
 

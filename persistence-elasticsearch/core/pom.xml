@@ -35,6 +35,11 @@
             <artifactId>org.osgi.core</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.compendium</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.unomi</groupId>
@@ -49,14 +54,29 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.karaf.cellar</groupId>
+            <artifactId>org.apache.karaf.cellar.core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.karaf.cellar</groupId>
+            <artifactId>org.apache.karaf.cellar.config</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>20.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.elasticsearch</groupId>
             <artifactId>elasticsearch</artifactId>
             <version>${elasticsearch.version}</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>org.elasticsearch.plugin</groupId>
-            <artifactId>delete-by-query</artifactId>
+            <groupId>org.elasticsearch.client</groupId>
+            <artifactId>transport</artifactId>
             <version>${elasticsearch.version}</version>
             <scope>compile</scope>
         </dependency>
@@ -64,41 +84,43 @@
         <!-- The following are optional dependencies from the ElasticSearch that are made mandatory -->
 
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <scope>provided</scope>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>2.6.2</version>
+            <scope>compile</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.6.2</version>
+            <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-api</artifactId>
+                </exclusion>
+            </exclusions>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-1.2-api</artifactId>
+            <version>2.6.2</version>
+            <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-core</artifactId>
+                </exclusion>
+            </exclusions>
+            <optional>true</optional>
         </dependency>
 
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>log4j-over-slf4j</artifactId>
-            <version>1.7.7</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.java.dev.jna</groupId>
-            <artifactId>jna</artifactId>
-            <version>4.1.0</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.github.spullara.mustache.java</groupId>
-            <artifactId>compiler</artifactId>
-            <version>0.8.13</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>2.8.1</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.noggit</groupId>
-            <artifactId>noggit</artifactId>
-            <version>0.7</version>
-            <scope>compile</scope>
-        </dependency>
         <!-- End of optional ElasticSearch dependencies -->
 
         <dependency>
@@ -169,6 +191,39 @@
                             sun.misc;resolution:=optional,
                             sun.security.util;resolution:=optional,
                             sun.security.x509;resolution:=optional,
+                            com.google.protobuf.nano;resolution:=optional,
+                            com.jcraft.jzlib;resolution:=optional,
+                            com.ning.compress;resolution:=optional,
+                            com.ning.compress.lzf;resolution:=optional,
+                            com.ning.compress.lzf.util;resolution:=optional,
+                            javassist;resolution:=optional,
+                            lzma.sdk;resolution:=optional,
+                            lzma.sdk.lzma;resolution:=optional,
+                            net.jpountz.lz4;resolution:=optional,
+                            net.jpountz.xxhash;resolution:=optional,
+                            org.apache.tomcat;resolution:=optional,
+                            org.eclipse.jetty.alpn;resolution:=optional,
+                            org.joda.convert;resolution:=optional,
+                            org.locationtech.spatial4j.context;resolution:=optional,
+                            org.locationtech.spatial4j.context.jts;resolution:=optional,
+                            org.locationtech.spatial4j.distance;resolution:=optional,
+                            org.locationtech.spatial4j.exception;resolution:=optional,
+                            org.locationtech.spatial4j.io;resolution:=optional,
+                            org.locationtech.spatial4j.shape;resolution:=optional,
+                            org.locationtech.spatial4j.shape.impl;resolution:=optional,
+                            org.locationtech.spatial4j.shape.jts;resolution:=optional,
+                            org.zeromq;resolution:=optional,
+                            org.apache.commons.compress.compressors;resolution:=optional,
+                            org.apache.commons.compress.utils;resolution:=optional,
+                            org.apache.commons.csv;resolution:=optional,
+                            org.apache.kafka.clients.producer;resolution:=optional,
+                            javax.persistence;resolution:=optional,
+                            com.google.errorprone.annotations.concurrent;resolution:=optional,
+                            com.lmax.disruptor;resolution:=optional,
+                            com.lmax.disruptor.dsl;resolution:=optional,
+                            com.fasterxml.jackson.dataformat.xml;resolution:=optional,
+                            com.fasterxml.jackson.dataformat.xml.annotation;resolution:=optional,
+                            com.fasterxml.jackson.dataformat.xml.util;resolution:=optional,
                             *
                         </Import-Package>
                         <Export-Package>
@@ -176,7 +231,7 @@
                             org.elasticsearch.index.query.*;version="${elasticsearch.version}",
                             org.apache.unomi.persistence.elasticsearch.conditions;version="${project.version}"
                         </Export-Package>
-                        <Embed-Dependency>*;scope=compile|runtime;artifactId=!log4j</Embed-Dependency>
+                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>
                     </instructions>
                 </configuration>
