@@ -20,8 +20,9 @@ package org.apache.unomi.plugins.baseplugin.conditions;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.FilterBuilders;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,21 +33,29 @@ public class SourceEventPropertyConditionESQueryBuilder implements ConditionESQu
     public SourceEventPropertyConditionESQueryBuilder() {
     }
 
-    private void appendFilderIfPropExist(List<FilterBuilder> filterBuilders, Condition condition, String prop){
+    private void appendFilderIfPropExist(List<QueryBuilder> queryBuilders, Condition condition, String prop){
         final Object parameter = condition.getParameter(prop);
         if (parameter != null && !"".equals(parameter)) {
-            filterBuilders.add(FilterBuilders.termFilter("source." + prop, (String) parameter));
+            queryBuilders.add(QueryBuilders.termQuery("source." + prop, (String) parameter));
         }
     }
 
-    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        List<FilterBuilder> l = new ArrayList<FilterBuilder>();
+    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+        List<QueryBuilder> queryBuilders = new ArrayList<QueryBuilder>();
         for (String prop : new String[]{"id", "path", "scope", "type"}){
-            appendFilderIfPropExist(l, condition, prop);
+            appendFilderIfPropExist(queryBuilders, condition, prop);
         }
 
-        if (l.size() >= 1) {
-            return l.size() == 1 ? l.get(0) : FilterBuilders.andFilter(l.toArray(new FilterBuilder[l.size()]));
+        if (queryBuilders.size() >= 1) {
+            if (queryBuilders.size() == 1) {
+                return queryBuilders.get(0);
+            } else {
+                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+                for (QueryBuilder queryBuilder : queryBuilders) {
+                    boolQueryBuilder.must(queryBuilder);
+                }
+                return boolQueryBuilder;
+            }
         } else {
             return null;
         }

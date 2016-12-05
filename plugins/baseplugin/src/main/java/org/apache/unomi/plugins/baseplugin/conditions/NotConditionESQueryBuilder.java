@@ -20,8 +20,8 @@ package org.apache.unomi.plugins.baseplugin.conditions;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.FilterBuilders;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 
 import java.util.Map;
 
@@ -30,8 +30,8 @@ import java.util.Map;
  */
 public class NotConditionESQueryBuilder implements ConditionESQueryBuilder {
 
-    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         Condition subCondition = (Condition) condition.getParameter("subCondition");
-        return FilterBuilders.notFilter(dispatcher.buildFilter(subCondition, context));
+        return QueryBuilders.boolQuery().mustNot(dispatcher.buildFilter(subCondition, context));
     }
 }

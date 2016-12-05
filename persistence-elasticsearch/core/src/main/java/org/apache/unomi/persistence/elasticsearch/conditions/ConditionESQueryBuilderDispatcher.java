@@ -18,9 +18,7 @@
 package org.apache.unomi.persistence.elasticsearch.conditions;
 
 import org.apache.unomi.api.conditions.Condition;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.FilterBuilders;
-import org.elasticsearch.index.query.FilteredQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
@@ -67,15 +65,15 @@ public class ConditionESQueryBuilderDispatcher {
         return "{\"query\": " + getQueryBuilder(condition).toString() + "}";
     }
 
-    public FilteredQueryBuilder getQueryBuilder(Condition condition) {
-        return QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), buildFilter(condition));
+    public QueryBuilder getQueryBuilder(Condition condition) {
+        return QueryBuilders.boolQuery().must(QueryBuilders.matchAllQuery()).filter(buildFilter(condition));
     }
 
-    public FilterBuilder buildFilter(Condition condition) {
+    public QueryBuilder buildFilter(Condition condition) {
         return buildFilter(condition, new HashMap<String, Object>());
     }
 
-    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context) {
+    public QueryBuilder buildFilter(Condition condition, Map<String, Object> context) {
         if(condition == null || condition.getConditionType() == null) {
             throw new IllegalArgumentException("Condition is null or doesn't have type, impossible to build filter");
         }
@@ -94,12 +92,12 @@ public class ConditionESQueryBuilderDispatcher {
             ConditionESQueryBuilder queryBuilder = queryBuilders.get(queryBuilderKey);
             Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context);
             if (contextualCondition != null) {
-                return queryBuilder.buildFilter(contextualCondition, context, this);
+                return queryBuilder.buildQuery(contextualCondition, context, this);
             }
         }
 
         // if no matching
-        return FilterBuilders.matchAllFilter();
+        return QueryBuilders.matchAllQuery();
     }
 
 

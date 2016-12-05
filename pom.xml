@@ -64,11 +64,11 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <cxf.version>2.7.11</cxf.version>
-        <version.jackson.core>2.4.0</version.jackson.core> <!-- version used by CXF -->
-        <version.jackson.jaxb>2.4.0</version.jackson.jaxb> <!-- version used by CXF -->
+        <version.jackson.core>2.6.6</version.jackson.core> <!-- version used by CXF -->
+        <version.jackson.jaxb>2.6.6</version.jackson.jaxb> <!-- version used by CXF -->
         <version.karaf>3.0.2</version.karaf>
-        <version.pax.exam>4.4.0</version.pax.exam>
-        <elasticsearch.version>1.6.2</elasticsearch.version>
+        <version.pax.exam>4.9.1</version.pax.exam>
+        <elasticsearch.version>2.4.1</elasticsearch.version>
 
         <maven.compiler.source>1.7</maven.compiler.source>
         <maven.compiler.target>1.7</maven.compiler.target>
