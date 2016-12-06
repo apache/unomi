@@ -17,43 +17,32 @@
 
 package org.apache.unomi.itests;
 
-import org.apache.unomi.api.Item;
-import org.apache.unomi.api.conditions.Condition;
-import org.junit.After;
-import org.junit.Before;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.services.SegmentService;
+import org.junit.Assert;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
 import java.util.List;
 
-/**
- * Integration tests for various condition query builder types (elasticsearch).
- *
- * @author Sergiy Shyrkov
- */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
-public class ConditionESQueryBuilderTest extends ConditionEvaluatorTest {
+public class SegmentIT extends BaseIT {
+    private final static Logger LOGGER = LoggerFactory.getLogger(SegmentIT.class);
+    @Inject
+    protected SegmentService segmentService;
 
-    @Override
-    protected boolean eval(Condition c) {
-        @SuppressWarnings("unchecked")
-        List<Item> list = persistenceService.query(c,null,(Class<Item>) item.getClass());
-        return list.contains(item);
+    @Test
+    public void testSegments() {
+        Assert.assertNotNull("Segment service should be available", segmentService);
+        List<Metadata> segmentMetadatas = segmentService.getSegmentMetadatas(0, 50, null).getList();
+        Assert.assertEquals("Segment metadata list should be empty", 0, segmentMetadatas.size());
+        LOGGER.info("Retrieved " + segmentMetadatas.size() + " segment metadata entries");
     }
-
-    @Before
-    public void setUp() {
-        super.setUp();
-        persistenceService.save(item);
-        persistenceService.refresh();
-    }
-
-    @After
-    public void tearDown() {
-        persistenceService.remove(item.getItemId(), item.getClass());
-    }
-
 }

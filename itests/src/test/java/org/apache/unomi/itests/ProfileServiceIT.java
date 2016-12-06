@@ -14,12 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-
 package org.apache.unomi.itests;
 
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.services.SegmentService;
-import org.junit.Assert;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.services.ProfileService;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -29,20 +27,27 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import java.util.List;
 
+/**
+ * An integration test for the profile service
+ */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
-public class SegmentTest extends BaseTest{
-    private final static Logger LOGGER = LoggerFactory.getLogger(SegmentTest.class);
+public class ProfileServiceIT extends BaseIT {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(SegmentIT.class);
+    private final static String TEST_PROFILE_ID = "test-profile-id";
     @Inject
-    protected SegmentService segmentService;
+    protected ProfileService profileService;
 
     @Test
-    public void testSegments() {
-        Assert.assertNotNull("Segment service should be available", segmentService);
-        List<Metadata> segmentMetadatas = segmentService.getSegmentMetadatas(0, 50, null).getList();
-        Assert.assertEquals("Segment metadata list should be empty", 0, segmentMetadatas.size());
-        LOGGER.info("Retrieved " + segmentMetadatas.size() + " segment metadata entries");
+    public void testProfileDelete() {
+        Profile profile = new Profile();
+        profile.setItemId(TEST_PROFILE_ID);
+        profileService.save(profile);
+        LOGGER.info("Profile saved, now testing profile delete...");
+        profileService.delete(TEST_PROFILE_ID, false);
+        LOGGER.info("Profile deleted successfully.");
     }
+
 }

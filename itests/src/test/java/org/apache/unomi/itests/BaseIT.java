@@ -33,7 +33,7 @@ import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.*;
  * 
  * @author kevan
  */
-public abstract class BaseTest {
+public abstract class BaseIT {
     
     protected static final String HTTP_PORT = "8181";
     
@@ -44,12 +44,18 @@ public abstract class BaseTest {
         MavenArtifactUrlReference karafUrl = maven()
                 .groupId("org.apache.karaf")
                 .artifactId("apache-karaf")
-                .version("3.0.2")
+                .version("3.0.8")
                 .type("tar.gz");
 
         MavenUrlReference karafStandardRepo = maven()
                 .groupId("org.apache.karaf.features")
                 .artifactId("standard")
+                .classifier("features")
+                .type("xml")
+                .versionAsInProject();
+        MavenUrlReference karafCellarRepo = maven()
+                .groupId("org.apache.karaf.cellar")
+                .artifactId("apache-karaf-cellar")
                 .classifier("features")
                 .type("xml")
                 .versionAsInProject();
@@ -78,15 +84,17 @@ public abstract class BaseTest {
                         .frameworkUrl(karafUrl)
                         .unpackDirectory(new File("target/exam"))
                         .useDeployFolder(false),
-//                keepRuntimeFolder(),
+                keepRuntimeFolder(),
                 configureConsole().ignoreLocalConsole().ignoreRemoteShell(),
                 logLevel(LogLevel.INFO),
 //                editConfigurationFilePut("etc/org.ops4j.pax.web.cfg", "org.osgi.service.http.port", HTTP_PORT),
 //                systemProperty("org.osgi.service.http.port").value(HTTP_PORT),
+                systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 features(karafPaxWebRepo, "war"),
                 features(karafCxfRepo, "cxf"),
                 features(karafStandardRepo, "openwebbeans"),
                 features(karafStandardRepo, "pax-cdi-web-openwebbeans"),
+                features(karafCellarRepo, "cellar"),
                 features(contextServerRepo, "unomi-kar"),
                 // we need to wrap the HttpComponents libraries ourselves since the OSGi bundles provided by the project are incorrect
                 wrappedBundle(mavenBundle("org.apache.httpcomponents",

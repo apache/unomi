@@ -54,6 +54,12 @@
             <type>xml</type>
         </dependency>
         <dependency>
+            <groupId>org.apache.karaf.cellar</groupId>
+            <artifactId>apache-karaf-cellar</artifactId>
+            <classifier>features</classifier>
+            <type>xml</type>
+        </dependency>
+        <dependency>
             <groupId>org.ops4j.pax.web</groupId>
             <artifactId>pax-web-features</artifactId>
             <classifier>features</classifier>
@@ -140,8 +146,9 @@
                 <version>5.0</version>
                 <configuration>
                     <clusterName>contextElasticSearch</clusterName>
-                    <tcpPort>9300</tcpPort>
+                    <transportPort>9300</transportPort>
                     <httpPort>9200</httpPort>
+                    <version>5.0.2</version>
                 </configuration>
                 <executions>
                     <!--
@@ -169,7 +176,7 @@
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <configuration>
                     <includes>
-                        <include>**/*AllTests.java</include>
+                        <include>**/*AllITs.java</include>
                     </includes>
                 </configuration>
                 <executions>
