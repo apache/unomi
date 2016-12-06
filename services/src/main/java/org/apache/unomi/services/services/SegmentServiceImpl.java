@@ -831,10 +831,28 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             List<Profile> previousProfiles = persistenceService.query(segmentCondition, null, Profile.class);
             List<Profile> newProfiles = persistenceService.query(segment.getCondition(), null, Profile.class);
 
-            Set<Profile> profilesToAdd = new HashSet<>(newProfiles);
-            Set<Profile> profilesToRemove = new HashSet<>(previousProfiles);
-            profilesToAdd.removeAll(previousProfiles);
-            profilesToRemove.removeAll(newProfiles);
+            // we use sets instead of lists to speed up contains() calls that are very expensive on lists.
+
+            // we use to use removeAll calls but these are expensive because they require lots of copies upon element
+            // removal so we implemented them with adds instead.
+            //profilesToAdd.removeAll(previousProfiles);
+            //profilesToRemove.removeAll(newProfiles);
+
+            Set<Profile> newProfilesSet = new HashSet<>(newProfiles);
+            Set<Profile> previousProfilesSet = new HashSet<>(previousProfiles);
+            Set<Profile> profilesToAdd = new HashSet<>(newProfilesSet.size() / 2);
+            for (Profile newProfile : newProfilesSet) {
+                if (!previousProfilesSet.contains(newProfile)) {
+                    profilesToAdd.add(newProfile);
+                }
+            }
+            Set<Profile> profilesToRemove = new HashSet<>(previousProfilesSet.size() / 2);
+            for (Profile previousProfile : previousProfilesSet) {
+                if (!newProfilesSet.contains(previousProfile)) {
+                    profilesToRemove.add(previousProfile);
+                }
+            }
+
 
             for (Profile profileToAdd : profilesToAdd) {
                 profileToAdd.getSegments().add(segment.getItemId());
