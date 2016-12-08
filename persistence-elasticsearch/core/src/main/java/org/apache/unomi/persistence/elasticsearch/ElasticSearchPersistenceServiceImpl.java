@@ -898,6 +898,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             break;
                         }
                     }
+                    client.prepareClearScroll().addScrollId(response.getScrollId()).execute().actionGet();
 
                     // we're done with the scrolling, delete now
                     if (deleteByScope.numberOfActions() > 0) {
@@ -1188,6 +1189,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 long totalHits = 0;
                 try {
                     String itemType = getItemType(clazz);
+                    final TimeValue keepAlive = TimeValue.timeValueHours(1);
 
                     SearchRequestBuilder requestBuilder = client.prepareSearch(getIndexNameForQuery(itemType))
                             .setTypes(itemType)
@@ -1199,7 +1201,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     } else if (size != -1) {
                         requestBuilder.setSize(size);
                     } else {
-                        // requestBuilder.setSize(Integer.MAX_VALUE);
+                        // size == -1, use scroll query to retrieve all the results
+                        requestBuilder = client.prepareSearch(getIndexNameForQuery(itemType))
+                                .setTypes(itemType)
+                                .setFetchSource(true)
+                                .setScroll(keepAlive)
+                                .setFrom(offset)
+                                .setQuery(query)
+                                .setSize(100);
                     }
                     if (routing != null) {
                         requestBuilder.setRouting(routing);
@@ -1229,13 +1238,35 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     SearchResponse response = requestBuilder
                             .execute()
                             .actionGet();
-                    SearchHits searchHits = response.getHits();
-                    totalHits = searchHits.getTotalHits();
-                    for (SearchHit searchHit : searchHits) {
-                        String sourceAsString = searchHit.getSourceAsString();
-                        final T value = CustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                        value.setItemId(searchHit.getId());
-                        results.add(value);
+                    if (size == -1) {
+                        // Scroll until no more hits are returned
+                        while (true) {
+
+                            for (SearchHit searchHit : response.getHits().getHits()) {
+                                // add hit to results
+                                String sourceAsString = searchHit.getSourceAsString();
+                                final T value = CustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
+                                value.setItemId(searchHit.getId());
+                                results.add(value);
+                            }
+
+                            response = client.prepareSearchScroll(response.getScrollId()).setScroll(keepAlive).execute().actionGet();
+
+                            // If we have no more hits, exit
+                            if (response.getHits().getHits().length == 0) {
+                                break;
+                            }
+                        }
+                        client.prepareClearScroll().addScrollId(response.getScrollId()).execute().actionGet();
+                    } else {
+                        SearchHits searchHits = response.getHits();
+                        totalHits = searchHits.getTotalHits();
+                        for (SearchHit searchHit : searchHits) {
+                            String sourceAsString = searchHit.getSourceAsString();
+                            final T value = CustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
+                            value.setItemId(searchHit.getId());
+                            results.add(value);
+                        }
                     }
                 } catch (Exception t) {
                     logger.error("Error loading itemType=" + clazz.getName() + " query=" + query + " sortBy=" + sortBy, t);
