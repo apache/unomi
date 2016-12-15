@@ -29,6 +29,7 @@
             <cm:property name="profile.purge.inactiveTime" value="30"/>
             <cm:property name="profile.purge.existTime" value="-1"/>
             <cm:property name="event.purge.existTime" value="12"/>
+            <cm:property name="segment.update.batchSize" value="1000"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -104,6 +105,7 @@
         <property name="rulesService" ref="rulesServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="taskExecutionPeriod" value="86400000"/>
+        <property name="segmentUpdateBatchSize" value="${services.segment.update.batchSize}" />
     </bean>
     <service id="segmentService" ref="segmentServiceImpl" auto-export="interfaces"/>
 

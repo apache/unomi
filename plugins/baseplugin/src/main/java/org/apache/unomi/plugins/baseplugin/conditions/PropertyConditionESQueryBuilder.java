@@ -129,8 +129,9 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
             case "isNotDay":
                 checkRequiredValue(value, name, op, false);
                 return QueryBuilders.boolQuery().mustNot(getIsSameDayRange(value, name));
+            default:
+                throw new IllegalArgumentException("Impossible to build ES filter, unrecognized op=" + op);
         }
-        return null;
     }
 
     private void checkRequiredValuesSize(List<?> values, String name, String operator, int expectedSize) {

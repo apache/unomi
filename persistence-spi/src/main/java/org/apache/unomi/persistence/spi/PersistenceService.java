@@ -294,6 +294,39 @@ public interface PersistenceService {
     <T extends Item> PartialList<T> query(Condition query, String sortBy, Class<T> clazz, int offset, int size);
 
     /**
+     * Retrieves a list of items satisfying the specified {@link Condition}, ordered according to the specified {@code sortBy} String and and paged: only {@code size} of them
+     * are retrieved, starting with the {@code offset}-th one. If a scroll identifier and time validity are specified, they will be used to perform a scrolling query, meaning
+     * that only partial results will be returned, but the scrolling can be continued.
+     *
+     * @param <T>    the type of the Item subclass we want to retrieve
+     * @param query  the {@link Condition} the items must satisfy to be retrieved
+     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *               elements according to the property order in the
+     *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
+     *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * @param clazz  the {@link Item} subclass of the items we want to retrieve
+     * @param offset zero or a positive integer specifying the position of the first item in the total ordered collection of matching items
+     * @param size   a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved. In the case of a scroll query
+     *               this will be used as the scrolling window size.
+     * @param scrollTimeValidity the time the scrolling query should stay valid. This must contain a time unit value such as the ones supported by ElasticSearch, such as
+     *                           the ones declared here : https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#time-units
+     * @return a {@link PartialList} of items matching the specified criteria, with an scroll identifier and the scroll validity used if a scroll query was requested.
+     */
+    <T extends Item> PartialList<T> query(Condition query, String sortBy, Class<T> clazz, int offset, int size, String scrollTimeValidity);
+
+    /**
+     * Continues the execution of a scroll query, to retrieve the next results. If there are no more results the scroll query is also cleared.
+     * @param clazz  the {@link Item} subclass of the items we want to retrieve
+     * @param scrollIdentifier a scroll identifier obtained by the execution of a first query and returned in the {@link PartialList} object
+     * @param scrollTimeValidity a scroll time validity value for the scroll query to stay valid. This must contain a time unit value such as the ones supported by ElasticSearch, such as
+     *                           the ones declared here : https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#time-units
+     * @param <T>    the type of the Item subclass we want to retrieve
+     * @return a {@link PartialList} of items matching the specified criteria, with an scroll identifier and the scroll validity used if a scroll query was requested. Note that if
+     * there are no more results the list will be empty but not null.
+     */
+    <T extends Item> PartialList<T> continueScrollQuery(Class<T> clazz, String scrollIdentifier, String scrollTimeValidity);
+
+    /**
      * Retrieves the same items as {@code query(query, sortBy, clazz, 0, -1)} with the added constraints that the matching elements must also have at least a field matching the
      * specified full text query.
      *
