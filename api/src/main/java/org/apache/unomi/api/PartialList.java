@@ -37,6 +37,8 @@ public class PartialList<T> implements Serializable {
     private long offset;
     private long pageSize;
     private long totalSize;
+    private String scrollIdentifier = null;
+    private String scrollTimeValidity = null;
 
     /**
      * Instantiates a new PartialList.
@@ -141,4 +143,27 @@ public class PartialList<T> implements Serializable {
         return list.get(index);
     }
 
+    /**
+     * Retrieve the scroll identifier to make it possible to continue a scrolling list query
+     * @return a string containing the scroll identifier, to be sent back in an subsequent request
+     */
+    public String getScrollIdentifier() {
+        return scrollIdentifier;
+    }
+
+    public void setScrollIdentifier(String scrollIdentifier) {
+        this.scrollIdentifier = scrollIdentifier;
+    }
+
+    /**
+     * Retrieve the value of the scroll time validity to make it possible to continue a scrolling list query
+     * @return a string containing a time value for the scroll validity, to be sent back in a subsequent request
+     */
+    public String getScrollTimeValidity() {
+        return scrollTimeValidity;
+    }
+
+    public void setScrollTimeValidity(String scrollTimeValidity) {
+        this.scrollTimeValidity = scrollTimeValidity;
+    }
 }

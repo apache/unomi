@@ -21,6 +21,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.*;
@@ -62,6 +63,7 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
     private List<Segment> allSegments;
     private List<Scoring> allScoring;
     private Timer segmentTimer;
+    private int segmentUpdateBatchSize = 1000;
 
     public SegmentServiceImpl() {
         logger.info("Initializing segment service...");
@@ -117,6 +119,10 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
+    }
+
+    public void setSegmentUpdateBatchSize(int segmentUpdateBatchSize) {
+        this.segmentUpdateBatchSize = segmentUpdateBatchSize;
     }
 
     public void postConstruct() {
@@ -819,64 +825,83 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         long t = System.currentTimeMillis();
         Condition segmentCondition = new Condition();
 
+        long updatedProfileCount = 0;
+
         segmentCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
         segmentCondition.setParameter("propertyName", "segments");
         segmentCondition.setParameter("comparisonOperator", "equals");
         segmentCondition.setParameter("propertyValue", segment.getItemId());
 
         if(segment.getMetadata().isEnabled()) {
-            // the following list can grow really big if the segments are large.
-            // We might want to replace this with scrolling if it becomes huge
-            // (100million profiles)
-            List<Profile> previousProfiles = persistenceService.query(segmentCondition, null, Profile.class);
-            List<Profile> newProfiles = persistenceService.query(segment.getCondition(), null, Profile.class);
 
-            // we use sets instead of lists to speed up contains() calls that are very expensive on lists.
+            ConditionType booleanConditionType = definitionsService.getConditionType("booleanCondition");
+            ConditionType notConditionType = definitionsService.getConditionType("notCondition");
 
-            // we use to use removeAll calls but these are expensive because they require lots of copies upon element
-            // removal so we implemented them with adds instead.
-            //profilesToAdd.removeAll(previousProfiles);
-            //profilesToRemove.removeAll(newProfiles);
+            Condition profilesToAddCondition = new Condition(booleanConditionType);
+            profilesToAddCondition.setParameter("operator", "and");
+            List<Condition> profilesToAddSubConditions = new ArrayList<>();
+            profilesToAddSubConditions.add(segment.getCondition());
+            Condition notOldSegmentCondition = new Condition(notConditionType);
+            notOldSegmentCondition.setParameter("subCondition", segmentCondition);
+            profilesToAddSubConditions.add(notOldSegmentCondition);
+            profilesToAddCondition.setParameter("subConditions", profilesToAddSubConditions);
 
-            Set<Profile> newProfilesSet = new HashSet<>(newProfiles);
-            Set<Profile> previousProfilesSet = new HashSet<>(previousProfiles);
-            Set<Profile> profilesToAdd = new HashSet<>(newProfilesSet.size() / 2);
-            for (Profile newProfile : newProfilesSet) {
-                if (!previousProfilesSet.contains(newProfile)) {
-                    profilesToAdd.add(newProfile);
+            Condition profilesToRemoveCondition = new Condition(booleanConditionType);
+            profilesToRemoveCondition.setParameter("operator", "and");
+            List<Condition> profilesToRemoveSubConditions = new ArrayList<>();
+            profilesToRemoveSubConditions.add(segmentCondition);
+            Condition notNewSegmentCondition = new Condition(notConditionType);
+            notNewSegmentCondition.setParameter("subCondition", segment.getCondition());
+            profilesToRemoveSubConditions.add(notNewSegmentCondition);
+            profilesToRemoveCondition.setParameter("subConditions", profilesToRemoveSubConditions);
+
+            PartialList<Profile> profilesToRemove = persistenceService.query(profilesToRemoveCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
+            PartialList<Profile> profilesToAdd = persistenceService.query(profilesToAddCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
+
+            while (profilesToAdd.getList().size() > 0) {
+                for (Profile profileToAdd : profilesToAdd.getList()) {
+                    profileToAdd.getSegments().add(segment.getItemId());
+                    persistenceService.update(profileToAdd.getItemId(), null, Profile.class, "segments", profileToAdd.getSegments());
+                    Event profileUpdated = new Event("profileUpdated", null, profileToAdd, null, null, profileToAdd, new Date());
+                    profileUpdated.setPersistent(false);
+                    eventService.send(profileUpdated);
+                    updatedProfileCount++;
+                }
+                profilesToAdd = persistenceService.continueScrollQuery(Profile.class, profilesToAdd.getScrollIdentifier(), profilesToAdd.getScrollTimeValidity());
+                if (profilesToAdd == null || profilesToAdd.getList().size() == 0) {
+                    break;
                 }
             }
-            Set<Profile> profilesToRemove = new HashSet<>(previousProfilesSet.size() / 2);
-            for (Profile previousProfile : previousProfilesSet) {
-                if (!newProfilesSet.contains(previousProfile)) {
-                    profilesToRemove.add(previousProfile);
+            while (profilesToRemove.getList().size() > 0) {
+                for (Profile profileToRemove : profilesToRemove.getList()) {
+                    profileToRemove.getSegments().remove(segment.getItemId());
+                    persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
+                    Event profileUpdated = new Event("profileUpdated", null, profileToRemove, null, null, profileToRemove, new Date());
+                    profileUpdated.setPersistent(false);
+                    eventService.send(profileUpdated);
+                    updatedProfileCount++;
                 }
-            }
-
-
-            for (Profile profileToAdd : profilesToAdd) {
-                profileToAdd.getSegments().add(segment.getItemId());
-                persistenceService.update(profileToAdd.getItemId(), null, Profile.class, "segments", profileToAdd.getSegments());
-                Event profileUpdated = new Event("profileUpdated", null, profileToAdd, null, null, profileToAdd, new Date());
-                profileUpdated.setPersistent(false);
-                eventService.send(profileUpdated);
-            }
-            for (Profile profileToRemove : profilesToRemove) {
-                profileToRemove.getSegments().remove(segment.getItemId());
-                persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
-                Event profileUpdated = new Event("profileUpdated", null, profileToRemove, null, null, profileToRemove, new Date());
-                profileUpdated.setPersistent(false);
-                eventService.send(profileUpdated);
+                profilesToRemove = persistenceService.continueScrollQuery(Profile.class, profilesToRemove.getScrollIdentifier(), profilesToRemove.getScrollTimeValidity());
+                if (profilesToRemove == null || profilesToRemove.getList().size() == 0) {
+                    break;
+                }
             }
 
         } else {
-            List<Profile> previousProfiles = persistenceService.query(segmentCondition, null, Profile.class);
-            for (Profile profileToRemove : previousProfiles) {
-                profileToRemove.getSegments().remove(segment.getItemId());
-                persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
+            PartialList<Profile> profilesToRemove = persistenceService.query(segmentCondition, null, Profile.class, 0, 200, "10m");
+            while (profilesToRemove.getList().size() > 0) {
+                for (Profile profileToRemove : profilesToRemove.getList()) {
+                    profileToRemove.getSegments().remove(segment.getItemId());
+                    persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
+                    updatedProfileCount++;
+                }
+                profilesToRemove = persistenceService.continueScrollQuery(Profile.class, profilesToRemove.getScrollIdentifier(), profilesToRemove.getScrollTimeValidity());
+                if (profilesToRemove == null || profilesToRemove.getList().size() == 0) {
+                    break;
+                }
             }
         }
-        logger.info("Profiles updated in {}ms", System.currentTimeMillis()-t);
+        logger.info("{} profiles updated in {}ms", updatedProfileCount, System.currentTimeMillis()-t);
     }
 
     private void updateExistingProfilesForScoring(Scoring scoring) {
