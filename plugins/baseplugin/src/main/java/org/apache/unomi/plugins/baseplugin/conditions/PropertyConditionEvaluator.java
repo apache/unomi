@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.Callable;
+import java.util.function.LongSupplier;
 import java.util.regex.Pattern;
 
 /**
@@ -282,9 +282,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else {
             DateMathParser parser = new DateMathParser(DateFieldMapper.DEFAULT_DATE_TIME_FORMATTER);
             try {
-                return new Date(parser.parse(value.toString(), new Callable<Long>() {
-                    @Override
-                    public Long call() throws Exception {
+                return new Date(parser.parse(value.toString(), new LongSupplier() {
+                    public long getAsLong() {
                         return System.currentTimeMillis();
                     }
                 }));

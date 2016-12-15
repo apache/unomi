@@ -63,7 +63,7 @@ import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.script.Script;
-import org.elasticsearch.script.ScriptService;
+import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.*;
@@ -827,7 +827,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
                             (itemsMonthlyIndexed.contains(itemType) && dateHint != null ? getMonthlyIndex(dateHint) : indexName);
 
-                    Script actualScript = new Script(script, ScriptService.ScriptType.INLINE, null, scriptParams);
+                    Script actualScript = new Script(ScriptType.INLINE, "groovy", script, scriptParams);
                     if (bulkProcessor == null) {
                         client.prepareUpdate(index, itemType, itemId).setScript(actualScript)
                                 .execute()
