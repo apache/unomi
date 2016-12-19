@@ -1,17 +1,5 @@
 {
   "campaign": {
-    "dynamic_templates": [
-      {
-        "all": {
-          "match": "*",
-          "match_mapping_type": "text",
-          "mapping": {
-            "type": "text",
-            "analyzer": "folding"
-          }
-        }
-      }
-    ],
     "properties": {
       "cost": {
         "type": "double"
@@ -20,12 +8,10 @@
         "type": "keyword"
       },
       "startDate": {
-        "type": "date",
-        "format": "strict_date_optional_time||epoch_millis"
+        "type": "date"
       },
       "endDate": {
-        "type": "date",
-        "format": "strict_date_optional_time||epoch_millis"
+        "type": "date"
       },
       "itemId": {
         "type": "keyword"
@@ -41,10 +27,6 @@
       },
       "metadata": {
         "properties": {
-          "description": {
-            "type": "text",
-            "analyzer": "folding"
-          },
           "enabled": {
             "type": "boolean"
           },
@@ -57,9 +39,6 @@
           "missingPlugins": {
             "type": "boolean"
           },
-          "name": {
-            "type": "keyword"
-          },
           "readOnly": {
             "type": "boolean"
           },
@@ -67,8 +46,7 @@
             "type": "keyword"
           },
           "tags": {
-            "type": "text",
-            "analyzer": "folding"
+            "type": "keyword"
           }
         }
       }

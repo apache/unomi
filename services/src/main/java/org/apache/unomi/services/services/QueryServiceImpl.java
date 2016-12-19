@@ -83,7 +83,7 @@ public class QueryServiceImpl implements QueryService {
             }
 
             // fall back on terms aggregate
-            return persistenceService.aggregateQuery(query.getCondition(), new TermsAggregate(property), itemType);
+            return persistenceService.aggregateQuery(query.getCondition(), new TermsAggregate(property + ".keyword"), itemType);
         }
 
         return getAggregate(itemType, property);

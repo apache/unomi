@@ -1,17 +1,5 @@
 {
   "personaSession": {
-    "dynamic_templates": [
-      {
-        "all": {
-          "match": "*",
-          "match_mapping_type": "text",
-          "mapping": {
-            "type": "text",
-            "analyzer": "folding"
-          }
-        }
-      }
-    ],
     "properties": {
       "duration" : {
         "type" : "long"
@@ -35,20 +23,6 @@
           },
           "itemType" : {
             "type" : "keyword"
-          },
-          "properties" : {
-            "properties" : {
-              "description" : {
-                "type" : "text",
-                "analyzer" : "folding"
-              },
-              "firstName" : {
-                "type" : "keyword"
-              },
-              "lastName" : {
-                "type" : "keyword"
-              }
-            }
           }
         }
       },
@@ -57,38 +31,8 @@
       },
       "properties" : {
         "properties" : {
-          "deviceCategory" : {
-            "type" : "keyword"
-          },
           "location" : {
             "type" : "geo_point"
-          },
-          "operatingSystemFamily" : {
-            "type" : "keyword"
-          },
-          "operatingSystemName" : {
-            "type" : "keyword"
-          },
-          "remoteAddr" : {
-            "type" : "keyword"
-          },
-          "remoteHost" : {
-            "type" : "keyword"
-          },
-          "sessionCity" : {
-            "type" : "keyword"
-          },
-          "sessionCountryCode" : {
-            "type" : "keyword"
-          },
-          "sessionCountryName" : {
-            "type" : "keyword"
-          },
-          "userAgentName" : {
-            "type" : "keyword"
-          },
-          "userAgentVersion" : {
-            "type" : "keyword"
           }
         }
       },

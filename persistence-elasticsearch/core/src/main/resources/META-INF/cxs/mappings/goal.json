@@ -1,17 +1,5 @@
 {
   "goal": {
-    "dynamic_templates": [
-      {
-        "all": {
-          "match": "*",
-          "match_mapping_type": "text",
-          "mapping": {
-            "type": "text",
-            "analyzer": "folding"
-          }
-        }
-      }
-    ],
     "properties": {
       "campaignId": {
         "type": "keyword"
@@ -24,10 +12,6 @@
       },
       "metadata": {
         "properties": {
-          "description": {
-            "type": "text",
-            "analyzer" : "folding"
-          },
           "enabled": {
             "type": "boolean"
           },
@@ -40,9 +24,6 @@
           "missingPlugins": {
             "type": "boolean"
           },
-          "name": {
-            "type": "keyword"
-          },
           "readOnly": {
             "type": "boolean"
           },
@@ -50,8 +31,7 @@
             "type": "keyword"
           },
           "tags": {
-            "type": "text",
-            "analyzer": "folding"
+            "type": "keyword"
           }
         }
       }

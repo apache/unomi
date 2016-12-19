@@ -1,17 +1,5 @@
 {
   "propertyType": {
-    "dynamic_templates": [
-      {
-        "all": {
-          "match": "*",
-          "match_mapping_type": "text",
-          "mapping": {
-            "type": "text",
-            "analyzer": "folding"
-          }
-        }
-      }
-    ],
     "properties": {
       "automaticMappingsFrom": {
         "type": "keyword"
@@ -55,11 +43,14 @@
           "missingPlugins": {
             "type": "boolean"
           },
-          "name": {
-            "type": "keyword"
-          },
           "readOnly": {
             "type": "boolean"
+          },
+          "scope": {
+            "type": "keyword"
+          },
+          "tags": {
+            "type": "keyword"
           }
         }
       },
@@ -86,8 +77,7 @@
         "type": "double"
       },
       "tags": {
-        "type": "text",
-        "analyzer": "folding"
+        "type": "keyword"
       },
       "target": {
         "type": "keyword"

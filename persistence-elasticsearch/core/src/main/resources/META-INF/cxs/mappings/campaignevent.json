@@ -1,17 +1,5 @@
 {
   "campaignevent": {
-    "dynamic_templates": [
-      {
-        "all": {
-          "match": "*",
-          "match_mapping_type": "text",
-          "mapping": {
-            "type": "text",
-            "analyzer": "folding"
-          }
-        }
-      }
-    ],
     "properties": {
       "campaignId": {
         "type": "keyword"
@@ -23,8 +11,7 @@
         "type": "keyword"
       },
       "eventDate": {
-        "type": "date",
-        "format": "strict_date_optional_time||epoch_millis"
+        "type": "date"
       },
       "itemId": {
         "type": "keyword"
@@ -37,10 +24,6 @@
       },
       "metadata": {
         "properties": {
-          "description": {
-            "type": "text",
-            "analyzer": "folding"
-          },
           "enabled": {
             "type": "boolean"
           },
@@ -53,13 +36,13 @@
           "missingPlugins": {
             "type": "boolean"
           },
-          "name": {
-            "type": "keyword"
-          },
           "readOnly": {
             "type": "boolean"
           },
           "scope": {
+            "type": "keyword"
+          },
+          "tags": {
             "type": "keyword"
           }
         }

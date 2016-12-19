@@ -1,17 +1,5 @@
 {
   "session": {
-    "dynamic_templates": [
-      {
-        "all": {
-          "match": "*",
-          "match_mapping_type": "text",
-          "mapping": {
-            "type": "text",
-            "analyzer": "folding"
-          }
-        }
-      }
-    ],
     "properties": {
       "duration": {
         "type": "long"
@@ -23,8 +11,7 @@
         "type": "keyword"
       },
       "lastEventDate": {
-        "type": "date",
-        "format": "strict_date_optional_time||epoch_millis"
+        "type": "date"
       },
       "profileId": {
         "type": "keyword"
@@ -43,12 +30,6 @@
         "properties": {
           "location": {
             "type": "geo_point"
-          },
-          "pageReferringURL": {
-            "type": "keyword"
-          },
-          "referringURL": {
-            "type": "keyword"
           }
         }
       },
@@ -59,8 +40,7 @@
         "type": "long"
       },
       "timeStamp": {
-        "type": "date",
-        "format": "strict_date_optional_time||epoch_millis"
+        "type": "date"
       }
     }
   }

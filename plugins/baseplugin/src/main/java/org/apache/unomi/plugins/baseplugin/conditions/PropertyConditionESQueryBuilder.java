@@ -44,12 +44,12 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
             throw new IllegalArgumentException("Impossible to build ES filter, condition is not valid, comparisonOperator and propertyName properties should be provided");
         }
 
-        String expectedValue = ConditionContextHelper.foldToASCII((String) condition.getParameter("propertyValue"));
+        String expectedValue = (String) condition.getParameter("propertyValue");
         Object expectedValueInteger = condition.getParameter("propertyValueInteger");
         Object expectedValueDate = condition.getParameter("propertyValueDate");
         Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
 
-        List<?> expectedValues = ConditionContextHelper.foldToASCII((List<?>) condition.getParameter("propertyValues"));
+        List<?> expectedValues = (List<?>) condition.getParameter("propertyValues");
         List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
         List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
         List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");

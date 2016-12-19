@@ -1135,12 +1135,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> List<T> query(final String fieldName, final String[] fieldValues, String sortBy, final Class<T> clazz) {
-        return query(QueryBuilders.termsQuery(fieldName, ConditionContextHelper.foldToASCII(fieldValues)), sortBy, clazz, 0, -1, getRouting(fieldName, fieldValues, clazz), null).getList();
+        return query(QueryBuilders.termsQuery(fieldName, fieldValues), sortBy, clazz, 0, -1, getRouting(fieldName, fieldValues, clazz), null).getList();
     }
 
     @Override
     public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz, int offset, int size) {
-        return query(QueryBuilders.termQuery(fieldName, ConditionContextHelper.foldToASCII(fieldValue)), sortBy, clazz, offset, size, getRouting(fieldName, new String[]{fieldValue}, clazz), null);
+        return query(QueryBuilders.termQuery(fieldName, fieldValue), sortBy, clazz, offset, size, getRouting(fieldName, new String[]{fieldValue}, clazz), null);
     }
 
     @Override
@@ -1243,12 +1243,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                     requestBuilder = requestBuilder.addSort(distanceSortBuilder.order(SortOrder.ASC));
                                 }
                             } else {
+                                String name = StringUtils.substringBeforeLast(sortByElement,":");
+                                if (name.equals("metadata.name") || name.equals("metadata.description")
+                                        || name.equals("properties.firstName") || name.equals("properties.lastName")
+                                        ) {
+                                    name += ".keyword";
+                                }
                                 if (sortByElement.endsWith(":desc")) {
-                                    requestBuilder = requestBuilder.addSort(sortByElement.substring(0, sortByElement.length() - ":desc".length()), SortOrder.DESC);
-                                } else if (sortByElement.endsWith(":asc")) {
-                                    requestBuilder = requestBuilder.addSort(sortByElement.substring(0, sortByElement.length() - ":asc".length()), SortOrder.ASC);
+                                    requestBuilder = requestBuilder.addSort(name, SortOrder.DESC);
                                 } else {
-                                    requestBuilder = requestBuilder.addSort(sortByElement, SortOrder.ASC);
+                                    requestBuilder = requestBuilder.addSort(name, SortOrder.ASC);
                                 }
                             }
                         }
@@ -1384,7 +1388,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                         for (DateRange range : dateRangeAggregate.getDateRanges()) {
                             if (range != null) {
-                                rangebuilder.addRange(range.getKey(), range.getFrom().toString(), range.getTo().toString());
+                                rangebuilder.addRange(range.getKey(), range.getFrom() != null ? range.getFrom().toString() : null, range.getTo() != null ? range.getTo().toString() : null);
                             }
                         }
                         bucketsAggregation = rangebuilder;
@@ -1636,7 +1640,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         new InClassLoaderExecute<Void>() {
             @Override
             protected Void execute(Object... args) {
-                QueryBuilder query = QueryBuilders.termQuery("scope", ConditionContextHelper.foldToASCII(scope));
+                QueryBuilder query = QueryBuilders.termQuery("scope", scope);
 
                 BulkRequestBuilder deleteByScope = client.prepareBulk();
 

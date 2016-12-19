@@ -492,7 +492,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             }
 
             if(aggregate == null){
-                aggregate = new TermsAggregate(query.getAggregate().getProperty());
+                aggregate = new TermsAggregate(query.getAggregate().getProperty() + ".keyword");
             }
         }
 

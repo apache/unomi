@@ -1,17 +1,5 @@
 {
   "profile": {
-    "dynamic_templates": [
-      {
-        "all": {
-          "match": "*",
-          "match_mapping_type": "text",
-          "mapping": {
-            "type": "text",
-            "analyzer": "folding"
-          }
-        }
-      }
-    ],
     "properties": {
       "itemId": {
         "type": "keyword"
@@ -21,23 +9,14 @@
       },
       "properties": {
         "properties": {
-          "j:nodename": {
-            "type": "keyword"
-          },
-          "preferredLanguage": {
-            "type": "keyword"
-          },
           "firstVisit": {
-            "type": "date",
-            "format": "strict_date_optional_time||epoch_millis"
+            "type": "date"
           },
           "lastVisit": {
-            "type": "date",
-            "format": "strict_date_optional_time||epoch_millis"
+            "type": "date"
           },
           "previousVisit": {
-            "type": "date",
-            "format": "strict_date_optional_time||epoch_millis"
+            "type": "date"
           },
           "nbOfVisits": {
             "type": "long"
