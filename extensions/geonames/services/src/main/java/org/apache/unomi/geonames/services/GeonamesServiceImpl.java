@@ -86,43 +86,64 @@ public class GeonamesServiceImpl implements GeonamesService {
         }
         final File f = new File(pathToGeonamesDatabase);
         if (f.exists()) {
-            Timer t = new Timer();
+            final Timer t = new Timer();
             t.schedule(new TimerTask() {
                 @Override
                 public void run() {
-                    try {
-                        ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(f));
-                        ZipEntry zipEntry = zipInputStream.getNextEntry();
-
-                        BufferedReader reader = new BufferedReader(new InputStreamReader(zipInputStream, "UTF-8"));
-
-                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                        String line;
-                        logger.info("Starting to import geonames database ...");
-                        while ((line = reader.readLine()) != null) {
-                            String[] values = line.split("\t");
-
-                            if (FEATURES_CLASSES.contains(values[6])) {
-                                GeonameEntry geonameEntry = new GeonameEntry(values[0], values[1], values[2],
-                                        StringUtils.isEmpty(values[4]) ? null : Double.parseDouble(values[4]),
-                                        StringUtils.isEmpty(values[5]) ? null : Double.parseDouble(values[5]),
-                                        values[6], values[7], values[8],
-                                        Arrays.asList(values[9].split(",")),
-                                        values[10], values[11], values[12], values[13],
-                                        StringUtils.isEmpty(values[14]) ? null : Integer.parseInt(values[14]),
-                                        StringUtils.isEmpty(values[15]) ? null : Integer.parseInt(values[15]),
-                                        values[16], values[17],
-                                        sdf.parse(values[18]));
-
-                                persistenceService.save(geonameEntry);
-                            }
-                        }
-                        logger.info("Geonames database imported");
-                    } catch (Exception e) {
-                        logger.error(e.getMessage(), e);
-                    }
+                        importGeoNameDatabase(f, t);
                 }
             }, 5000);
+        }
+    }
+
+    private void importGeoNameDatabase(final File f, final Timer t) {
+        Map<String,Map<String,Object>> typeMappings = persistenceService.getPropertiesMapping(GeonameEntry.ITEM_TYPE);
+        if (typeMappings == null) {
+            logger.warn("Type mappings for type {} are not yet installed, delaying import until they are ready!", GeonameEntry.ITEM_TYPE);
+            t.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    importGeoNameDatabase(f, t);
+                }
+            }, 5000);
+            return;
+        }
+        try {
+
+            ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(f));
+            ZipEntry zipEntry = zipInputStream.getNextEntry(); // used to advance to the first entry in the ZipInputStream
+            BufferedReader reader = new BufferedReader(new InputStreamReader(zipInputStream, "UTF-8"));
+
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            String line;
+            logger.info("Starting to import geonames database from file {}...", f);
+            long lineCount = 0;
+            long importStartTime = System.currentTimeMillis();
+            while ((line = reader.readLine()) != null) {
+                String[] values = line.split("\t");
+
+                if (FEATURES_CLASSES.contains(values[6])) {
+                    GeonameEntry geonameEntry = new GeonameEntry(values[0], values[1], values[2],
+                            StringUtils.isEmpty(values[4]) ? null : Double.parseDouble(values[4]),
+                            StringUtils.isEmpty(values[5]) ? null : Double.parseDouble(values[5]),
+                            values[6], values[7], values[8],
+                            Arrays.asList(values[9].split(",")),
+                            values[10], values[11], values[12], values[13],
+                            StringUtils.isEmpty(values[14]) ? null : Integer.parseInt(values[14]),
+                            StringUtils.isEmpty(values[15]) ? null : Integer.parseInt(values[15]),
+                            values[16], values[17],
+                            sdf.parse(values[18]));
+
+                    persistenceService.save(geonameEntry);
+                }
+                lineCount++;
+                if (lineCount % 1000 == 0) {
+                    logger.info("{} lines imported from file {}", lineCount, f);
+                }
+            }
+            logger.info("{} lines from Geonames database file {} imported in {}ms", lineCount, f, System.currentTimeMillis()-importStartTime);
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
         }
     }
 

@@ -163,9 +163,12 @@ public interface PersistenceService {
     boolean removeQuery(String queryName);
 
     /**
-     * TODO
+     * Retrieve the type mappings for a given itemType. This method queries the persistence service implementation
+     * to retrieve any type mappings it may have for the specified itemType.
      *
-     * @param itemType
+     * This method may not return any results if the implementation doesn't support property type mappings
+     *
+     * @param itemType the itemType we want to retrieve the mappings for
      * @return
      */
     Map<String, Map<String, Object>> getPropertiesMapping(String itemType);

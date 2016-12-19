@@ -33,7 +33,10 @@ import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
 import org.apache.unomi.api.services.ClusterService;
-import org.apache.unomi.persistence.elasticsearch.conditions.*;
+import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
+import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
+import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
+import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
@@ -1516,15 +1519,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     ClusterNode clusterNode = new ClusterNode();
                     clusterNode.setHostName(karafCellarNode.getHost());
                     String publicEndpoint = publicNodeEndpoints.get(karafCellarNode.getId());
-                    String[] publicEndpointParts = publicEndpoint.split(":");
-                    clusterNode.setHostAddress(publicEndpointParts[0]);
-                    clusterNode.setPublicPort(Integer.parseInt(publicEndpointParts[1]));
+                    if (publicEndpoint != null) {
+                        String[] publicEndpointParts = publicEndpoint.split(":");
+                        clusterNode.setHostAddress(publicEndpointParts[0]);
+                        clusterNode.setPublicPort(Integer.parseInt(publicEndpointParts[1]));
+                    }
                     String secureEndpoint = secureNodeEndpoints.get(karafCellarNode.getId());
-                    String[] secureEndpointParts = secureEndpoint.split(":");
-                    clusterNode.setSecureHostAddress(secureEndpointParts[0]);
-                    clusterNode.setSecurePort(Integer.parseInt(secureEndpointParts[1]));
-                    clusterNode.setMaster(false);
-                    clusterNode.setData(false);
+                    if (secureEndpoint != null) {
+                        String[] secureEndpointParts = secureEndpoint.split(":");
+                        clusterNode.setSecureHostAddress(secureEndpointParts[0]);
+                        clusterNode.setSecurePort(Integer.parseInt(secureEndpointParts[1]));
+                        clusterNode.setMaster(false);
+                        clusterNode.setData(false);
+                    }
                     try {
                         // now let's connect to remote JMX service to retrieve information from the runtime and operating system MX beans
                         JMXServiceURL url = new JMXServiceURL("service:jmx:rmi:///jndi/rmi://"+karafCellarNode.getHost() + ":"+karafJMXPort+"/karaf-root");

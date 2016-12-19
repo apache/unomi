@@ -27,6 +27,14 @@ mvn clean install -P \!integration-tests,\!performance-tests,rat
 pushd package/target
 echo Uncompressing Unomi package...
 tar zxvf unomi-$UNOMI_VERSION.tar.gz
+if [ -f "../../GeoLite2-City.mmdb" ]; then
+  echo Installing GeoLite2 City database...
+  cp ../../GeoLite2-City.mmdb unomi-$UNOMI_VERSION/etc
+fi
+if [ -f "../../allCountries.zip" ]; then
+  echo Installing Geonames countries database...
+  cp ../../allCountries.zip unomi-$UNOMI_VERSION/etc
+fi
 cd unomi-$UNOMI_VERSION/bin
 echo Starting Unomi...
 ./karaf debug
