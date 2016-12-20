@@ -1,12 +1,6 @@
 {
   "rule": {
     "properties": {
-      "itemId": {
-        "type": "keyword"
-      },
-      "itemType": {
-        "type": "keyword"
-      },
       "metadata": {
         "properties": {
           "enabled": {
@@ -15,17 +9,11 @@
           "hidden": {
             "type": "boolean"
           },
-          "id": {
-            "type": "keyword"
-          },
           "missingPlugins": {
             "type": "boolean"
           },
           "readOnly": {
             "type": "boolean"
-          },
-          "scope": {
-            "type": "keyword"
           }
         }
       },

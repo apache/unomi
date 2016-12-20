@@ -1,33 +1,9 @@
 {
   "propertyType": {
     "properties": {
-      "automaticMappingsFrom": {
-        "type": "keyword"
-      },
       "dateRanges": {
         "properties": {
-          "from": {
-            "type": "keyword"
-          },
-          "key": {
-            "type": "keyword"
-          },
-          "to": {
-            "type": "keyword"
-          }
         }
-      },
-      "defaultValue": {
-        "type": "keyword"
-      },
-      "itemId": {
-        "type": "keyword"
-      },
-      "itemType": {
-        "type": "keyword"
-      },
-      "mergeStrategy": {
-        "type": "keyword"
       },
       "metadata": {
         "properties": {
@@ -37,20 +13,11 @@
           "hidden": {
             "type": "boolean"
           },
-          "id": {
-            "type": "keyword"
-          },
           "missingPlugins": {
             "type": "boolean"
           },
           "readOnly": {
             "type": "boolean"
-          },
-          "scope": {
-            "type": "keyword"
-          },
-          "tags": {
-            "type": "keyword"
           }
         }
       },
@@ -62,9 +29,6 @@
           "from": {
             "type": "double"
           },
-          "key": {
-            "type": "keyword"
-          },
           "to": {
             "type": "double"
           }
@@ -75,15 +39,6 @@
       },
       "rank": {
         "type": "double"
-      },
-      "tags": {
-        "type": "keyword"
-      },
-      "target": {
-        "type": "keyword"
-      },
-      "type": {
-        "type": "keyword"
       }
     }
   }

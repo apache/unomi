@@ -4,30 +4,12 @@
       "duration" : {
         "type" : "long"
       },
-      "itemId" : {
-        "type" : "keyword"
-      },
-      "itemType" : {
-        "type" : "keyword"
-      },
+
       "timeStamp": {
         "type": "date"
       },
       "lastEventDate": {
         "type": "date"
-      },
-      "profile" : {
-        "properties" : {
-          "itemId" : {
-            "type" : "keyword"
-          },
-          "itemType" : {
-            "type" : "keyword"
-          }
-        }
-      },
-      "profileId" : {
-        "type" : "keyword"
       },
       "properties" : {
         "properties" : {

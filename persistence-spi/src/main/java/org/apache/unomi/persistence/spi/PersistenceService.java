@@ -174,6 +174,16 @@ public interface PersistenceService {
     Map<String, Map<String, Object>> getPropertiesMapping(String itemType);
 
     /**
+     * Retrieve the mapping for one specific property for a given type.
+     *
+     * @param property the property name (can use nested dot notation)
+     * @param itemType the itemType we want to retrieve the mappings for
+     * @return
+     */
+    Map<String, Object> getPropertyMapping(String property, String itemType);
+
+
+    /**
      * Create mapping
      * @param type
      * @param source

@@ -83,7 +83,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             return false;
         }
         
-        List<Object> actual = getValueSet(actualValue);
+        List<Object> actual = ConditionContextHelper.foldToASCII(getValueSet(actualValue));
 
         boolean result = true;
         
@@ -136,7 +136,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         String op = (String) condition.getParameter("comparisonOperator");
         String name = (String) condition.getParameter("propertyName");
 
-        String expectedValue = (String) condition.getParameter("propertyValue");
+        String expectedValue = ConditionContextHelper.foldToASCII((String) condition.getParameter("propertyValue"));
         Object expectedValueInteger = condition.getParameter("propertyValueInteger");
         Object expectedValueDate = condition.getParameter("propertyValueDate");
         Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
@@ -165,6 +165,9 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 actualValue = null;
             }
         }
+        if (actualValue instanceof String) {
+            actualValue = ConditionContextHelper.foldToASCII((String) actualValue);
+        }
 
         if(op == null) {
             return false;
@@ -175,6 +178,9 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("equals")) {
             if (actualValue instanceof Collection) {
                 for (Object o : ((Collection<?>)actualValue)) {
+                    if (o instanceof String) {
+                        o = ConditionContextHelper.foldToASCII((String) o);
+                    }
                     if (compare(o, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) == 0) {
                         return true;
                     }
@@ -214,7 +220,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("matchesRegex")) {
             return expectedValue != null && Pattern.compile(expectedValue).matcher(actualValue.toString()).matches();
         } else if (op.equals("in") || op.equals("notIn") || op.equals("hasSomeOf") || op.equals("hasNoneOf") || op.equals("all")) {
-            List<?> expectedValues = (List<?>) condition.getParameter("propertyValues");
+            List<?> expectedValues = ConditionContextHelper.foldToASCII((List<?>) condition.getParameter("propertyValues"));
             List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
             List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
             List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");

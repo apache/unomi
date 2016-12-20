@@ -33,10 +33,7 @@ import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
 import org.apache.unomi.api.services.ClusterService;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.elasticsearch.conditions.*;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
@@ -174,6 +171,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String bulkProcessorBulkSize= "5MB";
     private String bulkProcessorFlushInterval = "5s";
     private String bulkProcessorBackoffPolicy = "exponential";
+
+    private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -388,6 +387,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 if (!indexExists) {
                     logger.info("{} index doesn't exist yet, creating it...", indexName);
                     Map<String,String> indexMappings = new HashMap<String,String>();
+                    indexMappings.put("_default_",mappings.get("_default_"));
                     for (Map.Entry<String, String> entry : mappings.entrySet()) {
                         if (!itemsMonthlyIndexed.contains(entry.getKey()) && !indexNames.containsKey(entry.getKey())) {
                             indexMappings.put(entry.getKey(), entry.getValue());
@@ -631,6 +631,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 logger.info("{} index doesn't exist yet, creating it...", monthlyIndexName);
 
                 Map<String,String> indexMappings = new HashMap<String,String>();
+                indexMappings.put("_default_",mappings.get("_default_"));
                 for (Map.Entry<String, String> entry : mappings.entrySet()) {
                     if (itemsMonthlyIndexed.contains(entry.getKey())) {
                         indexMappings.put(entry.getKey(), entry.getValue());
@@ -928,6 +929,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 boolean indexExists = indicesExistsResponse.isExists();
                 if (!indexExists) {
                     Map<String,String> indexMappings = new HashMap<String,String>();
+                    indexMappings.put("_default_",mappings.get("_default_"));
                     for (Map.Entry<String, String> entry : mappings.entrySet()) {
                         if (indexNames.containsKey(entry.getKey()) && indexNames.get(entry.getKey()).equals(indexName)) {
                             indexMappings.put(entry.getKey(), entry.getValue());
@@ -958,17 +960,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         CreateIndexRequestBuilder builder = client.admin().indices().prepareCreate(indexName)
                 .setSettings("{\n" +
                         "    \"analysis\": {\n" +
-                        "      \"tokenizer\": {\n" +
-                        "        \"myTokenizer\": {\n" +
-                        "          \"type\":\"pattern\",\n" +
-                        "          \"pattern\":\".*\",\n" +
-                        "          \"group\":0\n" +
-                        "        }\n" +
-                        "      },\n" +
                         "      \"analyzer\": {\n" +
                         "        \"folding\": {\n" +
                         "          \"type\":\"custom\",\n" +
-                        "          \"tokenizer\": \"myTokenizer\",\n" +
+                        "          \"tokenizer\": \"keyword\",\n" +
                         "          \"filter\":  [ \"lowercase\", \"asciifolding\" ]\n" +
                         "        }\n" +
                         "      }\n" +
@@ -995,6 +990,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void createMapping(String type, String source) {
+        if (type.equals("_default_")) {
+            return;
+        }
         if (itemsMonthlyIndexed.contains(type)) {
             createMapping(type, source, indexName + "-*");
         } else if (indexNames.containsKey(type)) {
@@ -1040,6 +1038,36 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return propertyMap;
             }
         }.executeInClassLoader();
+    }
+
+    public Map<String, Object> getPropertyMapping(String property, String itemType) {
+        Map<String, Map<String, Object>> mappings = knownMappings.get(itemType);
+        Map<String, Object> result = getPropertyMapping(property, mappings);
+        if (result == null) {
+            mappings = getPropertiesMapping(itemType);
+            knownMappings.put(itemType, mappings);
+            result = getPropertyMapping(property, mappings);
+        }
+        return result;
+    }
+
+    private Map<String, Object> getPropertyMapping(String property, Map<String, Map<String, Object>> mappings) {
+        Map<String, Object> propMapping = null;
+        String[] properties = StringUtils.split(property, '.');
+        for (int i = 0; i < properties.length; i++) {
+            String s = properties[i];
+            if (mappings != null) {
+                propMapping = mappings.get(s);
+                if (i == properties.length - 1) {
+                    return propMapping;
+                } else {
+                    mappings = (Map<String, Map<String, Object>>) propMapping.get("properties");
+                }
+            } else {
+                return null;
+            }
+        }
+        return propMapping;
     }
 
     public boolean saveQuery(final String queryName, final String query) {
@@ -1138,12 +1166,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> List<T> query(final String fieldName, final String[] fieldValues, String sortBy, final Class<T> clazz) {
-        return query(QueryBuilders.termsQuery(fieldName, fieldValues), sortBy, clazz, 0, -1, getRouting(fieldName, fieldValues, clazz), null).getList();
+        return query(QueryBuilders.termsQuery(fieldName, ConditionContextHelper.foldToASCII(fieldValues)), sortBy, clazz, 0, -1, getRouting(fieldName, fieldValues, clazz), null).getList();
     }
 
     @Override
     public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz, int offset, int size) {
-        return query(QueryBuilders.termQuery(fieldName, fieldValue), sortBy, clazz, offset, size, getRouting(fieldName, new String[]{fieldValue}, clazz), null);
+        return query(QueryBuilders.termQuery(fieldName, ConditionContextHelper.foldToASCII(fieldValue)), sortBy, clazz, offset, size, getRouting(fieldName, new String[]{fieldValue}, clazz), null);
     }
 
     @Override
@@ -1247,9 +1275,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 }
                             } else {
                                 String name = StringUtils.substringBeforeLast(sortByElement,":");
-                                if (name.equals("metadata.name") || name.equals("metadata.description")
-                                        || name.equals("properties.firstName") || name.equals("properties.lastName")
-                                        ) {
+                                Map<String,Object> propertyMapping = getPropertyMapping(name,itemType);
+                                if (propertyMapping != null
+                                        && "text".equals(propertyMapping.get("type"))
+                                        && propertyMapping.containsKey("fields")
+                                        && ((Map)propertyMapping.get("fields")).containsKey("keyword")) {
                                     name += ".keyword";
                                 }
                                 if (sortByElement.endsWith(":desc")) {

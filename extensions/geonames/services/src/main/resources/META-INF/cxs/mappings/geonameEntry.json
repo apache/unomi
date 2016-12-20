@@ -1,48 +1,10 @@
 {
   "geonameEntry": {
     "properties": {
-      "admin1Code": {
-        "type": "keyword"
-      },
-      "admin2Code": {
-        "type": "keyword"
-      },
-      "admin3Code": {
-        "type": "keyword"
-      },
-      "admin4Code": {
-        "type": "keyword"
-      },
-      "alternatenames": {
-        "type": "keyword"
-      },
-      "asciiname": {
-        "type": "keyword"
-      },
-      "cc2": {
-        "type": "keyword"
-      },
-      "countryCode": {
-        "type": "keyword"
-      },
-      "dem": {
-        "type": "keyword"
-      },
       "elevation": {
         "type": "long"
       },
-      "featureClass": {
-        "type": "keyword"
-      },
-      "featureCode": {
-        "type": "keyword"
-      },
-      "itemId": {
-        "type": "keyword"
-      },
-      "itemType": {
-        "type": "keyword"
-      },
+
       "location": {
         "type": "geo_point"
       },
@@ -50,15 +12,11 @@
         "type": "date",
         "format": "strict_date_optional_time||epoch_millis"
       },
-      "name": {
-        "type": "keyword"
-      },
+
       "population": {
         "type": "long"
-      },
-      "timezone": {
-        "type": "keyword"
       }
+
     }
   }
 }

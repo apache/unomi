@@ -1,26 +1,11 @@
 {
   "campaignevent": {
     "properties": {
-      "campaignId": {
-        "type": "keyword"
-      },
       "cost": {
         "type": "double"
       },
-      "currency": {
-        "type": "keyword"
-      },
       "eventDate": {
         "type": "date"
-      },
-      "itemId": {
-        "type": "keyword"
-      },
-      "itemType": {
-        "type": "keyword"
-      },
-      "timezone": {
-        "type": "keyword"
       },
       "metadata": {
         "properties": {
@@ -30,20 +15,11 @@
           "hidden": {
             "type": "boolean"
           },
-          "id": {
-            "type": "keyword"
-          },
           "missingPlugins": {
             "type": "boolean"
           },
           "readOnly": {
             "type": "boolean"
-          },
-          "scope": {
-            "type": "keyword"
-          },
-          "tags": {
-            "type": "keyword"
           }
         }
       }

@@ -4,28 +4,11 @@
       "duration": {
         "type": "long"
       },
-      "itemId": {
-        "type": "keyword"
-      },
-      "itemType": {
-        "type": "keyword"
-      },
+
       "lastEventDate": {
         "type": "date"
       },
-      "profileId": {
-        "type": "keyword"
-      },
-      "profile": {
-        "properties": {
-          "itemId": {
-            "type": "keyword"
-          },
-          "itemType": {
-            "type": "keyword"
-          }
-        }
-      },
+
       "properties": {
         "properties": {
           "location": {
@@ -33,9 +16,7 @@
           }
         }
       },
-      "scope": {
-        "type": "keyword"
-      },
+
       "size": {
         "type": "long"
       },

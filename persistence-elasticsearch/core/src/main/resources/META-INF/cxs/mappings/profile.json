@@ -1,12 +1,7 @@
 {
   "profile": {
     "properties": {
-      "itemId": {
-        "type": "keyword"
-      },
-      "itemType": {
-        "type": "keyword"
-      },
+
       "properties": {
         "properties": {
           "firstVisit": {
@@ -20,13 +15,6 @@
           },
           "nbOfVisits": {
             "type": "long"
-          }
-        }
-      },
-      "systemProperties" : {
-        "properties" : {
-          "mergeIdentifier" : {
-            "type" : "keyword"
           }
         }
       }

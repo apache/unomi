@@ -1,24 +1,6 @@
 {
   "event": {
     "properties": {
-      "eventType": {
-        "type": "keyword"
-      },
-      "itemId": {
-        "type": "keyword"
-      },
-      "itemType": {
-        "type": "keyword"
-      },
-      "profileId": {
-        "type": "keyword"
-      },
-      "scope": {
-        "type": "keyword"
-      },
-      "sessionId": {
-        "type": "keyword"
-      },
       "timeStamp": {
         "type": "date"
       }

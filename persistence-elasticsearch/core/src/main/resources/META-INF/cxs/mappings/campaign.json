@@ -4,26 +4,11 @@
       "cost": {
         "type": "double"
       },
-      "currency": {
-        "type": "keyword"
-      },
       "startDate": {
         "type": "date"
       },
       "endDate": {
         "type": "date"
-      },
-      "itemId": {
-        "type": "keyword"
-      },
-      "itemType": {
-        "type": "keyword"
-      },
-      "primaryGoal": {
-        "type": "keyword"
-      },
-      "timezone": {
-        "type": "keyword"
       },
       "metadata": {
         "properties": {
@@ -33,20 +18,11 @@
           "hidden": {
             "type": "boolean"
           },
-          "id": {
-            "type": "keyword"
-          },
           "missingPlugins": {
             "type": "boolean"
           },
           "readOnly": {
             "type": "boolean"
-          },
-          "scope": {
-            "type": "keyword"
-          },
-          "tags": {
-            "type": "keyword"
           }
         }
       }
