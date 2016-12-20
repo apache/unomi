@@ -68,6 +68,17 @@ public interface PersistenceService {
     boolean save(Item item);
 
     /**
+     * Persists the specified Item in the context server.
+     *
+     * @param item the item to persist
+     * @param useBatching whether to use batching or not for saving the item. If activating there may be a delay between
+     *                 the call to this method and the actual saving in the persistence backend.
+     *
+     * @return {@code true} if the item was properly persisted, {@code false} otherwise
+     */
+    boolean save(Item item, boolean useBatching);
+
+    /**
      * Updates the item of the specified class and identified by the specified identifier with new property values provided as name - value pairs in the specified Map.
      *
      * @param itemId   the identifier of the item we want to update

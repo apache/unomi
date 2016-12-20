@@ -20,14 +20,18 @@ package org.apache.unomi.persistence.elasticsearch.conditions;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.lucene.analysis.miscellaneous.ASCIIFoldingFilter;
-import org.apache.lucene.util.ArrayUtil;
+import org.apache.logging.log4j.core.util.IOUtils;
+import org.apache.lucene.analysis.charfilter.MappingCharFilterFactory;
+import org.apache.lucene.analysis.util.ClasspathResourceLoader;
 import org.apache.unomi.api.conditions.Condition;
 import org.mvel2.MVEL;
 import org.mvel2.ParserConfiguration;
 import org.mvel2.ParserContext;
 
+import java.io.IOException;
+import java.io.Reader;
 import java.io.Serializable;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +40,18 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ConditionContextHelper {
     private static Map<String,Serializable> mvelExpressions = new ConcurrentHashMap<>();
+
+    private static MappingCharFilterFactory mappingCharFilterFactory;
+    static {
+        Map<String,String> args = new HashMap<>();
+        args.put("mapping", "mapping-FoldToASCII.txt");
+        mappingCharFilterFactory = new MappingCharFilterFactory(args);
+        try {
+            mappingCharFilterFactory.inform(new ClasspathResourceLoader(ConditionContextHelper.class.getClassLoader()));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     public static Condition getContextualCondition(Condition condition, Map<String, Object> context) {
         if (context.isEmpty() || !hasContextualParameter(condition.getParameterValues())) {
@@ -124,10 +140,13 @@ public class ConditionContextHelper {
     public static String foldToASCII(String s) {
         if (s != null) {
             s = s.toLowerCase();
-            int maxSizeNeeded = 4 * s.length();
-            char[] output = new char[ArrayUtil.oversize(maxSizeNeeded, 2)];
-            int length = ASCIIFoldingFilter.foldToASCII(s.toCharArray(), 0, output, 0, s.length());
-            return new String(output, 0, length);
+            StringReader stringReader = new StringReader(s);
+            Reader foldedStringReader = mappingCharFilterFactory.create(stringReader);
+            try {
+                return IOUtils.toString(foldedStringReader);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return null;
     }

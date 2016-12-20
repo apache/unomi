@@ -112,12 +112,15 @@ public class GeonamesServiceImpl implements GeonamesService {
 
             ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(f));
             ZipEntry zipEntry = zipInputStream.getNextEntry(); // used to advance to the first entry in the ZipInputStream
+            long fileSize = zipEntry.getSize();
             BufferedReader reader = new BufferedReader(new InputStreamReader(zipInputStream, "UTF-8"));
 
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
             String line;
             logger.info("Starting to import geonames database from file {}...", f);
-            long lineCount = 0;
+            long charCount = 0;
+            double lastCompletionPourcentage = 0.0;
+            long lastCharCount = 0;
             long importStartTime = System.currentTimeMillis();
             while ((line = reader.readLine()) != null) {
                 String[] values = line.split("\t");
@@ -134,14 +137,25 @@ public class GeonamesServiceImpl implements GeonamesService {
                             values[16], values[17],
                             sdf.parse(values[18]));
 
-                    persistenceService.save(geonameEntry);
+                    persistenceService.save(geonameEntry, true);
                 }
-                lineCount++;
-                if (lineCount % 1000 == 0) {
-                    logger.info("{} lines imported from file {}", lineCount, f);
+                charCount+=line.length();
+                if (fileSize > 0) {
+                    double completionPourcentage = 100.0 * charCount / fileSize;
+                    if (completionPourcentage - lastCompletionPourcentage > 1.0) {
+                        int roundedPourcentage = (int) completionPourcentage;
+                        logger.info("{}% imported from file {}", roundedPourcentage, f);
+                        lastCompletionPourcentage = completionPourcentage;
+                    }
+                } else {
+                    if (charCount - lastCharCount > (100*1024*1024)) {
+                        logger.info("{}MB imported from file {}", charCount / (1024*1024), f);
+                        lastCharCount = charCount;
+                    }
                 }
             }
-            logger.info("{} lines from Geonames database file {} imported in {}ms", lineCount, f, System.currentTimeMillis()-importStartTime);
+            long totalTimeMillis = System.currentTimeMillis()-importStartTime;
+            logger.info("{} characters from Geonames database file {} imported in {}ms. Speed={}MB/s", charCount, f, totalTimeMillis, charCount / (1024*1024) / (totalTimeMillis / 1000));
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }

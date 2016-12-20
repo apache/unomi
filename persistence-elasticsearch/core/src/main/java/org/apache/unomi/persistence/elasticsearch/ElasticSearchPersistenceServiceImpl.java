@@ -739,6 +739,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean save(final Item item) {
+        return save(item, false);
+    }
+
+    @Override
+    public boolean save(final Item item, final boolean useBatching) {
 
         return new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {
@@ -769,7 +774,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
 
                     try {
-                        indexBuilder.execute().actionGet();
+                        if (bulkProcessor == null || !useBatching) {
+                            indexBuilder.execute().actionGet();
+                        } else {
+                            bulkProcessor.add(indexBuilder.request());
+                        }
                     } catch (IndexNotFoundException e) {
                         if (existingIndexNames.contains(index)) {
                             existingIndexNames.remove(index);
