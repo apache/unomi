@@ -1054,20 +1054,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private Map<String, Object> getPropertyMapping(String property, Map<String, Map<String, Object>> mappings) {
         Map<String, Object> propMapping = null;
         String[] properties = StringUtils.split(property, '.');
-        for (int i = 0; i < properties.length; i++) {
+        for (int i = 0; i < properties.length && mappings != null; i++) {
             String s = properties[i];
-            if (mappings != null) {
-                propMapping = mappings.get(s);
-                if (i == properties.length - 1) {
-                    return propMapping;
-                } else {
-                    mappings = (Map<String, Map<String, Object>>) propMapping.get("properties");
-                }
+            propMapping = mappings.get(s);
+            if (i == properties.length - 1) {
+                return propMapping;
             } else {
-                return null;
+                mappings = propMapping != null ? ((Map<String, Map<String, Object>>) propMapping.get("properties")) : null;
             }
         }
-        return propMapping;
+        return null;
     }
 
     public boolean saveQuery(final String queryName, final String query) {
