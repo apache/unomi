@@ -493,13 +493,6 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             }
 
             if(aggregate == null){
-                Map<String,Object> propertyMapping = persistenceService.getPropertyMapping(property, Session.ITEM_TYPE);
-                if (propertyMapping != null
-                        && "text".equals(propertyMapping.get("type"))
-                        && propertyMapping.containsKey("fields")
-                        && ((Map)propertyMapping.get("fields")).containsKey("keyword")) {
-                    property += ".keyword";
-                }
                 aggregate = new TermsAggregate(property);
             }
         }

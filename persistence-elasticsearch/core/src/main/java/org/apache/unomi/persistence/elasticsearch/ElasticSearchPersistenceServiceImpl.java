@@ -24,10 +24,7 @@ import org.apache.karaf.cellar.core.*;
 import org.apache.karaf.cellar.core.control.SwitchStatus;
 import org.apache.karaf.cellar.core.event.EventProducer;
 import org.apache.karaf.cellar.core.event.EventType;
-import org.apache.unomi.api.ClusterNode;
-import org.apache.unomi.api.Item;
-import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.TimestampedItem;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
@@ -1075,6 +1072,17 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return null;
     }
 
+    private String getPropertyNameWithData(String name, String itemType) {
+        Map<String,Object> propertyMapping = getPropertyMapping(name,itemType);
+        if (propertyMapping != null
+                && "text".equals(propertyMapping.get("type"))
+                && propertyMapping.containsKey("fields")
+                && ((Map)propertyMapping.get("fields")).containsKey("keyword")) {
+            name += ".keyword";
+        }
+        return name;
+    }
+
     public boolean saveQuery(final String queryName, final String query) {
         return new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {
@@ -1279,14 +1287,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                     requestBuilder = requestBuilder.addSort(distanceSortBuilder.order(SortOrder.ASC));
                                 }
                             } else {
-                                String name = StringUtils.substringBeforeLast(sortByElement,":");
-                                Map<String,Object> propertyMapping = getPropertyMapping(name,itemType);
-                                if (propertyMapping != null
-                                        && "text".equals(propertyMapping.get("type"))
-                                        && propertyMapping.containsKey("fields")
-                                        && ((Map)propertyMapping.get("fields")).containsKey("keyword")) {
-                                    name += ".keyword";
-                                }
+                                String name = getPropertyNameWithData(StringUtils.substringBeforeLast(sortByElement,":"), itemType);
                                 if (sortByElement.endsWith(":desc")) {
                                     requestBuilder = requestBuilder.addSort(name, SortOrder.DESC);
                                 } else {
@@ -1397,15 +1398,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 if (aggregate != null) {
                     AggregationBuilder bucketsAggregation = null;
+                    String fieldName = aggregate.getField();
                     if (aggregate instanceof DateAggregate) {
                         DateAggregate dateAggregate = (DateAggregate) aggregate;
-                        DateHistogramAggregationBuilder dateHistogramBuilder = AggregationBuilders.dateHistogram("buckets").field(aggregate.getField()).dateHistogramInterval(new DateHistogramInterval((dateAggregate.getInterval())));
+                        DateHistogramAggregationBuilder dateHistogramBuilder = AggregationBuilders.dateHistogram("buckets").field(fieldName).dateHistogramInterval(new DateHistogramInterval((dateAggregate.getInterval())));
                         if (dateAggregate.getFormat() != null) {
                             dateHistogramBuilder.format(dateAggregate.getFormat());
                         }
                         bucketsAggregation = dateHistogramBuilder;
                     } else if (aggregate instanceof NumericRangeAggregate) {
-                        RangeAggregationBuilder rangebuilder = AggregationBuilders.range("buckets").field(aggregate.getField());
+                        RangeAggregationBuilder rangebuilder = AggregationBuilders.range("buckets").field(fieldName);
                         for (NumericRange range : ((NumericRangeAggregate) aggregate).getRanges()) {
                             if (range != null) {
                                 if (range.getFrom() != null && range.getTo() != null) {
@@ -1420,7 +1422,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         bucketsAggregation = rangebuilder;
                     } else if (aggregate instanceof DateRangeAggregate) {
                         DateRangeAggregate dateRangeAggregate = (DateRangeAggregate) aggregate;
-                        DateRangeAggregationBuilder rangebuilder = AggregationBuilders.dateRange("buckets").field(aggregate.getField());
+                        DateRangeAggregationBuilder rangebuilder = AggregationBuilders.dateRange("buckets").field(fieldName);
                         if (dateRangeAggregate.getFormat() != null) {
                             rangebuilder.format(dateRangeAggregate.getFormat());
                         }
@@ -1432,7 +1434,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         bucketsAggregation = rangebuilder;
                     } else if (aggregate instanceof IpRangeAggregate) {
                         IpRangeAggregate ipRangeAggregate = (IpRangeAggregate) aggregate;
-                        IpRangeAggregationBuilder rangebuilder = AggregationBuilders.ipRange("buckets").field(aggregate.getField());
+                        IpRangeAggregationBuilder rangebuilder = AggregationBuilders.ipRange("buckets").field(fieldName);
                         for (IpRange range : ipRangeAggregate.getRanges()) {
                             if (range != null) {
                                 rangebuilder.addRange(range.getKey(), range.getFrom(), range.getTo());
@@ -1440,11 +1442,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                         bucketsAggregation = rangebuilder;
                     } else {
+                        fieldName = getPropertyNameWithData(fieldName, itemType);
                         //default
-                        bucketsAggregation = AggregationBuilders.terms("buckets").field(aggregate.getField()).size(5000);
+                        bucketsAggregation = AggregationBuilders.terms("buckets").field(fieldName).size(5000);
                     }
                     if (bucketsAggregation != null) {
-                        final MissingAggregationBuilder missingBucketsAggregation = AggregationBuilders.missing("missing").field(aggregate.getField());
+                        final MissingAggregationBuilder missingBucketsAggregation = AggregationBuilders.missing("missing").field(fieldName);
                         for (AggregationBuilder aggregationBuilder : lastAggregation) {
                             bucketsAggregation.subAggregation(aggregationBuilder);
                             missingBucketsAggregation.subAggregation(aggregationBuilder);
