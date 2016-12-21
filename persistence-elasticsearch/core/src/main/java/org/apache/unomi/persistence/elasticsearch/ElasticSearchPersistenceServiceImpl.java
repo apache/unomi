@@ -463,17 +463,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             if (existingBundle.getBundleContext() != null) {
                 loadPredefinedMappings(existingBundle.getBundleContext(), true);
             }
-            if (existingBundle.getRegisteredServices() != null) {
-                for (ServiceReference<?> reference : existingBundle.getRegisteredServices()) {
-                    Object service = bundleContext.getService(reference);
-                    if (service instanceof ConditionEvaluator) {
-                        conditionEvaluatorDispatcher.addEvaluator(reference.getProperty("conditionEvaluatorId").toString(), existingBundle.getBundleId(), (ConditionEvaluator) service);
-                    }
-                    if (service instanceof ConditionESQueryBuilder) {
-                        conditionESQueryBuilderDispatcher.addQueryBuilder(reference.getProperty("queryBuilderId").toString(), existingBundle.getBundleId(), (ConditionESQueryBuilder) service);
-                    }
-                }
-            }
         }
 
         logger.info(this.getClass().getName() + " service started successfully.");
@@ -609,6 +598,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {
             case BundleEvent.STARTED:
+                // @todo replace this with a proper service tracker/listener
                 if (event.getBundle() != null && event.getBundle().getRegisteredServices() != null) {
                     for (ServiceReference<?> reference : event.getBundle().getRegisteredServices()) {
                         Object service = bundleContext.getService(reference);
