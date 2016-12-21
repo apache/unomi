@@ -154,4 +154,14 @@ public class Condition {
         result = 31 * result + parameterValues.hashCode();
         return result;
     }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("Condition{");
+        sb.append("conditionType=").append(conditionType);
+        sb.append(", conditionTypeId='").append(conditionTypeId).append('\'');
+        sb.append(", parameterValues=").append(parameterValues);
+        sb.append('}');
+        return sb.toString();
+    }
 }
