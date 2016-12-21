@@ -75,9 +75,10 @@ on your disk and copy all the files from the lib/sigar directory into Karaf's li
 3. Install the WAR support, CXF and CDI (OpenWebBeans) into Karaf by doing the following in the Karaf command line:
 
     ```
-       feature:install -v war
-       feature:repo-add cxf 2.7.11
-       feature:install -v cxf/2.7.11
+       feature:repo-add cxf 3.0.2
+       feature:repo-add cellar 3.0.3
+       feature:repo-add mvn:org.apache.unomi/unomi-kar/VERSION/xml/features
+       feature:install unomi-kar
     ```
 
 4. Create a new $MY_KARAF_HOME/etc/org.apache.cxf.osgi.cfg file and put the following property inside :
@@ -85,14 +86,8 @@ on your disk and copy all the files from the lib/sigar directory into Karaf's li
     ```
        org.apache.cxf.servlet.context=/cxs
     ```
-
-5. Copy the following KAR to the Karaf deploy directory, as in this example line:
-
-    ```
-      cp kar/target/unomi-kar-1.0.0-SNAPSHOT.kar ~/java/deployments/unomi/apache-karaf-3.0.1/deploy/
-    ```
    
-6. If all went smoothly, you should be able to access the context script here : http://localhost:8181/cxs/cluster .
+5. If all went smoothly, you should be able to access the context script here : http://localhost:8181/cxs/cluster .
  You should be able to login with karaf / karaf and see basic server information. If not something went wrong during the install.
 
 Configuration
