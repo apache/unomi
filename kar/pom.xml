@@ -108,6 +108,13 @@
             <groupId>org.apache.servicemix.bundles</groupId>
             <artifactId>org.apache.servicemix.bundles.joda-time</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.karaf.cellar</groupId>
+            <artifactId>apache-karaf-cellar</artifactId>
+            <classifier>features</classifier>
+            <type>xml</type>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -132,30 +139,6 @@
                     <startLevel>85</startLevel>
                 </configuration>
             </plugin>
-            <!--
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>attach-artifacts</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>attach-artifact</goal>
-                        </goals>
-                        <configuration>
-                            <artifacts>
-                                <artifact>
-                                    <file>target/feature/feature.xml</file>
-									<classifier>features</classifier>
-                                    <type>xml</type>
-                                </artifact>
-                            </artifacts>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            -->
         </plugins>
 
     </build>
