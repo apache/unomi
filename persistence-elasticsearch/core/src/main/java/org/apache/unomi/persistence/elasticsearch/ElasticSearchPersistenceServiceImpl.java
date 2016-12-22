@@ -340,7 +340,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         String[] secureEndpointsArray = secureEndpointsPropValue.split(",");
                         Set<String> secureEndpoints = new TreeSet<String>(Arrays.asList(secureEndpointsArray));
                         publicEndpoints.add(thisKarafNode.getId() + "=" + address + ":" + port);
-                        secureEndpoints.add(thisKarafNode.getId() + "=" + secureAddress + ":" + port);
+                        secureEndpoints.add(thisKarafNode.getId() + "=" + secureAddress + ":" + securePort);
                         karafCellarClusterNodeConfiguration.setProperty(KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, StringUtils.join(publicEndpoints, ","));
                         karafCellarClusterNodeConfiguration.setProperty(KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, StringUtils.join(secureEndpoints, ","));
                         configurations.put(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION, karafCellarClusterNodeConfiguration);
