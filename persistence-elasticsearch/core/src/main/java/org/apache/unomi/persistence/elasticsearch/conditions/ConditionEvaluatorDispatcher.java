@@ -51,6 +51,15 @@ public class ConditionEvaluatorDispatcher {
         evaluatorsByBundle.get(bundleId).add(name);
     }
 
+    public void removeEvaluator(String name, long bundleId) {
+        evaluators.remove(name);
+        List<String> bundleEvaluators = evaluatorsByBundle.get(bundleId);
+        if (bundleEvaluators != null && bundleEvaluators.size() > 0) {
+            bundleEvaluators.remove(name);
+            evaluatorsByBundle.put(bundleId, bundleEvaluators);
+        }
+    }
+
     public void removeEvaluators(long bundleId) {
         if (evaluatorsByBundle.containsKey(bundleId)) {
             for (String s : evaluatorsByBundle.get(bundleId)) {

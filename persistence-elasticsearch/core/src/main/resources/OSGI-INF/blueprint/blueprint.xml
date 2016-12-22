@@ -131,4 +131,19 @@
         <property name="karafJMXPort" value="${es.cluster.jmxPort}" />
     </bean>
 
+    <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
+    <reference-list id="conditionEvaluators"
+                    interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator"
+                    availability="optional">
+        <reference-listener
+                bind-method="bindConditionEvaluator" unbind-method="unbindConditionEvaluator" ref="elasticSearchPersistenceServiceImpl"/>
+    </reference-list>
+
+    <reference-list id="conditionESQueryBuilders"
+                    interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder"
+        availability="optional">
+        <reference-listener
+                bind-method="bindConditionESQueryBuilder" unbind-method="unbindConditionESQueryBuilder" ref="elasticSearchPersistenceServiceImpl"/>
+    </reference-list>
+
 </blueprint>

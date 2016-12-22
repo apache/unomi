@@ -430,19 +430,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
         bundleContext.addBundleListener(this);
 
-        try {
-            for (ServiceReference<ConditionEvaluator> reference : bundleContext.getServiceReferences(ConditionEvaluator.class, null)) {
-                ConditionEvaluator service = bundleContext.getService(reference);
-                conditionEvaluatorDispatcher.addEvaluator(reference.getProperty("conditionEvaluatorId").toString(), reference.getBundle().getBundleId(), service);
-            }
-            for (ServiceReference<ConditionESQueryBuilder> reference : bundleContext.getServiceReferences(ConditionESQueryBuilder.class, null)) {
-                ConditionESQueryBuilder service = bundleContext.getService(reference);
-                conditionESQueryBuilderDispatcher.addQueryBuilder(reference.getProperty("queryBuilderId").toString(), reference.getBundle().getBundleId(), service);
-            }
-        } catch (Exception e) {
-            logger.error("Cannot get services", e);
-        }
-
         timer = new Timer();
 
         timer.scheduleAtFixedRate(new TimerTask() {
@@ -594,29 +581,29 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         bundleContext.removeBundleListener(this);
     }
 
+    public void bindConditionEvaluator(ServiceReference<ConditionEvaluator> conditionEvaluatorServiceReference) {
+        ConditionEvaluator conditionEvaluator = bundleContext.getService(conditionEvaluatorServiceReference);
+        conditionEvaluatorDispatcher.addEvaluator(conditionEvaluatorServiceReference.getProperty("conditionEvaluatorId").toString(), conditionEvaluatorServiceReference.getBundle().getBundleId(), conditionEvaluator);
+    }
+
+    public void unbindConditionEvaluator(ServiceReference<ConditionEvaluator> conditionEvaluatorServiceReference) {
+        conditionEvaluatorDispatcher.removeEvaluator(conditionEvaluatorServiceReference.getProperty("conditionEvaluatorId").toString(), conditionEvaluatorServiceReference.getBundle().getBundleId());
+    }
+
+    public void bindConditionESQueryBuilder(ServiceReference<ConditionESQueryBuilder> conditionESQueryBuilderServiceReference) {
+        ConditionESQueryBuilder conditionESQueryBuilder = bundleContext.getService(conditionESQueryBuilderServiceReference);
+        conditionESQueryBuilderDispatcher.addQueryBuilder(conditionESQueryBuilderServiceReference.getProperty("queryBuilderId").toString(), conditionESQueryBuilderServiceReference.getBundle().getBundleId(), conditionESQueryBuilder);
+    }
+
+    public void unbindConditionESQueryBuilder(ServiceReference<ConditionESQueryBuilder> conditionESQueryBuilderServiceReference) {
+        conditionESQueryBuilderDispatcher.removeQueryBuilder(conditionESQueryBuilderServiceReference.getProperty("queryBuilderId").toString(), conditionESQueryBuilderServiceReference.getBundle().getBundleId());
+    }
+
     @Override
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {
-            case BundleEvent.STARTED:
-                // @todo replace this with a proper service tracker/listener
-                if (event.getBundle() != null && event.getBundle().getRegisteredServices() != null) {
-                    for (ServiceReference<?> reference : event.getBundle().getRegisteredServices()) {
-                        Object service = bundleContext.getService(reference);
-                        if (service instanceof ConditionEvaluator) {
-                            conditionEvaluatorDispatcher.addEvaluator(reference.getProperty("conditionEvaluatorId").toString(), event.getBundle().getBundleId(), (ConditionEvaluator) service);
-                        }
-                        if (service instanceof ConditionESQueryBuilder) {
-                            conditionESQueryBuilderDispatcher.addQueryBuilder(reference.getProperty("queryBuilderId").toString(), event.getBundle().getBundleId(), (ConditionESQueryBuilder) service);
-                        }
-                    }
-                }
-                break;
             case BundleEvent.STARTING:
                 loadPredefinedMappings(event.getBundle().getBundleContext(), true);
-                break;
-            case BundleEvent.STOPPING:
-                conditionEvaluatorDispatcher.removeEvaluators(event.getBundle().getBundleId());
-                conditionESQueryBuilderDispatcher.removeQueryBuilders(event.getBundle().getBundleId());
                 break;
         }
     }

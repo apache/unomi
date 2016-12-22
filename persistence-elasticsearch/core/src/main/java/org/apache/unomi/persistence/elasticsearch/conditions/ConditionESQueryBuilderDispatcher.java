@@ -52,6 +52,16 @@ public class ConditionESQueryBuilderDispatcher {
         queryBuildersByBundle.get(bundleId).add(name);
     }
 
+    public void removeQueryBuilder(String name, long bundleId) {
+        queryBuilders.remove(name);
+        List<String> bundleEvaluators = queryBuildersByBundle.get(bundleId);
+        if (bundleEvaluators != null && bundleEvaluators.size() > 0) {
+            bundleEvaluators.remove(name);
+            queryBuildersByBundle.put(bundleId, bundleEvaluators);
+        }
+    }
+
+
     public void removeQueryBuilders(long bundleId) {
         if (queryBuildersByBundle.containsKey(bundleId)) {
             for (String s : queryBuildersByBundle.get(bundleId)) {
