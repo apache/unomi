@@ -84,7 +84,6 @@
 
     <bean id="actionExecutorDispatcherImpl"
           class="org.apache.unomi.services.actions.ActionExecutorDispatcher">
-        <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
 
     <bean id="rulesServiceImpl" class="org.apache.unomi.services.services.RulesServiceImpl"
@@ -136,6 +135,13 @@
                     availability="optional">
         <reference-listener
                 bind-method="bind" unbind-method="unbind" ref="eventServiceImpl"/>
+    </reference-list>
+
+    <reference-list id="actionExecutors"
+                    interface="org.apache.unomi.api.actions.ActionExecutor"
+                    availability="optional">
+        <reference-listener
+                bind-method="bindExecutor" unbind-method="unbindExecutor" ref="rulesServiceImpl"/>
     </reference-list>
 
     <!-- Property merge strategy executors -->

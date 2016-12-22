@@ -19,13 +19,10 @@ package org.apache.unomi.persistence.elasticsearch.conditions;
 
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
-import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -35,38 +32,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ConditionEvaluatorDispatcher {
     private static final Logger logger = LoggerFactory.getLogger(ConditionEvaluatorDispatcher.class.getName());
 
-    private BundleContext bundleContext;
     private Map<String, ConditionEvaluator> evaluators = new ConcurrentHashMap<>();
-    private Map<Long, List<String>> evaluatorsByBundle = new ConcurrentHashMap<>();
 
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
-
-    public void addEvaluator(String name, long bundleId, ConditionEvaluator evaluator) {
+    public void addEvaluator(String name, ConditionEvaluator evaluator) {
         evaluators.put(name, evaluator);
-        if (!evaluatorsByBundle.containsKey(bundleId)) {
-            evaluatorsByBundle.put(bundleId, new ArrayList<String>());
-        }
-        evaluatorsByBundle.get(bundleId).add(name);
     }
 
-    public void removeEvaluator(String name, long bundleId) {
+    public void removeEvaluator(String name) {
         evaluators.remove(name);
-        List<String> bundleEvaluators = evaluatorsByBundle.get(bundleId);
-        if (bundleEvaluators != null && bundleEvaluators.size() > 0) {
-            bundleEvaluators.remove(name);
-            evaluatorsByBundle.put(bundleId, bundleEvaluators);
-        }
-    }
-
-    public void removeEvaluators(long bundleId) {
-        if (evaluatorsByBundle.containsKey(bundleId)) {
-            for (String s : evaluatorsByBundle.get(bundleId)) {
-                evaluators.remove(s);
-            }
-            evaluatorsByBundle.remove(bundleId);
-        }
     }
 
     public boolean eval(Condition condition, Item item) {

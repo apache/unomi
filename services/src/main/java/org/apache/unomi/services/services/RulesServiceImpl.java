@@ -17,12 +17,13 @@
 
 package org.apache.unomi.services.services;
 
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Item;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
-import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
@@ -77,6 +78,18 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         this.actionExecutorDispatcher = actionExecutorDispatcher;
     }
 
+    public void bindExecutor(ServiceReference<ActionExecutor> actionExecutorServiceReference) {
+        ActionExecutor actionExecutor = bundleContext.getService(actionExecutorServiceReference);
+        actionExecutorDispatcher.addExecutor(actionExecutorServiceReference.getProperty("actionExecutorId").toString(), actionExecutor);
+    }
+
+    public void unbindExecutor(ServiceReference<ActionExecutor> actionExecutorServiceReference) {
+        if (actionExecutorServiceReference == null) {
+            return;
+        }
+        actionExecutorDispatcher.removeExecutor(actionExecutorServiceReference.getProperty("actionExecutorId").toString());
+    }
+
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 
@@ -85,14 +98,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             if (bundle.getBundleContext() != null) {
                 loadPredefinedRules(bundle.getBundleContext());
             }
-        }
-        try {
-            for (ServiceReference<ActionExecutor> reference : bundleContext.getServiceReferences(ActionExecutor.class, null)) {
-                ActionExecutor service = bundleContext.getService(reference);
-                actionExecutorDispatcher.addExecutor(reference.getProperty("actionExecutorId").toString(), reference.getBundle().getBundleId(), service);
-            }
-        } catch (Exception e) {
-            logger.error("Cannot get services",e);
         }
 
         bundleContext.addBundleListener(this);
@@ -117,22 +122,12 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             return;
         }
         loadPredefinedRules(bundleContext);
-
-        if (bundleContext.getBundle().getRegisteredServices() != null) {
-            for (ServiceReference<?> reference : bundleContext.getBundle().getRegisteredServices()) {
-                Object service = bundleContext.getService(reference);
-                if (service instanceof ActionExecutor) {
-                    actionExecutorDispatcher.addExecutor(reference.getProperty("actionExecutorId").toString(), bundleContext.getBundle().getBundleId(), (ActionExecutor) service);
-                }
-            }
-        }
     }
 
     private void processBundleStop(BundleContext bundleContext) {
         if (bundleContext == null) {
             return;
         }
-        actionExecutorDispatcher.removeExecutors(bundleContext.getBundle().getBundleId());
     }
 
     private void loadPredefinedRules(BundleContext bundleContext) {

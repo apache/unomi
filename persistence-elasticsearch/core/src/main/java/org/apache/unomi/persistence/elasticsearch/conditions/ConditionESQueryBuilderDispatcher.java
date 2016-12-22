@@ -20,56 +20,29 @@ package org.apache.unomi.persistence.elasticsearch.conditions;
 import org.apache.unomi.api.conditions.Condition;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ConditionESQueryBuilderDispatcher {
     private static final Logger logger = LoggerFactory.getLogger(ConditionESQueryBuilderDispatcher.class.getName());
 
-    private BundleContext bundleContext;
     private Map<String, ConditionESQueryBuilder> queryBuilders = new ConcurrentHashMap<>();
-    private Map<Long, List<String>> queryBuildersByBundle = new ConcurrentHashMap<>();
 
     public ConditionESQueryBuilderDispatcher() {
     }
 
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
-
-    public void addQueryBuilder(String name, long bundleId, ConditionESQueryBuilder evaluator) {
+    public void addQueryBuilder(String name, ConditionESQueryBuilder evaluator) {
         queryBuilders.put(name, evaluator);
-        if (!queryBuildersByBundle.containsKey(bundleId)) {
-            queryBuildersByBundle.put(bundleId, new ArrayList<String>());
-        }
-        queryBuildersByBundle.get(bundleId).add(name);
     }
 
-    public void removeQueryBuilder(String name, long bundleId) {
+    public void removeQueryBuilder(String name) {
         queryBuilders.remove(name);
-        List<String> bundleEvaluators = queryBuildersByBundle.get(bundleId);
-        if (bundleEvaluators != null && bundleEvaluators.size() > 0) {
-            bundleEvaluators.remove(name);
-            queryBuildersByBundle.put(bundleId, bundleEvaluators);
-        }
     }
 
-
-    public void removeQueryBuilders(long bundleId) {
-        if (queryBuildersByBundle.containsKey(bundleId)) {
-            for (String s : queryBuildersByBundle.get(bundleId)) {
-                queryBuilders.remove(s);
-            }
-            queryBuildersByBundle.remove(bundleId);
-        }
-    }
 
     public String getQuery(Condition condition) {
         return "{\"query\": " + getQueryBuilder(condition).toString() + "}";

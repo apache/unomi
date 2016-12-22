@@ -75,12 +75,10 @@
 
     <bean id="conditionESQueryBuilderDispatcher"
           class="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher">
-        <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
 
     <bean id="conditionEvaluatorDispatcherImpl"
           class="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher">
-        <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
 
     <bean id="elasticSearchPersistenceServiceImpl"
