@@ -226,6 +226,17 @@
                                         </artifactItem>
                                         <artifactItem>
                                             <groupId>org.apache.unomi</groupId>
+                                            <artifactId>unomi-persistence-elasticsearch-core</artifactId>
+                                            <version>${project.version}</version>
+                                            <classifier>hazelcastconfig</classifier>
+                                            <type>xml</type>
+                                            <outputDirectory>
+                                                ${project.build.directory}/assembly/etc
+                                            </outputDirectory>
+                                            <destFileName>hazelcast.xml</destFileName>
+                                        </artifactItem>
+                                        <artifactItem>
+                                            <groupId>org.apache.unomi</groupId>
                                             <artifactId>unomi-plugins-request</artifactId>
                                             <version>${project.version}</version>
                                             <classifier>requestcfg</classifier>

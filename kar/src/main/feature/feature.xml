@@ -32,6 +32,7 @@
         <configfile finalname="/etc/org.apache.unomi.privacy.cfg">mvn:org.apache.unomi/cxs-privacy-extension-services/${project.version}/cfg/privacycfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.geonames.cfg">mvn:org.apache.unomi/cxs-geonames-services/${project.version}/cfg/geonamescfg</configfile>
         <configfile finalname="/etc/elasticsearch.yml">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/yml/elasticsearchconfig</configfile>
+        <configfile finalname="/etc/hazelcast.xml">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/xml/hazelcastconfig</configfile>
         <bundle start-level="75">mvn:commons-io/commons-io/2.4</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-core/${version.jackson.core}</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-databind/${version.jackson.core}</bundle>

@@ -260,6 +260,11 @@
                                     <type>yml</type>
                                     <classifier>elasticsearchconfig</classifier>
                                 </artifact>
+                                <artifact>
+                                    <file>src/main/resources/hazelcast.xml</file>
+                                    <type>xml</type>
+                                    <classifier>hazelcastconfig</classifier>
+                                </artifact>
                             </artifacts>
                         </configuration>
                     </execution>
