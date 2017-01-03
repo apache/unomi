@@ -33,6 +33,8 @@
             <cm:property name="cluster.name" value="contextElasticSearch"/>
             <cm:property name="index.name" value="context"/>
             <cm:property name="elasticSearchConfig" value="file:${karaf.etc}/elasticsearch.yml"/>
+            <cm:property name="numberOfShards" value="5"/>
+            <cm:property name="numberOfReplicas" value="0"/>
             <cm:property name="monthlyIndex.numberOfShards" value="3"/>
             <cm:property name="monthlyIndex.numberOfReplicas" value="0"/>
             <cm:property name="defaultQueryLimit" value="10"/>
@@ -92,6 +94,8 @@
         <property name="indexName" value="${es.index.name}"/>
         <property name="monthlyIndexNumberOfShards" value="${es.monthlyIndex.numberOfShards}"/>
         <property name="monthlyIndexNumberOfReplicas" value="${es.monthlyIndex.numberOfReplicas}"/>
+        <property name="numberOfShards" value="${es.numberOfShards}"/>
+        <property name="numberOfReplicas" value="${es.numberOfReplicas}"/>
         <property name="address" value="${web.contextserver.address}"/>
         <property name="port" value="${web.contextserver.port}"/>
         <property name="secureAddress" value="${web.contextserver.secureAddress}"/>

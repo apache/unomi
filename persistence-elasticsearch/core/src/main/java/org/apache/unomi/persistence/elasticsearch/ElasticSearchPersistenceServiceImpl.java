@@ -135,6 +135,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String indexName;
     private String monthlyIndexNumberOfShards;
     private String monthlyIndexNumberOfReplicas;
+    private String numberOfShards;
+    private String numberOfReplicas;
     private String elasticSearchConfig = null;
     private BundleContext bundleContext;
     private Map<String, String> mappings = new HashMap<String, String>();
@@ -189,6 +191,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setMonthlyIndexNumberOfReplicas(String monthlyIndexNumberOfReplicas) {
         this.monthlyIndexNumberOfReplicas = monthlyIndexNumberOfReplicas;
+    }
+
+    public void setNumberOfShards(String numberOfShards) {
+        this.numberOfShards = numberOfShards;
+    }
+
+    public void setNumberOfReplicas(String numberOfReplicas) {
+        this.numberOfReplicas = numberOfReplicas;
     }
 
     public void setAddress(String address) {
@@ -966,6 +976,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private void internalCreateIndex(String indexName, Map<String,String> mappings) {
         CreateIndexRequestBuilder builder = client.admin().indices().prepareCreate(indexName)
                 .setSettings("{\n" +
+                        "    \"index\" : {\n" +
+                        "        \"number_of_shards\" : " + numberOfShards + ",\n" +
+                        "        \"number_of_replicas\" : " + numberOfReplicas + "\n" +
+                        "    },\n" +
                         "    \"analysis\": {\n" +
                         "      \"analyzer\": {\n" +
                         "        \"folding\": {\n" +
