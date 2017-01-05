@@ -1300,11 +1300,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 }
                             } else {
                                 String name = getPropertyNameWithData(StringUtils.substringBeforeLast(sortByElement,":"), itemType);
-                                if (sortByElement.endsWith(":desc")) {
-                                    requestBuilder = requestBuilder.addSort(name, SortOrder.DESC);
+                                if (name != null) {
+                                    if (sortByElement.endsWith(":desc")) {
+                                        requestBuilder = requestBuilder.addSort(name, SortOrder.DESC);
+                                    } else {
+                                        requestBuilder = requestBuilder.addSort(name, SortOrder.ASC);
+                                    }
                                 } else {
-                                    requestBuilder = requestBuilder.addSort(name, SortOrder.ASC);
+                                    // in the case of no data existing for the property, we will not add the sorting to the request.
                                 }
+
                             }
                         }
                     }
@@ -1456,7 +1461,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     } else {
                         fieldName = getPropertyNameWithData(fieldName, itemType);
                         //default
-                        bucketsAggregation = AggregationBuilders.terms("buckets").field(fieldName).size(5000);
+                        if (fieldName != null) {
+                            bucketsAggregation = AggregationBuilders.terms("buckets").field(fieldName).size(5000);
+                        } else {
+                            // field name could be null if no existing data exists
+                        }
                     }
                     if (bucketsAggregation != null) {
                         final MissingAggregationBuilder missingBucketsAggregation = AggregationBuilders.missing("missing").field(fieldName);
