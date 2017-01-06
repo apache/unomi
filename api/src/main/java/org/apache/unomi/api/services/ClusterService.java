@@ -25,7 +25,6 @@ import java.util.List;
 /**
  * A service to access information about the context server's cluster.
  *
- * TODO: rename to something less specific like ContextRuntimeService?
  */
 public interface ClusterService {
 

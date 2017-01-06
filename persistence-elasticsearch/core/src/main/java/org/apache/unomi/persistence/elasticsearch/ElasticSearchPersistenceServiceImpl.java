@@ -18,13 +18,6 @@
 package org.apache.unomi.persistence.elasticsearch;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.karaf.cellar.config.ClusterConfigurationEvent;
-import org.apache.karaf.cellar.config.Constants;
-import org.apache.karaf.cellar.core.*;
-import org.apache.karaf.cellar.core.control.SwitchStatus;
-import org.apache.karaf.cellar.core.event.EventProducer;
-import org.apache.karaf.cellar.core.event.EventType;
-import org.apache.unomi.api.ClusterNode;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.TimestampedItem;
@@ -32,11 +25,12 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
-import org.apache.unomi.api.services.ClusterService;
 import org.apache.unomi.persistence.elasticsearch.conditions.*;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
+import org.elasticsearch.action.admin.cluster.node.info.NodeInfo;
+import org.elasticsearch.action.admin.cluster.node.info.NodesInfoResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
@@ -83,22 +77,13 @@ import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.osgi.framework.*;
-import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.management.*;
-import javax.management.remote.JMXConnector;
-import javax.management.remote.JMXConnectorFactory;
-import javax.management.remote.JMXServiceURL;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.management.ManagementFactory;
-import java.lang.management.OperatingSystemMXBean;
-import java.lang.management.RuntimeMXBean;
 import java.net.InetAddress;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.text.ParseException;
@@ -108,7 +93,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("rawtypes")
-public class ElasticSearchPersistenceServiceImpl implements PersistenceService, ClusterService, SynchronousBundleListener {
+public class ElasticSearchPersistenceServiceImpl implements PersistenceService, SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
 
@@ -116,18 +101,17 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public static final String CONTEXTSERVER_PORT = "contextserver.port";
     public static final String CONTEXTSERVER_SECURE_ADDRESS = "contextserver.secureAddress";
     public static final String CONTEXTSERVER_SECURE_PORT = "contextserver.securePort";
+
     public static final String NUMBER_OF_SHARDS = "number_of_shards";
     public static final String NUMBER_OF_REPLICAS = "number_of_replicas";
     public static final String CLUSTER_NAME = "cluster.name";
+
     public static final String BULK_PROCESSOR_NAME = "bulkProcessor.name";
     public static final String BULK_PROCESSOR_CONCURRENT_REQUESTS = "bulkProcessor.concurrentRequests";
     public static final String BULK_PROCESSOR_BULK_ACTIONS = "bulkProcessor.bulkActions";
     public static final String BULK_PROCESSOR_BULK_SIZE = "bulkProcessor.bulkSize";
     public static final String BULK_PROCESSOR_FLUSH_INTERVAL = "bulkProcessor.flushInterval";
     public static final String BULK_PROCESSOR_BACKOFF_POLICY = "bulkProcessor.backoffPolicy";
-    public static final String KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION = "org.apache.unoni.nodes";
-    public static final String KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS = "publicEndpoints";
-    public static final String KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS = "secureEndpoints";
 
     private Client client;
     private BulkProcessor bulkProcessor;
@@ -137,19 +121,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String monthlyIndexNumberOfReplicas;
     private String numberOfShards;
     private String numberOfReplicas;
-    private String elasticSearchConfig = null;
     private BundleContext bundleContext;
     private Map<String, String> mappings = new HashMap<String, String>();
     private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
-    private ClusterManager karafCellarClusterManager;
-    private EventProducer karafCellarEventProducer;
-    private GroupManager karafCellarGroupManager;
-    private String karafCellarGroupName = Configurations.DEFAULT_GROUP_NAME;
-    private ConfigurationAdmin osgiConfigurationAdmin;
-    private String karafJMXUsername = "karaf";
-    private String karafJMXPassword = "karaf";
-    private int karafJMXPort = 1099;
 
     private Map<String,String> indexNames;
     private List<String> itemsMonthlyIndexed;
@@ -170,6 +145,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String bulkProcessorBulkSize= "5MB";
     private String bulkProcessorFlushInterval = "5s";
     private String bulkProcessorBackoffPolicy = "exponential";
+
+    private String minimalElasticSearchVersion = "5.0.0";
+    private String maximalElasticSearchVersion = "5.2.0";
 
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
@@ -233,10 +211,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.routingByType = routingByType;
     }
 
-    public void setElasticSearchConfig(String elasticSearchConfig) {
-        this.elasticSearchConfig = elasticSearchConfig;
-    }
-
     public void setConditionEvaluatorDispatcher(ConditionEvaluatorDispatcher conditionEvaluatorDispatcher) {
         this.conditionEvaluatorDispatcher = conditionEvaluatorDispatcher;
     }
@@ -269,96 +243,27 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.bulkProcessorBackoffPolicy = bulkProcessorBackoffPolicy;
     }
 
-    public void setKarafCellarClusterManager(ClusterManager karafCellarClusterManager) {
-        this.karafCellarClusterManager = karafCellarClusterManager;
+    public void setMinimalElasticSearchVersion(String minimalElasticSearchVersion) {
+        this.minimalElasticSearchVersion = minimalElasticSearchVersion;
     }
 
-    public void setKarafCellarEventProducer(EventProducer karafCellarEventProducer) {
-        this.karafCellarEventProducer = karafCellarEventProducer;
+    public void setMaximalElasticSearchVersion(String maximalElasticSearchVersion) {
+        this.maximalElasticSearchVersion = maximalElasticSearchVersion;
     }
 
-    public void setKarafCellarGroupManager(GroupManager karafCellarGroupManager) {
-        this.karafCellarGroupManager = karafCellarGroupManager;
-    }
-
-    public void setKarafCellarGroupName(String karafCellarGroupName) {
-        this.karafCellarGroupName = karafCellarGroupName;
-    }
-
-    public void setOsgiConfigurationAdmin(ConfigurationAdmin osgiConfigurationAdmin) {
-        this.osgiConfigurationAdmin = osgiConfigurationAdmin;
-    }
-
-    public void setKarafJMXUsername(String karafJMXUsername) {
-        this.karafJMXUsername = karafJMXUsername;
-    }
-
-    public void setKarafJMXPassword(String karafJMXPassword) {
-        this.karafJMXPassword = karafJMXPassword;
-    }
-
-    public void setKarafJMXPort(int karafJMXPort) {
-        this.karafJMXPort = karafJMXPort;
-    }
-
-    public void start() {
+    public void start() throws Exception {
 
         loadPredefinedMappings(bundleContext, false);
 
         // on startup
         new InClassLoaderExecute<Object>() {
-            public Object execute(Object... args) {
+            public Object execute(Object... args) throws Exception {
                 logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index name " + indexName + "...");
 
                 address = System.getProperty(CONTEXTSERVER_ADDRESS, address);
                 port = System.getProperty(CONTEXTSERVER_PORT, port);
                 secureAddress = System.getProperty(CONTEXTSERVER_SECURE_ADDRESS, secureAddress);
                 securePort = System.getProperty(CONTEXTSERVER_SECURE_PORT, securePort);
-
-                if (karafCellarEventProducer != null && karafCellarClusterManager != null) {
-
-                    boolean setupConfigOk = true;
-                    Group group = karafCellarGroupManager.findGroupByName(karafCellarGroupName);
-                    if (setupConfigOk && group == null) {
-                        logger.error("Cluster group " + karafCellarGroupName + " doesn't exist");
-                        setupConfigOk = false;
-                    }
-
-                    // check if the producer is ON
-                    if (setupConfigOk && karafCellarEventProducer.getSwitch().getStatus().equals(SwitchStatus.OFF)) {
-                        logger.error("Cluster event producer is OFF");
-                        setupConfigOk = false;
-                    }
-
-                    // check if the config pid is allowed
-                    if (setupConfigOk && !isClusterConfigPIDAllowed(group, Constants.CATEGORY, KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION, EventType.OUTBOUND)) {
-                        logger.error("Configuration PID " + KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION + " is blocked outbound for cluster group " + karafCellarGroupName);
-                        setupConfigOk = false;
-                    }
-
-                    if (setupConfigOk) {
-                        Map<String, Properties> configurations = karafCellarClusterManager.getMap(Constants.CONFIGURATION_MAP + Configurations.SEPARATOR + karafCellarGroupName);
-                        org.apache.karaf.cellar.core.Node thisKarafNode = karafCellarClusterManager.getNode();
-                        Properties karafCellarClusterNodeConfiguration = configurations.get(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION);
-                        if (karafCellarClusterNodeConfiguration == null) {
-                            karafCellarClusterNodeConfiguration = new Properties();
-                        }
-                        String publicEndpointsPropValue = karafCellarClusterNodeConfiguration.getProperty(KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, thisKarafNode.getId() + "=" + address + ":" + port);
-                        String secureEndpointsPropValue = karafCellarClusterNodeConfiguration.getProperty(KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, thisKarafNode.getId() + "=" + secureAddress + ":" + securePort);
-                        String[] publicEndpointsArray = publicEndpointsPropValue.split(",");
-                        Set<String> publicEndpoints = new TreeSet<String>(Arrays.asList(publicEndpointsArray));
-                        String[] secureEndpointsArray = secureEndpointsPropValue.split(",");
-                        Set<String> secureEndpoints = new TreeSet<String>(Arrays.asList(secureEndpointsArray));
-                        publicEndpoints.add(thisKarafNode.getId() + "=" + address + ":" + port);
-                        secureEndpoints.add(thisKarafNode.getId() + "=" + secureAddress + ":" + securePort);
-                        karafCellarClusterNodeConfiguration.setProperty(KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, StringUtils.join(publicEndpoints, ","));
-                        karafCellarClusterNodeConfiguration.setProperty(KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, StringUtils.join(secureEndpoints, ","));
-                        configurations.put(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION, karafCellarClusterNodeConfiguration);
-                        ClusterConfigurationEvent clusterConfigurationEvent = new ClusterConfigurationEvent(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION);
-                        clusterConfigurationEvent.setSourceGroup(group);
-                        karafCellarEventProducer.produce(clusterConfigurationEvent);
-                    }
-                }
 
                 bulkProcessorName = System.getProperty(BULK_PROCESSOR_NAME, bulkProcessorName);
                 bulkProcessorConcurrentRequests = System.getProperty(BULK_PROCESSOR_CONCURRENT_REQUESTS, bulkProcessorConcurrentRequests);
@@ -373,7 +278,29 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     client = new PreBuiltTransportClient(transportSettings)
                             .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(address), 9300));
                 } catch (UnknownHostException e) {
-                    logger.error("Error resolving address " + address + " ElasticSearch transport client not connected, using internal client instead", e);
+                    String message = "Error resolving address " + address + " ElasticSearch transport client not connected";
+                    throw new Exception(message, e);
+                }
+
+                // let's now check the versions of all the nodes in the cluster, to make sure they are as expected.
+                try {
+                    NodesInfoResponse nodesInfoResponse = client.admin().cluster().prepareNodesInfo()
+                            .all().execute().get();
+
+                    org.elasticsearch.Version minimalVersion = org.elasticsearch.Version.fromString(minimalElasticSearchVersion);
+                    org.elasticsearch.Version maximalVersion = org.elasticsearch.Version.fromString(maximalElasticSearchVersion);
+                    for (NodeInfo nodeInfo : nodesInfoResponse.getNodes()) {
+                        org.elasticsearch.Version version = nodeInfo.getVersion();
+                        if (version.before(minimalVersion) ||
+                                version.equals(maximalVersion) ||
+                                version.after(maximalVersion)) {
+                            throw new Exception("ElasticSearch version on node " + nodeInfo.getHostname() + " is not within [" + minimalVersion + "," + maximalVersion + "), aborting startup !");
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    throw new Exception("Error checking ElasticSearch versions", e);
+                } catch (ExecutionException e) {
+                    throw new Exception("Error checking ElasticSearch versions", e);
                 }
 
                 // @todo is there a better way to detect index existence than to wait for it to startup ?
@@ -433,7 +360,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 logger.info("Cluster status is GREEN");
 
-                return null;
+                return true;
             }
         }.executeInClassLoader();
 
@@ -467,19 +394,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private void refreshExistingIndexNames() {
         new InClassLoaderExecute<Boolean>() {
-            protected Boolean execute(Object... args) {
+            protected Boolean execute(Object... args) throws Exception {
                 try {
                     logger.info("Refreshing existing indices list...");
                     IndicesStatsResponse indicesStatsResponse = client.admin().indices().prepareStats().all().execute().get();
                     existingIndexNames = new TreeSet<>(indicesStatsResponse.getIndices().keySet());
                 } catch (InterruptedException e) {
-                    logger.error("Error retrieving indices stats", e);
+                    throw new Exception("Error retrieving indices stats", e);
                 } catch (ExecutionException e) {
-                    logger.error("Error retrieving indices stats", e);
+                    throw new Exception("Error retrieving indices stats", e);
                 }
                 return true;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     public BulkProcessor getBulkProcessor() {
@@ -581,7 +508,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
                 return null;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
 
         if (timer != null) {
             timer.cancel();
@@ -706,7 +633,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     @Override
     public <T extends Item> T load(final String itemId, final Date dateHint, final Class<T> clazz) {
         return new InClassLoaderExecute<T>() {
-            protected T execute(Object... args) {
+            protected T execute(Object... args) throws Exception {
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
 
@@ -733,15 +660,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                     }
                 } catch (IndexNotFoundException e) {
-                    logger.debug("No index found for itemType=" + clazz.getName() + " itemId=" + itemId, e);
+                    throw new Exception("No index found for itemType=" + clazz.getName() + " itemId=" + itemId, e);
                 } catch (IllegalAccessException e) {
-                    logger.error("Error loading itemType=" + clazz.getName() + " itemId=" + itemId, e);
+                    throw new Exception("Error loading itemType=" + clazz.getName() + " itemId=" + itemId, e);
                 } catch (Exception t) {
-                    logger.error("Error loading itemType=" + clazz.getName() + " itemId=" + itemId, t);
+                    throw new Exception("Error loading itemType=" + clazz.getName() + " itemId=" + itemId, t);
                 }
-                return null;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
 
     }
 
@@ -754,7 +680,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public boolean save(final Item item, final boolean useBatching) {
 
         return new InClassLoaderExecute<Boolean>() {
-            protected Boolean execute(Object... args) {
+            protected Boolean execute(Object... args) throws Exception {
                 try {
                     String source = CustomObjectMapper.getObjectMapper().writeValueAsString(item);
                     String itemType = item.getItemType();
@@ -794,11 +720,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                     return true;
                 } catch (IOException e) {
-                    logger.error("Error saving item " + item, e);
+                    throw new Exception("Error saving item " + item, e);
                 }
-                return false;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
 
     }
 
@@ -810,7 +735,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     @Override
     public boolean update(final String itemId, final Date dateHint, final Class clazz, final Map source) {
         return new InClassLoaderExecute<Boolean>() {
-            protected Boolean execute(Object... args) {
+            protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
 
@@ -827,21 +752,20 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                     return true;
                 } catch (IndexNotFoundException e) {
-                    logger.debug("No index found for itemType=" + clazz.getName() + "itemId=" + itemId, e);
+                    throw new Exception("No index found for itemType=" + clazz.getName() + "itemId=" + itemId, e);
                 } catch (NoSuchFieldException e) {
-                    logger.error("Error updating item " + itemId, e);
+                    throw new Exception("Error updating item " + itemId, e);
                 } catch (IllegalAccessException e) {
-                    logger.error("Error updating item " + itemId, e);
+                    throw new Exception("Error updating item " + itemId, e);
                 }
-                return false;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     @Override
     public boolean updateWithScript(final String itemId, final Date dateHint, final Class<?> clazz, final String script, final Map<String, Object> scriptParams) {
         return new InClassLoaderExecute<Boolean>() {
-            protected Boolean execute(Object... args) {
+            protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
 
@@ -859,21 +783,20 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                     return true;
                 } catch (IndexNotFoundException e) {
-                    logger.debug("No index found for itemType=" + clazz.getName() + "itemId=" + itemId, e);
+                    throw new Exception("No index found for itemType=" + clazz.getName() + "itemId=" + itemId, e);
                 } catch (NoSuchFieldException e) {
-                    logger.error("Error updating item " + itemId, e);
+                    throw new Exception("Error updating item " + itemId, e);
                 } catch (IllegalAccessException e) {
-                    logger.error("Error updating item " + itemId, e);
+                    throw new Exception("Error updating item " + itemId, e);
                 }
-                return false;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     @Override
     public <T extends Item> boolean remove(final String itemId, final Class<T> clazz) {
         return new InClassLoaderExecute<Boolean>() {
-            protected Boolean execute(Object... args) {
+            protected Boolean execute(Object... args) throws Exception {
                 //Index the query = register it in the percolator
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
@@ -882,16 +805,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             .execute().actionGet();
                     return true;
                 } catch (Exception e) {
-                    logger.error("Cannot remove", e);
+                    throw new Exception("Cannot remove", e);
                 }
-                return false;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     public <T extends Item> boolean removeByQuery(final Condition query, final Class<T> clazz) {
         return new InClassLoaderExecute<Boolean>() {
-            protected Boolean execute(Object... args) {
+            protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
 
@@ -932,11 +854,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                     return true;
                 } catch (Exception e) {
-                    logger.error("Cannot remove by query", e);
+                    throw new Exception("Cannot remove by query", e);
                 }
-                return false;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     public boolean createIndex(final String indexName) {
@@ -956,7 +877,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
                 return !indexExists;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     public boolean removeIndex(final String indexName) {
@@ -970,7 +891,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
                 return indexExists;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     private void internalCreateIndex(String indexName, Map<String,String> mappings) {
@@ -1029,7 +950,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public Map<String, Map<String, Object>> getPropertiesMapping(final String itemType) {
         return new InClassLoaderExecute<Map<String, Map<String, Object>>>() {
             @SuppressWarnings("unchecked")
-            protected Map<String, Map<String, Object>> execute(Object... args) {
+            protected Map<String, Map<String, Object>> execute(Object... args) throws Exception {
                 GetMappingsResponse getMappingsResponse = client.admin().indices().prepareGetMappings().setTypes(itemType).execute().actionGet();
                 ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> mappings = getMappingsResponse.getMappings();
                 Map<String, Map<String, Object>> propertyMap = new HashMap<>();
@@ -1054,11 +975,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                     }
                 } catch (IOException e) {
-                    logger.error("Cannot get mapping", e);
+                    throw new Exception("Cannot get mapping", e);
                 }
                 return propertyMap;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     public Map<String, Object> getPropertyMapping(String property, String itemType) {
@@ -1089,6 +1010,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private String getPropertyNameWithData(String name, String itemType) {
         Map<String,Object> propertyMapping = getPropertyMapping(name,itemType);
+        if (propertyMapping == null) {
+            return null;
+        }
         if (propertyMapping != null
                 && "text".equals(propertyMapping.get("type"))
                 && propertyMapping.containsKey("fields")
@@ -1100,7 +1024,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public boolean saveQuery(final String queryName, final String query) {
         return new InClassLoaderExecute<Boolean>() {
-            protected Boolean execute(Object... args) {
+            protected Boolean execute(Object... args) throws Exception {
                 //Index the query = register it in the percolator
                 try {
                     logger.info("Saving query : " + queryName);
@@ -1110,11 +1034,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             .execute().actionGet();
                     return true;
                 } catch (Exception e) {
-                    logger.error("Cannot save query", e);
+                    throw new Exception("Cannot save query", e);
                 }
-                return false;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     @Override
@@ -1129,7 +1052,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     @Override
     public boolean removeQuery(final String queryName) {
         return new InClassLoaderExecute<Boolean>() {
-            protected Boolean execute(Object... args) {
+            protected Boolean execute(Object... args) throws Exception {
                 //Index the query = register it in the percolator
                 try {
                     client.prepareDelete(indexName, ".percolator", queryName)
@@ -1137,11 +1060,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             .execute().actionGet();
                     return true;
                 } catch (Exception e) {
-                    logger.error("Cannot delete query", e);
+                    throw new Exception("Cannot delete query", e);
                 }
-                return false;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     @Override
@@ -1238,14 +1160,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         .actionGet();
                 return response.getHits().getTotalHits();
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     private <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz, final int offset, final int size, final String[] routing, final String scrollTimeValidity) {
         return new InClassLoaderExecute<PartialList<T>>() {
 
             @Override
-            protected PartialList<T> execute(Object... args) {
+            protected PartialList<T> execute(Object... args) throws Exception {
                 List<T> results = new ArrayList<T>();
                 String scrollIdentifier = null;
                 long totalHits = 0;
@@ -1348,7 +1270,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                     }
                 } catch (Exception t) {
-                    logger.error("Error loading itemType=" + clazz.getName() + " query=" + query + " sortBy=" + sortBy, t);
+                    throw new Exception("Error loading itemType=" + clazz.getName() + " query=" + query + " sortBy=" + sortBy, t);
                 }
 
                 PartialList<T> result = new PartialList<T>(results, offset, size, totalHits);
@@ -1358,7 +1280,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
                 return result;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     @Override
@@ -1366,7 +1288,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return new InClassLoaderExecute<PartialList<T>>() {
 
             @Override
-            protected PartialList<T> execute(Object... args) {
+            protected PartialList<T> execute(Object... args) throws Exception {
                 List<T> results = new ArrayList<T>();
                 long totalHits = 0;
                 try {
@@ -1391,11 +1313,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                     return result;
                 } catch (Exception t) {
-                    logger.error("Error continuing scrolling query for itemType=" + clazz.getName() + " scrollIdentifier=" + scrollIdentifier + " scrollTimeValidity=" + scrollTimeValidity, t);
+                    throw new Exception("Error continuing scrolling query for itemType=" + clazz.getName() + " scrollIdentifier=" + scrollIdentifier + " scrollTimeValidity=" + scrollTimeValidity, t);
                 }
-                return null;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     @Override
@@ -1520,7 +1441,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 return results;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     private <T extends Item> String getItemType(Class<T> clazz) {
@@ -1544,105 +1465,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
 
-    @Override
-    public List<ClusterNode> getClusterNodes() {
-        return new InClassLoaderExecute<List<ClusterNode>>() {
-
-            @Override
-            protected List<ClusterNode> execute(Object... args) {
-                Map<String, ClusterNode> clusterNodes = new LinkedHashMap<String, ClusterNode>();
-
-                Set<org.apache.karaf.cellar.core.Node> karafCellarNodes = karafCellarClusterManager.listNodes();
-                org.apache.karaf.cellar.core.Node thisKarafNode = karafCellarClusterManager.getNode();
-                Map<String, Properties> clusterConfigurations = karafCellarClusterManager.getMap(Constants.CONFIGURATION_MAP + Configurations.SEPARATOR + karafCellarGroupName);
-                Properties karafCellarClusterNodeConfiguration = clusterConfigurations.get(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION);
-                Map<String, String> publicNodeEndpoints = new TreeMap<>();
-                Map<String, String> secureNodeEndpoints = new TreeMap<>();
-                if (karafCellarClusterNodeConfiguration != null) {
-                    String publicEndpointsPropValue = karafCellarClusterNodeConfiguration.getProperty(KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, thisKarafNode.getId() + "=" + address + ":" + port);
-                    String secureEndpointsPropValue = karafCellarClusterNodeConfiguration.getProperty(KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, thisKarafNode.getId() + "=" + secureAddress + ":" + securePort);
-                    String[] publicEndpointsArray = publicEndpointsPropValue.split(",");
-                    Set<String> publicEndpoints = new TreeSet<String>(Arrays.asList(publicEndpointsArray));
-                    for (String endpoint : publicEndpoints) {
-                        String[] endpointParts = endpoint.split("=");
-                        publicNodeEndpoints.put(endpointParts[0], endpointParts[1]);
-                    }
-                    String[] secureEndpointsArray = secureEndpointsPropValue.split(",");
-                    Set<String> secureEndpoints = new TreeSet<String>(Arrays.asList(secureEndpointsArray));
-                    for (String endpoint : secureEndpoints) {
-                        String[] endpointParts = endpoint.split("=");
-                        secureNodeEndpoints.put(endpointParts[0], endpointParts[1]);
-                    }
-                }
-                for (org.apache.karaf.cellar.core.Node karafCellarNode : karafCellarNodes) {
-                    ClusterNode clusterNode = new ClusterNode();
-                    clusterNode.setHostName(karafCellarNode.getHost());
-                    String publicEndpoint = publicNodeEndpoints.get(karafCellarNode.getId());
-                    if (publicEndpoint != null) {
-                        String[] publicEndpointParts = publicEndpoint.split(":");
-                        clusterNode.setHostAddress(publicEndpointParts[0]);
-                        clusterNode.setPublicPort(Integer.parseInt(publicEndpointParts[1]));
-                    }
-                    String secureEndpoint = secureNodeEndpoints.get(karafCellarNode.getId());
-                    if (secureEndpoint != null) {
-                        String[] secureEndpointParts = secureEndpoint.split(":");
-                        clusterNode.setSecureHostAddress(secureEndpointParts[0]);
-                        clusterNode.setSecurePort(Integer.parseInt(secureEndpointParts[1]));
-                        clusterNode.setMaster(false);
-                        clusterNode.setData(false);
-                    }
-                    try {
-                        // now let's connect to remote JMX service to retrieve information from the runtime and operating system MX beans
-                        JMXServiceURL url = new JMXServiceURL("service:jmx:rmi:///jndi/rmi://"+karafCellarNode.getHost() + ":"+karafJMXPort+"/karaf-root");
-                        Map<String,Object> environment=new HashMap<String,Object>();
-                        if (karafJMXUsername != null && karafJMXPassword != null) {
-                            environment.put(JMXConnector.CREDENTIALS,new String[]{karafJMXUsername,karafJMXPassword});
-                        }
-                        JMXConnector jmxc = JMXConnectorFactory.connect(url, environment);
-                        MBeanServerConnection mbsc = jmxc.getMBeanServerConnection();
-                        final RuntimeMXBean remoteRuntime = ManagementFactory.newPlatformMXBeanProxy(mbsc, ManagementFactory.RUNTIME_MXBEAN_NAME, RuntimeMXBean.class);
-                        clusterNode.setUptime(remoteRuntime.getUptime());
-                        ObjectName operatingSystemMXBeanName = new ObjectName(ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME);
-                        Double processCpuLoad = null;
-                        Double systemCpuLoad = null;
-                        try {
-                            processCpuLoad = (Double) mbsc.getAttribute(operatingSystemMXBeanName, "ProcessCpuLoad");
-                        } catch (MBeanException e) {
-                            e.printStackTrace();
-                        } catch (AttributeNotFoundException e) {
-                            e.printStackTrace();
-                        }
-                        try {
-                            systemCpuLoad = (Double) mbsc.getAttribute(operatingSystemMXBeanName, "SystemCpuLoad");
-                        } catch (MBeanException e) {
-                            e.printStackTrace();
-                        } catch (AttributeNotFoundException e) {
-                            e.printStackTrace();
-                        }
-                        final OperatingSystemMXBean remoteOperatingSystemMXBean = ManagementFactory.newPlatformMXBeanProxy(mbsc, ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME, OperatingSystemMXBean.class);
-                        clusterNode.setLoadAverage(new double[] { remoteOperatingSystemMXBean.getSystemLoadAverage()});
-                        if (systemCpuLoad != null) {
-                            clusterNode.setCpuLoad(systemCpuLoad);
-                        }
-
-                    } catch (MalformedURLException e) {
-                        logger.error("Error connecting to remote JMX server", e);
-                    } catch (IOException e) {
-                        logger.error("Error retrieving remote JMX data", e);
-                    } catch (MalformedObjectNameException e) {
-                        logger.error("Error retrieving remote JMX data", e);
-                    } catch (InstanceNotFoundException e) {
-                        logger.error("Error retrieving remote JMX data", e);
-                    } catch (ReflectionException e) {
-                        logger.error("Error retrieving remote JMX data", e);
-                    }
-                    clusterNodes.put(karafCellarNode.getId(), clusterNode);
-                }
-
-                return new ArrayList<ClusterNode>(clusterNodes.values());
-            }
-        }.executeInClassLoader();
-    }
 
     @Override
     public void refresh() {
@@ -1654,7 +1476,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 client.admin().indices().refresh(Requests.refreshRequest()).actionGet();
                 return true;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
 
     }
 
@@ -1663,7 +1485,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public void purge(final Date date) {
         new InClassLoaderExecute<Object>() {
             @Override
-            protected Object execute(Object... args) {
+            protected Object execute(Object... args) throws Exception {
                 IndicesStatsResponse statsResponse = client.admin().indices().prepareStats(indexName + "-*")
                         .setIndexing(false)
                         .setGet(false)
@@ -1689,7 +1511,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 toDelete.add(currentIndexName);
                             }
                         } catch (ParseException e) {
-                            logger.error("Cannot parse index name " + currentIndexName, e);
+                            throw new Exception("Cannot parse index name " + currentIndexName, e);
                         }
                     }
                 }
@@ -1698,7 +1520,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
                 return null;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     @Override
@@ -1743,7 +1565,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 return null;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     @Override
@@ -1794,7 +1616,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
                 return results;
             }
-        }.executeInClassLoader();
+        }.catchingExecuteInClassLoader(true);
     }
 
     private String getIndexNameForQuery(String itemType) {
@@ -1804,9 +1626,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public abstract static class InClassLoaderExecute<T> {
 
-        protected abstract T execute(Object... args);
+        protected abstract T execute(Object... args) throws Exception;
 
-        public T executeInClassLoader(Object... args) {
+        public T executeInClassLoader(Object... args) throws Exception {
             ClassLoader tccl = Thread.currentThread().getContextClassLoader();
             try {
                 Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
@@ -1814,6 +1636,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             } finally {
                 Thread.currentThread().setContextClassLoader(tccl);
             }
+        }
+
+        public T catchingExecuteInClassLoader( boolean logError, Object... args) {
+            try {
+                return executeInClassLoader(args);
+            } catch (Exception e) {
+                logger.error("Error while executing in class loader", e);
+            }
+            return null;
         }
     }
 
@@ -1825,21 +1656,5 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return defaultValue;
     }
 
-    /**
-     * Check if a configuration is allowed.
-     *
-     * @param group the cluster group.
-     * @param category the configuration category constant.
-     * @param pid the configuration PID.
-     * @param type the cluster event type.
-     * @return true if the cluster event type is allowed, false else.
-     */
-    public boolean isClusterConfigPIDAllowed(Group group, String category, String pid, EventType type) {
-        CellarSupport support = new CellarSupport();
-        support.setClusterManager(this.karafCellarClusterManager);
-        support.setGroupManager(this.karafCellarGroupManager);
-        support.setConfigurationAdmin(this.osgiConfigurationAdmin);
-        return support.isAllowed(group, category, pid, type);
-    }
 
 }

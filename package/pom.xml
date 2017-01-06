@@ -215,18 +215,7 @@
                                         </artifactItem>
                                         <artifactItem>
                                             <groupId>org.apache.unomi</groupId>
-                                            <artifactId>unomi-persistence-elasticsearch-core</artifactId>
-                                            <version>${project.version}</version>
-                                            <classifier>elasticsearchconfig</classifier>
-                                            <type>yml</type>
-                                            <outputDirectory>
-                                                ${project.build.directory}/assembly/etc
-                                            </outputDirectory>
-                                            <destFileName>elasticsearch.yml</destFileName>
-                                        </artifactItem>
-                                        <artifactItem>
-                                            <groupId>org.apache.unomi</groupId>
-                                            <artifactId>unomi-persistence-elasticsearch-core</artifactId>
+                                            <artifactId>unomi-services</artifactId>
                                             <version>${project.version}</version>
                                             <classifier>hazelcastconfig</classifier>
                                             <type>xml</type>

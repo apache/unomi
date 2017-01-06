@@ -427,8 +427,6 @@
                                 <exclude>**/src/main/webapp/WEB-INF/beans.xml</exclude>
                                 <!-- Web application robots.txt file -->
                                 <exclude>**/src/main/webapp/robots.txt</exclude>
-                                <!-- Elastic search configuration files with (mostly) default configuration -->
-                                <exclude>**/src/main/resources/elasticsearch.yml</exclude>
                                 <!-- ignore generated log files -->
                                 <exclude>**/*.log</exclude>
                             </excludes>

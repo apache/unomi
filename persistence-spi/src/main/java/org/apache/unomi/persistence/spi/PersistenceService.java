@@ -452,4 +452,12 @@ public interface PersistenceService {
      * @return {@code true} if the operation was successful, {@code false} otherwise
      */
     boolean removeIndex(final String indexName);
+
+    /**
+     * Removes all data associated with the provided scope.
+     *
+     * @param scope the scope for which we want to remove data
+     */
+    void purge(final String scope);
+
 }

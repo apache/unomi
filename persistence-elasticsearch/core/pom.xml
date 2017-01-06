@@ -54,16 +54,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.karaf.cellar</groupId>
-            <artifactId>org.apache.karaf.cellar.core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.karaf.cellar</groupId>
-            <artifactId>org.apache.karaf.cellar.config</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>20.0</version>
@@ -254,16 +244,6 @@
                                     </file>
                                     <type>cfg</type>
                                     <classifier>elasticsearchcfg</classifier>
-                                </artifact>
-                                <artifact>
-                                    <file>src/main/resources/elasticsearch.yml</file>
-                                    <type>yml</type>
-                                    <classifier>elasticsearchconfig</classifier>
-                                </artifact>
-                                <artifact>
-                                    <file>src/main/resources/hazelcast.xml</file>
-                                    <type>xml</type>
-                                    <classifier>hazelcastconfig</classifier>
                                 </artifact>
                             </artifacts>
                         </configuration>

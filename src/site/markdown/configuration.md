@@ -43,15 +43,6 @@ with the following contents:
 
     cluster.name=contextElasticSearch
     index.name=context
-    elasticSearchConfig=file:${karaf.etc}/elasticsearch.yml
-
-And replace the cluster.name parameter here by your cluster name.
-
-You can also put an elasticsearch configuration file in $MY_KARAF_HOME/etc/elasticsearch.yml ,
-and put any standard Elasticsearch configuration options in this last file.
-
-If you want your context server to be a client only on a cluster of elasticsearch nodes, just set the node.data property
-to false.
 
 Installing the MaxMind GeoIPLite2 IP lookup database
 ----------------------------------------------------
@@ -160,23 +151,7 @@ node-to-node communication : 9200 (Elasticsearch REST API), 9300 (Elasticsearch 
 
 Of course any ports listed here are the default ports configured in each server, you may adjust them if needed.
 
-Step 2 : Adjust the Context Server IP filtering
-
-By default the Context Server limits to connections to port 9200 and 9300 to the following IP ranges
-
-    - localhost
-    - 127.0.0.1
-    - ::1
-    - the current subnet (i.e., 192.168.1.0-192.168.1.255)
-    
-(this is done using a custom plugin for Elasticsearch, that you may find here : 
-https://git-wip-us.apache.org/repos/asf/incubator-unomi/context-server/persistence-elasticsearch/plugins/security)
-
-You can adjust this setting by using the following setting in the $MY_KARAF_HOME/etc/elasticsearch.yml file : 
-
-    security.ipranges: localhost,127.0.0.1,::1,10.0.1.0-10.0.1.255
-
-Step 3 : Follow industry recommended best practices for securing Elasticsearch
+Step 2 : Follow industry recommended best practices for securing Elasticsearch
 
 You may find more valuable recommendations here : 
 

@@ -32,7 +32,6 @@
         <cm:default-properties>
             <cm:property name="cluster.name" value="contextElasticSearch"/>
             <cm:property name="index.name" value="context"/>
-            <cm:property name="elasticSearchConfig" value="file:${karaf.etc}/elasticsearch.yml"/>
             <cm:property name="numberOfShards" value="5"/>
             <cm:property name="numberOfReplicas" value="0"/>
             <cm:property name="monthlyIndex.numberOfShards" value="3"/>
@@ -46,10 +45,9 @@
             <cm:property name="bulkProcessor.flushInterval" value="5s" />
             <cm:property name="bulkProcessor.backoffPolicy" value="exponential" />
 
-            <cm:property name="cluster.group" value="default" />
-            <cm:property name="cluster.jmxUsername" value="karaf" />
-            <cm:property name="cluster.jmxPassword" value="karaf" />
-            <cm:property name="cluster.jmxPort" value="1099" />
+            <cm:property name="minimalElasticSearchVersion" value="5.0.0" />
+            <cm:property name="maximalElasticSearchVersion" value="5.2.0" />
+
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -71,7 +69,6 @@
     <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl">
         <interfaces>
             <value>org.apache.unomi.persistence.spi.PersistenceService</value>
-            <value>org.apache.unomi.api.services.ClusterService</value>
         </interfaces>
     </service>
 
@@ -101,7 +98,6 @@
         <property name="secureAddress" value="${web.contextserver.secureAddress}"/>
         <property name="securePort" value="${web.contextserver.securePort}"/>
         <property name="defaultQueryLimit" value="${es.defaultQueryLimit}"/>
-        <property name="elasticSearchConfig" value="${es.elasticSearchConfig}"/>
         <property name="itemsMonthlyIndexed">
             <list>
                 <value>event</value>
@@ -123,14 +119,9 @@
         <property name="bulkProcessorBulkSize" value="${es.bulkProcessor.bulkSize}" />
         <property name="bulkProcessorFlushInterval" value="${es.bulkProcessor.flushInterval}" />
         <property name="bulkProcessorBackoffPolicy" value="${es.bulkProcessor.backoffPolicy}" />
-        <property name="karafCellarClusterManager" ref="karafCellarClusterManager" />
-        <property name="karafCellarEventProducer" ref="karafCellarEventProducer" />
-        <property name="karafCellarGroupManager" ref="karafCellarGroupManager" />
-        <property name="karafCellarGroupName" value="${es.cluster.group}" />
-        <property name="osgiConfigurationAdmin" ref="osgiConfigurationAdmin" />
-        <property name="karafJMXUsername" value="${es.cluster.jmxUsername}" />
-        <property name="karafJMXPassword" value="${es.cluster.jmxPassword}" />
-        <property name="karafJMXPort" value="${es.cluster.jmxPort}" />
+
+        <property name="minimalElasticSearchVersion" value="${es.minimalElasticSearchVersion}" />
+        <property name="maximalElasticSearchVersion" value="${es.maximalElasticSearchVersion}" />
     </bean>
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->

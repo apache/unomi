@@ -116,16 +116,9 @@ with the following contents:
 
     cluster.name=contextElasticSearch
     index.name=context
-    elasticSearchConfig=file:${karaf.etc}/elasticsearch.yml
 
 And replace the cluster.name parameter here by your cluster name.
-
-You can also put an elasticsearch configuration file in $MY_KARAF_HOME/etc/elasticsearch.yml ,
-and put any standard Elasticsearch configuration options in this last file.
-
-If you want your context server to be a client only on a cluster of elasticsearch nodes, just set the node.data property
-to false.
-
+    
 Secured events configuration
 ---------------------------
 
@@ -260,23 +253,16 @@ servers on the same network, and enable the discovery protocol in $MY_KARAF_HOME
 
 All nodes on the same network, sharing the same cluster name will be part of the same cluster.
 
-###Recommended configurations
-
-It is recommended to have one node dedicated to the context server, where the other nodes take care of the
-Elasticsearch persistence. The node dedicated to the context server will have node.data set to false.
-
 #### 2 nodes  configuration
 One node dedicated to context server, 1 node for elasticsearch storage.
 
 Node A :
 
-    node.data=true
     numberOfReplicas=0
     monthlyIndex.numberOfReplicas=0
 
 Node B :
 
-    node.data=false
     numberOfReplicas=0
     monthlyIndex.numberOfReplicas=0
 
@@ -285,38 +271,18 @@ One node dedicated to context server, 2 nodes for elasticsearch storage with fau
 
 Node A :
 
-    node.data=false
     numberOfReplicas=1
     monthlyIndex.numberOfReplicas=1
 
 Node B :
 
-    node.data=true
     numberOfReplicas=1
     monthlyIndex.numberOfReplicas=1
 
 Node C :
 
-    node.data=true
     numberOfReplicas=1
     monthlyIndex.numberOfReplicas=1
-
-### Specific configuration
-If multicast is not allowed on your network, you'll need to switch to unicast protocol and manually configure the server IPs. This can be
-done by disabling the elasticsearch automatic discovery in $MY_KARAF_HOME/etc/org.apache.unomi.persistence.elasticsearch.cfg :
-
-    discovery.zen.ping.multicast.enabled=false
-
-
-And then set the property discovery.zen.ping.unicast.hosts in $MY_KARAF_HOME/etc/elasticsearch.yml files :
-
-
-    discovery.zen.ping.unicast.hosts: [‘192.168.0.1:9300', ‘192.168.0.2:9300']
-
-
-More information and configuration options can be found at :
-[https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-discovery.html](https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-discovery.html)
-
 
 
 JDK Selection on Mac OS X
@@ -415,20 +381,6 @@ Of course any ports listed here are the default ports configured in each server,
 
 Step 2 : Adjust the Context Server IP filtering
 
-By default the Context Server limits to connections to port 9200 and 9300 to the following IP ranges
-
-    - localhost
-    - 127.0.0.1
-    - ::1
-    - the current subnet (i.e., 192.168.1.0-192.168.1.255)
-    
-(this is done using a custom plugin for Elasticsearch, that you may find here : 
-https://git-wip-us.apache.org/repos/asf/incubator-unomi/context-server/persistence-elasticsearch/plugins/security)
-
-You can adjust this setting by using the following setting in the $MY_KARAF_HOME/etc/elasticsearch.yml file : 
-
-    security.ipranges: localhost,127.0.0.1,::1,10.0.1.0-10.0.1.255
-
 Step 3 : Follow industry recommended best practices for securing Elasticsearch
 
 You may find more valuable recommendations here : 
@@ -463,9 +415,3 @@ To upload the site to the Apache website, simply run after the above command has
     
 This operation takes a little bit of time, so don't interrupt it even if you're waiting for a while for it to complete
 (usually takes about 16 minutes !)
-
-Todo
-----
-
-- Look at possible integration with newsletter management systems such as MailChimp, for example to synchronize profile data with collected info.
-- Integrate with machine learning implementations such as Prediction.io or Apache Mahout
