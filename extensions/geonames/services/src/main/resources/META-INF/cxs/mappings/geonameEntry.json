@@ -1,76 +1,22 @@
 {
   "geonameEntry": {
     "properties": {
-      "admin1Code": {
-        "type": "string",
-        "analyzer": "folding"
-      },
-      "admin2Code": {
-        "type": "string",
-        "analyzer": "folding"
-      },
-      "admin3Code": {
-        "type": "string",
-        "analyzer": "folding"
-      },
-      "admin4Code": {
-        "type": "string",
-        "analyzer": "folding"
-      },
-      "alternatenames": {
-        "type": "string"
-      },
-      "asciiname": {
-        "type": "string"
-      },
-      "cc2": {
-        "type": "string"
-      },
-      "countryCode": {
-        "type": "string",
-        "analyzer": "folding"
-      },
-      "dem": {
-        "type": "string",
-        "analyzer": "folding"
-      },
       "elevation": {
         "type": "long"
       },
-      "featureClass": {
-        "type": "string",
-        "analyzer": "folding"
-      },
-      "featureCode": {
-        "type": "string",
-        "analyzer": "folding"
-      },
-      "itemId": {
-        "type": "string",
-        "analyzer": "folding"
-      },
-      "itemType": {
-        "type": "string",
-        "analyzer": "folding"
-      },
+
       "location": {
         "type": "geo_point"
       },
       "modificationDate": {
         "type": "date",
-        "format": "dateOptionalTime"
+        "format": "strict_date_optional_time||epoch_millis"
       },
-      "name": {
-        "type": "string",
-        "analyzer": "folding"
-      },
+
       "population": {
         "type": "long"
-      },
-      "timezone": {
-        "type": "string",
-        "analyzer": "folding"
       }
+
     }
   }
 }

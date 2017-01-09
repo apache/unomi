@@ -1,30 +1,25 @@
 {
   "personaSession": {
-    "dynamic_templates": [
-      {
-        "all": {
-          "match": "*",
-          "match_mapping_type": "string",
-          "mapping": {
-            "type": "string",
-            "analyzer": "folding"
-          }
-        }
-      }
-    ],
     "properties": {
+      "duration" : {
+        "type" : "long"
+      },
+
       "timeStamp": {
         "type": "date"
       },
       "lastEventDate": {
         "type": "date"
       },
-      "properties": {
-        "properties": {
-          "location": {
-            "type": "geo_point"
+      "properties" : {
+        "properties" : {
+          "location" : {
+            "type" : "geo_point"
           }
         }
+      },
+      "size" : {
+        "type" : "long"
       }
     }
   }

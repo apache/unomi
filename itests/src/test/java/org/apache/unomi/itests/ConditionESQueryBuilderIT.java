@@ -35,7 +35,7 @@ import java.util.List;
  */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
-public class ConditionESQueryBuilderTest extends ConditionEvaluatorTest {
+public class ConditionESQueryBuilderIT extends ConditionEvaluatorIT {
 
     @Override
     protected boolean eval(Condition c) {

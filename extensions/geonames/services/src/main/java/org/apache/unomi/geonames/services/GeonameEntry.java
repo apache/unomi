@@ -20,7 +20,7 @@ package org.apache.unomi.geonames.services;
 import org.apache.unomi.api.Item;
 
 import java.util.Date;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -56,7 +56,7 @@ public class GeonameEntry extends Item {
         this.name = name;
         this.asciiname = asciiname;
 //        this.alternatenames = alternatenames;
-        this.location = new HashMap<>();
+        this.location = new LinkedHashMap<>();
         this.location.put("lat",lat);
         this.location.put("lon",lon);
         this.featureClass = featureClass;

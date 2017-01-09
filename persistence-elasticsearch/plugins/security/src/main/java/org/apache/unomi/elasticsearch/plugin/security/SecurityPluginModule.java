@@ -18,11 +18,10 @@
 package org.apache.unomi.elasticsearch.plugin.security;
 
 import org.elasticsearch.common.inject.AbstractModule;
-import org.elasticsearch.common.settings.Settings;
 
 public class SecurityPluginModule extends AbstractModule {
 
-    public SecurityPluginModule(Settings settings) {
+    public SecurityPluginModule() {
         super();
     }
 

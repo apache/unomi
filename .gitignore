@@ -10,3 +10,6 @@ target
 .DS_Store
 /performance-tests/.cache
 maven-metadata-local.xml
+GeoLite2-City.mmdb
+allCountries.zip
+rest/.miredot-offline.json

@@ -33,8 +33,8 @@ import java.util.List;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
-public class SegmentTest extends BaseTest{
-    private final static Logger LOGGER = LoggerFactory.getLogger(SegmentTest.class);
+public class SegmentIT extends BaseIT {
+    private final static Logger LOGGER = LoggerFactory.getLogger(SegmentIT.class);
     @Inject
     protected SegmentService segmentService;
 

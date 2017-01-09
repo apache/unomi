@@ -49,9 +49,7 @@
 
 MY_DIRNAME=`dirname $0`
 MY_KARAF_HOME=`cd "$MY_DIRNAME/.."; pwd`
-export KARAF_OPTS="-Djava.library.path=$MY_KARAF_HOME/lib/sigar"
 
 export JAVA_MAX_MEM=3G
-export JAVA_MAX_PERM_MEM=512M
 # export YOURKIT_AGENTPATH="/Applications/YourKit_Java_Profiler_2013_build_13048.app/bin/mac/libyjpagent.jnilib"
 # export KARAF_OPTS="-agentpath:$YOURKIT_AGENTPATH=disablestacktelemetry,disableexceptiontelemetry,delay=10000"

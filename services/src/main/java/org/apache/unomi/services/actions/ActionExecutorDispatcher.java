@@ -26,15 +26,12 @@ import org.apache.unomi.api.services.EventService;
 import org.mvel2.MVEL;
 import org.mvel2.ParserConfiguration;
 import org.mvel2.ParserContext;
-import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -43,9 +40,7 @@ public class ActionExecutorDispatcher {
     private static final String VALUE_NAME_SEPARATOR = "::";
     private final Map<String, Serializable> mvelExpressions = new ConcurrentHashMap<>();
     private final Map<String, ValueExtractor> valueExtractors = new HashMap<>(11);
-    private BundleContext bundleContext;
     private Map<String, ActionExecutor> executors = new ConcurrentHashMap<>();
-    private Map<Long, List<String>> executorsByBundle = new ConcurrentHashMap<>();
 
     public ActionExecutorDispatcher() {
         valueExtractors.put("profileProperty", new ValueExtractor() {
@@ -101,21 +96,12 @@ public class ActionExecutorDispatcher {
         });
     }
 
-    public void addExecutor(String name, long bundleId, ActionExecutor evaluator) {
+    public void addExecutor(String name, ActionExecutor evaluator) {
         executors.put(name, evaluator);
-        if (!executorsByBundle.containsKey(bundleId)) {
-            executorsByBundle.put(bundleId, new ArrayList<String>());
-        }
-        executorsByBundle.get(bundleId).add(name);
     }
 
-    public void removeExecutors(long bundleId) {
-        if (executorsByBundle.containsKey(bundleId)) {
-            for (String s : executorsByBundle.get(bundleId)) {
-                executors.remove(s);
-            }
-            executorsByBundle.remove(bundleId);
-        }
+    public void removeExecutor(String name) {
+        executors.remove(name);
     }
 
     public Action getContextualAction(Action action, Event event) {
@@ -175,10 +161,6 @@ public class ActionExecutorDispatcher {
             }
         }
         return false;
-    }
-
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
     }
 
     public int execute(Action action, Event event) {

@@ -22,9 +22,10 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
-import org.elasticsearch.common.joda.time.DateTime;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.FilterBuilders;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.joda.time.DateTime;
 
 import java.util.List;
 import java.util.Map;
@@ -35,7 +36,7 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
     }
 
     @Override
-    public FilterBuilder buildFilter(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         String op = (String) condition.getParameter("comparisonOperator");
         String name = (String) condition.getParameter("propertyName");
 
@@ -60,64 +61,77 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         switch (op) {
             case "equals":
                 checkRequiredValue(value, name, op, false);
-                return FilterBuilders.termFilter(name, value);
+                return QueryBuilders.termQuery(name, value);
             case "notEquals":
                 checkRequiredValue(value, name, op, false);
-                return FilterBuilders.notFilter(FilterBuilders.termFilter(name, value));
+                return QueryBuilders.boolQuery().mustNot(QueryBuilders.termQuery(name, value));
             case "greaterThan":
                 checkRequiredValue(value, name, op, false);
-                return FilterBuilders.rangeFilter(name).gt(value);
+                return QueryBuilders.rangeQuery(name).gt(value);
             case "greaterThanOrEqualTo":
                 checkRequiredValue(value, name, op, false);
-                return FilterBuilders.rangeFilter(name).gte(value);
+                return QueryBuilders.rangeQuery(name).gte(value);
             case "lessThan":
                 checkRequiredValue(value, name, op, false);
-                return FilterBuilders.rangeFilter(name).lt(value);
+                return QueryBuilders.rangeQuery(name).lt(value);
             case "lessThanOrEqualTo":
                 checkRequiredValue(value, name, op, false);
-                return FilterBuilders.rangeFilter(name).lte(value);
+                return QueryBuilders.rangeQuery(name).lte(value);
             case "between":
                 checkRequiredValuesSize(values, name, op, 2);
-                return FilterBuilders.rangeFilter(name).gte(values.get(0)).lte(values.get(1));
+                return QueryBuilders.rangeQuery(name).gte(values.get(0)).lte(values.get(1));
             case "exists":
-                return FilterBuilders.existsFilter(name);
+                return QueryBuilders.existsQuery(name);
             case "missing":
-                return FilterBuilders.missingFilter(name);
+                return QueryBuilders.boolQuery().mustNot(QueryBuilders.existsQuery((name)));
             case "contains":
                 checkRequiredValue(expectedValue, name, op, false);
-                return FilterBuilders.regexpFilter(name, ".*" + expectedValue + ".*");
+                return QueryBuilders.regexpQuery(name, ".*" + expectedValue + ".*");
             case "startsWith":
                 checkRequiredValue(expectedValue, name, op, false);
-                return FilterBuilders.prefixFilter(name, expectedValue);
+                return QueryBuilders.prefixQuery(name, expectedValue);
             case "endsWith":
                 checkRequiredValue(expectedValue, name, op, false);
-                return FilterBuilders.regexpFilter(name, ".*" + expectedValue);
+                return QueryBuilders.regexpQuery(name, ".*" + expectedValue);
             case "matchesRegex":
                 checkRequiredValue(expectedValue, name, op, false);
-                return FilterBuilders.regexpFilter(name, expectedValue);
+                return QueryBuilders.regexpQuery(name, expectedValue);
             case "in":
                 checkRequiredValue(values, name, op, true);
-                return FilterBuilders.inFilter(name, values.toArray());
+                return QueryBuilders.termsQuery(name, values.toArray());
             case "notIn":
                 checkRequiredValue(values, name, op, true);
-                return FilterBuilders.notFilter(FilterBuilders.inFilter(name, values.toArray()));
+                return QueryBuilders.boolQuery().mustNot(QueryBuilders.termsQuery(name, values.toArray()));
             case "all":
                 checkRequiredValue(values, name, op, true);
-                return FilterBuilders.termsFilter(name, values.toArray()).execution("and");
+                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+                for (Object curValue : values) {
+                    boolQueryBuilder.must(QueryBuilders.termQuery(name, curValue));
+                }
+                return boolQueryBuilder;
             case "hasSomeOf":
                 checkRequiredValue(values, name, op, true);
-                return FilterBuilders.termsFilter(name, values.toArray()).execution("or");
+                boolQueryBuilder = QueryBuilders.boolQuery();
+                for (Object curValue : values) {
+                    boolQueryBuilder.should(QueryBuilders.termQuery(name, curValue));
+                }
+                return boolQueryBuilder;
             case "hasNoneOf":
                 checkRequiredValue(values, name, op, true);
-                return FilterBuilders.notFilter(FilterBuilders.termsFilter(name, values.toArray()).execution("or"));
+                boolQueryBuilder = QueryBuilders.boolQuery();
+                for (Object curValue : values) {
+                    boolQueryBuilder.mustNot(QueryBuilders.termQuery(name, curValue));
+                }
+                return boolQueryBuilder;
             case "isDay":
                 checkRequiredValue(value, name, op, false);
                 return getIsSameDayRange(value, name);
             case "isNotDay":
                 checkRequiredValue(value, name, op, false);
-                return FilterBuilders.notFilter(getIsSameDayRange(value, name));
+                return QueryBuilders.boolQuery().mustNot(getIsSameDayRange(value, name));
+            default:
+                throw new IllegalArgumentException("Impossible to build ES filter, unrecognized op=" + op);
         }
-        return null;
     }
 
     private void checkRequiredValuesSize(List<?> values, String name, String operator, int expectedSize) {
@@ -132,10 +146,10 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         }
     }
 
-    private FilterBuilder getIsSameDayRange (Object value, String name) {
+    private QueryBuilder getIsSameDayRange (Object value, String name) {
         DateTime date = new DateTime(value);
         DateTime dayStart = date.withTimeAtStartOfDay();
         DateTime dayAfterStart = date.plusDays(1).withTimeAtStartOfDay();
-        return FilterBuilders.rangeFilter(name).gte(dayStart.toDate()).lte(dayAfterStart.toDate());
+        return QueryBuilders.rangeQuery(name).gte(dayStart.toDate()).lte(dayAfterStart.toDate());
     }
 }

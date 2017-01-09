@@ -64,14 +64,23 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!--
         <dependency>
-            <!-- scope is runtime so the feature repo is listed in the features service config file, and features may be installed using the karaf-maven-plugin configuration -->
             <groupId>org.apache.cxf.karaf</groupId>
             <artifactId>apache-cxf</artifactId>
             <classifier>features</classifier>
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
+        -->
+        <dependency>
+            <groupId>org.apache.karaf.cellar</groupId>
+            <artifactId>apache-karaf-cellar</artifactId>
+            <classifier>features</classifier>
+            <type>xml</type>
+            <scope>runtime</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-kar</artifactId>
@@ -158,7 +167,7 @@
                         <artifactId>maven-dependency-plugin</artifactId>
                         <executions>
                             <execution>
-                                <id>unpack-sigar</id>
+                                <id>unpack-deploy-by-query-plugin</id>
                                 <phase>generate-resources</phase>
                                 <goals>
                                     <goal>unpack</goal>
@@ -166,12 +175,10 @@
                                 <configuration>
                                     <artifactItems>
                                         <artifactItem>
-                                            <groupId>org.elasticsearch</groupId>
-                                            <artifactId>elasticsearch</artifactId>
+                                            <groupId>org.elasticsearch.plugin</groupId>
+                                            <artifactId>reindex-client</artifactId>
                                             <version>${elasticsearch.version}</version>
-                                            <type>tar.gz</type>
-                                            <includes>**/lib/sigar/**</includes>
-                                            <outputDirectory>${project.build.directory}/unpack</outputDirectory>
+                                            <outputDirectory>${project.build.directory}/assembly/elasticsearch/modules/reindex</outputDirectory>
                                         </artifactItem>
                                     </artifactItems>
                                 </configuration>
@@ -208,14 +215,14 @@
                                         </artifactItem>
                                         <artifactItem>
                                             <groupId>org.apache.unomi</groupId>
-                                            <artifactId>unomi-persistence-elasticsearch-core</artifactId>
+                                            <artifactId>unomi-services</artifactId>
                                             <version>${project.version}</version>
-                                            <classifier>elasticsearchconfig</classifier>
-                                            <type>yml</type>
+                                            <classifier>hazelcastconfig</classifier>
+                                            <type>xml</type>
                                             <outputDirectory>
                                                 ${project.build.directory}/assembly/etc
                                             </outputDirectory>
-                                            <destFileName>elasticsearch.yml</destFileName>
+                                            <destFileName>hazelcast.xml</destFileName>
                                         </artifactItem>
                                         <artifactItem>
                                             <groupId>org.apache.unomi</groupId>
@@ -245,27 +252,6 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-antrun-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>copy-karaf</id>
-                                <phase>generate-resources</phase>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                                <configuration>
-                                    <target>
-                                        <copy todir="${project.build.directory}/assembly/lib/sigar">
-                                            <fileset dir="${project.build.directory}/unpack/elasticsearch-${elasticsearch.version}/lib/sigar" />
-                                        </copy>
-                                    </target>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-
                     <plugin>
                         <groupId>org.apache.karaf.tooling</groupId>
                         <artifactId>karaf-maven-plugin</artifactId>
@@ -300,6 +286,7 @@
                                 <feature>cxf</feature>
                                 <feature>openwebbeans</feature>
                                 <feature>pax-cdi-web-openwebbeans</feature>
+                                <feature>cellar</feature>
                                 <feature>unomi-kar</feature>
                             </bootFeatures>
                         </configuration>

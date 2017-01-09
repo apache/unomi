@@ -40,7 +40,7 @@ import java.io.IOException;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
-public class BasicTest extends BaseTest{
+public class BasicIT extends BaseIT {
     private static final String JSON_MYME_TYPE = "application/json";
 
     private ObjectMapper objectMapper = new ObjectMapper();

@@ -1,45 +1,8 @@
 {
   "event": {
-    "dynamic_templates": [
-      {
-        "all": {
-          "match": "*",
-          "match_mapping_type": "string",
-          "mapping": {
-            "type": "string",
-            "analyzer": "folding"
-          }
-        }
-      }
-    ],
     "properties": {
-      "eventType": {
-        "type": "string",
-        "analyzer": "folding"
-      },
-      "itemId": {
-        "type": "string",
-        "analyzer": "folding"
-      },
-      "itemType": {
-        "type": "string",
-        "analyzer": "folding"
-      },
-      "profileId": {
-        "type": "string",
-        "analyzer": "folding"
-      },
-      "scope": {
-        "type": "string",
-        "analyzer": "folding"
-      },
-      "sessionId": {
-        "type": "string",
-        "analyzer": "folding"
-      },
       "timeStamp": {
-        "type": "date",
-        "format": "dateOptionalTime"
+        "type": "date"
       }
     }
   }

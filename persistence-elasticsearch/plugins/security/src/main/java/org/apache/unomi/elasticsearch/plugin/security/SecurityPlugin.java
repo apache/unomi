@@ -20,42 +20,34 @@ package org.apache.unomi.elasticsearch.plugin.security;
 import org.elasticsearch.common.component.LifecycleComponent;
 import org.elasticsearch.common.inject.Module;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.plugins.AbstractPlugin;
+import org.elasticsearch.plugins.Plugin;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 
-import static org.elasticsearch.common.collect.Lists.newArrayList;
-
-public class SecurityPlugin extends AbstractPlugin {
+public class SecurityPlugin extends Plugin {
 
     public SecurityPlugin(Settings settings) {
         super();
     }
 
-    public String name() {
-        return "contextserver-security";
-    }
-
-    public String description() {
-        return "A plugin that provides some basic security to the Context Server elasticsearch HTTP and Transport connectors";
+    @Override
+    public Collection<Module> createGuiceModules() {
+        return Collections.<Module>singletonList(new SecurityPluginModule());
     }
 
     @Override
-    public Collection<Class<? extends Module>> modules() {
-        Collection<Class<? extends Module>> modules = newArrayList();
-        // if (settings.getAsBoolean("security.enabled", true)) {
-        modules.add(SecurityPluginModule.class);
-        // }
-        return modules;
-    }
-
-    @SuppressWarnings("rawtypes")
-    @Override
-    public Collection<Class<? extends LifecycleComponent>> services() {
-        Collection<Class<? extends LifecycleComponent>> services = newArrayList();
-        // if (settings.getAsBoolean("security.enabled", true)) {
+    @SuppressWarnings("rawtypes") // Plugin use a rawtype
+    public Collection<Class<? extends LifecycleComponent>> getGuiceServiceClasses() {
+        Collection<Class<? extends LifecycleComponent>> services = new ArrayList<>();
         services.add(SecurityPluginService.class);
-        // }
         return services;
     }
+
+    @Override
+    public Settings additionalSettings() {
+        return Settings.EMPTY;
+    }
+
 }

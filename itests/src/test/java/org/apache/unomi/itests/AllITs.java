@@ -27,11 +27,12 @@ import org.junit.runners.Suite.SuiteClasses;
  * @author Sergiy Shyrkov
  */
 @RunWith(Suite.class)
-@SuiteClasses({ 
-    //BasicTest.class, 
-    ConditionEvaluatorTest.class,
-    ConditionESQueryBuilderTest.class,
-    SegmentTest.class
+@SuiteClasses({
+        //BasicIT.class,
+        ConditionEvaluatorIT.class,
+        ConditionESQueryBuilderIT.class,
+        SegmentIT.class,
+        ProfileServiceIT.class
     })
-public class AllTests {
+public class AllITs {
 }

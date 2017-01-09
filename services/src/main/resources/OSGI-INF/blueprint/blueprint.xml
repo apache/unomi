@@ -26,15 +26,41 @@
                              update-strategy="reload" placeholder-prefix="${services.">
         <cm:default-properties>
             <cm:property name="profile.purge.interval" value="1"/>
-            <cm:property name="profile.purge.inactiveTime" value="30"/>
+            <cm:property name="profile.purge.inactiveTime" value="180"/>
             <cm:property name="profile.purge.existTime" value="-1"/>
             <cm:property name="event.purge.existTime" value="12"/>
+            <cm:property name="segment.update.batchSize" value="1000"/>
         </cm:default-properties>
     </cm:property-placeholder>
+
+    <cm:property-placeholder persistent-id="org.apache.unomi.cluster"
+                             update-strategy="reload" placeholder-prefix="${cluster.">
+        <cm:default-properties>
+            <cm:property name="group" value="default" />
+            <cm:property name="jmxUsername" value="karaf" />
+            <cm:property name="jmxPassword" value="karaf" />
+            <cm:property name="jmxPort" value="1099" />
+        </cm:default-properties>
+    </cm:property-placeholder>
+
+    <cm:property-placeholder persistent-id="org.apache.unomi.web"
+                             update-strategy="reload" placeholder-prefix="${web.">
+        <cm:default-properties>
+            <cm:property name="contextserver.address" value="localhost"/>
+            <cm:property name="contextserver.port" value="8181"/>
+            <cm:property name="contextserver.secureAddress" value="localhost"/>
+            <cm:property name="contextserver.securePort" value="9443"/>
+        </cm:default-properties>
+    </cm:property-placeholder>
+
 
     <reference id="persistenceService"
                interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="httpService" interface="org.osgi.service.http.HttpService"/>
+    <reference id="karafCellarClusterManager" interface="org.apache.karaf.cellar.core.ClusterManager" />
+    <reference id="karafCellarEventProducer" interface="org.apache.karaf.cellar.core.event.EventProducer" />
+    <reference id="karafCellarGroupManager" interface="org.apache.karaf.cellar.core.GroupManager" />
+    <reference id="osgiConfigurationAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
 
     <!-- Service definitions -->
 
@@ -83,7 +109,6 @@
 
     <bean id="actionExecutorDispatcherImpl"
           class="org.apache.unomi.services.actions.ActionExecutorDispatcher">
-        <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
 
     <bean id="rulesServiceImpl" class="org.apache.unomi.services.services.RulesServiceImpl"
@@ -104,6 +129,7 @@
         <property name="rulesService" ref="rulesServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="taskExecutionPeriod" value="86400000"/>
+        <property name="segmentUpdateBatchSize" value="${services.segment.update.batchSize}" />
     </bean>
     <service id="segmentService" ref="segmentServiceImpl" auto-export="interfaces"/>
 
@@ -128,12 +154,37 @@
     </bean>
     <service id="queryService" ref="queryServiceImpl" auto-export="interfaces"/>
 
+    <bean id="clusterServiceImpl" class="org.apache.unomi.services.services.ClusterServiceImpl"
+          init-method="init" destroy-method="destroy">
+        <property name="address" value="${web.contextserver.address}"/>
+        <property name="port" value="${web.contextserver.port}"/>
+        <property name="secureAddress" value="${web.contextserver.secureAddress}"/>
+        <property name="securePort" value="${web.contextserver.securePort}"/>
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="karafCellarClusterManager" ref="karafCellarClusterManager" />
+        <property name="karafCellarEventProducer" ref="karafCellarEventProducer" />
+        <property name="karafCellarGroupManager" ref="karafCellarGroupManager" />
+        <property name="karafCellarGroupName" value="${cluster.group}" />
+        <property name="osgiConfigurationAdmin" ref="osgiConfigurationAdmin" />
+        <property name="karafJMXUsername" value="${cluster.jmxUsername}" />
+        <property name="karafJMXPassword" value="${cluster.jmxPassword}" />
+        <property name="karafJMXPort" value="${cluster.jmxPort}" />
+    </bean>
+    <service id="clusterService" ref="clusterServiceImpl" auto-export="interfaces"/>
+
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
     <reference-list id="eventListenerServices"
                     interface="org.apache.unomi.api.services.EventListenerService"
                     availability="optional">
         <reference-listener
                 bind-method="bind" unbind-method="unbind" ref="eventServiceImpl"/>
+    </reference-list>
+
+    <reference-list id="actionExecutors"
+                    interface="org.apache.unomi.api.actions.ActionExecutor"
+                    availability="optional">
+        <reference-listener
+                bind-method="bindExecutor" unbind-method="unbindExecutor" ref="rulesServiceImpl"/>
     </reference-list>
 
     <!-- Property merge strategy executors -->

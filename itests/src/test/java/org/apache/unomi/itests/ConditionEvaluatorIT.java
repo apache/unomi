@@ -41,7 +41,7 @@ import static org.junit.Assert.*;
  */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
-public class ConditionEvaluatorTest extends BaseTest {
+public class ConditionEvaluatorIT extends BaseIT {
 
     protected ConditionBuilder builder;
     @Inject

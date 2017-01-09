@@ -86,43 +86,80 @@ public class GeonamesServiceImpl implements GeonamesService {
         }
         final File f = new File(pathToGeonamesDatabase);
         if (f.exists()) {
-            Timer t = new Timer();
+            final Timer t = new Timer();
             t.schedule(new TimerTask() {
                 @Override
                 public void run() {
-                    try {
-                        ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(f));
-                        ZipEntry zipEntry = zipInputStream.getNextEntry();
-
-                        BufferedReader reader = new BufferedReader(new InputStreamReader(zipInputStream, "UTF-8"));
-
-                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                        String line;
-                        logger.info("Starting to import geonames database ...");
-                        while ((line = reader.readLine()) != null) {
-                            String[] values = line.split("\t");
-
-                            if (FEATURES_CLASSES.contains(values[6])) {
-                                GeonameEntry geonameEntry = new GeonameEntry(values[0], values[1], values[2],
-                                        StringUtils.isEmpty(values[4]) ? null : Double.parseDouble(values[4]),
-                                        StringUtils.isEmpty(values[5]) ? null : Double.parseDouble(values[5]),
-                                        values[6], values[7], values[8],
-                                        Arrays.asList(values[9].split(",")),
-                                        values[10], values[11], values[12], values[13],
-                                        StringUtils.isEmpty(values[14]) ? null : Integer.parseInt(values[14]),
-                                        StringUtils.isEmpty(values[15]) ? null : Integer.parseInt(values[15]),
-                                        values[16], values[17],
-                                        sdf.parse(values[18]));
-
-                                persistenceService.save(geonameEntry);
-                            }
-                        }
-                        logger.info("Geonames database imported");
-                    } catch (Exception e) {
-                        logger.error(e.getMessage(), e);
-                    }
+                        importGeoNameDatabase(f, t);
                 }
             }, 5000);
+        }
+    }
+
+    private void importGeoNameDatabase(final File f, final Timer t) {
+        Map<String,Map<String,Object>> typeMappings = persistenceService.getPropertiesMapping(GeonameEntry.ITEM_TYPE);
+        if (typeMappings == null || typeMappings.size() == 0) {
+            logger.warn("Type mappings for type {} are not yet installed, delaying import until they are ready!", GeonameEntry.ITEM_TYPE);
+            t.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    importGeoNameDatabase(f, t);
+                }
+            }, 5000);
+            return;
+        } else {
+            // let's check that the mappings are correct
+        }
+        try {
+
+            ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(f));
+            ZipEntry zipEntry = zipInputStream.getNextEntry(); // used to advance to the first entry in the ZipInputStream
+            long fileSize = zipEntry.getSize();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(zipInputStream, "UTF-8"));
+
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            String line;
+            logger.info("Starting to import geonames database from file {}...", f);
+            long charCount = 0;
+            double lastCompletionPourcentage = 0.0;
+            long lastCharCount = 0;
+            long importStartTime = System.currentTimeMillis();
+            while ((line = reader.readLine()) != null) {
+                String[] values = line.split("\t");
+
+                if (FEATURES_CLASSES.contains(values[6])) {
+                    GeonameEntry geonameEntry = new GeonameEntry(values[0], values[1], values[2],
+                            StringUtils.isEmpty(values[4]) ? null : Double.parseDouble(values[4]),
+                            StringUtils.isEmpty(values[5]) ? null : Double.parseDouble(values[5]),
+                            values[6], values[7], values[8],
+                            Arrays.asList(values[9].split(",")),
+                            values[10], values[11], values[12], values[13],
+                            StringUtils.isEmpty(values[14]) ? null : Integer.parseInt(values[14]),
+                            StringUtils.isEmpty(values[15]) ? null : Integer.parseInt(values[15]),
+                            values[16], values[17],
+                            sdf.parse(values[18]));
+
+                    persistenceService.save(geonameEntry, true);
+                }
+                charCount+=line.length();
+                if (fileSize > 0) {
+                    double completionPourcentage = 100.0 * charCount / fileSize;
+                    if (completionPourcentage - lastCompletionPourcentage > 1.0) {
+                        int roundedPourcentage = (int) completionPourcentage;
+                        logger.info("{}% imported from file {}", roundedPourcentage, f);
+                        lastCompletionPourcentage = completionPourcentage;
+                    }
+                } else {
+                    if (charCount - lastCharCount > (100*1024*1024)) {
+                        logger.info("{}MB imported from file {}", charCount / (1024*1024), f);
+                        lastCharCount = charCount;
+                    }
+                }
+            }
+            long totalTimeMillis = System.currentTimeMillis()-importStartTime;
+            logger.info("{} characters from Geonames database file {} imported in {}ms. Speed={}MB/s", charCount, f, totalTimeMillis, charCount / (1024*1024) / (totalTimeMillis / 1000));
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
         }
     }
 

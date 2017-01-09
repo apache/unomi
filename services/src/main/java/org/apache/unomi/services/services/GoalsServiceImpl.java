@@ -474,25 +474,26 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
         // resolve aggregate
         BaseAggregate aggregate = null;
-        if(query != null && query.getAggregate() != null && query.getAggregate().getProperty() != null) {
+        String property = query.getAggregate().getProperty();
+        if(query != null && query.getAggregate() != null && property != null) {
             if (query.getAggregate().getType() != null){
                 // try to guess the aggregate type
                 if(query.getAggregate().getType().equals("date")) {
                     String interval = (String) query.getAggregate().getParameters().get("interval");
                     String format = (String) query.getAggregate().getParameters().get("format");
-                    aggregate = new DateAggregate(query.getAggregate().getProperty(), interval, format);
+                    aggregate = new DateAggregate(property, interval, format);
                 } else if (query.getAggregate().getType().equals("dateRange") && query.getAggregate().getDateRanges() != null && query.getAggregate().getDateRanges().size() > 0) {
                     String format = (String) query.getAggregate().getParameters().get("format");
-                    aggregate = new DateRangeAggregate(query.getAggregate().getProperty(), format, query.getAggregate().getDateRanges());
+                    aggregate = new DateRangeAggregate(property, format, query.getAggregate().getDateRanges());
                 } else if (query.getAggregate().getType().equals("numericRange") && query.getAggregate().getNumericRanges() != null && query.getAggregate().getNumericRanges().size() > 0) {
-                    aggregate = new NumericRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().getNumericRanges());
+                    aggregate = new NumericRangeAggregate(property, query.getAggregate().getNumericRanges());
                 } else if (query.getAggregate().getType().equals("ipRange") && query.getAggregate().ipRanges() != null && query.getAggregate().ipRanges().size() > 0) {
-                    aggregate = new IpRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().ipRanges());
+                    aggregate = new IpRangeAggregate(property, query.getAggregate().ipRanges());
                 }
             }
 
             if(aggregate == null){
-                aggregate = new TermsAggregate(query.getAggregate().getProperty());
+                aggregate = new TermsAggregate(property);
             }
         }
 
