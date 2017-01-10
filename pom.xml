@@ -250,7 +250,7 @@
         <profile>
             <id>integration-tests</id>
             <activation>
-                <activeByDefault>true</activeByDefault>
+                <activeByDefault>false</activeByDefault>
             </activation>
             <modules>
                 <module>itests</module>
@@ -260,7 +260,7 @@
         <profile>
             <id>performance-tests</id>
             <activation>
-                <activeByDefault>true</activeByDefault>
+                <activeByDefault>false</activeByDefault>
             </activation>
             <modules>
                 <module>performance-tests</module>
