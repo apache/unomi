@@ -43,6 +43,23 @@ with the following contents:
 
     cluster.name=contextElasticSearch
     index.name=context
+    
+Secured events configuration
+---------------------------
+
+If you need to secure some events, that will be sent only by a trusted third party server, you can update the file :
+
+    $MY_KARAF_HOME/etc/org.apache.unomi.thirdparty.cfg
+
+Ususally, login events, which operate on profiles and do merge on protected properties, must be secured. For each
+trusted third party server, you need to add these 3 lines :
+
+thirdparty.provider1.key=secret-key
+thirdparty.provider1.ipAddresses=127.0.0.1,::1
+thirdparty.provider1.allowedEvents=login,download
+
+The events set in allowedEvents will be secured and will only be accepted if the call comes from the specified IP
+address, and if the secret-key is passed in the X-Unomi-Peer header.    
 
 Installing the MaxMind GeoIPLite2 IP lookup database
 ----------------------------------------------------
@@ -90,6 +107,17 @@ The generated package is also configured with a default SSL certificate. You can
 ```
 
 You should now have SSL setup on Karaf with your certificate, and you can test it by trying to access it on port 9443.
+
+3. Changing the default Karaf password can be done by modifying the etc/users.properties file
+
+4. You will also need to change the user/password information in the org.apache.unomi.cluster.cfg file : 
+
+```
+    cluster.group=default
+    cluster.jmxUsername=karaf
+    cluster.jmxPassword=karaf
+    cluster.jmxPort=1099
+```
 
 Automatic profile merging
 -------------------------

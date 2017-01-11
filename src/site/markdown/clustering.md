@@ -18,10 +18,20 @@
 Cluster setup
 =============
 
-Context server relies on Apache Karaf Cellar to discover and configure its cluster. You just need to install multiple context
-servers on the same network, and enable the discovery protocol in $MY_KARAF_HOME/etc/hazelcast.xml file.
+Apache Karaf relies on Apache Karaf Cellar, which in turn uses Hazelcast to discover and configure its cluster. 
+You just need to install multiple context servers on the same network, and then (optionally) change the Hazelcast 
+ configuration in the following file :
+
+    etc/hazelcast.xml
 
 All nodes on the same network, sharing the same cluster name will be part of the same cluster.
+
+For the actual ElasticSearch configuration however, this must be done using the following file:
+
+    etc/org.apache.unomi.persistence.elasticsearch.cfg
+    
+Depending on the cluster size, you will want to adjust the following parameters to make sure your setup is optimal in 
+terms of performance and safety.
 
 #### 2 nodes  configuration
 One node dedicated to context server, 1 node for elasticsearch storage.
@@ -53,3 +63,4 @@ Node C :
 
     numberOfReplicas=1
     monthlyIndex.numberOfReplicas=1
+

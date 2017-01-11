@@ -17,28 +17,68 @@
 Building
 ========
 
-Simply type at the root of the project:
+Initial Setup
+-------------
 
-    mvn clean install
+1) Install J2SE 8.0 SDK (or later), which can be downloaded from
+   http://www.oracle.com/technetwork/java/javase/downloads/index.html
 
-The Maven build process will generate both a standalone package you can use directly to start the context server
-(see "Deploying the generated package") or a KAR file that you can then deploy using a manual deployment process into
-an already installed Apache Karaf server (see "Deploying into an existing Karaf server")
+2) Make sure that your JAVA_HOME environment variable is set to the newly installed
+   JDK location, and that your PATH includes %JAVA_HOME%\bin (windows) or
+   $JAVA_HOME$/bin (unix).
 
-If you want to build and run the integration tests, you should instead use : 
+3) Install Maven 3.0.3 (or later), which can be downloaded from
+   http://maven.apache.org/download.html. Make sure that your PATH includes
+   the MVN_HOME/bin directory.
 
-    mvn -P integration-tests clean install
 
-Deploying the generated package
--------------------------------
+Building
+--------
+
+1) Change to the top level directory of Apache Unomi source distribution.
+2) Run
+
+         $> mvn clean install
+
+   This will compile Apache Unomi and run all of the tests in the
+   Apache Unomi source distribution. Alternatively, you can run
+
+         $> mvn -P \!integration-tests,\!performance-tests clean install
+
+   This will compile Apache Unomi without running the tests and takes less
+   time to build.
+
+3) The distributions will be available under "package/target" directory.
+
+Installing an ElasticSearch server
+----------------------------------
+
+Starting with version 1.2, Apache Unomi no longer embeds an ElasticSearch server as this is no longer supported by 
+the developers of ElasticSearch. Therefore you will need to install a standalone ElasticSearch using the following steps:
+
+1. Download an ElasticSearch 5.x version (5.1.1 or more recent, but not 6.x) from the following site:
+
+    https://www.elastic.co/downloads/elasticsearch
+    
+2. Uncompress the downloaded package into a directory and launch the server using
+
+    bin/elasticsearch (Mac, Linux)
+    bin\elasticsearch.bat (Windows)
+    
+3. Check that the ElasticSearch is up and running by accessing the following URL : 
+
+    http://localhost:9200    
+
+Deploying the generated binary package
+--------------------------------------
 
 The "package" sub-project generates a pre-configured Apache Karaf installation that is the simplest way to get started.
-Simply uncompress the `package/target/unomi-VERSION.tar.gz` (for Linux or Mac OS X) or
- `package/target/unomi-VERSION.zip` (for Windows) archive into the directory of your choice.
+Simply uncompress the package/target/unomi-VERSION.tar.gz (for Linux or Mac OS X) or
+ package/target/unomi-VERSION.zip (for Windows) archive into the directory of your choice.
  
 You can then start the server simply by using the command on UNIX/Linux/MacOS X : 
 
-    ./bin/karaf start
+    ./bin/karaf start    
     
 or on Windows shell : 
 
@@ -52,8 +92,7 @@ This is only needed if you didn't use the generated package. Also, this is the p
 environment if you intend to re-deploy the context server KAR iteratively.
 
 Additional requirements:
- - Apache Karaf 3.0.2+, http://karaf.apache.org
- - Local copy of the Elasticsearch ZIP package, available here : http://www.elasticsearch.org
+* Apache Karaf 3.x, http://karaf.apache.org
 
 1. Before deploying, make sure that you have Apache Karaf properly installed. You will also have to increase the
 default maximum memory size and perm gen size by adjusting the following environment values in the bin/setenv(.bat)
@@ -62,22 +101,17 @@ files (at the end of the file):
     ```
        MY_DIRNAME=`dirname $0`
        MY_KARAF_HOME=`cd "$MY_DIRNAME/.."; pwd`
-       export KARAF_OPTS="-Djava.library.path=$MY_KARAF_HOME/lib/sigar"
        export JAVA_MAX_MEM=3G
        export JAVA_MAX_PERM_MEM=384M
     ```
     
-2. You will also need to have the Hyperic Sigar native libraries in your Karaf installation, so in order to this
-go to the Elasticsearch website (http://www.elasticsearch.org)  and download the ZIP package. Decompress it somewhere 
-on your disk and copy all the files from the lib/sigar directory into Karaf's lib/sigar directory 
-(must be created first) EXCEPT THE SIGAR.JAR file.
-
-3. Install the WAR support, CXF into Karaf by doing the following in the Karaf command line:
+2. Install the WAR support, CXF and CDI (OpenWebBeans) into Karaf by doing the following in the Karaf command line:
 
     ```
-       feature:install -v war
-       feature:repo-add cxf 2.7.11
-       feature:install -v cxf/2.7.11
+       feature:repo-add cxf 3.0.2
+       feature:repo-add cellar 3.0.3
+       feature:repo-add mvn:org.apache.unomi/unomi-kar/VERSION/xml/features
+       feature:install unomi-kar
     ```
 
 4. Create a new $MY_KARAF_HOME/etc/org.apache.cxf.osgi.cfg file and put the following property inside :
@@ -85,14 +119,8 @@ on your disk and copy all the files from the lib/sigar directory into Karaf's li
     ```
        org.apache.cxf.servlet.context=/cxs
     ```
-
-5. Copy the following KAR to the Karaf deploy directory, as in this example line:
-
-    ```
-      cp kar/target/unomi-kar-1.0.0-SNAPSHOT.kar ~/java/deployments/unomi/apache-karaf-3.0.1/deploy/
-    ```
    
-6. If all went smoothly, you should be able to access the context script here : http://localhost:8181/cxs/cluster .
+5. If all went smoothly, you should be able to access the context script here : http://localhost:8181/cxs/cluster .
  You should be able to login with karaf / karaf and see basic server information. If not something went wrong during the install.
  
 JDK Selection on Mac OS X

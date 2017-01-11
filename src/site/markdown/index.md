@@ -17,7 +17,7 @@
   
 ![Unomi logo](images/apache-unomi-380x85.png)
 
-## A front end for personalization big data technologies (with built-in privacy management)
+## A personalization and A/B testing open source server (with built-in privacy management)
 
 ### In a few words
 
@@ -90,6 +90,8 @@ compliant server community.
 
 ### News
 
+- 2016-10-04 Released version 1.1.0-incubating
+- 2016-05-22 Released version 1.0.0-incubating
 - 2015-11-23 Initial code base import in [Git repository](source-repository.html) 
 - 2015-11-20 Added [Apache Maturity Model report page](maturity-model-report.html)
 - 2015-11-13 Initial web site created

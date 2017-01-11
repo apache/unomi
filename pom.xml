@@ -29,9 +29,9 @@
     <groupId>org.apache.unomi</groupId>
     <artifactId>unomi-root</artifactId>
     <name>Apache Unomi :: Root Project</name>
-    <description>Unomi is a reference implementation of the OASIS Context Server specification currently being worked on
-        by the OASIS Context Server Technical Committee. It
-        provides a high-performance user profile and event tracking server.
+    <description>Apache Unomi is a reference implementation of the OASIS Context Server specification currently being
+        worked on by the OASIS Context Server Technical Committee. It provides a high-performance user profile and
+        event tracking server.
     </description>
     <url>http://unomi.incubator.apache.org</url>
     <version>1.2.0-incubating-SNAPSHOT</version>
