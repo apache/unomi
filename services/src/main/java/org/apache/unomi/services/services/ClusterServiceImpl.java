@@ -70,6 +70,8 @@ public class ClusterServiceImpl implements ClusterService {
     private String secureAddress;
     private String securePort;
 
+    private Map<String,JMXConnector> jmxConnectors = new LinkedHashMap<>();
+
     PersistenceService persistenceService;
 
     public void setPersistenceService(PersistenceService persistenceService) {
@@ -178,6 +180,15 @@ public class ClusterServiceImpl implements ClusterService {
     }
 
     public void destroy() {
+        for (Map.Entry<String,JMXConnector> jmxConnectorEntry : jmxConnectors.entrySet()) {
+            String url = jmxConnectorEntry.getKey();
+            JMXConnector jmxConnector = jmxConnectorEntry.getValue();
+            try {
+                jmxConnector.close();
+            } catch (IOException e) {
+                logger.error("Error closing JMX connector for url {}", url, e);
+            }
+        }
     }
 
     @Override
@@ -224,32 +235,19 @@ public class ClusterServiceImpl implements ClusterService {
                 clusterNode.setData(false);
             }
             try {
-                // now let's connect to remote JMX service to retrieve information from the runtime and operating system MX beans
-                JMXServiceURL url = new JMXServiceURL("service:jmx:rmi:///jndi/rmi://"+karafCellarNode.getHost() + ":"+karafJMXPort+"/karaf-root");
-                Map<String,Object> environment=new HashMap<String,Object>();
-                if (karafJMXUsername != null && karafJMXPassword != null) {
-                    environment.put(JMXConnector.CREDENTIALS,new String[]{karafJMXUsername,karafJMXPassword});
-                }
-                JMXConnector jmxc = JMXConnectorFactory.connect(url, environment);
-                MBeanServerConnection mbsc = jmxc.getMBeanServerConnection();
+                String serviceUrl = "service:jmx:rmi:///jndi/rmi://"+karafCellarNode.getHost() + ":"+karafJMXPort+"/karaf-root";
+                JMXConnector jmxConnector = getJMXConnector(serviceUrl);
+                MBeanServerConnection mbsc = jmxConnector.getMBeanServerConnection();
                 final RuntimeMXBean remoteRuntime = ManagementFactory.newPlatformMXBeanProxy(mbsc, ManagementFactory.RUNTIME_MXBEAN_NAME, RuntimeMXBean.class);
                 clusterNode.setUptime(remoteRuntime.getUptime());
                 ObjectName operatingSystemMXBeanName = new ObjectName(ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME);
-                Double processCpuLoad = null;
                 Double systemCpuLoad = null;
-                try {
-                    processCpuLoad = (Double) mbsc.getAttribute(operatingSystemMXBeanName, "ProcessCpuLoad");
-                } catch (MBeanException e) {
-                    e.printStackTrace();
-                } catch (AttributeNotFoundException e) {
-                    e.printStackTrace();
-                }
                 try {
                     systemCpuLoad = (Double) mbsc.getAttribute(operatingSystemMXBeanName, "SystemCpuLoad");
                 } catch (MBeanException e) {
-                    e.printStackTrace();
+                    logger.error("Error retrieving system CPU load", e);
                 } catch (AttributeNotFoundException e) {
-                    e.printStackTrace();
+                    logger.error("Error retrieving system CPU load", e);
                 }
                 final OperatingSystemMXBean remoteOperatingSystemMXBean = ManagementFactory.newPlatformMXBeanProxy(mbsc, ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME, OperatingSystemMXBean.class);
                 clusterNode.setLoadAverage(new double[] { remoteOperatingSystemMXBean.getSystemLoadAverage()});
@@ -299,6 +297,34 @@ public class ClusterServiceImpl implements ClusterService {
         support.setGroupManager(this.karafCellarGroupManager);
         support.setConfigurationAdmin(this.osgiConfigurationAdmin);
         return support.isAllowed(group, category, pid, type);
+    }
+
+    private JMXConnector getJMXConnector(String url) throws IOException {
+        if (jmxConnectors.containsKey(url)) {
+            JMXConnector jmxConnector = jmxConnectors.get(url);
+            try {
+                jmxConnector.getMBeanServerConnection();
+                return jmxConnector;
+            } catch (IOException e) {
+                jmxConnectors.remove(url);
+                try {
+                    jmxConnector.close();
+                } catch (IOException e1) {
+                    logger.error("Error closing invalid JMX connection", e1);
+                }
+                logger.error("Error using the JMX connection to url {}, closed and will reconnect", url, e);
+            }
+        }
+        // if we reach this point either we didn't have a connector or it didn't validate
+        // now let's connect to remote JMX service to retrieve information from the runtime and operating system MX beans
+        JMXServiceURL jmxServiceURL = new JMXServiceURL(url);
+        Map<String,Object> environment=new HashMap<String,Object>();
+        if (karafJMXUsername != null && karafJMXPassword != null) {
+            environment.put(JMXConnector.CREDENTIALS,new String[]{karafJMXUsername,karafJMXPassword});
+        }
+        JMXConnector jmxConnector = JMXConnectorFactory.connect(jmxServiceURL, environment);
+        jmxConnectors.put(url, jmxConnector);
+        return jmxConnector;
     }
 
 }
