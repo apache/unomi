@@ -803,17 +803,18 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
             l.add(numberOfDaysCondition);
         }
         String propertyKey = (String) parentCondition.getParameter("generatedPropertyKey");
-        Map<String, Long> res = persistenceService.aggregateQuery(andCondition, new TermsAggregate("profileId"), Event.ITEM_TYPE);
-        for (Map.Entry<String, Long> entry : res.entrySet()) {
-            if (!entry.getKey().startsWith("_")) {
-                Map<String,Object> p = new HashMap<>();
-                p.put(propertyKey, entry.getValue());
-                Map<String,Object> p2 = new HashMap<>();
-                p2.put("pastEvents",p);
+        Map<String, Long> eventCountByProfile = persistenceService.aggregateQuery(andCondition, new TermsAggregate("profileId"), Event.ITEM_TYPE);
+        for (Map.Entry<String, Long> entry : eventCountByProfile.entrySet()) {
+            String profileId = entry.getKey();
+            if (!profileId.startsWith("_")) {
+                Map<String,Long> pastEventCounts = new HashMap<>();
+                pastEventCounts.put(propertyKey, entry.getValue());
+                Map<String,Object> systemProperties = new HashMap<>();
+                systemProperties.put("pastEvents",pastEventCounts);
                 try {
-                    persistenceService.update(entry.getKey(), null, Profile.class, "systemProperties", p2);
+                    persistenceService.update(profileId, null, Profile.class, "systemProperties", systemProperties);
                 } catch (Exception e) {
-                    logger.error(e.getMessage(), e);
+                    logger.error("Error updating profile {} past event system properties", profileId, e);
                 }
             }
         }
