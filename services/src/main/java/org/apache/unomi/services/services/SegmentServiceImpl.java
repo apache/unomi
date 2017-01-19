@@ -137,11 +137,13 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
         }
         bundleContext.addBundleListener(this);
         initializeTimer();
+        logger.info("Segment service initialized.");
     }
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
         cancelTimers();
+        logger.info("Segment service shutdown.");
     }
 
     private void cancelTimers() {

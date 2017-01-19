@@ -23,25 +23,29 @@ Changing the default configuration
 
 If you want to change the default configuration, you can perform any modification you want in the $MY_KARAF_HOME/etc directory.
 
-The context server configuration is kept in the $MY_KARAF_HOME/etc/org.apache.unomi.web.cfg . It defines the
+The context server configuration is kept in the $MY_KARAF_HOME/etc/org.apache.unomi.cluster.cfg . It defines the
 addresses and port where it can be found :
 
     contextserver.address=localhost
     contextserver.port=8181
     contextserver.secureAddress=localhost
     contextserver.securePort=9443
-    contextserver.domain=apache.org
 
-If you need to specify an Elasticsearch cluster name that is different than the default, it is recommended to do this
-BEFORE you start the server for the first time, or you will loose all the data you have stored previously.
+If you need to specify an Elasticsearch cluster name, or a host and port that are different than the default, 
+it is recommended to do this BEFORE you start the server for the first time, or you will loose all the data 
+you have stored previously.
 
-To change the cluster name, first create a file called 
+To change these settings, first create a file called 
 
     $MY_KARAF_HOME/etc/org.apache.unomi.persistence.elasticsearch.cfg
 
 with the following contents:
 
     cluster.name=contextElasticSearch
+    # The elasticSearchAddresses may be a comma seperated list of host names and ports such as
+    # hostA:9300,hostB:9300
+    # Note: the port number must be repeated for each host.
+    elasticSearchAddresses=localhost:9300
     index.name=context
     
 Secured events configuration
@@ -197,12 +201,15 @@ Integrating with an Apache HTTP web server
 If you want to setup an Apache HTTP web server in from of Apache Unomi, here is an example configuration using 
 mod_proxy.
 
-In your Unomi package directory, in /etc/org.apache.unomi.web.cfg for unomi.apache.org
+In your Unomi package directory, in /etc/org.apache.unomi.cluster.cfg for unomi.apache.org
    
    contextserver.address=unomi.apache.org
    contextserver.port=80
    contextserver.secureAddress=unomi.apache.org
    contextserver.securePort=443
+   
+and you will also need to change the contextserver.domain in the /etc/org.apache.unomi.web.cfg file
+
    contextserver.domain=apache.org
 
 Main virtual host config:

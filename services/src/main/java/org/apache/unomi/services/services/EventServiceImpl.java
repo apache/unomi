@@ -55,6 +55,14 @@ public class EventServiceImpl implements EventService {
 
     private Map<String, ThirdPartyServer> thirdPartyServers = new HashMap<>();
 
+    public void init() {
+        logger.info("Event service initialized.");
+    }
+
+    public void destroy() {
+        logger.info("Event service shutdown.");
+    }
+
     public void setThirdPartyConfiguration(Map<String,String> thirdPartyConfiguration) {
         this.thirdPartyServers = new HashMap<>();
         for (Map.Entry<String, String> entry : thirdPartyConfiguration.entrySet()) {

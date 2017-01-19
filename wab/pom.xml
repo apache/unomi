@@ -53,24 +53,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.geronimo.specs</groupId>
-            <artifactId>geronimo-jcdi_1.0_spec</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.geronimo.specs</groupId>
-            <artifactId>geronimo-atinject_1.0_spec</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.geronimo.specs</groupId>
-            <artifactId>geronimo-annotation_1.1_spec</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
           <groupId>com.fasterxml.jackson.core</groupId>
           <artifactId>jackson-databind</artifactId>
           <scope>provided</scope>
@@ -118,10 +100,6 @@
                             *
                         </Import-Package>
                         <Web-ContextPath>/</Web-ContextPath>
-                        <Require-Capability>
-                            org.ops4j.pax.cdi.extension; filter:="(extension=pax-cdi-extension)",
-                            osgi.extender; filter:="(osgi.extender=pax.cdi)"
-                        </Require-Capability>
                     </instructions>
                 </configuration>
             </plugin>

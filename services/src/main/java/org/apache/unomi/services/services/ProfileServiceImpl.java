@@ -98,12 +98,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         bundleContext.addBundleListener(this);
         initializePurge();
         schedulePropertyTypeLoad();
+        logger.info("Profile service initialized.");
     }
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
         cancelPurge();
         cancelPropertyTypeLoad();
+        logger.info("Profile service shutdown.");
     }
 
     private void processBundleStartup(BundleContext bundleContext) {

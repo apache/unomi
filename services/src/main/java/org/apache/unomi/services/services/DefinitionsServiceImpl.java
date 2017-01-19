@@ -55,7 +55,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     private BundleContext bundleContext;
     public DefinitionsServiceImpl() {
-        logger.info("Instantiating definitions service...");
+
     }
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -79,6 +79,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         }
 
         bundleContext.addBundleListener(this);
+        logger.info("Definitions service initialized.");
     }
 
     private void processBundleStartup(BundleContext bundleContext) {
@@ -118,6 +119,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
+        logger.info("Definitions service shutdown.");
     }
 
     private void loadPredefinedTags(BundleContext bundleContext) {

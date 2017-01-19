@@ -103,11 +103,13 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         bundleContext.addBundleListener(this);
 
         initializeTimer();
+        logger.info("Rule service initialized.");
     }
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
         cancelTimers();
+        logger.info("Rule service shutdown.");
     }
 
     private void cancelTimers() {

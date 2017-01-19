@@ -105,7 +105,7 @@ files (at the end of the file):
        export JAVA_MAX_PERM_MEM=384M
     ```
     
-2. Install the WAR support, CXF and CDI (OpenWebBeans) into Karaf by doing the following in the Karaf command line:
+2. Install the WAR support, CXF and Karaf Cellar into Karaf by doing the following in the Karaf command line:
 
     ```
        feature:repo-add cxf 3.0.2

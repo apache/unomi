@@ -92,8 +92,6 @@ public abstract class BaseIT {
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 features(karafPaxWebRepo, "war"),
                 features(karafCxfRepo, "cxf"),
-                features(karafStandardRepo, "openwebbeans"),
-                features(karafStandardRepo, "pax-cdi-web-openwebbeans"),
                 features(karafCellarRepo, "cellar"),
                 features(contextServerRepo, "unomi-kar"),
                 // we need to wrap the HttpComponents libraries ourselves since the OSGi bundles provided by the project are incorrect

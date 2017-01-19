@@ -22,6 +22,8 @@ import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.geonames.services.GeonameEntry;
 import org.apache.unomi.geonames.services.GeonamesService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -40,10 +42,12 @@ import java.util.Locale;
 )
 public class GeonamesEndPoint {
 
+    private static final Logger logger = LoggerFactory.getLogger(GeonamesEndPoint.class.getName());
+
     private GeonamesService geonamesService;
 
     public GeonamesEndPoint() {
-        System.out.println("Initializing geonames service endpoint...");
+        logger.info("Initializing geonames service endpoint...");
     }
 
     @WebMethod(exclude = true)

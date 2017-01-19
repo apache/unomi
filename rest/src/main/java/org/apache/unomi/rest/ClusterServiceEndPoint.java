@@ -51,7 +51,7 @@ public class ClusterServiceEndPoint {
     private ClusterService clusterService;
 
     public ClusterServiceEndPoint() {
-        System.out.println("Initializing cluster service endpoint...");
+        logger.info("Initializing cluster service endpoint...");
     }
 
     @WebMethod(exclude = true)

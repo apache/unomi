@@ -44,9 +44,11 @@ public class QueryServiceImpl implements QueryService {
     }
 
     public void postConstruct() {
+        logger.info("Query service initialized.");
     }
 
     public void preDestroy() {
+        logger.info("Query service shutdown.");
     }
 
     @Override

@@ -127,19 +127,18 @@ public class ClusterServiceImpl implements ClusterService {
     }
 
     public void init() {
-        logger.debug("init cluster service");
         if (karafCellarEventProducer != null && karafCellarClusterManager != null) {
-
-            address = System.getProperty(CONTEXTSERVER_ADDRESS, address);
-            port = System.getProperty(CONTEXTSERVER_PORT, port);
-            secureAddress = System.getProperty(CONTEXTSERVER_SECURE_ADDRESS, secureAddress);
-            securePort = System.getProperty(CONTEXTSERVER_SECURE_PORT, securePort);
 
             boolean setupConfigOk = true;
             Group group = karafCellarGroupManager.findGroupByName(karafCellarGroupName);
             if (setupConfigOk && group == null) {
-                logger.error("Cluster group " + karafCellarGroupName + " doesn't exist");
-                setupConfigOk = false;
+                logger.error("Cluster group " + karafCellarGroupName + " doesn't exist, creating it...");
+                group = karafCellarGroupManager.createGroup(karafCellarGroupName);
+                if (group != null) {
+                    setupConfigOk = true;
+                } else {
+                    setupConfigOk = false;
+                }
             }
 
             // check if the producer is ON
@@ -177,6 +176,7 @@ public class ClusterServiceImpl implements ClusterService {
                 karafCellarEventProducer.produce(clusterConfigurationEvent);
             }
         }
+        logger.info("Cluster service initialized.");
     }
 
     public void destroy() {
@@ -189,6 +189,7 @@ public class ClusterServiceImpl implements ClusterService {
                 logger.error("Error closing JMX connector for url {}", url, e);
             }
         }
+        logger.info("Cluster service shutdown.");
     }
 
     @Override

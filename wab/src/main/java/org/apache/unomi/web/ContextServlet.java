@@ -30,6 +30,7 @@ import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -59,6 +60,11 @@ public class ContextServlet extends HttpServlet {
     private String profileIdCookieName = "context-profile-id";
     private String profileIdCookieDomain;
 
+    @Override
+    public void init(ServletConfig config) throws ServletException {
+        super.init(config);
+        logger.info("ContextServlet initialized.");
+    }
 
     @Override
     public void service(ServletRequest request, ServletResponse response) throws ServletException, IOException {
@@ -396,6 +402,7 @@ public class ContextServlet extends HttpServlet {
 
 
     public void destroy() {
+        logger.info("Context servlet shutdown.");
     }
 
     public void setProfileService(ProfileService profileService) {

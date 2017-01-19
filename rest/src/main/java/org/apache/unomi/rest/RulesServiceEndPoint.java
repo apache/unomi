@@ -23,6 +23,8 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.RulesService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -42,10 +44,12 @@ import java.util.Set;
 )
 public class RulesServiceEndPoint {
 
+    private static final Logger logger = LoggerFactory.getLogger(RulesServiceEndPoint.class.getName());
+
     private RulesService rulesService;
 
     public RulesServiceEndPoint() {
-        System.out.println("Initializing rule service endpoint...");
+        logger.info("Initializing rule service endpoint...");
     }
 
     @WebMethod(exclude=true)

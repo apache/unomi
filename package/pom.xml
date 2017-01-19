@@ -284,8 +284,6 @@
                                 <feature>kar</feature>
                                 <feature>war</feature>
                                 <feature>cxf</feature>
-                                <feature>openwebbeans</feature>
-                                <feature>pax-cdi-web-openwebbeans</feature>
                                 <feature>cellar</feature>
                                 <feature>unomi-kar</feature>
                             </bootFeatures>

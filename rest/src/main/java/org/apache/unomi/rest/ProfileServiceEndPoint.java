@@ -61,7 +61,7 @@ public class ProfileServiceEndPoint {
     private LocalizationHelper localizationHelper;
 
     public ProfileServiceEndPoint() {
-        System.out.println("Initializing profile service endpoint...");
+        logger.info("Initializing profile service endpoint...");
     }
 
     @WebMethod(exclude = true)

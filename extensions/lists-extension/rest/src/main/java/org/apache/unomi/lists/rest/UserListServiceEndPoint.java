@@ -23,6 +23,8 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.lists.UserList;
 import org.apache.unomi.services.UserListService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -40,10 +42,13 @@ import javax.ws.rs.core.MediaType;
         allowCredentials = true
 )
 public class UserListServiceEndPoint {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserListServiceEndPoint.class.getName());
+
     private UserListService userListService;
 
     public UserListServiceEndPoint() {
-        System.out.println("Initializing user list service endpoint...");
+        logger.info("Initializing user list service endpoint...");
     }
 
     @WebMethod(exclude = true)

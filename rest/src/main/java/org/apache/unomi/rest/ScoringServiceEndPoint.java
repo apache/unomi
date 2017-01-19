@@ -25,6 +25,8 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.segments.DependentMetadata;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.services.SegmentService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -44,10 +46,12 @@ import java.util.List;
 )
 public class ScoringServiceEndPoint {
 
+    private static final Logger logger = LoggerFactory.getLogger(ScoringServiceEndPoint.class.getName());
+
     private SegmentService segmentService;
 
     public ScoringServiceEndPoint() {
-        System.out.println("Initializing scoring service endpoint...");
+        logger.info("Initializing scoring service endpoint...");
     }
 
     @WebMethod(exclude = true)

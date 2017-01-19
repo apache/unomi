@@ -42,8 +42,8 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.action.update.UpdateRequest;
-import org.elasticsearch.client.Client;
 import org.elasticsearch.client.Requests;
+import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.settings.Settings;
@@ -113,8 +113,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public static final String BULK_PROCESSOR_FLUSH_INTERVAL = "bulkProcessor.flushInterval";
     public static final String BULK_PROCESSOR_BACKOFF_POLICY = "bulkProcessor.backoffPolicy";
 
-    private Client client;
+    private TransportClient client;
     private BulkProcessor bulkProcessor;
+    private String elasticSearchAddresses;
+    private List<String> elasticSearchAddressList = new ArrayList<>();
     private String clusterName;
     private String indexName;
     private String monthlyIndexNumberOfShards;
@@ -131,10 +133,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private Map<String, String> routingByType;
     private Set<String> existingIndexNames = new TreeSet<String>();
 
-    private String address;
-    private String port;
-    private String secureAddress;
-    private String securePort;
     private Integer defaultQueryLimit = 10;
 
     private Timer timer;
@@ -159,6 +157,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.clusterName = clusterName;
     }
 
+    public void setElasticSearchAddresses(String elasticSearchAddresses) {
+        this.elasticSearchAddresses = elasticSearchAddresses;
+        String[] elasticSearchAddressesArray = elasticSearchAddresses.split(",");
+        elasticSearchAddressList.clear();
+        for (String elasticSearchAddress : elasticSearchAddressesArray) {
+            elasticSearchAddressList.add(elasticSearchAddress.trim());
+        }
+    }
+
     public void setIndexName(String indexName) {
         this.indexName = indexName;
     }
@@ -177,22 +184,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setNumberOfReplicas(String numberOfReplicas) {
         this.numberOfReplicas = numberOfReplicas;
-    }
-
-    public void setAddress(String address) {
-        this.address = address;
-    }
-
-    public void setPort(String port) {
-        this.port = port;
-    }
-
-    public void setSecureAddress(String secureAddress) {
-        this.secureAddress = secureAddress;
-    }
-
-    public void setSecurePort(String securePort) {
-        this.securePort = securePort;
     }
 
     public void setDefaultQueryLimit(Integer defaultQueryLimit) {
@@ -260,11 +251,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             public Object execute(Object... args) throws Exception {
                 logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index name " + indexName + "...");
 
-                address = System.getProperty(CONTEXTSERVER_ADDRESS, address);
-                port = System.getProperty(CONTEXTSERVER_PORT, port);
-                secureAddress = System.getProperty(CONTEXTSERVER_SECURE_ADDRESS, secureAddress);
-                securePort = System.getProperty(CONTEXTSERVER_SECURE_PORT, securePort);
-
                 bulkProcessorName = System.getProperty(BULK_PROCESSOR_NAME, bulkProcessorName);
                 bulkProcessorConcurrentRequests = System.getProperty(BULK_PROCESSOR_CONCURRENT_REQUESTS, bulkProcessorConcurrentRequests);
                 bulkProcessorBulkActions = System.getProperty(BULK_PROCESSOR_BULK_ACTIONS, bulkProcessorBulkActions);
@@ -272,14 +258,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 bulkProcessorFlushInterval = System.getProperty(BULK_PROCESSOR_FLUSH_INTERVAL, bulkProcessorFlushInterval);
                 bulkProcessorBackoffPolicy = System.getProperty(BULK_PROCESSOR_BACKOFF_POLICY, bulkProcessorBackoffPolicy);
 
-                try {
-                    Settings transportSettings = Settings.builder()
-                            .put(CLUSTER_NAME, clusterName).build();
-                    client = new PreBuiltTransportClient(transportSettings)
-                            .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(address), 9300));
-                } catch (UnknownHostException e) {
-                    String message = "Error resolving address " + address + " ElasticSearch transport client not connected";
-                    throw new Exception(message, e);
+                Settings transportSettings = Settings.builder()
+                        .put(CLUSTER_NAME, clusterName).build();
+                client = new PreBuiltTransportClient(transportSettings);
+                for (String elasticSearchAddress : elasticSearchAddressList) {
+                    String[] elasticSearchAddressParts = elasticSearchAddress.split(":");
+                    String elasticSearchHostName = elasticSearchAddressParts[0];
+                    int elasticSearchPort = Integer.parseInt(elasticSearchAddressParts[1]);
+                    try {
+                        client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(elasticSearchHostName), elasticSearchPort));
+                    } catch (UnknownHostException e) {
+                        String message = "Error resolving address " + elasticSearchAddress + " ElasticSearch transport client not connected";
+                        throw new Exception(message, e);
+                    }
                 }
 
                 // let's now check the versions of all the nodes in the cluster, to make sure they are as expected.

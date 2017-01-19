@@ -834,6 +834,7 @@
     <modules>
         <module>api</module>
         <module>persistence-spi</module>
+        <module>lifecycle-watcher</module>
         <module>persistence-elasticsearch</module>
         <module>services</module>
         <module>rest</module>

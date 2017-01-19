@@ -27,6 +27,7 @@ import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
@@ -45,6 +46,18 @@ public class EventsCollectorServlet extends HttpServlet {
     private EventService eventService;
     private ProfileService profileService;
     private PrivacyService privacyService;
+
+    @Override
+    public void init(ServletConfig config) throws ServletException {
+        super.init(config);
+        logger.info("Event collector servlet initialized.");
+    }
+
+    @Override
+    public void destroy() {
+        super.destroy();
+        logger.info("Event collector servlet shutdown.");
+    }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {

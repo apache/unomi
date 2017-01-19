@@ -14,11 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-cluster.group=default
-cluster.jmxUsername=karaf
-cluster.jmxPassword=karaf
-cluster.jmxPort=1099
-contextserver.address=localhost
-contextserver.port=8181
-contextserver.secureAddress=localhost
-contextserver.securePort=9443
+
+
+        ____ ___     A P A C H E     .__
+       |    |   \____   ____   _____ |__|
+       |    |   /    \ /  _ \ /     \|  |
+       |    |  /   |  (  <_> )  Y Y  \  |
+       |______/|___|  /\____/|__|_|  /__|
+                    \/             \/
+
+--------------------------------------------------------------------------

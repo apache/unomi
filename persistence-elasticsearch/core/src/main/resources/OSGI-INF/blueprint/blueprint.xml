@@ -31,6 +31,7 @@
                              update-strategy="reload" placeholder-prefix="${es.">
         <cm:default-properties>
             <cm:property name="cluster.name" value="contextElasticSearch"/>
+            <cm:property name="elasticSearchAddresses" value="localhost:9300"/>
             <cm:property name="index.name" value="context"/>
             <cm:property name="numberOfShards" value="5"/>
             <cm:property name="numberOfReplicas" value="0"/>
@@ -50,21 +51,6 @@
 
         </cm:default-properties>
     </cm:property-placeholder>
-
-    <cm:property-placeholder persistent-id="org.apache.unomi.web"
-                             update-strategy="reload" placeholder-prefix="${web.">
-        <cm:default-properties>
-            <cm:property name="contextserver.address" value="localhost"/>
-            <cm:property name="contextserver.port" value="8181"/>
-            <cm:property name="contextserver.secureAddress" value="localhost"/>
-            <cm:property name="contextserver.securePort" value="9443"/>
-        </cm:default-properties>
-    </cm:property-placeholder>
-
-    <reference id="karafCellarClusterManager" interface="org.apache.karaf.cellar.core.ClusterManager" />
-    <reference id="karafCellarEventProducer" interface="org.apache.karaf.cellar.core.event.EventProducer" />
-    <reference id="karafCellarGroupManager" interface="org.apache.karaf.cellar.core.GroupManager" />
-    <reference id="osgiConfigurationAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
 
     <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl">
         <interfaces>
@@ -93,10 +79,7 @@
         <property name="monthlyIndexNumberOfReplicas" value="${es.monthlyIndex.numberOfReplicas}"/>
         <property name="numberOfShards" value="${es.numberOfShards}"/>
         <property name="numberOfReplicas" value="${es.numberOfReplicas}"/>
-        <property name="address" value="${web.contextserver.address}"/>
-        <property name="port" value="${web.contextserver.port}"/>
-        <property name="secureAddress" value="${web.contextserver.secureAddress}"/>
-        <property name="securePort" value="${web.contextserver.securePort}"/>
+        <property name="elasticSearchAddresses" value="${es.elasticSearchAddresses}"/>
         <property name="defaultQueryLimit" value="${es.defaultQueryLimit}"/>
         <property name="itemsMonthlyIndexed">
             <list>

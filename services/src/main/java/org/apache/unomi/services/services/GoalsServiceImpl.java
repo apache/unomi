@@ -23,7 +23,6 @@ import org.apache.unomi.api.campaigns.Campaign;
 import org.apache.unomi.api.campaigns.CampaignDetail;
 import org.apache.unomi.api.campaigns.events.CampaignEvent;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.goals.Goal;
 import org.apache.unomi.api.goals.GoalReport;
 import org.apache.unomi.api.query.AggregateQuery;
@@ -88,10 +87,12 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             }
         }
         bundleContext.addBundleListener(this);
+        logger.info("Goal service initialized.");
     }
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
+        logger.info("Goal service shutdown.");
     }
 
     private void processBundleStartup(BundleContext bundleContext) {

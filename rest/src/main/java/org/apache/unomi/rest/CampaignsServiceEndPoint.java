@@ -26,6 +26,8 @@ import org.apache.unomi.api.campaigns.events.CampaignEvent;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.GoalsService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -45,10 +47,12 @@ import java.util.Set;
 )
 public class CampaignsServiceEndPoint {
 
+    private static final Logger logger = LoggerFactory.getLogger(CampaignsServiceEndPoint.class.getName());
+
     private GoalsService goalsService;
 
     public CampaignsServiceEndPoint() {
-        System.out.println("Initializing campaigns service endpoint...");
+        logger.info("Initializing campaigns service endpoint...");
     }
 
     @WebMethod(exclude=true)

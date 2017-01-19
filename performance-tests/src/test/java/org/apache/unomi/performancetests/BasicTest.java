@@ -131,8 +131,6 @@ public class BasicTest {
                 keepRuntimeFolder(),
                 KarafDistributionOption.features(karafPaxWebRepo, "war"),
                 KarafDistributionOption.features(karafCxfRepo, "cxf"),
-                KarafDistributionOption.features(karafStandardRepo, "openwebbeans"),
-                KarafDistributionOption.features(karafStandardRepo, "pax-cdi-web-openwebbeans"),
                 KarafDistributionOption.features(contextServerRepo, "unomi-kar"),
                 // we need to wrap the HttpComponents libraries ourselves since the OSGi bundles provided by the project are incorrect
                 wrappedBundle(mavenBundle("org.apache.httpcomponents",
