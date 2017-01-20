@@ -52,14 +52,14 @@ public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         for (int i = 0; i < conditionCount; i++) {
             if (isAndOperator) {
-                QueryBuilder andFilter = dispatcher.buildFilter(conditions.get(i));
+                QueryBuilder andFilter = dispatcher.buildFilter(conditions.get(i), context);
                 if (andFilter != null) {
                     boolQueryBuilder.must(andFilter);
                 } else {
                     logger.warn("Null filter for boolean AND sub condition " + conditions.get(i));
                 }
             } else {
-                QueryBuilder orFilter = dispatcher.buildFilter(conditions.get(i));
+                QueryBuilder orFilter = dispatcher.buildFilter(conditions.get(i), context);
                 if (orFilter != null) {
                     boolQueryBuilder.should(orFilter);
                 } else {

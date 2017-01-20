@@ -54,7 +54,7 @@ public class ConditionContextHelper {
     }
 
     public static Condition getContextualCondition(Condition condition, Map<String, Object> context) {
-        if (context.isEmpty() || !hasContextualParameter(condition.getParameterValues())) {
+        if (!hasContextualParameter(condition.getParameterValues())) {
             return condition;
         }
         @SuppressWarnings("unchecked")
