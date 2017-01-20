@@ -35,7 +35,7 @@ If you need to specify an Elasticsearch cluster name, or a host and port that ar
 it is recommended to do this BEFORE you start the server for the first time, or you will loose all the data 
 you have stored previously.
 
-To change these settings, first create a file called 
+To change these settings, you will need to modify a file called 
 
     $MY_KARAF_HOME/etc/org.apache.unomi.persistence.elasticsearch.cfg
 

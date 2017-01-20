@@ -45,6 +45,7 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
 
     private BundleContext bundleContext;
     private boolean startupMessageAlreadyDisplayed = false;
+    private boolean shutdownMessageAlreadyDisplayed = false;
     private List<String> logoLines = new ArrayList<>();
 
     public void setRequiredStartedBundleCount(long requiredStartedBundleCount) {
@@ -71,28 +72,7 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
     public void init() {
         bundleContext.addBundleListener(this);
         bundleContext.addServiceListener(this);
-        URL logoURL = bundleContext.getBundle().getResource("logo.txt");
-        if (logoURL != null) {
-            BufferedReader bufferedReader = null;
-            try {
-                bufferedReader = new BufferedReader(new InputStreamReader(logoURL.openStream()));
-                String line;
-                while ((line = bufferedReader.readLine()) != null) {
-                    if (!line.trim().startsWith("#")) {
-                        logoLines.add(line);
-                    }
-                }
-            } catch (IOException e) {
-                logger.error("Error loading logo lines", e);
-            } finally {
-                if (bufferedReader != null) {
-                    try {
-                        bufferedReader.close();
-                    } catch (IOException e) {
-                    }
-                }
-            }
-        }
+        loadLogo();
         startupTime = System.currentTimeMillis();
         logger.info("Bundle watcher initialized.");
     }
@@ -155,7 +135,11 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
         for (Filter requiredService : requiredServicesFilters) {
             if (requiredService.match(serviceReference)) {
                 matchedRequiredServicesCount--;
-                logger.info("Apache Unomi no longer available, as required service {} is shutdown !", serviceReference);
+                if (!shutdownMessageAlreadyDisplayed) {
+                    System.out.println("Apache Unomi shutting down...");
+                    logger.info("Apache Unomi no longer available, as required service {} is shutdown !", serviceReference);
+                    shutdownMessageAlreadyDisplayed = true;
+                }
                 startupMessageAlreadyDisplayed = false;
             }
         }
@@ -172,9 +156,22 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
                     System.out.println(logoLine);
                 }
             }
+            String buildNumber = "n/a";
+            if (bundleContext.getBundle().getHeaders().get("Implementation-Build") != null) {
+                buildNumber = bundleContext.getBundle().getHeaders().get("Implementation-Build");
+            }
+            String timestamp = "n/a";
+            if (bundleContext.getBundle().getHeaders().get("Implementation-TimeStamp") != null) {
+                timestamp = bundleContext.getBundle().getHeaders().get("Implementation-TimeStamp");
+            }
+            String versionMessage = "  " + bundleContext.getBundle().getVersion().toString() + "  Build:" + buildNumber + "  Timestamp:" + timestamp;
+            System.out.println(versionMessage);
+            System.out.println("--------------------------------------------------------------------------");
             System.out.println("Successfully started " + unomiStartedBundleCount + " bundles and " + matchedRequiredServicesCount + " required services in " + totalStartupTime + " ms");
+            logger.info("Apache Unomi version: " + versionMessage);
             logger.info("Apache Unomi successfully started {} bundles and {} required services in {} ms", unomiStartedBundleCount, matchedRequiredServicesCount, totalStartupTime);
             startupMessageAlreadyDisplayed = true;
+            shutdownMessageAlreadyDisplayed = false;
         }
     }
 
@@ -187,4 +184,30 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
         }
         return true;
     }
+
+    private void loadLogo() {
+        URL logoURL = bundleContext.getBundle().getResource("logo.txt");
+        if (logoURL != null) {
+            BufferedReader bufferedReader = null;
+            try {
+                bufferedReader = new BufferedReader(new InputStreamReader(logoURL.openStream()));
+                String line;
+                while ((line = bufferedReader.readLine()) != null) {
+                    if (!line.trim().startsWith("#")) {
+                        logoLines.add(line);
+                    }
+                }
+            } catch (IOException e) {
+                logger.error("Error loading logo lines", e);
+            } finally {
+                if (bufferedReader != null) {
+                    try {
+                        bufferedReader.close();
+                    } catch (IOException e) {
+                    }
+                }
+            }
+        }
+    }
+
 }

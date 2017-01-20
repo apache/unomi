@@ -97,11 +97,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
 
-    public static final String CONTEXTSERVER_ADDRESS = "contextserver.address";
-    public static final String CONTEXTSERVER_PORT = "contextserver.port";
-    public static final String CONTEXTSERVER_SECURE_ADDRESS = "contextserver.secureAddress";
-    public static final String CONTEXTSERVER_SECURE_PORT = "contextserver.securePort";
-
     public static final String NUMBER_OF_SHARDS = "number_of_shards";
     public static final String NUMBER_OF_REPLICAS = "number_of_replicas";
     public static final String CLUSTER_NAME = "cluster.name";
