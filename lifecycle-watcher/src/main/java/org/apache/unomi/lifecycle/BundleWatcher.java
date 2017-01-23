@@ -74,6 +74,7 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
         bundleContext.addServiceListener(this);
         loadLogo();
         startupTime = System.currentTimeMillis();
+        System.out.println("Initializing Unomi...");
         logger.info("Bundle watcher initialized.");
     }
 

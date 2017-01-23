@@ -33,7 +33,7 @@ For the actual ElasticSearch configuration however, this must be done using the 
 Depending on the cluster size, you will want to adjust the following parameters to make sure your setup is optimal in 
 terms of performance and safety.
 
-#### 2 nodes  configuration
+#### 2 nodes configuration
 One node dedicated to context server, 1 node for elasticsearch storage.
 
 Node A :
