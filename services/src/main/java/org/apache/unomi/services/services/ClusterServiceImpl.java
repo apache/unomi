@@ -17,7 +17,6 @@
 
 package org.apache.unomi.services.services;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.karaf.cellar.config.ClusterConfigurationEvent;
 import org.apache.karaf.cellar.config.Constants;
 import org.apache.karaf.cellar.core.*;
@@ -49,10 +48,6 @@ public class ClusterServiceImpl implements ClusterService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterServiceImpl.class.getName());
 
-    public static final String CONTEXTSERVER_ADDRESS = "contextserver.address";
-    public static final String CONTEXTSERVER_PORT = "contextserver.port";
-    public static final String CONTEXTSERVER_SECURE_ADDRESS = "contextserver.secureAddress";
-    public static final String CONTEXTSERVER_SECURE_PORT = "contextserver.securePort";
     public static final String KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION = "org.apache.unomi.nodes";
     public static final String KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS = "publicEndpoints";
     public static final String KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS = "secureEndpoints";
@@ -160,16 +155,12 @@ public class ClusterServiceImpl implements ClusterService {
                 if (karafCellarClusterNodeConfiguration == null) {
                     karafCellarClusterNodeConfiguration = new Properties();
                 }
-                String publicEndpointsPropValue = karafCellarClusterNodeConfiguration.getProperty(KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, thisKarafNode.getId() + "=" + address + ":" + port);
-                String secureEndpointsPropValue = karafCellarClusterNodeConfiguration.getProperty(KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, thisKarafNode.getId() + "=" + secureAddress + ":" + securePort);
-                String[] publicEndpointsArray = publicEndpointsPropValue.split(",");
-                Set<String> publicEndpoints = new TreeSet<String>(Arrays.asList(publicEndpointsArray));
-                String[] secureEndpointsArray = secureEndpointsPropValue.split(",");
-                Set<String> secureEndpoints = new TreeSet<String>(Arrays.asList(secureEndpointsArray));
-                publicEndpoints.add(thisKarafNode.getId() + "=" + address + ":" + port);
-                secureEndpoints.add(thisKarafNode.getId() + "=" + secureAddress + ":" + securePort);
-                karafCellarClusterNodeConfiguration.setProperty(KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, StringUtils.join(publicEndpoints, ","));
-                karafCellarClusterNodeConfiguration.setProperty(KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, StringUtils.join(secureEndpoints, ","));
+                Map<String,String> publicEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, thisKarafNode.getId() + "=" + address + ":" + port);
+                Map<String,String> secureEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, thisKarafNode.getId() + "=" + secureAddress + ":" + securePort);
+                publicEndpoints.put(thisKarafNode.getId(), address + ":" + port);
+                secureEndpoints.put(thisKarafNode.getId(), secureAddress + ":" + securePort);
+                setMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, publicEndpoints);
+                setMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, secureEndpoints);
                 configurations.put(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION, karafCellarClusterNodeConfiguration);
                 ClusterConfigurationEvent clusterConfigurationEvent = new ClusterConfigurationEvent(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION);
                 clusterConfigurationEvent.setSourceGroup(group);
@@ -203,20 +194,8 @@ public class ClusterServiceImpl implements ClusterService {
         Map<String, String> publicNodeEndpoints = new TreeMap<>();
         Map<String, String> secureNodeEndpoints = new TreeMap<>();
         if (karafCellarClusterNodeConfiguration != null) {
-            String publicEndpointsPropValue = karafCellarClusterNodeConfiguration.getProperty(KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, thisKarafNode.getId() + "=" + address + ":" + port);
-            String secureEndpointsPropValue = karafCellarClusterNodeConfiguration.getProperty(KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, thisKarafNode.getId() + "=" + secureAddress + ":" + securePort);
-            String[] publicEndpointsArray = publicEndpointsPropValue.split(",");
-            Set<String> publicEndpoints = new TreeSet<String>(Arrays.asList(publicEndpointsArray));
-            for (String endpoint : publicEndpoints) {
-                String[] endpointParts = endpoint.split("=");
-                publicNodeEndpoints.put(endpointParts[0], endpointParts[1]);
-            }
-            String[] secureEndpointsArray = secureEndpointsPropValue.split(",");
-            Set<String> secureEndpoints = new TreeSet<String>(Arrays.asList(secureEndpointsArray));
-            for (String endpoint : secureEndpoints) {
-                String[] endpointParts = endpoint.split("=");
-                secureNodeEndpoints.put(endpointParts[0], endpointParts[1]);
-            }
+            publicNodeEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, thisKarafNode.getId() + "=" + address + ":" + port);
+            secureNodeEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, thisKarafNode.getId() + "=" + secureAddress + ":" + securePort);
         }
         for (org.apache.karaf.cellar.core.Node karafCellarNode : karafCellarNodes) {
             ClusterNode clusterNode = new ClusterNode();
@@ -330,6 +309,39 @@ public class ClusterServiceImpl implements ClusterService {
         JMXConnector jmxConnector = JMXConnectorFactory.connect(jmxServiceURL, environment);
         jmxConnectors.put(url, jmxConnector);
         return jmxConnector;
+    }
+
+    private Map<String,String> getMapProperty(Properties properties, String propertyName, String defaultValue) {
+        String propertyValue = properties.getProperty(propertyName, defaultValue);
+        return getMapProperty(propertyValue);
+    }
+
+    private Map<String, String> getMapProperty(String propertyValue) {
+        String[] propertyValueArray = propertyValue.split(",");
+        Map<String,String> propertyMapValue = new LinkedHashMap<>();
+        for (String propertyValueElement : propertyValueArray) {
+            String[] propertyValueElementPrats = propertyValueElement.split("=");
+            propertyMapValue.put(propertyValueElementPrats[0], propertyValueElementPrats[1]);
+        }
+        return propertyMapValue;
+    }
+
+    private Map<String,String> setMapProperty(Properties properties, String propertyName, Map<String,String> propertyMapValue) {
+        StringBuilder propertyValueBuilder = new StringBuilder();
+        int entryCount = 0;
+        for (Map.Entry<String,String> propertyMapValueEntry : propertyMapValue.entrySet()) {
+            propertyValueBuilder.append(propertyMapValueEntry.getKey());
+            propertyValueBuilder.append("=");
+            propertyValueBuilder.append(propertyMapValueEntry.getValue());
+            if (entryCount < propertyMapValue.size() - 1) {
+                propertyValueBuilder.append(",");
+            }
+        }
+        String oldPropertyValue = (String) properties.setProperty(propertyName, propertyValueBuilder.toString());
+        if (oldPropertyValue == null) {
+            return null;
+        }
+        return getMapProperty(oldPropertyValue);
     }
 
 }
