@@ -313,7 +313,11 @@ public class ClusterServiceImpl implements ClusterService {
                 } catch (IOException e1) {
                     logger.error("Error closing invalid JMX connection", e1);
                 }
-                logger.error("Error using the JMX connection to url {}, closed and will reconnect", url, e);
+                if (e.getMessage() != null && e.getMessage().contains("Connection closed")) {
+                    logger.warn("JMX connection to url {} was closed (Cause:{}). Reconnecting...", url, e.getMessage());
+                } else {
+                    logger.error("Error using the JMX connection to url {}, closed and will reconnect", url, e);
+                }
             }
         }
         // if we reach this point either we didn't have a connector or it didn't validate
