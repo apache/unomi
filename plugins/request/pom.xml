@@ -45,13 +45,13 @@
         <dependency>
             <groupId>net.sf.uadetector</groupId>
             <artifactId>uadetector-resources</artifactId>
-            <version>2014.10</version>
+            <version>2014.11-jahia1</version>
         </dependency>
 
         <dependency>
             <groupId>net.sf.uadetector</groupId>
             <artifactId>uadetector-core</artifactId>
-            <version>0.9.22-133</version>
+            <version>0.9.23-jahia1</version>
         </dependency>
 
         <dependency>
