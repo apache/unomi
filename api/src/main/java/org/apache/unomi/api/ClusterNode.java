@@ -28,7 +28,6 @@ public class ClusterNode implements Serializable {
 
     private double cpuLoad;
     private double[] loadAverage;
-    private String hostName;
     private String hostAddress;
     private int publicPort;
     private String secureHostAddress;
@@ -59,24 +58,6 @@ public class ClusterNode implements Serializable {
      */
     public void setCpuLoad(double cpuLoad) {
         this.cpuLoad = cpuLoad;
-    }
-
-    /**
-     * Retrieves the host name.
-     *
-     * @return the host name
-     */
-    public String getHostName() {
-        return hostName;
-    }
-
-    /**
-     * Sets the host name.
-     *
-     * @param hostName the host name
-     */
-    public void setHostName(String hostName) {
-        this.hostName = hostName;
     }
 
     /**

@@ -199,7 +199,6 @@ public class ClusterServiceImpl implements ClusterService {
         }
         for (org.apache.karaf.cellar.core.Node karafCellarNode : karafCellarNodes) {
             ClusterNode clusterNode = new ClusterNode();
-            clusterNode.setHostName(karafCellarNode.getHost());
             String publicEndpoint = publicNodeEndpoints.get(karafCellarNode.getId());
             if (publicEndpoint != null) {
                 String[] publicEndpointParts = publicEndpoint.split(":");
