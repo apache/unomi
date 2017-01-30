@@ -36,6 +36,8 @@
 
     <dependencies>
 
+        <!-- Standard Apache Karaf Features -->
+
         <dependency>
             <!-- scope is compile so all features (there is only one) are installed into startup.properties and the feature repo itself is not installed -->
             <groupId>org.apache.karaf.features</groupId>
@@ -45,10 +47,16 @@
         <dependency>
             <!-- scope is runtime so the feature repo is listed in the features service config file, and features may be installed using the karaf-maven-plugin configuration -->
             <groupId>org.apache.karaf.features</groupId>
-            <artifactId>standard</artifactId>
+            <artifactId>framework</artifactId>
             <classifier>features</classifier>
             <type>xml</type>
             <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.karaf.features</groupId>
+            <artifactId>standard</artifactId>
+            <classifier>features</classifier>
+            <type>xml</type>
         </dependency>
         <dependency>
             <groupId>org.apache.karaf.features</groupId>
@@ -65,7 +73,8 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!--
+        <!-- Aditionnal Apache Unomi features -->
+
         <dependency>
             <groupId>org.apache.cxf.karaf</groupId>
             <artifactId>apache-cxf</artifactId>
@@ -73,7 +82,6 @@
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
-        -->
         <dependency>
             <groupId>org.apache.karaf.cellar</groupId>
             <artifactId>apache-karaf-cellar</artifactId>
@@ -309,16 +317,16 @@
                         <artifactId>karaf-maven-plugin</artifactId>
                         <executions>
                             <execution>
-                                <id>install-kar</id>
-                                <phase>compile</phase>
+                                <id>process-resources</id>
+                                <phase>process-resources</phase>
                                 <goals>
-                                    <goal>install-kars</goal>
+                                    <goal>assembly</goal>
                                 </goals>
                             </execution>
                             <execution>
                                 <id>package</id>
                                 <goals>
-                                    <goal>instance-create-archive</goal>
+                                    <goal>archive</goal>
                                 </goals>
                             </execution>
                         </executions>
@@ -327,13 +335,26 @@
                                 <feature>wrapper</feature>
                             </installedFeatures>
                             <bootFeatures>
-                                <feature>standard</feature>
-                                <feature>management</feature>
+                                <feature>framework</feature>
+                                <feature>wrap</feature>
+                                <feature>aries-blueprint</feature>
+                                <feature>shell</feature>
+                                <feature>shell-compat</feature>
+                                <feature>feature</feature>
+                                <feature>jaas</feature>
                                 <feature>ssh</feature>
+                                <feature>management</feature>
+                                <feature>bundle</feature>
                                 <feature>config</feature>
-                                <feature>region</feature>
-                                <feature>package</feature>
+                                <feature>deployer</feature>
+                                <feature>diagnostic</feature>
+                                <feature>feature</feature>
+                                <feature>instance</feature>
                                 <feature>kar</feature>
+                                <feature>log</feature>
+                                <feature>package</feature>
+                                <feature>service</feature>
+                                <feature>system</feature>
                                 <feature>war</feature>
                                 <feature>cxf</feature>
                                 <feature>cellar</feature>

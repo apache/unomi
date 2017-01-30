@@ -42,7 +42,7 @@
         <property name="mailServerPassword" value="${mail.server.password}"/>
         <property name="mailServerSSLOnConnect" value="${mail.server.sslOnConnect}"/>
     </bean>
-    <service id="sendMailAction" ref="sendMailActionImpl" auto-export="interfaces">
+    <service id="sendMailAction" ref="sendMailActionImpl" interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="sendMail"/>
         </service-properties>

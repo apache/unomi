@@ -60,7 +60,7 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="definitionsService" ref="definitionsServiceImpl" auto-export="interfaces"/>
+    <service id="definitionsService" ref="definitionsServiceImpl" interface="org.apache.unomi.api.services.DefinitionsService"/>
 
     <bean id="eventServiceImpl" class="org.apache.unomi.services.services.EventServiceImpl"
         init-method="init" destroy-method="destroy">
@@ -89,7 +89,7 @@
             <cm:cm-properties persistent-id="org.apache.unomi.thirdparty" update="true" />
         </property>
     </bean>
-    <service id="eventService" ref="eventServiceImpl" auto-export="interfaces"/>
+    <service id="eventService" ref="eventServiceImpl" interface="org.apache.unomi.api.services.EventService"/>
 
     <bean id="goalsServiceImpl" class="org.apache.unomi.services.services.GoalsServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
@@ -98,7 +98,7 @@
         <property name="rulesService" ref="rulesServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="goalsService" ref="goalsServiceImpl" auto-export="interfaces"/>
+    <service id="goalsService" ref="goalsServiceImpl" interface="org.apache.unomi.api.services.GoalsService"/>
 
     <bean id="actionExecutorDispatcherImpl"
           class="org.apache.unomi.services.actions.ActionExecutorDispatcher">
@@ -113,7 +113,7 @@
         <property name="actionExecutorDispatcher" ref="actionExecutorDispatcherImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="rulesService" ref="rulesServiceImpl" auto-export="interfaces"/>
+    <service id="rulesService" ref="rulesServiceImpl" interface="org.apache.unomi.api.services.RulesService"/>
 
     <bean id="segmentServiceImpl" class="org.apache.unomi.services.services.SegmentServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
@@ -125,7 +125,7 @@
         <property name="taskExecutionPeriod" value="86400000"/>
         <property name="segmentUpdateBatchSize" value="${services.segment.update.batchSize}" />
     </bean>
-    <service id="segmentService" ref="segmentServiceImpl" auto-export="interfaces"/>
+    <service id="segmentService" ref="segmentServiceImpl" interface="org.apache.unomi.api.services.SegmentService"/>
 
     <bean id="userListServiceImpl" class="org.apache.unomi.services.services.UserListServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
@@ -148,14 +148,14 @@
         <property name="purgeSessionsAndEventsTime" value="${services.event.purge.existTime}"/>
         <property name="forceRefreshOnSave" value="${services.profile.forceRefreshOnSave}" />
     </bean>
-    <service id="profileService" ref="profileServiceImpl" auto-export="interfaces"/>
+    <service id="profileService" ref="profileServiceImpl" interface="org.apache.unomi.api.services.ProfileService"/>
 
     <bean id="queryServiceImpl" class="org.apache.unomi.services.services.QueryServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
     </bean>
-    <service id="queryService" ref="queryServiceImpl" auto-export="interfaces"/>
+    <service id="queryService" ref="queryServiceImpl" interface="org.apache.unomi.api.services.QueryService"/>
 
     <bean id="clusterServiceImpl" class="org.apache.unomi.services.services.ClusterServiceImpl"
           init-method="init" destroy-method="destroy">
@@ -169,7 +169,7 @@
         <property name="osgiConfigurationAdmin" ref="osgiConfigurationAdmin" />
         <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}" />
     </bean>
-    <service id="clusterService" ref="clusterServiceImpl" auto-export="interfaces"/>
+    <service id="clusterService" ref="clusterServiceImpl" interface="org.apache.unomi.api.services.ClusterService"/>
 
 
     <bean id="personalizationServiceImpl" class="org.apache.unomi.services.services.PersonalizationServiceImpl">
@@ -202,7 +202,7 @@
 
     <!-- Property merge strategy executors -->
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
         <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="defaultPropertyMergeStrategyExecutor"/>
         </service-properties>
@@ -210,7 +210,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
         <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="addPropertyMergeStrategyExecutor"/>
         </service-properties>
@@ -218,7 +218,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
         <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="mostRecentPropertyMergeStrategyExecutor"/>
         </service-properties>
@@ -226,7 +226,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
         <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="oldestPropertyMergeStrategyExecutor"/>
         </service-properties>
@@ -234,7 +234,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
         <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="nonEmptyPropertyMergeStrategyExecutor"/>
         </service-properties>

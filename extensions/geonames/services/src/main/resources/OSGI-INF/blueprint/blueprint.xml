@@ -44,6 +44,6 @@
         <property name="pathToGeonamesDatabase" value="${request.geonamesDatabase.location}"/>
         <property name="forceDbImport" value="${request.geonamesDatabase.forceImport}"/>
     </bean>
-    <service id="geonamesService" ref="geonamesServiceImpl" auto-export="interfaces"/>
+    <service id="geonamesService" ref="geonamesServiceImpl" interface="org.apache.unomi.geonames.services.GeonamesService"/>
 
 </blueprint>

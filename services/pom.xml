@@ -80,11 +80,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.glassfish</groupId>
-            <artifactId>javax.json</artifactId>
-        </dependency>
-
-        <dependency>
           <groupId>com.fasterxml.jackson.core</groupId>
           <artifactId>jackson-core</artifactId>
           <scope>provided</scope>

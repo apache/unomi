@@ -31,5 +31,5 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsService"/>
     </bean>
-    <service id="userListService" ref="userListServiceImpl" auto-export="interfaces"/>
+    <service id="userListService" ref="userListServiceImpl" interface="org.apache.unomi.services.UserListService"/>
 </blueprint>
