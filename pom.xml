@@ -64,12 +64,12 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <cxf.version>3.0.2</cxf.version>
+        <cxf.version>3.1.0</cxf.version>
         <version.jackson.core>2.6.6</version.jackson.core> <!-- version used by CXF -->
         <version.jackson.jaxb>2.6.6</version.jackson.jaxb> <!-- version used by CXF -->
-        <version.karaf>3.0.8</version.karaf>
-        <version.karaf.cellar>3.0.3</version.karaf.cellar>
-        <version.pax.exam>4.11.0</version.pax.exam>
+        <version.karaf>4.0.8</version.karaf>
+        <version.karaf.cellar>4.0.3</version.karaf.cellar>
+        <version.pax.exam>4.11.2</version.pax.exam>
         <elasticsearch.version>5.6.3</elasticsearch.version>
 
         <maven.compiler.source>1.7</maven.compiler.source>
@@ -624,14 +624,20 @@
 
             <!-- Apache Karaf dependencies -->
             <dependency>
-                <!-- scope is compile so all features (there is only one) are installed into startup.properties and the feature repo itself is not installed -->
                 <groupId>org.apache.karaf.features</groupId>
                 <artifactId>framework</artifactId>
                 <version>${version.karaf}</version>
                 <type>kar</type>
             </dependency>
             <dependency>
-                <!-- scope is runtime so the feature repo is listed in the features service config file, and features may be installed using the karaf-maven-plugin configuration -->
+                <groupId>org.apache.karaf.features</groupId>
+                <artifactId>framework</artifactId>
+                <classifier>features</classifier>
+                <version>${version.karaf}</version>
+                <type>xml</type>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.karaf.features</groupId>
                 <artifactId>standard</artifactId>
                 <classifier>features</classifier>
@@ -878,6 +884,7 @@
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-bundle-plugin</artifactId>
                     <version>3.2.0</version>
+                    <extensions>true</extensions>
                     <configuration>
                         <instructions>
                             <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>

@@ -157,7 +157,7 @@
 
     <!-- Action executors -->
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="allEventToProfileProperties"/>
         </service-properties>
@@ -166,14 +166,14 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="eventToProfileProperty"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.EventToProfilePropertyAction"/>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="setProperty"/>
         </service-properties>
@@ -201,7 +201,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="evaluateProfileSegments"/>
         </service-properties>
@@ -210,14 +210,14 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="evaluateProfileAge"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.EvaluateProfileAgeAction"/>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="setEventOccurenceCount"/>
         </service-properties>
@@ -227,7 +227,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="sendEvent"/>
         </service-properties>
@@ -236,7 +236,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="mergeProfilesOnProperty"/>
         </service-properties>

@@ -45,7 +45,7 @@
           class="org.apache.unomi.plugins.request.actions.RequestHeaderToProfilePropertyAction">
     </bean>
     <service id="requestHeaderToProfilePropertyAction" ref="requestHeaderToProfilePropertyActionImpl"
-             auto-export="interfaces">
+             interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="requestHeaderToProfileProperty"/>
         </service-properties>
@@ -55,7 +55,7 @@
           class="org.apache.unomi.plugins.request.actions.RequestParameterToProfilePropertyAction">
     </bean>
     <service id="RequestParameterToProfilePropertyAction" ref="requestParameterToProfilePropertyActionImpl"
-             auto-export="interfaces">
+             interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="requestParameterToProfileProperty"/>
         </service-properties>
