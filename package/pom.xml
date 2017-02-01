@@ -227,6 +227,28 @@
                                         </artifactItem>
                                         <artifactItem>
                                             <groupId>org.apache.unomi</groupId>
+                                            <artifactId>unomi-services</artifactId>
+                                            <version>${project.version}</version>
+                                            <classifier>clustercfg</classifier>
+                                            <type>cfg</type>
+                                            <outputDirectory>
+                                                ${project.build.directory}/assembly/etc
+                                            </outputDirectory>
+                                            <destFileName>org.apache.unomi.cluster.cfg</destFileName>
+                                        </artifactItem>
+                                        <artifactItem>
+                                            <groupId>org.apache.unomi</groupId>
+                                            <artifactId>unomi-services</artifactId>
+                                            <version>${project.version}</version>
+                                            <classifier>servicescfg</classifier>
+                                            <type>cfg</type>
+                                            <outputDirectory>
+                                                ${project.build.directory}/assembly/etc
+                                            </outputDirectory>
+                                            <destFileName>org.apache.unomi.services.cfg</destFileName>
+                                        </artifactItem>
+                                        <artifactItem>
+                                            <groupId>org.apache.unomi</groupId>
                                             <artifactId>unomi-plugins-request</artifactId>
                                             <version>${project.version}</version>
                                             <classifier>requestcfg</classifier>
