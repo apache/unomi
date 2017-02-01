@@ -269,6 +269,15 @@
                                             </outputDirectory>
                                             <destFileName>org.apache.unomi.plugins.mail.cfg</destFileName>
                                         </artifactItem>
+                                        <!-- UNOMI-75 : We install the blueprint core bundle in a different version to fix a problem with offline startup -->
+                                        <artifactItem>
+                                            <groupId>org.apache.aries.blueprint</groupId>
+                                            <artifactId>org.apache.aries.blueprint.core</artifactId>
+                                            <version>1.6.2</version>
+                                            <outputDirectory>
+                                                ${project.build.directory}/assembly/system/org/apache/aries/blueprint/org.apache.aries.blueprint.core/1.6.2
+                                            </outputDirectory>
+                                        </artifactItem>
                                     </artifactItems>
                                     <!-- other configurations here -->
                                 </configuration>
