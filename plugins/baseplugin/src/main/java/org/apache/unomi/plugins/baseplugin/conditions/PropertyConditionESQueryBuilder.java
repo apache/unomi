@@ -40,7 +40,7 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         String comparisonOperator = (String) condition.getParameter("comparisonOperator");
         String name = (String) condition.getParameter("propertyName");
 
-        if(comparisonOperator == null || name == null){
+        if (comparisonOperator == null || name == null) {
             throw new IllegalArgumentException("Impossible to build ES filter, condition is not valid, comparisonOperator and propertyName properties should be provided");
         }
 
@@ -54,9 +54,9 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
         List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");
 
-        Object value = ObjectUtils.firstNonNull(expectedValue,expectedValueInteger,expectedValueDate,expectedValueDateExpr);
+        Object value = ObjectUtils.firstNonNull(expectedValue, expectedValueInteger, expectedValueDate, expectedValueDateExpr);
         @SuppressWarnings("unchecked")
-        List<?> values = ObjectUtils.firstNonNull(expectedValues,expectedValuesInteger,expectedValuesDate,expectedValuesDateExpr);
+        List<?> values = ObjectUtils.firstNonNull(expectedValues, expectedValuesInteger, expectedValuesDate, expectedValuesDateExpr);
 
         switch (comparisonOperator) {
             case "equals":
@@ -109,6 +109,13 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
                     boolQueryBuilder.must(QueryBuilders.termQuery(name, curValue));
                 }
                 return boolQueryBuilder;
+            case "inContains":
+                checkRequiredValue(values, name, comparisonOperator, true);
+                BoolQueryBuilder boolQueryBuilderInContains = QueryBuilders.boolQuery();
+                for (Object curValue : values) {
+                    boolQueryBuilderInContains.must(QueryBuilders.regexpQuery(name, ".*" + curValue + ".*"));
+                }
+                return boolQueryBuilderInContains;
             case "hasSomeOf":
                 checkRequiredValue(values, name, comparisonOperator, true);
                 boolQueryBuilder = QueryBuilders.boolQuery();
@@ -134,18 +141,18 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
     }
 
     private void checkRequiredValuesSize(List<?> values, String name, String operator, int expectedSize) {
-        if(values == null || values.size() != expectedSize) {
+        if (values == null || values.size() != expectedSize) {
             throw new IllegalArgumentException("Impossible to build ES filter, missing " + expectedSize + " values for a condition using comparisonOperator: " + operator + ", and propertyName: " + name);
         }
     }
 
     private void checkRequiredValue(Object value, String name, String operator, boolean multiple) {
-        if(value == null) {
+        if (value == null) {
             throw new IllegalArgumentException("Impossible to build ES filter, missing value" + (multiple ? "s" : "") + " for condition using comparisonOperator: " + operator + ", and propertyName: " + name);
         }
     }
 
-    private QueryBuilder getIsSameDayRange (Object value, String name) {
+    private QueryBuilder getIsSameDayRange(Object value, String name) {
         DateTime date = new DateTime(value);
         DateTime dayStart = date.withTimeAtStartOfDay();
         DateTime dayAfterStart = date.plusDays(1).withTimeAtStartOfDay();
