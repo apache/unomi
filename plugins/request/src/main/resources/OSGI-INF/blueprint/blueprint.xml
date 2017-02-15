@@ -26,6 +26,16 @@
                              update-strategy="reload">
         <cm:default-properties>
             <cm:property name="request.ipDatabase.location" value="file:${karaf.etc}/GeoIP2-City.mmdb"/>
+
+            <cm:property name="defaultSessionCountryCode" value="CH"/>
+            <cm:property name="defaultSessionCountryName" value="Switzerland"/>
+            <cm:property name="defaultSessionCity" value="Geneva"/>
+            <cm:property name="defaultSessionAdminSubDiv1" value="2660645"/>
+            <cm:property name="defaultSessionAdminSubDiv2" value="6458783"/>
+            <cm:property name="defaultSessionIsp" value="Cablecom"/>
+            <cm:property name="defaultLatitude" value="46.1884341"/>
+            <cm:property name="defaultLongitude" value="6.1282508"/>
+
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -58,6 +68,16 @@
         <bean class="org.apache.unomi.plugins.request.actions.SetRemoteHostInfoAction"
               init-method="postConstruct">
             <property name="pathToGeoLocationDatabase" value="${request.ipDatabase.location}"/>
+
+            <property name="defaultSessionCountryCode" value="${defaultSessionCountryCode}"/>
+            <property name="defaultSessionCountryName" value="${defaultSessionCountryName}"/>
+            <property name="defaultSessionCity" value="${defaultSessionCity}"/>
+            <property name="defaultSessionAdminSubDiv1" value="${defaultSessionAdminSubDiv1}"/>
+            <property name="defaultSessionAdminSubDiv2" value="${defaultSessionAdminSubDiv2}"/>
+            <property name="defaultSessionIsp" value="${defaultSessionIsp}"/>
+            <property name="defaultLatitude" value="${defaultLatitude}"/>
+            <property name="defaultLongitude" value="${defaultLongitude}"/>
+
         </bean>
     </service>
 

@@ -46,8 +46,49 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
     private DatabaseReader databaseReader;
     private String pathToGeoLocationDatabase;
 
+    private String defaultSessionCountryCode = "CH";
+    private String defaultSessionCountryName = "Switzerland";
+    private String defaultSessionCity = "Geneva";
+    private String defaultSessionAdminSubDiv1 = "2660645";
+    private String defaultSessionAdminSubDiv2 = "6458783";
+    private String defaultSessionIsp = "Cablecom";
+    private double defaultLatitude = 46.1884341;
+    private double defaultLongitude = 6.1282508;
+
     public void setPathToGeoLocationDatabase(String pathToGeoLocationDatabase) {
         this.pathToGeoLocationDatabase = pathToGeoLocationDatabase;
+    }
+
+    public void setDefaultSessionCountryCode(String defaultSessionCountryCode) {
+        this.defaultSessionCountryCode = defaultSessionCountryCode;
+    }
+
+    public void setDefaultSessionCountryName(String defaultSessionCountryName) {
+        this.defaultSessionCountryName = defaultSessionCountryName;
+    }
+
+    public void setDefaultSessionCity(String defaultSessionCity) {
+        this.defaultSessionCity = defaultSessionCity;
+    }
+
+    public void setDefaultSessionAdminSubDiv1(String defaultSessionAdminSubDiv1) {
+        this.defaultSessionAdminSubDiv1 = defaultSessionAdminSubDiv1;
+    }
+
+    public void setDefaultSessionAdminSubDiv2(String defaultSessionAdminSubDiv2) {
+        this.defaultSessionAdminSubDiv2 = defaultSessionAdminSubDiv2;
+    }
+
+    public void setDefaultSessionIsp(String defaultSessionIsp) {
+        this.defaultSessionIsp = defaultSessionIsp;
+    }
+
+    public void setDefaultLatitude(double defaultLatitude) {
+        this.defaultLatitude = defaultLatitude;
+    }
+
+    public void setDefaultLongitude(double defaultLongitude) {
+        this.defaultLongitude = defaultLongitude;
     }
 
     @Override
@@ -79,15 +120,15 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             if (!remoteAddr.equals("127.0.0.1") && IPV4.matcher(remoteAddr).matches()) {
                 ipLookup(remoteAddr, session);
             } else {
-                session.setProperty("sessionCountryCode", "CH");
-                session.setProperty("sessionCountryName", "Switzerland");
-                session.setProperty("sessionCity", "Geneva");
-                session.setProperty("sessionAdminSubDiv1", "GE");
-                session.setProperty("sessionAdminSubDiv2", "2500");
-                session.setProperty("sessionIsp", "Cablecom");
+                session.setProperty("sessionCountryCode", defaultSessionCountryCode);
+                session.setProperty("sessionCountryName", defaultSessionCountryName);
+                session.setProperty("sessionCity", defaultSessionCity);
+                session.setProperty("sessionAdminSubDiv1", defaultSessionAdminSubDiv1);
+                session.setProperty("sessionAdminSubDiv2", defaultSessionAdminSubDiv2);
+                session.setProperty("sessionIsp", defaultSessionIsp);
                 Map<String, Double> location = new HashMap<String, Double>();
-                location.put("lat", 46.1884341);
-                location.put("lon", 6.1282508);
+                location.put("lat", defaultLatitude);
+                location.put("lon", defaultLongitude);
                 session.setProperty("location", location);
             }
             session.setProperty("countryAndCity", session.getProperty("sessionCountryName") + "@@" + session.getProperty("sessionCity") +
