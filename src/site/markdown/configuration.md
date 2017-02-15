@@ -281,3 +281,25 @@ common.conf:
     
     ProxyPass / http://localhost:8181/ connectiontimeout=20 timeout=300 ttl=120
     ProxyPassReverse / http://localhost:8181/
+
+Changing the default tracking location
+--------------------------------------
+
+When performing localhost requests to Apache Unomi, a default location will be used to insert values into the session
+to make the location-based personalization still work. You can find the default location settings in the file : 
+
+    org.apache.unomi.plugins.request.cfg
+    
+that contains the following default settings:
+
+    # The following settings represent the default position that is used for localhost requests
+    defaultSessionCountryCode=CH
+    defaultSessionCountryName=Switzerland
+    defaultSessionCity=Geneva
+    defaultSessionAdminSubDiv1=2660645
+    defaultSessionAdminSubDiv2=6458783
+    defaultSessionIsp=Cablecom
+    defaultLatitude=46.1884341
+    defaultLongitude=6.1282508
+
+You might want to change these for testing or for demonstration purposes.
