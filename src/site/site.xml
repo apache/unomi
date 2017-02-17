@@ -107,11 +107,20 @@
 
         <menu name="Documentation" inherit="top">
             <item name="Home" href="./" />
-            <item name="Building and deploying" href="building-and-deploying.html" />
-            <item name="Getting started" href="getting-started.html"/>
-            <item name="Configuration" href="configuration.html" />
-            <item name="Cluster setup" href="clustering.html" />
-            <item name="Concepts" href="concepts.html"/>
+            <item name="Version 1.1 (current)">
+                <item name="Building and deploying" href="versions/1.1/building-and-deploying.html" />
+                <item name="Getting started" href="versions/1.1/getting-started.html"/>
+                <item name="Configuration" href="versions/1.1/configuration.html" />
+                <item name="Cluster setup" href="versions/1.1/clustering.html" />
+                <item name="Concepts" href="versions/master/1.1.html"/>
+            </item>
+            <item name="Master (snapshot)">
+                <item name="Building and deploying" href="versions/master/building-and-deploying.html" />
+                <item name="Getting started" href="versions/master/getting-started.html"/>
+                <item name="Configuration" href="versions/master/configuration.html" />
+                <item name="Cluster setup" href="versions/master/clustering.html" />
+                <item name="Concepts" href="versions/master/concepts.html"/>
+            </item>
             <item name="REST API documentation" href="./rest-api-doc/index.html"/>
             <item name="API Javadoc" href="./unomi-api/apidocs/index.html"/>
         </menu>
