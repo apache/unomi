@@ -57,6 +57,12 @@ public interface DefinitionsService {
     Tag getTag(String tagId);
 
     /**
+     * Add a new tag to the list of tags
+     * @param tag the tag to add
+     */
+    void addTag(Tag tag);
+
+    /**
      * Retrieves all condition types.
      *
      * @return a Collection of all collection types

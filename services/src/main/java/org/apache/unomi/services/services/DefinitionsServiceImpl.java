@@ -141,6 +141,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         }
 
         // now let's resolve all the children.
+        resolveTagsChildren();
+    }
+
+    private void resolveTagsChildren() {
         for (Tag tag : tags.values()) {
             if (tag.getParentId() != null && tag.getParentId().length() > 0) {
                 Tag parentTag = tags.get(tag.getParentId());
@@ -240,6 +244,13 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     public Tag getTag(String tagId) {
         Tag completeTag = tags.get(tagId);
         return completeTag;
+    }
+
+    public void addTag(Tag tag) {
+        tag.setPluginId(bundleContext.getBundle().getBundleId());
+        tags.put(tag.getId(), tag);
+        // now let's resolve all the children.
+        resolveTagsChildren();
     }
 
     public Map<Long, List<PluginType>> getTypesByPlugin() {

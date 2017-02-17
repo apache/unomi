@@ -102,6 +102,16 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
+     * Add a new tag to the list of tags
+     * @param tag the tag to add
+     */
+    @POST
+    @Path("/tags")
+    public void addTag(Tag tag) {
+        definitionsService.addTag(tag);
+    }
+
+    /**
      * Retrieves all condition types localized using the specified language.
      *
      * @param language the language to use to localize.
