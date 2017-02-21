@@ -18,6 +18,7 @@
 <project name="Apache Unomi"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/DECORATION/1.7.0"
          xsi:schemaLocation="http://maven.apache.org/DECORATION/1.7.0 http://maven.apache.org/xsd/decoration-1.7.0.xsd">
+
     <skin>
         <groupId>lt.velykis.maven.skins</groupId>
         <artifactId>reflow-maven-skin</artifactId>

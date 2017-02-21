@@ -33,13 +33,8 @@
     <pluginRepositories>
         <pluginRepository>
             <id>miredot</id>
-            <name>MireDot Releases</name>
+            <name>Miredot Releases</name>
             <url>http://nexus.qmino.com/content/repositories/miredot</url>
-        </pluginRepository>
-        <pluginRepository>
-            <id>miredot-snapshots</id>
-            <name>MireDot Releases</name>
-            <url>http://nexus.qmino.com/content/repositories/miredot-snapshots</url>
         </pluginRepository>
     </pluginRepositories>
 
@@ -163,7 +158,7 @@
             <plugin>
                 <groupId>com.qmino</groupId>
                 <artifactId>miredot-plugin</artifactId>
-                <version>2.0</version>
+                <version>2.0.3</version>
                 <executions>
                     <execution>
                         <goals>
@@ -172,9 +167,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <license>
-                        cHJvamVjdHxvcmcuYXBhY2hlLnVub21pLnVub21pLXJlc3R8MjAxNi0xMi0zMXx0cnVlfC0xI01Dd0NGRnI4UlhTSVNMdDdXck85ODRwcVo3MFhoY0d0QWhSTU1BNVJBUUNZTkNnVkFPRkpZNGxYeWNIM01RPT0=
-                    </license>
+                    <organizationId>c652adef-c7d3-41b5-a668-3a4d8fc2102e</organizationId>
                     <output>
                         <title>Documentation for Apache Unomi's RESTful API ${project.version}</title>
                         <html>
@@ -190,6 +183,29 @@
                                 <item>src/main/resources/OSGI-INF/blueprint/blueprint.xml</item>
                             </cxfServiceConfig>
                         </restFramework>
+                        <httpStatusCodes>
+                            <httpStatusCode>
+                                <httpCode>200</httpCode>
+                                <document>always</document>
+                                <defaultMessage>The service call has completed successfully.</defaultMessage>
+                            </httpStatusCode>
+                            <httpStatusCode>
+                                <httpCode>401</httpCode>
+                                <document>explicit: com.acme.exceptions.AuthorizationException</document>
+                                <defaultMessage>The user is not authorized to use this service.</defaultMessage>
+                            </httpStatusCode>
+                            <httpStatusCode>
+                                <httpCode>412</httpCode>
+                                <document>put,post</document>
+                                <defaultMessage>Invalid JSON/XML input.</defaultMessage>
+                            </httpStatusCode>
+                            <httpStatusCode>
+                                <httpCode>500</httpCode>
+                                <document>always</document>
+                                <defaultMessage>The service call has not succeeded.</defaultMessage>
+                                <sticky>true</sticky> <!-- Document always, even if there is an @statuscode tag -->
+                            </httpStatusCode>
+                        </httpStatusCodes>
                         <externalSources>
                             <sourceDirs>
                                 <sourceDir>../api/src/main/java</sourceDir>

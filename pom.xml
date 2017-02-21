@@ -894,7 +894,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>2.10.3</version>
+                    <version>2.10.4</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.servicemix.tooling</groupId>
@@ -953,7 +953,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-scm-publish-plugin</artifactId>
-                <version>1.0-beta-2</version>
+                <version>1.1</version>
                 <configuration>
                     <checkinComment>[scm-publish] Updating Unomi website</checkinComment>
                     <pubScmUrl>scm:svn:https://svn.apache.org/repos/asf/incubator/unomi/website/</pubScmUrl>
@@ -962,7 +962,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-site-plugin</artifactId>
-                <version>3.3</version>
+                <version>3.4</version>
                 <dependencies>
                     <dependency>
                         <groupId>lt.velykis.maven.skins</groupId>
@@ -985,7 +985,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.10.3</version>
+                <version>2.10.4</version>
                 <configuration>
                     <tags>
                         <tag>
@@ -1045,7 +1045,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-project-info-reports-plugin</artifactId>
-                <version>2.8.1</version>
+                <version>2.9</version>
                 <configuration>
                     <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
                 </configuration>
