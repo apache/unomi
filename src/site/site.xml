@@ -122,6 +122,7 @@
                 <item name="Cluster setup" href="versions/master/clustering.html" />
                 <item name="Concepts" href="versions/master/concepts.html"/>
             </item>
+            <item name="More use cases" href="usecases.html" />
             <item name="REST API documentation" href="./rest-api-doc/index.html"/>
             <item name="API Javadoc" href="./unomi-api/apidocs/index.html"/>
         </menu>

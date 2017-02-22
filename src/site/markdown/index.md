@@ -17,76 +17,72 @@
   
 ![Unomi logo](images/apache-unomi-380x85.png)
 
-## A personalization and A/B testing open source server (with built-in privacy management)
+# The Open Source Customer Data Platform
 
-### In a few words
+## Apache Unomi in one sentence
+Apache Unomi is __a Java Open Source customer data platform__, a Java server designed to manage customers, 
+leads and visitors’ data and help personalize customers’ experiences. 
 
-Apache Unomi is a REST server that manages user profiles and events related to the profiles. It can be used to
-integrate personalization and profile management within very different systems such as CMS, CRMs, Issue Trackers,
-native mobile application. It was designed to be easy to integrate with external systems, promoting profile sharing
-and re-use in very different applications.
- 
-Basically the server tracks users using different mechanisms (by default cookies), builds a progressively populated
-profile and associates events that are performed by a user with his profile. Events may range from a click on a page,
-to a file being downloaded, a native mobile application button being clicked, or anything that can be sent to the
-server.
+## For developers 
+* Uses ElasticSearch for data storage, dynamic data structure
+* Highly scalable architecture
+* Very simple to deploy and install (simply unzip & run)
+* Uses Apache Karaf as the OSGi runtime 
+* Full & simple REST API
+* Extensible through plugin architecture (using OSGi & simple JSON descriptors)
+* Apache Open Source project
 
-The server has a built-in rule system that makes it possible to perform any action when an event is collected for
-a profile. It also has the notion of user segments, making it possible to classify user profiles into dynamic
- sub-groups, notably to build personalized experiences for specific segments.
- 
-As Apache Unomi is built as an OSGi application running inside Apache Karaf, it is extremely extensible and built to
-be scalable. For example it is possible to plugin new conditions, actions, or any other service that may be needed 
-such as beacon tracking or push notifications.
+## For IT stakeholders and business users
+* First-Party Data Collection and Ownership
+* Persistent and consolidated profiles for all your audience (customers & leads), storing anonymous and personally 
+identifiable information
+* Regulation-proof and privacy management built-in 
+* Real-Time Decisioning (Scoring logics, segmentation)
+* Open standard, easy integration and extension
+
+## Why would you need a Customer Data Platform ? 
+Organizations collect data from multiple sources and channels - sales, web, emails, mobile, brick and mortar - and 
+all of this data is spread across different departments and technologies. As a result, many professionals are lacking 
+the data they need to do their job, especially data analysts and marketers.
+
+A customer data platform helps business users collect all the customer data in one place, providing a complete view 
+of the customers. When the data is collected, the customer data platform will also play a key role in choosing which 
+content or offer is more relevant to a customer. 
+
+## The Apache Unomi advantage 
+Each organization is unique and will always have specific needs, this is why Apache Unomi has been designed to 
+be extended and to ease the integration of external data. The embedded features such as segmentation, scoring and 
+built-in privacy will be appreciated by business users while horizontal scalability and open source positioning will 
+be loved by developers and architects. 
 
 Apache Unomi is also the reference implementation of the upcoming OASIS Context Server (CXS) standard 
-(https://www.oasis-open.org/committees/cxs/) to help standardize personalization of online experience
-while promoting ethical web experience management and increased user privacy controls.
+(https://www.oasis-open.org/committees/cxs/) to help standardize personalization of customer experience while promoting 
+ethical web experience management and increased user privacy controls. 
 
-### What is unique about Apache Unomi ?
+## Business cases based on Unomi
+* Build a web personalization software to adapt the content on your website to your audience
+* Collect data from mobile application and feed Apache Unomi to track and understand your customers’ journeys 
+* Connect the beacons deployed in your stores to Apache Unomi and consolidate the profile of your customers and leads across all these channels
+* Automatically push profiles from Apache Unomi to your CRM when a lead reach a given number of points in one of your scoring plans
 
-One of the most unique features of this server is its privacy management features. Using the privacy REST API, it is
-possible for integrators to build user facing UIs that let them manage their profile, and control how they are being
-tracked, what data has been collected and even anonymize previously collected data or future data ! Finally there is 
-even the possibility for end-users to delete their profile information completely. 
+## Unomi logical architecture
 
-It is becoming more and more important to address privacy issues correctly, and it is even becoming more and more of 
-a legal issue since a lot of legislation is now appearing in many countries to make sure that user's right to privacy is 
-respected.
+All communication is done using HTTP REST requests and JSON data formats.
 
-Of course these possibilities have no default UI inside of Apache Unomi so it is left up to the developers to expose
-them (or not).
+![Unomi logical architecture](images/unomi-logical-architecture-diagram.png)
 
-### Use cases
+## 5 Minute Quick start
+1. Install JDK 8 (see [http://www.oracle.com/technetwork/java/javase/downloads/index.html](http://www.oracle.com/technetwork/java/javase/downloads/index.html) and make sure you set the JAVA_HOME variable [https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/](https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/)
+2. Download ElasticSearch 5.1.2, for example using: 
 
-#### Use Apache Unomi as a personalization service for a Web CMS
+        curl -O https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.1.2.tar.gz
 
-In this use case Apache Unomi is used to track all the users that visits the sites being managed by the CMS. The 
-sites may also contain personalized content elements that will use the profile information coming from Apache Unomi
-to change their display based on the user. It will also send events (such as login events for example) back to the
-server using simple AJAX calls to the Apache Unomi REST API. 
-
-The Web CMS can also build UIs to expose the privacy management feature to end-users of the platform, and will of 
-course build UIs to perform administration tasks such as profile, segments, goals, rules management. 
-
-#### Use Apache Unomi as an analytics service for a native mobile application
-
-In this case the server is used as a back-end for a native mobile application that will authenticate a user and then
-send events to the server when the user performs certains tasks within the app. Tasks may include pressing a button,
-getting close to a location (using GPS or beacons), etc...
-
-The application may also include a UI to expose the privacy management features of Apache Unomi.
-
-#### Use Apache Unomi as a centralized profile management system
-
-In this use case the server is used a centralized profile management system, making it easy to aggregate different
-profile information that may be stored in different systems such as CRMs, Issue tracking systems, forums, CMS, ...
-One way of achieving this is to make sure that "anonymous" profiles are merged when an event such as a login happens
-and a unique cross-system identifier (usually the email address) is detected on each system.
-
-In this case connectors to all the different systems will need to be developped (and hopefully contributed back to
-the Apache Unomi community), so that the centralization of the information is managed by an Open Source and standards
-compliant server community.
+3. Edit the cluster.name in the `conf/elasticSearch.yml` file to `contextElasticSearch`
+4. Download Apache Unomi here : [http://unomi.incubator.apache.org/download.html](http://unomi.incubator.apache.org/download.html)
+5. Start it using : `./bin/karaf`
+6. Wait for startup to complete
+7. Try accessing [https://localhost:9443/cxs/cluster](https://localhost:9443/cxs/cluster) with username/password: karaf/karaf . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
+8. Request your first context by simply accessing : [http://localhost:8181/context.js?session=1234](http://localhost:8181/context.js?session=1234)
 
 ### News
 
@@ -103,37 +99,6 @@ compliant server community.
 * [Linux.com : Unomi: A Bridge Between Privacy and Digital Marketing](http://www.linux.com/news/enterprise/cloud-computing/858418-unomi-a-bridge-between-privacy-and-digital-marketing)
 * [Introducing Apache Unomi, JavaOne 2015](http://www.slideshare.net/sergehuber/introducing-apache-unomi-javaone-2015-session) This presentation has a cool example of integrating Apache Unomi with IoT devices (Internet of Things) such as beacons, smartphones and even televisions
 * [Apache Unomi In-depth, ApacheCon EU 2015](http://www.slideshare.net/sergehuber/apache-unomi-in-depth-apachecon-eu-2015-session)
-
-### Features
-
-![Unomi features](images/unomi-features.png)
-
-* Simple entry-point to retrieve the profile context and collecting user-triggered events (page view, click, downloads, etc...)
-* Full & simple REST API for Context Server administration
-* Highly scalable architecture
-* Fully OSGi compliant application
-* Persistence & query layer uses ElasticSearch (other providers may be implemented in the future)
-* Uses Apache Karaf as the OSGi runtime (supports both Apache Felix and Eclipse Equinox OSGi implementations)
-* Very simple to deploy and install (simply unzip & run)
-* Extensible through plugin architecture (using OSGi & simple JSON descriptors)
-
-### At a glance
-
-![Unomi input output](images/unomi-input-output.png)
-
-Unomi provides the context of the current user interacting with any Unomi-aware system. Using this context, Unomi-connected systems can
-send events to the context server. These events might, in turn, trigger rules that perform actions that can update the current context,
-interact with external systems or pretty much anything that can be implemented using the Unomi API.
-
-### Requirements
-
-* JDK 7 or later, http://www.oracle.com/technetwork/java/javase/downloads/index.html
-* Maven 3.0+, http://maven.apache.org
-        
-### Todo
-
-- Look at possible integration with newsletter management systems such as MailChimp, for example to synchronize profile data with collected info.
-- Integrate with machine learning implementations such as Prediction.io or Apache Mahout
 
 ---
 
@@ -152,5 +117,3 @@ of the code, it does indicate that the project has yet to be fully endorsed by t
 
 Apache Karaf, Apache Mahout, Apache and the Apache feather logo are either registered trademarks or trademarks of The
  Apache Software Foundation in the United States and other countries.
- 
-
