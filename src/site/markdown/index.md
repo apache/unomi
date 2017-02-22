@@ -73,16 +73,11 @@ All communication is done using HTTP REST requests and JSON data formats.
 
 ## 5 Minute Quick start
 1. Install JDK 8 (see [http://www.oracle.com/technetwork/java/javase/downloads/index.html](http://www.oracle.com/technetwork/java/javase/downloads/index.html) and make sure you set the JAVA_HOME variable [https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/](https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/)
-2. Download ElasticSearch 5.1.2, for example using: 
-
-        curl -O https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.1.2.tar.gz
-
-3. Edit the cluster.name in the `conf/elasticSearch.yml` file to `contextElasticSearch`
-4. Download Apache Unomi here : [http://unomi.incubator.apache.org/download.html](http://unomi.incubator.apache.org/download.html)
-5. Start it using : `./bin/karaf`
-6. Wait for startup to complete
-7. Try accessing [https://localhost:9443/cxs/cluster](https://localhost:9443/cxs/cluster) with username/password: karaf/karaf . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
-8. Request your first context by simply accessing : [http://localhost:8181/context.js?session=1234](http://localhost:8181/context.js?session=1234)
+2. Download Apache Unomi here : [http://unomi.incubator.apache.org/download.html](http://unomi.incubator.apache.org/download.html)
+3. Start it using : `./bin/karaf`
+4. Wait for startup to complete
+5. Try accessing [https://localhost:9443/cxs/cluster](https://localhost:9443/cxs/cluster) with username/password: karaf/karaf . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
+6. Request your first context by simply accessing : [http://localhost:8181/context.js?session=1234](http://localhost:8181/context.js?session=1234)
 
 ### News
 

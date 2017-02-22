@@ -18,5 +18,5 @@
 #
 ################################################################################
 echo Building...
-mvn clean install -P integration-tests,performance-tests,rat
+mvn clean install -P !integration-tests,!performance-tests,rat
 echo Package building completed.

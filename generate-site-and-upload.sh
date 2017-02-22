@@ -23,7 +23,7 @@ if [ $# -ne 2 ]
     exit 1
 fi
 echo Generating site...
-mvn clean install site site:stage -P integration-tests,performance-tests
+mvn clean install site site:stage -P !integration-tests,!performance-tests
 cd rest
 mvn package
 cd -
