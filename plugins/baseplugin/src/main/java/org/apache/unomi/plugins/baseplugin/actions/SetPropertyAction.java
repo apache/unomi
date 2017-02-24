@@ -18,10 +18,12 @@
 package org.apache.unomi.plugins.baseplugin.actions;
 
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
 
 import java.text.SimpleDateFormat;
@@ -30,9 +32,14 @@ import java.util.TimeZone;
 public class SetPropertyAction implements ActionExecutor {
 
     private PrivacyService privacyService;
+    private ProfileService profileService;
 
     public void setPrivacyService(PrivacyService privacyService) {
         this.privacyService = privacyService;
+    }
+
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
     }
 
     public int execute(Action action, Event event) {
@@ -46,13 +53,17 @@ public class SetPropertyAction implements ActionExecutor {
         }
         Object propertyValueInteger = action.getParameterValues().get("setPropertyValueInteger");
         Object setPropertyValueMultiple = action.getParameterValues().get("setPropertyValueMultiple");
+        Object setPropertyValueBoolean = action.getParameterValues().get("setPropertyValueBoolean");
 
         if (propertyValue == null) {
             if (propertyValueInteger != null) {
                 propertyValue = PropertyHelper.getInteger(propertyValueInteger);
             }
-            if(setPropertyValueMultiple != null) {
+            if (setPropertyValueMultiple != null) {
                propertyValue = setPropertyValueMultiple;
+            }
+            if (setPropertyValueBoolean != null) {
+                propertyValue = PropertyHelper.getBooleanValue(setPropertyValueBoolean);
             }
         }
         if (propertyValue != null && propertyValue.equals("now")) {
@@ -60,7 +71,6 @@ public class SetPropertyAction implements ActionExecutor {
             format.setTimeZone(TimeZone.getTimeZone("UTC"));
             propertyValue = format.format(event.getTimeStamp());
         }
-
 
         Object target = storeInSession ? event.getSession() : event.getProfile();
 

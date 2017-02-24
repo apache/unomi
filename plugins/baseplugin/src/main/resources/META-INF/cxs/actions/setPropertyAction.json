@@ -21,6 +21,11 @@
       "multivalued": false
     },
     {
+      "id": "setPropertyValueBoolean",
+      "type": "boolean",
+      "multivalued": false
+    },
+    {
       "id": "setPropertyValueInteger",
       "type": "integer",
       "multivalued": false

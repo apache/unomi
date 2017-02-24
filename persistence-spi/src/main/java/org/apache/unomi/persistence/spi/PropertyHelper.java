@@ -109,4 +109,24 @@ public class PropertyHelper {
         return null;
     }
 
+    public static Boolean getBooleanValue(Object setPropertyValueBoolean) {
+
+        if (setPropertyValueBoolean instanceof Boolean) {
+            return((Boolean)setPropertyValueBoolean);
+        } else if (setPropertyValueBoolean instanceof Number) {
+            if (((Number)setPropertyValueBoolean).intValue() >= 1) {
+                return  new Boolean(true);
+            } else {
+                return  new Boolean(false);
+            }
+        } else {
+            if (((String)setPropertyValueBoolean).equalsIgnoreCase("true") || ((String)setPropertyValueBoolean).equalsIgnoreCase("on") ||
+                    ((String)setPropertyValueBoolean).equalsIgnoreCase("yes") || ((String)setPropertyValueBoolean).equalsIgnoreCase("1")) {
+                return  new Boolean(true);
+            } else {
+                return  new Boolean(false);
+            }
+        }
+
+    }
 }
