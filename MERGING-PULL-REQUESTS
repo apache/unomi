@@ -1,0 +1,81 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+Merging Github Pull Requests
+============================
+
+When a developer submits a Pull Request (PR) to the Apache Unomi project on GitHub, you can follow these steps to
+accept and merge that PR into the Apache Unomi code base.
+
+Step-by-step guide
+------------------
+
+1. Carefully review the PR
+
+  Make sure that the code for the PR looks good and, ideally, includes JUnit tests that prove that the code works.
+  Check which branch the PR is targeting and make sure you want the code to go into that branch
+  If the PR is large or adds new files, then make sure the person who submitted the request has an Apache ICLA on file.
+  Ask the contributor to fill out this form and follow the instructions on the form to sent it in to
+  Apache: https://www.apache.org/licenses/icla.txt
+  Check the code to ensure that it does not bring in any code or dependencies with licenses more restrictive than the
+  Apache Software License (ASLv2). For example, we cannot bring in any code or dependencies that are under GPL or
+  LGPL license.
+
+2. Configure your Git client to map GitHub PRs to ref
+
+  Add this to your Git config for the Apache Unomi project. If you already have a remote for GitHub then add the two
+  lines that mention "refs" to it.
+
+        [remote "github"]
+        url = https://github.com/apache/incubating-unomi.git
+        fetch = +refs/heads/*:refs/remotes/github/*
+        fetch = +refs/pull/*/head:refs/remotes/github/pr/*
+
+  NOTE: For the rest of this guide we will assume that Apache Git is the remote named "origin" and GitHub is the remote named "github".
+
+3. Fetch the latest PR refs from GitHub
+
+  Use git's fetch command to pull in the latest PR refs from GitHub.
+
+        git fetch github
+
+4. Checkout the PR code
+
+  Now you can fetch the code for the Pull Request like so:
+
+        git checkout pr/<pull request number>
+
+5. Merge the PR into the desired branch
+
+   First checkout the desired branch and make sure it is up to date, for example:
+
+        git checkout master
+        git pull origin
+
+  Next, use the merge command to merge the code into the target branch. And make sure to include a
+  "This closes #" message (be sure to include the # sign) so that Apache's GitHub integration feature will close the
+  PR. For example:
+
+        git merge -m "This closes pull request number #<pull request number>" pr/<pull request number>
+
+6. Push the code
+
+  Push the code to Apache Git.
+
+        git push origin
+
+  Thank the contributor for their code.
