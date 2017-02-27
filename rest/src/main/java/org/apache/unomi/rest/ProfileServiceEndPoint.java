@@ -306,6 +306,18 @@ public class ProfileServiceEndPoint {
     }
 
     /**
+     * Save the posted persona with its sessions
+     *
+     * @param personaWithSessions the persona to save with its sessions.
+     * @return a {@link PersonaWithSessions} instance with the persona identified by the specified identifier and all its associated sessions
+     */
+    @POST
+    @Path("/personasWithSessions")
+    public PersonaWithSessions savePersonaWithSessions(PersonaWithSessions personaWithSessions) {
+        return profileService.savePersonaWithSessions(personaWithSessions);
+    }
+
+    /**
      * Persists the specified {@link Persona} in the context server.
      *
      * @param persona the persona to persist

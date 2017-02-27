@@ -54,6 +54,6 @@ public class PersonaWithSessions {
 
     @XmlTransient
     public PersonaSession getLastSession() {
-        return sessions.get(0);
+        return sessions.size()>0?sessions.get(0):null;
     }
 }

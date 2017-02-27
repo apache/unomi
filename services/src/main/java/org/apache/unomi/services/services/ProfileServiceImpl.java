@@ -683,6 +683,29 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return persistenceService.query("profileId", personaId, sortBy, Session.class, offset, size);
     }
 
+    public PersonaWithSessions savePersonaWithSessions(PersonaWithSessions personaToSave){
+        if(personaToSave !=null){
+            //Generate a UUID if no itemId is set on the persona
+            if(personaToSave.getPersona().getItemId() == null){
+                personaToSave.getPersona().setItemId("persona-"+UUID.randomUUID().toString());
+            }
+            boolean savedPersona = persistenceService.save(personaToSave.getPersona());
+            //Browse persona sessions
+            List<PersonaSession> sessions = personaToSave.getSessions();
+            for (PersonaSession session : sessions) {
+                //Generate a UUID if no itemId is set on the session
+                if(session.getItemId() == null){
+                    session.setItemId(UUID.randomUUID().toString());
+                }
+                //link the session to the persona
+                session.setProfile(personaToSave.getPersona());
+                persistenceService.save(session);
+            }
+            return personaToSave;
+        }
+        return null;
+    }
+
     private void loadPredefinedPersonas(BundleContext bundleContext) {
         if (bundleContext == null) {
             return;

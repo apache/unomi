@@ -227,6 +227,14 @@ public interface ProfileService {
     PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy);
 
     /**
+     * Save a persona with its sessions.
+     *
+     * @param personaToSave the persona object containing all the persona information and sessions
+     */
+    PersonaWithSessions savePersonaWithSessions(PersonaWithSessions personaToSave);
+
+
+    /**
      * Retrieves all the property types associated with the specified target.
      *
      * TODO: move to a different class
