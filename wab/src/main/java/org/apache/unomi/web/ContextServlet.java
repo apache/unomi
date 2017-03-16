@@ -372,18 +372,30 @@ public class ContextServlet extends HttpServlet {
         return changes;
     }
 
+    /**
+     * This function will update the profile if it is from Persona instance.
+     * The profile will be updated using the overrides attributes :
+     * - profileOverrides for profile properties, segments and scores
+     * - sessionPropertiesOverrides for session properties
+     * @param contextRequest
+     * @param profile
+     * @param session
+     */
     private void processOverrides(ContextRequest contextRequest, Profile profile, Session session) {
         if (profile instanceof Persona) {
-            if (contextRequest.getSegmentOverrides() != null) {
-                profile.setSegments(contextRequest.getSegmentOverrides());
-            }
-
-            if (contextRequest.getProfilePropertiesOverrides() != null) {
-                profile.setProperties(contextRequest.getProfilePropertiesOverrides());
-            }
-
-            if (contextRequest.getSessionPropertiesOverrides() != null) {
-                session.setProperties(contextRequest.getSessionPropertiesOverrides()); // we do this just in case a cache is behind this
+            if (contextRequest.getProfileOverrides() != null) {
+                if(contextRequest.getProfileOverrides().getScores()!=null){
+                    profile.setScores(contextRequest.getProfileOverrides().getScores());
+                }
+                if(contextRequest.getProfileOverrides().getSegments()!=null){
+                    profile.setSegments(contextRequest.getProfileOverrides().getSegments());
+                }
+                if(contextRequest.getProfileOverrides().getProperties()!=null){
+                    profile.setProperties(contextRequest.getProfileOverrides().getProperties());
+                }
+                if(contextRequest.getSessionPropertiesOverrides()!=null){
+                    session.setProperties(contextRequest.getSessionPropertiesOverrides());
+                }
             }
         }
     }
