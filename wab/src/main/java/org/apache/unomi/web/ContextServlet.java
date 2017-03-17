@@ -380,6 +380,7 @@ public class ContextServlet extends HttpServlet {
 
             if (contextRequest.getProfilePropertiesOverrides() != null) {
                 profile.setProperties(contextRequest.getProfilePropertiesOverrides());
+                session.getProfile().setProperties(contextRequest.getProfilePropertiesOverrides());
             }
 
             if (contextRequest.getSessionPropertiesOverrides() != null) {
