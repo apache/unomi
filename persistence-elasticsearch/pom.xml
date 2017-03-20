@@ -32,7 +32,6 @@
 
     <modules>
         <module>core</module>
-        <module>plugins</module>
     </modules>
 
 </project>

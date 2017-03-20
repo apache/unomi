@@ -56,7 +56,11 @@ import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.index.reindex.BulkIndexByScrollResponse;
+import org.elasticsearch.index.reindex.UpdateByQueryAction;
+import org.elasticsearch.index.reindex.UpdateByQueryRequestBuilder;
 import org.elasticsearch.script.Script;
+import org.elasticsearch.script.ScriptException;
 import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
@@ -92,22 +96,21 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import static org.elasticsearch.index.query.QueryBuilders.termQuery;
+
 @SuppressWarnings("rawtypes")
 public class ElasticSearchPersistenceServiceImpl implements PersistenceService, SynchronousBundleListener {
-
-    private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
 
     public static final String NUMBER_OF_SHARDS = "number_of_shards";
     public static final String NUMBER_OF_REPLICAS = "number_of_replicas";
     public static final String CLUSTER_NAME = "cluster.name";
-
     public static final String BULK_PROCESSOR_NAME = "bulkProcessor.name";
     public static final String BULK_PROCESSOR_CONCURRENT_REQUESTS = "bulkProcessor.concurrentRequests";
     public static final String BULK_PROCESSOR_BULK_ACTIONS = "bulkProcessor.bulkActions";
     public static final String BULK_PROCESSOR_BULK_SIZE = "bulkProcessor.bulkSize";
     public static final String BULK_PROCESSOR_FLUSH_INTERVAL = "bulkProcessor.flushInterval";
     public static final String BULK_PROCESSOR_BACKOFF_POLICY = "bulkProcessor.backoffPolicy";
-
+    private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
     private TransportClient client;
     private BulkProcessor bulkProcessor;
     private String elasticSearchAddresses;
@@ -123,7 +126,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
 
-    private Map<String,String> indexNames;
+    private Map<String, String> indexNames;
     private List<String> itemsMonthlyIndexed;
     private Map<String, String> routingByType;
     private Set<String> existingIndexNames = new TreeSet<String>();
@@ -135,7 +138,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String bulkProcessorName = "unomi-bulk";
     private String bulkProcessorConcurrentRequests = "1";
     private String bulkProcessorBulkActions = "1000";
-    private String bulkProcessorBulkSize= "5MB";
+    private String bulkProcessorBulkSize = "5MB";
     private String bulkProcessorFlushInterval = "5s";
     private String bulkProcessorBackoffPolicy = "exponential";
 
@@ -306,8 +309,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
                 if (!indexExists) {
                     logger.info("{} index doesn't exist yet, creating it...", indexName);
-                    Map<String,String> indexMappings = new HashMap<String,String>();
-                    indexMappings.put("_default_",mappings.get("_default_"));
+                    Map<String, String> indexMappings = new HashMap<String, String>();
+                    indexMappings.put("_default_", mappings.get("_default_"));
                     for (Map.Entry<String, String> entry : mappings.entrySet()) {
                         if (!itemsMonthlyIndexed.contains(entry.getKey()) && !indexNames.containsKey(entry.getKey())) {
                             indexMappings.put(entry.getKey(), entry.getValue());
@@ -455,7 +458,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     int paramEndPos = backoffPolicyStr.indexOf(")", paramStartPos);
                     int paramSeparatorPos = backoffPolicyStr.indexOf(",", paramStartPos);
                     TimeValue delay = TimeValue.parseTimeValue(backoffPolicyStr.substring(paramStartPos, paramSeparatorPos), new TimeValue(5, TimeUnit.SECONDS), BULK_PROCESSOR_BACKOFF_POLICY);
-                    int maxNumberOfRetries = Integer.parseInt(backoffPolicyStr.substring(paramSeparatorPos+1, paramEndPos));
+                    int maxNumberOfRetries = Integer.parseInt(backoffPolicyStr.substring(paramSeparatorPos + 1, paramEndPos));
                     bulkProcessorBuilder.setBackoffPolicy(BackoffPolicy.constantBackoff(delay, maxNumberOfRetries));
                 } else if (backoffPolicyStr.startsWith("exponential")) {
                     if (!backoffPolicyStr.contains("(")) {
@@ -466,7 +469,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         int paramEndPos = backoffPolicyStr.indexOf(")", paramStartPos);
                         int paramSeparatorPos = backoffPolicyStr.indexOf(",", paramStartPos);
                         TimeValue delay = TimeValue.parseTimeValue(backoffPolicyStr.substring(paramStartPos, paramSeparatorPos), new TimeValue(5, TimeUnit.SECONDS), BULK_PROCESSOR_BACKOFF_POLICY);
-                        int maxNumberOfRetries = Integer.parseInt(backoffPolicyStr.substring(paramSeparatorPos+1, paramEndPos));
+                        int maxNumberOfRetries = Integer.parseInt(backoffPolicyStr.substring(paramSeparatorPos + 1, paramEndPos));
                         bulkProcessorBuilder.setBackoffPolicy(BackoffPolicy.exponentialBackoff(delay, maxNumberOfRetries));
                     }
                 }
@@ -551,8 +554,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             if (!indexExists) {
                 logger.info("{} index doesn't exist yet, creating it...", monthlyIndexName);
 
-                Map<String,String> indexMappings = new HashMap<String,String>();
-                indexMappings.put("_default_",mappings.get("_default_"));
+                Map<String, String> indexMappings = new HashMap<String, String>();
+                indexMappings.put("_default_", mappings.get("_default_"));
                 for (Map.Entry<String, String> entry : mappings.entrySet()) {
                     if (itemsMonthlyIndexed.contains(entry.getKey())) {
                         indexMappings.put(entry.getKey(), entry.getValue());
@@ -749,6 +752,60 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
+    public boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts, final Map<String, Object>[] scriptParams, final Condition[] conditions) {
+        return new InClassLoaderExecute<Boolean>() {
+            protected Boolean execute(Object... args) throws Exception {
+                try {
+                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
+
+                    String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
+                            (itemsMonthlyIndexed.contains(itemType) && dateHint != null ? getMonthlyIndex(dateHint) : indexName);
+
+                    for (int i = 0; i < scripts.length; i++) {
+                        Script actualScript = new Script(ScriptType.INLINE, "painless", scripts[i], scriptParams[i]);
+
+                        client.admin().indices().prepareRefresh(index).get();
+
+                        UpdateByQueryRequestBuilder ubqrb = UpdateByQueryAction.INSTANCE.newRequestBuilder(client);
+                        ubqrb.source(index).source().setTypes(itemType);
+                        BulkIndexByScrollResponse response = ubqrb.setSlices(2)
+                                .setMaxRetries(1000).abortOnVersionConflict(false).script(actualScript)
+                                .filter(conditionESQueryBuilderDispatcher.buildFilter(conditions[i])).get();
+                        if (response.getBulkFailures().size() > 0) {
+                            for (BulkItemResponse.Failure failure : response.getBulkFailures()) {
+                                logger.error("Failure : cause={} , message={}", failure.getCause(), failure.getMessage());
+                            }
+                        } else {
+                            logger.info("Update By Query has processed {} in {}.", response.getUpdated(), response.getTook().toString());
+                        }
+                        if (response.isTimedOut()) {
+                            logger.error("Update By Query ended with timeout!");
+                        }
+                        if (response.getVersionConflicts() > 0) {
+                            logger.warn("Update By Query ended with {} Version Conflicts!", response.getVersionConflicts());
+                        }
+                        if (response.getNoops() > 0) {
+                            logger.warn("Update By Query ended with {} noops!", response.getNoops());
+                        }
+                    }
+                    return true;
+                } catch (IndexNotFoundException e) {
+                    throw new Exception("No index found for itemType=" + clazz.getName(), e);
+                } catch (NoSuchFieldException e) {
+                    throw new Exception("Error updating item ", e);
+                } catch (IllegalAccessException e) {
+                    throw new Exception("Error updating item ", e);
+                } catch (ScriptException e) {
+                    logger.error("Error in the update script : {}\n{}\n{}", e.getScript(), e.getDetailedMessage(), e.getScriptStack());
+                    throw new Exception("Error in the update script");
+                } finally {
+                    return false;
+                }
+            }
+        }.catchingExecuteInClassLoader(true);
+    }
+
+    @Override
     public boolean updateWithScript(final String itemId, final Date dateHint, final Class<?> clazz, final String script, final Map<String, Object> scriptParams) {
         return new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) throws Exception {
@@ -758,13 +815,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
                             (itemsMonthlyIndexed.contains(itemType) && dateHint != null ? getMonthlyIndex(dateHint) : indexName);
 
-                    Script actualScript = new Script(ScriptType.INLINE, "groovy", script, scriptParams);
+                    Script actualScript = new Script(ScriptType.INLINE, "painless", script, scriptParams);
+
                     if (bulkProcessor == null) {
                         client.prepareUpdate(index, itemType, itemId).setScript(actualScript)
                                 .execute()
                                 .actionGet();
                     } else {
-                        UpdateRequest updateRequest = client.prepareUpdate(index, itemType, itemId).setScript(actualScript).request();
+                        UpdateRequest updateRequest = client.prepareUpdate(index, itemType, itemId).setScript(actualScript).
+                                setRefreshPolicy(WriteRequest.RefreshPolicy.WAIT_UNTIL).request();
                         bulkProcessor.add(updateRequest);
                     }
                     return true;
@@ -852,8 +911,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(indexName).execute().actionGet();
                 boolean indexExists = indicesExistsResponse.isExists();
                 if (!indexExists) {
-                    Map<String,String> indexMappings = new HashMap<String,String>();
-                    indexMappings.put("_default_",mappings.get("_default_"));
+                    Map<String, String> indexMappings = new HashMap<String, String>();
+                    indexMappings.put("_default_", mappings.get("_default_"));
                     for (Map.Entry<String, String> entry : mappings.entrySet()) {
                         if (indexNames.containsKey(entry.getKey()) && indexNames.get(entry.getKey()).equals(indexName)) {
                             indexMappings.put(entry.getKey(), entry.getValue());
@@ -880,7 +939,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.catchingExecuteInClassLoader(true);
     }
 
-    private void internalCreateIndex(String indexName, Map<String,String> mappings) {
+    private void internalCreateIndex(String indexName, Map<String, String> mappings) {
         CreateIndexRequestBuilder builder = client.admin().indices().prepareCreate(indexName)
                 .setSettings("{\n" +
                         "    \"index\" : {\n" +
@@ -995,14 +1054,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private String getPropertyNameWithData(String name, String itemType) {
-        Map<String,Object> propertyMapping = getPropertyMapping(name,itemType);
+        Map<String, Object> propertyMapping = getPropertyMapping(name, itemType);
         if (propertyMapping == null) {
             return null;
         }
         if (propertyMapping != null
                 && "text".equals(propertyMapping.get("type"))
                 && propertyMapping.containsKey("fields")
-                && ((Map)propertyMapping.get("fields")).containsKey("keyword")) {
+                && ((Map) propertyMapping.get("fields")).containsKey("keyword")) {
             name += ".keyword";
         }
         return name;
@@ -1107,12 +1166,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz, int offset, int size) {
-        return query(QueryBuilders.termQuery(fieldName, ConditionContextHelper.foldToASCII(fieldValue)), sortBy, clazz, offset, size, getRouting(fieldName, new String[]{fieldValue}, clazz), null);
+        return query(termQuery(fieldName, ConditionContextHelper.foldToASCII(fieldValue)), sortBy, clazz, offset, size, getRouting(fieldName, new String[]{fieldValue}, clazz), null);
     }
 
     @Override
     public <T extends Item> PartialList<T> queryFullText(String fieldName, String fieldValue, String fulltext, String sortBy, Class<T> clazz, int offset, int size) {
-        return query(QueryBuilders.boolQuery().must(QueryBuilders.queryStringQuery(fulltext).defaultField("_all")).must(QueryBuilders.termQuery(fieldName, fieldValue)), sortBy, clazz, offset, size, getRouting(fieldName, new String[]{fieldValue}, clazz), null);
+        return query(QueryBuilders.boolQuery().must(QueryBuilders.queryStringQuery(fulltext).defaultField("_all")).must(termQuery(fieldName, fieldValue)), sortBy, clazz, offset, size, getRouting(fieldName, new String[]{fieldValue}, clazz), null);
     }
 
     @Override
@@ -1207,7 +1266,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                     requestBuilder = requestBuilder.addSort(distanceSortBuilder.order(SortOrder.ASC));
                                 }
                             } else {
-                                String name = getPropertyNameWithData(StringUtils.substringBeforeLast(sortByElement,":"), itemType);
+                                String name = getPropertyNameWithData(StringUtils.substringBeforeLast(sortByElement, ":"), itemType);
                                 if (name != null) {
                                     if (sortByElement.endsWith(":desc")) {
                                         requestBuilder = requestBuilder.addSort(name, SortOrder.DESC);
@@ -1451,7 +1510,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
 
-
     @Override
     public void refresh() {
         new InClassLoaderExecute<Boolean>() {
@@ -1514,7 +1572,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         new InClassLoaderExecute<Void>() {
             @Override
             protected Void execute(Object... args) {
-                QueryBuilder query = QueryBuilders.termQuery("scope", scope);
+                QueryBuilder query = termQuery("scope", scope);
 
                 BulkRequestBuilder deleteByScope = client.prepareBulk();
 
@@ -1610,6 +1668,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 (itemsMonthlyIndexed.contains(itemType) ? indexName + "-*" : indexName);
     }
 
+    private String getConfig(Map<String, String> settings, String key,
+                             String defaultValue) {
+        if (settings != null && settings.get(key) != null) {
+            return settings.get(key);
+        }
+        return defaultValue;
+    }
+
     public abstract static class InClassLoaderExecute<T> {
 
         protected abstract T execute(Object... args) throws Exception;
@@ -1624,7 +1690,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             }
         }
 
-        public T catchingExecuteInClassLoader( boolean logError, Object... args) {
+        public T catchingExecuteInClassLoader(boolean logError, Object... args) {
             try {
                 return executeInClassLoader(args);
             } catch (Exception e) {
@@ -1632,14 +1698,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             }
             return null;
         }
-    }
-
-    private String getConfig(Map<String,String> settings, String key,
-                             String defaultValue) {
-        if (settings != null && settings.get(key) != null) {
-            return settings.get(key);
-        }
-        return defaultValue;
     }
 
 

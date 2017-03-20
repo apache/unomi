@@ -87,6 +87,9 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
             case "contains":
                 checkRequiredValue(expectedValue, name, comparisonOperator, false);
                 return QueryBuilders.regexpQuery(name, ".*" + expectedValue + ".*");
+            case "notContains":
+                checkRequiredValue(expectedValue, name, comparisonOperator, false);
+                return QueryBuilders.boolQuery().mustNot(QueryBuilders.regexpQuery(name, ".*" + expectedValue + ".*"));
             case "startsWith":
                 checkRequiredValue(expectedValue, name, comparisonOperator, false);
                 return QueryBuilders.prefixQuery(name, expectedValue);

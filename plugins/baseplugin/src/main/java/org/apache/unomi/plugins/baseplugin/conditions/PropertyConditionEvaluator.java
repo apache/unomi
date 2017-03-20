@@ -22,7 +22,6 @@ import ognl.Ognl;
 import ognl.OgnlContext;
 import ognl.OgnlException;
 import ognl.enhance.ExpressionAccessor;
-import org.apache.commons.beanutils.BeanUtilsBean;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Event;
@@ -51,8 +50,6 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     private static final Logger logger = LoggerFactory.getLogger(PropertyConditionEvaluator.class.getName());
 
     private static final SimpleDateFormat yearMonthDayDateFormat = new SimpleDateFormat("yyyyMMdd");
-
-    private BeanUtilsBean beanUtilsBean = BeanUtilsBean.getInstance();
 
     private Map<String, Map<String, ExpressionAccessor>> expressionCache = new HashMap<>(64);
 

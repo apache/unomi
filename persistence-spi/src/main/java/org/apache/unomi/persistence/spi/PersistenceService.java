@@ -116,6 +116,18 @@ public interface PersistenceService {
     boolean updateWithScript(String itemId, Date dateHint, Class<?> clazz, String script, Map<String, Object> scriptParams);
 
     /**
+     * Updates the items of the specified class by a query with a new property value for the specified property name based on a provided script.
+     *
+     * @param dateHint      a Date helping in identifying where the item is located
+     * @param clazz         the Item subclass of the item to update
+     * @param scripts       inline scripts array
+     * @param scriptParams  script params array
+     * @param conditions    conditions array
+     * @return {@code true} if the update was successful, {@code false} otherwise
+     */
+    boolean updateWithQueryAndScript(Date dateHint, Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions);
+
+    /**
      * Retrieves the item identified with the specified identifier and with the specified Item subclass if it exists.
      *
      * @param <T>    the type of the Item subclass we want to retrieve
