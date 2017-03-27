@@ -70,6 +70,18 @@
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
+    <jaxrs:server address="/userList" id="restUserListService">
+        <jaxrs:providers>
+            <ref component-id="jaxb-provider"/>
+            <ref component-id="cors-filter"/>
+            <ref component-id="jaas-filter"/>
+        </jaxrs:providers>
+
+        <jaxrs:serviceBeans>
+            <ref component-id="userListServiceEndPoint"/>
+        </jaxrs:serviceBeans>
+    </jaxrs:server>
+
     <jaxrs:server address="/scoring" id="restScoringService">
         <jaxrs:providers>
             <ref component-id="jaxb-provider"/>
@@ -167,6 +179,7 @@
     </jaxrs:server>
 
     <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
+    <reference id="userListService" interface="org.apache.unomi.api.services.UserListService"/>
     <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
     <reference id="goalsService" interface="org.apache.unomi.api.services.GoalsService"/>
     <reference id="rulesService" interface="org.apache.unomi.api.services.RulesService"/>
@@ -177,6 +190,10 @@
 
     <bean id="segmentServiceEndPoint" class="org.apache.unomi.rest.SegmentServiceEndPoint">
         <property name="segmentService" ref="segmentService"/>
+    </bean>
+
+    <bean id="userListServiceEndPoint" class="org.apache.unomi.rest.UserListServiceEndPoint">
+        <property name="userListService" ref="userListService"/>
     </bean>
 
     <bean id="scoringServiceEndPoint" class="org.apache.unomi.rest.ScoringServiceEndPoint">

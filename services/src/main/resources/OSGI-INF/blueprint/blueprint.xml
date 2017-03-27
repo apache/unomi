@@ -127,6 +127,14 @@
     </bean>
     <service id="segmentService" ref="segmentServiceImpl" auto-export="interfaces"/>
 
+    <bean id="userListServiceImpl" class="org.apache.unomi.services.services.UserListServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="definitionsService" ref="definitionsServiceImpl"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+    </bean>
+    <service id="userListService" ref="userListServiceImpl" auto-export="interfaces"/>
+
     <bean id="profileServiceImpl" class="org.apache.unomi.services.services.ProfileServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>

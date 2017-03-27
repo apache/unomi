@@ -45,15 +45,11 @@ import java.net.URL;
 import java.security.MessageDigest;
 import java.util.*;
 
-public class SegmentServiceImpl implements SegmentService, SynchronousBundleListener {
+public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentService, SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
 
     private BundleContext bundleContext;
-
-    private PersistenceService persistenceService;
-
-    private DefinitionsService definitionsService;
 
     private EventService eventService;
 
@@ -103,14 +99,6 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
-    }
-
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
-    }
-
-    public void setDefinitionsService(DefinitionsService definitionsService) {
-        this.definitionsService = definitionsService;
     }
 
     public void setEventService(EventService eventService) {
@@ -1023,28 +1011,6 @@ public class SegmentServiceImpl implements SegmentService, SynchronousBundleList
 
     public void setTaskExecutionPeriod(long taskExecutionPeriod) {
         this.taskExecutionPeriod = taskExecutionPeriod;
-    }
-
-    private <T extends MetadataItem> PartialList<Metadata> getMetadatas(int offset, int size, String sortBy, Class<T> clazz) {
-        PartialList<T> items = persistenceService.getAllItems(clazz, offset, size, sortBy);
-        List<Metadata> details = new LinkedList<>();
-        for (T definition : items.getList()) {
-            details.add(definition.getMetadata());
-        }
-        return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize());
-    }
-
-    private <T extends MetadataItem> PartialList<Metadata> getMetadatas(Query query, Class<T> clazz) {
-        if (query.isForceRefresh()) {
-            persistenceService.refresh();
-        }
-        definitionsService.resolveConditionType(query.getCondition());
-        PartialList<T> items = persistenceService.query(query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit());
-        List<Metadata> details = new LinkedList<>();
-        for (T definition : items.getList()) {
-            details.add(definition.getMetadata());
-        }
-        return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize());
     }
 
 }
