@@ -158,7 +158,7 @@ public class ContextServlet extends HttpServlet {
                 }
             }
 
-            if (sessionId != null) {
+            if (sessionId != null && sessionId.trim().length() > 0) {
                 session = profileService.loadSession(sessionId, timestamp);
                 if (session != null) {
                     sessionProfile = session.getProfile();
@@ -199,8 +199,8 @@ public class ContextServlet extends HttpServlet {
                 sessionProfile = privacyService.isRequireAnonymousBrowsing(profile.getItemId()) ? privacyService.getAnonymousProfile(profile) : profile;
                 session = new Session(sessionId, sessionProfile, timestamp, scope);
 
-                if (sessionId != null) {
-                    // Only save session and send event if a session id was provided, otherise keep transient session
+                if (sessionId != null && sessionId.trim().length() > 0) {
+                    // Only save session and send event if a session id was provided, otherwise keep transient session
                     changes |= EventService.SESSION_UPDATED;
                     Event event = new Event("sessionCreated", session, profile, scope, null, session, timestamp);
                     if (sessionProfile.isAnonymousProfile()) {
