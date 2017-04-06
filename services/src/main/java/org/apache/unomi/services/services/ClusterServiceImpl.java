@@ -51,6 +51,7 @@ public class ClusterServiceImpl implements ClusterService {
     public static final String KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION = "org.apache.unomi.nodes";
     public static final String KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS = "publicEndpoints";
     public static final String KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS = "secureEndpoints";
+    public static final String KARAF_CLUSTER_CONFIGURATION_INTERNAL_ENDPOINTS = "internalEndpoints";
 
     private ClusterManager karafCellarClusterManager;
     private EventProducer karafCellarEventProducer;
@@ -64,6 +65,8 @@ public class ClusterServiceImpl implements ClusterService {
     private String port;
     private String secureAddress;
     private String securePort;
+    private String internalAddress;
+    private String internalPort;
 
     private Map<String,JMXConnector> jmxConnectors = new LinkedHashMap<>();
 
@@ -119,6 +122,14 @@ public class ClusterServiceImpl implements ClusterService {
 
     public void setSecurePort(String securePort) {
         this.securePort = securePort;
+    }
+
+    public void setInternalAddress(String internalAddress) {
+        this.internalAddress = internalAddress;
+    }
+
+    public void setInternalPort(String internalPort) {
+        this.internalPort = internalPort;
     }
 
     public void init() {
@@ -193,9 +204,11 @@ public class ClusterServiceImpl implements ClusterService {
         Properties karafCellarClusterNodeConfiguration = clusterConfigurations.get(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION);
         Map<String, String> publicNodeEndpoints = new TreeMap<>();
         Map<String, String> secureNodeEndpoints = new TreeMap<>();
+        Map<String, String> internalNodeEndpoints = new TreeMap<>();
         if (karafCellarClusterNodeConfiguration != null) {
             publicNodeEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, thisKarafNode.getId() + "=" + address + ":" + port);
             secureNodeEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, thisKarafNode.getId() + "=" + secureAddress + ":" + securePort);
+            internalNodeEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_INTERNAL_ENDPOINTS, thisKarafNode.getId() + "=" + internalAddress + ":" + internalPort);
         }
         for (org.apache.karaf.cellar.core.Node karafCellarNode : karafCellarNodes) {
             ClusterNode clusterNode = new ClusterNode();
@@ -212,6 +225,12 @@ public class ClusterServiceImpl implements ClusterService {
                 clusterNode.setSecurePort(Integer.parseInt(secureEndpointParts[1]));
                 clusterNode.setMaster(false);
                 clusterNode.setData(false);
+            }
+            String internalEndpoint = internalNodeEndpoints.get(karafCellarNode.getId());
+            if (internalEndpoint != null) {
+                String[] internalEndpointParts = internalEndpoint.split(":");
+                clusterNode.setInternalHostAddress(internalEndpointParts[0]);
+                clusterNode.setInternalPort(Integer.parseInt(internalEndpointParts[1]));
             }
             try {
                 String serviceUrl = "service:jmx:rmi:///jndi/rmi://"+karafCellarNode.getHost() + ":"+karafJMXPort+"/karaf-root";

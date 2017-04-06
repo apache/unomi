@@ -44,6 +44,8 @@
             <cm:property name="contextserver.port" value="8181"/>
             <cm:property name="contextserver.secureAddress" value="localhost"/>
             <cm:property name="contextserver.securePort" value="9443"/>
+            <cm:property name="contextserver.internalAddress" value="127.0.0.1"/>
+            <cm:property name="contextserver.internalPort" value="8181"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -162,6 +164,8 @@
         <property name="port" value="${cluster.contextserver.port}"/>
         <property name="secureAddress" value="${cluster.contextserver.secureAddress}"/>
         <property name="securePort" value="${cluster.contextserver.securePort}"/>
+        <property name="internalAddress" value="${cluster.contextserver.internalAddress}"/>
+        <property name="internalPort" value="${cluster.contextserver.internalPort}"/>
         <property name="persistenceService" ref="persistenceService"/>
         <property name="karafCellarClusterManager" ref="karafCellarClusterManager" />
         <property name="karafCellarEventProducer" ref="karafCellarEventProducer" />
