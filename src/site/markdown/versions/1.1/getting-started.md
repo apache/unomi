@@ -198,8 +198,10 @@ Let's look at the context request structure:
     requiredProfileProperties: <optional array of property identifiers>,
     requiredSessionProperties: <optional array of property identifiers>,
     filters: <optional array of filters to evaluate>,
-    segmentOverrides: <optional array of segment identifiers>,
-    profilePropertiesOverrides: <optional map of property name / value pairs>,
+    profileOverrides: <optional profile containing segments,scores or profile properties to override>,
+        - segments: <optional array of segment identifiers>,
+        - profileProperties: <optional map of property name / value pairs>,
+        - scores: <optional map of score id / value pairs>
     sessionPropertiesOverrides: <optional map of property name / value pairs>,
     requiresSegments: <boolean, whether to return the associated segments>
 }
@@ -214,7 +216,7 @@ A context request payload needs to at least specify some information about the s
 A client wishing to perform content personalization might also specify filtering conditions to be evaluated by the context server so that it can tell the client whether the content associated with the filter should be activated for this profile/session. This is accomplished by providing a list of filter definitions to be evaluated by the context server via the `filters` field of the payload. If provided, the evaluation results will be provided in the `filteringResults` field of the resulting `cxs` object the context server will send.
 
 #### Overrides
-It is also possible for clients wishing to perform user impersonation to specify properties or segments to override the proper ones so as to emulate a specific profile, in which case the overridden value will temporarily replace the proper values so that all rules will be evaluated with these values instead of the proper ones. The `segmentOverrides` (array of segment identifiers), `profilePropertiesOverrides` and `sessionPropertiesOverrides` (maps of property name and associated object value) fields allow to provide such information. Providing such overrides will, of course, impact content filtering results and segments matching for this specific request.
+It is also possible for clients wishing to perform user impersonation to specify properties, segments or scores to override the proper ones so as to emulate a specific profile, in which case the overridden value will temporarily replace the proper values so that all rules will be evaluated with these values instead of the proper ones. The `segments` (array of segment identifiers), `profileProperties` (maps of property name and associated object value) and `scores` (maps of score id and value) all wrapped in a profileOverrides object and the `sessionPropertiesOverrides` (maps of property name and associated object value) fields allow to provide such information. Providing such overrides will, of course, impact content filtering results and segments matching for this specific request.
 
 #### Controlling the content of the response
 The clients can also specify which information to include in the response by setting the `requiresSegments` property to true if segments the current profile matches should be returned or provide an array of property identifiers for `requiredProfileProperties` or `requiredSessionProperties` fields to ask the context server to return the values for the specified profile or session properties, respectively. This information is provided by the `profileProperties`, `sessionProperties` and `profileSegments` fields of the context server response.

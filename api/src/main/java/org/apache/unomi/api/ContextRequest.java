@@ -60,9 +60,7 @@ public class ContextRequest {
     // the following overrides make it possible to override temporarily the current profile segments, properties or
     // even session properties. This is useful for building UIs to temporarily override one of these parameters to
     // test different filter results.
-
-    private Set<String> segmentOverrides;
-    private Map<String, Object> profilePropertiesOverrides;
+    private Profile profileOverrides;
     private Map<String, Object> sessionPropertiesOverrides;
 
     /**
@@ -182,39 +180,21 @@ public class ContextRequest {
     }
 
     /**
-     * Retrieves the segment overrides.
+     * Retrieves the overrides.
      *
-     * @return the segment overrides
+     * @return the overrides
      */
-    public Set<String> getSegmentOverrides() {
-        return segmentOverrides;
+    public Profile getProfileOverrides() {
+        return profileOverrides;
     }
 
     /**
-     * Sets the segment overrides.
+     * Sets the overrides.
      *
-     * @param segmentOverrides the segment overrides
+     * @param overrides the collection<String> overrides out of profileProperties and sessionProperties
      */
-    public void setSegmentOverrides(Set<String> segmentOverrides) {
-        this.segmentOverrides = segmentOverrides;
-    }
-
-    /**
-     * Retrieves the profile properties overrides.
-     *
-     * @return the profile properties overrides
-     */
-    public Map<String, Object> getProfilePropertiesOverrides() {
-        return profilePropertiesOverrides;
-    }
-
-    /**
-     * Sets the profile properties overrides.
-     *
-     * @param profilePropertiesOverrides the profile properties overrides
-     */
-    public void setProfilePropertiesOverrides(Map<String, Object> profilePropertiesOverrides) {
-        this.profilePropertiesOverrides = profilePropertiesOverrides;
+    public void setProfileOverrides(Profile overrides) {
+        this.profileOverrides = overrides;
     }
 
     /**
