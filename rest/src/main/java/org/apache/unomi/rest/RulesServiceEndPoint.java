@@ -22,6 +22,7 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.rules.RuleStatistics;
 import org.apache.unomi.api.services.RulesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,6 +102,18 @@ public class RulesServiceEndPoint {
     @Path("/{ruleId}")
     public Rule getRule( @PathParam("ruleId") String ruleId) {
         return rulesService.getRule(ruleId);
+    }
+
+    /**
+     * Retrieves the statistics for the rule with the specified identifier
+     *
+     * @param ruleId the identifier of the rule we want to retrieve
+     * @return the statistics for the specified rule or {@code null} if no such rule exists.
+     */
+    @GET
+    @Path("/{ruleId}/statistics")
+    public RuleStatistics getRuleStatistics(@PathParam("ruleId") String ruleId) {
+        return rulesService.getRuleStatistics(ruleId);
     }
 
     /**

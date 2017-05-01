@@ -23,6 +23,7 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.rules.RuleStatistics;
 
 import java.util.Set;
 
@@ -53,6 +54,13 @@ public interface RulesService {
      * @return the rule identified by the specified identifier or {@code null} if no such rule exists.
      */
     Rule getRule(String ruleId);
+
+    /**
+     * Retrieves the statistics for a rule
+     * @param ruleId the identifier of the rule
+     * @return a long representing the number of times the rule was matched and executed.
+     */
+    RuleStatistics getRuleStatistics(String ruleId);
 
     /**
      * Persists the specified rule to the context server.

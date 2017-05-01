@@ -26,6 +26,7 @@ import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.rules.RuleStatistics;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
@@ -57,6 +58,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     private List<Rule> allRules;
 
     private Timer rulesTimer;
+    private Timer ruleStatisticsTimer;
+
+    private Map<String,RuleStatistics> allRuleStatistics = new HashMap<String,RuleStatistics>();
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -102,7 +106,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
         bundleContext.addBundleListener(this);
 
-        initializeTimer();
+        initializeTimers();
         logger.info("Rule service initialized.");
     }
 
@@ -115,6 +119,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     private void cancelTimers() {
         if(rulesTimer != null) {
             rulesTimer.cancel();
+        }
+        if (ruleStatisticsTimer != null) {
+            ruleStatisticsTimer.cancel();
         }
         logger.info("Rule purge: Purge unscheduled");
     }
@@ -161,41 +168,50 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         List<Rule> allItems = allRules;
 
         for (Rule rule : allItems) {
+            RuleStatistics ruleStatistics = getLocalRuleStatistics(rule);
+            long ruleConditionStartTime = System.currentTimeMillis();
             String scope = rule.getMetadata().getScope();
             if (scope.equals(Metadata.SYSTEM_SCOPE) || scope.equals(event.getScope())) {
                 Condition eventCondition = definitionsService.extractConditionByTag(rule.getCondition(), "eventCondition");
 
                 if (eventCondition == null) {
+                    updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
                     continue;
                 }
 
                 if (!persistenceService.testMatch(eventCondition, event)) {
+                    updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
                     continue;
                 }
 
                 Condition sourceCondition = definitionsService.extractConditionByTag(rule.getCondition(), "sourceEventCondition");
                 if (sourceCondition != null && !persistenceService.testMatch(sourceCondition, event.getSource())) {
+                    updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
                     continue;
                 }
 
                 if (rule.isRaiseEventOnlyOnceForProfile()) {
                     hasEventAlreadyBeenRaisedForProfile = hasEventAlreadyBeenRaisedForProfile != null ? hasEventAlreadyBeenRaisedForProfile : eventService.hasEventAlreadyBeenRaised(event, false);
                     if (hasEventAlreadyBeenRaisedForProfile) {
+                        updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
                         continue;
                     }
                 } else if (rule.isRaiseEventOnlyOnceForSession()) {
                     hasEventAlreadyBeenRaisedForSession = hasEventAlreadyBeenRaisedForSession != null ? hasEventAlreadyBeenRaisedForSession : eventService.hasEventAlreadyBeenRaised(event, true);
                     if (hasEventAlreadyBeenRaisedForSession) {
+                        updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
                         continue;
                     }
                 }
 
                 Condition profileCondition = definitionsService.extractConditionByTag(rule.getCondition(), "profileCondition");
                 if (profileCondition != null && !persistenceService.testMatch(profileCondition, event.getProfile())) {
+                    updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
                     continue;
                 }
                 Condition sessionCondition = definitionsService.extractConditionByTag(rule.getCondition(), "sessionCondition");
                 if (sessionCondition != null && !persistenceService.testMatch(sessionCondition, event.getSession())) {
+                    updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
                     continue;
                 }
                 matchedRules.add(rule);
@@ -203,6 +219,20 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         }
 
         return matchedRules;
+    }
+
+    private RuleStatistics getLocalRuleStatistics(Rule rule) {
+        RuleStatistics ruleStatistics = this.allRuleStatistics.get(rule.getItemId());
+        if (ruleStatistics == null) {
+            ruleStatistics = new RuleStatistics(rule.getItemId());
+        }
+        return ruleStatistics;
+    }
+
+    private void updateRuleStatistics(RuleStatistics ruleStatistics, long ruleConditionStartTime) {
+        long totalRuleConditionTime = System.currentTimeMillis() - ruleConditionStartTime;
+        ruleStatistics.setLocalConditionsTime(ruleStatistics.getLocalConditionsTime() + totalRuleConditionTime);
+        allRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
     }
 
     private List<Rule> getAllRules() {
@@ -225,16 +255,30 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         int changes = EventService.NO_CHANGE;
         for (Rule rule : rules) {
             logger.debug("Fired rule " + rule.getMetadata().getId() + " for " + event.getEventType() + " - " + event.getItemId());
+            long actionsStartTime = System.currentTimeMillis();
             for (Action action : rule.getActions()) {
                 changes |= actionExecutorDispatcher.execute(action, event);
             }
-
+            long totalActionsTime = System.currentTimeMillis() - actionsStartTime;
             Event ruleFired = new Event("ruleFired", event.getSession(), event.getProfile(), event.getScope(), event, rule, event.getTimeStamp());
             ruleFired.getAttributes().putAll(event.getAttributes());
             ruleFired.setPersistent(false);
             changes |= eventService.send(ruleFired);
+
+            RuleStatistics ruleStatistics = getLocalRuleStatistics(rule);
+            ruleStatistics.setLocalExecutionCount(ruleStatistics.getLocalExecutionCount()+1);
+            ruleStatistics.setLocalActionsTime(ruleStatistics.getLocalActionsTime() + totalActionsTime);
+            this.allRuleStatistics.put(rule.getItemId(), ruleStatistics);
         }
         return changes;
+    }
+
+    @Override
+    public RuleStatistics getRuleStatistics(String ruleId) {
+        if (allRuleStatistics.containsKey(ruleId)) {
+            return allRuleStatistics.get(ruleId);
+        }
+        return persistenceService.load(ruleId, RuleStatistics.class);
     }
 
     public Set<Metadata> getRuleMetadatas() {
@@ -309,7 +353,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         persistenceService.remove(ruleId, Rule.class);
     }
 
-    private void initializeTimer() {
+    private void initializeTimers() {
         rulesTimer = new Timer();
         TimerTask task = new TimerTask() {
             @Override
@@ -318,6 +362,14 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             }
         };
         rulesTimer.schedule(task, 0, 1000);
+        ruleStatisticsTimer = new Timer();
+        TimerTask statisticsTask = new TimerTask() {
+            @Override
+            public void run() {
+                syncRuleStatistics();
+            }
+        };
+        ruleStatisticsTimer.schedule(statisticsTask, 0, 10000);
     }
 
     public void bundleChanged(BundleEvent event) {
@@ -328,6 +380,65 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             case BundleEvent.STOPPING:
                 processBundleStop(event.getBundle().getBundleContext());
                 break;
+        }
+    }
+
+    private void syncRuleStatistics() {
+        List<RuleStatistics> allPersistedRuleStatisticsList = persistenceService.getAllItems(RuleStatistics.class);
+        Map<String,RuleStatistics> allPersistedRuleStatistics = new HashMap<>();
+        for (RuleStatistics ruleStatistics : allPersistedRuleStatisticsList) {
+            allPersistedRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
+        }
+        // first we iterate over the rules we have in memory
+        for (RuleStatistics ruleStatistics : allRuleStatistics.values()) {
+            boolean mustPersist = false;
+            if (allPersistedRuleStatistics.containsKey(ruleStatistics.getItemId())) {
+                // we must sync with the data coming from the persistence service.
+                RuleStatistics persistedRuleStatistics = allPersistedRuleStatistics.get(ruleStatistics.getItemId());
+                ruleStatistics.setExecutionCount(persistedRuleStatistics.getExecutionCount() + ruleStatistics.getLocalExecutionCount());
+                if (ruleStatistics.getLocalExecutionCount() > 0) {
+                    ruleStatistics.setLocalExecutionCount(0);
+                    mustPersist = true;
+                }
+                ruleStatistics.setConditionsTime(persistedRuleStatistics.getConditionsTime() + ruleStatistics.getLocalConditionsTime());
+                if (ruleStatistics.getLocalConditionsTime() > 0) {
+                    ruleStatistics.setLocalConditionsTime(0);
+                    mustPersist = true;
+                }
+                ruleStatistics.setActionsTime(persistedRuleStatistics.getActionsTime() + ruleStatistics.getLocalActionsTime());
+                if (ruleStatistics.getLocalActionsTime() > 0) {
+                    ruleStatistics.setLocalActionsTime(0);
+                    mustPersist = true;
+                }
+                ruleStatistics.setLastSyncDate(new Date());
+            } else {
+                ruleStatistics.setExecutionCount(ruleStatistics.getExecutionCount() + ruleStatistics.getLocalExecutionCount());
+                if (ruleStatistics.getLocalExecutionCount() > 0) {
+                    ruleStatistics.setLocalExecutionCount(0);
+                    mustPersist = true;
+                }
+                ruleStatistics.setConditionsTime(ruleStatistics.getConditionsTime() + ruleStatistics.getLocalConditionsTime());
+                if (ruleStatistics.getLocalConditionsTime() > 0) {
+                    ruleStatistics.setLocalConditionsTime(0);
+                    mustPersist = true;
+                }
+                ruleStatistics.setActionsTime(ruleStatistics.getActionsTime() + ruleStatistics.getLocalActionsTime());
+                if (ruleStatistics.getLocalActionsTime() > 0) {
+                    ruleStatistics.setLocalActionsTime(0);
+                    mustPersist = true;
+                }
+                ruleStatistics.setLastSyncDate(new Date());
+            }
+            allRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
+            if (mustPersist) {
+                persistenceService.save(ruleStatistics);
+            }
+        }
+        // now let's iterate over the rules coming from the persistence service, as we may have new ones.
+        for (RuleStatistics ruleStatistics : allPersistedRuleStatistics.values()) {
+            if (!allRuleStatistics.containsKey(ruleStatistics.getItemId())) {
+                allRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
+            }
         }
     }
 }
