@@ -281,6 +281,10 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         return persistenceService.load(ruleId, RuleStatistics.class);
     }
 
+    public Map<String,RuleStatistics> getAllRuleStatistics() {
+        return allRuleStatistics;
+    }
+
     public Set<Metadata> getRuleMetadatas() {
         Set<Metadata> metadatas = new HashSet<Metadata>();
         for (Rule rule : persistenceService.getAllItems(Rule.class, 0, 50, null).getList()) {

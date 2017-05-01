@@ -31,6 +31,7 @@ import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -78,6 +79,17 @@ public class RulesServiceEndPoint {
     @Path("/")
     public void setRule(Rule rule) {
         rulesService.setRule(rule);
+    }
+
+    /**
+     * Retrieves the metadata for all known rules.
+     *
+     * @return the Set of known metadata
+     */
+    @GET
+    @Path("/statistics")
+    public Map<String,RuleStatistics> getAllRuleStatistics() {
+        return rulesService.getAllRuleStatistics();
     }
 
     /**

@@ -25,6 +25,7 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -61,6 +62,12 @@ public interface RulesService {
      * @return a long representing the number of times the rule was matched and executed.
      */
     RuleStatistics getRuleStatistics(String ruleId);
+
+    /**
+     * Retrieves the statistics for all the rules
+     * @return a map containing rule IDs as key, and the RuleStatistics object as a value
+     */
+    Map<String,RuleStatistics> getAllRuleStatistics();
 
     /**
      * Persists the specified rule to the context server.
