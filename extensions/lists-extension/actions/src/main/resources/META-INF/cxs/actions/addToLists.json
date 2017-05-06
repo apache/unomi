@@ -1,0 +1,19 @@
+{
+  "metadata": {
+    "id": "addToListsAction",
+    "name": "addToListsAction",
+    "description": "",
+    "tags": [
+      "demographic"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "addToLists",
+  "parameters": [
+    {
+      "id": "listIdentifiers",
+      "type": "string",
+      "multivalued": true
+    }
+  ]
+}
