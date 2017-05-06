@@ -24,6 +24,10 @@ if [ -f "$DIRNAME/setenv.sh" ]; then
   . "$DIRNAME/setenv.sh"
 fi
 mvn clean install -P integration-tests,performance-tests,rat
+if [ $? -ne 0 ]
+then
+    exit 1;
+fi
 pushd package/target
 echo Uncompressing Unomi package...
 tar zxvf unomi-$UNOMI_VERSION.tar.gz
