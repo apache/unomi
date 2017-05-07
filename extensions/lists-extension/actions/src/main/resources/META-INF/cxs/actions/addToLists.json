@@ -4,7 +4,8 @@
     "name": "addToListsAction",
     "description": "",
     "tags": [
-      "demographic"
+      "demographic",
+      "hidden.availableToEndUsers"
     ],
     "readOnly": true
   },

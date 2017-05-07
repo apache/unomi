@@ -4,7 +4,9 @@
     "name": "sendMailAction",
     "description": "",
     "tags": [
-      "event"
+      "event",
+      "hidden.availableToEndUser",
+      "hidden.allowMultipleInstances"
     ],
     "readOnly": true
   },

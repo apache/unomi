@@ -4,7 +4,9 @@
     "name": "setPropertyAction",
     "description": "",
     "tags": [
-      "demographic"
+      "demographic",
+      "hidden.availableToEndUser",
+      "hidden.allowMultipleInstances"
     ],
     "readOnly": true
   },
