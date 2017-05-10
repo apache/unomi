@@ -303,3 +303,12 @@ that contains the following default settings:
     defaultLongitude=6.1282508
 
 You might want to change these for testing or for demonstration purposes.
+
+Apache Karaf SSH Console
+--------------------------------------
+The Apache Karaf SSH console is available inside Apache Unomi, but the port has been changed from the default value of
+8101 to 8102 to avoid conflicts with other Karaf-based products. So to connect to the SSH console you should use:
+
+    ssh -p 8102 karaf@localhost
+    
+or the user/password you have setup to protect the system if you have changed it.
