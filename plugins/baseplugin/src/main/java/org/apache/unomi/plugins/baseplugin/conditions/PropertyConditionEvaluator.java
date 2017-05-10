@@ -220,6 +220,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                             (expectedValuesDateExpr != null && expectedValuesDateExpr.size() >= 2) ? (String) expectedValuesDateExpr.get(1) : null) <= 0;
         } else if (op.equals("contains")) {
             return actualValue.toString().contains(expectedValue);
+        } else if (op.equals("notContains")) {
+            return !actualValue.toString().contains(expectedValue);
         } else if (op.equals("startsWith")) {
             return actualValue.toString().startsWith(expectedValue);
         } else if (op.equals("endsWith")) {
