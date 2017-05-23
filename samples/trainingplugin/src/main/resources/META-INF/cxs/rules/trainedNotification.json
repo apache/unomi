@@ -1,0 +1,20 @@
+{
+  "metadata": {
+    "id": "smp:trainedRule",
+    "name": "Trained",
+    "description": "..."
+  },
+  "raiseEventOnlyOnceForSession": false,
+  "condition": {
+    "type": "eventTypeCondition",
+    "parameterValues": {
+      "eventTypeId": "trainingEvent"
+    }
+  },
+  "actions": [
+    {
+      "type": "trainingNotifAction",
+      "parameterValues": {}
+    }
+  ]
+}

@@ -269,6 +269,17 @@
                                             </outputDirectory>
                                             <destFileName>org.apache.unomi.plugins.mail.cfg</destFileName>
                                         </artifactItem>
+                                        <artifactItem>
+                                            <groupId>org.apache.unomi</groupId>
+                                            <artifactId>unomi-router-core</artifactId>
+                                            <version>${project.version}</version>
+                                            <classifier>routercfg</classifier>
+                                            <type>cfg</type>
+                                            <outputDirectory>
+                                                ${project.build.directory}/assembly/etc
+                                            </outputDirectory>
+                                            <destFileName>org.apache.unomi.router.cfg</destFileName>
+                                        </artifactItem>
                                         <!-- UNOMI-75 : We install the blueprint core bundle in a different version to fix a problem with offline startup -->
                                         <artifactItem>
                                             <groupId>org.apache.aries.blueprint</groupId>

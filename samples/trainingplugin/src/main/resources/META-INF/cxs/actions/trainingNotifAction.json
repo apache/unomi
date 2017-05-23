@@ -1,0 +1,13 @@
+{
+  "metadata": {
+    "id": "trainingNotifAction",
+    "name": "Training Action",
+    "description": "",
+    "tags": [
+      "event"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "training",
+  "parameters": []
+}
