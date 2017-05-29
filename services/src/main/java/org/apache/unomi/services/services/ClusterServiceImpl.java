@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
+import java.net.ConnectException;
 import java.net.MalformedURLException;
 import java.util.*;
 
@@ -232,8 +233,8 @@ public class ClusterServiceImpl implements ClusterService {
                 clusterNode.setInternalHostAddress(internalEndpointParts[0]);
                 clusterNode.setInternalPort(Integer.parseInt(internalEndpointParts[1]));
             }
+            String serviceUrl = "service:jmx:rmi:///jndi/rmi://"+karafCellarNode.getHost() + ":"+karafJMXPort+"/karaf-root";
             try {
-                String serviceUrl = "service:jmx:rmi:///jndi/rmi://"+karafCellarNode.getHost() + ":"+karafJMXPort+"/karaf-root";
                 JMXConnector jmxConnector = getJMXConnector(serviceUrl);
                 MBeanServerConnection mbsc = jmxConnector.getMBeanServerConnection();
                 final RuntimeMXBean remoteRuntime = ManagementFactory.newPlatformMXBeanProxy(mbsc, ManagementFactory.RUNTIME_MXBEAN_NAME, RuntimeMXBean.class);
@@ -255,6 +256,20 @@ public class ClusterServiceImpl implements ClusterService {
 
             } catch (MalformedURLException e) {
                 logger.error("Error connecting to remote JMX server", e);
+            } catch (ConnectException ce) {
+                if (ce.getMessage() != null && ce.getMessage().contains("timed out")) {
+                    logger.warn("RMI Connection timed out, will reconnect on next request.");
+                    JMXConnector jmxConnector = jmxConnectors.remove(serviceUrl);
+                    try {
+                        if (jmxConnector != null) {
+                            jmxConnector.close();
+                        }
+                    } catch (Throwable t) {
+                        // ignore any exception when closing a timed out connection.
+                    }
+                } else {
+                    logger.error("Error retrieving remote JMX data", ce);
+                }
             } catch (IOException e) {
                 logger.error("Error retrieving remote JMX data", e);
             } catch (MalformedObjectNameException e) {

@@ -143,7 +143,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String bulkProcessorBackoffPolicy = "exponential";
 
     private String minimalElasticSearchVersion = "5.0.0";
-    private String maximalElasticSearchVersion = "5.2.0";
+    private String maximalElasticSearchVersion = "5.3.0";
 
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
@@ -258,6 +258,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 Settings transportSettings = Settings.builder()
                         .put(CLUSTER_NAME, clusterName).build();
+
+                // this property is used for integration tests, to make sure we don't conflict with an already running ElasticSearch instance.
+                if (System.getProperty("org.apache.unomi.itests.elasticsearch.transport.port") != null) {
+                    elasticSearchAddressList.clear();
+                    elasticSearchAddressList.add("localhost:" + System.getProperty("org.apache.unomi.itests.elasticsearch.transport.port"));
+                }
+
                 client = new PreBuiltTransportClient(transportSettings);
                 for (String elasticSearchAddress : elasticSearchAddressList) {
                     String[] elasticSearchAddressParts = elasticSearchAddress.split(":");

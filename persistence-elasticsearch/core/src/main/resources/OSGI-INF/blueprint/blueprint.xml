@@ -47,7 +47,7 @@
             <cm:property name="bulkProcessor.backoffPolicy" value="exponential" />
 
             <cm:property name="minimalElasticSearchVersion" value="5.0.0" />
-            <cm:property name="maximalElasticSearchVersion" value="5.2.0" />
+            <cm:property name="maximalElasticSearchVersion" value="5.3.0" />
 
         </cm:default-properties>
     </cm:property-placeholder>

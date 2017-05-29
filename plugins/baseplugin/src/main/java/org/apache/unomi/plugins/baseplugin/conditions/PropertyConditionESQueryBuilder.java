@@ -26,13 +26,20 @@ import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
 public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder {
 
+    DateTimeFormatter dateTimeFormatter;
+
     public PropertyConditionESQueryBuilder() {
+        dateTimeFormatter = ISODateTimeFormat.dateTime();
     }
 
     @Override
@@ -46,12 +53,12 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
 
         String expectedValue = ConditionContextHelper.foldToASCII((String) condition.getParameter("propertyValue"));
         Object expectedValueInteger = condition.getParameter("propertyValueInteger");
-        Object expectedValueDate = condition.getParameter("propertyValueDate");
+        Object expectedValueDate = convertDateToISO(condition.getParameter("propertyValueDate"));
         Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
 
         List<?> expectedValues = ConditionContextHelper.foldToASCII((List<?>) condition.getParameter("propertyValues"));
         List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
-        List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
+        List<?> expectedValuesDate = convertDatesToISO((List<?>) condition.getParameter("propertyValuesDate"));
         List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");
 
         Object value = ObjectUtils.firstNonNull(expectedValue, expectedValueInteger, expectedValueDate, expectedValueDateExpr);
@@ -160,5 +167,29 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         DateTime dayStart = date.withTimeAtStartOfDay();
         DateTime dayAfterStart = date.plusDays(1).withTimeAtStartOfDay();
         return QueryBuilders.rangeQuery(name).gte(dayStart.toDate()).lte(dayAfterStart.toDate());
+    }
+
+    private Object convertDateToISO(Object dateValue) {
+        if (dateValue == null) {
+            return dateValue;
+        }
+        if (dateValue instanceof Date) {
+            return dateTimeFormatter.print(new DateTime(dateValue));
+        } else {
+            return dateValue;
+        }
+    }
+
+    private List<?> convertDatesToISO(List<?> datesValues) {
+        List<Object> results = new ArrayList<>();
+        if (datesValues == null) {
+            return null;
+        }
+        for (Object dateValue : datesValues) {
+            if (dateValue != null) {
+                results.add(convertDateToISO(dateValue));
+            }
+        }
+        return results;
     }
 }
