@@ -257,8 +257,9 @@ public class ClusterServiceImpl implements ClusterService {
             } catch (MalformedURLException e) {
                 logger.error("Error connecting to remote JMX server", e);
             } catch (ConnectException ce) {
-                if (ce.getMessage() != null && ce.getMessage().contains("timed out")) {
-                    logger.warn("RMI Connection timed out, will reconnect on next request.");
+                if (ce.getMessage() != null &&
+                        (ce.getMessage().contains("timed out") || ce.getMessage().contains("Network is unreachable"))) {
+                    logger.warn("RMI Connection timed out or network is unreachable, will reconnect on next request.");
                     JMXConnector jmxConnector = jmxConnectors.remove(serviceUrl);
                     try {
                         if (jmxConnector != null) {
@@ -323,7 +324,8 @@ public class ClusterServiceImpl implements ClusterService {
                 try {
                     jmxConnector.close();
                 } catch (IOException e1) {
-                    logger.error("Error closing invalid JMX connection", e1);
+                    logger.warn("Closing invalid JMX connection resulted in :" + e1.getMessage() + ", this is probably ok.");
+                    logger.debug("Error closing invalid JMX connection", e1);
                 }
                 if (e.getMessage() != null && e.getMessage().contains("Connection closed")) {
                     logger.warn("JMX connection to url {} was closed (Cause:{}). Reconnecting...", url, e.getMessage());
