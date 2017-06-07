@@ -112,6 +112,9 @@ public class ConditionEvaluatorIT extends BaseIT {
         assertTrue(eval(builder.profileProperty("properties.lastVisit").all(lastVisit).build()));
         assertFalse(eval(builder.profileProperty("properties.lastVisit")
                 .all(new Date(lastVisit.getTime() + 10000), lastVisit).build()));
+
+        assertTrue(eval(builder.profileProperty("properties.lastVisit").isDay(lastVisit).build()));
+        assertTrue(eval(builder.profileProperty("properties.lastVisit").isNotDay(new Date(lastVisit.getTime() + 10000)).build()));
     }
 
     @Test

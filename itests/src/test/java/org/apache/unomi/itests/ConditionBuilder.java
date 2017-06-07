@@ -129,6 +129,14 @@ public class ConditionBuilder {
             return op("in").dateValues(values);
         }
 
+        public ComparisonCondition isDay(Date value) {
+            return op("isDay").dateValue(value);
+        }
+
+        public ComparisonCondition isNotDay(Date value) {
+            return op("isNotDay").dateValue(value);
+        }
+
         public ComparisonCondition in(Integer... values) {
             return op("in").integerValues(values);
         }

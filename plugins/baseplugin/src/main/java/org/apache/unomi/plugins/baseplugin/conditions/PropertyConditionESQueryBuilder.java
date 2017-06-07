@@ -166,7 +166,7 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         DateTime date = new DateTime(value);
         DateTime dayStart = date.withTimeAtStartOfDay();
         DateTime dayAfterStart = date.plusDays(1).withTimeAtStartOfDay();
-        return QueryBuilders.rangeQuery(name).gte(dayStart.toDate()).lte(dayAfterStart.toDate());
+        return QueryBuilders.rangeQuery(name).gte(convertDateToISO(dayStart.toDate())).lte(convertDateToISO(dayAfterStart.toDate()));
     }
 
     private Object convertDateToISO(Object dateValue) {
