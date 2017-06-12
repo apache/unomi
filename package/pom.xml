@@ -90,6 +90,15 @@
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-router-karaf-feature</artifactId>
+            <version>1.2.0-incubating-SNAPSHOT</version>
+            <classifier>features</classifier>
+            <type>xml</type>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -329,6 +338,7 @@
                                 <feature>cxf</feature>
                                 <feature>cellar</feature>
                                 <feature>unomi-kar</feature>
+                                <feature>unomi-router-karaf-feature</feature>
                             </bootFeatures>
                         </configuration>
                     </plugin>
