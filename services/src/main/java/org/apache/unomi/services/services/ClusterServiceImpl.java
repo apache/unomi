@@ -257,20 +257,9 @@ public class ClusterServiceImpl implements ClusterService {
             } catch (MalformedURLException e) {
                 logger.error("Error connecting to remote JMX server", e);
             } catch (ConnectException ce) {
-                if (ce.getMessage() != null &&
-                        (ce.getMessage().contains("timed out") || ce.getMessage().contains("Network is unreachable"))) {
-                    logger.warn("RMI Connection timed out or network is unreachable, will reconnect on next request.");
-                    JMXConnector jmxConnector = jmxConnectors.remove(serviceUrl);
-                    try {
-                        if (jmxConnector != null) {
-                            jmxConnector.close();
-                        }
-                    } catch (Throwable t) {
-                        // ignore any exception when closing a timed out connection.
-                    }
-                } else {
-                    logger.error("Error retrieving remote JMX data", ce);
-                }
+                handleTimeouts(serviceUrl, ce);
+            } catch (java.rmi.ConnectException ce) {
+                handleTimeouts(serviceUrl, ce);
             } catch (IOException e) {
                 logger.error("Error retrieving remote JMX data", e);
             } catch (MalformedObjectNameException e) {
@@ -284,6 +273,23 @@ public class ClusterServiceImpl implements ClusterService {
         }
 
         return new ArrayList<ClusterNode>(clusterNodes.values());
+    }
+
+    private void handleTimeouts(String serviceUrl, Throwable throwable) {
+        if (throwable.getMessage() != null &&
+                (throwable.getMessage().contains("timed out") || throwable.getMessage().contains("Network is unreachable"))) {
+            logger.warn("RMI Connection timed out or network is unreachable, will reconnect on next request.");
+            JMXConnector jmxConnector = jmxConnectors.remove(serviceUrl);
+            try {
+                if (jmxConnector != null) {
+                    jmxConnector.close();
+                }
+            } catch (Throwable t) {
+                // ignore any exception when closing a timed out connection.
+            }
+        } else {
+            logger.error("Error retrieving remote JMX data", throwable);
+        }
     }
 
     @Override
