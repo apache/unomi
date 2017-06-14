@@ -22,11 +22,10 @@ import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.ProfileToImport;
+import org.apache.unomi.router.core.RouterConstants;
+import org.apache.unomi.router.core.exception.BadProfileDataFormatException;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Created by amidani on 29/12/2016.
@@ -42,7 +41,8 @@ public class LineSplitProcessor implements Processor {
     @Override
     public void process(Exchange exchange) throws Exception {
         //In case of one shot import we check the header and overwrite import config
-        ImportConfiguration importConfigOneShot = (ImportConfiguration) exchange.getIn().getHeader("importConfigOneShot");
+        ImportConfiguration importConfigOneShot = (ImportConfiguration) exchange.getIn().getHeader(RouterConstants.HEADER_IMPORT_CONFIG_ONESHOT);
+        String configType = (String) exchange.getIn().getHeader(RouterConstants.HEADER_CONFIG_TYPE);
         if(importConfigOneShot!=null) {
             fieldsMapping = (Map<String, Integer>)importConfigOneShot.getProperties().get("mapping");
             propertiesToOverwrite = importConfigOneShot.getPropertiesToOverwrite();
@@ -50,15 +50,18 @@ public class LineSplitProcessor implements Processor {
             overwriteExistingProfiles = importConfigOneShot.isOverwriteExistingProfiles();
             columnSeparator = importConfigOneShot.getColumnSeparator();
         }
-        String[] profileData = ((String)exchange.getIn().getBody()).split(columnSeparator);
+        String[] profileData = ((String)exchange.getIn().getBody()).split(columnSeparator, -1);
         ProfileToImport profileToImport = new ProfileToImport();
         profileToImport.setItemId(UUID.randomUUID().toString());
         profileToImport.setItemType("profile");
         profileToImport.setScope("system");
-        if(profileData.length > 0) {
+        if(profileData.length > 0 && StringUtils.isNotBlank(profileData[0])) {
+            if(fieldsMapping.size() != (profileData.length - 1)) {
+                throw new BadProfileDataFormatException("The index does not match the number of column : line ["+((Integer)exchange.getProperty("CamelSplitIndex")+1)+"]", new Throwable("MAPPING_COLUMN_MATCH"));
+            }
             Map<String, Object> properties = new HashMap<>();
-            for(String fieldMappingKey : fieldsMapping.keySet()) {
-                if(profileData.length > fieldsMapping.get(fieldMappingKey)) {
+            for (String fieldMappingKey : fieldsMapping.keySet()) {
+                if (profileData.length > fieldsMapping.get(fieldMappingKey)) {
                     properties.put(fieldMappingKey, profileData[fieldsMapping.get(fieldMappingKey)].trim());
                 }
             }
@@ -66,13 +69,17 @@ public class LineSplitProcessor implements Processor {
             profileToImport.setMergingProperty(mergingProperty);
             profileToImport.setPropertiesToOverwrite(propertiesToOverwrite);
             profileToImport.setOverwriteExistingProfiles(overwriteExistingProfiles);
-            if(StringUtils.isNotBlank(profileData[profileData.length - 1]) && Boolean.parseBoolean(profileData[profileData.length - 1].trim())) {
+            if (StringUtils.isNotBlank(profileData[profileData.length - 1]) && Boolean.parseBoolean(profileData[profileData.length - 1].trim())) {
                 profileToImport.setProfileToDelete(true);
             }
+        } else {
+            throw new BadProfileDataFormatException("Empty line : line ["+((Integer)exchange.getProperty("CamelSplitIndex")+1)+"]", new Throwable("EMPTY_LINE"));
         }
         exchange.getIn().setBody(profileToImport, ProfileToImport.class);
-        exchange.getIn().setHeader(KafkaConstants.PARTITION_KEY, 0);
-        exchange.getIn().setHeader(KafkaConstants.KEY, "1");
+        if(RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
+            exchange.getIn().setHeader(KafkaConstants.PARTITION_KEY, 0);
+            exchange.getIn().setHeader(KafkaConstants.KEY, "1");
+        }
     }
 
     /**

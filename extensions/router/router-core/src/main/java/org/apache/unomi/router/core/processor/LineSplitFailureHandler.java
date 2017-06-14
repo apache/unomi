@@ -18,28 +18,17 @@ package org.apache.unomi.router.core.processor;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
-import org.apache.camel.component.file.GenericFile;
-import org.apache.unomi.router.api.ImportConfiguration;
-import org.apache.unomi.router.api.services.ImportConfigurationService;
-import org.apache.unomi.router.core.RouterConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Created by amidani on 22/05/2017.
+ * Created by amidani on 14/06/2017.
  */
-public class ImportConfigByFileNameProcessor implements Processor{
+public class LineSplitFailureHandler implements Processor {
 
-    private ImportConfigurationService importConfigurationService;
+    private static final Logger logger = LoggerFactory.getLogger(LineSplitFailureHandler.class.getName());
 
-    @Override
     public void process(Exchange exchange) throws Exception {
-
-        String fileName = exchange.getIn().getBody(GenericFile.class).getFileName();
-        String importConfigId = fileName.substring(0, fileName.indexOf('.'));
-        ImportConfiguration importConfiguration = importConfigurationService.load(importConfigId);
-        exchange.getIn().setHeader(RouterConstants.HEADER_IMPORT_CONFIG_ONESHOT, importConfiguration);
-    }
-
-    public void setImportConfigurationService(ImportConfigurationService importConfigurationService) {
-        this.importConfigurationService = importConfigurationService;
+        logger.error("{}", exchange.getProperty(Exchange.EXCEPTION_CAUGHT));
     }
 }

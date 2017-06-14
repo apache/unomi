@@ -25,10 +25,13 @@
 
     <cm:property-placeholder persistent-id="org.apache.unomi.router" update-strategy="reload">
         <cm:default-properties>
+            <cm:property name="import.config.type" value="nobroker"/>
             <cm:property name="kafka.host" value="localhost"/>
             <cm:property name="kafka.port" value="9092"/>
             <cm:property name="kafka.import.topic" value="camel-deposit"/>
             <cm:property name="kafka.import.groupId" value="unomi-import-group"/>
+            <cm:property name="kafka.import.consumerCount" value="10"/>
+            <cm:property name="kafka.import.autoCommit" value="true"/>
             <cm:property name="import.oneshot.uploadDir" value="/tmp/oneshot_import_configs/"/>
         </cm:default-properties>
     </cm:property-placeholder>
@@ -63,12 +66,15 @@
 
     <bean id="camelContext" class="org.apache.unomi.router.core.context.ProfileImportCamelContext"
           init-method="initCamelContext" destroy-method="preDestroy">
+        <property name="configType" value="${import.config.type}"/>
         <property name="kafkaProps">
             <map>
                 <entry key="kafkaHost" value="${kafka.host}"/>
                 <entry key="kafkaPort" value="${kafka.port}"/>
                 <entry key="kafkaImportTopic" value="${kafka.import.topic}"/>
                 <entry key="kafkaImportGroupId" value="${kafka.import.groupId}"/>
+                <entry key="kafkaImportConsumerCount" value="${kafka.import.consumerCount}"/>
+                <entry key="kafkaImportAutoCommit" value="${kafka.import.autoCommit}"/>
             </map>
         </property>
         <property name="uploadDir" value="${import.oneshot.uploadDir}"/>

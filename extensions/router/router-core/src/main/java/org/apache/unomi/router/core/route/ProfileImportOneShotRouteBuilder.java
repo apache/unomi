@@ -21,7 +21,9 @@ import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.component.kafka.KafkaComponent;
 import org.apache.camel.component.kafka.KafkaConfiguration;
 import org.apache.camel.component.kafka.KafkaEndpoint;
+import org.apache.camel.model.ProcessorDefinition;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.unomi.router.core.RouterConstants;
 import org.apache.unomi.router.core.processor.ImportConfigByFileNameProcessor;
 import org.apache.unomi.router.core.processor.LineSplitProcessor;
 import org.slf4j.Logger;
@@ -32,57 +34,41 @@ import java.util.Map;
 /**
  * Created by amidani on 22/05/2017.
  */
-public class ProfileImportOneShotRouteBuilder extends RouteBuilder {
+public class ProfileImportOneShotRouteBuilder extends ProfileImportAbstractRouteBuilder {
 
     private Logger logger = LoggerFactory.getLogger(ProfileImportOneShotRouteBuilder.class.getName());
 
     private ImportConfigByFileNameProcessor importConfigByFileNameProcessor;
-    private JacksonDataFormat jacksonDataFormat;
     private String uploadDir;
-    private String kafkaHost;
-    private String kafkaPort;
-    private String kafkaImportTopic;
-    private String kafkaImportGroupId;
 
     private final String IMPORT_ONESHOT_ROUTE_ID = "ONE_SHOT_ROUTE";
 
-    public ProfileImportOneShotRouteBuilder(Map<String, String> kafkaProps) {
-        kafkaHost = kafkaProps.get("kafkaHost");
-        kafkaPort = kafkaProps.get("kafkaPort");
-        kafkaImportTopic = kafkaProps.get("kafkaImportTopic");
-        kafkaImportGroupId = kafkaProps.get("kafkaImportGroupId");
+    public ProfileImportOneShotRouteBuilder(Map<String, String> kafkaProps, String configType) {
+        super(kafkaProps, configType);
     }
 
     @Override
     public void configure() throws Exception {
 
-        //Prepare Kafka Deposit
-        StringBuilder kafkaUri = new StringBuilder("kafka:");
-        kafkaUri.append(kafkaHost).append(":").append(kafkaPort).append("?topic=").append(kafkaImportTopic);
-        if(StringUtils.isNotBlank(kafkaImportGroupId)) {
-            kafkaUri.append("&groupId="+ kafkaImportGroupId);
-        }
-
-        KafkaConfiguration kafkaConfiguration = new KafkaConfiguration();
-        kafkaConfiguration.setBrokers(kafkaHost+":"+kafkaPort);
-        kafkaConfiguration.setTopic(kafkaImportTopic);
-        kafkaConfiguration.setGroupId(kafkaImportGroupId);
-        KafkaEndpoint endpoint = new KafkaEndpoint(kafkaUri.toString(), new KafkaComponent(this.getContext()));
-        endpoint.setConfiguration(kafkaConfiguration);
+        logger.info("Configure OneShot Route...");
 
         LineSplitProcessor lineSplitProcessor = new LineSplitProcessor();
 
-
-        from("file://"+uploadDir+"?include=.*.csv&consumer.delay=1m")
+        ProcessorDefinition prDef = from("file://"+uploadDir+"?include=.*.csv&consumer.delay=1m")
                 .routeId(IMPORT_ONESHOT_ROUTE_ID)
                 .autoStartup(true)
                 .process(importConfigByFileNameProcessor)
                 .split(bodyAs(String.class).tokenize("${in.header.importConfigOneShot.getLineSeparator}"))
+                .setHeader("configType", constant(configType))
                 .process(lineSplitProcessor)
                 .to("log:org.apache.unomi.router?level=INFO")
                 .marshal(jacksonDataFormat)
-                .convertBodyTo(String.class)
-                .to(endpoint);
+                .convertBodyTo(String.class);
+        if(RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)){
+            prDef.to((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_FROM));
+        } else {
+            prDef.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM));
+        }
     }
 
     public void setImportConfigByFileNameProcessor(ImportConfigByFileNameProcessor importConfigByFileNameProcessor) {

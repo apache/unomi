@@ -16,13 +16,14 @@
  */
 package org.apache.unomi.router.core.route;
 
-import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.component.jackson.JacksonDataFormat;
-import org.apache.camel.component.kafka.KafkaComponent;
-import org.apache.camel.component.kafka.KafkaConfiguration;
+import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.kafka.KafkaEndpoint;
+import org.apache.camel.model.ProcessorDefinition;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.router.api.ImportConfiguration;
+import org.apache.unomi.router.core.RouterConstants;
+import org.apache.unomi.router.core.exception.BadProfileDataFormatException;
+import org.apache.unomi.router.core.processor.LineSplitFailureHandler;
 import org.apache.unomi.router.core.processor.LineSplitProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,43 +35,25 @@ import java.util.Map;
  * Created by amidani on 26/04/2017.
  */
 
-public class ProfileImportSourceToKafkaRouteBuilder extends RouteBuilder {
+public class ProfileImportFromSourceRouteBuilder extends ProfileImportAbstractRouteBuilder {
 
-    private static final Logger logger = LoggerFactory.getLogger(ProfileImportSourceToKafkaRouteBuilder.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ProfileImportFromSourceRouteBuilder.class.getName());
 
     private List<ImportConfiguration> importConfigurationList;
-    private JacksonDataFormat jacksonDataFormat;
-    private String kafkaHost;
-    private String kafkaPort;
-    private String kafkaImportTopic;
-    private String kafkaImportGroupId;
 
-    public ProfileImportSourceToKafkaRouteBuilder(Map<String, String> kafkaProps) {
-        kafkaHost = kafkaProps.get("kafkaHost");
-        kafkaPort = kafkaProps.get("kafkaPort");
-        kafkaImportTopic = kafkaProps.get("kafkaImportTopic");
-        kafkaImportGroupId = kafkaProps.get("kafkaImportGroupId");
+
+    public ProfileImportFromSourceRouteBuilder(Map<String, String> kafkaProps, String configType) {
+        super(kafkaProps, configType);
     }
 
     @Override
     public void configure() throws Exception {
-        //Prepare Kafka Deposit
-        StringBuilder kafkaUri = new StringBuilder("kafka:");
-        kafkaUri.append(kafkaHost).append(":").append(kafkaPort).append("?topic=").append(kafkaImportTopic);
-        if(StringUtils.isNotBlank(kafkaImportGroupId)) {
-            kafkaUri.append("&groupId="+ kafkaImportGroupId);
-        }
 
-        KafkaConfiguration kafkaConfiguration = new KafkaConfiguration();
-        kafkaConfiguration.setBrokers(kafkaHost+":"+kafkaPort);
-        kafkaConfiguration.setTopic(kafkaImportTopic);
-        kafkaConfiguration.setGroupId(kafkaImportGroupId);
-        KafkaEndpoint endpoint = new KafkaEndpoint(kafkaUri.toString(), new KafkaComponent(this.getContext()));
-        endpoint.setConfiguration(kafkaConfiguration);
+        logger.info("Configure Recurrent Route 'From Source'");
 
         //Loop on multiple import configuration
-        for(ImportConfiguration importConfiguration : importConfigurationList) {
-            if(importConfiguration.getProperties().size() > 0 &&
+        for (ImportConfiguration importConfiguration : importConfigurationList) {
+            if (importConfiguration.getProperties().size() > 0 &&
                     StringUtils.isNotEmpty((String) importConfiguration.getProperties().get("source"))) {
                 //Prepare Split Processor
                 LineSplitProcessor lineSplitProcessor = new LineSplitProcessor();
@@ -80,41 +63,40 @@ public class ProfileImportSourceToKafkaRouteBuilder extends RouteBuilder {
                 lineSplitProcessor.setMergingProperty(importConfiguration.getMergingProperty());
                 lineSplitProcessor.setColumnSeparator(importConfiguration.getColumnSeparator());
 
-                from((String) importConfiguration.getProperties().get("source"))
+                onException(BadProfileDataFormatException.class)
+                        .log(LoggingLevel.ERROR, "Error processing record ${exchangeProperty.CamelSplitIndex}++ !")
+                        .handled(true)
+                        .process(new LineSplitFailureHandler())
+                        .to("direct:errors");
+
+                errorHandler(deadLetterChannel("direct:errors"));
+
+                ProcessorDefinition prDef = from((String) importConfiguration.getProperties().get("source"))
                         .routeId(importConfiguration.getItemId())// This allow identification of the route for manual start/stop
                         .autoStartup(importConfiguration.isActive())// Auto-start if the import configuration is set active
                         .split(bodyAs(String.class).tokenize(importConfiguration.getLineSeparator()))
+                        .log(LoggingLevel.INFO, "Splitted into ${exchangeProperty.CamelSplitSize} records")
+                        .setHeader(RouterConstants.HEADER_PROFILES_COUNT, exchangeProperty("CamelSplitSize}"))
+                        .setHeader(RouterConstants.HEADER_CONFIG_TYPE, constant(configType))
                         .process(lineSplitProcessor)
+                        .log(LoggingLevel.INFO, "Split IDX ${exchangeProperty.CamelSplitIndex} record")
                         .to("log:org.apache.unomi.router?level=INFO")
                         .marshal(jacksonDataFormat)
-                        .convertBodyTo(String.class)
-                        .to(endpoint);
+                        .convertBodyTo(String.class);
+
+                if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
+                    prDef.to((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_FROM));
+                } else {
+                    prDef.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM));
+                }
+
+                from("direct:errors").to("log:org.apache.unomi.router?level=ERROR");
             }
         }
     }
 
     public void setImportConfigurationList(List<ImportConfiguration> importConfigurationList) {
         this.importConfigurationList = importConfigurationList;
-    }
-
-    public void setJacksonDataFormat(JacksonDataFormat jacksonDataFormat) {
-        this.jacksonDataFormat = jacksonDataFormat;
-    }
-
-    public void setKafkaHost(String kafkaHost) {
-        this.kafkaHost = kafkaHost;
-    }
-
-    public void setKafkaPort(String kafkaPort) {
-        this.kafkaPort = kafkaPort;
-    }
-
-    public void setKafkaImportTopic(String kafkaImportTopic) {
-        this.kafkaImportTopic = kafkaImportTopic;
-    }
-
-    public void setKafkaImportGroupId(String kafkaImportGroupId) {
-        this.kafkaImportGroupId = kafkaImportGroupId;
     }
 
 }

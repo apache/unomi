@@ -21,47 +21,40 @@ import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.component.kafka.KafkaComponent;
 import org.apache.camel.component.kafka.KafkaConfiguration;
 import org.apache.camel.component.kafka.KafkaEndpoint;
+import org.apache.camel.model.RouteDefinition;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.unomi.router.core.RouterConstants;
 import org.apache.unomi.router.core.processor.UnomiStorageProcessor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
 /**
  * Created by amidani on 26/04/2017.
  */
-public class ProfileImportKafkaToUnomiRouteBuilder extends RouteBuilder {
+public class ProfileImportToUnomiRouteBuilder extends ProfileImportAbstractRouteBuilder {
+
+    private Logger logger = LoggerFactory.getLogger(ProfileImportToUnomiRouteBuilder.class.getName());
 
     private UnomiStorageProcessor unomiStorageProcessor;
-    private JacksonDataFormat jacksonDataFormat;
-    private String kafkaHost;
-    private String kafkaPort;
-    private String kafkaImportTopic;
-    private String kafkaImportGroupId;
 
-    public ProfileImportKafkaToUnomiRouteBuilder(Map<String, String> kafkaProps) {
-        kafkaHost = kafkaProps.get("kafkaHost");
-        kafkaPort = kafkaProps.get("kafkaPort");
-        kafkaImportTopic = kafkaProps.get("kafkaImportTopic");
-        kafkaImportGroupId = kafkaProps.get("kafkaImportGroupId");
+    public ProfileImportToUnomiRouteBuilder(Map<String, String> kafkaProps, String configType) {
+        super(kafkaProps, configType);
     }
 
     @Override
     public void configure() throws Exception {
 
-        StringBuilder kafkaUri = new StringBuilder("kafka:");
-        kafkaUri.append(kafkaHost).append(":").append(kafkaPort).append("?topic=").append(kafkaImportTopic);
-        if(StringUtils.isNotBlank(kafkaImportGroupId)) {
-            kafkaUri.append("&groupId="+kafkaImportGroupId);
+        logger.info("Configure Recurrent Route 'To Target'");
+
+        RouteDefinition rtDef;
+        if(RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)){
+            rtDef=from((KafkaEndpoint)getEndpointURI(RouterConstants.DIRECTION_TO));
+        } else {
+            rtDef=from((String)getEndpointURI(RouterConstants.DIRECTION_TO));
         }
-        kafkaUri.append("&autoCommitEnable=true&consumersCount=10");
-        KafkaConfiguration kafkaConfiguration = new KafkaConfiguration();
-        kafkaConfiguration.setBrokers(kafkaHost+":"+kafkaPort);
-        kafkaConfiguration.setTopic(kafkaImportTopic);
-        kafkaConfiguration.setGroupId(kafkaImportGroupId);
-        KafkaEndpoint endpoint = new KafkaEndpoint(kafkaUri.toString(), new KafkaComponent(this.getContext()));
-        endpoint.setConfiguration(kafkaConfiguration);
-        from(endpoint)
-                .unmarshal(jacksonDataFormat)
+        rtDef.unmarshal(jacksonDataFormat)
                 .process(unomiStorageProcessor)
                 .to("log:org.apache.unomi.router?level=INFO");
 
