@@ -146,6 +146,12 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources-filtered</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.felix</groupId>
@@ -241,7 +247,7 @@
                             <artifacts>
                                 <artifact>
                                     <file>
-                                        src/main/resources/org.apache.unomi.persistence.elasticsearch.cfg
+                                        ${project.build.outputDirectory}/org.apache.unomi.persistence.elasticsearch.cfg
                                     </file>
                                     <type>cfg</type>
                                     <classifier>elasticsearchcfg</classifier>
@@ -254,5 +260,21 @@
         </plugins>
 
     </build>
+
+    <profiles>
+        <profile>
+            <id>esClusterName</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+                <property>
+                    <name>!esClusterName</name>
+                </property>
+            </activation>
+
+            <properties>
+                <esClusterName>contextElasticSearch</esClusterName>
+            </properties>
+        </profile>
+    </profiles>
 
 </project>
