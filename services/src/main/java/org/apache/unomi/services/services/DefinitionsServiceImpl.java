@@ -286,6 +286,9 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     public ConditionType getConditionType(String id) {
+        if (id == null) {
+            return null;
+        }
         ConditionType type = conditionTypeById.get(id);
         if (type == null) {
             type = persistenceService.load(id, ConditionType.class);

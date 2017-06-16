@@ -260,6 +260,8 @@ public class ClusterServiceImpl implements ClusterService {
                 handleTimeouts(serviceUrl, ce);
             } catch (java.rmi.ConnectException ce) {
                 handleTimeouts(serviceUrl, ce);
+            } catch (java.rmi.ConnectIOException coie) {
+                handleTimeouts(serviceUrl, coie);
             } catch (IOException e) {
                 logger.error("Error retrieving remote JMX data", e);
             } catch (MalformedObjectNameException e) {
@@ -276,19 +278,19 @@ public class ClusterServiceImpl implements ClusterService {
     }
 
     private void handleTimeouts(String serviceUrl, Throwable throwable) {
-        if (throwable.getMessage() != null &&
-                (throwable.getMessage().contains("timed out") || throwable.getMessage().contains("Network is unreachable"))) {
-            logger.warn("RMI Connection timed out or network is unreachable, will reconnect on next request.");
-            JMXConnector jmxConnector = jmxConnectors.remove(serviceUrl);
-            try {
-                if (jmxConnector != null) {
-                    jmxConnector.close();
-                }
-            } catch (Throwable t) {
-                // ignore any exception when closing a timed out connection.
+        Throwable rootCause = throwable;
+        while (rootCause.getCause() != null) {
+            rootCause = rootCause.getCause();
+        }
+        logger.warn("JMX RMI Connection error, will reconnect on next request. Active debug logging for access to detailed stack trace. Root cause=" + rootCause.getMessage());
+        logger.debug("Detailed stacktrace", throwable);
+        JMXConnector jmxConnector = jmxConnectors.remove(serviceUrl);
+        try {
+            if (jmxConnector != null) {
+                jmxConnector.close();
             }
-        } else {
-            logger.error("Error retrieving remote JMX data", throwable);
+        } catch (Throwable t) {
+            // ignore any exception when closing a timed out connection.
         }
     }
 
