@@ -82,6 +82,16 @@ public class SendMailAction implements ActionExecutor {
         String subject = (String) action.getParameterValues().get("subject");
         String template = (String) action.getParameterValues().get("template");
 
+        if (notifType == null) {
+            notifType = "default";
+        }
+        if (notifTypeId == null) {
+            notifTypeId = subject;
+        }
+        if (notifyOnce == null) {
+            notifyOnce = false;
+        }
+
         Map profileNotif = (HashMap) event.getProfile().getSystemProperties().get("notificationAck");
         if (profileNotif != null && profileNotif.get(notifType) != null && ((HashMap) profileNotif.get(notifType)).get(notifTypeId) != null) {
             Integer notifTypeAck = (Integer) ((HashMap) profileNotif.get(notifType) ).get(notifTypeId);
