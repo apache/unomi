@@ -115,7 +115,7 @@ public class SendMailAction implements ActionExecutor {
         event.getProfile().getSystemProperties().put("notificationAck", profileNotif);
         persistenceService.update(event.getProfile().getItemId(), null, Profile.class, "systemProperties", event.getProfile().getSystemProperties());
 
-        ST stringTemplate = new ST(template);
+        ST stringTemplate = new ST(template, '$', '$');
         stringTemplate.add("profile", event.getProfile());
         stringTemplate.add("event", event);
         // load your HTML email template
