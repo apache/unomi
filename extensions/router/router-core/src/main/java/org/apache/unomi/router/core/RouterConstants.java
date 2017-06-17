@@ -28,7 +28,8 @@ public interface RouterConstants {
 
     String HEADER_IMPORT_CONFIG_ONESHOT = "importConfigOneShot";
     String HEADER_CONFIG_TYPE = "configType";
-    String HEADER_PROFILES_COUNT = "profilesCount";
+
+    String HEADER_FAILED_MESSAGE = "failedMessage";
 
     String DIRECTION_FROM = "from";
     String DIRECTION_TO = "to";

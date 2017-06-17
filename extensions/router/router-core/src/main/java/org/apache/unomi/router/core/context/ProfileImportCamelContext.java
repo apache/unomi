@@ -23,10 +23,11 @@ import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.services.ImportConfigurationService;
 import org.apache.unomi.router.core.processor.ImportConfigByFileNameProcessor;
+import org.apache.unomi.router.core.processor.RouteCompletionProcessor;
 import org.apache.unomi.router.core.processor.UnomiStorageProcessor;
-import org.apache.unomi.router.core.route.ProfileImportToUnomiRouteBuilder;
-import org.apache.unomi.router.core.route.ProfileImportOneShotRouteBuilder;
 import org.apache.unomi.router.core.route.ProfileImportFromSourceRouteBuilder;
+import org.apache.unomi.router.core.route.ProfileImportOneShotRouteBuilder;
+import org.apache.unomi.router.core.route.ProfileImportToUnomiRouteBuilder;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -44,19 +45,17 @@ import java.util.concurrent.TimeUnit;
  */
 public class ProfileImportCamelContext implements SynchronousBundleListener {
 
+    private final String IMPORT_CONFIG_TYPE_RECURRENT = "recurrent";
     private Logger logger = LoggerFactory.getLogger(ProfileImportCamelContext.class.getName());
-
     private CamelContext camelContext;
     private UnomiStorageProcessor unomiStorageProcessor;
+    private RouteCompletionProcessor routeCompletionProcessor;
     private ImportConfigByFileNameProcessor importConfigByFileNameProcessor;
     private ImportConfigurationService importConfigurationService;
     private JacksonDataFormat jacksonDataFormat;
     private String uploadDir;
     private Map<String, String> kafkaProps;
     private String configType;
-
-    private final String IMPORT_CONFIG_TYPE_RECURRENT = "recurrent";
-
     private BundleContext bundleContext;
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -66,9 +65,9 @@ public class ProfileImportCamelContext implements SynchronousBundleListener {
     public void initCamelContext() throws Exception {
         logger.info("Initialize Camel Context...");
         camelContext = new DefaultCamelContext();
-        List<ImportConfiguration> importConfigurationList = importConfigurationService.getImportConfigurations();
+
         ProfileImportFromSourceRouteBuilder builderReader = new ProfileImportFromSourceRouteBuilder(kafkaProps, configType);
-        builderReader.setImportConfigurationList(importConfigurationList);
+        builderReader.setImportConfigurationService(importConfigurationService);
         builderReader.setJacksonDataFormat(jacksonDataFormat);
         builderReader.setContext(camelContext);
         camelContext.addRoutes(builderReader);
@@ -84,6 +83,7 @@ public class ProfileImportCamelContext implements SynchronousBundleListener {
 
         ProfileImportToUnomiRouteBuilder builderProcessor = new ProfileImportToUnomiRouteBuilder(kafkaProps, configType);
         builderProcessor.setUnomiStorageProcessor(unomiStorageProcessor);
+        builderProcessor.setRouteCompletionProcessor(routeCompletionProcessor);
         builderProcessor.setJacksonDataFormat(jacksonDataFormat);
         builderProcessor.setContext(camelContext);
         camelContext.addRoutes(builderProcessor);
@@ -109,13 +109,14 @@ public class ProfileImportCamelContext implements SynchronousBundleListener {
 
     public void updateProfileImportReaderRoute(ImportConfiguration importConfiguration) throws Exception {
         Route route = camelContext.getRoute(importConfiguration.getItemId());
-        if(route!=null && stopRoute(importConfiguration.getItemId())) {
+        if (route != null && stopRoute(importConfiguration.getItemId())) {
             camelContext.removeRoute(importConfiguration.getItemId());
         }
         //Handle transforming an import config oneshot <--> recurrent
-        if(IMPORT_CONFIG_TYPE_RECURRENT.equals(importConfiguration.getConfigType())){
+        if (IMPORT_CONFIG_TYPE_RECURRENT.equals(importConfiguration.getConfigType())) {
             ProfileImportFromSourceRouteBuilder builder = new ProfileImportFromSourceRouteBuilder(kafkaProps, configType);
             builder.setImportConfigurationList(Arrays.asList(importConfiguration));
+            builder.setImportConfigurationService(importConfigurationService);
             builder.setJacksonDataFormat(jacksonDataFormat);
             builder.setContext(camelContext);
             camelContext.addRoutes(builder);
@@ -128,6 +129,10 @@ public class ProfileImportCamelContext implements SynchronousBundleListener {
 
     public void setUnomiStorageProcessor(UnomiStorageProcessor unomiStorageProcessor) {
         this.unomiStorageProcessor = unomiStorageProcessor;
+    }
+
+    public void setRouteCompletionProcessor(RouteCompletionProcessor routeCompletionProcessor) {
+        this.routeCompletionProcessor = routeCompletionProcessor;
     }
 
     public void setImportConfigByFileNameProcessor(ImportConfigByFileNameProcessor importConfigByFileNameProcessor) {

@@ -57,7 +57,7 @@ public class LineSplitProcessor implements Processor {
         profileToImport.setScope("system");
         if(profileData.length > 0 && StringUtils.isNotBlank(profileData[0])) {
             if(fieldsMapping.size() != (profileData.length - 1)) {
-                throw new BadProfileDataFormatException("The index does not match the number of column : line ["+((Integer)exchange.getProperty("CamelSplitIndex")+1)+"]", new Throwable("MAPPING_COLUMN_MATCH"));
+                throw new BadProfileDataFormatException("The mapping does not match the number of column : line ["+((Integer)exchange.getProperty("CamelSplitIndex")+1)+"]", new Throwable("MAPPING_COLUMN_MATCH"));
             }
             Map<String, Object> properties = new HashMap<>();
             for (String fieldMappingKey : fieldsMapping.keySet()) {

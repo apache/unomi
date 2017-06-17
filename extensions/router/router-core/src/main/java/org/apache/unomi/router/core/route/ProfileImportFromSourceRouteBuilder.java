@@ -16,18 +16,23 @@
  */
 package org.apache.unomi.router.core.route;
 
+import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.Processor;
 import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.camel.model.ProcessorDefinition;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.router.api.ImportConfiguration;
+import org.apache.unomi.router.api.services.ImportConfigurationService;
 import org.apache.unomi.router.core.RouterConstants;
 import org.apache.unomi.router.core.exception.BadProfileDataFormatException;
 import org.apache.unomi.router.core.processor.LineSplitFailureHandler;
 import org.apache.unomi.router.core.processor.LineSplitProcessor;
+import org.apache.unomi.router.core.processor.RouteCompletionProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -40,7 +45,7 @@ public class ProfileImportFromSourceRouteBuilder extends ProfileImportAbstractRo
     private static final Logger logger = LoggerFactory.getLogger(ProfileImportFromSourceRouteBuilder.class.getName());
 
     private List<ImportConfiguration> importConfigurationList;
-
+    private ImportConfigurationService importConfigurationService;
 
     public ProfileImportFromSourceRouteBuilder(Map<String, String> kafkaProps, String configType) {
         super(kafkaProps, configType);
@@ -51,8 +56,12 @@ public class ProfileImportFromSourceRouteBuilder extends ProfileImportAbstractRo
 
         logger.info("Configure Recurrent Route 'From Source'");
 
+        if(importConfigurationList == null) {
+            importConfigurationList = importConfigurationService.getImportConfigurations();
+        }
+
         //Loop on multiple import configuration
-        for (ImportConfiguration importConfiguration : importConfigurationList) {
+        for (final ImportConfiguration importConfiguration : importConfigurationList) {
             if (importConfiguration.getProperties().size() > 0 &&
                     StringUtils.isNotEmpty((String) importConfiguration.getProperties().get("source"))) {
                 //Prepare Split Processor
@@ -63,24 +72,39 @@ public class ProfileImportFromSourceRouteBuilder extends ProfileImportAbstractRo
                 lineSplitProcessor.setMergingProperty(importConfiguration.getMergingProperty());
                 lineSplitProcessor.setColumnSeparator(importConfiguration.getColumnSeparator());
 
-                onException(BadProfileDataFormatException.class)
+                ProcessorDefinition prDefErr = onException(BadProfileDataFormatException.class)
                         .log(LoggingLevel.ERROR, "Error processing record ${exchangeProperty.CamelSplitIndex}++ !")
                         .handled(true)
-                        .process(new LineSplitFailureHandler())
-                        .to("direct:errors");
+                        .process(new LineSplitFailureHandler());
 
-                errorHandler(deadLetterChannel("direct:errors"));
+                if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
+                    prDefErr.to((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_FROM));
+                } else {
+                    prDefErr.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM));
+                }
 
                 ProcessorDefinition prDef = from((String) importConfiguration.getProperties().get("source"))
                         .routeId(importConfiguration.getItemId())// This allow identification of the route for manual start/stop
                         .autoStartup(importConfiguration.isActive())// Auto-start if the import configuration is set active
+                        .onCompletion()
+                        // this route is only invoked when the original route is complete as a kind
+                        // of completion callback
+                        .log(LoggingLevel.DEBUG, "ROUTE [" + importConfiguration.getItemId() + "] is now complete [" + new Date().toString() + "]")
+                        // must use end to denote the end of the onCompletion route
+                        .end()
+                        .process(new Processor() {
+                            @Override
+                            public void process(Exchange exchange) throws Exception {
+                                importConfiguration.setRunning(true);
+                                importConfigurationService.save(importConfiguration);
+                            }
+                        })
                         .split(bodyAs(String.class).tokenize(importConfiguration.getLineSeparator()))
-                        .log(LoggingLevel.INFO, "Splitted into ${exchangeProperty.CamelSplitSize} records")
-                        .setHeader(RouterConstants.HEADER_PROFILES_COUNT, exchangeProperty("CamelSplitSize}"))
+                        .log(LoggingLevel.DEBUG, "Splitted into ${exchangeProperty.CamelSplitSize} records")
                         .setHeader(RouterConstants.HEADER_CONFIG_TYPE, constant(configType))
                         .process(lineSplitProcessor)
-                        .log(LoggingLevel.INFO, "Split IDX ${exchangeProperty.CamelSplitIndex} record")
-                        .to("log:org.apache.unomi.router?level=INFO")
+                        .log(LoggingLevel.DEBUG, "Split IDX ${exchangeProperty.CamelSplitIndex} record")
+                        .to("log:org.apache.unomi.router?level=DEBUG")
                         .marshal(jacksonDataFormat)
                         .convertBodyTo(String.class);
 
@@ -89,14 +113,16 @@ public class ProfileImportFromSourceRouteBuilder extends ProfileImportAbstractRo
                 } else {
                     prDef.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM));
                 }
-
-                from("direct:errors").to("log:org.apache.unomi.router?level=ERROR");
             }
         }
     }
 
     public void setImportConfigurationList(List<ImportConfiguration> importConfigurationList) {
         this.importConfigurationList = importConfigurationList;
+    }
+
+    public void setImportConfigurationService(ImportConfigurationService importConfigurationService) {
+        this.importConfigurationService = importConfigurationService;
     }
 
 }

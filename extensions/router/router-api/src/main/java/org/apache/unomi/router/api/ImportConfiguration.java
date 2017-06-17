@@ -19,9 +19,8 @@ package org.apache.unomi.router.api;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.MetadataItem;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import javax.lang.model.type.MirroredTypeException;
+import java.util.*;
 
 /**
  * Created by amidani on 28/04/2017.
@@ -45,6 +44,9 @@ public class ImportConfiguration extends Item {
     private String columnSeparator = ",";
     private String lineSeparator = "\n";
     private boolean active = false;
+    private boolean running = false;
+
+    private List<Map<String, Object>> executions = new ArrayList();
 
     /**
      * Sets the property identified by the specified name to the specified value. If a property with that name already exists, replaces its value, otherwise adds the new
@@ -160,6 +162,24 @@ public class ImportConfiguration extends Item {
     }
 
     /**
+     * Retrieves the import configuration running flag.
+     *
+     * @return true if the import configuration is running false if not
+     */
+    public boolean isRunning() {
+        return this.running;
+    }
+
+    /**
+     * Sets the running flag true/false.
+     *
+     * @param running a boolean to set to running or inactive the import configuration
+     */
+    public void setRunning(boolean running) {
+        this.running = running;
+    }
+
+    /**
      * Retrieves the import configuration overwriteExistingProfiles flag.
      *
      * @return true if during the import existing profiles must be overwritten
@@ -186,7 +206,7 @@ public class ImportConfiguration extends Item {
     }
 
     /**
-     * gets the column separator.
+     * Retrieves the column separator.
      */
     public String getColumnSeparator() {
         return this.columnSeparator;
@@ -203,7 +223,7 @@ public class ImportConfiguration extends Item {
     }
 
     /**
-     * gets the line separator.
+     * Retrieves the line separator.
      */
     public String getLineSeparator() {
         return this.lineSeparator;
@@ -217,6 +237,22 @@ public class ImportConfiguration extends Item {
         if(lineSeparator != null) {
             this.lineSeparator = lineSeparator;
         }
+    }
+
+    /**
+     * Retrieves the executions
+     */
+    public List<Map<String, Object>> getExecutions() {
+        return this.executions;
+    }
+
+
+    /**
+     * Sets the executions
+     * @param executions
+     */
+    public void setExecutions(List<Map<String, Object>> executions) {
+        this.executions = executions;
     }
 
 

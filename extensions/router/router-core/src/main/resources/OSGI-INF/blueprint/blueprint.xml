@@ -33,11 +33,17 @@
             <cm:property name="kafka.import.consumerCount" value="10"/>
             <cm:property name="kafka.import.autoCommit" value="true"/>
             <cm:property name="import.oneshot.uploadDir" value="/tmp/oneshot_import_configs/"/>
+            <cm:property name="import.executionsHistory.size" value="5"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
     <bean id="unomiStorageProcessor" class="org.apache.unomi.router.core.processor.UnomiStorageProcessor">
         <property name="profileImportService" ref="profileImportService"/>
+    </bean>
+
+    <bean id="routeCompletionProcessor" class="org.apache.unomi.router.core.processor.RouteCompletionProcessor">
+        <property name="importConfigurationService" ref="importConfigurationService"/>
+        <property name="executionsHistorySize" value="${import.executionsHistory.size}"/>
     </bean>
 
     <bean id="importConfigByFileNameProcessor" class="org.apache.unomi.router.core.processor.ImportConfigByFileNameProcessor">
@@ -50,6 +56,11 @@
 
     <bean id="jacksonDataFormatImportConfig" class="org.apache.camel.model.dataformat.JsonDataFormat">
         <property name="unmarshalType" value="org.apache.unomi.router.api.ImportConfiguration"/>
+        <property name="library" value="Jackson"/>
+    </bean>
+
+    <bean id="jacksonDataFormatImportLineError" class="org.apache.camel.model.dataformat.JsonDataFormat">
+        <property name="unmarshalType" value="org.apache.unomi.router.api.ImportLineError"/>
         <property name="library" value="Jackson"/>
     </bean>
 
@@ -79,6 +90,7 @@
         </property>
         <property name="uploadDir" value="${import.oneshot.uploadDir}"/>
         <property name="unomiStorageProcessor" ref="unomiStorageProcessor"/>
+        <property name="routeCompletionProcessor" ref="routeCompletionProcessor"/>
         <property name="importConfigByFileNameProcessor" ref="importConfigByFileNameProcessor"/>
         <property name="importConfigurationService" ref="importConfigurationService"/>
         <property name="jacksonDataFormat" ref="jacksonDataFormat"/>

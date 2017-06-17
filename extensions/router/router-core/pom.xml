@@ -135,6 +135,7 @@
                             org.apache.camel.model,
                             org.apache.camel.model.dataformat,
                             org.apache.camel.model.rest,
+                            org.apache.camel.processor.aggregate,
                             org.apache.camel.spi,
                             org.apache.unomi.api,
                             org.apache.unomi.router.api,

@@ -44,10 +44,10 @@ public interface ImportConfigurationService {
     /**
      * Saves the specified import configuration in the context server.
      *
-     * @param profile the import configuration to be saved
+     * @param importConfiguration the import configuration to be saved
      * @return the newly saved import configuration
      */
-    public ImportConfiguration save(ImportConfiguration profile);
+    public ImportConfiguration save(ImportConfiguration importConfiguration);
 
     /**
      * Deletes the import configuration identified by the specified identifier.

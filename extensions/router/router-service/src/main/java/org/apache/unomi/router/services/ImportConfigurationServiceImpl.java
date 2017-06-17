@@ -95,10 +95,7 @@ public class ImportConfigurationServiceImpl implements ImportConfigurationServic
         if (importConfiguration.getItemId() == null) {
             importConfiguration.setItemId(UUID.randomUUID().toString());
         }
-        if(persistenceService.save(importConfiguration)) {
-
-        }
-
+        persistenceService.save(importConfiguration);
         return persistenceService.load(importConfiguration.getItemId(), ImportConfiguration.class);
     }
 
