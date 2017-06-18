@@ -95,7 +95,7 @@ public class ProfileImportFromSourceRouteBuilder extends ProfileImportAbstractRo
                         .process(new Processor() {
                             @Override
                             public void process(Exchange exchange) throws Exception {
-                                importConfiguration.setRunning(true);
+                                importConfiguration.setStatus(RouterConstants.CONFIG_STATUS_RUNNING);
                                 importConfigurationService.save(importConfiguration);
                             }
                         })

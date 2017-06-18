@@ -44,7 +44,7 @@ public class ImportConfiguration extends Item {
     private String columnSeparator = ",";
     private String lineSeparator = "\n";
     private boolean active = false;
-    private boolean running = false;
+    private String status;
 
     private List<Map<String, Object>> executions = new ArrayList();
 
@@ -162,21 +162,21 @@ public class ImportConfiguration extends Item {
     }
 
     /**
-     * Retrieves the import configuration running flag.
+     * Retrieves the import configuration status for last execution.
      *
-     * @return true if the import configuration is running false if not
+     * @return status of the last execution
      */
-    public boolean isRunning() {
-        return this.running;
+    public String getStatus() {
+        return this.status;
     }
 
     /**
-     * Sets the running flag true/false.
+     * Sets status of the last execution.
      *
-     * @param running a boolean to set to running or inactive the import configuration
+     * @param status of the last execution
      */
-    public void setRunning(boolean running) {
-        this.running = running;
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     /**

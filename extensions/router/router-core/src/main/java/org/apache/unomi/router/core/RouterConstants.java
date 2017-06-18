@@ -24,13 +24,18 @@ public interface RouterConstants {
     String CONFIG_TYPE_NOBROKER = "nobroker";
     String CONFIG_TYPE_KAFKA = "kafka";
 
+    String CONFIG_STATUS_RUNNING = "RUNNING";
+    String CONFIG_STATUS_COMPLETE_ERRORS = "ERRORS";
+    String CONFIG_STATUS_COMPLETE_SUCCESS = "SUCCESS";
+    String CONFIG_STATUS_COMPLETE_WITH_ERRORS = "WITH_ERRORS";
+
     String DIRECT_DEPOSIT_BUFFER = "direct:depositBuffer";
-
-    String HEADER_IMPORT_CONFIG_ONESHOT = "importConfigOneShot";
-    String HEADER_CONFIG_TYPE = "configType";
-
-    String HEADER_FAILED_MESSAGE = "failedMessage";
 
     String DIRECTION_FROM = "from";
     String DIRECTION_TO = "to";
+
+    String HEADER_CONFIG_TYPE = "configType";
+
+    String HEADER_FAILED_MESSAGE = "failedMessage";
+    String HEADER_IMPORT_CONFIG_ONESHOT = "importConfigOneShot";
 }

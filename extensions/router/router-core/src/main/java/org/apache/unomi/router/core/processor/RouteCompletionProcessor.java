@@ -84,7 +84,13 @@ public class RouteCompletionProcessor implements Processor {
 
         importConfiguration.getExecutions().add(execution);
         //Set running to false, route is complete
-        importConfiguration.setRunning(false);
+        if(failureCount>0 && successCount>0) {
+            importConfiguration.setStatus(RouterConstants.CONFIG_STATUS_COMPLETE_WITH_ERRORS);
+        } else if(failureCount>0 && successCount==0) {
+            importConfiguration.setStatus(RouterConstants.CONFIG_STATUS_COMPLETE_ERRORS);
+        } else if(failureCount==0 && successCount>0) {
+            importConfiguration.setStatus(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS);
+        }
         importConfigurationService.save(importConfiguration);
         logger.info("Processing route {} completed.", exchange.getFromRouteId());
     }
