@@ -111,6 +111,8 @@ public class ContextServlet extends HttpServlet {
         }
 
         String sessionId = request.getParameter("sessionId");
+        boolean invalidateSession = request.getParameter("invalidateSession")!=null?new Boolean(request.getParameter("invalidateSession")):false;
+        boolean invalidateProfile = request.getParameter("invalidateProfile")!=null?new Boolean(request.getParameter("invalidateProfile")):false;
 
         if (cookieProfileId == null && sessionId == null && personaId == null) {
             ((HttpServletResponse)response).sendError(HttpServletResponse.SC_BAD_REQUEST);
@@ -142,8 +144,8 @@ public class ContextServlet extends HttpServlet {
             boolean profileCreated = false;
 
             // Not a persona, resolve profile now
-            if (cookieProfileId == null) {
-                // no profileId cookie was found, we generate a new one and create the profile in the profile service
+            if (cookieProfileId == null || invalidateProfile) {
+                // no profileId cookie was found or the profile has to be invalidated, we generate a new one and create the profile in the profile service
                 profile = createNewProfile(null, response, timestamp);
                 profileCreated = true;
             } else {
@@ -195,7 +197,7 @@ public class ContextServlet extends HttpServlet {
                 }
             }
 
-            if (session == null) {
+            if (session == null || invalidateSession) {
                 sessionProfile = privacyService.isRequireAnonymousBrowsing(profile.getItemId()) ? privacyService.getAnonymousProfile(profile) : profile;
                 session = new Session(sessionId, sessionProfile, timestamp, scope);
 
