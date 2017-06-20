@@ -54,22 +54,22 @@ public abstract class ProfileImportAbstractRouteBuilder extends RouteBuilder {
 
     public Object getEndpointURI(String direction) {
         Object endpoint;
-        if(RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
+        if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
             //Prepare Kafka Deposit
             StringBuilder kafkaUri = new StringBuilder("kafka:");
             kafkaUri.append(kafkaHost).append(":").append(kafkaPort).append("?topic=").append(kafkaImportTopic);
             if (StringUtils.isNotBlank(kafkaImportGroupId)) {
                 kafkaUri.append("&groupId=" + kafkaImportGroupId);
             }
-            if(RouterConstants.DIRECTION_TO.equals(direction)) {
-                kafkaUri.append("&autoCommitEnable="+kafkaImportAutoCommit+"&consumersCount="+kafkaImportConsumerCount);
+            if (RouterConstants.DIRECTION_TO.equals(direction)) {
+                kafkaUri.append("&autoCommitEnable=" + kafkaImportAutoCommit + "&consumersCount=" + kafkaImportConsumerCount);
             }
             KafkaConfiguration kafkaConfiguration = new KafkaConfiguration();
             kafkaConfiguration.setBrokers(kafkaHost + ":" + kafkaPort);
             kafkaConfiguration.setTopic(kafkaImportTopic);
             kafkaConfiguration.setGroupId(kafkaImportGroupId);
             endpoint = new KafkaEndpoint(kafkaUri.toString(), new KafkaComponent(this.getContext()));
-            ((KafkaEndpoint)endpoint).setConfiguration(kafkaConfiguration);
+            ((KafkaEndpoint) endpoint).setConfiguration(kafkaConfiguration);
         } else {
             endpoint = RouterConstants.DIRECT_DEPOSIT_BUFFER;
         }

@@ -41,7 +41,7 @@ public class RouteCompletionProcessor implements Processor {
     public void process(Exchange exchange) throws Exception {
         String importConfigId = null;
         ImportConfiguration importConfigOneShot = (ImportConfiguration) exchange.getIn().getHeader(RouterConstants.HEADER_IMPORT_CONFIG_ONESHOT);
-        if(importConfigOneShot!=null) {
+        if (importConfigOneShot != null) {
             importConfigId = importConfigOneShot.getItemId();
         } else {
             importConfigId = exchange.getFromRouteId();
@@ -52,10 +52,10 @@ public class RouteCompletionProcessor implements Processor {
         long ignoreCount = 0;
         List<ImportLineError> errors = new ArrayList<ImportLineError>();
 
-        for(Object line : exchange.getIn().getBody(ArrayList.class)){
-            if(line instanceof ProfileToImport) {
+        for (Object line : exchange.getIn().getBody(ArrayList.class)) {
+            if (line instanceof ProfileToImport) {
                 successCount++;
-            } else if(line instanceof ImportLineError) {
+            } else if (line instanceof ImportLineError) {
                 failureCount++;
                 errors.add(((ImportLineError) line));
             } else {
@@ -64,18 +64,18 @@ public class RouteCompletionProcessor implements Processor {
         }
 
         Map execution = new HashMap();
-        execution.put("date", ((Date)exchange.getProperty("CamelCreatedTimestamp")).getTime());
+        execution.put("date", ((Date) exchange.getProperty("CamelCreatedTimestamp")).getTime());
         execution.put("totalLinesNb", exchange.getProperty("CamelSplitSize"));
         execution.put("successCount", successCount);
         execution.put("failureCount", failureCount);
         execution.put("errors", errors);
 
-        if(importConfiguration.getExecutions().size() >= executionsHistorySize) {
+        if (importConfiguration.getExecutions().size() >= executionsHistorySize) {
             int oldestExecIndex = 0;
-            long oldestExecDate = (Long)importConfiguration.getExecutions().get(0).get("date");
-            for(int i = 1 ; i < importConfiguration.getExecutions().size() ; i++) {
-                if((Long)importConfiguration.getExecutions().get(i).get("date") < oldestExecDate) {
-                    oldestExecDate = (Long)importConfiguration.getExecutions().get(i).get("date");
+            long oldestExecDate = (Long) importConfiguration.getExecutions().get(0).get("date");
+            for (int i = 1; i < importConfiguration.getExecutions().size(); i++) {
+                if ((Long) importConfiguration.getExecutions().get(i).get("date") < oldestExecDate) {
+                    oldestExecDate = (Long) importConfiguration.getExecutions().get(i).get("date");
                     oldestExecIndex = i;
                 }
             }
@@ -84,11 +84,11 @@ public class RouteCompletionProcessor implements Processor {
 
         importConfiguration.getExecutions().add(execution);
         //Set running to false, route is complete
-        if(failureCount>0 && successCount>0) {
+        if (failureCount > 0 && successCount > 0) {
             importConfiguration.setStatus(RouterConstants.CONFIG_STATUS_COMPLETE_WITH_ERRORS);
-        } else if(failureCount>0 && successCount==0) {
+        } else if (failureCount > 0 && successCount == 0) {
             importConfiguration.setStatus(RouterConstants.CONFIG_STATUS_COMPLETE_ERRORS);
-        } else if(failureCount==0 && successCount>0) {
+        } else if (failureCount == 0 && successCount > 0) {
             importConfiguration.setStatus(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS);
         }
         importConfigurationService.save(importConfiguration);

@@ -28,7 +28,6 @@ import org.apache.unomi.router.core.RouterConstants;
 import org.apache.unomi.router.core.exception.BadProfileDataFormatException;
 import org.apache.unomi.router.core.processor.LineSplitFailureHandler;
 import org.apache.unomi.router.core.processor.LineSplitProcessor;
-import org.apache.unomi.router.core.processor.RouteCompletionProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +55,7 @@ public class ProfileImportFromSourceRouteBuilder extends ProfileImportAbstractRo
 
         logger.info("Configure Recurrent Route 'From Source'");
 
-        if(importConfigurationList == null) {
+        if (importConfigurationList == null) {
             importConfigurationList = importConfigurationService.getImportConfigurations();
         }
 

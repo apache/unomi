@@ -19,7 +19,7 @@ package org.apache.unomi.router.core.exception;
 /**
  * Created by amidani on 13/06/2017.
  */
-public class BadProfileDataFormatException extends Exception{
+public class BadProfileDataFormatException extends Exception {
 
     public BadProfileDataFormatException() {
         super();

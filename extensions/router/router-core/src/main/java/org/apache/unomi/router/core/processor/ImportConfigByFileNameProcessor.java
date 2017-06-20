@@ -26,7 +26,7 @@ import org.apache.unomi.router.core.RouterConstants;
 /**
  * Created by amidani on 22/05/2017.
  */
-public class ImportConfigByFileNameProcessor implements Processor{
+public class ImportConfigByFileNameProcessor implements Processor {
 
     private ImportConfigurationService importConfigurationService;
 

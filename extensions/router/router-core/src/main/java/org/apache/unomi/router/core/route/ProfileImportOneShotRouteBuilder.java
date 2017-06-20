@@ -16,15 +16,14 @@
  */
 package org.apache.unomi.router.core.route;
 
-import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.jackson.JacksonDataFormat;
-import org.apache.camel.component.kafka.KafkaComponent;
-import org.apache.camel.component.kafka.KafkaConfiguration;
 import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.camel.model.ProcessorDefinition;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.router.core.RouterConstants;
+import org.apache.unomi.router.core.exception.BadProfileDataFormatException;
 import org.apache.unomi.router.core.processor.ImportConfigByFileNameProcessor;
+import org.apache.unomi.router.core.processor.LineSplitFailureHandler;
 import org.apache.unomi.router.core.processor.LineSplitProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +50,17 @@ public class ProfileImportOneShotRouteBuilder extends ProfileImportAbstractRoute
     public void configure() throws Exception {
 
         logger.info("Configure OneShot Route...");
+
+        ProcessorDefinition prDefErr = onException(BadProfileDataFormatException.class)
+                .log(LoggingLevel.ERROR, "Error processing record ${exchangeProperty.CamelSplitIndex}++ !")
+                .handled(true)
+                .process(new LineSplitFailureHandler());
+
+        if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
+            prDefErr.to((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_FROM));
+        } else {
+            prDefErr.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM));
+        }
 
         LineSplitProcessor lineSplitProcessor = new LineSplitProcessor();
 

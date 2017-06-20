@@ -19,7 +19,6 @@ package org.apache.unomi.router.core.route;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.component.kafka.KafkaEndpoint;
-import org.apache.camel.model.Constants;
 import org.apache.camel.model.RouteDefinition;
 import org.apache.unomi.router.core.RouterConstants;
 import org.apache.unomi.router.core.processor.RouteCompletionProcessor;

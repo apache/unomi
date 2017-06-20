@@ -25,7 +25,10 @@ import org.apache.unomi.router.api.ProfileToImport;
 import org.apache.unomi.router.core.RouterConstants;
 import org.apache.unomi.router.core.exception.BadProfileDataFormatException;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Created by amidani on 29/12/2016.
@@ -43,21 +46,21 @@ public class LineSplitProcessor implements Processor {
         //In case of one shot import we check the header and overwrite import config
         ImportConfiguration importConfigOneShot = (ImportConfiguration) exchange.getIn().getHeader(RouterConstants.HEADER_IMPORT_CONFIG_ONESHOT);
         String configType = (String) exchange.getIn().getHeader(RouterConstants.HEADER_CONFIG_TYPE);
-        if(importConfigOneShot!=null) {
-            fieldsMapping = (Map<String, Integer>)importConfigOneShot.getProperties().get("mapping");
+        if (importConfigOneShot != null) {
+            fieldsMapping = (Map<String, Integer>) importConfigOneShot.getProperties().get("mapping");
             propertiesToOverwrite = importConfigOneShot.getPropertiesToOverwrite();
             mergingProperty = importConfigOneShot.getMergingProperty();
             overwriteExistingProfiles = importConfigOneShot.isOverwriteExistingProfiles();
             columnSeparator = importConfigOneShot.getColumnSeparator();
         }
-        String[] profileData = ((String)exchange.getIn().getBody()).split(columnSeparator, -1);
+        String[] profileData = ((String) exchange.getIn().getBody()).split(columnSeparator, -1);
         ProfileToImport profileToImport = new ProfileToImport();
         profileToImport.setItemId(UUID.randomUUID().toString());
         profileToImport.setItemType("profile");
         profileToImport.setScope("system");
-        if(profileData.length > 0 && StringUtils.isNotBlank(profileData[0])) {
-            if(fieldsMapping.size() != (profileData.length - 1)) {
-                throw new BadProfileDataFormatException("The mapping does not match the number of column : line ["+((Integer)exchange.getProperty("CamelSplitIndex")+1)+"]", new Throwable("MAPPING_COLUMN_MATCH"));
+        if (profileData.length > 0 && StringUtils.isNotBlank(profileData[0])) {
+            if (fieldsMapping.size() != (profileData.length - 1)) {
+                throw new BadProfileDataFormatException("The mapping does not match the number of column : line [" + ((Integer) exchange.getProperty("CamelSplitIndex") + 1) + "]", new Throwable("MAPPING_COLUMN_MATCH"));
             }
             Map<String, Object> properties = new HashMap<>();
             for (String fieldMappingKey : fieldsMapping.keySet()) {
@@ -73,10 +76,10 @@ public class LineSplitProcessor implements Processor {
                 profileToImport.setProfileToDelete(true);
             }
         } else {
-            throw new BadProfileDataFormatException("Empty line : line ["+((Integer)exchange.getProperty("CamelSplitIndex")+1)+"]", new Throwable("EMPTY_LINE"));
+            throw new BadProfileDataFormatException("Empty line : line [" + ((Integer) exchange.getProperty("CamelSplitIndex") + 1) + "]", new Throwable("EMPTY_LINE"));
         }
         exchange.getIn().setBody(profileToImport, ProfileToImport.class);
-        if(RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
+        if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
             exchange.getIn().setHeader(KafkaConstants.PARTITION_KEY, 0);
             exchange.getIn().setHeader(KafkaConstants.KEY, "1");
         }
@@ -84,6 +87,7 @@ public class LineSplitProcessor implements Processor {
 
     /**
      * Setter of fieldsMapping
+     *
      * @param fieldsMapping map String,Integer fieldName in ES and the matching column index in the import file
      */
     public void setFieldsMapping(Map<String, Integer> fieldsMapping) {
@@ -104,6 +108,7 @@ public class LineSplitProcessor implements Processor {
 
     /**
      * Sets the merging property.
+     *
      * @param mergingProperty property used to check if the profile exist when merging
      */
     public void setMergingProperty(String mergingProperty) {
@@ -112,6 +117,7 @@ public class LineSplitProcessor implements Processor {
 
     /**
      * Sets the line separator.
+     *
      * @param columnSeparator property used to specify a line separator. Defaults to ','
      */
     public void setColumnSeparator(String columnSeparator) {

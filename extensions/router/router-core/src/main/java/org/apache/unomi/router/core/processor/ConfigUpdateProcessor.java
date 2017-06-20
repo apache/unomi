@@ -25,7 +25,7 @@ import org.apache.unomi.router.core.context.ProfileImportCamelContext;
 /**
  * Created by amidani on 10/05/2017.
  */
-public class ConfigUpdateProcessor implements Processor{
+public class ConfigUpdateProcessor implements Processor {
 
     private ProfileImportCamelContext profileImportCamelContext;
 
