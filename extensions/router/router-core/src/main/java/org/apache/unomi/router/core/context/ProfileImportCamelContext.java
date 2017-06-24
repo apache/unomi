@@ -20,6 +20,7 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Route;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.impl.DefaultCamelContext;
+import org.apache.camel.model.RouteDefinition;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.services.ImportConfigurationService;
 import org.apache.unomi.router.core.processor.ImportConfigByFileNameProcessor;
@@ -107,9 +108,16 @@ public class ProfileImportCamelContext implements SynchronousBundleListener {
     }
 
     public void updateProfileImportReaderRoute(ImportConfiguration importConfiguration) throws Exception {
+        //Active routes
         Route route = camelContext.getRoute(importConfiguration.getItemId());
         if (route != null && stopRoute(importConfiguration.getItemId())) {
             camelContext.removeRoute(importConfiguration.getItemId());
+        }
+
+        //Inactive routes
+        RouteDefinition routeDefinition = camelContext.getRouteDefinition(importConfiguration.getItemId());
+        if (routeDefinition != null) {
+            camelContext.removeRouteDefinition(routeDefinition);
         }
         //Handle transforming an import config oneshot <--> recurrent
         if (IMPORT_CONFIG_TYPE_RECURRENT.equals(importConfiguration.getConfigType())) {
