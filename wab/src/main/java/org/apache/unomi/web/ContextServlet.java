@@ -249,12 +249,12 @@ public class ContextServlet extends HttpServlet {
         boolean noScript = "json".equals(extension);
         String contextAsJSONString = CustomObjectMapper.getObjectMapper().writeValueAsString(data);
         Writer responseWriter;
-        if(noScript){
-            response.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+        if (noScript) {
             responseWriter = response.getWriter();
             response.setContentType("application/json");
             IOUtils.write(contextAsJSONString, responseWriter);
-        }else {
+        } else {
             responseWriter = response.getWriter();
             responseWriter.append("window.digitalData = window.digitalData || {};\n")
                     .append("var cxs = ")
