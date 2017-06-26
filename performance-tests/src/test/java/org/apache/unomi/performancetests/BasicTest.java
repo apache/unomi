@@ -82,7 +82,7 @@ public class BasicTest {
         MavenArtifactUrlReference karafUrl = maven()
                 .groupId("org.apache.karaf")
                 .artifactId("apache-karaf")
-                .version("3.0.1")
+                .version("4.1.1")
                 .type("tar.gz");
 
         MavenUrlReference karafStandardRepo = maven()
@@ -129,6 +129,7 @@ public class BasicTest {
                         .unpackDirectory(new File("target/exam"))
                         .useDeployFolder(false),
                 keepRuntimeFolder(),
+                KarafDistributionOption.features(karafStandardRepo, "wrap")
                 KarafDistributionOption.features(karafPaxWebRepo, "war"),
                 KarafDistributionOption.features(karafCxfRepo, "cxf"),
                 KarafDistributionOption.features(contextServerRepo, "unomi-kar"),
