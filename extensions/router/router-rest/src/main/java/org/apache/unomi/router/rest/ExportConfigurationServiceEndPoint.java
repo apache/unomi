@@ -65,7 +65,7 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
         if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(exportConfigSaved.getConfigType())) {
             CloseableHttpClient httpClient = HttpClients.createDefault();
             try {
-                HttpPut httpPut = new HttpPut("http://localhost:" + clusterConfigSharingService.getInternalServerPort() + "/configUpdate/exportConfigAdmin");
+                HttpPut httpPut = new HttpPut("http://localhost:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/exportConfigAdmin");
                 StringEntity input = new StringEntity(new ObjectMapper().writeValueAsString(exportConfigSaved));
                 input.setContentType(MediaType.APPLICATION_JSON);
                 httpPut.setEntity(input);

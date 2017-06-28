@@ -21,6 +21,7 @@ import org.apache.camel.Route;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.model.RouteDefinition;
+import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.ImportConfiguration;
@@ -63,13 +64,21 @@ public class RouterCamelContext implements SynchronousBundleListener {
     private String configType;
     private String allowedEndpoints;
     private BundleContext bundleContext;
+    private ConfigSharingService configSharingService;
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
 
+    public void setConfigSharingService(ConfigSharingService configSharingService) {
+        this.configSharingService = configSharingService;
+    }
+
     public void initCamelContext() throws Exception {
         logger.info("Initialize Camel Context...");
+
+        configSharingService.setProperty("oneshotImportUploadDir", uploadDir);
+
         camelContext = new DefaultCamelContext();
 
         //--IMPORT ROUTES

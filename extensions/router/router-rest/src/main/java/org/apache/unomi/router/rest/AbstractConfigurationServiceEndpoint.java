@@ -30,17 +30,11 @@ import java.util.List;
 public abstract class AbstractConfigurationServiceEndpoint<T> {
 
     protected ImportExportConfigurationService<T> configurationService;
-    protected ConfigSharingService routerConfigSharingService;
-    protected ConfigSharingService clusterConfigSharingService;
+    protected ConfigSharingService configSharingService;
 
     @WebMethod(exclude = true)
-    public void setRouterConfigSharingService(ConfigSharingService routerConfigSharingService) {
-        this.routerConfigSharingService = routerConfigSharingService;
-    }
-
-    @WebMethod(exclude = true)
-    public void setClusterConfigSharingService(ConfigSharingService clusterConfigSharingService) {
-        this.clusterConfigSharingService = clusterConfigSharingService;
+    public void setConfigSharingService(ConfigSharingService configSharingService) {
+        this.configSharingService = configSharingService;
     }
 
     /**

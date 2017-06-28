@@ -16,17 +16,54 @@
  */
 package org.apache.unomi.api.services;
 
+import java.util.Set;
+
 /**
- * A service to share cfg properties with other bundles.
+ * A service to share configuration properties with other bundles. It also support listeners that will be called whenever
+ * a property is added/updated/removed. Simply register a service with the @link ConfigSharingServiceConfigChangeListener interface and it will
+ * be automatically picked up.
  */
 public interface ConfigSharingService {
 
-    String getOneshotImportUploadDir();
+    Object getProperty(String name);
+    Object setProperty(String name, Object value);
+    boolean hasProperty(String name);
+    Object removeProperty(String name);
+    Set<String> getPropertyNames();
 
-    void setOneshotImportUploadDir(String oneshotImportUploadDir);
+    class ConfigChangeEvent {
+        public enum ConfigChangeEventType { ADDED, UPDATED, REMOVED };
+        private ConfigChangeEventType eventType;
+        private String name;
+        private Object oldValue;
+        private Object newValue;
 
-    String getInternalServerPort();
+        public ConfigChangeEvent(ConfigChangeEventType eventType, String name, Object oldValue, Object newValue) {
+            this.eventType = eventType;
+            this.name = name;
+            this.oldValue = oldValue;
+            this.newValue = newValue;
+        }
 
-    void setInternalServerPort(String internalServerPort);
+        public ConfigChangeEventType getEventType() {
+            return eventType;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public Object getOldValue() {
+            return oldValue;
+        }
+
+        public Object getNewValue() {
+            return newValue;
+        }
+    }
+
+    interface ConfigChangeListener {
+        void configChanged(ConfigChangeEvent configChangeEvent);
+    }
 
 }

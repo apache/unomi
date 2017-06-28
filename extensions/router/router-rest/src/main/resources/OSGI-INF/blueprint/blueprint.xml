@@ -17,13 +17,10 @@
   -->
 
 <blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
            xmlns:jaxrs="http://cxf.apache.org/blueprint/jaxrs"
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
-                              http://cxf.apache.org/blueprint/jaxrs http://cxf.apache.org/schemas/blueprint/jaxrs.xsd
-
-                              http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
+                              http://cxf.apache.org/blueprint/jaxrs http://cxf.apache.org/schemas/blueprint/jaxrs.xsd">
 
     <bean id="cors-filter" class="org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter"/>
     <bean id="jacksonMapper" class="com.fasterxml.jackson.databind.ObjectMapper"/>
@@ -69,22 +66,16 @@
     <reference id="exportConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService"
                filter="(configDiscriminator=EXPORT)"/>
 
-    <reference id="configSharingServiceRouter" interface="org.apache.unomi.api.services.ConfigSharingService"
-               filter="(bundleDiscriminator=ROUTER)"/>
-
-    <reference id="configSharingServiceCluster" interface="org.apache.unomi.api.services.ConfigSharingService"
-               filter="(bundleDiscriminator=SERVICES)"/>
+    <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService"/>
 
     <bean id="importConfigurationServiceEndPoint" class="org.apache.unomi.router.rest.ImportConfigurationServiceEndPoint">
         <property name="importConfigurationService" ref="importConfigurationService"/>
-        <property name="routerConfigSharingService" ref="configSharingServiceRouter"/>
-        <property name="clusterConfigSharingService" ref="configSharingServiceCluster"/>
+        <property name="configSharingService" ref="configSharingService"/>
     </bean>
 
     <bean id="exportConfigurationServiceEndPoint" class="org.apache.unomi.router.rest.ExportConfigurationServiceEndPoint">
         <property name="exportConfigurationService" ref="exportConfigurationService"/>
-        <property name="routerConfigSharingService" ref="configSharingServiceRouter"/>
-        <property name="clusterConfigSharingService" ref="configSharingServiceCluster"/>
+        <property name="configSharingService" ref="configSharingService"/>
     </bean>
 
 </blueprint>

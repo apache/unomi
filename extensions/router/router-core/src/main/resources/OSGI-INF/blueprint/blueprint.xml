@@ -39,17 +39,6 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
-    <bean id="configSharingServiceRB" class="org.apache.unomi.router.core.config.ConfigSharingServiceImpl" destroy-method="preDestroy">
-        <property name="oneshotImportUploadDir" value="${import.oneshot.uploadDir}"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-    </bean>
-
-    <service id="configSharingServiceRBE" ref="configSharingServiceRB" auto-export="interfaces">
-        <service-properties>
-            <entry key="bundleDiscriminator" value="ROUTER"/>
-        </service-properties>
-    </service>
-
     <bean id="unomiStorageProcessor" class="org.apache.unomi.router.core.processor.UnomiStorageProcessor">
         <property name="profileImportService" ref="profileImportService"/>
     </bean>
@@ -116,6 +105,7 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="jacksonDataFormat" ref="jacksonDataFormat"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="configSharingService" ref="configSharingService" />
     </bean>
 
     <camel:camelContext id="httpEndpoint" xmlns="http://camel.apache.org/schema/blueprint">
@@ -126,6 +116,7 @@
         <property name="routerCamelContext" ref="camelContext"/>
     </bean>
 
+    <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />
     <reference id="httpService" interface="org.osgi.service.http.HttpService"/>
     <reference id="profileImportService" interface="org.apache.unomi.router.api.services.ProfileImportService"/>
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>

@@ -75,7 +75,7 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
         if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(importConfigSaved.getConfigType())) {
             CloseableHttpClient httpClient = HttpClients.createDefault();
             try {
-                HttpPut httpPut = new HttpPut("http://localhost:" + clusterConfigSharingService.getInternalServerPort() + "/configUpdate/importConfigAdmin");
+                HttpPut httpPut = new HttpPut("http://localhost:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/importConfigAdmin");
                 StringEntity input = new StringEntity(new ObjectMapper().writeValueAsString(importConfigSaved));
                 input.setContentType(MediaType.APPLICATION_JSON);
                 httpPut.setEntity(input);
@@ -105,7 +105,7 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
     @Produces(MediaType.APPLICATION_JSON)
     public Response processOneshotImportConfigurationCSV(@Multipart(value = "importConfigId") String importConfigId, @Multipart(value = "file") Attachment file) {
         try {
-            java.nio.file.Path path = Paths.get(routerConfigSharingService.getOneshotImportUploadDir() + importConfigId + ".csv");
+            java.nio.file.Path path = Paths.get(configSharingService.getProperty("oneshotImportUploadDir") + importConfigId + ".csv");
             Files.deleteIfExists(path);
             InputStream in = file.getObject(InputStream.class);
 
