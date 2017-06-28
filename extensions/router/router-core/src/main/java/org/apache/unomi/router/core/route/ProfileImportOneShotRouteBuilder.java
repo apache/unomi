@@ -20,7 +20,7 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.camel.model.ProcessorDefinition;
-import org.apache.unomi.router.core.RouterConstants;
+import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.core.exception.BadProfileDataFormatException;
 import org.apache.unomi.router.core.processor.ImportConfigByFileNameProcessor;
 import org.apache.unomi.router.core.processor.LineSplitFailureHandler;

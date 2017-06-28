@@ -27,7 +27,22 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="importConfigurationService" ref="importConfigurationServiceImpl" auto-export="interfaces"/>
+    <service id="importConfigurationService" ref="importConfigurationServiceImpl" auto-export="interfaces">
+        <service-properties>
+            <entry key="configDiscriminator" value="IMPORT"/>
+        </service-properties>
+    </service>
+
+    <bean id="exportConfigurationServiceImpl" class="org.apache.unomi.router.services.ExportConfigurationServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+    </bean>
+    <service id="exportConfigurationService" ref="exportConfigurationServiceImpl" auto-export="interfaces">
+        <service-properties>
+            <entry key="configDiscriminator" value="EXPORT"/>
+        </service-properties>
+    </service>
 
     <bean id="profileImportServiceImpl" class="org.apache.unomi.router.services.ProfileImportServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">

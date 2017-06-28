@@ -14,28 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.router.core;
+package org.apache.unomi.api.services;
 
 /**
- * Created by amidani on 13/06/2017.
+ * A service to share cfg properties with other bundles.
  */
-public interface RouterConstants {
+public interface ConfigSharingService {
 
-    String CONFIG_TYPE_NOBROKER = "nobroker";
-    String CONFIG_TYPE_KAFKA = "kafka";
+    String getOneshotImportUploadDir();
 
-    String CONFIG_STATUS_RUNNING = "RUNNING";
-    String CONFIG_STATUS_COMPLETE_ERRORS = "ERRORS";
-    String CONFIG_STATUS_COMPLETE_SUCCESS = "SUCCESS";
-    String CONFIG_STATUS_COMPLETE_WITH_ERRORS = "WITH_ERRORS";
+    void setOneshotImportUploadDir(String oneshotImportUploadDir);
 
-    String DIRECT_DEPOSIT_BUFFER = "direct:depositBuffer";
+    String getInternalServerPort();
 
-    String DIRECTION_FROM = "from";
-    String DIRECTION_TO = "to";
+    void setInternalServerPort(String internalServerPort);
 
-    String HEADER_CONFIG_TYPE = "configType";
-
-    String HEADER_FAILED_MESSAGE = "failedMessage";
-    String HEADER_IMPORT_CONFIG_ONESHOT = "importConfigOneShot";
 }

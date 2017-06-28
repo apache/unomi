@@ -25,7 +25,9 @@
 
     <cm:property-placeholder persistent-id="org.apache.unomi.router" update-strategy="reload">
         <cm:default-properties>
-            <cm:property name="import.config.type" value="nobroker"/>
+            <cm:property name="config.type" value="nobroker"/>
+            <cm:property name="config.allowedEndpoints" value="file,ftp"/>
+            <cm:property name="config.internalPort" value="8233"/>
             <cm:property name="kafka.host" value="localhost"/>
             <cm:property name="kafka.port" value="9092"/>
             <cm:property name="kafka.import.topic" value="camel-deposit"/>
@@ -36,6 +38,17 @@
             <cm:property name="import.executionsHistory.size" value="5"/>
         </cm:default-properties>
     </cm:property-placeholder>
+
+    <bean id="configSharingServiceRB" class="org.apache.unomi.router.core.config.ConfigSharingServiceImpl" destroy-method="preDestroy">
+        <property name="oneshotImportUploadDir" value="${import.oneshot.uploadDir}"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+    </bean>
+
+    <service id="configSharingServiceRBE" ref="configSharingServiceRB" auto-export="interfaces">
+        <service-properties>
+            <entry key="bundleDiscriminator" value="ROUTER"/>
+        </service-properties>
+    </service>
 
     <bean id="unomiStorageProcessor" class="org.apache.unomi.router.core.processor.UnomiStorageProcessor">
         <property name="profileImportService" ref="profileImportService"/>
@@ -59,6 +72,11 @@
         <property name="library" value="Jackson"/>
     </bean>
 
+    <bean id="jacksonDataFormatExportConfig" class="org.apache.camel.model.dataformat.JsonDataFormat">
+        <property name="unmarshalType" value="org.apache.unomi.router.api.ExportConfiguration"/>
+        <property name="library" value="Jackson"/>
+    </bean>
+
     <bean id="jacksonDataFormatImportLineError" class="org.apache.camel.model.dataformat.JsonDataFormat">
         <property name="unmarshalType" value="org.apache.unomi.router.api.ImportLineError"/>
         <property name="library" value="Jackson"/>
@@ -67,7 +85,7 @@
     <bean class="org.apache.camel.component.servlet.osgi.OsgiServletRegisterer"
           init-method="register"
           destroy-method="unregister">
-        <property name="alias" value="/importConfigAdmin"/>
+        <property name="alias" value="/configUpdate"/>
         <property name="httpService" ref="httpService"/>
         <property name="servlet" ref="camelServlet"/>
     </bean>
@@ -75,9 +93,10 @@
     <bean id="camelServlet" class="org.apache.camel.component.servlet.CamelHttpTransportServlet"/>
 
 
-    <bean id="camelContext" class="org.apache.unomi.router.core.context.ProfileImportCamelContext"
+    <bean id="camelContext" class="org.apache.unomi.router.core.context.RouterCamelContext"
           init-method="initCamelContext" destroy-method="preDestroy">
-        <property name="configType" value="${import.config.type}"/>
+        <property name="configType" value="${config.type}"/>
+        <property name="allowedEndpoints" value="${config.allowedEndpoints}"/>
         <property name="kafkaProps">
             <map>
                 <entry key="kafkaHost" value="${kafka.host}"/>
@@ -93,20 +112,24 @@
         <property name="routeCompletionProcessor" ref="routeCompletionProcessor"/>
         <property name="importConfigByFileNameProcessor" ref="importConfigByFileNameProcessor"/>
         <property name="importConfigurationService" ref="importConfigurationService"/>
+        <property name="exportConfigurationService" ref="exportConfigurationService"/>
+        <property name="persistenceService" ref="persistenceService"/>
         <property name="jacksonDataFormat" ref="jacksonDataFormat"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
 
     <camel:camelContext id="httpEndpoint" xmlns="http://camel.apache.org/schema/blueprint">
-        <camel:routeBuilder ref="profileImportConfigUpdateRouteBuilder" />
+        <camel:routeBuilder ref="configUpdateRouteBuilder" />
     </camel:camelContext>
 
-    <bean id="profileImportConfigUpdateRouteBuilder" class="org.apache.unomi.router.core.route.ProfileImportConfigUpdateRouteBuilder">
-        <property name="profileImportCamelContext" ref="camelContext"/>
+    <bean id="configUpdateRouteBuilder" class="org.apache.unomi.router.core.route.ConfigUpdateRouteBuilder">
+        <property name="routerCamelContext" ref="camelContext"/>
     </bean>
 
     <reference id="httpService" interface="org.osgi.service.http.HttpService"/>
     <reference id="profileImportService" interface="org.apache.unomi.router.api.services.ProfileImportService"/>
-    <reference id="importConfigurationService" interface="org.apache.unomi.router.api.services.ImportConfigurationService"/>
+    <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
+    <reference id="importConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService" filter="(configDiscriminator=IMPORT)"/>
+    <reference id="exportConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService" filter="(configDiscriminator=EXPORT)"/>
 
 </blueprint>

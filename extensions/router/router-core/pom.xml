@@ -47,6 +47,12 @@
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-spi</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-services</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
@@ -138,6 +144,7 @@
                             org.apache.unomi.api,
                             org.apache.unomi.router.api,
                             org.apache.unomi.api.services,
+                            org.apache.unomi.persistence.spi,
                             org.apache.unomi.router.api.services,
                             org.apache.kafka.clients.producer;resolution:=optional,
                             org.apache.kafka.clients.consumer;resolution:=optional,

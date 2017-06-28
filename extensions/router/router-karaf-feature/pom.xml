@@ -147,7 +147,7 @@
                 <groupId>org.apache.karaf.tooling</groupId>
                 <artifactId>karaf-maven-plugin</artifactId>
                 <configuration>
-                    <startLevel>90</startLevel>
+                    <startLevel>77</startLevel>
                 </configuration>
             </plugin>
         </plugins>

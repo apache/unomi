@@ -17,8 +17,8 @@
 package org.apache.unomi.router.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.cxf.jaxrs.ext.multipart.Multipart;
 import org.apache.cxf.jaxrs.ext.multipart.Attachment;
+import org.apache.cxf.jaxrs.ext.multipart.Multipart;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPut;
@@ -26,113 +26,56 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.unomi.router.api.ImportConfiguration;
-import org.apache.unomi.router.api.services.ImportConfigurationService;
+import org.apache.unomi.router.api.RouterConstants;
+import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
-import javax.ws.rs.*;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.List;
 
 /**
- * A JAX-RS endpoint to manage {@link org.apache.unomi.router.api.ImportConfiguration}s.
+ * A JAX-RS endpoint to manage {@link ImportConfiguration}s.
  */
 @WebService
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
         allowCredentials = true
 )
-public class ImportConfigurationServiceEndPoint {
+public class ImportConfigurationServiceEndPoint extends AbstractConfigurationServiceEndpoint<ImportConfiguration> {
 
     private static final Logger logger = LoggerFactory.getLogger(ImportConfigurationServiceEndPoint.class.getName());
-    private final String CONFIG_TYPE_RECURRENT = "recurrent";
 
-    private ImportConfigurationService importConfigurationService;
-    private String uploadDir;
-    private String serverPort;
-
-    public ImportConfigurationServiceEndPoint () {
+    public ImportConfigurationServiceEndPoint() {
         logger.info("Initializing import configuration service endpoint...");
     }
 
     @WebMethod(exclude = true)
-    public void setImportConfigurationService(ImportConfigurationService importConfigurationService) {
-        this.importConfigurationService = importConfigurationService;
+    public void setImportConfigurationService(ImportExportConfigurationService<ImportConfiguration> importConfigurationService) {
+        configurationService = importConfigurationService;
     }
-
-    @WebMethod(exclude = true)
-    public void setUploadDir(String uploadDir) {
-        this.uploadDir = uploadDir;
-    }
-
-    @WebMethod(exclude = true)
-    public void setServerPort(String serverPort) {
-        this.serverPort = serverPort;
-    }
-
-    /**
-     * Retrieves all the import configurations.
-     *
-     * @return all the import configurations.
-     */
-    @GET
-    @Path("/")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Consumes(MediaType.APPLICATION_JSON)
-    public List<ImportConfiguration> getImportConfigurations() {
-        return importConfigurationService.getImportConfigurations();
-    }
-
-    /**
-     * Retrieves an import configuration by id.
-     *
-     * @return the import configuration that matches the given id.
-     */
-    @GET
-    @Path("/{configId}")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Consumes(MediaType.APPLICATION_JSON)
-    public ImportConfiguration getImportConfiguration(@PathParam("configId") String configId) {
-        return importConfigurationService.load(configId);
-    }
-
-    /**
-     * Delete an import configuration by id.
-     *
-     * @return the deleted import configuration.
-     */
-    @DELETE
-    @Path("/{configId}")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Consumes(MediaType.APPLICATION_JSON)
-    public void deleteImportConfiguration(@PathParam("configId") String configId) {
-        importConfigurationService.delete(configId);
-    }
-
-
 
     /**
      * Save the given import configuration.
      *
      * @return the import configuration saved.
      */
-    @POST
-    @Path("/")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Consumes(MediaType.APPLICATION_JSON)
-    public ImportConfiguration saveImportConfiguration(ImportConfiguration importConfiguration) {
-        ImportConfiguration importConfigSaved = importConfigurationService.save(importConfiguration);
-        if(CONFIG_TYPE_RECURRENT.equals(importConfigSaved.getConfigType())) {
+    public ImportConfiguration saveConfiguration(ImportConfiguration importConfiguration) {
+        ImportConfiguration importConfigSaved = configurationService.save(importConfiguration);
+        if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(importConfigSaved.getConfigType())) {
             CloseableHttpClient httpClient = HttpClients.createDefault();
             try {
-                HttpPut httpPut = new HttpPut("http://localhost:"+serverPort+"/importConfigAdmin/");
+                HttpPut httpPut = new HttpPut("http://localhost:" + clusterConfigSharingService.getInternalServerPort() + "/configUpdate/importConfigAdmin");
                 StringEntity input = new StringEntity(new ObjectMapper().writeValueAsString(importConfigSaved));
                 input.setContentType(MediaType.APPLICATION_JSON);
                 httpPut.setEntity(input);
@@ -153,6 +96,7 @@ public class ImportConfigurationServiceEndPoint {
     /**
      * Save/Update the given import configuration.
      * Prepare the file to be processed with Camel routes
+     *
      * @return OK / NOK Http Code.
      */
     @POST
@@ -161,7 +105,7 @@ public class ImportConfigurationServiceEndPoint {
     @Produces(MediaType.APPLICATION_JSON)
     public Response processOneshotImportConfigurationCSV(@Multipart(value = "importConfigId") String importConfigId, @Multipart(value = "file") Attachment file) {
         try {
-            java.nio.file.Path path = Paths.get(uploadDir+importConfigId+".csv");
+            java.nio.file.Path path = Paths.get(routerConfigSharingService.getOneshotImportUploadDir() + importConfigId + ".csv");
             Files.deleteIfExists(path);
             InputStream in = file.getObject(InputStream.class);
 

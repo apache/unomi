@@ -21,8 +21,8 @@ import org.apache.camel.Processor;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.ImportLineError;
 import org.apache.unomi.router.api.ProfileToImport;
-import org.apache.unomi.router.api.services.ImportConfigurationService;
-import org.apache.unomi.router.core.RouterConstants;
+import org.apache.unomi.router.api.services.ImportExportConfigurationService;
+import org.apache.unomi.router.api.RouterConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +34,7 @@ import java.util.*;
 public class RouteCompletionProcessor implements Processor {
 
     private static final Logger logger = LoggerFactory.getLogger(RouteCompletionProcessor.class.getName());
-    private ImportConfigurationService importConfigurationService;
+    private ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
     private int executionsHistorySize;
 
     @Override
@@ -95,7 +95,7 @@ public class RouteCompletionProcessor implements Processor {
         logger.info("Processing route {} completed.", exchange.getFromRouteId());
     }
 
-    public void setImportConfigurationService(ImportConfigurationService importConfigurationService) {
+    public void setImportConfigurationService(ImportExportConfigurationService<ImportConfiguration> importConfigurationService) {
         this.importConfigurationService = importConfigurationService;
     }
 

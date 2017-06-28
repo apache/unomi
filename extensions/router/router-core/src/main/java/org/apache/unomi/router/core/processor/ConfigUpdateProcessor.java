@@ -20,25 +20,25 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.apache.camel.Processor;
 import org.apache.unomi.router.api.ImportConfiguration;
-import org.apache.unomi.router.core.context.ProfileImportCamelContext;
+import org.apache.unomi.router.core.context.RouterCamelContext;
 
 /**
  * Created by amidani on 10/05/2017.
  */
 public class ConfigUpdateProcessor implements Processor {
 
-    private ProfileImportCamelContext profileImportCamelContext;
+    private RouterCamelContext routerCamelContext;
 
     @Override
     public void process(Exchange exchange) throws Exception {
         if (exchange.getIn() != null) {
             Message message = exchange.getIn();
-            ImportConfiguration importConfiguration = message.getBody(ImportConfiguration.class);
-            profileImportCamelContext.updateProfileImportReaderRoute(importConfiguration);
+            Object configuration = message.getBody();
+            routerCamelContext.updateProfileReaderRoute(configuration);
         }
     }
 
-    public void setProfileImportCamelContext(ProfileImportCamelContext profileImportCamelContext) {
-        this.profileImportCamelContext = profileImportCamelContext;
+    public void setRouterCamelContext(RouterCamelContext routerCamelContext) {
+        this.routerCamelContext = routerCamelContext;
     }
 }
