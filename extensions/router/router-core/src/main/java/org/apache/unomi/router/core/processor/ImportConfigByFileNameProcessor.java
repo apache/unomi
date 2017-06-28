@@ -20,15 +20,15 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.component.file.GenericFile;
 import org.apache.unomi.router.api.ImportConfiguration;
-import org.apache.unomi.router.api.services.ImportConfigurationService;
-import org.apache.unomi.router.core.RouterConstants;
+import org.apache.unomi.router.api.services.ImportExportConfigurationService;
+import org.apache.unomi.router.api.RouterConstants;
 
 /**
  * Created by amidani on 22/05/2017.
  */
 public class ImportConfigByFileNameProcessor implements Processor {
 
-    private ImportConfigurationService importConfigurationService;
+    private ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
 
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -39,7 +39,7 @@ public class ImportConfigByFileNameProcessor implements Processor {
         exchange.getIn().setHeader(RouterConstants.HEADER_IMPORT_CONFIG_ONESHOT, importConfiguration);
     }
 
-    public void setImportConfigurationService(ImportConfigurationService importConfigurationService) {
+    public void setImportConfigurationService(ImportExportConfigurationService<ImportConfiguration> importConfigurationService) {
         this.importConfigurationService = importConfigurationService;
     }
 }

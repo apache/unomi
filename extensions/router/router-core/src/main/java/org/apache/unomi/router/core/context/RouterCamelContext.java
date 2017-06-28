@@ -21,11 +21,15 @@ import org.apache.camel.Route;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.model.RouteDefinition;
+import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.ImportConfiguration;
-import org.apache.unomi.router.api.services.ImportConfigurationService;
+import org.apache.unomi.router.api.RouterConstants;
+import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.core.processor.ImportConfigByFileNameProcessor;
 import org.apache.unomi.router.core.processor.RouteCompletionProcessor;
 import org.apache.unomi.router.core.processor.UnomiStorageProcessor;
+import org.apache.unomi.router.core.route.ProfileExportCollectRouteBuilder;
 import org.apache.unomi.router.core.route.ProfileImportFromSourceRouteBuilder;
 import org.apache.unomi.router.core.route.ProfileImportOneShotRouteBuilder;
 import org.apache.unomi.router.core.route.ProfileImportToUnomiRouteBuilder;
@@ -43,19 +47,21 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by amidani on 04/05/2017.
  */
-public class ProfileImportCamelContext implements SynchronousBundleListener {
+public class RouterCamelContext implements SynchronousBundleListener {
 
-    private final String IMPORT_CONFIG_TYPE_RECURRENT = "recurrent";
-    private Logger logger = LoggerFactory.getLogger(ProfileImportCamelContext.class.getName());
+    private Logger logger = LoggerFactory.getLogger(RouterCamelContext.class.getName());
     private CamelContext camelContext;
     private UnomiStorageProcessor unomiStorageProcessor;
     private RouteCompletionProcessor routeCompletionProcessor;
     private ImportConfigByFileNameProcessor importConfigByFileNameProcessor;
-    private ImportConfigurationService importConfigurationService;
+    private ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
+    private ImportExportConfigurationService<ExportConfiguration> exportConfigurationService;
+    private PersistenceService persistenceService;
     private JacksonDataFormat jacksonDataFormat;
     private String uploadDir;
     private Map<String, String> kafkaProps;
     private String configType;
+    private String allowedEndpoints;
     private BundleContext bundleContext;
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -66,9 +72,13 @@ public class ProfileImportCamelContext implements SynchronousBundleListener {
         logger.info("Initialize Camel Context...");
         camelContext = new DefaultCamelContext();
 
+        //--IMPORT ROUTES
+
+        //Source
         ProfileImportFromSourceRouteBuilder builderReader = new ProfileImportFromSourceRouteBuilder(kafkaProps, configType);
         builderReader.setImportConfigurationService(importConfigurationService);
         builderReader.setJacksonDataFormat(jacksonDataFormat);
+        builderReader.setAllowedEndpoints(allowedEndpoints);
         builderReader.setContext(camelContext);
         camelContext.addRoutes(builderReader);
 
@@ -80,13 +90,22 @@ public class ProfileImportCamelContext implements SynchronousBundleListener {
         builderOneShot.setContext(camelContext);
         camelContext.addRoutes(builderOneShot);
 
-
+        //Unomi sink route
         ProfileImportToUnomiRouteBuilder builderProcessor = new ProfileImportToUnomiRouteBuilder(kafkaProps, configType);
         builderProcessor.setUnomiStorageProcessor(unomiStorageProcessor);
         builderProcessor.setRouteCompletionProcessor(routeCompletionProcessor);
         builderProcessor.setJacksonDataFormat(jacksonDataFormat);
         builderProcessor.setContext(camelContext);
         camelContext.addRoutes(builderProcessor);
+
+        //--EXPORT ROUTES
+        ProfileExportCollectRouteBuilder profileExportCollectRouteBuilder = new ProfileExportCollectRouteBuilder();
+        profileExportCollectRouteBuilder.setExportConfigurationService(exportConfigurationService);
+        profileExportCollectRouteBuilder.setPersistenceService(persistenceService);
+        profileExportCollectRouteBuilder.setAllowedEndpoints(allowedEndpoints);
+        profileExportCollectRouteBuilder.setContext(camelContext);
+        camelContext.addRoutes(profileExportCollectRouteBuilder);
+
 
         camelContext.start();
 
@@ -107,26 +126,51 @@ public class ProfileImportCamelContext implements SynchronousBundleListener {
         return camelContext.stopRoute(routeId, 10L, TimeUnit.SECONDS, true);
     }
 
-    public void updateProfileImportReaderRoute(ImportConfiguration importConfiguration) throws Exception {
+    private void killExistingRoute(String routeId) throws Exception {
         //Active routes
-        Route route = camelContext.getRoute(importConfiguration.getItemId());
-        if (route != null && stopRoute(importConfiguration.getItemId())) {
-            camelContext.removeRoute(importConfiguration.getItemId());
+        Route route = camelContext.getRoute(routeId);
+        if (route != null && stopRoute(routeId)) {
+            camelContext.removeRoute(routeId);
         }
-
         //Inactive routes
-        RouteDefinition routeDefinition = camelContext.getRouteDefinition(importConfiguration.getItemId());
+        RouteDefinition routeDefinition = camelContext.getRouteDefinition(routeId);
         if (routeDefinition != null) {
             camelContext.removeRouteDefinition(routeDefinition);
         }
+    }
+
+    public void updateProfileReaderRoute(Object configuration) throws Exception {
+        if (configuration instanceof ImportConfiguration) {
+            updateProfileImportReaderRoute((ImportConfiguration) configuration);
+        } else {
+            updateProfileExportReaderRoute((ExportConfiguration) configuration);
+        }
+    }
+
+    private void updateProfileImportReaderRoute(ImportConfiguration importConfiguration) throws Exception {
+
         //Handle transforming an import config oneshot <--> recurrent
-        if (IMPORT_CONFIG_TYPE_RECURRENT.equals(importConfiguration.getConfigType())) {
+        if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(importConfiguration.getConfigType())) {
             ProfileImportFromSourceRouteBuilder builder = new ProfileImportFromSourceRouteBuilder(kafkaProps, configType);
             builder.setImportConfigurationList(Arrays.asList(importConfiguration));
             builder.setImportConfigurationService(importConfigurationService);
+            builder.setAllowedEndpoints(allowedEndpoints);
             builder.setJacksonDataFormat(jacksonDataFormat);
             builder.setContext(camelContext);
             camelContext.addRoutes(builder);
+        }
+    }
+
+    private void updateProfileExportReaderRoute(ExportConfiguration exportConfiguration) throws Exception {
+        killExistingRoute(exportConfiguration.getItemId());
+        //Handle transforming an import config oneshot <--> recurrent
+        if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(exportConfiguration.getConfigType())) {
+            ProfileExportCollectRouteBuilder profileExportCollectRouteBuilder = new ProfileExportCollectRouteBuilder();
+            profileExportCollectRouteBuilder.setExportConfigurationService(exportConfigurationService);
+            profileExportCollectRouteBuilder.setPersistenceService(persistenceService);
+            profileExportCollectRouteBuilder.setAllowedEndpoints(allowedEndpoints);
+            profileExportCollectRouteBuilder.setContext(camelContext);
+            camelContext.addRoutes(profileExportCollectRouteBuilder);
         }
     }
 
@@ -146,8 +190,16 @@ public class ProfileImportCamelContext implements SynchronousBundleListener {
         this.importConfigByFileNameProcessor = importConfigByFileNameProcessor;
     }
 
-    public void setImportConfigurationService(ImportConfigurationService importConfigurationService) {
+    public void setImportConfigurationService(ImportExportConfigurationService<ImportConfiguration> importConfigurationService) {
         this.importConfigurationService = importConfigurationService;
+    }
+
+    public void setExportConfigurationService(ImportExportConfigurationService<ExportConfiguration> exportConfigurationService) {
+        this.exportConfigurationService = exportConfigurationService;
+    }
+
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
     }
 
     public void setJacksonDataFormat(JacksonDataFormat jacksonDataFormat) {
@@ -164,6 +216,10 @@ public class ProfileImportCamelContext implements SynchronousBundleListener {
 
     public void setConfigType(String configType) {
         this.configType = configType;
+    }
+
+    public void setAllowedEndpoints(String allowedEndpoints) {
+        this.allowedEndpoints = allowedEndpoints;
     }
 
     public void preDestroy() throws Exception {

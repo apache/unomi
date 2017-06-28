@@ -15,13 +15,11 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>unomi-router</artifactId>
         <groupId>org.apache.unomi</groupId>
-        <version>1.2.0-incubating-SNAPSHOT</version>
+        <version>1.2.0-incubating-unomi_102-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -44,6 +42,12 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-spi</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -140,6 +144,7 @@
                             org.apache.unomi.api,
                             org.apache.unomi.router.api,
                             org.apache.unomi.api.services,
+                            org.apache.unomi.persistence.spi,
                             org.apache.unomi.router.api.services,
                             org.apache.kafka.clients.producer;resolution:=optional,
                             org.apache.kafka.clients.consumer;resolution:=optional,

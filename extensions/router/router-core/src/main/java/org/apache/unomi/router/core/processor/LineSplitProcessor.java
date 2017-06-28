@@ -22,7 +22,7 @@ import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.ProfileToImport;
-import org.apache.unomi.router.core.RouterConstants;
+import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.core.exception.BadProfileDataFormatException;
 
 import java.util.HashMap;

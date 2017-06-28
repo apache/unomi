@@ -24,18 +24,6 @@
                               http://cxf.apache.org/blueprint/jaxrs http://cxf.apache.org/schemas/blueprint/jaxrs.xsd
 
                               http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
-    <cm:property-placeholder persistent-id="org.apache.unomi.router" update-strategy="reload">
-        <cm:default-properties>
-            <cm:property name="import.oneshot.uploadDir" value="/tmp/oneshot_import_configs/"/>
-        </cm:default-properties>
-    </cm:property-placeholder>
-
-    <cm:property-placeholder persistent-id="org.apache.unomi.cluster"
-                             update-strategy="reload" placeholder-prefix="${cluster.">
-        <cm:default-properties>
-            <cm:property name="cluster.contextserver.port" value="8181"/>
-        </cm:default-properties>
-    </cm:property-placeholder>
 
     <bean id="cors-filter" class="org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter"/>
     <bean id="jacksonMapper" class="com.fasterxml.jackson.databind.ObjectMapper"/>
@@ -63,12 +51,40 @@
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
-    <reference id="importConfigurationService" interface="org.apache.unomi.router.api.services.ImportConfigurationService"/>
+    <jaxrs:server address="/exportConfiguration" id="restExportConfigurationService">
+        <jaxrs:providers>
+            <ref component-id="json-provider"/>
+            <ref component-id="cors-filter"/>
+            <ref component-id="jaas-filter"/>
+        </jaxrs:providers>
+
+        <jaxrs:serviceBeans>
+            <ref component-id="exportConfigurationServiceEndPoint"/>
+        </jaxrs:serviceBeans>
+    </jaxrs:server>
+
+    <reference id="importConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService"
+            filter="(configDiscriminator=IMPORT)"/>
+
+    <reference id="exportConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService"
+               filter="(configDiscriminator=EXPORT)"/>
+
+    <reference id="configSharingServiceRouter" interface="org.apache.unomi.api.services.ConfigSharingService"
+               filter="(bundleDiscriminator=ROUTER)"/>
+
+    <reference id="configSharingServiceCluster" interface="org.apache.unomi.api.services.ConfigSharingService"
+               filter="(bundleDiscriminator=SERVICES)"/>
 
     <bean id="importConfigurationServiceEndPoint" class="org.apache.unomi.router.rest.ImportConfigurationServiceEndPoint">
         <property name="importConfigurationService" ref="importConfigurationService"/>
-        <property name="uploadDir" value="${import.oneshot.uploadDir}"/>
-        <property name="serverPort" value="${cluster.contextserver.port}"/>
+        <property name="routerConfigSharingService" ref="configSharingServiceRouter"/>
+        <property name="clusterConfigSharingService" ref="configSharingServiceCluster"/>
+    </bean>
+
+    <bean id="exportConfigurationServiceEndPoint" class="org.apache.unomi.router.rest.ExportConfigurationServiceEndPoint">
+        <property name="exportConfigurationService" ref="exportConfigurationService"/>
+        <property name="routerConfigSharingService" ref="configSharingServiceRouter"/>
+        <property name="clusterConfigSharingService" ref="configSharingServiceCluster"/>
     </bean>
 
 </blueprint>

@@ -18,8 +18,10 @@ package org.apache.unomi.router.core.route;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.rest.RestBindingMode;
+import org.apache.unomi.api.services.ConfigSharingService;
+import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.ImportConfiguration;
-import org.apache.unomi.router.core.context.ProfileImportCamelContext;
+import org.apache.unomi.router.core.context.RouterCamelContext;
 import org.apache.unomi.router.core.processor.ConfigUpdateProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,27 +29,36 @@ import org.slf4j.LoggerFactory;
 /**
  * Created by amidani on 10/05/2017.
  */
-public class ProfileImportConfigUpdateRouteBuilder extends RouteBuilder {
+public class ConfigUpdateRouteBuilder extends RouteBuilder {
 
-    private static final Logger logger = LoggerFactory.getLogger(ProfileImportConfigUpdateRouteBuilder.class.getName());
-
-    private ProfileImportCamelContext profileImportCamelContext;
+    private static final Logger logger = LoggerFactory.getLogger(ConfigUpdateRouteBuilder.class.getName());
+    private RouterCamelContext routerCamelContext;
 
     @Override
     public void configure() throws Exception {
-        logger.info("Preparing REST Configuration for servlet with context path [/importConfigAdmin]");
+        logger.info("Preparing REST Configuration for servlet with context path [/configUpdate]");
         restConfiguration().component("servlet")
-                .contextPath("/importConfigAdmin")
+                .contextPath("/configUpdate")
                 .enableCORS(false)
                 .bindingMode(RestBindingMode.json)
                 .dataFormatProperty("prettyPrint", "true");
 
-        rest().put("/").consumes("application/json").type(ImportConfiguration.class)
+        rest().put("/importConfigAdmin").consumes("application/json").type(ImportConfiguration.class)
                 .to("direct:importConfigRestDeposit");
-        ConfigUpdateProcessor profileImportConfigUpdateProcessor = new ConfigUpdateProcessor();
-        profileImportConfigUpdateProcessor.setProfileImportCamelContext(profileImportCamelContext);
+
+        ConfigUpdateProcessor profileConfigUpdateProcessor = new ConfigUpdateProcessor();
+        profileConfigUpdateProcessor.setRouterCamelContext(routerCamelContext);
         from("direct:importConfigRestDeposit")
-                .process(profileImportConfigUpdateProcessor)
+                .process(profileConfigUpdateProcessor)
+                .transform().constant("Success.")
+                .onException(Exception.class)
+                .transform().constant("Failure!");
+
+        rest().put("/exportConfigAdmin").consumes("application/json").type(ExportConfiguration.class)
+                .to("direct:exportConfigRestDeposit");
+
+        from("direct:exportConfigRestDeposit")
+                .process(profileConfigUpdateProcessor)
                 .transform().constant("Success.")
                 .onException(Exception.class)
                 .transform().constant("Failure!");
@@ -55,8 +66,8 @@ public class ProfileImportConfigUpdateRouteBuilder extends RouteBuilder {
 
     }
 
-    public void setProfileImportCamelContext(ProfileImportCamelContext profileImportCamelContext) {
-        this.profileImportCamelContext = profileImportCamelContext;
+    public void setRouterCamelContext(RouterCamelContext routerCamelContext) {
+        this.routerCamelContext = routerCamelContext;
     }
 
 }

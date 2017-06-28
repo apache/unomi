@@ -16,7 +16,7 @@
  */
 package org.apache.unomi.router.services;
 
-import org.apache.unomi.router.api.ImportConfiguration;
+import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,35 +27,35 @@ import java.util.UUID;
 /**
  * Created by amidani on 28/04/2017.
  */
-public class ImportConfigurationServiceImpl extends AbstractConfigurationServiceImpl implements ImportExportConfigurationService<ImportConfiguration> {
+public class ExportConfigurationServiceImpl extends AbstractConfigurationServiceImpl implements ImportExportConfigurationService<ExportConfiguration> {
 
-    private static final Logger logger = LoggerFactory.getLogger(ImportConfigurationServiceImpl.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ExportConfigurationServiceImpl.class.getName());
 
-    public ImportConfigurationServiceImpl() {
-        logger.info("Initializing import configuration service...");
+    public ExportConfigurationServiceImpl() {
+        logger.info("Initializing export configuration service...");
     }
 
     @Override
-    public List<ImportConfiguration> getAll() {
-        return persistenceService.getAllItems(ImportConfiguration.class);
+    public List<ExportConfiguration> getAll() {
+        return persistenceService.getAllItems(ExportConfiguration.class);
     }
 
     @Override
-    public ImportConfiguration load(String configId) {
-        return persistenceService.load(configId, ImportConfiguration.class);
+    public ExportConfiguration load(String configId) {
+        return persistenceService.load(configId, ExportConfiguration.class);
     }
 
     @Override
-    public ImportConfiguration save(ImportConfiguration importConfiguration) {
-        if (importConfiguration.getItemId() == null) {
-            importConfiguration.setItemId(UUID.randomUUID().toString());
+    public ExportConfiguration save(ExportConfiguration exportConfiguration) {
+        if (exportConfiguration.getItemId() == null) {
+            exportConfiguration.setItemId(UUID.randomUUID().toString());
         }
-        persistenceService.save(importConfiguration);
-        return persistenceService.load(importConfiguration.getItemId(), ImportConfiguration.class);
+        persistenceService.save(exportConfiguration);
+        return persistenceService.load(exportConfiguration.getItemId(), ExportConfiguration.class);
     }
 
     @Override
     public void delete(String configId) {
-        persistenceService.remove(configId, ImportConfiguration.class);
+        persistenceService.remove(configId, ExportConfiguration.class);
     }
 }

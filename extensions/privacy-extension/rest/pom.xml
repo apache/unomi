@@ -20,7 +20,7 @@
     <parent>
         <artifactId>cxs-privacy-extension</artifactId>
         <groupId>org.apache.unomi</groupId>
-        <version>1.2.0-incubating-SNAPSHOT</version>
+        <version>1.2.0-incubating-unomi_102-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -33,14 +33,14 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
-            <version>1.2.0-incubating-SNAPSHOT</version>
+            <version>1.2.0-incubating-unomi_102-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>cxs-privacy-extension-services</artifactId>
-            <version>1.2.0-incubating-SNAPSHOT</version>
+            <version>1.2.0-incubating-unomi_102-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
 
@@ -76,7 +76,7 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-spi</artifactId>
-            <version>1.2.0-incubating-SNAPSHOT</version>
+            <version>1.2.0-incubating-unomi_102-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

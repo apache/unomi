@@ -16,43 +16,44 @@
  */
 package org.apache.unomi.router.api.services;
 
+import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.ImportConfiguration;
 
 import java.util.List;
 
 /**
- * A service to access and operate on {@link ImportConfiguration}s.
+ * A service to access and operate on {@link ImportConfiguration}s / {@link ExportConfiguration}s.
  */
-public interface ImportConfigurationService {
+public interface ImportExportConfigurationService<T> {
 
     /**
-     * Retrieves all the import configurations.
+     * Retrieves all the import/export configurations.
      *
-     * @return the list of import configurations
+     * @return the list of import/export configurations
      */
-    public List<ImportConfiguration> getImportConfigurations();
+    public List<T> getAll();
 
     /**
-     * Retrieves the import configuration identified by the specified identifier.
+     * Retrieves the import/export configuration identified by the specified identifier.
      *
      * @param configId the identifier of the profile to retrieve
-     * @return the import configuration identified by the specified identifier or
-     *  {@code null} if no such import configuration exists
+     * @return the import/export configuration identified by the specified identifier or
+     * {@code null} if no such import/export configuration exists
      */
-    public ImportConfiguration load(String configId);
+    public T load(String configId);
 
     /**
-     * Saves the specified import configuration in the context server.
+     * Saves the specified import/export configuration in the context server.
      *
-     * @param importConfiguration the import configuration to be saved
-     * @return the newly saved import configuration
+     * @param configuration the import/export configuration to be saved
+     * @return the newly saved import/export configuration
      */
-    public ImportConfiguration save(ImportConfiguration importConfiguration);
+    public T save(T configuration);
 
     /**
-     * Deletes the import configuration identified by the specified identifier.
+     * Deletes the import/export configuration identified by the specified identifier.
      *
-     * @param configId the identifier of the import configuration to delete
+     * @param configId the identifier of the import/export configuration to delete
      */
     public void delete(String configId);
 

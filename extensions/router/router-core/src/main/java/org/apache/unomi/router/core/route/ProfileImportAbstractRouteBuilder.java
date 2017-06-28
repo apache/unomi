@@ -22,7 +22,7 @@ import org.apache.camel.component.kafka.KafkaComponent;
 import org.apache.camel.component.kafka.KafkaConfiguration;
 import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.router.core.RouterConstants;
+import org.apache.unomi.router.api.RouterConstants;
 
 import java.util.Map;
 
