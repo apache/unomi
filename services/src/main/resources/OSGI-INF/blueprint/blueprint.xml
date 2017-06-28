@@ -235,4 +235,15 @@
         </bean>
     </service>
 
+    <bean id="configSharingServiceCB" class="org.apache.unomi.services.services.ConfigSharingServiceImpl" destroy-method="preDestroy">
+        <property name="internalServerPort" value="${cluster.contextserver.port}"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+    </bean>
+
+    <service id="configSharingServiceCBE" ref="configSharingServiceCB" auto-export="interfaces">
+        <service-properties>
+            <entry key="bundleDiscriminator" value="SERVICES"/>
+        </service-properties>
+    </service>
+
 </blueprint>
