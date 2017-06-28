@@ -35,7 +35,7 @@
         event tracking server.
     </description>
     <url>http://unomi.incubator.apache.org</url>
-    <version>1.2.0-incubating-unomi_102-SNAPSHOT</version>
+    <version>1.2.0-incubating-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <licenses>
