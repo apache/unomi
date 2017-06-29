@@ -27,15 +27,16 @@
         <cm:default-properties>
             <cm:property name="config.type" value="nobroker"/>
             <cm:property name="config.allowedEndpoints" value="file,ftp"/>
-            <cm:property name="config.internalPort" value="8233"/>
             <cm:property name="kafka.host" value="localhost"/>
             <cm:property name="kafka.port" value="9092"/>
-            <cm:property name="kafka.import.topic" value="camel-deposit"/>
+            <cm:property name="kafka.import.topic" value="import-deposit"/>
+            <cm:property name="kafka.export.topic" value="export-deposit"/>
             <cm:property name="kafka.import.groupId" value="unomi-import-group"/>
-            <cm:property name="kafka.import.consumerCount" value="10"/>
-            <cm:property name="kafka.import.autoCommit" value="true"/>
+            <cm:property name="kafka.export.groupId" value="unomi-export-group"/>
+            <cm:property name="kafka.consumerCount" value="10"/>
+            <cm:property name="kafka.autoCommit" value="true"/>
             <cm:property name="import.oneshot.uploadDir" value="/tmp/oneshot_import_configs/"/>
-            <cm:property name="import.executionsHistory.size" value="5"/>
+            <cm:property name="executionsHistory.size" value="5"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -43,9 +44,14 @@
         <property name="profileImportService" ref="profileImportService"/>
     </bean>
 
-    <bean id="routeCompletionProcessor" class="org.apache.unomi.router.core.processor.RouteCompletionProcessor">
+    <bean id="importRouteCompletionProcessor" class="org.apache.unomi.router.core.processor.ImportRouteCompletionProcessor">
         <property name="importConfigurationService" ref="importConfigurationService"/>
-        <property name="executionsHistorySize" value="${import.executionsHistory.size}"/>
+        <property name="executionsHistorySize" value="${executionsHistory.size}"/>
+    </bean>
+
+    <bean id="exportRouteCompletionProcessor" class="org.apache.unomi.router.core.processor.ExportRouteCompletionProcessor">
+        <property name="exportConfigurationService" ref="exportConfigurationService"/>
+        <property name="executionsHistorySize" value="${executionsHistory.size}"/>
     </bean>
 
     <bean id="importConfigByFileNameProcessor" class="org.apache.unomi.router.core.processor.ImportConfigByFileNameProcessor">
@@ -86,26 +92,29 @@
           init-method="initCamelContext" destroy-method="preDestroy">
         <property name="configType" value="${config.type}"/>
         <property name="allowedEndpoints" value="${config.allowedEndpoints}"/>
+        <property name="uploadDir" value="${import.oneshot.uploadDir}"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="jacksonDataFormat" ref="jacksonDataFormat"/>
         <property name="kafkaProps">
             <map>
                 <entry key="kafkaHost" value="${kafka.host}"/>
                 <entry key="kafkaPort" value="${kafka.port}"/>
                 <entry key="kafkaImportTopic" value="${kafka.import.topic}"/>
+                <entry key="kafkaExportTopic" value="${kafka.export.topic}"/>
                 <entry key="kafkaImportGroupId" value="${kafka.import.groupId}"/>
-                <entry key="kafkaImportConsumerCount" value="${kafka.import.consumerCount}"/>
-                <entry key="kafkaImportAutoCommit" value="${kafka.import.autoCommit}"/>
+                <entry key="kafkaExportGroupId" value="${kafka.export.groupId}"/>
+                <entry key="kafkaConsumerCount" value="${kafka.consumerCount}"/>
+                <entry key="kafkaAutoCommit" value="${kafka.autoCommit}"/>
             </map>
         </property>
-        <property name="uploadDir" value="${import.oneshot.uploadDir}"/>
         <property name="unomiStorageProcessor" ref="unomiStorageProcessor"/>
-        <property name="routeCompletionProcessor" ref="routeCompletionProcessor"/>
+        <property name="importRouteCompletionProcessor" ref="importRouteCompletionProcessor"/>
+        <property name="exportRouteCompletionProcessor" ref="exportRouteCompletionProcessor"/>
         <property name="importConfigByFileNameProcessor" ref="importConfigByFileNameProcessor"/>
-        <property name="importConfigurationService" ref="importConfigurationService"/>
-        <property name="exportConfigurationService" ref="exportConfigurationService"/>
-        <property name="persistenceService" ref="persistenceService"/>
-        <property name="jacksonDataFormat" ref="jacksonDataFormat"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="configSharingService" ref="configSharingService" />
+        <property name="exportConfigurationService" ref="exportConfigurationService"/>
+        <property name="importConfigurationService" ref="importConfigurationService"/>
+        <property name="persistenceService" ref="persistenceService"/>
     </bean>
 
     <camel:camelContext id="httpEndpoint" xmlns="http://camel.apache.org/schema/blueprint">
@@ -114,6 +123,10 @@
 
     <bean id="configUpdateRouteBuilder" class="org.apache.unomi.router.core.route.ConfigUpdateRouteBuilder">
         <property name="routerCamelContext" ref="camelContext"/>
+    </bean>
+
+    <bean id="collectProfileBean" class="org.apache.unomi.router.core.bean.CollectProfileBean">
+        <property name="persistenceService" ref="persistenceService"/>
     </bean>
 
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />

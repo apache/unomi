@@ -14,30 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.router.core.processor;
+package org.apache.unomi.router.core.strategy;
 
 import org.apache.camel.Exchange;
-import org.apache.camel.Message;
-import org.apache.camel.Processor;
-import org.apache.unomi.router.core.context.RouterCamelContext;
+import org.apache.camel.processor.aggregate.AggregationStrategy;
+import org.apache.unomi.router.api.ExportConfiguration;
 
 /**
- * Created by amidani on 10/05/2017.
+ * Created by amidani on 29/06/2017.
  */
-public class ConfigUpdateProcessor implements Processor {
+public class StringLinesAggregationStrategy implements AggregationStrategy {
 
-    private RouterCamelContext routerCamelContext;
+    public Exchange aggregate(Exchange oldExchange, Exchange newExchange) {
+        Object newBody = newExchange.getIn().getBody(String.class);
+        String lineSeparator = newExchange.getIn().getHeader("exportConfig", ExportConfiguration.class).getLineSeparator();
+        if (oldExchange != null) {
+            String fileContent = oldExchange.getIn().getBody(String.class);
 
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        if (exchange.getIn() != null) {
-            Message message = exchange.getIn();
-            Object configuration = message.getBody();
-            routerCamelContext.updateProfileReaderRoute(configuration);
+            fileContent += lineSeparator + newBody;
+            oldExchange.getIn().setBody(fileContent);
+            return oldExchange;
+        } else {
+            return newExchange;
         }
-    }
-
-    public void setRouterCamelContext(RouterCamelContext routerCamelContext) {
-        this.routerCamelContext = routerCamelContext;
     }
 }

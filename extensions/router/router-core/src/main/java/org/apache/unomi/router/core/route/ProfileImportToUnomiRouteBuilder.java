@@ -17,11 +17,10 @@
 package org.apache.unomi.router.core.route;
 
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.camel.model.RouteDefinition;
 import org.apache.unomi.router.api.RouterConstants;
-import org.apache.unomi.router.core.processor.RouteCompletionProcessor;
+import org.apache.unomi.router.core.processor.ImportRouteCompletionProcessor;
 import org.apache.unomi.router.core.processor.UnomiStorageProcessor;
 import org.apache.unomi.router.core.strategy.ArrayListAggregationStrategy;
 import org.slf4j.Logger;
@@ -32,12 +31,12 @@ import java.util.Map;
 /**
  * Created by amidani on 26/04/2017.
  */
-public class ProfileImportToUnomiRouteBuilder extends ProfileImportAbstractRouteBuilder {
+public class ProfileImportToUnomiRouteBuilder extends RouterAbstractRouteBuilder {
 
     private Logger logger = LoggerFactory.getLogger(ProfileImportToUnomiRouteBuilder.class.getName());
 
     private UnomiStorageProcessor unomiStorageProcessor;
-    private RouteCompletionProcessor routeCompletionProcessor;
+    private ImportRouteCompletionProcessor importRouteCompletionProcessor;
 
     public ProfileImportToUnomiRouteBuilder(Map<String, String> kafkaProps, String configType) {
         super(kafkaProps, configType);
@@ -50,9 +49,9 @@ public class ProfileImportToUnomiRouteBuilder extends ProfileImportAbstractRoute
 
         RouteDefinition rtDef;
         if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
-            rtDef = from((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_TO));
+            rtDef = from((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_TO, RouterConstants.DIRECT_IMPORT_DEPOSIT_BUFFER));
         } else {
-            rtDef = from((String) getEndpointURI(RouterConstants.DIRECTION_TO));
+            rtDef = from((String) getEndpointURI(RouterConstants.DIRECTION_TO, RouterConstants.DIRECT_IMPORT_DEPOSIT_BUFFER));
         }
         rtDef.choice()
                 .when(header(RouterConstants.HEADER_FAILED_MESSAGE).isNull())
@@ -64,7 +63,7 @@ public class ProfileImportToUnomiRouteBuilder extends ProfileImportAbstractRoute
                 .aggregate(constant(true), new ArrayListAggregationStrategy())
                 .completionPredicate(exchangeProperty("CamelSplitComplete").isEqualTo("true"))
                 .eagerCheckCompletion()
-                .process(routeCompletionProcessor)
+                .process(importRouteCompletionProcessor)
                 .to("log:org.apache.unomi.router?level=INFO");
     }
 
@@ -72,11 +71,7 @@ public class ProfileImportToUnomiRouteBuilder extends ProfileImportAbstractRoute
         this.unomiStorageProcessor = unomiStorageProcessor;
     }
 
-    public void setRouteCompletionProcessor(RouteCompletionProcessor routeCompletionProcessor) {
-        this.routeCompletionProcessor = routeCompletionProcessor;
-    }
-
-    public void setJacksonDataFormat(JacksonDataFormat jacksonDataFormat) {
-        this.jacksonDataFormat = jacksonDataFormat;
+    public void setImportRouteCompletionProcessor(ImportRouteCompletionProcessor importRouteCompletionProcessor) {
+        this.importRouteCompletionProcessor = importRouteCompletionProcessor;
     }
 }
