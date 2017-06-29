@@ -16,21 +16,25 @@
  */
 package org.apache.unomi.router.core.route;
 
-import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.LoggingLevel;
+import org.apache.camel.component.kafka.KafkaEndpoint;
+import org.apache.camel.model.ProcessorDefinition;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.Profile;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ExportConfiguration;
+import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
+import org.apache.unomi.router.core.bean.CollectProfileBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by amidani on 27/06/2017.
  */
-public class ProfileExportCollectRouteBuilder extends RouteBuilder {
+public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder {
 
     private static final Logger logger = LoggerFactory.getLogger(ProfileExportCollectRouteBuilder.class);
 
@@ -38,7 +42,9 @@ public class ProfileExportCollectRouteBuilder extends RouteBuilder {
     private ImportExportConfigurationService<ExportConfiguration> exportConfigurationService;
     private PersistenceService persistenceService;
 
-    private String allowedEndpoints;
+    public ProfileExportCollectRouteBuilder(Map<String, String> kafkaProps, String configType) {
+        super(kafkaProps, configType);
+    }
 
     @Override
     public void configure() throws Exception {
@@ -48,16 +54,37 @@ public class ProfileExportCollectRouteBuilder extends RouteBuilder {
             exportConfigurationList = exportConfigurationService.getAll();
         }
 
+        CollectProfileBean collectProfileBean = new CollectProfileBean();
+        collectProfileBean.setPersistenceService(persistenceService);
+
+
         //Loop on multiple export configuration
         for (final ExportConfiguration exportConfiguration : exportConfigurationList) {
-            String endpoint = (String) exportConfiguration.getProperties().get("destination");
-
-            if (StringUtils.isNotBlank(endpoint) && allowedEndpoints.contains(endpoint.substring(0, endpoint.indexOf(':')))) {
-                List<Profile> profilesCollected = persistenceService.query("segments", (String) exportConfiguration.getProperties().get("segments"),
-                         null, Profile.class);
-                logger.info("Collected +++{}+++ profiles.", profilesCollected.size());
+            if (exportConfiguration.getProperties() != null && exportConfiguration.getProperties().size() > 0) {
+                if ((Map<String, String>) exportConfiguration.getProperties().get("mapping") != null) {
+                    String destinationEndpoint = (String) exportConfiguration.getProperties().get("destination");
+                    if (StringUtils.isNotBlank(destinationEndpoint) && allowedEndpoints.contains(destinationEndpoint.substring(0, destinationEndpoint.indexOf(':')))) {
+                        ProcessorDefinition prDef = from("timer://collectProfile?fixedRate=true&period=" + (String) exportConfiguration.getProperties().get("period"))
+                                .autoStartup(exportConfiguration.isActive())
+                                .bean(collectProfileBean, "extractProfileBySegment(" + exportConfiguration.getProperties().get("segment") + ")")
+                                .split(body())
+                                .marshal(jacksonDataFormat)
+                                .convertBodyTo(String.class)
+                                .setHeader(RouterConstants.HEADER_EXPORT_CONFIG, constant(exportConfiguration))
+                                .log(LoggingLevel.DEBUG, "BODY : ${body}");
+                        if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
+                            prDef.to((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_EXPORT_DEPOSIT_BUFFER));
+                        } else {
+                            prDef.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_EXPORT_DEPOSIT_BUFFER));
+                        }
+                    } else {
+                        logger.error("Endpoint scheme {} is not allowed, route {} will be skipped.", destinationEndpoint.substring(0, destinationEndpoint.indexOf(':')), exportConfiguration.getItemId());
+                    }
+                } else {
+                    logger.warn("Mapping is null in export configuration, route {} will be skipped!", exportConfiguration.getItemId());
+                }
             } else {
-                logger.error("Endpoint scheme {} is not allowed, route {} will be skipped.", endpoint.substring(0, endpoint.indexOf(':')), exportConfiguration.getItemId());
+                logger.warn("Export configuration incomplete, route {} will be skipped!", exportConfiguration.getItemId());
             }
         }
     }
@@ -72,10 +99,6 @@ public class ProfileExportCollectRouteBuilder extends RouteBuilder {
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
-    }
-
-    public void setAllowedEndpoints(String allowedEndpoints) {
-        this.allowedEndpoints = allowedEndpoints;
     }
 
 }

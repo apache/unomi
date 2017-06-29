@@ -18,7 +18,6 @@ package org.apache.unomi.router.core.route;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.rest.RestBindingMode;
-import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.core.context.RouterCamelContext;

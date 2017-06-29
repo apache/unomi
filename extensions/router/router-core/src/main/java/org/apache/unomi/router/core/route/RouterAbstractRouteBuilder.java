@@ -29,49 +29,60 @@ import java.util.Map;
 /**
  * Created by amidani on 13/06/2017.
  */
-public abstract class ProfileImportAbstractRouteBuilder extends RouteBuilder {
+public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
 
     protected JacksonDataFormat jacksonDataFormat;
 
     protected String kafkaHost;
     protected String kafkaPort;
     protected String kafkaImportTopic;
+    protected String kafkaExportTopic;
     protected String kafkaImportGroupId;
-    protected String kafkaImportConsumerCount;
-    protected String kafkaImportAutoCommit;
+    protected String kafkaExportGroupId;
+    protected String kafkaConsumerCount;
+    protected String kafkaAutoCommit;
 
     protected String configType;
+    protected String allowedEndpoints;
 
-    public ProfileImportAbstractRouteBuilder(Map<String, String> kafkaProps, String configType) {
+    public RouterAbstractRouteBuilder(Map<String, String> kafkaProps, String configType) {
         this.kafkaHost = kafkaProps.get("kafkaHost");
         this.kafkaPort = kafkaProps.get("kafkaPort");
         this.kafkaImportTopic = kafkaProps.get("kafkaImportTopic");
+        this.kafkaExportTopic = kafkaProps.get("kafkaExportTopic");
         this.kafkaImportGroupId = kafkaProps.get("kafkaImportGroupId");
-        this.kafkaImportConsumerCount = kafkaProps.get("kafkaImportConsumerCount");
-        this.kafkaImportAutoCommit = kafkaProps.get("kafkaImportAutoCommit");
+        this.kafkaExportGroupId = kafkaProps.get("kafkaExportGroupId");
+        this.kafkaConsumerCount = kafkaProps.get("kafkaConsumerCount");
+        this.kafkaAutoCommit = kafkaProps.get("kafkaAutoCommit");
         this.configType = configType;
     }
 
-    public Object getEndpointURI(String direction) {
+    public Object getEndpointURI(String direction, String operationDepositBuffer) {
         Object endpoint;
         if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
+            String kafkaTopic = kafkaImportTopic;
+            String kafkaGroupId = kafkaImportGroupId;
+            if (RouterConstants.DIRECT_EXPORT_DEPOSIT_BUFFER.equals(operationDepositBuffer)) {
+                kafkaTopic = kafkaExportTopic;
+                kafkaGroupId = kafkaExportGroupId;
+            }
             //Prepare Kafka Deposit
             StringBuilder kafkaUri = new StringBuilder("kafka:");
-            kafkaUri.append(kafkaHost).append(":").append(kafkaPort).append("?topic=").append(kafkaImportTopic);
-            if (StringUtils.isNotBlank(kafkaImportGroupId)) {
-                kafkaUri.append("&groupId=" + kafkaImportGroupId);
+            kafkaUri.append(kafkaHost).append(":").append(kafkaPort).append("?topic=").append(kafkaTopic);
+            if (StringUtils.isNotBlank(kafkaGroupId)) {
+                kafkaUri.append("&groupId=" + kafkaGroupId);
             }
             if (RouterConstants.DIRECTION_TO.equals(direction)) {
-                kafkaUri.append("&autoCommitEnable=" + kafkaImportAutoCommit + "&consumersCount=" + kafkaImportConsumerCount);
+                kafkaUri.append("&autoCommitEnable=" + kafkaAutoCommit + "&consumersCount=" + kafkaConsumerCount);
             }
             KafkaConfiguration kafkaConfiguration = new KafkaConfiguration();
             kafkaConfiguration.setBrokers(kafkaHost + ":" + kafkaPort);
-            kafkaConfiguration.setTopic(kafkaImportTopic);
-            kafkaConfiguration.setGroupId(kafkaImportGroupId);
+            kafkaConfiguration.setTopic(kafkaTopic);
+            kafkaConfiguration.setGroupId(kafkaGroupId);
             endpoint = new KafkaEndpoint(kafkaUri.toString(), new KafkaComponent(this.getContext()));
             ((KafkaEndpoint) endpoint).setConfiguration(kafkaConfiguration);
         } else {
-            endpoint = RouterConstants.DIRECT_DEPOSIT_BUFFER;
+            endpoint = operationDepositBuffer;
         }
 
         return endpoint;
@@ -79,5 +90,9 @@ public abstract class ProfileImportAbstractRouteBuilder extends RouteBuilder {
 
     public void setJacksonDataFormat(JacksonDataFormat jacksonDataFormat) {
         this.jacksonDataFormat = jacksonDataFormat;
+    }
+
+    public void setAllowedEndpoints(String allowedEndpoints) {
+        this.allowedEndpoints = allowedEndpoints;
     }
 }

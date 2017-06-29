@@ -14,30 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.router.core.processor;
+package org.apache.unomi.router.core.bean;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
-import org.apache.camel.Processor;
-import org.apache.unomi.router.core.context.RouterCamelContext;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.persistence.spi.PersistenceService;
+
+import java.util.List;
 
 /**
- * Created by amidani on 10/05/2017.
+ * Created by amidani on 28/06/2017.
  */
-public class ConfigUpdateProcessor implements Processor {
+public class CollectProfileBean {
 
-    private RouterCamelContext routerCamelContext;
+    private PersistenceService persistenceService;
 
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        if (exchange.getIn() != null) {
-            Message message = exchange.getIn();
-            Object configuration = message.getBody();
-            routerCamelContext.updateProfileReaderRoute(configuration);
-        }
+    public List<Profile> extractProfileBySegment(String segment) {
+        return persistenceService.query("segments", segment,null, Profile.class);
     }
 
-    public void setRouterCamelContext(RouterCamelContext routerCamelContext) {
-        this.routerCamelContext = routerCamelContext;
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
     }
 }

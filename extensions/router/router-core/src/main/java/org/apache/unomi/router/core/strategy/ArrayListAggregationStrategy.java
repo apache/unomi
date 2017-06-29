@@ -18,8 +18,6 @@ package org.apache.unomi.router.core.strategy;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.processor.aggregate.AggregationStrategy;
-import org.apache.camel.processor.aggregate.CompletionAwareAggregationStrategy;
-import org.apache.unomi.router.core.processor.RouteCompletionProcessor;
 
 import java.util.ArrayList;
 

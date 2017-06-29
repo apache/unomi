@@ -32,13 +32,20 @@ public interface RouterConstants {
     String IMPORT_EXPORT_CONFIG_TYPE_RECURRENT = "recurrent";
     String IMPORT_EXPORT_CONFIG_TYPE_ONESHOT = "oneshot";
 
-    String DIRECT_DEPOSIT_BUFFER = "direct:depositBuffer";
+    String DIRECT_IMPORT_DEPOSIT_BUFFER = "direct:depositImportBuffer";
+    String DIRECT_EXPORT_DEPOSIT_BUFFER = "direct:depositExportBuffer";
 
     String DIRECTION_FROM = "from";
     String DIRECTION_TO = "to";
 
     String HEADER_CONFIG_TYPE = "configType";
 
+    String HEADER_EXPORT_CONFIG = "exportConfig";
     String HEADER_FAILED_MESSAGE = "failedMessage";
     String HEADER_IMPORT_CONFIG_ONESHOT = "importConfigOneShot";
+
+    String IMPORT_ONESHOT_ROUTE_ID = "ONE_SHOT_ROUTE";
+    String DEFAULT_FILE_COLUMN_SEPARATOR = ",";
+
+    String DEFAULT_FILE_LINE_SEPARATOR = "\n";
 }

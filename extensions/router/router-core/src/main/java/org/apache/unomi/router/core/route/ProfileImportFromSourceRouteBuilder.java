@@ -23,8 +23,8 @@ import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.camel.model.ProcessorDefinition;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.router.api.ImportConfiguration;
-import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.api.RouterConstants;
+import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.core.exception.BadProfileDataFormatException;
 import org.apache.unomi.router.core.processor.LineSplitFailureHandler;
 import org.apache.unomi.router.core.processor.LineSplitProcessor;
@@ -39,14 +39,12 @@ import java.util.Map;
  * Created by amidani on 26/04/2017.
  */
 
-public class ProfileImportFromSourceRouteBuilder extends ProfileImportAbstractRouteBuilder {
+public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuilder {
 
     private static final Logger logger = LoggerFactory.getLogger(ProfileImportFromSourceRouteBuilder.class.getName());
 
     private List<ImportConfiguration> importConfigurationList;
     private ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
-
-    private String allowedEndpoints;
 
     public ProfileImportFromSourceRouteBuilder(Map<String, String> kafkaProps, String configType) {
         super(kafkaProps, configType);
@@ -67,9 +65,9 @@ public class ProfileImportFromSourceRouteBuilder extends ProfileImportAbstractRo
                 .process(new LineSplitFailureHandler());
 
         if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
-            prDefErr.to((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_FROM));
+            prDefErr.to((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_IMPORT_DEPOSIT_BUFFER));
         } else {
-            prDefErr.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM));
+            prDefErr.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_IMPORT_DEPOSIT_BUFFER));
         }
 
         //Loop on multiple import configuration
@@ -113,9 +111,9 @@ public class ProfileImportFromSourceRouteBuilder extends ProfileImportAbstractRo
                             .convertBodyTo(String.class);
 
                     if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
-                        prDef.to((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_FROM));
+                        prDef.to((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_IMPORT_DEPOSIT_BUFFER));
                     } else {
-                        prDef.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM));
+                        prDef.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_IMPORT_DEPOSIT_BUFFER));
                     }
                 } else {
                     logger.error("Endpoint scheme {} is not allowed, route {} will be skipped.", endpoint.substring(0, endpoint.indexOf(':')), importConfiguration.getItemId());
@@ -130,10 +128,6 @@ public class ProfileImportFromSourceRouteBuilder extends ProfileImportAbstractRo
 
     public void setImportConfigurationService(ImportExportConfigurationService<ImportConfiguration> importConfigurationService) {
         this.importConfigurationService = importConfigurationService;
-    }
-
-    public void setAllowedEndpoints(String allowedEndpoints) {
-        this.allowedEndpoints = allowedEndpoints;
     }
 
 }

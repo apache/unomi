@@ -17,7 +17,6 @@
 package org.apache.unomi.router.core.route;
 
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.camel.model.ProcessorDefinition;
 import org.apache.unomi.router.api.RouterConstants;
@@ -33,14 +32,11 @@ import java.util.Map;
 /**
  * Created by amidani on 22/05/2017.
  */
-public class ProfileImportOneShotRouteBuilder extends ProfileImportAbstractRouteBuilder {
+public class ProfileImportOneShotRouteBuilder extends RouterAbstractRouteBuilder {
 
     private Logger logger = LoggerFactory.getLogger(ProfileImportOneShotRouteBuilder.class.getName());
-
     private ImportConfigByFileNameProcessor importConfigByFileNameProcessor;
     private String uploadDir;
-
-    private final String IMPORT_ONESHOT_ROUTE_ID = "ONE_SHOT_ROUTE";
 
     public ProfileImportOneShotRouteBuilder(Map<String, String> kafkaProps, String configType) {
         super(kafkaProps, configType);
@@ -57,27 +53,27 @@ public class ProfileImportOneShotRouteBuilder extends ProfileImportAbstractRoute
                 .process(new LineSplitFailureHandler());
 
         if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
-            prDefErr.to((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_FROM));
+            prDefErr.to((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_IMPORT_DEPOSIT_BUFFER));
         } else {
-            prDefErr.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM));
+            prDefErr.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_IMPORT_DEPOSIT_BUFFER));
         }
 
         LineSplitProcessor lineSplitProcessor = new LineSplitProcessor();
 
-        ProcessorDefinition prDef = from("file://"+uploadDir+"?include=.*.csv&consumer.delay=1m")
-                .routeId(IMPORT_ONESHOT_ROUTE_ID)
+        ProcessorDefinition prDef = from("file://" + uploadDir + "?include=.*.csv&consumer.delay=1m")
+                .routeId(RouterConstants.IMPORT_ONESHOT_ROUTE_ID)
                 .autoStartup(true)
                 .process(importConfigByFileNameProcessor)
                 .split(bodyAs(String.class).tokenize("${in.header.importConfigOneShot.getLineSeparator}"))
-                .setHeader("configType", constant(configType))
+                .setHeader(RouterConstants.HEADER_CONFIG_TYPE, constant(configType))
                 .process(lineSplitProcessor)
                 .to("log:org.apache.unomi.router?level=INFO")
                 .marshal(jacksonDataFormat)
                 .convertBodyTo(String.class);
-        if(RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)){
-            prDef.to((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_FROM));
+        if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
+            prDef.to((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_IMPORT_DEPOSIT_BUFFER));
         } else {
-            prDef.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM));
+            prDef.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_IMPORT_DEPOSIT_BUFFER));
         }
     }
 
@@ -87,9 +83,5 @@ public class ProfileImportOneShotRouteBuilder extends ProfileImportAbstractRoute
 
     public void setUploadDir(String uploadDir) {
         this.uploadDir = uploadDir;
-    }
-
-    public void setJacksonDataFormat(JacksonDataFormat jacksonDataFormat) {
-        this.jacksonDataFormat = jacksonDataFormat;
     }
 }
