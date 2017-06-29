@@ -31,15 +31,5 @@ public class ExportConfiguration extends ImportExportConfiguration {
      */
     public static final String ITEM_TYPE = "exportConfig";
 
-    private String[] segments;
-
-    public String[] getSegments() {
-        return segments;
-    }
-
-    public void setSegments(String[] segments) {
-        this.segments = segments;
-    }
-
 }
 
