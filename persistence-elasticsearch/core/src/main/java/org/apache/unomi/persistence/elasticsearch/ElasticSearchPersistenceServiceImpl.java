@@ -674,8 +674,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean save(final Item item, final boolean useBatching) {
-
-        return new InClassLoaderExecute<Boolean>() {
+        Boolean result =  new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String source = CustomObjectMapper.getObjectMapper().writeValueAsString(item);
@@ -720,7 +719,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }.catchingExecuteInClassLoader(true);
-
+        if (result == null) {
+            return false;
+        } else {
+            return result;
+        }
     }
 
     @Override
@@ -730,7 +733,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean update(final String itemId, final Date dateHint, final Class clazz, final Map source) {
-        return new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
@@ -756,11 +759,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }.catchingExecuteInClassLoader(true);
+        if (result == null) {
+            return false;
+        } else {
+            return result;
+        }
     }
 
     @Override
     public boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts, final Map<String, Object>[] scriptParams, final Condition[] conditions) {
-        return new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
@@ -810,11 +818,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }.catchingExecuteInClassLoader(true);
+        if (result == null) {
+            return false;
+        } else {
+            return result;
+        }
     }
 
     @Override
     public boolean updateWithScript(final String itemId, final Date dateHint, final Class<?> clazz, final String script, final Map<String, Object> scriptParams) {
-        return new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
@@ -843,11 +856,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }.catchingExecuteInClassLoader(true);
+        if (result == null) {
+            return false;
+        } else {
+            return result;
+        }
     }
 
     @Override
     public <T extends Item> boolean remove(final String itemId, final Class<T> clazz) {
-        return new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) throws Exception {
                 //Index the query = register it in the percolator
                 try {
@@ -861,10 +879,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }.catchingExecuteInClassLoader(true);
+        if (result == null) {
+            return false;
+        } else {
+            return result;
+        }
     }
 
     public <T extends Item> boolean removeByQuery(final Condition query, final Class<T> clazz) {
-        return new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
@@ -910,10 +933,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }.catchingExecuteInClassLoader(true);
+        if (result == null) {
+            return false;
+        } else {
+            return result;
+        }
     }
 
     public boolean createIndex(final String indexName) {
-        return new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {
                 IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(indexName).execute().actionGet();
                 boolean indexExists = indicesExistsResponse.isExists();
@@ -930,10 +958,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return !indexExists;
             }
         }.catchingExecuteInClassLoader(true);
+        if (result == null) {
+            return false;
+        } else {
+            return result;
+        }
     }
 
     public boolean removeIndex(final String indexName) {
-        return new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) {
                 IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(indexName).execute().actionGet();
                 boolean indexExists = indicesExistsResponse.isExists();
@@ -944,6 +977,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return indexExists;
             }
         }.catchingExecuteInClassLoader(true);
+        if (result == null) {
+            return false;
+        } else {
+            return result;
+        }
     }
 
     private void internalCreateIndex(String indexName, Map<String, String> mappings) {
@@ -1075,7 +1113,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public boolean saveQuery(final String queryName, final String query) {
-        return new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) throws Exception {
                 //Index the query = register it in the percolator
                 try {
@@ -1090,6 +1128,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }.catchingExecuteInClassLoader(true);
+        if (result == null) {
+            return false;
+        } else {
+            return result;
+        }
     }
 
     @Override
@@ -1103,7 +1146,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean removeQuery(final String queryName) {
-        return new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) throws Exception {
                 //Index the query = register it in the percolator
                 try {
@@ -1116,6 +1159,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }.catchingExecuteInClassLoader(true);
+        if (result == null) {
+            return false;
+        } else {
+            return result;
+        }
     }
 
     @Override
