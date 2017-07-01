@@ -18,10 +18,7 @@ package org.apache.unomi.router.core.processor;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
-import org.apache.unomi.router.api.ImportConfiguration;
-import org.apache.unomi.router.api.ImportLineError;
-import org.apache.unomi.router.api.ProfileToImport;
-import org.apache.unomi.router.api.RouterConstants;
+import org.apache.unomi.router.api.*;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,17 +67,7 @@ public class ImportRouteCompletionProcessor implements Processor {
         execution.put("failureCount", failureCount);
         execution.put("errors", errors);
 
-        if (importConfiguration.getExecutions().size() >= executionsHistorySize) {
-            int oldestExecIndex = 0;
-            long oldestExecDate = (Long) importConfiguration.getExecutions().get(0).get("date");
-            for (int i = 1; i < importConfiguration.getExecutions().size(); i++) {
-                if ((Long) importConfiguration.getExecutions().get(i).get("date") < oldestExecDate) {
-                    oldestExecDate = (Long) importConfiguration.getExecutions().get(i).get("date");
-                    oldestExecIndex = i;
-                }
-            }
-            importConfiguration.getExecutions().remove(oldestExecIndex);
-        }
+        importConfiguration = (ImportConfiguration) RouterUtils.addExecutionEntry(importConfiguration, execution,executionsHistorySize);
 
         importConfiguration.getExecutions().add(execution);
         //Set running to false, route is complete

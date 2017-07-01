@@ -26,13 +26,18 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
+import org.apache.unomi.router.api.services.ProfileExportService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * A JAX-RS endpoint to manage {@link ExportConfiguration}s.
@@ -46,6 +51,8 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
 
     private static final Logger logger = LoggerFactory.getLogger(ExportConfigurationServiceEndPoint.class.getName());
 
+    private ProfileExportService profileExportService;
+
     public ExportConfigurationServiceEndPoint() {
         logger.info("Initializing export configuration service endpoint...");
     }
@@ -53,6 +60,11 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
     @WebMethod(exclude = true)
     public void setExportConfigurationService(ImportExportConfigurationService<ExportConfiguration> exportConfigurationService) {
         configurationService = exportConfigurationService;
+    }
+
+    @WebMethod(exclude = true)
+    public void setProfileExportService(ProfileExportService profileExportService) {
+        this.profileExportService = profileExportService;
     }
 
     /**
@@ -82,5 +94,24 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
         }
 
         return exportConfigSaved;
+    }
+
+    /**
+     * Save/Update the given import configuration.
+     * Prepare the file to be processed with Camel routes
+     *
+     * @return OK / NOK Http Code.
+     */
+    @POST
+    @Path("/oneshot")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces("text/csv")
+    public Response processOneshotImportConfigurationCSV(ExportConfiguration exportConfiguration) {
+        ExportConfiguration exportConfigSaved = configurationService.save(exportConfiguration);
+        String csvContent = profileExportService.extractProfilesBySegment(exportConfigSaved);
+        Response.ResponseBuilder response = Response.ok(csvContent);
+        response.header("Content-Disposition",
+                "attachment; filename=Profiles_export_" + new SimpleDateFormat("yyyy-MM-dd-HH-mm").format(new Date()) + ".csv");
+        return response.build();
     }
 }

@@ -19,6 +19,7 @@ package org.apache.unomi.router.core.route;
 import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.camel.model.RouteDefinition;
 import org.apache.unomi.router.api.RouterConstants;
+import org.apache.unomi.router.api.services.ProfileExportService;
 import org.apache.unomi.router.core.processor.ExportRouteCompletionProcessor;
 import org.apache.unomi.router.core.processor.LineBuildProcessor;
 import org.apache.unomi.router.core.strategy.StringLinesAggregationStrategy;
@@ -36,8 +37,14 @@ public class ProfileExportProducerRouteBuilder extends RouterAbstractRouteBuilde
 
     private ExportRouteCompletionProcessor exportRouteCompletionProcessor;
 
+    private ProfileExportService profileExportService;
+
     public ProfileExportProducerRouteBuilder(Map<String, String> kafkaProps, String configType) {
         super(kafkaProps, configType);
+    }
+
+    public void setProfileExportService(ProfileExportService profileExportService) {
+        this.profileExportService = profileExportService;
     }
 
     @Override
@@ -53,7 +60,7 @@ public class ProfileExportProducerRouteBuilder extends RouterAbstractRouteBuilde
         }
 
         rtDef.unmarshal(jacksonDataFormat)
-                .process(new LineBuildProcessor())
+                .process(new LineBuildProcessor(profileExportService))
                 .aggregate(constant(true), new StringLinesAggregationStrategy())
                 .completionPredicate(exchangeProperty("CamelSplitSize").isEqualTo(exchangeProperty("CamelAggregatedSize")))
                 .eagerCheckCompletion()

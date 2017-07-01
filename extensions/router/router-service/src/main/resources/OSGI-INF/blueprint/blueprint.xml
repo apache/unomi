@@ -21,6 +21,7 @@
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd">
 
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
+    <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService"/>
 
     <bean id="importConfigurationServiceImpl" class="org.apache.unomi.router.services.ImportConfigurationServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
@@ -50,5 +51,13 @@
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
     <service id="profileImportService" ref="profileImportServiceImpl" auto-export="interfaces"/>
+
+    <bean id="profileExportServiceImpl" class="org.apache.unomi.router.services.ProfileExportServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="configSharingService" ref="configSharingService" />
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+    </bean>
+    <service id="profileExportService" ref="profileExportServiceImpl" auto-export="interfaces"/>
 
 </blueprint>

@@ -20,10 +20,9 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.router.api.ExportConfiguration;
+import org.apache.unomi.router.api.services.ProfileExportService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map;
 
 /**
  * Created by amidani on 28/06/2017.
@@ -32,21 +31,18 @@ public class LineBuildProcessor implements Processor {
 
     private static final Logger logger = LoggerFactory.getLogger(LineBuildProcessor.class);
 
+    private ProfileExportService profileExportService;
+
+    public LineBuildProcessor(ProfileExportService profileExportService) {
+        this.profileExportService = profileExportService;
+    }
+
     @Override
     public void process(Exchange exchange) throws Exception {
         ExportConfiguration exportConfiguration = (ExportConfiguration) exchange.getIn().getHeader("exportConfig");
-        exchange.getIn().setHeader("destination", exportConfiguration.getProperty("destination"));
         Profile profile = exchange.getIn().getBody(Profile.class);
 
-        Map<String, String> mapping = (Map<String, String>) exportConfiguration.getProperty("mapping");
-        String lineToWrite = "";
-        for (int i = 0; i < mapping.size(); i++) {
-            String propertyName = mapping.get(String.valueOf(i));
-            lineToWrite += profile.getProperty(propertyName) != null ? profile.getProperty(propertyName) : "";
-            if (i + 1 < mapping.size()) {
-                lineToWrite += exportConfiguration.getColumnSeparator();
-            }
-        }
+        String lineToWrite = profileExportService.convertProfileToCSVLine(profile, exportConfiguration);
 
         exchange.getIn().setBody(lineToWrite, String.class);
     }

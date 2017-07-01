@@ -70,6 +70,12 @@
         </dependency>
         <dependency>
             <groupId>org.apache.camel</groupId>
+            <artifactId>camel-core-osgi</artifactId>
+            <version>${camel.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
             <artifactId>camel-jackson</artifactId>
             <version>${camel.version}</version>
             <scope>provided</scope>
@@ -88,6 +94,11 @@
         </dependency>
         <dependency>
             <groupId>org.apache.camel</groupId>
+            <artifactId>camel-ftp</artifactId>
+            <version>${camel.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
             <artifactId>camel-kafka</artifactId>
             <version>${camel.version}</version>
             <scope>provided</scope>
@@ -100,7 +111,6 @@
             <groupId>commons-net</groupId>
             <artifactId>commons-net</artifactId>
             <version>3.5</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.servicemix.bundles</groupId>
@@ -126,7 +136,7 @@
                     <instructions>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Import-Package>
-                            org.osgi.service.event;resolution:=optional,
+                            org.osgi.service.event*;resolution:=optional,
                             org.apache.camel,
                             org.apache.camel.builder,
                             org.apache.camel.component.file.remote,
@@ -135,6 +145,7 @@
                             org.apache.camel.component.kafka,
                             org.apache.camel.component.servlet,
                             org.apache.camel.component.servlet.osgi,
+                            org.apache.camel.core.osgi,
                             org.apache.camel.impl,
                             org.apache.camel.model,
                             org.apache.camel.model.dataformat,
@@ -151,7 +162,8 @@
                             com.jcraft.jsch,
                             org.osgi.framework,
                             org.osgi.service.http,
-                            org.slf4j
+                            org.slf4j,
+                            *
                         </Import-Package>
                     </instructions>
                 </configuration>

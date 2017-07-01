@@ -73,7 +73,7 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
         //Loop on multiple import configuration
         for (final ImportConfiguration importConfiguration : importConfigurationList) {
             if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(importConfiguration.getConfigType()) &&
-                    importConfiguration.getProperties().size() > 0) {
+                    importConfiguration.getProperties() != null && importConfiguration.getProperties().size() > 0) {
                 //Prepare Split Processor
                 LineSplitProcessor lineSplitProcessor = new LineSplitProcessor();
                 lineSplitProcessor.setFieldsMapping((Map<String, Integer>) importConfiguration.getProperties().get("mapping"));

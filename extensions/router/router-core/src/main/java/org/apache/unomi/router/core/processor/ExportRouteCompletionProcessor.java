@@ -20,6 +20,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
+import org.apache.unomi.router.api.RouterUtils;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,28 +40,16 @@ public class ExportRouteCompletionProcessor implements Processor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        String importConfigId = null;
         ExportConfiguration exportConfig = (ExportConfiguration) exchange.getIn().getHeader(RouterConstants.HEADER_EXPORT_CONFIG);
 
         Map execution = new HashMap();
-        execution.put("date", ((Date) exchange.getProperty("CamelCreatedTimestamp")).getTime());
-        execution.put("extractedProfiles", exchange.getProperty("CamelSplitSize"));
+        execution.put(RouterConstants.KEY_EXECS_DATE, ((Date) exchange.getProperty("CamelCreatedTimestamp")).getTime());
+        execution.put(RouterConstants.KEY_EXECS_EXTRACTED, exchange.getProperty("CamelSplitSize"));
 
         ExportConfiguration exportConfiguration = exportConfigurationService.load(exportConfig.getItemId());
 
-        if (exportConfiguration.getExecutions().size() >= executionsHistorySize) {
-            int oldestExecIndex = 0;
-            long oldestExecDate = (Long) exportConfiguration.getExecutions().get(0).get("date");
-            for (int i = 1; i < exportConfiguration.getExecutions().size(); i++) {
-                if ((Long) exportConfiguration.getExecutions().get(i).get("date") < oldestExecDate) {
-                    oldestExecDate = (Long) exportConfiguration.getExecutions().get(i).get("date");
-                    oldestExecIndex = i;
-                }
-            }
-            exportConfiguration.getExecutions().remove(oldestExecIndex);
-        }
+        exportConfiguration = (ExportConfiguration) RouterUtils.addExecutionEntry(exportConfiguration, execution, executionsHistorySize);
 
-        exportConfiguration.getExecutions().add(execution);
         exportConfigurationService.save(exportConfiguration);
 
         logger.info("Processing route {} completed.", exchange.getFromRouteId());

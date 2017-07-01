@@ -67,6 +67,7 @@
                filter="(configDiscriminator=EXPORT)"/>
 
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService"/>
+    <reference id="profileExportService" interface="org.apache.unomi.router.api.services.ProfileExportService"/>
 
     <bean id="importConfigurationServiceEndPoint" class="org.apache.unomi.router.rest.ImportConfigurationServiceEndPoint">
         <property name="importConfigurationService" ref="importConfigurationService"/>
@@ -76,6 +77,7 @@
     <bean id="exportConfigurationServiceEndPoint" class="org.apache.unomi.router.rest.ExportConfigurationServiceEndPoint">
         <property name="exportConfigurationService" ref="exportConfigurationService"/>
         <property name="configSharingService" ref="configSharingService"/>
+        <property name="profileExportService" ref="profileExportService"/>
     </bean>
 
 </blueprint>

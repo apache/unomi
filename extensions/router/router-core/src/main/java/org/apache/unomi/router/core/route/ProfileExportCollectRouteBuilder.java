@@ -60,11 +60,13 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
 
         //Loop on multiple export configuration
         for (final ExportConfiguration exportConfiguration : exportConfigurationList) {
-            if (exportConfiguration.getProperties() != null && exportConfiguration.getProperties().size() > 0) {
+            if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(exportConfiguration.getConfigType()) &&
+                    exportConfiguration.getProperties() != null && exportConfiguration.getProperties().size() > 0) {
                 if ((Map<String, String>) exportConfiguration.getProperties().get("mapping") != null) {
                     String destinationEndpoint = (String) exportConfiguration.getProperties().get("destination");
                     if (StringUtils.isNotBlank(destinationEndpoint) && allowedEndpoints.contains(destinationEndpoint.substring(0, destinationEndpoint.indexOf(':')))) {
                         ProcessorDefinition prDef = from("timer://collectProfile?fixedRate=true&period=" + (String) exportConfiguration.getProperties().get("period"))
+                                .routeId(exportConfiguration.getItemId())// This allow identification of the route for manual start/stop
                                 .autoStartup(exportConfiguration.isActive())
                                 .bean(collectProfileBean, "extractProfileBySegment(" + exportConfiguration.getProperties().get("segment") + ")")
                                 .split(body())
