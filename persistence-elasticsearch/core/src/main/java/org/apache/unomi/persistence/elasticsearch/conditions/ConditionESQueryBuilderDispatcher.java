@@ -80,7 +80,9 @@ public class ConditionESQueryBuilderDispatcher {
         }
 
         // if no matching
-        logger.warn("No matching query builder for condition {} and context {}", condition, context);
+        if (logger.isDebugEnabled()) {
+            logger.debug("No matching query builder for condition {} and context {}", condition, context);
+        }
         return QueryBuilders.matchAllQuery();
     }
 
