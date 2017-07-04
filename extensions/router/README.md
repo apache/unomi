@@ -101,6 +101,10 @@ This extension is implemented using Apache Camel routes and can use Apache Kafka
     The attribute `propertiesToOverwrite` is a list of profile properties ids to overwrite, if **null** all properties
     will be overwritten.
     
+    The attribute `hasHeader` is a boolean that defaults to false (the imported file has no header).
+    
+    The attribute `hasDeleteColumn` is a boolean that defaults to false (the imported file' last column is a delete flag).
+    
     The attribute `active` is the flag to activate or deactivate the import configuration.
     
     Concerning oneshot import configuration using the previously described service will only create the import configuration, to send the file to process
