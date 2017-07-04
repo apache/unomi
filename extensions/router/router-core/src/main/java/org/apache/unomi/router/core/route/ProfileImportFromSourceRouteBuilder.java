@@ -81,6 +81,8 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                 lineSplitProcessor.setPropertiesToOverwrite(importConfiguration.getPropertiesToOverwrite());
                 lineSplitProcessor.setMergingProperty(importConfiguration.getMergingProperty());
                 lineSplitProcessor.setColumnSeparator(importConfiguration.getColumnSeparator());
+                lineSplitProcessor.setHasHeader(importConfiguration.isHasHeader());
+                lineSplitProcessor.setHasDeleteColumn(importConfiguration.isHasDeleteColumn());
 
                 String endpoint = (String) importConfiguration.getProperties().get("source");
 

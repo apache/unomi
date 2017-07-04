@@ -60,16 +60,20 @@ public class ImportRouteCompletionProcessor implements Processor {
             }
         }
 
+        Integer nbTotal = (Integer) exchange.getProperty("CamelSplitSize");
+        if(importConfiguration.isHasHeader()) {
+            nbTotal--;
+        }
+
         Map execution = new HashMap();
         execution.put("date", ((Date) exchange.getProperty("CamelCreatedTimestamp")).getTime());
-        execution.put("totalLinesNb", exchange.getProperty("CamelSplitSize"));
+        execution.put("totalLinesNb", nbTotal);
         execution.put("successCount", successCount);
         execution.put("failureCount", failureCount);
         execution.put("errors", errors);
 
         importConfiguration = (ImportConfiguration) RouterUtils.addExecutionEntry(importConfiguration, execution,executionsHistorySize);
 
-        importConfiguration.getExecutions().add(execution);
         //Set running to false, route is complete
         if (failureCount > 0 && successCount > 0) {
             importConfiguration.setStatus(RouterConstants.CONFIG_STATUS_COMPLETE_WITH_ERRORS);

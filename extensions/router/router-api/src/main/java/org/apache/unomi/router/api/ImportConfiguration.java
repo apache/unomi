@@ -36,6 +36,8 @@ public class ImportConfiguration extends ImportExportConfiguration {
     private String mergingProperty;
     private boolean overwriteExistingProfiles = false;
     private List<String> propertiesToOverwrite;
+    private boolean hasHeader = false;
+    private boolean hasDeleteColumn = false;
 
 
     public String getMergingProperty() {
@@ -68,6 +70,11 @@ public class ImportConfiguration extends ImportExportConfiguration {
         this.overwriteExistingProfiles = overwriteExistingProfiles;
     }
 
+    /**
+     * Retrieves the import configuration propertiesToOverwrite field.
+     *
+     * @return propertiesToOverwrite list.
+     */
     public List<String> getPropertiesToOverwrite() {
         return propertiesToOverwrite;
     }
@@ -76,4 +83,21 @@ public class ImportConfiguration extends ImportExportConfiguration {
         this.propertiesToOverwrite = propertiesToOverwrite;
     }
 
+    /**
+     * Retrieves the hasHeader flag.
+     *
+     * @return true if the file imported by the current config has a header line.
+     */
+    public boolean isHasHeader() {
+        return this.hasHeader;
+    }
+
+    /**
+     * Retrieves the hasDeleteColumn flag.
+     *
+     * @return true if the file imported by the current config has a delete column.
+     */
+    public boolean isHasDeleteColumn() {
+        return this.hasDeleteColumn;
+    }
 }

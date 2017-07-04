@@ -39,10 +39,17 @@ public class LineSplitProcessor implements Processor {
     private List<String> propertiesToOverwrite;
     private String mergingProperty;
     private boolean overwriteExistingProfiles;
+    private boolean hasHeader;
+    private boolean hasDeleteColumn;
     private String columnSeparator;
 
     @Override
     public void process(Exchange exchange) throws Exception {
+
+        if ((Integer) exchange.getProperty("CamelSplitIndex") == 0 && hasHeader) {
+            exchange.setProperty(Exchange.ROUTE_STOP, Boolean.TRUE);
+            return;
+        }
         //In case of one shot import we check the header and overwrite import config
         ImportConfiguration importConfigOneShot = (ImportConfiguration) exchange.getIn().getHeader(RouterConstants.HEADER_IMPORT_CONFIG_ONESHOT);
         String configType = (String) exchange.getIn().getHeader(RouterConstants.HEADER_CONFIG_TYPE);
@@ -52,12 +59,15 @@ public class LineSplitProcessor implements Processor {
             mergingProperty = importConfigOneShot.getMergingProperty();
             overwriteExistingProfiles = importConfigOneShot.isOverwriteExistingProfiles();
             columnSeparator = importConfigOneShot.getColumnSeparator();
+            hasHeader = importConfigOneShot.isHasHeader();
+            hasDeleteColumn = importConfigOneShot.isHasDeleteColumn();
         }
+
         String[] profileData = ((String) exchange.getIn().getBody()).split(columnSeparator, -1);
         ProfileToImport profileToImport = new ProfileToImport();
         profileToImport.setItemId(UUID.randomUUID().toString());
         profileToImport.setItemType("profile");
-        profileToImport.setScope("system");
+        profileToImport.setScope(RouterConstants.SYSTEM_SCOPE);
         if (profileData.length > 0 && StringUtils.isNotBlank(profileData[0])) {
             if (fieldsMapping.size() != (profileData.length - 1)) {
                 throw new BadProfileDataFormatException("The mapping does not match the number of column : line [" + ((Integer) exchange.getProperty("CamelSplitIndex") + 1) + "]", new Throwable("MAPPING_COLUMN_MATCH"));
@@ -72,7 +82,8 @@ public class LineSplitProcessor implements Processor {
             profileToImport.setMergingProperty(mergingProperty);
             profileToImport.setPropertiesToOverwrite(propertiesToOverwrite);
             profileToImport.setOverwriteExistingProfiles(overwriteExistingProfiles);
-            if (StringUtils.isNotBlank(profileData[profileData.length - 1]) && Boolean.parseBoolean(profileData[profileData.length - 1].trim())) {
+            if (hasDeleteColumn && StringUtils.isNotBlank(profileData[profileData.length - 1]) &&
+                    Boolean.parseBoolean(profileData[profileData.length - 1].trim())) {
                 profileToImport.setProfileToDelete(true);
             }
         } else {
@@ -102,8 +113,12 @@ public class LineSplitProcessor implements Processor {
         this.overwriteExistingProfiles = overwriteExistingProfiles;
     }
 
-    public String getMergingProperty() {
-        return this.mergingProperty;
+    public void setHasHeader(boolean hasHeader) {
+        this.hasHeader = hasHeader;
+    }
+
+    public void setHasDeleteColumn(boolean hasDeleteColumn) {
+        this.hasDeleteColumn = hasDeleteColumn;
     }
 
     /**
