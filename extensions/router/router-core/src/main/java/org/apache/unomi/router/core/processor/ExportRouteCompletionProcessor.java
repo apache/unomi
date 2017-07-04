@@ -49,6 +49,7 @@ public class ExportRouteCompletionProcessor implements Processor {
         ExportConfiguration exportConfiguration = exportConfigurationService.load(exportConfig.getItemId());
 
         exportConfiguration = (ExportConfiguration) RouterUtils.addExecutionEntry(exportConfiguration, execution, executionsHistorySize);
+        exportConfiguration.setStatus(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS);
 
         exportConfigurationService.save(exportConfiguration);
 
