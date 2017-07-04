@@ -25,7 +25,7 @@
 
     <cm:property-placeholder persistent-id="org.apache.unomi.router" update-strategy="reload">
         <cm:default-properties>
-            <cm:property name="config.type" value="nobroker"/>
+            <cm:property name="router.config.type" value="nobroker"/>
             <cm:property name="config.allowedEndpoints" value="file,ftp"/>
             <cm:property name="kafka.host" value="localhost"/>
             <cm:property name="kafka.port" value="9092"/>
@@ -90,7 +90,7 @@
 
     <bean id="camelContext" class="org.apache.unomi.router.core.context.RouterCamelContext"
           init-method="initCamelContext" destroy-method="preDestroy">
-        <property name="configType" value="${config.type}"/>
+        <property name="configType" value="${router.config.type}"/>
         <property name="allowedEndpoints" value="${config.allowedEndpoints}"/>
         <property name="uploadDir" value="${import.oneshot.uploadDir}"/>
         <property name="execHistorySize" value="${executionsHistory.size}"/>

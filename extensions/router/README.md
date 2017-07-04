@@ -22,11 +22,20 @@ Unomi Router
 Unomi Router Extension a Karaf Feature that provide an Enterprise Application Integration tool.
 It is optional so you must configure it and install it in Karaf, and can be used for Machine - Machine or Human - Machine integration with Unomi.
 Mainly Unomi Router Extension aim to make it easy to import third party applications/platforms profiles into Unomi.
-This extension is implemented using Apache Camel routes and is using Apache Kafka to buffer import process and make it failsafe. 
+This extension is implemented using Apache Camel routes and can use Apache Kafka to buffer import process and make it failsafe. 
 
 ## Getting started
 1. Configure your Unomi Router:
-    In the `etc/org.apache.unomi.router.cfg` file, you might want to update the following settings:
+    In the `etc/org.apache.unomi.router.cfg` file, first of all you need to decide if you want to use Apache Kafka to support huge amount of imported data
+    or just use the default configuration (Without broker) you might want to update the following settings:
+    
+    Configuration type
+    >`#Configuration Type values {'nobroker', 'kafka'}`
+    
+    >`router.config.type=nobroker`
+    
+    Change to 'kafka' and uncomment settings below to switch your configuration. 
+    
     Kafka settings 
     >`#Kafka settings`
     
@@ -34,26 +43,23 @@ This extension is implemented using Apache Camel routes and is using Apache Kafk
     
     >`kafka.port=9092`
     
-    >`kafka.import.topic=camel-deposit`
+    >`kafka.import.topic=import-deposit`
     
     >`kafka.import.groupId=unomi-import-group`
     
-    Kafka host and port with the topic name and the groupId ti which the topic is assigned
+    >`kafka.export.topic=export-deposit`
+        
+    >`kafka.export.groupId=unomi-export-group`
+    
+    Kafka host and port with the topic name and the groupId to which the topic is assigned
     
     >`#Import One Shot upload directory`
     
-    >`import.oneshot.uploadDir=/tmp/unomi_oneshot_import_configs/`
+    >`import.oneshot.uploadDir=${karaf.data}/tmp/unomi_oneshot_import_configs/`
    
     Path to the folder where unomi should stock file imported for a oneshot processing
     
-
-2. Deploy into Apache Unomi using the following commands from the Apache Karaf shell:
-    ```sh
-    $ feature:repo-add mvn:org.apache.unomi/unomi-router-karaf-feature/${version}/xml/features
-    $ feature:install unomi-router-karaf-feature
-    ```
-    
-3. Send your import configuration:
+2. Send your import configuration:
 
     An import configuration is nothing else than a simple JSON to describe how you want to import your data (Profiles).
     To create/update an import configuration
@@ -64,7 +70,7 @@ This extension is implemented using Apache Camel routes and is using Apache Kafk
          "itemId": "f57f1f86-97bf-4ba0-b4e4-7d5e77e7c0bd",
          "itemType": "importConfig",
          "scope": "integration",
-         "name": "Test Recurrent",
+         "name": "Recurrent import",
          "description": "Just test recurrent import",
          "configType": "recurrent",
          "properties": {
@@ -82,7 +88,7 @@ This extension is implemented using Apache Camel routes and is using Apache Kafk
      }
     ```
     
-    Omit the `itemId` when creating new entry, `configType` can be '**recurrent**' for file/ftp/network path polling or  '**oneshot**' for one time import.
+    Omit the `itemId` when creating new entry, `configType` can be '**recurrent**' for file/ftp/network path polling or  '**oneshot**' for one time import (in case of oneshot configuration, omit the properties.source attribute).
     
     The `properties.source` attribute is an Apache Camel endpoint uri (See http://camel.apache.org/uris.html for more details). Unomi Router is designed to use **File** and **FTP** Camel components. 
     
@@ -106,8 +112,54 @@ This extension is implemented using Apache Camel routes and is using Apache Kafk
     
     First multipart with the name '**importConfigId**' is the importConfiguration to use to import the file, second one with the name '**file**' is the file to import.
     
+    2. Send your export configuration:
     
+    An export configuration is nothing else than a simple JSON to describe how you want to export your data (Profiles).
+    To create/update an export configuration
+    
+    `POST /cxs/exportConfiguration`
+    ```json
+     {
+         "itemId": "0e59d271-f5a4-497f-8646-0c8c66602278",
+         "itemType": "exportConfig",
+         "scope": "integration",
+         "name": "Test Recurrent",
+         "description": "Just test recurrent export",
+         "configType": "recurrent",
+         "properties": {
+           "destination": "{file/ftp}://{path}?fileName=profiles-export-${date:now:yyyyMMddHHmm}.csv",
+           "period": "1m",
+           "mapping": {
+             "0": "firstName",
+             "1": "lastName",
+             ...
+           }
+         },
+         "active": true
+     }
+    ```
+   Omit the `itemId` when creating new entry, `configType` can be '**recurrent**' for file/ftp/network path polling or  '**oneshot**' for one time export (in case of oneshot configuration, omit the properties.destination 
+   and properties.period attributes).
+       
+   The `properties.destination` attribute is an Apache Camel endpoint uri (See http://camel.apache.org/uris.html for more details). Unomi Router is designed to use **File** and **FTP**/**FTPS**/**SFTP** Camel components.
+    
+   File and ftp URI format:
+    
+   `file://directoryName[?options]`
+    
+   See http://camel.apache.org/file2.html for more details.
+       
+   `ftp://[username@]hostname[:port]/directoryname[?options]`
+   `sftp://[username@]hostname[:port]/directoryname[?options]`
+   `ftps://[username@]hostname[:port]/directoryname[?options]`
    
+   See http://camel.apache.org/ftp.html for more details.
+   
+   Concerning oneshot export configuration using the previously described service will create the export configuration, to return the generated file to download you need to call: 
+   
+   `POST /cxs/importConfiguration/oneshot`
+   
+   `Content-Type : application/json`
 
     
     
