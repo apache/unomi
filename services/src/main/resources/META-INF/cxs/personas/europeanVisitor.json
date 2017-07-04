@@ -1,16 +1,16 @@
 {
     "persona": {
-        "itemId": "nonUsVisitor",
+        "itemId": "europeanVisitor",
         "properties": {
-            "description": "Represents a visitor browsing from somewhere outside the US",
-            "firstName": "Non U.S.",
+            "description": "Represents a visitor browsing from Europe (Switzerland)",
+            "firstName": "European",
             "lastName": "Visitor"
         },
         "segments": []
     },
     "sessions": [ {
         "itemId": "51c8e9a8-3db6-41f8-9569-057c339e3017",
-        "profileId": "nonUsVisitor",
+        "profileId": "europeanVisitor",
         "properties": {
             "operatingSystemName": "OS X 10.9 Mavericks",
             "sessionCountryName": "Switzerland",
