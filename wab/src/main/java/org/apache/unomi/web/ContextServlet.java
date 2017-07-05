@@ -22,10 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.PrivacyService;
-import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,13 +53,19 @@ public class ContextServlet extends HttpServlet {
     private EventService eventService;
     private RulesService rulesService;
     private PrivacyService privacyService;
+    private ConfigSharingService configSharingService;
 
     private String profileIdCookieName = "context-profile-id";
     private String profileIdCookieDomain;
+    private static final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365; // 1 year
+    private int profileIdCookieMaxAgeInSeconds = MAX_COOKIE_AGE_IN_SECONDS;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
+        configSharingService.setProperty("profileIdCookieName", profileIdCookieName);
+        configSharingService.setProperty("profileIdCookieDomain", profileIdCookieDomain);
+        configSharingService.setProperty("profileIdCookieMaxAgeInSeconds", (Integer) profileIdCookieMaxAgeInSeconds);
         logger.info("ContextServlet initialized.");
     }
 
@@ -169,7 +172,7 @@ public class ContextServlet extends HttpServlet {
                     if (!profile.isAnonymousProfile() && !anonymousProfile && !profile.getItemId().equals(sessionProfile.getItemId())) {
                         // Session user has been switched, profile id in cookie is not uptodate
                         profile = sessionProfile;
-                        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain);
+                        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
                     }
 
                     Boolean requireAnonymousBrowsing = privacyService.isRequireAnonymousBrowsing(profile.getItemId());
@@ -280,7 +283,7 @@ public class ContextServlet extends HttpServlet {
                     session.setProfile(profile);
                     profileService.saveSession(session);
                 }
-                HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain);
+                HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
             } else {
                 logger.warn("Couldn't find merged profile" + profileId + ", falling back to profile " + profileToDelete.getItemId());
                 profile = profileToDelete;
@@ -410,7 +413,7 @@ public class ContextServlet extends HttpServlet {
         }
         profile = new Profile(profileId);
         profile.setProperty("firstVisit", timestamp);
-        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain);
+        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
         return profile;
     }
 
@@ -435,7 +438,19 @@ public class ContextServlet extends HttpServlet {
         this.profileIdCookieDomain = profileIdCookieDomain;
     }
 
+    public void setProfileIdCookieName(String profileIdCookieName) {
+        this.profileIdCookieName = profileIdCookieName;
+    }
+
+    public void setProfileIdCookieMaxAgeInSeconds(int profileIdCookieMaxAgeInSeconds) {
+        this.profileIdCookieMaxAgeInSeconds = profileIdCookieMaxAgeInSeconds;
+    }
+
     public void setPrivacyService(PrivacyService privacyService) {
         this.privacyService = privacyService;
+    }
+
+    public void setConfigSharingService(ConfigSharingService configSharingService) {
+        this.configSharingService = configSharingService;
     }
 }

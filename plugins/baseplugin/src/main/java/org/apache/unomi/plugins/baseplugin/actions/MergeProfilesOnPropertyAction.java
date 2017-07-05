@@ -26,10 +26,7 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.PrivacyService;
-import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,9 +42,9 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
     private static final Logger logger = LoggerFactory.getLogger(MergeProfilesOnPropertyAction.class.getName());
 
-    private final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365 * 10; // 10-years
-    private int cookieAgeInSeconds = MAX_COOKIE_AGE_IN_SECONDS;
     private String profileIdCookieName = "context-profile-id";
+    private String profileIdCookieDomain;
+    private int profileIdCookieMaxAgeInSeconds;
 
     private ProfileService profileService;
 
@@ -59,9 +56,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
     private PrivacyService privacyService;
 
-    public void setCookieAgeInSeconds(int cookieAgeInSeconds) {
-        this.cookieAgeInSeconds = cookieAgeInSeconds;
-    }
+    private ConfigSharingService configSharingService;
 
     public void setProfileIdCookieName(String profileIdCookieName) {
         this.profileIdCookieName = profileIdCookieName;
@@ -99,7 +94,14 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         this.definitionsService = definitionsService;
     }
 
+    public void setConfigSharingService(ConfigSharingService configSharingService) {
+        this.configSharingService = configSharingService;
+    }
+
     public int execute(Action action, Event event) {
+        profileIdCookieName = (String) configSharingService.getProperty("profileIdCookieName");
+        profileIdCookieDomain = (String) configSharingService.getProperty("profileIdCookieDomain");
+        profileIdCookieMaxAgeInSeconds = (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds");
 
         Profile profile = event.getProfile();
         if (profile instanceof Persona || profile.isAnonymousProfile()) {
@@ -153,7 +155,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             logger.info("Different users, switch to " + profile.getItemId());
 
             HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
-            sendProfileCookie(profile, httpServletResponse);
+            sendProfileCookie(profile, httpServletResponse, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
 
             // At the end of the merge, we must set the merged profile as profile event to process other Actions
             event.setProfileId(profile.getItemId());
@@ -187,7 +189,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             // Profile has changed
             if (!masterProfile.getItemId().equals(profileId)) {
                 HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
-                sendProfileCookie(currentSession.getProfile(), httpServletResponse);
+                sendProfileCookie(currentSession.getProfile(), httpServletResponse, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
                 final String masterProfileId = masterProfile.getItemId();
 
                 // At the end of the merge, we must set the merged profile as profile event to process other Actions
@@ -244,13 +246,18 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         }
     }
 
-    public void sendProfileCookie(Profile profile, ServletResponse response) {
+    private static void sendProfileCookie(Profile profile, ServletResponse response, String profileIdCookieName, String profileIdCookieDomain, int cookieAgeInSeconds) {
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-            Cookie profileIdCookie = new Cookie(profileIdCookieName, profile.getItemId());
-            profileIdCookie.setPath("/");
-            profileIdCookie.setMaxAge(cookieAgeInSeconds);
-            httpServletResponse.addCookie(profileIdCookie);
+            if (!(profile instanceof Persona)) {
+                Cookie profileIdCookie = new Cookie(profileIdCookieName, profile.getItemId());
+                profileIdCookie.setPath("/");
+                if (profileIdCookieDomain != null && !profileIdCookieDomain.equals("")) {
+                    profileIdCookie.setDomain(profileIdCookieDomain);
+                }
+                profileIdCookie.setMaxAge(cookieAgeInSeconds);
+                httpServletResponse.addCookie(profileIdCookie);
+            }
         }
     }
 

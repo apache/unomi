@@ -32,10 +32,6 @@ import java.util.Map;
 
 public class HttpUtils {
 
-    private static final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365 * 10; // 10-years
-
-    private static int cookieAgeInSeconds = MAX_COOKIE_AGE_IN_SECONDS;
-
     public static void setupCORSHeaders(HttpServletRequest httpServletRequest, ServletResponse response) throws IOException {
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
@@ -107,7 +103,7 @@ public class HttpUtils {
         return baseRequestURL;
     }
 
-    public static void sendProfileCookie(Profile profile, ServletResponse response, String profileIdCookieName, String profileIdCookieDomain) {
+    public static void sendProfileCookie(Profile profile, ServletResponse response, String profileIdCookieName, String profileIdCookieDomain, int profileIdCookieMaxAgeInSeconds) {
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
             if (!(profile instanceof Persona)) {
@@ -116,7 +112,7 @@ public class HttpUtils {
                 if (profileIdCookieDomain != null && !profileIdCookieDomain.equals("")) {
                     profileIdCookie.setDomain(profileIdCookieDomain);
                 }
-                profileIdCookie.setMaxAge(cookieAgeInSeconds);
+                profileIdCookie.setMaxAge(profileIdCookieMaxAgeInSeconds);
                 httpServletResponse.addCookie(profileIdCookie);
             }
         }

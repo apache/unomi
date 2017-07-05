@@ -26,20 +26,27 @@
     <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
     <reference id="rulesService" interface="org.apache.unomi.api.services.RulesService"/>
     <reference id="privacyService" interface="org.apache.unomi.api.services.PrivacyService"/>
+    <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />
 
     <cm:property-placeholder persistent-id="org.apache.unomi.web"
                              update-strategy="reload" placeholder-prefix="${web.">
         <cm:default-properties>
             <cm:property name="contextserver.domain" value=""/>
+            <cm:property name="contextserver.profileIdCookieName" value="context-profile-id"/>
+            <cm:property name="contextserver.profileIdCookieMaxAgeInSeconds" value="31536000"/> <!-- 1 year by default -->
         </cm:default-properties>
     </cm:property-placeholder>
+
 
     <bean id="contextServlet" class="org.apache.unomi.web.ContextServlet">
         <property name="profileService" ref="profileService"/>
         <property name="eventService" ref="eventService"/>
         <property name="rulesService" ref="rulesService"/>
         <property name="privacyService" ref="privacyService" />
+        <property name="configSharingService" ref="configSharingService"/>
         <property name="profileIdCookieDomain" value="${web.contextserver.domain}" />
+        <property name="profileIdCookieName" value="${web.contextserver.profileIdCookieName}"/>
+        <property name="profileIdCookieMaxAgeInSeconds" value="${web.contextserver.profileIdCookieMaxAgeInSeconds}"/>
     </bean>
 
     <service id="contextServletService" auto-export="interfaces" ref="contextServlet">

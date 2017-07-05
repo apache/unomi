@@ -25,6 +25,7 @@
     <reference id="privacyService" interface="org.apache.unomi.api.services.PrivacyService"/>
     <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
     <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
+    <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />
 
     <service
             interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
@@ -217,6 +218,7 @@
             <property name="persistenceService" ref="persistenceService"/>
             <property name="definitionsService" ref="definitionsService"/>
             <property name="privacyService" ref="privacyService"/>
+            <property name="configSharingService" ref="configSharingService" />
         </bean>
     </service>
 
