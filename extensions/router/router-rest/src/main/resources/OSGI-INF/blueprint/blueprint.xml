@@ -36,11 +36,14 @@
         <property name="realmName" value="cxs"/>
     </bean>
 
+    <bean id="exceptionMapper" class="org.apache.unomi.router.rest.ConfigRestExceptionMapper"/>
+
     <jaxrs:server address="/importConfiguration" id="restImportConfigurationService">
         <jaxrs:providers>
             <ref component-id="json-provider"/>
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
+            <ref component-id="exceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -53,6 +56,7 @@
             <ref component-id="json-provider"/>
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
+            <ref component-id="exceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>

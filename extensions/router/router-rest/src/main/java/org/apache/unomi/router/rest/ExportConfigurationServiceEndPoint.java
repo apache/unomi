@@ -32,10 +32,12 @@ import org.slf4j.LoggerFactory;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
-import javax.ws.rs.*;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -85,11 +87,16 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
                 HttpResponse response = httpClient.execute(httpPut);
 
                 if (response.getStatusLine().getStatusCode() != 200) {
-                    throw new RuntimeException("Failed : HTTP error code : "
-                            + response.getStatusLine().getStatusCode());
+                    logger.error("Failed to update the running config: Please check the acceccibilty to the URI: \n{}",
+                            "http://localhost:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/importConfigAdmin");
+                    logger.error("HTTP Status code returned {}", response.getStatusLine().getStatusCode());
+                    throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.warn("Unable to update Camel route [{}]", exportConfiguration.getItemId());
+                e.printStackTrace();
+                throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
+
             }
         }
 

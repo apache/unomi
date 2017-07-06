@@ -83,11 +83,16 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
                 HttpResponse response = httpClient.execute(httpPut);
 
                 if (response.getStatusLine().getStatusCode() != 200) {
-                    throw new RuntimeException("Failed : HTTP error code : "
-                            + response.getStatusLine().getStatusCode());
+                    logger.error("Failed to update the running config: Please check the acceccibilty to the URI: \n{}",
+                            "http://localhost234:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/importConfigAdmin");
+                    logger.error("HTTP Status code returned {}", response.getStatusLine().getStatusCode());
+                    throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.warn("Unable to update Camel route [{}]", importConfiguration.getItemId());
+                e.printStackTrace();
+                throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
+
             }
         }
         return importConfigSaved;
