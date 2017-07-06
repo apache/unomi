@@ -19,6 +19,7 @@ package org.apache.unomi.router.core.strategy;
 import org.apache.camel.Exchange;
 import org.apache.camel.processor.aggregate.AggregationStrategy;
 import org.apache.unomi.router.api.ExportConfiguration;
+import org.apache.unomi.router.api.RouterUtils;
 
 /**
  * Created by amidani on 29/06/2017.
@@ -29,9 +30,11 @@ public class StringLinesAggregationStrategy implements AggregationStrategy {
         Object newBody = newExchange.getIn().getBody(String.class);
         String lineSeparator = newExchange.getIn().getHeader("exportConfig", ExportConfiguration.class).getLineSeparator();
         if (oldExchange != null) {
-            String fileContent = oldExchange.getIn().getBody(String.class);
+            StringBuilder fileContent = new StringBuilder();
+            fileContent.append(oldExchange.getIn().getBody(String.class));
+            fileContent.append(RouterUtils.getCharFromLineSeparator(lineSeparator));
+            fileContent.append(newBody);
 
-            fileContent += lineSeparator + newBody;
             oldExchange.getIn().setBody(fileContent);
             return oldExchange;
         } else {
