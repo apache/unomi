@@ -39,4 +39,12 @@ public class RouterUtils {
         configuration.getExecutions().add(execution);
         return configuration;
     }
+
+    public static char getCharFromLineSeparator(String lineSeparator) {
+        char charLineSep = '\n';
+        if("\r".equals(lineSeparator)) {
+            charLineSep = '\r';
+        }
+        return charLineSep;
+    }
 }

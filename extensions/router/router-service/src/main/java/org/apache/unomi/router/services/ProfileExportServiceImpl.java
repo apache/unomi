@@ -21,7 +21,6 @@ import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.RouterUtils;
-import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.api.services.ProfileExportService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,10 +41,10 @@ public class ProfileExportServiceImpl extends AbstractCustomServiceImpl implemen
 
     public String extractProfilesBySegment(ExportConfiguration exportConfiguration) {
         List<Profile> profileList = persistenceService.query("segments", (String) exportConfiguration.getProperty("segment"), null, Profile.class);
-        String csvContent = "";
+        StringBuilder csvContent = new StringBuilder();
         for (Profile profile : profileList) {
-            csvContent += convertProfileToCSVLine(profile, exportConfiguration);
-            csvContent += exportConfiguration.getLineSeparator();
+            csvContent.append(convertProfileToCSVLine(profile, exportConfiguration));
+            csvContent.append(RouterUtils.getCharFromLineSeparator(exportConfiguration.getLineSeparator()));
         }
         logger.debug("Exporting {} extracted profiles.", profileList.size());
         Map<String, Object> returnMap = new HashMap();
@@ -60,7 +59,7 @@ public class ProfileExportServiceImpl extends AbstractCustomServiceImpl implemen
         returnMap.put(RouterConstants.KEY_CSV_CONTENT, csvContent);
         returnMap.put(RouterConstants.KEY_EXECS, execution);
 
-        return csvContent;
+        return csvContent.toString();
     }
 
     public String convertProfileToCSVLine(Profile profile, ExportConfiguration exportConfiguration) {
