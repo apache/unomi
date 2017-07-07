@@ -72,29 +72,28 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
      */
     public ImportConfiguration saveConfiguration(ImportConfiguration importConfiguration) {
         ImportConfiguration importConfigSaved = configurationService.save(importConfiguration);
-        if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(importConfigSaved.getConfigType())) {
-            CloseableHttpClient httpClient = HttpClients.createDefault();
-            try {
-                HttpPut httpPut = new HttpPut("http://localhost:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/importConfigAdmin");
-                StringEntity input = new StringEntity(new ObjectMapper().writeValueAsString(importConfigSaved));
-                input.setContentType(MediaType.APPLICATION_JSON);
-                httpPut.setEntity(input);
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        try {
+            HttpPut httpPut = new HttpPut("http://localhost:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/importConfigAdmin");
+            StringEntity input = new StringEntity(new ObjectMapper().writeValueAsString(importConfigSaved));
+            input.setContentType(MediaType.APPLICATION_JSON);
+            httpPut.setEntity(input);
 
-                HttpResponse response = httpClient.execute(httpPut);
+            HttpResponse response = httpClient.execute(httpPut);
 
-                if (response.getStatusLine().getStatusCode() != 200) {
-                    logger.error("Failed to update the running config: Please check the acceccibilty to the URI: \n{}",
-                            "http://localhost234:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/importConfigAdmin");
-                    logger.error("HTTP Status code returned {}", response.getStatusLine().getStatusCode());
-                    throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
-                }
-            } catch (Exception e) {
-                logger.warn("Unable to update Camel route [{}]", importConfiguration.getItemId());
-                e.printStackTrace();
+            if (response.getStatusLine().getStatusCode() != 200) {
+                logger.error("Failed to update the running config: Please check the acceccibilty to the URI: \n{}",
+                        "http://localhost234:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/importConfigAdmin");
+                logger.error("HTTP Status code returned {}", response.getStatusLine().getStatusCode());
                 throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
-
             }
+        } catch (Exception e) {
+            logger.warn("Unable to update Camel route [{}]", importConfiguration.getItemId());
+            e.printStackTrace();
+            throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
+
         }
+
         return importConfigSaved;
     }
 

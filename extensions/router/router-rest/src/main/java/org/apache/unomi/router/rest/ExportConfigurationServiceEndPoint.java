@@ -24,7 +24,6 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.unomi.router.api.ExportConfiguration;
-import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.api.services.ProfileExportService;
 import org.slf4j.Logger;
@@ -76,28 +75,26 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
      */
     public ExportConfiguration saveConfiguration(ExportConfiguration exportConfiguration) {
         ExportConfiguration exportConfigSaved = configurationService.save(exportConfiguration);
-        if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(exportConfigSaved.getConfigType())) {
-            CloseableHttpClient httpClient = HttpClients.createDefault();
-            try {
-                HttpPut httpPut = new HttpPut("http://localhost:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/exportConfigAdmin");
-                StringEntity input = new StringEntity(new ObjectMapper().writeValueAsString(exportConfigSaved));
-                input.setContentType(MediaType.APPLICATION_JSON);
-                httpPut.setEntity(input);
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        try {
+            HttpPut httpPut = new HttpPut("http://localhost:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/exportConfigAdmin");
+            StringEntity input = new StringEntity(new ObjectMapper().writeValueAsString(exportConfigSaved));
+            input.setContentType(MediaType.APPLICATION_JSON);
+            httpPut.setEntity(input);
 
-                HttpResponse response = httpClient.execute(httpPut);
+            HttpResponse response = httpClient.execute(httpPut);
 
-                if (response.getStatusLine().getStatusCode() != 200) {
-                    logger.error("Failed to update the running config: Please check the acceccibilty to the URI: \n{}",
-                            "http://localhost:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/importConfigAdmin");
-                    logger.error("HTTP Status code returned {}", response.getStatusLine().getStatusCode());
-                    throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
-                }
-            } catch (Exception e) {
-                logger.warn("Unable to update Camel route [{}]", exportConfiguration.getItemId());
-                e.printStackTrace();
+            if (response.getStatusLine().getStatusCode() != 200) {
+                logger.error("Failed to update the running config: Please check the acceccibilty to the URI: \n{}",
+                        "http://localhost:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/importConfigAdmin");
+                logger.error("HTTP Status code returned {}", response.getStatusLine().getStatusCode());
                 throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
-
             }
+        } catch (Exception e) {
+            logger.warn("Unable to update Camel route [{}]", exportConfiguration.getItemId());
+            e.printStackTrace();
+            throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
+
         }
 
         return exportConfigSaved;
@@ -114,8 +111,7 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces("text/csv")
     public Response processOneshotImportConfigurationCSV(ExportConfiguration exportConfiguration) {
-        ExportConfiguration exportConfigSaved = configurationService.save(exportConfiguration);
-        String csvContent = profileExportService.extractProfilesBySegment(exportConfigSaved);
+        String csvContent = profileExportService.extractProfilesBySegment(exportConfiguration);
         Response.ResponseBuilder response = Response.ok(csvContent);
         response.header("Content-Disposition",
                 "attachment; filename=Profiles_export_" + new SimpleDateFormat("yyyy-MM-dd-HH-mm").format(new Date()) + ".csv");
