@@ -842,8 +842,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 .execute()
                                 .actionGet();
                     } else {
-                        UpdateRequest updateRequest = client.prepareUpdate(index, itemType, itemId).setScript(actualScript).
-                                setRefreshPolicy(WriteRequest.RefreshPolicy.WAIT_UNTIL).request();
+                        UpdateRequest updateRequest = client.prepareUpdate(index, itemType, itemId).setScript(actualScript).request();
                         bulkProcessor.add(updateRequest);
                     }
                     return true;

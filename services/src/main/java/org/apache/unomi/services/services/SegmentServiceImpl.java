@@ -936,14 +936,18 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         scoringCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
         scoringCondition.setParameter("propertyName", "scores." + scoringId);
         scoringCondition.setParameter("comparisonOperator", "exists");
-        List<Profile> previousProfiles = persistenceService.query(scoringCondition, null, Profile.class);
+        Condition[] conditions = new Condition[1];
+        conditions[0] = scoringCondition;
 
-        HashMap<String, Object> scriptParams = new HashMap<>();
-        scriptParams.put("scoringId", scoringId);
+        HashMap<String, Object>[] scriptParams = new HashMap[1];
+        scriptParams[0] = new HashMap<String, Object>();
+        scriptParams[0].put("scoringId", scoringId);
 
-        for (Profile profileToRemove : previousProfiles) {
-            persistenceService.updateWithScript(profileToRemove.getItemId(), null, Profile.class, "ctx._source.scores.remove(scoringId)", scriptParams);
-        }
+        String[] script = new String[1];
+        script[0] = "ctx._source.scores.remove(params.scoringId)";
+
+        persistenceService.updateWithQueryAndScript(null, Profile.class, script, scriptParams, conditions);
+
         logger.info("Profiles updated in {}ms", System.currentTimeMillis() - t);
     }
 
