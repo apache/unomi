@@ -82,16 +82,22 @@ public class ActionExecutorDispatcher {
         valueExtractors.put("script", new ValueExtractor() {
             @Override
             public Object extract(String valueAsString, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-                if (!mvelExpressions.containsKey(valueAsString)) {
-                    ParserConfiguration parserConfiguration = new ParserConfiguration();
-                    parserConfiguration.setClassLoader(getClass().getClassLoader());
-                    mvelExpressions.put(valueAsString, MVEL.compileExpression(valueAsString, new ParserContext(parserConfiguration)));
+                final ClassLoader tccl = Thread.currentThread().getContextClassLoader();
+                try {
+                    Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+                    if (!mvelExpressions.containsKey(valueAsString)) {
+                        ParserConfiguration parserConfiguration = new ParserConfiguration();
+                        parserConfiguration.setClassLoader(getClass().getClassLoader());
+                        mvelExpressions.put(valueAsString, MVEL.compileExpression(valueAsString, new ParserContext(parserConfiguration)));
+                    }
+                    Map<String, Object> ctx = new HashMap<>();
+                    ctx.put("event", event);
+                    ctx.put("session", event.getSession());
+                    ctx.put("profile", event.getProfile());
+                    return MVEL.executeExpression(mvelExpressions.get(valueAsString), ctx);
+                } finally {
+                    Thread.currentThread().setContextClassLoader(tccl);
                 }
-                Map<String, Object> ctx = new HashMap<>();
-                ctx.put("event", event);
-                ctx.put("session", event.getSession());
-                ctx.put("profile", event.getProfile());
-                return MVEL.executeExpression(mvelExpressions.get(valueAsString), ctx);
             }
         });
     }
