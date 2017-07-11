@@ -69,7 +69,7 @@ public class LineSplitProcessor implements Processor {
         profileToImport.setItemType("profile");
         profileToImport.setScope(RouterConstants.SYSTEM_SCOPE);
         if (profileData.length > 0 && StringUtils.isNotBlank(profileData[0])) {
-            if (fieldsMapping.size() != (profileData.length - 1)) {
+            if (hasDeleteColumn && (fieldsMapping.size() != (profileData.length - 1))) {
                 throw new BadProfileDataFormatException("The mapping does not match the number of column : line [" + ((Integer) exchange.getProperty("CamelSplitIndex") + 1) + "]", new Throwable("MAPPING_COLUMN_MATCH"));
             }
             Map<String, Object> properties = new HashMap<>();
