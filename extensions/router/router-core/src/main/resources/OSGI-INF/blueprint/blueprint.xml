@@ -37,6 +37,7 @@
             <cm:property name="kafka.autoCommit" value="true"/>
             <cm:property name="import.oneshot.uploadDir" value="/tmp/oneshot_import_configs/"/>
             <cm:property name="executionsHistory.size" value="5"/>
+            <cm:property name="executions.error.report.size" value="200"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -47,6 +48,7 @@
     <bean id="importRouteCompletionProcessor" class="org.apache.unomi.router.core.processor.ImportRouteCompletionProcessor">
         <property name="importConfigurationService" ref="importConfigurationService"/>
         <property name="executionsHistorySize" value="${executionsHistory.size}"/>
+        <property name="execErrReportSize" value="${executions.error.report.size}"/>
     </bean>
 
     <bean id="exportRouteCompletionProcessor" class="org.apache.unomi.router.core.processor.ExportRouteCompletionProcessor">
@@ -94,6 +96,7 @@
         <property name="allowedEndpoints" value="${config.allowedEndpoints}"/>
         <property name="uploadDir" value="${import.oneshot.uploadDir}"/>
         <property name="execHistorySize" value="${executionsHistory.size}"/>
+        <property name="execErrReportSize" value="${executions.error.report.size}"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="jacksonDataFormat" ref="jacksonDataFormat"/>
         <property name="kafkaProps">

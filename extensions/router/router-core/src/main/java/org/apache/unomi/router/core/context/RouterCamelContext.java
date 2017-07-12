@@ -64,6 +64,7 @@ public class RouterCamelContext implements SynchronousBundleListener {
     private JacksonDataFormat jacksonDataFormat;
     private String uploadDir;
     private String execHistorySize;
+    private String execErrReportSize;
     private Map<String, String> kafkaProps;
     private String configType;
     private String allowedEndpoints;
@@ -72,6 +73,10 @@ public class RouterCamelContext implements SynchronousBundleListener {
 
     public void setExecHistorySize(String execHistorySize) {
         this.execHistorySize = execHistorySize;
+    }
+
+    public void setExecErrReportSize(String execErrReportSize) {
+        this.execErrReportSize = execErrReportSize;
     }
 
     public void setBundleContext(BundleContext bundleContext) {

@@ -33,6 +33,7 @@ public class ImportRouteCompletionProcessor implements Processor {
     private static final Logger logger = LoggerFactory.getLogger(ImportRouteCompletionProcessor.class.getName());
     private ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
     private int executionsHistorySize;
+    private int execErrReportSize;
 
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -54,7 +55,9 @@ public class ImportRouteCompletionProcessor implements Processor {
                 successCount++;
             } else if (line instanceof ImportLineError) {
                 failureCount++;
-                errors.add(((ImportLineError) line));
+                if(errors.size() < execErrReportSize) {
+                    errors.add(((ImportLineError) line));
+                }
             } else {
                 ignoreCount++;
             }
@@ -92,5 +95,9 @@ public class ImportRouteCompletionProcessor implements Processor {
 
     public void setExecutionsHistorySize(int executionsHistorySize) {
         this.executionsHistorySize = executionsHistorySize;
+    }
+
+    public void setExecErrReportSize(int execErrReportSize) {
+        this.execErrReportSize = execErrReportSize;
     }
 }
