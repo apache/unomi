@@ -34,6 +34,8 @@ public class ImportExportConfiguration extends Item {
     private Map<String, Object> properties = new HashMap<>();
     private String columnSeparator = ",";
     private String lineSeparator = "\n";
+    private String multiValueSeparator = "|";
+    private String multiValueDelimiter = "";
     private boolean active;
     private String status;
 
@@ -180,6 +182,44 @@ public class ImportExportConfiguration extends Item {
         if(lineSeparator != null) {
             this.lineSeparator = lineSeparator;
         }
+    }
+
+    /**
+     * Gets the multi value separator.
+     *
+     * @return  multiValueSeparator multi value separator
+     */
+    public String getMultiValueSeparator() {
+        return this.multiValueSeparator;
+    }
+
+
+    /**
+     * Sets the multi value separator.
+     *
+     * @param multiValueSeparator multi value separator
+     */
+    public void setMultiValueSeparator(String multiValueSeparator) {
+        this.multiValueSeparator = multiValueSeparator;
+    }
+
+    /**
+     * Gets the multi value delimiter.
+     *
+     * @return multiValueDelimiter multi value delimiter
+     */
+    public String getMultiValueDelimiter() {
+        return this.multiValueDelimiter;
+    }
+
+
+    /**
+     * Sets the multi value delimiter.
+     *
+     * @param multiValueDelimiter multi value delimiter
+     */
+    public void setMultiValueDelimiter(String multiValueDelimiter) {
+        this.multiValueDelimiter = multiValueDelimiter;
     }
 
     /**

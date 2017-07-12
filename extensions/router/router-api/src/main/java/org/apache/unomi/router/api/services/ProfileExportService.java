@@ -17,17 +17,18 @@
 package org.apache.unomi.router.api.services;
 
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.router.api.ExportConfiguration;
 
-import java.util.List;
+import java.util.Collection;
 
 /**
  * Created by amidani on 30/06/2017.
  */
 public interface ProfileExportService {
 
-    String extractProfilesBySegment(ExportConfiguration exportConfiguration);
+    String extractProfilesBySegment(ExportConfiguration exportConfiguration, Collection<PropertyType> propertiesDef);
 
-    String convertProfileToCSVLine(Profile profile, ExportConfiguration exportConfiguration);
+    String convertProfileToCSVLine(Profile profile, ExportConfiguration exportConfiguration, Collection<PropertyType> propertiesDef);
 
 }

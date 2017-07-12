@@ -18,12 +18,11 @@ package org.apache.unomi.router.core.context;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Route;
-import org.apache.camel.component.file.remote.FtpComponent;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.core.osgi.OsgiDefaultCamelContext;
-import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.model.RouteDefinition;
 import org.apache.unomi.api.services.ConfigSharingService;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.ImportConfiguration;
@@ -60,6 +59,7 @@ public class RouterCamelContext implements SynchronousBundleListener {
     private ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
     private ImportExportConfigurationService<ExportConfiguration> exportConfigurationService;
     private PersistenceService persistenceService;
+    private ProfileService profileService;
     private ProfileExportService profileExportService;
     private JacksonDataFormat jacksonDataFormat;
     private String uploadDir;
@@ -85,7 +85,7 @@ public class RouterCamelContext implements SynchronousBundleListener {
     public void initCamelContext() throws Exception {
         logger.info("Initialize Camel Context...");
 
-        configSharingService.setProperty("oneshotImportUploadDir", uploadDir);
+        configSharingService.setProperty(RouterConstants.IMPORT_ONESHOT_UPLOAD_DIR, uploadDir);
         configSharingService.setProperty(RouterConstants.KEY_HISTORY_SIZE, execHistorySize);
 
         camelContext = new OsgiDefaultCamelContext(bundleContext);
@@ -94,6 +94,7 @@ public class RouterCamelContext implements SynchronousBundleListener {
 
         //Source
         ProfileImportFromSourceRouteBuilder builderReader = new ProfileImportFromSourceRouteBuilder(kafkaProps, configType);
+        builderReader.setProfileService(profileService);
         builderReader.setImportConfigurationService(importConfigurationService);
         builderReader.setJacksonDataFormat(jacksonDataFormat);
         builderReader.setAllowedEndpoints(allowedEndpoints);
@@ -102,6 +103,7 @@ public class RouterCamelContext implements SynchronousBundleListener {
 
         //One shot import route
         ProfileImportOneShotRouteBuilder builderOneShot = new ProfileImportOneShotRouteBuilder(kafkaProps, configType);
+        builderOneShot.setProfileService(profileService);
         builderOneShot.setImportConfigByFileNameProcessor(importConfigByFileNameProcessor);
         builderOneShot.setJacksonDataFormat(jacksonDataFormat);
         builderOneShot.setUploadDir(uploadDir);
@@ -129,6 +131,7 @@ public class RouterCamelContext implements SynchronousBundleListener {
 
         //Write to destination
         ProfileExportProducerRouteBuilder profileExportProducerRouteBuilder = new ProfileExportProducerRouteBuilder(kafkaProps, configType);
+        profileExportProducerRouteBuilder.setProfileService(profileService);
         profileExportProducerRouteBuilder.setProfileExportService(profileExportService);
         profileExportProducerRouteBuilder.setExportRouteCompletionProcessor(exportRouteCompletionProcessor);
         profileExportProducerRouteBuilder.setAllowedEndpoints(allowedEndpoints);
@@ -239,6 +242,10 @@ public class RouterCamelContext implements SynchronousBundleListener {
 
     public void setProfileExportService(ProfileExportService profileExportService) {
         this.profileExportService = profileExportService;
+    }
+
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
     }
 
     public void setJacksonDataFormat(JacksonDataFormat jacksonDataFormat) {

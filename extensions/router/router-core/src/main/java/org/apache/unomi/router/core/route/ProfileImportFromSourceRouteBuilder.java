@@ -83,6 +83,10 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                 lineSplitProcessor.setColumnSeparator(importConfiguration.getColumnSeparator());
                 lineSplitProcessor.setHasHeader(importConfiguration.isHasHeader());
                 lineSplitProcessor.setHasDeleteColumn(importConfiguration.isHasDeleteColumn());
+                lineSplitProcessor.setMultiValueDelimiter(importConfiguration.getMultiValueDelimiter());
+                lineSplitProcessor.setMultiValueSeparator(importConfiguration.getMultiValueSeparator());
+
+                lineSplitProcessor.setPropertiesDef(profileService.getAllPropertyTypes("profiles"));
 
                 String endpoint = (String) importConfiguration.getProperties().get("source");
 

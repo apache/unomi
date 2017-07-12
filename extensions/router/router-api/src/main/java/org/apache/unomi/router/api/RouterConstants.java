@@ -45,14 +45,15 @@ public interface RouterConstants {
     String HEADER_IMPORT_CONFIG_ONESHOT = "importConfigOneShot";
 
     String IMPORT_ONESHOT_ROUTE_ID = "ONE_SHOT_ROUTE";
-    String DEFAULT_FILE_COLUMN_SEPARATOR = ",";
+    String IMPORT_ONESHOT_UPLOAD_DIR = "oneshotImportUploadDir";
 
+    String DEFAULT_FILE_COLUMN_SEPARATOR = ",";
     String DEFAULT_FILE_LINE_SEPARATOR = "\n";
     String KEY_HISTORY_SIZE = "historySize";
     String KEY_CSV_CONTENT = "csvContent";
     String KEY_EXECS = "execs";
     Object KEY_EXECS_DATE = "date";
-    Object KEY_EXECS_EXTRACTED = "extractedProfiles";
 
+    Object KEY_EXECS_EXTRACTED = "extractedProfiles";
     String SYSTEM_SCOPE = "integration";
 }

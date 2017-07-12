@@ -16,6 +16,9 @@
  */
 package org.apache.unomi.router.api;
 
+import org.apache.unomi.api.PropertyType;
+
+import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -42,9 +45,18 @@ public class RouterUtils {
 
     public static char getCharFromLineSeparator(String lineSeparator) {
         char charLineSep = '\n';
-        if("\r".equals(lineSeparator)) {
+        if ("\r".equals(lineSeparator)) {
             charLineSep = '\r';
         }
         return charLineSep;
+    }
+
+    public static PropertyType getPropertyTypeById(Collection<PropertyType> propertyTypes, String propertyTypeId) {
+        for (PropertyType propertyType : propertyTypes) {
+            if (propertyType.getMetadata().getId().equals(propertyTypeId)) {
+                return propertyType;
+            }
+        }
+        return null;
     }
 }

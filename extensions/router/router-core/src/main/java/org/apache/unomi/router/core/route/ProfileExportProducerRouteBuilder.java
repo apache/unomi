@@ -59,8 +59,12 @@ public class ProfileExportProducerRouteBuilder extends RouterAbstractRouteBuilde
             rtDef = from((String) getEndpointURI(RouterConstants.DIRECTION_TO, RouterConstants.DIRECT_EXPORT_DEPOSIT_BUFFER));
         }
 
+        LineBuildProcessor processor = new LineBuildProcessor(profileExportService);
+        processor.setPropertiesDef(profileService.getAllPropertyTypes("profiles"));
+
+
         rtDef.unmarshal(jacksonDataFormat)
-                .process(new LineBuildProcessor(profileExportService))
+                .process(processor)
                 .aggregate(constant(true), new StringLinesAggregationStrategy())
                 .completionPredicate(exchangeProperty("CamelSplitSize").isEqualTo(exchangeProperty("CamelAggregatedSize")))
                 .eagerCheckCompletion()

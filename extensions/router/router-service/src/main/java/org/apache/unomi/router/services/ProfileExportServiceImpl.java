@@ -16,7 +16,10 @@
  */
 package org.apache.unomi.router.services;
 
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
@@ -25,10 +28,7 @@ import org.apache.unomi.router.api.services.ProfileExportService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by amidani on 30/06/2017.
@@ -39,11 +39,11 @@ public class ProfileExportServiceImpl extends AbstractCustomServiceImpl implemen
 
     private ConfigSharingService configSharingService;
 
-    public String extractProfilesBySegment(ExportConfiguration exportConfiguration) {
+    public String extractProfilesBySegment(ExportConfiguration exportConfiguration, Collection<PropertyType> propertiesDef) {
         List<Profile> profileList = persistenceService.query("segments", (String) exportConfiguration.getProperty("segment"), null, Profile.class);
         StringBuilder csvContent = new StringBuilder();
         for (Profile profile : profileList) {
-            csvContent.append(convertProfileToCSVLine(profile, exportConfiguration));
+            csvContent.append(convertProfileToCSVLine(profile, exportConfiguration, propertiesDef));
             csvContent.append(RouterUtils.getCharFromLineSeparator(exportConfiguration.getLineSeparator()));
         }
         logger.debug("Exporting {} extracted profiles.", profileList.size());
@@ -62,12 +62,29 @@ public class ProfileExportServiceImpl extends AbstractCustomServiceImpl implemen
         return csvContent.toString();
     }
 
-    public String convertProfileToCSVLine(Profile profile, ExportConfiguration exportConfiguration) {
+    public String convertProfileToCSVLine(Profile profile, ExportConfiguration exportConfiguration, Collection<PropertyType> propertiesDef) {
         Map<String, String> mapping = (Map<String, String>) exportConfiguration.getProperty("mapping");
         String lineToWrite = "";
         for (int i = 0; i < mapping.size(); i++) {
             String propertyName = mapping.get(String.valueOf(i));
-            lineToWrite += profile.getProperty(propertyName) != null ? profile.getProperty(propertyName) : "";
+            PropertyType propType = RouterUtils.getPropertyTypeById(propertiesDef, propertyName);
+            if (BooleanUtils.isTrue(propType.isMultivalued())) {
+                List<String> multiValue = (List<String>) profile.getProperty(propertyName);
+
+                lineToWrite += StringUtils.isNotBlank(exportConfiguration.getMultiValueDelimiter()) ? exportConfiguration.getMultiValueDelimiter().charAt(0) : "";
+                int j = 0;
+                for (String entry : multiValue) {
+                    lineToWrite += entry;
+                    if (j + 1 < multiValue.size()) {
+                        lineToWrite += exportConfiguration.getMultiValueSeparator();
+                    }
+                    j++;
+                }
+                lineToWrite += StringUtils.isNotBlank(exportConfiguration.getMultiValueDelimiter()) ? exportConfiguration.getMultiValueDelimiter().charAt(1) : "";
+
+            } else {
+                lineToWrite += profile.getProperty(propertyName) != null ? profile.getProperty(propertyName) : "";
+            }
             if (i + 1 < mapping.size()) {
                 lineToWrite += exportConfiguration.getColumnSeparator();
             }

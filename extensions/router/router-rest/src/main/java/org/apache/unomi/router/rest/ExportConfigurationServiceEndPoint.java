@@ -23,6 +23,7 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.api.services.ProfileExportService;
@@ -53,6 +54,7 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
     private static final Logger logger = LoggerFactory.getLogger(ExportConfigurationServiceEndPoint.class.getName());
 
     private ProfileExportService profileExportService;
+    private ProfileService profileService;
 
     public ExportConfigurationServiceEndPoint() {
         logger.info("Initializing export configuration service endpoint...");
@@ -66,6 +68,11 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
     @WebMethod(exclude = true)
     public void setProfileExportService(ProfileExportService profileExportService) {
         this.profileExportService = profileExportService;
+    }
+
+    @WebMethod(exclude = true)
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
     }
 
     /**
@@ -111,7 +118,8 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces("text/csv")
     public Response processOneshotImportConfigurationCSV(ExportConfiguration exportConfiguration) {
-        String csvContent = profileExportService.extractProfilesBySegment(exportConfiguration);
+        String csvContent = profileExportService.extractProfilesBySegment(exportConfiguration,
+                profileService.getAllPropertyTypes("profiles"));
         Response.ResponseBuilder response = Response.ok(csvContent);
         response.header("Content-Disposition",
                 "attachment; filename=Profiles_export_" + new SimpleDateFormat("yyyy-MM-dd-HH-mm").format(new Date()) + ".csv");

@@ -22,6 +22,7 @@ import org.apache.camel.component.kafka.KafkaComponent;
 import org.apache.camel.component.kafka.KafkaConfiguration;
 import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.router.api.RouterConstants;
 
 import java.util.Map;
@@ -44,6 +45,8 @@ public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
 
     protected String configType;
     protected String allowedEndpoints;
+
+    protected ProfileService profileService;
 
     public RouterAbstractRouteBuilder(Map<String, String> kafkaProps, String configType) {
         this.kafkaHost = kafkaProps.get("kafkaHost");
@@ -95,4 +98,9 @@ public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
     public void setAllowedEndpoints(String allowedEndpoints) {
         this.allowedEndpoints = allowedEndpoints;
     }
+
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
+    }
+
 }

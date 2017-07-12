@@ -109,7 +109,7 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
     @Produces(MediaType.APPLICATION_JSON)
     public Response processOneshotImportConfigurationCSV(@Multipart(value = "importConfigId") String importConfigId, @Multipart(value = "file") Attachment file) {
         try {
-            java.nio.file.Path path = Paths.get(configSharingService.getProperty("oneshotImportUploadDir") + importConfigId + ".csv");
+            java.nio.file.Path path = Paths.get(configSharingService.getProperty(RouterConstants.IMPORT_ONESHOT_UPLOAD_DIR) + importConfigId + ".csv");
             Files.deleteIfExists(path);
             InputStream in = file.getObject(InputStream.class);
 

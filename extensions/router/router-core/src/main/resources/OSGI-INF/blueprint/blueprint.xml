@@ -117,6 +117,7 @@
         <property name="importConfigurationService" ref="importConfigurationService"/>
         <property name="persistenceService" ref="persistenceService"/>
         <property name="profileExportService" ref="profileExportService"/>
+        <property name="profileService" ref="profileService"/>
     </bean>
 
     <camel:camelContext id="httpEndpoint" xmlns="http://camel.apache.org/schema/blueprint">
@@ -135,6 +136,7 @@
     <reference id="httpService" interface="org.osgi.service.http.HttpService"/>
     <reference id="profileImportService" interface="org.apache.unomi.router.api.services.ProfileImportService"/>
     <reference id="profileExportService" interface="org.apache.unomi.router.api.services.ProfileExportService"/>
+    <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="importConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService" filter="(configDiscriminator=IMPORT)"/>
     <reference id="exportConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService" filter="(configDiscriminator=EXPORT)"/>

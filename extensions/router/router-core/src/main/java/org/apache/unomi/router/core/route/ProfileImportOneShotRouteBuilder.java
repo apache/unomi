@@ -59,6 +59,7 @@ public class ProfileImportOneShotRouteBuilder extends RouterAbstractRouteBuilder
         }
 
         LineSplitProcessor lineSplitProcessor = new LineSplitProcessor();
+        lineSplitProcessor.setPropertiesDef(profileService.getAllPropertyTypes("profiles"));
 
         ProcessorDefinition prDef = from("file://" + uploadDir + "?include=.*.csv&consumer.delay=1m")
                 .routeId(RouterConstants.IMPORT_ONESHOT_ROUTE_ID)
