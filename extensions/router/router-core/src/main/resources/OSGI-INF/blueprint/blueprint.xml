@@ -43,6 +43,7 @@
 
     <bean id="unomiStorageProcessor" class="org.apache.unomi.router.core.processor.UnomiStorageProcessor">
         <property name="profileImportService" ref="profileImportService"/>
+        <property name="segmentService" ref="segmentService"/>
     </bean>
 
     <bean id="importRouteCompletionProcessor" class="org.apache.unomi.router.core.processor.ImportRouteCompletionProcessor">
@@ -141,6 +142,7 @@
     <reference id="profileExportService" interface="org.apache.unomi.router.api.services.ProfileExportService"/>
     <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
+    <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
     <reference id="importConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService" filter="(configDiscriminator=IMPORT)"/>
     <reference id="exportConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService" filter="(configDiscriminator=EXPORT)"/>
 

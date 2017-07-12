@@ -19,8 +19,13 @@ package org.apache.unomi.router.core.processor;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.apache.camel.Processor;
+import org.apache.unomi.api.segments.SegmentsAndScores;
+import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.router.api.ProfileToImport;
 import org.apache.unomi.router.api.services.ProfileImportService;
+
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by amidani on 29/12/2016.
@@ -28,6 +33,7 @@ import org.apache.unomi.router.api.services.ProfileImportService;
 public class UnomiStorageProcessor implements Processor {
 
     private ProfileImportService profileImportService;
+    private SegmentService segmentService;
 
     @Override
     public void process(Exchange exchange)
@@ -36,11 +42,28 @@ public class UnomiStorageProcessor implements Processor {
             Message message = exchange.getIn();
 
             ProfileToImport profileToImport = (ProfileToImport) message.getBody();
+
+            if(!profileToImport.isProfileToDelete()) {
+                SegmentsAndScores segmentsAndScoringForProfile = segmentService.getSegmentsAndScoresForProfile(profileToImport);
+                Set<String> segments = segmentsAndScoringForProfile.getSegments();
+                if (!segments.equals(profileToImport.getSegments())) {
+                    profileToImport.setSegments(segments);
+                }
+                Map<String, Integer> scores = segmentsAndScoringForProfile.getScores();
+                if (!scores.equals(profileToImport.getScores())) {
+                    profileToImport.setScores(scores);
+                }
+            }
+
             profileImportService.saveMergeDeleteImportedProfile(profileToImport);
         }
     }
 
     public void setProfileImportService(ProfileImportService profileImportService) {
         this.profileImportService = profileImportService;
+    }
+
+    public void setSegmentService(SegmentService segmentService) {
+        this.segmentService = segmentService;
     }
 }

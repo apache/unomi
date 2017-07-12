@@ -53,6 +53,9 @@ public class ProfileImportServiceImpl extends AbstractCustomServiceImpl implemen
                 for (String propName : propertiesToOverwrite) {
                     existingProfile.getProperties().put(propName, profileToImport.getProperties().get(propName));
                 }
+                //update segments and scores
+                existingProfile.setSegments(profileToImport.getSegments());
+                existingProfile.setScores(profileToImport.getScores());
             } else { //If no property is marked to overwrite we replace the whole properties map
                 logger.debug("Overwrite all properties");
                 existingProfile.setProperties(profileToImport.getProperties());
