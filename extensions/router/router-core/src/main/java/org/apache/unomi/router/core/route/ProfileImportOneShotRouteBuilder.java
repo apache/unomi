@@ -59,7 +59,7 @@ public class ProfileImportOneShotRouteBuilder extends RouterAbstractRouteBuilder
         }
 
         LineSplitProcessor lineSplitProcessor = new LineSplitProcessor();
-        lineSplitProcessor.setPropertiesDef(profileService.getAllPropertyTypes("profiles"));
+        lineSplitProcessor.setProfileService(profileService);
 
         ProcessorDefinition prDef = from("file://" + uploadDir + "?include=.*.csv&consumer.delay=1m")
                 .routeId(RouterConstants.IMPORT_ONESHOT_ROUTE_ID)
@@ -68,7 +68,7 @@ public class ProfileImportOneShotRouteBuilder extends RouterAbstractRouteBuilder
                 .split(bodyAs(String.class).tokenize("${in.header.importConfigOneShot.getLineSeparator}"))
                 .setHeader(RouterConstants.HEADER_CONFIG_TYPE, constant(configType))
                 .process(lineSplitProcessor)
-                .to("log:org.apache.unomi.router?level=INFO")
+                .to("log:org.apache.unomi.router?level=DEBUG")
                 .marshal(jacksonDataFormat)
                 .convertBodyTo(String.class);
         if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {

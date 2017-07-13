@@ -43,7 +43,7 @@ public class UnomiStorageProcessor implements Processor {
 
             ProfileToImport profileToImport = (ProfileToImport) message.getBody();
 
-            if(!profileToImport.isProfileToDelete()) {
+            if (!profileToImport.isProfileToDelete()) {
                 SegmentsAndScores segmentsAndScoringForProfile = segmentService.getSegmentsAndScoresForProfile(profileToImport);
                 Set<String> segments = segmentsAndScoringForProfile.getSegments();
                 if (!segments.equals(profileToImport.getSegments())) {

@@ -55,7 +55,7 @@ public class ImportRouteCompletionProcessor implements Processor {
                 successCount++;
             } else if (line instanceof ImportLineError) {
                 failureCount++;
-                if(errors.size() < execErrReportSize) {
+                if (errors.size() < execErrReportSize) {
                     errors.add(((ImportLineError) line));
                 }
             } else {
@@ -64,7 +64,7 @@ public class ImportRouteCompletionProcessor implements Processor {
         }
 
         Integer nbTotal = (Integer) exchange.getProperty("CamelSplitSize");
-        if(importConfiguration.isHasHeader()) {
+        if (importConfiguration.isHasHeader()) {
             nbTotal--;
         }
 
@@ -75,7 +75,7 @@ public class ImportRouteCompletionProcessor implements Processor {
         execution.put("failureCount", failureCount);
         execution.put("errors", errors);
 
-        importConfiguration = (ImportConfiguration) RouterUtils.addExecutionEntry(importConfiguration, execution,executionsHistorySize);
+        importConfiguration = (ImportConfiguration) RouterUtils.addExecutionEntry(importConfiguration, execution, executionsHistorySize);
 
         //Set running to false, route is complete
         if (failureCount > 0 && successCount > 0) {
@@ -86,7 +86,7 @@ public class ImportRouteCompletionProcessor implements Processor {
             importConfiguration.setStatus(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS);
         }
         importConfigurationService.save(importConfiguration);
-        logger.info("Processing route {} completed.", exchange.getFromRouteId());
+        logger.info("Processing route {} completed. completion date: {}.", exchange.getFromRouteId(), new Date());
     }
 
     public void setImportConfigurationService(ImportExportConfigurationService<ImportConfiguration> importConfigurationService) {

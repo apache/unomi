@@ -86,7 +86,7 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                 lineSplitProcessor.setMultiValueDelimiter(importConfiguration.getMultiValueDelimiter());
                 lineSplitProcessor.setMultiValueSeparator(importConfiguration.getMultiValueSeparator());
 
-                lineSplitProcessor.setPropertiesDef(profileService.getAllPropertyTypes("profiles"));
+                lineSplitProcessor.setProfileService(profileService);
 
                 String endpoint = (String) importConfiguration.getProperties().get("source");
 
@@ -112,7 +112,6 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                             .setHeader(RouterConstants.HEADER_CONFIG_TYPE, constant(configType))
                             .process(lineSplitProcessor)
                             .log(LoggingLevel.DEBUG, "Split IDX ${exchangeProperty.CamelSplitIndex} record")
-                            .to("log:org.apache.unomi.router?level=DEBUG")
                             .marshal(jacksonDataFormat)
                             .convertBodyTo(String.class);
 

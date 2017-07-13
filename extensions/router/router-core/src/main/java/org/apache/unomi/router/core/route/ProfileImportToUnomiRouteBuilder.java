@@ -64,7 +64,7 @@ public class ProfileImportToUnomiRouteBuilder extends RouterAbstractRouteBuilder
                 .completionPredicate(exchangeProperty("CamelSplitComplete").isEqualTo("true"))
                 .eagerCheckCompletion()
                 .process(importRouteCompletionProcessor)
-                .to("log:org.apache.unomi.router?level=INFO");
+                .to("log:org.apache.unomi.router?level=DEBUG");
     }
 
     public void setUnomiStorageProcessor(UnomiStorageProcessor unomiStorageProcessor) {

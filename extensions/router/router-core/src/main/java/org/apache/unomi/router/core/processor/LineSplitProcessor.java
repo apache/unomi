@@ -22,6 +22,7 @@ import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.PropertyType;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.ProfileToImport;
 import org.apache.unomi.router.api.RouterConstants;
@@ -30,7 +31,10 @@ import org.apache.unomi.router.core.exception.BadProfileDataFormatException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Created by amidani on 29/12/2016.
@@ -50,7 +54,7 @@ public class LineSplitProcessor implements Processor {
     private String multiValueSeparator;
     private String multiValueDelimiter;
 
-    private Collection<PropertyType> propertiesDef;
+    private ProfileService profileService;
 
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -87,17 +91,17 @@ public class LineSplitProcessor implements Processor {
             }
             Map<String, Object> properties = new HashMap<>();
             for (String fieldMappingKey : fieldsMapping.keySet()) {
-                PropertyType propertyType = RouterUtils.getPropertyTypeById(propertiesDef, fieldMappingKey);
+                PropertyType propertyType = RouterUtils.getPropertyTypeById(profileService.getAllPropertyTypes("profiles"), fieldMappingKey);
 
                 if (profileData.length > fieldsMapping.get(fieldMappingKey)) {
                     try {
-                         if (propertyType.getValueTypeId().equals("string") || propertyType.getValueTypeId().equals("email")) {
+                        if (propertyType.getValueTypeId().equals("string") || propertyType.getValueTypeId().equals("email")) {
                             if (BooleanUtils.isTrue(propertyType.isMultivalued())) {
                                 String multivalueArray = profileData[fieldsMapping.get(fieldMappingKey)].trim();
-                                if(StringUtils.isNoneBlank(multiValueDelimiter) && multiValueDelimiter.length() == 2) {
-                                    multivalueArray = multivalueArray.replaceAll("\\"+multiValueDelimiter.charAt(0),"").replaceAll("\\"+multiValueDelimiter.charAt(1), "");
+                                if (StringUtils.isNoneBlank(multiValueDelimiter) && multiValueDelimiter.length() == 2) {
+                                    multivalueArray = multivalueArray.replaceAll("\\" + multiValueDelimiter.charAt(0), "").replaceAll("\\" + multiValueDelimiter.charAt(1), "");
                                 }
-                                String[] valuesArray = multivalueArray.split("\\"+multiValueSeparator);
+                                String[] valuesArray = multivalueArray.split("\\" + multiValueSeparator);
                                 properties.put(fieldMappingKey, valuesArray);
                             } else {
                                 properties.put(fieldMappingKey, profileData[fieldsMapping.get(fieldMappingKey)].trim());
@@ -193,12 +197,12 @@ public class LineSplitProcessor implements Processor {
     }
 
     /**
-     * Sets the Property definitions list.
+     * Sets the Profile service.
      *
-     * @param propertiesDef Property definitions list
+     * @param profileService Profile service
      */
-    public void setPropertiesDef(Collection<PropertyType> propertiesDef) {
-        this.propertiesDef = propertiesDef;
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
     }
 
 }
