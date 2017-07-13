@@ -168,6 +168,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         List<Rule> allItems = allRules;
 
         for (Rule rule : allItems) {
+            if (!rule.getMetadata().isEnabled()) {
+                continue;
+            }
             RuleStatistics ruleStatistics = getLocalRuleStatistics(rule);
             long ruleConditionStartTime = System.currentTimeMillis();
             String scope = rule.getMetadata().getScope();
@@ -336,6 +339,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     public Set<Condition> getTrackedConditions(Item source){
         Set<Condition> trackedConditions = new HashSet<>();
         for (Rule r : allRules) {
+            if (!r.getMetadata().isEnabled()) {
+                continue;
+            }
             Condition trackedCondition = definitionsService.extractConditionByTag(r.getCondition(), "trackedCondition");
             if(trackedCondition != null){
                 Condition sourceEventPropertyCondition = definitionsService.extractConditionByTag(r.getCondition(), "sourceEventCondition");
