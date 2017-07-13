@@ -26,7 +26,6 @@ import org.apache.unomi.api.services.RulesService;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * An incoming request for context information from clients of the context server. This allows clients to specify which type of information they are interested in getting from
@@ -180,18 +179,18 @@ public class ContextRequest {
     }
 
     /**
-     * Retrieves the overrides.
+     * Retrieves the profile overrides.
      *
-     * @return the overrides
+     * @return the profile overrides
      */
     public Profile getProfileOverrides() {
         return profileOverrides;
     }
 
     /**
-     * Sets the overrides.
+     * Sets the profile overrides.
      *
-     * @param overrides the collection<String> overrides out of profileProperties and sessionProperties
+     * @param overrides the profile overrides
      */
     public void setProfileOverrides(Profile overrides) {
         this.profileOverrides = overrides;
