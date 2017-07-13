@@ -77,7 +77,7 @@ All communication is done using HTTP REST requests and JSON data formats.
 3. Start it using : `./bin/karaf`
 4. Wait for startup to complete
 5. Try accessing [https://localhost:9443/cxs/cluster](https://localhost:9443/cxs/cluster) with username/password: karaf/karaf . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
-6. Request your first context by simply accessing : [http://localhost:8181/context.js?session=1234](http://localhost:8181/context.js?session=1234)
+6. Request your first context by simply accessing : [http://localhost:8181/context.js?sessionId=1234](http://localhost:8181/context.js?sessionId=1234)
 
 ### News
 
