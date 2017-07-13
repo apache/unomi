@@ -81,6 +81,12 @@ This extension is implemented using Apache Camel routes and can use Apache Kafka
              ...
            }
          },
+         "columnSeparator": ",",
+         "lineSeparator": "\\n",
+         "multiValueSeparator": "|",
+         "multiValueDelimiter": "",
+         "hasHeader": false,
+         "hasDeleteColumn": false,
          "mergingProperty": "email",
          "overwriteExistingProfiles": true,
          "propertiesToOverwrite": ["firstName", "lastName"],
@@ -91,33 +97,50 @@ This extension is implemented using Apache Camel routes and can use Apache Kafka
     Omit the `itemId` when creating new entry, `configType` can be '**recurrent**' for file/ftp/network path polling or  '**oneshot**' for one time import (in case of oneshot configuration, omit the properties.source attribute).
     
     The `properties.source` attribute is an Apache Camel endpoint uri (See http://camel.apache.org/uris.html for more details). Unomi Router is designed to use **File** and **FTP** Camel components. 
+            
+           **path** the path to the file 
+           **fileName** is the name of the file to consume, you can use a pattern by using include option instead of fileName (eg. include=.*.csv)
+           **move** is the folder where you want to move you consumed files (By default they are moved to '.camel' folder)
+           **consumer.delay** the polling frequency on the specified path, have different format (number of milliseconds, or '2s', '1h', etc.)
     
     The attribute `properties.mapping` is a Map of:
     * Key: Profile property id in Unomi
     * Value: Index of the column in the imported file to copy the in the previous property.
-        
-    The attribute `mergingProperty` is the profile property id in Unomi to use to check for duplication.
     
-    The attribute `propertiesToOverwrite` is a list of profile properties ids to overwrite, if **null** all properties
-    will be overwritten.
+    The attribute `columnSeparator` is a string that defaults to "," the most common column separator for CSV files.
+    
+    The attribute `lineSeparator` is a string that defaults to "\n" the most common line separator for files.
+    
+    The attribute `multiValueSeparator` is a string that defaults to "|".
+    
+    **ATTENTION:** Be careful not to use the same separator as for column.
+    
+    The attribute `multiValueDelimiter` is a string that defaults to an empty string (No delimiter), some CSV producers tend to wrap multivalued column use this attribute to specify your producers' delimiter 
+    (eg. for brackets you can fill the field with "[]", opening and closing are needed).
     
     The attribute `hasHeader` is a boolean that defaults to false (the imported file has no header).
     
     The attribute `hasDeleteColumn` is a boolean that defaults to false (the imported file' last column is a delete flag).
     
+    The attribute `mergingProperty` is the profile property id in Unomi to use to check for duplicates.
+    
+    The attribute `overwriteExistingProfiles` is a flag to tell what you want to do if the profile already exist (**Merge -> true / Skip -> false**).
+        
+    The attribute `propertiesToOverwrite` is a list of profile properties ids to overwrite (ignored if 'overwriteExistingProfiles' is **false**), if **null** all properties
+    will be overwritten.
+    
     The attribute `active` is the flag to activate or deactivate the import configuration.
     
     Concerning oneshot import configuration using the previously described service will only create the import configuration, to send the file to process
-    you need to call : 
-    
+        you need to call : 
+        
     `POST /cxs/importConfiguration/oneshot`
-    
     `Content-Type : multipart/form-data`
-    
+
     First multipart with the name '**importConfigId**' is the importConfiguration to use to import the file, second one with the name '**file**' is the file to import.
-    
-    2. Send your export configuration:
-    
+            
+  3. Send your export configuration:
+            
     An export configuration is nothing else than a simple JSON to describe how you want to export your data (Profiles).
     To create/update an export configuration
     
