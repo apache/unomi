@@ -31,7 +31,7 @@ improvement of the ASF incubation process. Unomi is the second podling where
 that happens.
 
 ## Status of this document
-Just started, to be reviewed
+Updated 2017-07-19 with the latest status of the project.
 
 ## Overall assessment
 Just introduced this report card, we will need to evaluate all the model's parts to see how we fare so far.
@@ -45,50 +45,50 @@ and comment on it.
 #### CD10
 _The project produces Open Source software, for distribution to the public at no charge._
 
-- [ ] : to be evaluated
+- [ OK ] : everything is hosted at the Apache Software Foundation
  
 #### CD20
 _The project's code is easily discoverable and publicly accessible._
 
-- [ ] : to be evaluated
+- [ OK ] : it is linked from the main project site and accessible in the public ASF git repository
 
 #### CD30
 _The code can be built in a reproducible way using widely available standard tools._
 
-- [ ] : to be evaluated
+- [ OK ] : Jenkins is configured on the project.
 
 #### CD40
 _The full history of the project's code is available via a source code control system, in a way that allows any released version to be recreated._
 
-- [ ] : to be evaluated
+- [ OK ] : everything is in the ASF Git repository.
 
 #### CD50
 _The provenance of each line of code is established via the source code control system, in a reliable way based on strong authentication of the committer.
 When third-party contributions are committed, commit messages provide reliable information about the code provenance._
 
-- [ ] : to be evaluated
+- [ OK ] : Only ASF committers with CLAs may contribute to the project.
 
 ### Licenses and Copyright
 
 #### LC10
 _The code is released under the Apache License, version 2._0._ 
 
-- [ ] : to be evaluated
+- [ OK ] : A LICENSE file is also at the root of the ASF Git repository
 
 #### LC20
 _Libraries that are mandatory dependencies of the project's code do not create more restrictions than the Apache License does._
 
-- [ ] : to be evaluated
+- [ OK ] : NOTICE files contain all the information and has been reviewed on two releases already
 
 #### LC30
 _The libraries mentioned in LC20 are available as Open Source software._
 
-- [ ] : to be evaluated
+- [ OK ] : See LC20
 
 #### LC40
 _Committers are bound by an Individual Contributor Agreement (the "Apache iCLA") that defines which code they are allowed to commit and how they need to identify code that is not their own._
 
-- [ ] : to be evaluated
+- [ OK ] : All committers have registered iCLAs
 
 #### LC50
 _The copyright ownership of everything that the project produces is clearly defined and documented._
@@ -100,22 +100,22 @@ _The copyright ownership of everything that the project produces is clearly defi
 #### RE10
 _Releases consist of source code, distributed using standard and open archive formats that are expected to stay readable in the long term._
 
-- [ ] : to be evaluated
+- [ OK ] : Two releases have been produced so far and have been reviewed by IPMCs
 
 #### RE20
 _Releases are approved by the project's PMC (see CS10), in order to make them an act of the Foundation._
 
-- [ ] : to be evaluated
+- [ OK ] : Happened for two major releases already
 
 #### RE30
 _Releases are signed and/or distributed along with digests that can be reliably used to validate the downloaded archives._
 
-- [ ] : to be evaluated
+- [ OK ] : See releases here
 
 #### RE40
 _Convenience binaries can be distributed alongside source code but they are not Apache Releases -- they are just a convenience provided with no guarantee._
 
-- [ ] : to be evaluated
+- [ OK ] : See the releases here
 
 ### Quality
 
@@ -149,7 +149,7 @@ _The project strives to respond to documented bug reports in a timely manner._
 #### CO10
 _The project has a well-known homepage that points to all the information required to operate according to this maturity model._
 
-- [ ] : to be evaluated
+- [ OK ] : See the [project's home page](http://unomi.incubator.apache.org)
 
 #### CO20
 _The community welcomes contributions from anyone who acts in good faith and in a respectful manner and adds value to the project._ 
