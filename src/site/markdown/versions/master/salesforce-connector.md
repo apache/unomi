@@ -15,8 +15,11 @@
   ~ limitations under the License.
   -->
 
-Unomi Salesforce Connector
-==========================
+Apache Unomi Salesforce Connector
+=================================
+
+This connector makes it possible to push and pull data to/from the Salesforce CRM. It can copy information between 
+Apache Unomi profiles and Salesforce Leads.
 
 ## Getting started
 
@@ -72,12 +75,16 @@ change the following settings:
     Both URLs are password protected by the Apache Unomi (Karaf) password. You can find this user and password information
     in the etc/users.properties file.
     
+9. You can now use the connector's defined actions in rules to push or pull data to/from the Salesforce CRM. You can 
+    find more information about rules in the [Concepts](concepts.html) and the [Getting Started](getting-started.html) pages. 
+    
 ## Upgrading the Salesforce connector
 
 If you followed all the steps in the Getting Started section, you can upgrade the Salesforce connector by using the following steps:
 
 1. Compile the connector using:
 
+        cd extensions/salesforce-connector
         mvn clean install
         
 2. Login to the Unomi Karaf Shell using:
@@ -143,6 +150,7 @@ test.properties
         
 and then use the following command line to reference the file:
 
+    cd extensions/salesforce-connector
     mvn clean install -DsfdcProperties=../test.properties
     
 (in case you're wondering the ../ is because the test is located in the services sub-directory)
