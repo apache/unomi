@@ -13,3 +13,4 @@ maven-metadata-local.xml
 GeoLite2-City.mmdb
 allCountries.zip
 rest/.miredot-offline.json
+/extensions/salesforce-connector/test.properties

@@ -1,0 +1,15 @@
+{
+  "metadata": {
+    "id": "sfdcUpdateProfileFromLeadAction",
+    "name": "sfdcUpdateProfileFromLeadAction",
+    "description": "",
+    "tags": [
+      "demographic",
+      "hidden.availableToEndUser"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "sfdcUpdateProfileFromLead",
+  "parameters": [
+  ]
+}

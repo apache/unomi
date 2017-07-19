@@ -13,29 +13,37 @@
   ~ distributed under the License is distributed on an "AS IS" BASIS,
   ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   ~ See the License for the specific language governing permissions and
-  ~ limitations under the License
+  ~ limitations under the License.
   -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>org.apache.unomi</groupId>
-        <artifactId>unomi-root</artifactId>
+        <artifactId>unomi-salesforce-connector</artifactId>
         <version>1.2.0-incubating-SNAPSHOT</version>
     </parent>
+    <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>unomi-extensions</artifactId>
-    <name>Apache Unomi :: Extensions</name>
-    <description>Apache Unomi Context Server extensions</description>
-    <packaging>pom</packaging>
+    <artifactId>unomi-salesforce-connector-actions</artifactId>
+    <name>Apache Unomi :: Extensions :: Salesforce connector :: Rule Actions</name>
+    <description>Rule Actions for the Apache Unomi Context Server extension that integrates with Salesforce</description>
+    <packaging>bundle</packaging>
 
-    <modules>
-        <module>lists-extension</module>
-        <module>privacy-extension</module>
-        <module>geonames</module>
-        <module>router</module>
-        <module>salesforce-connector</module>
-    </modules>
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-api</artifactId>
+            <version>1.2.0-incubating-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-salesforce-connector-services</artifactId>
+            <version>1.2.0-incubating-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
+    </dependencies>
 
 </project>
