@@ -18,11 +18,11 @@
 <features xmlns="http://karaf.apache.org/xmlns/features/v1.2.1" name="unomi-salesforce-connector-karaf-feature">
     <feature name="unomi-salesforce-connector-karaf-kar" version="1.0-SNAPSHOT" description="Apache Unomi :: Extensions :: Salesforce connector :: Apache Karaf Feature">
         <details>Apache Karaf feature for the Apache Unomi Context Server extension that integrates with Salesforce</details>
-        <configfile finalname="/etc/org.apache.unomi.sfdc.cfg">mvn:org.apache.unomi/unomi-salesforce-connector-services/1.0-SNAPSHOT/cfg/sfdccfg</configfile>
+        <configfile finalname="/etc/org.apache.unomi.sfdc.cfg">mvn:org.apache.unomi/unomi-salesforce-connector-services/1.2.0-incubating-SNAPSHOT/cfg/sfdccfg</configfile>
         <bundle start-level="85">mvn:org.apache.httpcomponents/httpcore-osgi/4.4.6</bundle>
         <bundle start-level="85">mvn:org.apache.httpcomponents/httpclient-osgi/4.5.1</bundle>
-        <bundle start-level="85">mvn:org.apache.unomi/unomi-salesforce-connector-services/1.0-SNAPSHOT</bundle>
-        <bundle start-level="85">mvn:org.apache.unomi/unomi-salesforce-connector-rest/1.0-SNAPSHOT</bundle>
-        <bundle start-level="85">mvn:org.apache.unomi/unomi-salesforce-connector-actions/1.0-SNAPSHOT</bundle>
+        <bundle start-level="85">mvn:org.apache.unomi/unomi-salesforce-connector-services/1.2.0-incubating-SNAPSHOT</bundle>
+        <bundle start-level="85">mvn:org.apache.unomi/unomi-salesforce-connector-rest/1.2.0-incubating-SNAPSHOT</bundle>
+        <bundle start-level="85">mvn:org.apache.unomi/unomi-salesforce-connector-actions/1.2.0-incubating-SNAPSHOT</bundle>
     </feature>
 </features>
