@@ -15,37 +15,8 @@
   ~ limitations under the License.
   -->
 
-# Getting started with Unomi
-
-We will first get you up and running with an example. We will then lift the corner of the cover somewhat and explain in greater details what just happened.
-
-## Prerequisites
-This document assumes that you are already familiar with Unomi's [concepts](concepts.html). On the technical side, we also assume working knowledge of [git](https://git-scm.com/) to be able to retrieve the code for Unomi and the example. Additionnally, you will require a working Java 7 or above install. Refer to http://www.oracle.com/technetwork/java/javase/ for details on how to download and install Java SE 7 or greater.
-
-## Running Unomi
-
-### Building Unomi
-
-1. Get the code: `git clone https://git-wip-us.apache.org/repos/asf/incubator-unomi.git`
-2. Build and install according to the [instructions](building-and-deploying.html) and install Unomi.
-
-### Start Unomi
-Start Unomi according to the [instructions](building-and-deploying.html#Deploying_the_generated_package). Once you have Karaf running,
- you should wait until you see the following messages on the Karaf console:
-
-```
-Initializing user list service endpoint...
-Initializing geonames service endpoint...
-Initializing segment service endpoint...
-Initializing scoring service endpoint...
-Initializing campaigns service endpoint...
-Initializing rule service endpoint...
-Initializing profile service endpoint...
-Initializing cluster service endpoint...
-```
-
-This indicates that all the Unomi services are started and ready to react to requests. You can then open a browser and go to `http://localhost:8181/cxs` to see the list of
-available RESTful services or retrieve an initial context at `http://localhost:8181/context.json` (which isn't very useful at this point).
+Twitter sample
+==============
 
 ### Building the tweet button sample
 In your local copy of the Unomi repository and run:
@@ -199,9 +170,9 @@ Let's look at the context request structure:
     requiredSessionProperties: <optional array of property identifiers>,
     filters: <optional array of filters to evaluate>,
     profileOverrides: <optional profile containing segments,scores or profile properties to override>,
-        - segments: <optional array of segment identifiers>,
-        - profileProperties: <optional map of property name / value pairs>,
-        - scores: <optional map of score id / value pairs>
+            - segments: <optional array of segment identifiers>,
+            - profileProperties: <optional map of property name / value pairs>,
+            - scores: <optional map of score id / value pairs>
     sessionPropertiesOverrides: <optional map of property name / value pairs>,
     requiresSegments: <boolean, whether to return the associated segments>
 }
@@ -216,7 +187,7 @@ A context request payload needs to at least specify some information about the s
 A client wishing to perform content personalization might also specify filtering conditions to be evaluated by the context server so that it can tell the client whether the content associated with the filter should be activated for this profile/session. This is accomplished by providing a list of filter definitions to be evaluated by the context server via the `filters` field of the payload. If provided, the evaluation results will be provided in the `filteringResults` field of the resulting `cxs` object the context server will send.
 
 #### Overrides
-It is also possible for clients wishing to perform user impersonation to specify properties, segments or scores to override the proper ones so as to emulate a specific profile, in which case the overridden value will temporarily replace the proper values so that all rules will be evaluated with these values instead of the proper ones. The `segments` (array of segment identifiers), `profileProperties` (maps of property name and associated object value) and `scores` (maps of score id and value) all wrapped in a profileOverrides object and the `sessionPropertiesOverrides` (maps of property name and associated object value) fields allow to provide such information. Providing such overrides will, of course, impact content filtering results and segments matching for this specific request.
+It is also possible for clients wishing to perform user impersonation to specify properties or segments to override the proper ones so as to emulate a specific profile, in which case the overridden value will temporarily replace the proper values so that all rules will be evaluated with these values instead of the proper ones. The `segments` (array of segment identifiers), `profileProperties` (maps of property name and associated object value) and `scores` (maps of score id and value) all wrapped in a profileOverrides object and the `sessionPropertiesOverrides` (maps of property name and associated object value) fields allow to provide such information. Providing such overrides will, of course, impact content filtering results and segments matching for this specific request.
 
 #### Controlling the content of the response
 The clients can also specify which information to include in the response by setting the `requiresSegments` property to true if segments the current profile matches should be returned or provide an array of property identifiers for `requiredProfileProperties` or `requiredSessionProperties` fields to ask the context server to return the values for the specified profile or session properties, respectively. This information is provided by the `profileProperties`, `sessionProperties` and `profileSegments` fields of the context server response.
@@ -423,3 +394,4 @@ We have seen a simple example how to interact with Unomi using a combination of 
 # Annex
 Here is an overview of how Unomi processes incoming requests to the `ContextServlet`.
 ![Unomi request overview](../../images/unomi-request.png)
+

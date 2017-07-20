@@ -119,6 +119,7 @@
                 <item name="Building and deploying" href="versions/master/building-and-deploying.html" />
                 <item name="Getting started" href="versions/master/getting-started.html"/>
                 <item name="Configuration" href="versions/master/configuration.html" />
+                <item name="Samples" href="/versions/master/samples.html" />
                 <item name="Connectors" href="versions/master/connectors.html" />
                 <item name="Cluster setup" href="versions/master/clustering.html" />
                 <item name="Concepts" href="versions/master/concepts.html"/>
