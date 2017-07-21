@@ -18,6 +18,14 @@
 Twitter sample
 ==============
 
+## Overview
+We will examine how a simple HTML page can interact with Unomi to enrich a user's profile. The use case we will follow 
+is a rather simple one: we use a Twitter button to record the number of times the visitor tweeted (as a `tweetNb` profile 
+integer property) as well as the URLs they tweeted from (as a `tweetedFrom` multi-valued string profile property). 
+A javascript script will use the Twitter API to react to clicks on this button 
+and update the user profile using a `ContextServlet` request triggering a custom event. This event will, in turn, 
+trigger a Unomi action on the server implemented using a Unomi plugin, a standard extension point for the server.
+
 ### Building the tweet button sample
 In your local copy of the Unomi repository and run:
 
@@ -93,8 +101,6 @@ We will look at the details of the context request and response later.
 
 # Example
 
-## Overview
-We will examine how a simple HTML page can interact with Unomi to enrich a user's profile. The use case we will follow is a rather simple one: we want to react to Twitter events by associating information to their profile. We will record the number of times the user tweeted (as a `tweetNb` profile integer property) as well as the URLs they tweeted from (as a `tweetedFrom` multi-valued string profile property). We will accomplish this using a simple HTML page on which we position a standard "Tweet" button. A javascript script will use the Twitter API to react to clicks on this button and update the user profile using a `ContextServlet` request triggering a custom event. This event will, in turn, trigger a Unomi action on the server implemented using a Unomi plugin, a standard extension point for the server.
 
 ## HTML page
 The code for the HTML page with our Tweet button can be found at https://github.com/apache/incubator-unomi/blob/master/wab/src/main/webapp/index.html.

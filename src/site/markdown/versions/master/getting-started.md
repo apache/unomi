@@ -53,7 +53,7 @@ available RESTful services or retrieve an initial context at `http://localhost:8
 
 You can retrieve a context using curl like this : 
 
-        curl http://localhost:8181/context.js?sessionId=1234
+    curl http://localhost:8181/context.js?sessionId=1234
         
 This will retrieve a JavaScript script that contains a `cxs` object that contains the context with the current user
 profile, segments, scores as well as functions that makes it easier to perform further requests (such as collecting 
@@ -63,7 +63,7 @@ events using the cxs.collectEvents() function).
 
 If you prefer to retrieve a pure JSON object, you can simply use a request formed like this:
 
-        curl http://localhost:8181/context.json?sessionId=1234
+    curl http://localhost:8181/context.json?sessionId=1234
 
 #### Accessing profile properties in a context
 
@@ -73,7 +73,7 @@ of the context.js(on) servlet.
 
 Here is an example that will retrieve all the session and profile properties.
 
-        curl -H "Content-Type: application/json" -X POST -d '{"source":{"itemId":"homepage","itemType":"page","scope":"example"},"requiredProfileProperties":["*"],"requiredSessionProperties":["*"],"requireSegments":true}' http://localhost:8181/context.json?sessionId=1234
+    curl -H "Content-Type: application/json" -X POST -d '{"source":{"itemId":"homepage","itemType":"page","scope":"example"},"requiredProfileProperties":["*"],"requiredSessionProperties":["*"],"requireSegments":true}' http://localhost:8181/context.json?sessionId=1234
         
 The `requiredProfileProperties` and `requiredSessionProperties` are properties that take an array of property names 
 that should be retrieved. In this case we use the wildcard character '*' to say we want to retrieve all the available
@@ -85,7 +85,7 @@ Java class.
 At the same time as you are retrieving the context, you can also directly send events in the ContextRequest object as 
 illustrated in the following example:
 
-        curl -H "Content-Type: application/json" -X POST -d '{"source":{"itemId":"homepage","itemType":"page","scope":"example"},"events":[{"eventType":"view","scope": "example","source":{"itemType": "site","scope":"example","itemId": "mysite"},"target":{"itemType":"page","scope":"example","itemId":"homepage","properties":{"pageInfo":{"referringURL":""}}}}]}' http://localhost:8181/context.json?sessionId=1234
+    curl -H "Content-Type: application/json" -X POST -d '{"source":{"itemId":"homepage","itemType":"page","scope":"example"},"events":[{"eventType":"view","scope": "example","source":{"itemType": "site","scope":"example","itemId": "mysite"},"target":{"itemType":"page","scope":"example","itemId":"homepage","properties":{"pageInfo":{"referringURL":""}}}}]}' http://localhost:8181/context.json?sessionId=1234
         
 Upon received events, Apache Unomi will execute all the rules that match the current context, and return an updated context.
 This way of sending events is usually used upon first loading of a page. If you want to send events after the page has
@@ -97,7 +97,7 @@ to send events in a network optimal way you can use the eventcollector servlet (
 If you only need to send events without retrieving a context, you should use the eventcollector servlet that is optimized 
 respond quickly and minimize network traffic. Here is an example of using this servlet:
 
-        curl -H "Content-Type: application/json" -X POST -d '{"events":[{"eventType":"view","scope": "example","source":{"itemType": "site","scope":"example","itemId": "mysite"},"target":{"itemType":"page","scope":"example","itemId":"homepage","properties":{"pageInfo":{"referringURL":""}}}}]}' http://localhost:8181/eventcollector?sessionId=1234
+    curl -H "Content-Type: application/json" -X POST -d '{"events":[{"eventType":"view","scope": "example","source":{"itemType": "site","scope":"example","itemId": "mysite"},"target":{"itemType":"page","scope":"example","itemId":"homepage","properties":{"pageInfo":{"referringURL":""}}}}]}' http://localhost:8181/eventcollector?sessionId=1234
         
 Note that the eventcollector executes the rules but does not return a context. If is generally used after a page is loaded
 to send additional events.        
