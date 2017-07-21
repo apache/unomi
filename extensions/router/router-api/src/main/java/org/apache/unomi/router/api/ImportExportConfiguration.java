@@ -34,8 +34,8 @@ public class ImportExportConfiguration extends Item {
     private Map<String, Object> properties = new HashMap<>();
     private String columnSeparator = ",";
     private String lineSeparator = "\n";
-    private String multiValueSeparator = "|";
-    private String multiValueDelimiter = "";
+    private String multiValueSeparator = ";";
+    private String multiValueDelimiter = "[]";
     private boolean active;
     private String status;
 
