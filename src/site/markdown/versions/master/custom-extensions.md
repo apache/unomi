@@ -73,6 +73,39 @@ An extension is simply a Maven project, with a Maven pom that looks like this:
 An extension may contain many different kinds of Apache Unomi objects, as well as custom OSGi services or anything that
 is needed to build your application.
 
+## Predefined segments
+
+You may provide pre-defined segments by simply adding a JSON file in the src/main/resources/META-INF/cxs/segments directory of 
+your Maven project. Here is an example of a pre-defined segment:
+
+    {
+      "metadata": {
+        "id": "leads",
+        "name": "Leads",
+        "scope": "systemscope",
+        "description": "You can customize the list below by editing the leads segment.",
+        "readOnly":true
+      },
+      "condition": {
+        "parameterValues": {
+          "subConditions": [
+            {
+              "parameterValues": {
+                "propertyName": "properties.leadAssignedTo",
+                "comparisonOperator": "exists"
+              },
+              "type": "profilePropertyCondition"
+            }
+          ],
+          "operator" : "and"
+        },
+        "type": "booleanCondition"
+      }
+    }
+
+Basically this segment uses a condition to test if the profile has a property `leadAssignedTo` that exists. All profiles
+that match this condition will be part of the pre-defined segment.
+
 ## Predefined rules
 
 You may provide pre-defined rules by simply adding a JSON file in the src/main/resources/META-INF/cxs/rules directory of 
