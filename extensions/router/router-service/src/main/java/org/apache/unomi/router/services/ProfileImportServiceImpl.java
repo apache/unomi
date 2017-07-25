@@ -36,7 +36,7 @@ public class ProfileImportServiceImpl extends AbstractCustomServiceImpl implemen
     public boolean saveMergeDeleteImportedProfile(ProfileToImport profileToImport) throws InvocationTargetException, IllegalAccessException {
         logger.debug("Importing profile with ID : {}", profileToImport.getItemId());
         Profile existingProfile = new Profile();
-        List<Profile> existingProfiles = persistenceService.query("properties." + profileToImport.getMergingProperty(), (String) profileToImport.getProperties().get(profileToImport.getMergingProperty()), null, Profile.class);
+        List<Profile> existingProfiles = persistenceService.query("properties." + profileToImport.getMergingProperty(), profileToImport.getProperties().get(profileToImport.getMergingProperty()).toString(), null, Profile.class);
         logger.debug("Query existing profile with mergingProperty: {}. Found: {}", profileToImport.getMergingProperty(), existingProfiles.size());
 
         //Profile already exist, and import config allow to overwrite profiles
@@ -65,7 +65,7 @@ public class ProfileImportServiceImpl extends AbstractCustomServiceImpl implemen
             BeanUtils.copyProperties(existingProfile, profileToImport);
         } else {
             logger.warn("{} occurences found for profile with {} = {}. Profile import is skipped", existingProfiles.size(),
-                    profileToImport.getMergingProperty(), profileToImport.getProperties().get(profileToImport.getMergingProperty()));
+                    profileToImport.getMergingProperty(), profileToImport.getProperties().get(profileToImport.getMergingProperty()).toString());
         }
         logger.debug("-------------------------------------");
         return persistenceService.save(existingProfile, true);
