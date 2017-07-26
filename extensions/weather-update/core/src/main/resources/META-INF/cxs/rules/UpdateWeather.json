@@ -1,0 +1,40 @@
+{
+  "metadata": {
+    "id": "weatherUpdate",
+    "name": "Add weather information to session",
+    "description": "Get the weather from a city"
+  },
+  "raiseEventOnlyOnceForSession": false,
+  "condition": {
+
+    "parameterValues": {
+      "subConditions": [
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "weatherEvent"
+          }
+        },
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "login"
+          }
+        }
+      ],
+      "operator" : "or"
+    },
+    "type": "booleanCondition"
+  },
+  "actions": [
+    {
+      "type": "weatherUpdateAction",
+      "parameterValues": {}
+    }
+  ]
+}
+
+
+
+
+
