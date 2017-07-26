@@ -16,15 +16,20 @@
   -->
 
 
-# UnomiWeatherUpdate
-A simple plugin to send Unomi events when a member is logged
+Apache Unomi Unomi Weather Update
+=================================
 
+This sample plugin will retrieve the weather associated with the resolved location of the user (from his IP address)
 
-In the etc/org.apache.unomi.weatherupdate.cfg file change the following settings:
+## Getting started
 
-        weatherUpdate.apiKey=YOUR_WEATHER_APIKEY
-        
-        
-                <configfile finalname="/etc/org.apache.unomi.weatherupdate.cfg">mvn:org.apache.unomi
-                .samples/weather-update-karaf-kar/${project.version}/cfg/weatherupdatecfg</configfile>
+1.  Configure the Apache Unomi Weather Update. In the etc/org.apache.unomi.weatherUpdate.cfg file 
+change the following settings:
 
+         weatherUpdate.apiKey=YOUR_WEATHER_APIKEY
+  
+           
+2. Deploy into Apache Unomi using the following commands from the Apache Karaf shell:
+
+        feature:repo-add mvn:org.apache.unomi/unomi-weather-update-karaf-kar/1.2.0-incubating-SNAPSHOT/xml/features
+        feature:install unomi-weather-update-karaf-kar
