@@ -60,7 +60,7 @@ public class ProfileImportServiceImpl extends AbstractCustomServiceImpl implemen
             //update segments and scores
             existingProfile.setSegments(profileToImport.getSegments());
             existingProfile.setScores(profileToImport.getScores());
-        } else if (existingProfiles.size() == 0) {
+        } else if (existingProfiles.size() == 0 && !profileToImport.isProfileToDelete()) {
             logger.debug("New profile to add...");
             BeanUtils.copyProperties(existingProfile, profileToImport);
         } else {
