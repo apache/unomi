@@ -23,13 +23,21 @@ This sample plugin will retrieve the weather associated with the resolved locati
 
 ## Getting started
 
-1.  Configure the Apache Unomi Weather Update. In the etc/org.apache.unomi.weatherUpdate.cfg file 
+1.  Create an new account :
+
+        https://home.openweathermap.org/users/sign_up
+           
+2.  Generate a new API Key, or get the default
+
+        https://home.openweathermap.org/api_keys
+
+2.  Configure the Apache Unomi Weather Update. In the etc/org.apache.unomi.weatherUpdate.cfg file 
 change the following settings:
 
          weatherUpdate.apiKey=YOUR_WEATHER_APIKEY
   
            
-2. Deploy into Apache Unomi using the following commands from the Apache Karaf shell:
+3.  Deploy into Apache Unomi using the following commands from the Apache Karaf shell:
 
         feature:repo-add mvn:org.apache.unomi/unomi-weather-update-karaf-kar/1.2.0-incubating-SNAPSHOT/xml/features
         feature:install unomi-weather-update-karaf-kar
