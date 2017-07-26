@@ -57,12 +57,15 @@ public class WeatherUpdateAction implements ActionExecutor {
         }
 
         Session session = event.getSession();
+
         if (!(weatherApiKey == null || weatherUrlBase == null || weatherUrlAttributes == null)) {
             Map<String, Object> sessionProperties = session.getProperties();
             if (sessionProperties.containsKey("location")) {
                 Map<String, Double> location = (Map<String, Double>) session.getProperty("location");
-                HttpGet httpGet = new HttpGet(weatherUrlBase + "/" + weatherUrlAttributes +
-                        "?lat=" + location.get("lat") + "&lon=" + location.get("lon") + "&appid=" + weatherApiKey);
+                HttpGet httpGet = new HttpGet(weatherUrlBase + "/" + weatherUrlAttributes + "?lat=" +
+                        location.get("lat") + "&lon=" + location.get("lon") + "&appid=" + weatherApiKey
+                );
+
                 JsonNode jsonNode = null;
                 CloseableHttpResponse response = null;
                 try {
@@ -111,16 +114,9 @@ public class WeatherUpdateAction implements ActionExecutor {
                 }
             }
         }
-        logger.info("No update made.");
         return EventService.NO_CHANGE;
     }
 
-    /**
-     * Extract the temperature property from the response
-     *
-     * @param jsonNode
-     * @return String temperature in celsius
-     */
     private String extractTemperature(JsonNode jsonNode) {
         float temperature;
         if (jsonNode.has("main") && jsonNode.get("main").has("temp")) {
@@ -138,12 +134,6 @@ public class WeatherUpdateAction implements ActionExecutor {
         return null;
     }
 
-    /**
-     * Extract the wind speed property from the response
-     *
-     * @param jsonNode
-     * @return String wind speed in km/h
-     */
     private String extractWindSpeed(JsonNode jsonNode) {
         JsonNode WindInfoSpeed;
         if (jsonNode.has("wind") && jsonNode.get("wind").has("speed")) {
@@ -159,50 +149,56 @@ public class WeatherUpdateAction implements ActionExecutor {
 
     }
 
-    /**
-     * Extract the wind direction property from the response
-     *
-     * @param jsonNode
-     * @return String wind direction in cardinal points format
-     */
     private String extractWindDirection(JsonNode jsonNode) {
-        JsonNode windInfoDirection;
-        String direction = "";
+        JsonNode WindInfoDirection;
         if (jsonNode.has("wind")) {
-            windInfoDirection = jsonNode.get("wind").get("deg");
-            if (windInfoDirection != null) {
-
-                float deg = Float.parseFloat(windInfoDirection.toString());
-                if (340 < deg && deg < 360 || 0 < deg && deg < 20) {
-                    direction = ("N");
-                } else if (20 < deg && deg < 70) {
-                    direction = ("NE");
-                } else if (70 < deg && deg < 110) {
-                    direction = ("E");
-                } else if (110 < deg && deg < 160) {
-                    direction = ("SE");
-                } else if (160 < deg && deg < 200) {
-                    direction = ("S");
-                } else if (200 < deg && deg < 245) {
-                    direction = ("SW");
-                } else if (245 < deg && deg < 290) {
-                    direction = ("W");
-                } else if (290 < deg && deg < 340) {
-                    direction = ("NW");
-                }
-                logger.debug("Wind direction: " + direction);
-                return direction;
+            WindInfoDirection = jsonNode.get("wind").get("deg");
+            String direction = "";
+            float deg = Float.parseFloat(WindInfoDirection.toString());
+            if (11.25 < deg && deg < 348.75) {
+                direction = ("N");
+            } else if (11.25 < deg && deg < 33.75) {
+                direction = ("NNE");
+            } else if (33.75 < deg && deg < 56.25) {
+                direction = ("NE");
+            } else if (56.25 < deg && deg < 78.75) {
+                direction = ("ENE");
+            } else if (78.75 < deg && deg < 101.25) {
+                direction = ("E");
+            } else if (101.25 < deg && deg < 123.75) {
+                direction = ("ESE");
+            } else if (123.75 < deg && deg < 146.25) {
+                direction = ("SE");
+            } else if (146.25 < deg && deg < 168.75) {
+                direction = ("SSE");
+            } else if (168.75 < deg && deg < 191.25) {
+                direction = ("S");
+            } else if (191.25 < deg && deg < 213.75) {
+                direction = ("SSW");
+            } else if (213.75 < deg && deg < 236.25) {
+                direction = ("SW");
+            } else if (236.25 < deg && deg < 258.75) {
+                direction = ("WSW");
+            } else if (258.75 < deg && deg < 281.25) {
+                direction = ("W");
+            } else if (281.25 < deg && deg < 303.75) {
+                direction = ("WNW");
+            } else if (303.75 < deg && deg < 326.25) {
+                direction = ("NW");
+            } else if (326.25 < deg && deg < 348.75) {
+                direction = ("NNW");
             }
+            logger.debug("Wind direction: " + direction);
+            return direction;
         }
         logger.info("API Response doesn't contains the wind direction");
         return null;
     }
 
     /**
-     * Extract the weather like property from the response
      *
      * @param jsonNode
-     * @return String weather like
+     * @return
      */
     private String extractWeatherLike(JsonNode jsonNode) {
         JsonNode weatherLike;
@@ -219,9 +215,10 @@ public class WeatherUpdateAction implements ActionExecutor {
     }
 
     /**
-     * @param session  the current session
-     * @param property session property to fill
-     * @param value    of property
+     *
+     * @param session
+     * @param property
+     * @param value
      */
     private void fillPropreties(Session session, String property, String value) {
         session.setProperty(property, value);
@@ -230,9 +227,6 @@ public class WeatherUpdateAction implements ActionExecutor {
     //Setters
 
     /**
-     * +
-     * Set the weatherApiKey
-     *
      * @param weatherApiKey
      */
     public void setWeatherApiKey(String weatherApiKey) {
@@ -240,8 +234,6 @@ public class WeatherUpdateAction implements ActionExecutor {
     }
 
     /**
-     * Set the weatherUrlBase
-     *
      * @param weatherUrlBase
      */
     public void setWeatherUrlBase(String weatherUrlBase) {
@@ -249,8 +241,6 @@ public class WeatherUpdateAction implements ActionExecutor {
     }
 
     /**
-     * Set the weatherUrlAttributes
-     *
      * @param weatherUrlAttributes
      */
     public void setWeatherUrlAttributes(String weatherUrlAttributes) {
