@@ -33,7 +33,7 @@
     <!-- Action executor -->
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="actionExecutorId" value="weatherUpdate"/>
+            <entry key="actionExecutorId" value="WeatherUpdate"/>
         </service-properties>
         <bean class="org.apache.unomi.weatherupdate.actions.WeatherUpdateAction">
             <property name="weatherApiKey" value="${weatherUpdate.apiKey}"/>
