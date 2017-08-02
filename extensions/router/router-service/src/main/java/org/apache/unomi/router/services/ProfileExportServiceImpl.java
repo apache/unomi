@@ -68,13 +68,14 @@ public class ProfileExportServiceImpl extends AbstractCustomServiceImpl implemen
         for (int i = 0; i < mapping.size(); i++) {
             String propertyName = mapping.get(String.valueOf(i));
             PropertyType propType = RouterUtils.getPropertyTypeById(propertiesDef, propertyName);
+            Object propertyValue = profile.getProperty(propertyName);
             if (BooleanUtils.isTrue(propType.isMultivalued())) {
-                List<String> multiValue = (List<String>) profile.getProperty(propertyName);
+                List<String> multiValue = (List<String>) propertyValue;
 
                 lineToWrite += StringUtils.isNotBlank(exportConfiguration.getMultiValueDelimiter()) ? exportConfiguration.getMultiValueDelimiter().charAt(0) : "";
                 int j = 0;
                 for (String entry : multiValue) {
-                    lineToWrite += entry;
+                    lineToWrite += entry.replaceAll("\"", "\"\"");
                     if (j + 1 < multiValue.size()) {
                         lineToWrite += exportConfiguration.getMultiValueSeparator();
                     }
@@ -83,7 +84,11 @@ public class ProfileExportServiceImpl extends AbstractCustomServiceImpl implemen
                 lineToWrite += StringUtils.isNotBlank(exportConfiguration.getMultiValueDelimiter()) ? exportConfiguration.getMultiValueDelimiter().charAt(1) : "";
 
             } else {
-                lineToWrite += profile.getProperty(propertyName) != null ? profile.getProperty(propertyName) : "";
+                propertyValue = propertyValue.toString().replaceAll("\"", "\"\"");
+                if (StringUtils.contains(propertyValue.toString(), exportConfiguration.getColumnSeparator())) {
+                    propertyValue = "\"" + propertyValue + "\"";
+                }
+                lineToWrite += propertyValue.toString() != null ? propertyValue.toString() : "";
             }
             if (i + 1 < mapping.size()) {
                 lineToWrite += exportConfiguration.getColumnSeparator();

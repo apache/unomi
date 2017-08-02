@@ -16,6 +16,8 @@
  */
 package org.apache.unomi.router.core.processor;
 
+import com.opencsv.RFC4180Parser;
+import com.opencsv.RFC4180ParserBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.component.kafka.KafkaConstants;
@@ -79,7 +81,11 @@ public class LineSplitProcessor implements Processor {
             return;
         }
 
-        String[] profileData = ((String) exchange.getIn().getBody()).split(columnSeparator, -1);
+        RFC4180Parser rfc4180Parser = new RFC4180ParserBuilder()
+                .withSeparator(columnSeparator.charAt(0))
+                .build();
+
+        String[] profileData = rfc4180Parser.parseLine(((String) exchange.getIn().getBody()));
         ProfileToImport profileToImport = new ProfileToImport();
         profileToImport.setItemId(UUID.randomUUID().toString());
         profileToImport.setItemType("profile");
@@ -100,11 +106,13 @@ public class LineSplitProcessor implements Processor {
                                 String multivalueArray = profileData[fieldsMapping.get(fieldMappingKey)].trim();
                                 if (StringUtils.isNoneBlank(multiValueDelimiter) && multiValueDelimiter.length() == 2) {
                                     multivalueArray = multivalueArray.replaceAll("\\" + multiValueDelimiter.charAt(0), "").replaceAll("\\" + multiValueDelimiter.charAt(1), "");
+                                    multivalueArray = RouterUtils.removeQuotes(multivalueArray);
                                 }
                                 String[] valuesArray = multivalueArray.split("\\" + multiValueSeparator);
                                 properties.put(fieldMappingKey, valuesArray);
                             } else {
-                                properties.put(fieldMappingKey, profileData[fieldsMapping.get(fieldMappingKey)].trim());
+                                String singleValue = profileData[fieldsMapping.get(fieldMappingKey)].trim();
+                                properties.put(fieldMappingKey, RouterUtils.removeQuotes(singleValue));
                             }
                         } else if (propertyType.getValueTypeId().equals("boolean")) {
                             properties.put(fieldMappingKey, new Boolean(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
