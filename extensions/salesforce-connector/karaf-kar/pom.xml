@@ -20,7 +20,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-salesforce-connector</artifactId>
-        <version>1.3.0-incubating-SNAPSHOT</version>
+        <version>1.3.0-incubating-unomi_117-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -33,7 +33,7 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
-            <version>1.3.0-incubating-SNAPSHOT</version>
+            <version>1.3.0-incubating-unomi_117-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
 
@@ -50,17 +50,17 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-salesforce-connector-services</artifactId>
-            <version>1.3.0-incubating-SNAPSHOT</version>
+            <version>1.3.0-incubating-unomi_117-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-salesforce-connector-rest</artifactId>
-            <version>1.3.0-incubating-SNAPSHOT</version>
+            <version>1.3.0-incubating-unomi_117-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-salesforce-connector-actions</artifactId>
-            <version>1.3.0-incubating-SNAPSHOT</version>
+            <version>1.3.0-incubating-unomi_117-SNAPSHOT</version>
         </dependency>
 
     </dependencies>
