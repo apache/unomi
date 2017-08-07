@@ -16,10 +16,10 @@
   -->
 
 
-Apache Unomi Unomi Weather Update
+Apache Unomi Weather Update
 =================================
 
-This sample plugin will retrieve the weather associated with the resolved location of the user (from his IP address)
+This extension will retrieve the weather associated with the resolved location of the user (from his IP address)
 
 ## Getting started
 
@@ -39,5 +39,5 @@ change the following settings:
            
 3.  Deploy into Apache Unomi using the following commands from the Apache Karaf shell:
 
-        feature:repo-add mvn:org.apache.unomi/unomi-weather-update-karaf-kar/1.2.0-incubating-SNAPSHOT/xml/features
+        feature:repo-add mvn:org.apache.unomi/unomi-weather-update-karaf-kar/${project.version}/xml/features
         feature:install unomi-weather-update-karaf-kar

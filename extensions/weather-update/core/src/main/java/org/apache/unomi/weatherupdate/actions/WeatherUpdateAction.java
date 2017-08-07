@@ -43,9 +43,25 @@ import java.util.Map;
  * @author dsalhotra
  */
 public class WeatherUpdateAction implements ActionExecutor {
-    private static Logger logger = LoggerFactory.getLogger(WeatherUpdateAction.class);
-    private CloseableHttpClient httpClient;
 
+    private static Logger logger = LoggerFactory.getLogger(WeatherUpdateAction.class);
+
+    private static final double KELVIN = 273.15;
+    private static final double ROUND_TO_THE_TENTH = 0.5;
+    private static final double SECOND_TO_HOUR = 3.6;
+    private static final String MAIM_INFO_WEATHER = "main";
+    private static final String SPEED = "speed";
+    private static final String STATUS_CODE = "cod";
+    private static final String TEMPERATURE_VALUE = "temp";
+    private static final String WEATHER_LIKE_INFO = "weather";
+    private static final String WIND = "wind";
+    private static final String WIND_DIRECTION_INFO = "deg";
+    private static final String WEATHER_TEMPERATURE = "weatherTemperature";
+    private static final String WEATHER_LIKE = "weatherLike";
+    private static final String WEATHER_WIND_DIRECTION = "weatherWindDirection";
+    private static final String WEATHER_WIND_SPEED = "weatherWindSpeed";
+
+    private CloseableHttpClient httpClient;
     private String weatherApiKey;
     private String weatherUrlBase;
     private String weatherUrlAttributes;
@@ -88,23 +104,23 @@ public class WeatherUpdateAction implements ActionExecutor {
                     }
                 }
 
-                if (jsonNode.has("cod")) {
-                    if (jsonNode.get("cod").asText().equals("200")) {
+                if (jsonNode.has(STATUS_CODE)) {
+                    if (jsonNode.get(STATUS_CODE).asText().equals("200")) {
                         String temperature = extractTemperature(jsonNode);
                         String weatherLike = extractWeatherLike(jsonNode);
                         String windDirection = extractWindDirection(jsonNode);
                         String windSpeed = extractWindSpeed(jsonNode);
                         if (temperature != null) {
-                            fillPropreties(session, "weatherTemperature", temperature);
+                            fillPropreties(session, WEATHER_TEMPERATURE, temperature);
                         }
                         if (weatherLike != null) {
-                            fillPropreties(session, "weatherLike", weatherLike);
+                            fillPropreties(session, WEATHER_LIKE, weatherLike);
                         }
                         if (windDirection != null) {
-                            fillPropreties(session, "weatherWindDirection", windDirection);
+                            fillPropreties(session, WEATHER_WIND_DIRECTION, windDirection);
                         }
                         if (windSpeed != null) {
-                            fillPropreties(session, "weatherWindSpeed", windSpeed);
+                            fillPropreties(session, WEATHER_WIND_SPEED, windSpeed);
                         }
                         return EventService.SESSION_UPDATED;
                     }
@@ -123,12 +139,12 @@ public class WeatherUpdateAction implements ActionExecutor {
      */
     private String extractTemperature(JsonNode jsonNode) {
         float temperature;
-        if (jsonNode.has("main") && jsonNode.get("main").has("temp")) {
-            String responseString = jsonNode.get("main").get("temp").asText();
+        if (jsonNode.has(MAIM_INFO_WEATHER) && jsonNode.get(MAIM_INFO_WEATHER).has(TEMPERATURE_VALUE)) {
+            String responseString = jsonNode.get(MAIM_INFO_WEATHER).get(TEMPERATURE_VALUE).asText();
             temperature = Float.parseFloat(responseString);
-            temperature -= 273.15;
+            temperature -= KELVIN;
             int temperatureTreated = (int) temperature;
-            if (temperature - temperatureTreated > 0.5) {
+            if (temperature - temperatureTreated > ROUND_TO_THE_TENTH) {
                 temperatureTreated++;
             }
             logger.debug("Temperature: " + temperatureTreated);
@@ -146,10 +162,10 @@ public class WeatherUpdateAction implements ActionExecutor {
      */
     private String extractWindSpeed(JsonNode jsonNode) {
         JsonNode WindInfoSpeed;
-        if (jsonNode.has("wind") && jsonNode.get("wind").has("speed")) {
-            WindInfoSpeed = jsonNode.get("wind").get("speed");
+        if (jsonNode.has(WIND) && jsonNode.get(WIND).has(SPEED)) {
+            WindInfoSpeed = jsonNode.get(WIND).get(SPEED);
             float speed = Float.parseFloat(WindInfoSpeed.toString());
-            speed *= 3.6;
+            speed *= SECOND_TO_HOUR;
             int speedTreated = (int) speed;
             logger.debug("Wind speed: " + speedTreated);
             return speedTreated + "";
@@ -168,30 +184,32 @@ public class WeatherUpdateAction implements ActionExecutor {
     private String extractWindDirection(JsonNode jsonNode) {
         JsonNode windInfoDirection;
         String direction = "";
-        if (jsonNode.has("wind")) {
-            windInfoDirection = jsonNode.get("wind").get("deg");
-            if (windInfoDirection != null) {
+        if (jsonNode.has(WIND)) {
+            if (jsonNode.get(WIND).has(WIND_DIRECTION_INFO)) {
+                windInfoDirection = jsonNode.get(WIND).get(WIND_DIRECTION_INFO);
+                if (windInfoDirection != null) {
 
-                float deg = Float.parseFloat(windInfoDirection.toString());
-                if (340 < deg && deg < 360 || 0 < deg && deg < 20) {
-                    direction = ("N");
-                } else if (20 < deg && deg < 70) {
-                    direction = ("NE");
-                } else if (70 < deg && deg < 110) {
-                    direction = ("E");
-                } else if (110 < deg && deg < 160) {
-                    direction = ("SE");
-                } else if (160 < deg && deg < 200) {
-                    direction = ("S");
-                } else if (200 < deg && deg < 245) {
-                    direction = ("SW");
-                } else if (245 < deg && deg < 290) {
-                    direction = ("W");
-                } else if (290 < deg && deg < 340) {
-                    direction = ("NW");
+                    float deg = Float.parseFloat(windInfoDirection.toString());
+                    if (340 < deg && deg < 360 || 0 < deg && deg < 20) {
+                        direction = ("N");
+                    } else if (20 < deg && deg < 70) {
+                        direction = ("NE");
+                    } else if (70 < deg && deg < 110) {
+                        direction = ("E");
+                    } else if (110 < deg && deg < 160) {
+                        direction = ("SE");
+                    } else if (160 < deg && deg < 200) {
+                        direction = ("S");
+                    } else if (200 < deg && deg < 245) {
+                        direction = ("SW");
+                    } else if (245 < deg && deg < 290) {
+                        direction = ("W");
+                    } else if (290 < deg && deg < 340) {
+                        direction = ("NW");
+                    }
+                    logger.debug("Wind direction: " + direction);
+                    return direction;
                 }
-                logger.debug("Wind direction: " + direction);
-                return direction;
             }
         }
         logger.info("API Response doesn't contains the wind direction");
@@ -206,10 +224,10 @@ public class WeatherUpdateAction implements ActionExecutor {
      */
     private String extractWeatherLike(JsonNode jsonNode) {
         JsonNode weatherLike;
-        if (jsonNode.has("weather")) {
-            weatherLike = jsonNode.get("weather");
+        if (jsonNode.has(WEATHER_LIKE_INFO)) {
+            weatherLike = jsonNode.get(WEATHER_LIKE_INFO);
             if (weatherLike.size() > 0) {
-                weatherLike = weatherLike.get(0).get("main");
+                weatherLike = weatherLike.get(0).get(MAIM_INFO_WEATHER);
                 logger.debug("Weather like: " + weatherLike);
                 return weatherLike.asText();
             }
@@ -230,7 +248,7 @@ public class WeatherUpdateAction implements ActionExecutor {
     //Setters
 
     /**
-     * +
+     *
      * Set the weatherApiKey
      *
      * @param weatherApiKey
