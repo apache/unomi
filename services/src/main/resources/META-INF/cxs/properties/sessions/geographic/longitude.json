@@ -1,7 +1,11 @@
 {
     "metadata": {     "id": "longitude", "name": "Longitude"   },
     "type": "string",
-    "tags": ["geographicSessionProperties"],
+    "tags": [
+        "properties",
+        "sessionProperties",
+        "geographicSessionProperties"
+    ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "5.0"

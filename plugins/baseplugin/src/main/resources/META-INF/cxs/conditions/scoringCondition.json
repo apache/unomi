@@ -4,7 +4,9 @@
     "name": "scoringCondition",
     "description": "",
     "tags": [
+      "profileTags",
       "aggregated",
+      "condition",
       "profileCondition"
     ],
     "readOnly": true

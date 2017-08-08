@@ -105,7 +105,7 @@ object AdminScenario {
       .headers(adminHeaders)
       .check(jsonPath("$..id").find.is("profileTags")))
 
-    .exec(http("Existing profile properties").get("/cxs/profiles/existingProperties?tagId=profileProperties&itemType=profile")
+    .exec(http("Existing profile properties").get("/cxs/profiles/existingProperties?tag=profileProperties&itemType=profile")
       .headers(adminHeaders)
       .check(jsonPath("$..itemId").find.exists))
       

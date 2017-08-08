@@ -1,7 +1,11 @@
 {
   "metadata": {"id": "address", "name": "Address"},
   "type": "string",
-  "tags": ["contactProfileProperties"],
+  "tags": [
+    "properties",
+    "profileProperties",
+    "contactProfileProperties"
+  ],
   "defaultValue": "",
   "automaticMappingsFrom": [],
   "rank": "303.0"

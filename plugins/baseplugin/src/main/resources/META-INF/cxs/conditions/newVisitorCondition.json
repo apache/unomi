@@ -4,7 +4,9 @@
     "name": "newVisitorCondition",
     "description": "",
     "tags": [
+      "profileTags",
       "event",
+      "condition",
       "sessionCondition"
     ],
     "readOnly": true

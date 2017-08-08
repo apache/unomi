@@ -4,7 +4,9 @@
     "name": "booleanCondition",
     "description": "",
     "tags": [
+      "profileTags",
       "logical",
+      "condition",
       "profileCondition",
       "eventCondition",
       "sessionCondition",

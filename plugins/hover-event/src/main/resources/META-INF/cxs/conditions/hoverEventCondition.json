@@ -4,7 +4,9 @@
     "name": "hoverEventCondition",
     "description": "",
     "tags": [
+      "profileTags",
       "event",
+      "condition",
       "eventCondition",
       "usableInPastEventCondition"
     ],

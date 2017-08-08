@@ -4,7 +4,9 @@
     "name": "profileUserListCondition",
     "description": "",
     "tags": [
+      "profileTags",
       "aggregated",
+      "condition",
       "profileCondition"
     ],
     "readOnly": true

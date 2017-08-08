@@ -4,7 +4,11 @@
     "name": "Age"
   },
   "type": "integer",
-  "tags": ["personalProfileProperties"],
+  "tags": [
+    "properties",
+    "profileProperties",
+    "personalProfileProperties"
+  ],
   "defaultValue": "",
   "numericRanges": [
     {"key":"*_10", "to" : 10 },

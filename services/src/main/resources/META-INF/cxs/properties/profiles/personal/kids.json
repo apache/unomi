@@ -1,7 +1,11 @@
 {
     "metadata": {     "id": "kids", "name": "Kids"   },
     "type": "integer",
-    "tags": ["personalProfileProperties"],
+    "tags": [
+        "properties",
+        "profileProperties",
+        "personalProfileProperties"
+    ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "504.0"

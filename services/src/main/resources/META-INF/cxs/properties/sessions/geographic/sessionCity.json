@@ -1,7 +1,11 @@
 {
     "metadata": {     "id": "sessionCity", "name": "City"   },
     "type": "string",
-    "tags": ["geographicSessionProperties"],
+    "tags": [
+        "properties",
+        "sessionProperties",
+        "geographicSessionProperties"
+    ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "3.0"

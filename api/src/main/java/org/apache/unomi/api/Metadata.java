@@ -145,9 +145,9 @@ public class Metadata implements Comparable<Metadata> {
     }
 
     /**
-     * Retrieves a set of {@link Tag} names associated with this Metadata
+     * Retrieves a set of {@link String} tag names associated with this Metadata
      *
-     * @return a set of {@link Tag} names associated with this Metadata
+     * @return a set of {@link String} tag names associated with this Metadata
      */
     public Set<String> getTags() {
         return tags;
@@ -156,10 +156,10 @@ public class Metadata implements Comparable<Metadata> {
     /**
      * Sets the tags.
      *
-     * @param tagIDs the tag i ds
+     * @param tags the tag i ds
      */
-    public void setTags(Set<String> tagIDs) {
-        this.tags = tagIDs;
+    public void setTags(Set<String> tags) {
+        this.tags = tags;
     }
 
     /**

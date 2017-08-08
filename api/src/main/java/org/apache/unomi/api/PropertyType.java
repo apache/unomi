@@ -46,9 +46,7 @@ public class PropertyType extends MetadataItem {
     private Set<String> automaticMappingsFrom = new HashSet<>();
     private Double rank;
     private String mergeStrategy;
-    @Deprecated
-    private Set<Tag> tags = new TreeSet<Tag>();
-    private Set<String> tagIds = new LinkedHashSet<String>();
+    private Set<String> tags = new LinkedHashSet<>();
     private Boolean multivalued;
     private Boolean protekted;
 
@@ -133,11 +131,8 @@ public class PropertyType extends MetadataItem {
      * Retrieves the tags used by this PropertyType.
      *
      * @return the tags used by this PropertyType
-     * @deprecated will be removed in next major release as tag become an open string
      */
-    @XmlTransient
-    @Deprecated
-    public Set<Tag> getTags() {
+    public Set<String> getTags() {
         return tags;
     }
 
@@ -145,34 +140,9 @@ public class PropertyType extends MetadataItem {
      * Sets the tags used by this PropertyType.
      *
      * @param tags the tags used by this PropertyType
-     * @deprecated will be removed in next major release as tag become an open string
      */
-    @Deprecated
-    public void setTags(Set<Tag> tags) {
+    public void setTags(Set<String> tags) {
         this.tags = tags;
-    }
-
-    /**
-     * Retrieves the identifiers of the tags used by this PropertyType.
-     *
-     * @return the identifiers of the tags used by this PropertyType
-     * @deprecated will be rename to getTags() in next major release as tag become an open string
-     */
-    @XmlElement(name = "tags")
-    @Deprecated
-    public Set<String> getTagIds() {
-        return tagIds;
-    }
-
-    /**
-     * Sets the identifiers of the tags used by this PropertyType.
-     *
-     * @param tagIds the identifiers of the tags used by this PropertyType
-     * @deprecated will be rename to setTags(Set&lt;String&gt; tags) in next major release as tag become an open string
-     */
-    @Deprecated
-    public void setTagIds(Set<String> tagIds) {
-        this.tagIds = tagIds;
     }
 
     /**

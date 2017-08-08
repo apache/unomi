@@ -4,7 +4,9 @@
     "name": "goalMatchCondition",
     "description": "",
     "tags": [
+      "condition",
       "profileCondition",
+      "profileTags",
       "event"
     ],
     "readOnly": true

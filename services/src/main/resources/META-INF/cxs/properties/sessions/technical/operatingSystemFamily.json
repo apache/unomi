@@ -1,7 +1,11 @@
 {
     "metadata": {     "id": "operatingSystemFamily", "name": "Operating system family"   },
     "type": "string",
-    "tags": ["technicalSessionProperties"],
+    "tags": [
+        "properties",
+        "sessionProperties",
+        "technicalSessionProperties"
+    ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "101.0"

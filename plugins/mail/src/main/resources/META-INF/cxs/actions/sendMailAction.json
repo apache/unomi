@@ -4,6 +4,7 @@
     "name": "sendMailAction",
     "description": "",
     "tags": [
+      "profileTags",
       "event",
       "hidden.availableToEndUser",
       "hidden.allowMultipleInstances"

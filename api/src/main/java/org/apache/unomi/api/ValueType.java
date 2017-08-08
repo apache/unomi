@@ -17,12 +17,10 @@
 
 package org.apache.unomi.api;
 
-import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.TreeSet;
 
 /**
  * A value type to be used to constrain property values.
@@ -34,9 +32,7 @@ public class ValueType implements PluginType {
     private String nameKey;
     private String descriptionKey;
     private long pluginId;
-    @Deprecated
-    private Set<Tag> tags = new TreeSet<>();
-    private Set<String> tagIds = new LinkedHashSet<>();
+    private Set<String> tags = new LinkedHashSet<>();
 
     /**
      * Instantiates a new Value type.
@@ -126,11 +122,8 @@ public class ValueType implements PluginType {
      * Retrieves the tags used by this ValueType.
      *
      * @return the tags used by this ValueType
-     * @deprecated will be removed in next major release as tag become an open string
      */
-    @XmlTransient
-    @Deprecated
-    public Set<Tag> getTags() {
+    public Set<String> getTags() {
         return tags;
     }
 
@@ -138,34 +131,9 @@ public class ValueType implements PluginType {
      * Sets the tags used by this ValueType.
      *
      * @param tags the tags used by this ValueType
-     * @deprecated will be removed in next major release as tag become an open string
      */
-    @Deprecated
-    public void setTags(Set<Tag> tags) {
+    public void setTags(Set<String> tags) {
         this.tags = tags;
-    }
-
-    /**
-     * Retrieves the identifiers of the tags used by this ValueType.
-     *
-     * @return the identifiers of the tags used by this ValueType
-     * @deprecated will be rename to getTags() in next major release as tag become an open string
-     */
-    @XmlElement(name = "tags")
-    @Deprecated
-    public Set<String> getTagIds() {
-        return tagIds;
-    }
-
-    /**
-     * Sets the identifiers of the tags used by this ValueType.
-     *
-     * @param tagIds the identifiers of the tags used by this ValueType
-     * @deprecated will be rename to setTags(Set&lt;String&gt; tags) in next major release as tag become an open string
-     */
-    @Deprecated
-    public void setTagIds(Set<String> tagIds) {
-        this.tagIds = tagIds;
     }
 
     @Override

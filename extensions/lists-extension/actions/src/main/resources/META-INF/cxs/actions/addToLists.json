@@ -4,6 +4,7 @@
     "name": "addToListsAction",
     "description": "",
     "tags": [
+      "profileTags",
       "demographic",
       "hidden.availableToEndUser"
     ],

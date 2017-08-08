@@ -4,6 +4,7 @@
     "name": "incrementTweetNumberAction",
     "description": "",
     "tags": [
+      "profileTags",
       "event"
     ],
     "readOnly": true

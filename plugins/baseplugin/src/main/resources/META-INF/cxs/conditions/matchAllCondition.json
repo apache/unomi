@@ -4,7 +4,9 @@
     "name": "matchAllCondition",
     "description": "",
     "tags": [
+      "profileTags",
       "logical",
+      "condition",
       "profileCondition",
       "eventCondition",
       "sessionCondition",

@@ -4,6 +4,7 @@
     "name": "sourceEventPropertyCondition",
     "description": "",
     "tags": [
+      "condition",
       "sourceEventCondition"
     ],
     "readOnly": true

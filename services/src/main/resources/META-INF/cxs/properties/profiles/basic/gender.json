@@ -1,7 +1,11 @@
 {
     "metadata": {     "id": "gender", "name": "Gender"   },
     "type": "string",
-    "tags": [ "basicProfileProperties" ],
+    "tags": [
+        "properties",
+        "profileProperties",
+        "basicProfileProperties"
+    ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "104.0"

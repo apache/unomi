@@ -1,7 +1,11 @@
 {
     "metadata": {     "id": "userAgentName", "name": "Browser user agent name"   },
     "type": "string",
-    "tags": ["technicalSessionProperties"],
+    "tags": [
+        "properties",
+        "sessionProperties",
+        "technicalSessionProperties"
+    ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "103.0"

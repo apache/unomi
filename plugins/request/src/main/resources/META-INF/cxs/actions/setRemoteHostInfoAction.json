@@ -4,6 +4,7 @@
     "name": "setRemoteHostInfoAction",
     "description": "",
     "tags": [
+      "profileTags",
       "event"
     ],
     "readOnly": true

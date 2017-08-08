@@ -4,6 +4,7 @@
     "name": "Training Action",
     "description": "",
     "tags": [
+      "profileTags",
       "event"
     ],
     "readOnly": true

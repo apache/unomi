@@ -4,6 +4,7 @@
     "name": "setEventOccurenceCountAction",
     "description": "",
     "tags": [
+      "profileTags",
       "demographic"
     ],
     "readOnly": true

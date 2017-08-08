@@ -57,7 +57,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     private RulesService rulesService;
 
-    private Map<Tag, Set<Goal>> goalByTag = new HashMap<>();
+    private Map<String, Set<Goal>> goalByTag = new HashMap<>();
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -121,9 +121,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
                     goal.getMetadata().setScope("systemscope");
                 }
                 if (getGoal(goal.getMetadata().getId()) == null) {
-                    for (String tagId : goal.getMetadata().getTags()) {
-                        Tag tag = definitionsService.getTag(tagId);
-                        if (tag != null) {
+                    for (String tag : goal.getMetadata().getTags()) {
+                        if (goalByTag.containsKey(tag)) {
                             Set<Goal> goals = goalByTag.get(tag);
                             if (goals == null) {
                                 goals = new LinkedHashSet<>();
@@ -132,7 +131,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
                             goalByTag.put(tag, goals);
                         } else {
                             // we found a tag that is not defined, we will define it automatically
-                            logger.warn("Unknown tag " + tagId + " used in goal definition " + predefinedGoalURL);
+                            logger.debug("Unknown tag " + tag + " used in goal definition " + predefinedGoalURL);
                         }
                     }
 
@@ -540,28 +539,11 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         return report;
     }
 
-    @Deprecated
-    public Set<Goal> getGoalByTag(Tag tag, boolean recursive) {
+    public Set<Goal> getGoalByTag(String tag) {
         Set<Goal> goals = new LinkedHashSet<>();
         Set<Goal> directGoals = goalByTag.get(tag);
         if (directGoals != null) {
             goals.addAll(directGoals);
-        }
-        if (recursive) {
-            for (Tag subTag : tag.getSubTags()) {
-                Set<Goal> childGoals = getGoalByTag(subTag, true);
-                goals.addAll(childGoals);
-            }
-        }
-        return goals;
-    }
-
-    public Set<Goal> getGoalByTag(String tag) {
-        Set<Goal> goals = new LinkedHashSet<>();
-        for (Tag legacyTag : goalByTag.keySet()) {
-            if (legacyTag.getId().equals(tag)) {
-                goals.addAll(goalByTag.get(legacyTag));
-            }
         }
 
         return goals;

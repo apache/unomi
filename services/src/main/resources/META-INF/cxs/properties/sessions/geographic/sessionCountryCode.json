@@ -1,7 +1,11 @@
 {
     "metadata": {     "id": "sessionCountryCode", "name": "Country code"   },
     "type": "string",
-    "tags": ["geographicSessionProperties"],
+    "tags": [
+        "properties",
+        "sessionProperties",
+        "geographicSessionProperties"
+    ],
     "defaultValue": "",
     "automaticMappingsFrom": [ "j:country" ],
     "rank": "1.0"

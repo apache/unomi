@@ -4,6 +4,7 @@
     "name": "requestHeaderToProfilePropertyAction",
     "description": "",
     "tags": [
+      "profileTags",
       "event"
     ],
     "readOnly": true

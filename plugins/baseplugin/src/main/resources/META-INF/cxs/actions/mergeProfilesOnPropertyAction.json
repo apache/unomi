@@ -4,6 +4,7 @@
     "name": "mergeProfilesOnPropertyAction",
     "description": "",
     "tags": [
+      "profileTags",
       "demographic"
     ],
     "readOnly": true

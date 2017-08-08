@@ -4,7 +4,9 @@
     "name": "notCondition",
     "description": "",
     "tags": [
+      "profileTags",
       "logical",
+      "condition",
       "profileCondition",
       "eventCondition",
       "sessionCondition",

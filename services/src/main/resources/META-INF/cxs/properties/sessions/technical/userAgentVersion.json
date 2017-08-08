@@ -1,7 +1,11 @@
 {
     "metadata": {     "id": "userAgentVersion", "name": "Browser user agent version"   },
     "type": "string",
-    "tags": ["technicalSessionProperties"],
+    "tags": [
+        "properties",
+        "sessionProperties",
+        "technicalSessionProperties"
+    ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "104.0"

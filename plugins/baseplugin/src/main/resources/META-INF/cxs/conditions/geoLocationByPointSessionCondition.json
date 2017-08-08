@@ -4,7 +4,9 @@
     "name": "geoLocationByPointSessionCondition",
     "description": "",
     "tags": [
+      "profileTags",
       "geographic",
+      "condition",
       "sessionCondition"
     ],
     "readOnly": true

@@ -4,6 +4,7 @@
     "name": "sfdcUpdateProfileFromLeadAction",
     "description": "",
     "tags": [
+      "profileTags",
       "demographic",
       "hidden.availableToEndUser"
     ],

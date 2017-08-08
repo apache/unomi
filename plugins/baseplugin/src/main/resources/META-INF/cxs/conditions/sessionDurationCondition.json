@@ -4,7 +4,9 @@
     "name": "sessionDurationCondition",
     "description": "",
     "tags": [
+      "profileTags",
       "event",
+      "condition",
       "sessionCondition"
     ],
     "readOnly": true

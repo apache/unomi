@@ -4,7 +4,9 @@
     "name": "sessionCreatedEventCondition",
     "description": "",
     "tags": [
+      "profileTags",
       "event",
+      "condition",
       "eventCondition"
     ],
     "readOnly": true

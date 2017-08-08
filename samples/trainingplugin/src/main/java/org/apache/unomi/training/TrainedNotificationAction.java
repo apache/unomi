@@ -50,7 +50,7 @@ public class TrainedNotificationAction implements ActionExecutor {
             // create trained flag property type
             PropertyType propertyType = new PropertyType(new Metadata(event.getScope(), TRAINED_NB_PROPERTY, TRAINED_NB_PROPERTY, "Am I trained"));
             propertyType.setValueTypeId("boolean");
-            propertyType.setTagIds(Collections.singleton("training"));
+            propertyType.setTags(Collections.singleton("training"));
             propertyType.setTarget(TARGET);
             service.setPropertyType(propertyType);
         }

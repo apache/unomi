@@ -1,7 +1,11 @@
 {
     "metadata": {     "id": "googleId", "name": "Google ID"   },
     "type": "string",
-    "tags": [ "socialProfileProperties" ],
+    "tags": [
+        "properties",
+        "profileProperties",
+        "socialProfileProperties"
+    ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "403.0"

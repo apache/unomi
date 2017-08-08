@@ -4,6 +4,7 @@
     "name": "requestParameterToProfilePropertyAction",
     "description": "",
     "tags": [
+      "profileTags",
       "event"
     ],
     "readOnly": true

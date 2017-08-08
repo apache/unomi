@@ -20,7 +20,6 @@ package org.apache.unomi.rest;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.PropertyMergeStrategyType;
-import org.apache.unomi.api.Tag;
 import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.ConditionType;
@@ -60,66 +59,6 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Retrieves all known tags localized using the specified language.
-     *
-     * @param language the language to use to localize
-     * @return the set of all known tags
-     * @deprecated will be removed in next major release as tag become an open string
-     */
-    @GET
-    @Path("/tags")
-    @Deprecated
-    public Collection<RESTTag> getAllTags(@HeaderParam("Accept-Language") String language) {
-        return localizationHelper.generateTags(definitionsService.getAllTags(), language);
-    }
-
-    /**
-     * Retrieves the set of all root tags from which all other tags are derived via sub-tags localized using the specified language.
-     *
-     * @param language the language to use to localize.
-     * @return the set of all root tags
-     * @deprecated will be removed in next major release as tag become an open string
-     */
-    @GET
-    @Path("/rootTags")
-    @Deprecated
-    public Collection<RESTTag> getRootTags(@HeaderParam("Accept-Language") String language) {
-        return localizationHelper.generateTags(definitionsService.getRootTags(), language);
-    }
-
-    /**
-     * Retrieves the tag with the specified identifier localized using the specified language.
-     *
-     * @param language     the language to use to localize.
-     * @param tagId          the identifier of the tag to retrieve
-     * @param filterHidden {@code true} if hidden sub-tags should be filtered out, {@code false} otherwise
-     * @return the tag with the specified identifier
-     * @deprecated will be removed in next major release as tag become an open string
-     */
-    @GET
-    @Path("/tags/{tagId}")
-    @Deprecated
-    public RESTTag getTag(@PathParam("tagId") String tagId, @QueryParam("filterHidden") @DefaultValue("false") boolean filterHidden, @HeaderParam("Accept-Language") String language) {
-        Tag tag = definitionsService.getTag(tagId);
-        if (tag == null) {
-            throw new NotFoundException(new NoSuchElementException(tagId)); // return 404 when tag is not found
-        }
-        return localizationHelper.generateTag(tag, language, filterHidden);
-    }
-
-    /**
-     * Add a new tag to the list of tags
-     * @param tag the tag to add
-     * @deprecated will be removed in next major release as tag become an open string
-     */
-    @POST
-    @Path("/tags")
-    @Deprecated
-    public void addTag(Tag tag) {
-        definitionsService.addTag(tag);
-    }
-
-    /**
      * Retrieves all condition types localized using the specified language.
      *
      * @param language the language to use to localize.
@@ -137,19 +76,15 @@ public class DefinitionsServiceEndPoint {
      *
      * @param language  the language to use to localize.
      * @param tags      a comma-separated list of tag identifiers
-     * @param recursive {@code true} if we want to also include condition types marked by sub-tags of the specified tag
      * @return the set of condition types with the specified tag (and its sub-tags, if specified)
      */
     @GET
-    @Path("/conditions/tags/{tagId}")
-    public Collection<RESTConditionType> getConditionTypesByTag(@PathParam("tagId") String tags, @Deprecated @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
+    @Path("/conditions/tags/{tags}")
+    public Collection<RESTConditionType> getConditionTypesByTag(@PathParam("tags") String tags, @HeaderParam("Accept-Language") String language) {
         String[] tagsArray = tags.split(",");
         Set<ConditionType> results = new LinkedHashSet<>();
-        for (String s : tagsArray) {
-            Tag tag = definitionsService.getTag(s);
-            if (tag != null) {
-                results.addAll(definitionsService.getConditionTypesByTag(tag, recursive));
-            }
+        for (String tag : tagsArray) {
+            results.addAll(definitionsService.getConditionTypesByTag(tag));
         }
         return localizationHelper.generateConditions(results, language);
     }
@@ -208,19 +143,15 @@ public class DefinitionsServiceEndPoint {
      *
      * @param language  the language to use to localize.
      * @param tags      the tag marking the action types we want to retrieve
-     * @param recursive {@code true} if we want to also include action types marked by sub-tags of the specified tag
      * @return the set of action types with the specified tag (and its sub-tags, if specified)
      */
     @GET
-    @Path("/actions/tags/{tagId}")
-    public Collection<RESTActionType> getActionTypeByTag(@PathParam("tagId") String tags, @Deprecated @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
+    @Path("/actions/tags/{tags}")
+    public Collection<RESTActionType> getActionTypeByTag(@PathParam("tags") String tags, @HeaderParam("Accept-Language") String language) {
         String[] tagsArray = tags.split(",");
         Set<ActionType> results = new LinkedHashSet<>();
-        for (String s : tagsArray) {
-            Tag tag = definitionsService.getTag(s);
-            if (tag != null) {
-                results.addAll(definitionsService.getActionTypeByTag(tag, recursive));
-            }
+        for (String tag : tagsArray) {
+            results.addAll(definitionsService.getActionTypeByTag(tag));
         }
         return localizationHelper.generateActions(results, language);
     }
@@ -278,19 +209,15 @@ public class DefinitionsServiceEndPoint {
      *
      * @param language  the language to use to localize.
      * @param tags      the tag marking the value types we want to retrieve
-     * @param recursive {@code true} if we want to also include value types marked by sub-tags of the specified tag
      * @return the set of value types with the specified tag (and its sub-tags, if specified)
      */
     @GET
-    @Path("/values/tags/{tagId}")
-    public Collection<RESTValueType> getValueTypeByTag(@PathParam("tagId") String tags, @Deprecated @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
+    @Path("/values/tags/{tags}")
+    public Collection<RESTValueType> getValueTypeByTag(@PathParam("tags") String tags, @HeaderParam("Accept-Language") String language) {
         String[] tagsArray = tags.split(",");
         Set<ValueType> results = new LinkedHashSet<>();
-        for (String s : tagsArray) {
-            Tag tag = definitionsService.getTag(s);
-            if (tag != null) {
-                results.addAll(definitionsService.getValueTypeByTag(tag, recursive));
-            }
+        for (String tag : tagsArray) {
+            results.addAll(definitionsService.getValueTypeByTag(tag));
         }
         return localizationHelper.generateValueTypes(results, language);
     }

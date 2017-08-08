@@ -4,7 +4,9 @@
     "name": "eventTypeCondition",
     "description": "",
     "tags": [
+      "profileTags",
       "event",
+      "condition",
       "eventCondition"
     ],
     "readOnly": true

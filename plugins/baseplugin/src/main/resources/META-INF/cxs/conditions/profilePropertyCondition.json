@@ -4,7 +4,9 @@
     "name": "profilePropertyCondition",
     "description": "",
     "tags": [
+      "profileTags",
       "demographic",
+      "condition",
       "profileCondition"
     ],
     "readOnly": true

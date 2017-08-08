@@ -19,7 +19,6 @@ package org.apache.unomi.services.services;
 
 import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.PropertyMergeStrategyType;
-import org.apache.unomi.api.Tag;
 import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
@@ -44,12 +43,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     private PersistenceService persistenceService;
 
-    private Map<String, Tag> tags = new HashMap<>();
-    private Set<Tag> rootTags = new LinkedHashSet<>();
     private Map<String, ConditionType> conditionTypeById = new HashMap<>();
     private Map<String, ActionType> actionTypeById = new HashMap<>();
     private Map<String, ValueType> valueTypeById = new HashMap<>();
-    private Map<Tag, Set<ValueType>> valueTypeByTag = new HashMap<>();
+    private Map<String, Set<ValueType>> valueTypeByTag = new HashMap<>();
     private Map<Long, List<PluginType>> pluginTypes = new HashMap<>();
     private Map<String, PropertyMergeStrategyType> propertyMergeStrategyTypeById = new HashMap<>();
 
@@ -89,8 +86,6 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
         pluginTypes.put(bundleContext.getBundle().getBundleId(), new ArrayList<PluginType>());
 
-        loadPredefinedTags(bundleContext);
-
         loadPredefinedConditionTypes(bundleContext);
         loadPredefinedActionTypes(bundleContext);
         loadPredefinedValueTypes(bundleContext);
@@ -108,54 +103,19 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 if (type instanceof ValueType) {
                     ValueType valueType = (ValueType) type;
                     valueTypeById.remove(valueType.getId());
-                    for (Tag tag : valueType.getTags()) {
-                        valueTypeByTag.get(tag).remove(valueType);
+                    for (String tag : valueType.getTags()) {
+                        if (valueTypeByTag.containsKey(tag)) {
+                            valueTypeByTag.get(tag).remove(valueType);
+                        }
                     }
                 }
             }
         }
     }
 
-
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
         logger.info("Definitions service shutdown.");
-    }
-
-    @Deprecated
-    private void loadPredefinedTags(BundleContext bundleContext) {
-        Enumeration<URL> predefinedTagEntries = bundleContext.getBundle().findEntries("META-INF/cxs/tags", "*.json", true);
-        if (predefinedTagEntries == null) {
-            return;
-        }
-        while (predefinedTagEntries.hasMoreElements()) {
-            URL predefinedTagURL = predefinedTagEntries.nextElement();
-            logger.debug("Found predefined tags at " + predefinedTagURL + ", loading... ");
-
-            try {
-                Tag tag = CustomObjectMapper.getObjectMapper().readValue(predefinedTagURL, Tag.class);
-                tag.setPluginId(bundleContext.getBundle().getBundleId());
-                tags.put(tag.getId(), tag);
-            } catch (IOException e) {
-                logger.error("Error while loading segment definition " + predefinedTagEntries, e);
-            }
-        }
-
-        // now let's resolve all the children.
-        resolveTagsChildren();
-    }
-
-    private void resolveTagsChildren() {
-        for (Tag tag : tags.values()) {
-            if (tag.getParentId() != null && tag.getParentId().length() > 0) {
-                Tag parentTag = tags.get(tag.getParentId());
-                if (parentTag != null) {
-                    parentTag.getSubTags().add(tag);
-                }
-            } else {
-                rootTags.add(tag);
-            }
-        }
     }
 
     private void loadPredefinedConditionTypes(BundleContext bundleContext) {
@@ -212,8 +172,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 valueType.setPluginId(bundleContext.getBundle().getBundleId());
                 valueTypeById.put(valueType.getId(), valueType);
                 pluginTypeArrayList.add(valueType);
-                for (String tagId : valueType.getTagIds()) {
-                    Tag tag = tags.get(tagId);
+                for (String tag : valueType.getTags()) {
                     if (tag != null) {
                         valueType.getTags().add(tag);
                         Set<ValueType> valueTypes = valueTypeByTag.get(tag);
@@ -224,7 +183,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                         valueTypeByTag.put(tag, valueTypes);
                     } else {
                         // we found a tag that is not defined, we will define it automatically
-                        logger.warn("Unknown tag " + tagId + " used in property type definition " + predefinedPropertyURL);
+                        logger.debug("Unknown tag " + tag + " used in property type definition " + predefinedPropertyURL);
                     }
                 }
             } catch (Exception e) {
@@ -232,30 +191,6 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             }
         }
 
-    }
-
-    @Deprecated
-    public Set<Tag> getAllTags() {
-        return new HashSet<Tag>(tags.values());
-    }
-
-    @Deprecated
-    public Set<Tag> getRootTags() {
-        return rootTags;
-    }
-
-    @Deprecated
-    public Tag getTag(String tagId) {
-        Tag completeTag = tags.get(tagId);
-        return completeTag;
-    }
-
-    @Deprecated
-    public void addTag(Tag tag) {
-        tag.setPluginId(bundleContext.getBundle().getBundleId());
-        tags.put(tag.getId(), tag);
-        // now let's resolve all the children.
-        resolveTagsChildren();
     }
 
     public Map<Long, List<PluginType>> getTypesByPlugin() {
@@ -270,25 +205,6 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             }
         }
         return all;
-    }
-
-    @Deprecated
-    public Set<ConditionType> getConditionTypesByTag(Tag tag, boolean includeFromSubtags) {
-        Set<ConditionType> conditionTypes = new LinkedHashSet<ConditionType>();
-        List<ConditionType> directConditionTypes = persistenceService.query("metadata.tags",tag.getId(),null, ConditionType.class);
-        for (ConditionType type : directConditionTypes) {
-            if (type.getParentCondition() != null) {
-                ParserHelper.resolveConditionType(this, type.getParentCondition());
-            }
-        }
-        conditionTypes.addAll(directConditionTypes);
-        if (includeFromSubtags) {
-            for (Tag subTag : tag.getSubTags()) {
-                Set<ConditionType> childConditionTypes = getConditionTypesByTag(subTag, true);
-                conditionTypes.addAll(childConditionTypes);
-            }
-        }
-        return conditionTypes;
     }
 
     public Set<ConditionType> getConditionTypesByTag(String tag) {
@@ -333,20 +249,6 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         return persistenceService.getAllItems(ActionType.class);
     }
 
-    @Deprecated
-    public Set<ActionType> getActionTypeByTag(Tag tag, boolean includeFromSubtags) {
-        Set<ActionType> actionTypes = new LinkedHashSet<ActionType>();
-        List<ActionType> directActionTypes = persistenceService.query("metadata.tags",tag.getId(),null, ActionType.class);
-        actionTypes.addAll(directActionTypes);
-        if (includeFromSubtags) {
-            for (Tag subTag : tag.getSubTags()) {
-                Set<ActionType> childActionTypes = getActionTypeByTag(subTag, true);
-                actionTypes.addAll(childActionTypes);
-            }
-        }
-        return actionTypes;
-    }
-
     public Set<ActionType> getActionTypeByTag(String tag) {
         Set<ActionType> actionTypes = new LinkedHashSet<ActionType>();
         List<ActionType> directActionTypes = persistenceService.query("metadata.tags", tag,null, ActionType.class);
@@ -378,28 +280,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         return valueTypeById.values();
     }
 
-    @Deprecated
-    public Set<ValueType> getValueTypeByTag(Tag tag, boolean includeFromSubtags) {
-        Set<ValueType> valueTypes = new LinkedHashSet<ValueType>();
-        Set<ValueType> directValueTypes = valueTypeByTag.get(tag);
-        if (directValueTypes != null) {
-            valueTypes.addAll(directValueTypes);
-        }
-        if (includeFromSubtags) {
-            for (Tag subTag : tag.getSubTags()) {
-                Set<ValueType> childValueTypes = getValueTypeByTag(subTag, true);
-                valueTypes.addAll(childValueTypes);
-            }
-        }
-        return valueTypes;
-    }
-
     public Set<ValueType> getValueTypeByTag(String tag) {
         Set<ValueType> valueTypes = new LinkedHashSet<ValueType>();
-        for (Tag legacyTag : valueTypeByTag.keySet()) {
-            if (legacyTag.getId().equals(tag)) {
-                valueTypes.addAll(valueTypeByTag.get(legacyTag));
-            }
+        if (valueTypeByTag.containsKey(tag)) {
+            valueTypes.addAll(valueTypeByTag.get(tag));
         }
 
         return valueTypes;
@@ -462,13 +346,13 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         }
     }
 
-    public Condition extractConditionByTag(Condition rootCondition, String tagId) {
+    public Condition extractConditionByTag(Condition rootCondition, String tag) {
         if (rootCondition.containsParameter("subConditions")) {
             @SuppressWarnings("unchecked")
             List<Condition> subConditions = (List<Condition>) rootCondition.getParameter("subConditions");
             List<Condition> matchingConditions = new ArrayList<Condition>();
             for (Condition condition : subConditions) {
-                Condition c = extractConditionByTag(condition, tagId);
+                Condition c = extractConditionByTag(condition, tag);
                 if (c != null) {
                     matchingConditions.add(c);
                 }
@@ -489,7 +373,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 }
             }
             throw new IllegalArgumentException();
-        } else if (rootCondition.getConditionType() != null && rootCondition.getConditionType().getMetadata().getTags().contains(tagId)) {
+        } else if (rootCondition.getConditionType() != null && rootCondition.getConditionType().getMetadata().getTags().contains(tag)) {
             return rootCondition;
         } else {
             return null;

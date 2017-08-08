@@ -4,7 +4,9 @@
     "name": "pastEventCondition",
     "description": "",
     "tags": [
+      "profileTags",
       "event",
+      "condition",
       "profileCondition"
     ],
     "readOnly": true

@@ -294,10 +294,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     @Override
-    public Set<PropertyType> getExistingProperties(String tagId, String itemType) {
+    public Set<PropertyType> getExistingProperties(String tag, String itemType) {
         Set<PropertyType> filteredProperties = new LinkedHashSet<PropertyType>();
         // TODO: here we limit the result to the definition we have, but what if some properties haven't definition but exist in ES mapping ?
-        Set<PropertyType> profileProperties = getPropertyTypeByTag(tagId, true);
+        Set<PropertyType> profileProperties = getPropertyTypeByTag(tag);
         Map<String, Map<String, Object>> itemMapping = persistenceService.getPropertiesMapping(itemType);
 
         if (itemMapping == null || itemMapping.isEmpty() || itemMapping.get("properties") == null || itemMapping.get("properties").get("properties") == null) {
@@ -593,9 +593,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
         for (Profile profile : profiles) {
             if (PropertyHelper.setProperty(profile, update.getPropertyName(), update.getPropertyValue(), update.getStrategy())) {
-//                Event profileUpdated = new Event("profileUpdated", null, profile, null, null, profile, new Date());
-//                profileUpdated.setPersistent(false);
-//                eventService.send(profileUpdated);
                 save(profile);
             }
         }
@@ -638,26 +635,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 propertyTypes.put(prop.getTarget(), new LinkedHashSet<PropertyType>());
             }
             propertyTypes.get(prop.getTarget()).add(prop);
-        }
-        return propertyTypes;
-    }
-
-    @Deprecated
-    public Set<PropertyType> getPropertyTypeByTag(String tagId, boolean includeFromSubtags) {
-        Set<PropertyType> propertyTypes = new LinkedHashSet<PropertyType>();
-        Collection<PropertyType> directPropertyTypes = persistenceService.query("tags", tagId, "rank", PropertyType.class);
-
-        if (directPropertyTypes != null) {
-            propertyTypes.addAll(directPropertyTypes);
-        }
-        if (includeFromSubtags) {
-            Tag tag = definitionsService.getTag(tagId);
-            if (tag != null) {
-                for (Tag subTag : tag.getSubTags()) {
-                    Set<PropertyType> childPropertyTypes = getPropertyTypeByTag(subTag.getId(), true);
-                    propertyTypes.addAll(childPropertyTypes);
-                }
-            }
         }
         return propertyTypes;
     }

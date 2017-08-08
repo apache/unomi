@@ -18,7 +18,6 @@
 package org.apache.unomi.rest;
 
 import org.apache.unomi.api.Parameter;
-import org.apache.unomi.api.Tag;
 import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.ConditionType;
@@ -173,69 +172,7 @@ public class LocalizationHelper {
         ResourceBundle bundle = resourceBundleHelper.getResourceBundle(valueType, language);
         result.setName(resourceBundleHelper.getResourceBundleValue(bundle, valueType.getNameKey()));
         result.setDescription(resourceBundleHelper.getResourceBundleValue(bundle, valueType.getDescriptionKey()));
-        result.setTags(generateTags(valueType.getTags(), language));
-        return result;
-    }
-
-    /**
-     * Same as generateTages(tags, language, false).
-     * @param tags the tag
-     * @param language the language
-     * @return list of tags
-     */
-    public Collection<RESTTag> generateTags(Collection<Tag> tags, String language) {
-        return generateTags(tags, language, false);
-    }
-
-    /**
-     * Creates {@link RESTTag}s, localized using the specified language, based on the specified {@link Tag}s.
-     *
-     * @param tags         the {@link Tag}s to be localized
-     * @param language     the language to use to localize {@link Tag}s
-     * @param filterHidden {@code true} to filter out hidden tags, {@code false} otherwise
-     * @return a collection of {@link RESTTag}s based on the specified {@link Tag}s and localized using the specified language
-     */
-    public Collection<RESTTag> generateTags(Collection<Tag> tags, String language, boolean filterHidden) {
-        List<RESTTag> result = new ArrayList<RESTTag>();
-        for (Tag tag : tags) {
-            RESTTag subTag = generateTag(tag, language, filterHidden);
-            if (subTag != null) {
-                result.add(subTag);
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Same as generateTag(tag, language, false).
-     * @param tag the tag
-     * @param language the language
-     * @return tag
-     */
-    public RESTTag generateTag(Tag tag, String language) {
-        return generateTag(tag, language, false);
-    }
-
-    /**
-     * Creates a {@link RESTTag}, localized using the specified language, based on the specified {@link Tag}.
-     *
-     * @param tag          the {@link Tag} to be localized
-     * @param language     the language to use to localize the {@link Tag}
-     * @param filterHidden {@code true} to filter out hidden sub-tags, {@code false} otherwise
-     * @return a {@link RESTTag} based on the specified {@link Tag} and localized using the specified language
-     */
-    public RESTTag generateTag(Tag tag, String language, boolean filterHidden) {
-        if (tag == null || (filterHidden && tag.isHidden())) {
-            return null;
-        }
-        RESTTag result = new RESTTag();
-        result.setId(tag.getId());
-        ResourceBundle bundle = resourceBundleHelper.getResourceBundle(tag, language);
-        result.setName(resourceBundleHelper.getResourceBundleValue(bundle, tag.getNameKey()));
-        result.setDescription(resourceBundleHelper.getResourceBundleValue(bundle, tag.getDescriptionKey()));
-        result.setParentId(tag.getParentId());
-        result.setRank(tag.getRank());
-        result.setSubTags(generateTags(tag.getSubTags(), language, filterHidden));
+        result.setTags(valueType.getTags());
         return result;
     }
 

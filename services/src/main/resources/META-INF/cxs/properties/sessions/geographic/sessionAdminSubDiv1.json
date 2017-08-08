@@ -1,7 +1,11 @@
 {
   "metadata": {     "id": "sessionAdminSubDiv1", "name": "State/Region/Province"   },
   "type": "string",
-  "tags": ["geographicSessionProperties"],
+  "tags": [
+    "properties",
+    "sessionProperties",
+    "geographicSessionProperties"
+  ],
   "defaultValue": "",
   "automaticMappingsFrom": [ ],
   "rank": "2.0"

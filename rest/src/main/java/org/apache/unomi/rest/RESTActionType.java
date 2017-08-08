@@ -19,8 +19,8 @@ package org.apache.unomi.rest;
 
 import org.apache.unomi.api.actions.ActionType;
 
-import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 /**
  * A representation of an {@link ActionType} better suited for definitions.
@@ -29,7 +29,7 @@ public class RESTActionType {
     private String id;
     private String name;
     private String description;
-    private Collection<String> tags;
+    private Set<String> tags;
     private List<RESTParameter> parameters;
 
     public String getId() {
@@ -56,11 +56,11 @@ public class RESTActionType {
         this.description = description;
     }
 
-    public Collection<String> getTags() {
+    public Set<String> getTags() {
         return tags;
     }
 
-    public void setTags(Collection<String> tags) {
+    public void setTags(Set<String> tags) {
         this.tags = tags;
     }
 

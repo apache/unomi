@@ -4,6 +4,7 @@
     "name": "evaluateProfileAgeAction",
     "description": "",
     "tags": [
+      "profileTags",
       "event"
     ],
     "readOnly": true

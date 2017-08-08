@@ -443,15 +443,15 @@ public class ProfileServiceEndPoint {
      *
      * TODO: move to a different class
      *
-     * @param tagId    the tag we're interested in
+     * @param tag      the tag we're interested in
      * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
      * @param language the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
      * @return all property types defined for the specified item type and with the specified tag
      */
     @GET
     @Path("/existingProperties")
-    public Collection<PropertyType> getExistingProperties(@QueryParam("tagId") String tagId, @QueryParam("itemType") String itemType, @HeaderParam("Accept-Language") String language) {
-        Set<PropertyType> properties = profileService.getExistingProperties(tagId, itemType);
+    public Collection<PropertyType> getExistingProperties(@QueryParam("tag") String tag, @QueryParam("itemType") String itemType, @HeaderParam("Accept-Language") String language) {
+        Set<PropertyType> properties = profileService.getExistingProperties(tag, itemType);
         return properties;
     }
 
@@ -509,17 +509,16 @@ public class ProfileServiceEndPoint {
      * TODO: passing a list of tags via a comma-separated list is not very RESTful
      *
      * @param tags      a comma-separated list of tag identifiers
-     * @param recursive {@code true} if sub-tags of the specified tag should also be considered, {@code false} otherwise
      * @param language  the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
      * @return a Set of the property types with the specified tag
      */
     @GET
-    @Path("/properties/tags/{tagId}")
-    public Collection<PropertyType> getPropertyTypeByTag(@PathParam("tagId") String tags, @Deprecated @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
+    @Path("/properties/tags/{tags}")
+    public Collection<PropertyType> getPropertyTypeByTag(@PathParam("tags") String tags, @HeaderParam("Accept-Language") String language) {
         String[] tagsArray = tags.split(",");
         Set<PropertyType> results = new LinkedHashSet<>();
-        for (String s : tagsArray) {
-            results.addAll(profileService.getPropertyTypeByTag(s, recursive));
+        for (String tag : tagsArray) {
+            results.addAll(profileService.getPropertyTypeByTag(tag));
         }
         return results;
     }

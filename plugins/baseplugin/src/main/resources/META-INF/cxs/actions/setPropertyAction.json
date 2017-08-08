@@ -4,6 +4,7 @@
     "name": "setPropertyAction",
     "description": "",
     "tags": [
+      "profileTags",
       "demographic",
       "hidden.availableToEndUser",
       "hidden.allowMultipleInstances"

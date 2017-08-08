@@ -4,7 +4,9 @@
     "name": "formEventCondition",
     "description": "",
     "tags": [
+      "profileTags",
       "event",
+      "condition",
       "eventCondition",
       "usableInPastEventCondition",
       "trackedCondition"

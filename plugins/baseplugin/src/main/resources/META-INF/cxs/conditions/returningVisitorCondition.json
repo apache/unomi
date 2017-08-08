@@ -4,7 +4,9 @@
     "name": "returningVisitorCondition",
     "description": "",
     "tags": [
+      "profileTags",
       "event",
+      "condition",
       "sessionCondition"
     ],
     "readOnly": true
