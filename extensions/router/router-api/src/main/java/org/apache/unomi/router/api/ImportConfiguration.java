@@ -93,11 +93,29 @@ public class ImportConfiguration extends ImportExportConfiguration {
     }
 
     /**
+     * Sets the hasHeader flag.
+     *
+     * @param hasHeader
+     */
+    public void setHasHeader(boolean hasHeader) {
+        this.hasHeader = hasHeader;
+    }
+
+    /**
      * Retrieves the hasDeleteColumn flag.
      *
      * @return true if the file imported by the current config has a delete column.
      */
     public boolean isHasDeleteColumn() {
         return this.hasDeleteColumn;
+    }
+
+    /**
+     * Sets the hasDeleteColumn flag.
+     *
+     * @param hasDeleteColumn
+     */
+    public void setHasDeleteColumn(boolean hasDeleteColumn) {
+        this.hasDeleteColumn = hasDeleteColumn;
     }
 }

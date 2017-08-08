@@ -35,7 +35,7 @@ public class ImportExportConfiguration extends Item {
     private String columnSeparator = ",";
     private String lineSeparator = "\n";
     private String multiValueSeparator = ";";
-    private String multiValueDelimiter = "[]";
+    private String multiValueDelimiter = "";
     private boolean active;
     private String status;
 
