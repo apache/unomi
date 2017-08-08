@@ -497,7 +497,7 @@ public class ProfileServiceEndPoint {
      */
     @GET
     @Path("/properties/tags/{tagId}")
-    public Collection<PropertyType> getPropertyTypeByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
+    public Collection<PropertyType> getPropertyTypeByTag(@PathParam("tagId") String tags, @Deprecated @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
         String[] tagsArray = tags.split(",");
         Set<PropertyType> results = new LinkedHashSet<>();
         for (String s : tagsArray) {

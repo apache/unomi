@@ -540,6 +540,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         return report;
     }
 
+    @Deprecated
     public Set<Goal> getGoalByTag(Tag tag, boolean recursive) {
         Set<Goal> goals = new LinkedHashSet<>();
         Set<Goal> directGoals = goalByTag.get(tag);
@@ -552,6 +553,17 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
                 goals.addAll(childGoals);
             }
         }
+        return goals;
+    }
+
+    public Set<Goal> getGoalByTag(String tag) {
+        Set<Goal> goals = new LinkedHashSet<>();
+        for (Tag legacyTag : goalByTag.keySet()) {
+            if (legacyTag.getId().equals(tag)) {
+                goals.addAll(goalByTag.get(legacyTag));
+            }
+        }
+
         return goals;
     }
 

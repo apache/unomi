@@ -46,6 +46,7 @@ public class PropertyType extends MetadataItem {
     private Set<String> automaticMappingsFrom = new HashSet<>();
     private Double rank;
     private String mergeStrategy;
+    @Deprecated
     private Set<Tag> tags = new TreeSet<Tag>();
     private Set<String> tagIds = new LinkedHashSet<String>();
     private Boolean multivalued;
@@ -132,8 +133,10 @@ public class PropertyType extends MetadataItem {
      * Retrieves the tags used by this PropertyType.
      *
      * @return the tags used by this PropertyType
+     * @deprecated will be removed in next major release as tag become an open string
      */
     @XmlTransient
+    @Deprecated
     public Set<Tag> getTags() {
         return tags;
     }
@@ -142,7 +145,9 @@ public class PropertyType extends MetadataItem {
      * Sets the tags used by this PropertyType.
      *
      * @param tags the tags used by this PropertyType
+     * @deprecated will be removed in next major release as tag become an open string
      */
+    @Deprecated
     public void setTags(Set<Tag> tags) {
         this.tags = tags;
     }
@@ -151,8 +156,10 @@ public class PropertyType extends MetadataItem {
      * Retrieves the identifiers of the tags used by this PropertyType.
      *
      * @return the identifiers of the tags used by this PropertyType
+     * @deprecated will be rename to getTags() in next major release as tag become an open string
      */
     @XmlElement(name = "tags")
+    @Deprecated
     public Set<String> getTagIds() {
         return tagIds;
     }
@@ -161,7 +168,9 @@ public class PropertyType extends MetadataItem {
      * Sets the identifiers of the tags used by this PropertyType.
      *
      * @param tagIds the identifiers of the tags used by this PropertyType
+     * @deprecated will be rename to setTags(Set<String> tags) in next major release as tag become an open string
      */
+    @Deprecated
     public void setTagIds(Set<String> tagIds) {
         this.tagIds = tagIds;
     }

@@ -24,7 +24,10 @@ import java.util.TreeSet;
 
 /**
  * A representation of a {@link Tag} better suited for definitions.
+ *
+ * @deprecated tags will be an open string in next major release
  */
+@Deprecated
 public class RESTTag {
     private String id;
     private String name;

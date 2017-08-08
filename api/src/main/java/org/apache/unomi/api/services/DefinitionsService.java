@@ -38,14 +38,18 @@ public interface DefinitionsService {
      * Retrieves all known tags.
      *
      * @return the set of all known tags
+     * @deprecated will be removed in next major release as tag become an open string
      */
+    @Deprecated
     Set<Tag> getAllTags();
 
     /**
      * Retrieves the set of all root tags from which all other tags are derived via sub-tags.
      *
      * @return the set of all root tags
+     * @deprecated will be removed in next major release as tag become an open string
      */
+    @Deprecated
     Set<Tag> getRootTags();
 
     /**
@@ -53,13 +57,17 @@ public interface DefinitionsService {
      *
      * @param tagId the identifier of the tag to retrieve
      * @return the tag with the specified identifier
+     * @deprecated will be removed in next major release as tag become an open string
      */
+    @Deprecated
     Tag getTag(String tagId);
 
     /**
      * Add a new tag to the list of tags
      * @param tag the tag to add
+     * @deprecated will be removed in next major release as tag become an open string
      */
+    @Deprecated
     void addTag(Tag tag);
 
     /**
@@ -75,8 +83,18 @@ public interface DefinitionsService {
      * @param tag                the tag marking the condition types we want to retrieve
      * @param includeFromSubtags {@code true} if we want to also include condition types marked by sub-tags of the specified tag
      * @return the set of condition types with the specified tag (and its sub-tags, if specified)
+     * @deprecated will be replace by {@link #getConditionTypesByTag(String)}
      */
+    @Deprecated
     Set<ConditionType> getConditionTypesByTag(Tag tag, boolean includeFromSubtags);
+
+    /**
+     * Retrieves the set of condition types with the specified tag also retrieving condition types from sub-tags if so specified.
+     *
+     * @param tag                the tag marking the condition types we want to retrieve
+     * @return the set of condition types with the specified tag (and its sub-tags, if specified)
+     */
+    Set<ConditionType> getConditionTypesByTag(String tag);
 
     /**
      * Retrieves the condition type associated with the specified identifier.
@@ -113,8 +131,18 @@ public interface DefinitionsService {
      * @param tag                the tag marking the action types we want to retrieve
      * @param includeFromSubtags {@code true} if we want to also include action types marked by sub-tags of the specified tag
      * @return the set of action types with the specified tag (and its sub-tags, if specified)
+     * @deprecated will be replace by {@link #getActionTypeByTag(String)}
      */
+    @Deprecated
     Set<ActionType> getActionTypeByTag(Tag tag, boolean includeFromSubtags);
+
+    /**
+     * Retrieves the set of action types with the specified tag also retrieving action types from sub-tags if so specified.
+     *
+     * @param tag                the tag marking the action types we want to retrieve
+     * @return the set of action types with the specified tag (and its sub-tags, if specified)
+     */
+    Set<ActionType> getActionTypeByTag(String tag);
 
     /**
      * Retrieves the action type associated with the specified identifier.
@@ -151,8 +179,18 @@ public interface DefinitionsService {
      * @param tag                the tag marking the value types we want to retrieve
      * @param includeFromSubtags {@code true} if we want to also include value types marked by sub-tags of the specified tag
      * @return the set of value types with the specified tag (and its sub-tags, if specified)
+     * @deprecated will be replace by {@link #getValueTypeByTag(String)}
      */
+    @Deprecated
     Set<ValueType> getValueTypeByTag(Tag tag, boolean includeFromSubtags);
+
+    /**
+     * Retrieves the set of value types with the specified tag also retrieving value types from sub-tags if so specified.
+     *
+     * @param tag                the tag marking the value types we want to retrieve
+     * @return the set of value types with the specified tag (and its sub-tags, if specified)
+     */
+    Set<ValueType> getValueTypeByTag(String tag);
 
     /**
      * Retrieves the value type associated with the specified identifier.

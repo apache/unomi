@@ -634,6 +634,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return propertyTypes;
     }
 
+    @Deprecated
     public Set<PropertyType> getPropertyTypeByTag(String tagId, boolean includeFromSubtags) {
         Set<PropertyType> propertyTypes = new LinkedHashSet<PropertyType>();
         Collection<PropertyType> directPropertyTypes = persistenceService.query("tags", tagId, "rank", PropertyType.class);
@@ -650,6 +651,17 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 }
             }
         }
+        return propertyTypes;
+    }
+
+    public Set<PropertyType> getPropertyTypeByTag(String tag) {
+        Set<PropertyType> propertyTypes = new LinkedHashSet<PropertyType>();
+        Collection<PropertyType> directPropertyTypes = persistenceService.query("tags", tag, "rank", PropertyType.class);
+
+        if (directPropertyTypes != null) {
+            propertyTypes.addAll(directPropertyTypes);
+        }
+
         return propertyTypes;
     }
 

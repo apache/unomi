@@ -64,9 +64,11 @@ public class DefinitionsServiceEndPoint {
      *
      * @param language the language to use to localize
      * @return the set of all known tags
+     * @deprecated will be removed in next major release as tag become an open string
      */
     @GET
     @Path("/tags")
+    @Deprecated
     public Collection<RESTTag> getAllTags(@HeaderParam("Accept-Language") String language) {
         return localizationHelper.generateTags(definitionsService.getAllTags(), language);
     }
@@ -76,9 +78,11 @@ public class DefinitionsServiceEndPoint {
      *
      * @param language the language to use to localize.
      * @return the set of all root tags
+     * @deprecated will be removed in next major release as tag become an open string
      */
     @GET
     @Path("/rootTags")
+    @Deprecated
     public Collection<RESTTag> getRootTags(@HeaderParam("Accept-Language") String language) {
         return localizationHelper.generateTags(definitionsService.getRootTags(), language);
     }
@@ -90,9 +94,11 @@ public class DefinitionsServiceEndPoint {
      * @param tagId          the identifier of the tag to retrieve
      * @param filterHidden {@code true} if hidden sub-tags should be filtered out, {@code false} otherwise
      * @return the tag with the specified identifier
+     * @deprecated will be removed in next major release as tag become an open string
      */
     @GET
     @Path("/tags/{tagId}")
+    @Deprecated
     public RESTTag getTag(@PathParam("tagId") String tagId, @QueryParam("filterHidden") @DefaultValue("false") boolean filterHidden, @HeaderParam("Accept-Language") String language) {
         Tag tag = definitionsService.getTag(tagId);
         if (tag == null) {
@@ -104,9 +110,11 @@ public class DefinitionsServiceEndPoint {
     /**
      * Add a new tag to the list of tags
      * @param tag the tag to add
+     * @deprecated will be removed in next major release as tag become an open string
      */
     @POST
     @Path("/tags")
+    @Deprecated
     public void addTag(Tag tag) {
         definitionsService.addTag(tag);
     }
@@ -134,7 +142,7 @@ public class DefinitionsServiceEndPoint {
      */
     @GET
     @Path("/conditions/tags/{tagId}")
-    public Collection<RESTConditionType> getConditionTypesByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
+    public Collection<RESTConditionType> getConditionTypesByTag(@PathParam("tagId") String tags, @Deprecated @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
         String[] tagsArray = tags.split(",");
         Set<ConditionType> results = new LinkedHashSet<>();
         for (String s : tagsArray) {
@@ -205,7 +213,7 @@ public class DefinitionsServiceEndPoint {
      */
     @GET
     @Path("/actions/tags/{tagId}")
-    public Collection<RESTActionType> getActionTypeByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
+    public Collection<RESTActionType> getActionTypeByTag(@PathParam("tagId") String tags, @Deprecated @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
         String[] tagsArray = tags.split(",");
         Set<ActionType> results = new LinkedHashSet<>();
         for (String s : tagsArray) {
@@ -275,7 +283,7 @@ public class DefinitionsServiceEndPoint {
      */
     @GET
     @Path("/values/tags/{tagId}")
-    public Collection<RESTValueType> getValueTypeByTag(@PathParam("tagId") String tags, @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
+    public Collection<RESTValueType> getValueTypeByTag(@PathParam("tagId") String tags, @Deprecated @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
         String[] tagsArray = tags.split(",");
         Set<ValueType> results = new LinkedHashSet<>();
         for (String s : tagsArray) {

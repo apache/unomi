@@ -24,7 +24,10 @@ import java.util.TreeSet;
 
 /**
  * A tag to help categorize entities. A tag can have sub-tags.
+ *
+ * @deprecated tags will be an open string in next major release
  */
+@Deprecated
 public class Tag implements PluginType, Comparable<Tag> {
 
     private Set<Tag> subTags = new TreeSet<>();

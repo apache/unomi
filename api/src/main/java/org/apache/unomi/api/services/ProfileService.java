@@ -262,8 +262,20 @@ public interface ProfileService {
      * @param tag                the tag name marking property types we want to retrieve
      * @param includeFromSubtags {@code true} if sub-tags of the specified tag should also be considered, {@code false} otherwise
      * @return a Set of the property types with the specified tag
+     * @deprecated will be replace by {@link #getPropertyTypeByTag(String)} in next major release
      */
+    @Deprecated
     Set<PropertyType> getPropertyTypeByTag(String tag, boolean includeFromSubtags);
+
+    /**
+     * Retrieves all property types with the specified tag also retrieving property types with sub-tags of the specified tag if so specified.
+     *
+     * TODO: move to a different class
+     *
+     * @param tag                the tag name marking property types we want to retrieve
+     * @return a Set of the property types with the specified tag
+     */
+    Set<PropertyType> getPropertyTypeByTag(String tag);
 
     /**
      * TODO

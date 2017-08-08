@@ -122,6 +122,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         logger.info("Definitions service shutdown.");
     }
 
+    @Deprecated
     private void loadPredefinedTags(BundleContext bundleContext) {
         Enumeration<URL> predefinedTagEntries = bundleContext.getBundle().findEntries("META-INF/cxs/tags", "*.json", true);
         if (predefinedTagEntries == null) {
@@ -233,19 +234,23 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     }
 
+    @Deprecated
     public Set<Tag> getAllTags() {
         return new HashSet<Tag>(tags.values());
     }
 
+    @Deprecated
     public Set<Tag> getRootTags() {
         return rootTags;
     }
 
+    @Deprecated
     public Tag getTag(String tagId) {
         Tag completeTag = tags.get(tagId);
         return completeTag;
     }
 
+    @Deprecated
     public void addTag(Tag tag) {
         tag.setPluginId(bundleContext.getBundle().getBundleId());
         tags.put(tag.getId(), tag);
@@ -267,6 +272,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         return all;
     }
 
+    @Deprecated
     public Set<ConditionType> getConditionTypesByTag(Tag tag, boolean includeFromSubtags) {
         Set<ConditionType> conditionTypes = new LinkedHashSet<ConditionType>();
         List<ConditionType> directConditionTypes = persistenceService.query("metadata.tags",tag.getId(),null, ConditionType.class);
@@ -282,6 +288,19 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 conditionTypes.addAll(childConditionTypes);
             }
         }
+        return conditionTypes;
+    }
+
+    public Set<ConditionType> getConditionTypesByTag(String tag) {
+        Set<ConditionType> conditionTypes = new LinkedHashSet<ConditionType>();
+        List<ConditionType> directConditionTypes = persistenceService.query("metadata.tags", tag,null, ConditionType.class);
+        for (ConditionType type : directConditionTypes) {
+            if (type.getParentCondition() != null) {
+                ParserHelper.resolveConditionType(this, type.getParentCondition());
+            }
+        }
+        conditionTypes.addAll(directConditionTypes);
+
         return conditionTypes;
     }
 
@@ -314,6 +333,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         return persistenceService.getAllItems(ActionType.class);
     }
 
+    @Deprecated
     public Set<ActionType> getActionTypeByTag(Tag tag, boolean includeFromSubtags) {
         Set<ActionType> actionTypes = new LinkedHashSet<ActionType>();
         List<ActionType> directActionTypes = persistenceService.query("metadata.tags",tag.getId(),null, ActionType.class);
@@ -324,6 +344,14 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 actionTypes.addAll(childActionTypes);
             }
         }
+        return actionTypes;
+    }
+
+    public Set<ActionType> getActionTypeByTag(String tag) {
+        Set<ActionType> actionTypes = new LinkedHashSet<ActionType>();
+        List<ActionType> directActionTypes = persistenceService.query("metadata.tags", tag,null, ActionType.class);
+        actionTypes.addAll(directActionTypes);
+
         return actionTypes;
     }
 
@@ -350,6 +378,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         return valueTypeById.values();
     }
 
+    @Deprecated
     public Set<ValueType> getValueTypeByTag(Tag tag, boolean includeFromSubtags) {
         Set<ValueType> valueTypes = new LinkedHashSet<ValueType>();
         Set<ValueType> directValueTypes = valueTypeByTag.get(tag);
@@ -362,6 +391,17 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 valueTypes.addAll(childValueTypes);
             }
         }
+        return valueTypes;
+    }
+
+    public Set<ValueType> getValueTypeByTag(String tag) {
+        Set<ValueType> valueTypes = new LinkedHashSet<ValueType>();
+        for (Tag legacyTag : valueTypeByTag.keySet()) {
+            if (legacyTag.getId().equals(tag)) {
+                valueTypes.addAll(valueTypeByTag.get(legacyTag));
+            }
+        }
+
         return valueTypes;
     }
 
