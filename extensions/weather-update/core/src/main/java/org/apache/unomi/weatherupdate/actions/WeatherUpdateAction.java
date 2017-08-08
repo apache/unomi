@@ -49,7 +49,7 @@ public class WeatherUpdateAction implements ActionExecutor {
     private static final double KELVIN = 273.15;
     private static final double ROUND_TO_THE_TENTH = 0.5;
     private static final double SECOND_TO_HOUR = 3.6;
-    private static final String MAIM_INFO_WEATHER = "main";
+    private static final String MAIN_INFO_WEATHER = "main";
     private static final String SPEED = "speed";
     private static final String STATUS_CODE = "cod";
     private static final String TEMPERATURE_VALUE = "temp";
@@ -139,8 +139,8 @@ public class WeatherUpdateAction implements ActionExecutor {
      */
     private String extractTemperature(JsonNode jsonNode) {
         float temperature;
-        if (jsonNode.has(MAIM_INFO_WEATHER) && jsonNode.get(MAIM_INFO_WEATHER).has(TEMPERATURE_VALUE)) {
-            String responseString = jsonNode.get(MAIM_INFO_WEATHER).get(TEMPERATURE_VALUE).asText();
+        if (jsonNode.has(MAIN_INFO_WEATHER) && jsonNode.get(MAIN_INFO_WEATHER).has(TEMPERATURE_VALUE)) {
+            String responseString = jsonNode.get(MAIN_INFO_WEATHER).get(TEMPERATURE_VALUE).asText();
             temperature = Float.parseFloat(responseString);
             temperature -= KELVIN;
             int temperatureTreated = (int) temperature;
@@ -227,7 +227,7 @@ public class WeatherUpdateAction implements ActionExecutor {
         if (jsonNode.has(WEATHER_LIKE_INFO)) {
             weatherLike = jsonNode.get(WEATHER_LIKE_INFO);
             if (weatherLike.size() > 0) {
-                weatherLike = weatherLike.get(0).get(MAIM_INFO_WEATHER);
+                weatherLike = weatherLike.get(0).get(MAIN_INFO_WEATHER);
                 logger.debug("Weather like: " + weatherLike);
                 return weatherLike.asText();
             }
