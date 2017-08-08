@@ -19,6 +19,7 @@ package org.apache.unomi.itests;
 
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.Option;
+import org.ops4j.pax.exam.karaf.options.KarafDistributionConfigurationFileReplacementOption;
 import org.ops4j.pax.exam.karaf.options.LogLevelOption.LogLevel;
 import org.ops4j.pax.exam.options.MavenArtifactUrlReference;
 import org.ops4j.pax.exam.options.MavenUrlReference;
@@ -38,6 +39,8 @@ public abstract class BaseIT {
     protected static final String HTTP_PORT = "8181";
     
     protected static final String URL = "http://localhost:" + HTTP_PORT;
+
+    protected static final String KARAF_DIR = "target/exam";
 
     @Configuration
     public Option[] config() {
@@ -77,13 +80,23 @@ public abstract class BaseIT {
                 .classifier("features")
                 .type("xml")
                 .versionAsInProject();
+        MavenUrlReference routerRepo = maven()
+                .groupId("org.apache.unomi")
+                .artifactId("unomi-router-karaf-feature")
+                .classifier("features")
+                .type("xml")
+                .versionAsInProject();
         
         return new Option[]{
                 debugConfiguration("5005", false),
                 karafDistributionConfiguration()
                         .frameworkUrl(karafUrl)
-                        .unpackDirectory(new File("target/exam"))
-                        .useDeployFolder(false),
+                        .unpackDirectory(new File(KARAF_DIR))
+                        .useDeployFolder(true),
+                replaceConfigurationFile("etc/org.apache.unomi.router.cfg", new File(
+                        "src/test/resources/org.apache.unomi.router.cfg")),
+                replaceConfigurationFile("data/tmp/unomi_oneshot_import_configs/1-basic-test.csv", new File(
+                        "src/test/resources/1-basic-test.csv")),
                 keepRuntimeFolder(),
                 configureConsole().ignoreLocalConsole(),
                 logLevel(LogLevel.INFO),
@@ -96,6 +109,7 @@ public abstract class BaseIT {
                 features(karafCxfRepo, "cxf"),
                 features(karafCellarRepo, "cellar"),
                 features(contextServerRepo, "unomi-kar"),
+                features(routerRepo, "unomi-router-karaf-feature"),
                 // we need to wrap the HttpComponents libraries ourselves since the OSGi bundles provided by the project are incorrect
                 wrappedBundle(mavenBundle("org.apache.httpcomponents",
                         "httpcore").versionAsInProject()),

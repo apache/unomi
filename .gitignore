@@ -5,7 +5,7 @@ target
 .project
 
 /src/main/webapp/META-INF/MANIFEST.MF
-/.idea
+/**/.idea
 *.iml
 .DS_Store
 /performance-tests/.cache
