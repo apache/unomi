@@ -85,7 +85,12 @@ public class LineSplitProcessor implements Processor {
                 .withSeparator(columnSeparator.charAt(0))
                 .build();
 
+        logger.debug("$$$$ : LineSplitProcessor : BODY : " + (String) exchange.getIn().getBody());
+
         String[] profileData = rfc4180Parser.parseLine(((String) exchange.getIn().getBody()));
+
+        logger.debug("$$$$ : LineSplitProcessor : LINE : {}, {}, {}.", profileData[0], profileData[1], profileData[2]);
+
         ProfileToImport profileToImport = new ProfileToImport();
         profileToImport.setItemId(UUID.randomUUID().toString());
         profileToImport.setItemType("profile");
@@ -95,6 +100,7 @@ public class LineSplitProcessor implements Processor {
             if (hasDeleteColumn && (fieldsMapping.size() > (profileData.length - 1))) {
                 throw new BadProfileDataFormatException("The mapping does not match the number of column : line [" + ((Integer) exchange.getProperty("CamelSplitIndex") + 1) + "]", new Throwable("MAPPING_COLUMN_MATCH"));
             }
+            logger.debug("$$$$ : LineSplitProcessor : MAPPING : " + fieldsMapping.keySet());
             Map<String, Object> properties = new HashMap<>();
             for (String fieldMappingKey : fieldsMapping.keySet()) {
                 PropertyType propertyType = RouterUtils.getPropertyTypeById(profileService.getAllPropertyTypes("profiles"), fieldMappingKey);
@@ -104,15 +110,14 @@ public class LineSplitProcessor implements Processor {
                         if (propertyType.getValueTypeId().equals("string") || propertyType.getValueTypeId().equals("email")) {
                             if (BooleanUtils.isTrue(propertyType.isMultivalued())) {
                                 String multivalueArray = profileData[fieldsMapping.get(fieldMappingKey)].trim();
-                                if (StringUtils.isNoneBlank(multiValueDelimiter) && multiValueDelimiter.length() == 2) {
+                                if (StringUtils.isNotBlank(multiValueDelimiter) && multiValueDelimiter.length() == 2) {
                                     multivalueArray = multivalueArray.replaceAll("\\" + multiValueDelimiter.charAt(0), "").replaceAll("\\" + multiValueDelimiter.charAt(1), "");
-                                    multivalueArray = RouterUtils.removeQuotes(multivalueArray);
                                 }
                                 String[] valuesArray = multivalueArray.split("\\" + multiValueSeparator);
                                 properties.put(fieldMappingKey, valuesArray);
                             } else {
                                 String singleValue = profileData[fieldsMapping.get(fieldMappingKey)].trim();
-                                properties.put(fieldMappingKey, RouterUtils.removeQuotes(singleValue));
+                                properties.put(fieldMappingKey, singleValue);
                             }
                         } else if (propertyType.getValueTypeId().equals("boolean")) {
                             properties.put(fieldMappingKey, new Boolean(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
