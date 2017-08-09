@@ -191,6 +191,7 @@ public class RouterCamelContext implements SynchronousBundleListener {
             ProfileImportFromSourceRouteBuilder builder = new ProfileImportFromSourceRouteBuilder(kafkaProps, configType);
             builder.setImportConfigurationList(Arrays.asList(importConfiguration));
             builder.setImportConfigurationService(importConfigurationService);
+            builder.setProfileService(profileService);
             builder.setAllowedEndpoints(allowedEndpoints);
             builder.setJacksonDataFormat(jacksonDataFormat);
             builder.setContext(camelContext);
