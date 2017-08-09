@@ -60,10 +60,4 @@ public class RouterUtils {
         return null;
     }
 
-    public static String removeQuotes(String propValue) {
-        if(propValue.charAt(0) == '"' && propValue.charAt(propValue.length()-1) == '"') {
-            return propValue.substring(1, propValue.length()-1);
-        }
-        return propValue;
-    }
 }
