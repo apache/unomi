@@ -68,6 +68,10 @@ public class ProfileImportServiceImpl extends AbstractCustomServiceImpl implemen
                     profileToImport.getMergingProperty(), profileToImport.getProperties().get(profileToImport.getMergingProperty()).toString());
         }
         logger.debug("-------------------------------------");
-        return persistenceService.save(existingProfile, true);
+        if (!profileToImport.isProfileToDelete()) {
+            return persistenceService.save(existingProfile, true);
+        } else {
+            return false;
+        }
     }
 }
