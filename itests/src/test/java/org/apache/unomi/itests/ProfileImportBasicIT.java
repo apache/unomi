@@ -18,10 +18,12 @@ package org.apache.unomi.itests;
 
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,14 +46,16 @@ import java.util.Map;
  */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
-public class ProfileImportIT extends BaseIT {
+public class ProfileImportBasicIT extends BaseIT {
 
     @Inject
     @Filter("(configDiscriminator=IMPORT)")
     protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
+
     @Inject
     protected ProfileService profileService;
-    private Logger logger = LoggerFactory.getLogger(ProfileImportIT.class);
+    private Logger logger = LoggerFactory.getLogger(ProfileImportBasicIT.class);
+
 
     @Before
     public void setUp() {
@@ -76,21 +80,19 @@ public class ProfileImportIT extends BaseIT {
     }
 
     @Test
-    public void testGetImportConfigList() {
+    public void testCheckImportConfigList() {
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(1, importConfigurations.size());
     }
 
     @Test
-    public void testBasic() throws IOException, InterruptedException {
+    public void testImport1Basic() throws IOException, InterruptedException {
 
         //Wait for the csv to be processed
         Thread.sleep(10000);
 
         //Check saved profiles
         PartialList<Profile> profiles = profileService.findProfilesByPropertyValue("properties.email", "basic1@test.com", 0, 10, null);
-        logger.info("$$$$  :  Profile count : " + profileService.getAllProfilesCount());
-        logger.info("$$$$  :  List size : " + profiles.getList().size());
         Assert.assertEquals(3, profileService.getAllProfilesCount());
         Assert.assertEquals(1, profiles.getList().size());
         Assert.assertNotNull(profiles.get(0));
@@ -101,6 +103,11 @@ public class ProfileImportIT extends BaseIT {
         ImportConfiguration importConfiguration = importConfigurationService.load("1-basic-test");
         Assert.assertEquals(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS, importConfiguration.getStatus());
         Assert.assertEquals(1, importConfiguration.getExecutions().size());
+
+    }
+
+    @After
+    public void tearDown() {
 
     }
 

@@ -33,7 +33,8 @@ import org.junit.runners.Suite.SuiteClasses;
         ConditionESQueryBuilderIT.class,
         SegmentIT.class,
         ProfileServiceIT.class,
-        ProfileImportIT.class
+        ProfileImportBasicIT.class,
+        ProfileImportSurfersIT.class
     })
 public class AllITs {
 }
