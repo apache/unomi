@@ -85,7 +85,7 @@
                             <artifacts>
                                 <artifact>
                                     <file>
-                                        src/main/resources/org.apache.unomi.weatherupdate.cfg
+                                        src/main/resources/org.apache.unomi.weatherUpdate.cfg
                                     </file>
                                     <type>cfg</type>
                                     <classifier>weatherupdatecfg</classifier>
