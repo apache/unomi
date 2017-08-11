@@ -17,19 +17,10 @@
 package org.apache.unomi.itests;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
-import org.apache.http.auth.AuthenticationException;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
@@ -54,7 +45,9 @@ import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -76,7 +69,7 @@ public class ProfileImportSurfersIT extends BaseIT {
 
 
     @Before
-    public void setUp() throws IOException, AuthenticationException {
+    public void setUp() throws IOException {
 
         /*** Create Missing Properties ***/
         PropertyType propertyType = new PropertyType(new Metadata("integration", "alive", "Alive", "Is the person alive?"));
@@ -86,7 +79,7 @@ public class ProfileImportSurfersIT extends BaseIT {
 
         profileService.setPropertyType(propertyType);
 
-        /*** Surfer Test ***/
+        /*** Surfers Test ***/
         ImportConfiguration importConfigSurfers = new ImportConfiguration();
         importConfigSurfers.setItemId("2-surfers-test");
         importConfigSurfers.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
@@ -121,6 +114,7 @@ public class ProfileImportSurfersIT extends BaseIT {
 
         HttpResponse response = httpclient.execute(httpPut);
         assertThat(response.getStatusLine().getStatusCode(), equalTo(200));
+
         httpclient.close();
 
     }
@@ -138,15 +132,7 @@ public class ProfileImportSurfersIT extends BaseIT {
     }
 
     @Test
-    public void testCheckImportConfigList() {
-
-        List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(2, importConfigurations.size());
-
-    }
-
-    @Test
-    public void testImport2Surfers() throws IOException, InterruptedException  {
+    public void testImport2Surfers() throws IOException, InterruptedException {
 
         //Wait for data to be processed
         Thread.sleep(10000);

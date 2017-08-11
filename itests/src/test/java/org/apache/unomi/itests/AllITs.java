@@ -34,7 +34,8 @@ import org.junit.runners.Suite.SuiteClasses;
         SegmentIT.class,
         ProfileServiceIT.class,
         ProfileImportBasicIT.class,
-        ProfileImportSurfersIT.class
+        ProfileImportSurfersIT.class,
+        ProfileImportSurfersDeleteIT.class
     })
 public class AllITs {
 }
