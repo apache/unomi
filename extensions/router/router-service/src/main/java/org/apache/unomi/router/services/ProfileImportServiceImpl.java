@@ -34,43 +34,48 @@ public class ProfileImportServiceImpl extends AbstractCustomServiceImpl implemen
     private static final Logger logger = LoggerFactory.getLogger(ProfileImportServiceImpl.class.getName());
 
     public boolean saveMergeDeleteImportedProfile(ProfileToImport profileToImport) throws InvocationTargetException, IllegalAccessException {
-        logger.debug("Importing profile with ID : {}", profileToImport.getItemId());
+        logger.info("Importing profile with ID : {}", profileToImport.getItemId());
         Profile existingProfile = new Profile();
-        List<Profile> existingProfiles = persistenceService.query("properties." + profileToImport.getMergingProperty(), profileToImport.getProperties().get(profileToImport.getMergingProperty()).toString(), null, Profile.class);
-        logger.debug("Query existing profile with mergingProperty: {}. Found: {}", profileToImport.getMergingProperty(), existingProfiles.size());
+        if(profileToImport.getProperties().get(profileToImport.getMergingProperty()) != null) {
+            List<Profile> existingProfiles = persistenceService.query("properties." + profileToImport.getMergingProperty(), profileToImport.getProperties().get(profileToImport.getMergingProperty()).toString(), null, Profile.class);
+            logger.info("Query existing profile with mergingProperty: {}. Found: {}", profileToImport.getMergingProperty(), existingProfiles.size());
 
-        //Profile already exist, and import config allow to overwrite profiles
-        if (existingProfiles.size() == 1) {
-            existingProfile = existingProfiles.get(0);
-            if (profileToImport.isProfileToDelete()) {
-                logger.debug("Profile is to delete!");
-                persistenceService.remove(existingProfile.getItemId(), Profile.class);
-                return true;
-            }
-            List<String> propertiesToOverwrite = profileToImport.getPropertiesToOverwrite();
-            if (profileToImport.isOverwriteExistingProfiles() && propertiesToOverwrite != null && propertiesToOverwrite.size() > 0) { // We overwrite only properties marked to overwrite
-                logger.debug("Properties to overwrite: {}", propertiesToOverwrite);
-                for (String propName : propertiesToOverwrite) {
-                    existingProfile.getProperties().put(propName, profileToImport.getProperties().get(propName));
+            //Profile already exist, and import config allow to overwrite profiles
+            if (existingProfiles.size() == 1) {
+                existingProfile = existingProfiles.get(0);
+                if (profileToImport.isProfileToDelete()) {
+                    logger.info("Profile is to delete!");
+                    persistenceService.remove(existingProfile.getItemId(), Profile.class);
+                    return true;
                 }
-            } else { //If no property is marked to overwrite we replace the whole properties map
-                logger.debug("Overwrite all properties");
-                existingProfile.setProperties(profileToImport.getProperties());
+                List<String> propertiesToOverwrite = profileToImport.getPropertiesToOverwrite();
+                if (profileToImport.isOverwriteExistingProfiles() && propertiesToOverwrite != null && propertiesToOverwrite.size() > 0) { // We overwrite only properties marked to overwrite
+                    logger.info("Properties to overwrite: {}", propertiesToOverwrite);
+                    for (String propName : propertiesToOverwrite) {
+                        existingProfile.getProperties().put(propName, profileToImport.getProperties().get(propName));
+                    }
+                } else { //If no property is marked to overwrite we replace the whole properties map
+                    logger.info("Overwrite all properties");
+                    existingProfile.setProperties(profileToImport.getProperties());
+                }
+                //update segments and scores
+                existingProfile.setSegments(profileToImport.getSegments());
+                existingProfile.setScores(profileToImport.getScores());
+            } else if (existingProfiles.size() == 0 && !profileToImport.isProfileToDelete()) {
+                logger.info("New profile to add...");
+                BeanUtils.copyProperties(existingProfile, profileToImport);
+            } else {
+                logger.warn("{} occurences found for profile with {} = {}. Profile import is skipped", existingProfiles.size(),
+                        profileToImport.getMergingProperty(), profileToImport.getProperties().get(profileToImport.getMergingProperty()).toString());
             }
-            //update segments and scores
-            existingProfile.setSegments(profileToImport.getSegments());
-            existingProfile.setScores(profileToImport.getScores());
-        } else if (existingProfiles.size() == 0 && !profileToImport.isProfileToDelete()) {
-            logger.debug("New profile to add...");
-            BeanUtils.copyProperties(existingProfile, profileToImport);
+            logger.info("-------------------------------------");
+            if (!profileToImport.isProfileToDelete()) {
+                return persistenceService.save(existingProfile, true);
+            } else {
+                return false;
+            }
         } else {
-            logger.warn("{} occurences found for profile with {} = {}. Profile import is skipped", existingProfiles.size(),
-                    profileToImport.getMergingProperty(), profileToImport.getProperties().get(profileToImport.getMergingProperty()).toString());
-        }
-        logger.debug("-------------------------------------");
-        if (!profileToImport.isProfileToDelete()) {
-            return persistenceService.save(existingProfile, true);
-        } else {
+            logger.error("Merging property '{}' has no value in the current profile.");
             return false;
         }
     }

@@ -99,7 +99,7 @@ public class ProfileImportSurfersIT extends BaseIT {
 
         importConfigSurfers.getProperties().put("mapping", mappingSurfers);
         File importSurfersFile = new File("data/tmp/recurrent_import/");
-        importConfigSurfers.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=2-surfers-test.csv&consumer.delay=10m&consumer.initialDelay=5s&move=.done");
+        importConfigSurfers.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=2-surfers-test.csv&consumer.delay=10m&move=.done");
         importConfigSurfers.setActive(true);
 
         ImportConfiguration savedImportConfig = importConfigurationService.save(importConfigSurfers);
@@ -120,10 +120,10 @@ public class ProfileImportSurfersIT extends BaseIT {
     }
 
     @Test
-    public void testCheckAddedProperties() throws IOException, InterruptedException {
+    public void testCheckAddedPropertiesSurfers() throws IOException, InterruptedException {
 
         //Wait for data to be processed
-        Thread.sleep(5000);
+        Thread.sleep(1000);
 
         PropertyType propAlive = profileService.getPropertyType("alive");
 

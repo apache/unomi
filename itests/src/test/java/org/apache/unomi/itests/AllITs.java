@@ -35,7 +35,8 @@ import org.junit.runners.Suite.SuiteClasses;
         ProfileServiceIT.class,
         ProfileImportBasicIT.class,
         ProfileImportSurfersIT.class,
-        ProfileImportSurfersDeleteIT.class
+        ProfileImportSurfersDeleteIT.class,
+        ProfileImportRankingIT.class
     })
 public class AllITs {
 }
