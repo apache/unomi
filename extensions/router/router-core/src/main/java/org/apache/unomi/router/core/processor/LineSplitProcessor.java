@@ -33,10 +33,7 @@ import org.apache.unomi.router.core.exception.BadProfileDataFormatException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Created by amidani on 29/12/2016.
@@ -105,6 +102,8 @@ public class LineSplitProcessor implements Processor {
             for (String fieldMappingKey : fieldsMapping.keySet()) {
                 PropertyType propertyType = RouterUtils.getPropertyTypeById(profileService.getAllPropertyTypes("profiles"), fieldMappingKey);
 
+                logger.debug("$$$$ : LineSplitProcessor : PropType value : {}", profileData[fieldsMapping.get(fieldMappingKey)].trim());
+
                 if (profileData.length > fieldsMapping.get(fieldMappingKey)) {
                     try {
                         if (propertyType.getValueTypeId().equals("string") || propertyType.getValueTypeId().equals("email")) {
@@ -113,8 +112,16 @@ public class LineSplitProcessor implements Processor {
                                 if (StringUtils.isNotBlank(multiValueDelimiter) && multiValueDelimiter.length() == 2) {
                                     multivalueArray = multivalueArray.replaceAll("\\" + multiValueDelimiter.charAt(0), "").replaceAll("\\" + multiValueDelimiter.charAt(1), "");
                                 }
-                                String[] valuesArray = multivalueArray.split("\\" + multiValueSeparator);
-                                properties.put(fieldMappingKey, valuesArray);
+                                if(multivalueArray.contains(multiValueSeparator)) {
+                                    String[] valuesArray = multivalueArray.split("\\" + multiValueSeparator);
+                                    properties.put(fieldMappingKey, valuesArray);
+                                } else {
+                                    if(StringUtils.isNotBlank(multivalueArray)) {
+                                        properties.put(fieldMappingKey, multivalueArray);
+                                    } else {
+                                        properties.put(fieldMappingKey, new String[]{});
+                                    }
+                                }
                             } else {
                                 String singleValue = profileData[fieldsMapping.get(fieldMappingKey)].trim();
                                 properties.put(fieldMappingKey, singleValue);
