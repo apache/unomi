@@ -105,6 +105,8 @@ public abstract class BaseIT {
                         "src/test/resources/4-surfers-delete-test.csv")),
                 replaceConfigurationFile("data/tmp/recurrent_import/5-ranking-test.csv", new File(
                         "src/test/resources/5-ranking-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/6-actors-test.csv", new File(
+                        "src/test/resources/6-actors-test.csv")),
                 keepRuntimeFolder(),
                 configureConsole().ignoreLocalConsole(),
                 logLevel(LogLevel.INFO),

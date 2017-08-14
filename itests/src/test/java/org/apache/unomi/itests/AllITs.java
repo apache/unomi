@@ -37,7 +37,8 @@ import org.junit.runners.Suite.SuiteClasses;
         ProfileImportSurfersIT.class,
         ProfileImportSurfersOverwriteIT.class,
         ProfileImportSurfersDeleteIT.class,
-        ProfileImportRankingIT.class
+        ProfileImportRankingIT.class,
+        ProfileImportActorsIT.class
     })
 public class AllITs {
 }
