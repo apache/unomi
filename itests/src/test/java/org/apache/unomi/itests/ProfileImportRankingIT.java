@@ -89,7 +89,7 @@ public class ProfileImportRankingIT extends BaseIT {
 
         /*** Surfers Test ***/
         ImportConfiguration importConfigRanking = new ImportConfiguration();
-        importConfigRanking.setItemId("4-ranking-test");
+        importConfigRanking.setItemId("5-ranking-test");
         importConfigRanking.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
         importConfigRanking.setMergingProperty("rank");
         importConfigRanking.setOverwriteExistingProfiles(true);
@@ -106,7 +106,7 @@ public class ProfileImportRankingIT extends BaseIT {
 
         importConfigRanking.getProperties().put("mapping", mappingRanking);
         File importSurfersFile = new File("data/tmp/recurrent_import/");
-        importConfigRanking.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=4-ranking-test.csv&consumer.delay=10m&move=.done");
+        importConfigRanking.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=5-ranking-test.csv&consumer.delay=10m&move=.done");
         importConfigRanking.setActive(true);
 
         ImportConfiguration savedImportConfig = importConfigurationService.save(importConfigRanking);
@@ -130,7 +130,7 @@ public class ProfileImportRankingIT extends BaseIT {
     public void testCheckImportConfigListRanking() {
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(4, importConfigurations.size());
+        Assert.assertEquals(5, importConfigurations.size());
 
     }
 
@@ -150,15 +150,15 @@ public class ProfileImportRankingIT extends BaseIT {
     }
 
     @Test
-    public void testImport4Ranking() throws InterruptedException {
+    public void testImportRanking() throws InterruptedException {
 
         //Wait for data to be processed
         //Check import config status
-        ImportConfiguration importConfiguration = importConfigurationService.load("4-ranking-test");
+        ImportConfiguration importConfiguration = importConfigurationService.load("5-ranking-test");
         while (importConfiguration != null && !RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS.equals(importConfiguration.getStatus())) {
-            logger.info("$$$$ : testImport4Ranking : Waiting for data to be processed ...");
+            logger.info("$$$$ : testImportRanking : Waiting for data to be processed ...");
             Thread.sleep(1000);
-            importConfiguration = importConfigurationService.load("4-ranking-test");
+            importConfiguration = importConfigurationService.load("5-ranking-test");
         }
         Thread.sleep(10000);
 

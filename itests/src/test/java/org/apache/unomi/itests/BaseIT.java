@@ -99,10 +99,12 @@ public abstract class BaseIT {
                         "src/test/resources/1-basic-test.csv")),
                 replaceConfigurationFile("data/tmp/recurrent_import/2-surfers-test.csv", new File(
                         "src/test/resources/2-surfers-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/3-surfers-delete-test.csv", new File(
-                        "src/test/resources/3-surfers-delete-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/4-ranking-test.csv", new File(
-                        "src/test/resources/4-ranking-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/3-surfers-overwrite-test.csv", new File(
+                        "src/test/resources/3-surfers-overwrite-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/4-surfers-delete-test.csv", new File(
+                        "src/test/resources/4-surfers-delete-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/5-ranking-test.csv", new File(
+                        "src/test/resources/5-ranking-test.csv")),
                 keepRuntimeFolder(),
                 configureConsole().ignoreLocalConsole(),
                 logLevel(LogLevel.INFO),

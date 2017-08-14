@@ -86,7 +86,7 @@ public class ProfileImportBasicIT extends BaseIT {
     }
 
     @Test
-    public void testImport1Basic() throws IOException, InterruptedException {
+    public void testImportBasic() throws IOException, InterruptedException {
 
         //Wait for the csv to be processed
         Thread.sleep(10000);

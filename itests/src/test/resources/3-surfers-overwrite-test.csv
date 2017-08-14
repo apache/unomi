@@ -1,0 +1,37 @@
+idnum;last;email;fbid;gender;alive;delete
+1;Jordy Smith;jordy@smith.com;999;male;FALSE;FALSE
+2;Gabriel Medina;gabriel@medina.com;998;male;FALSE;FALSE
+3;Kolohe Andino;kolohe@andino.com;997;male;FALSE;FALSE
+4;Matt Wilkinson;Matt@Wilkinson.com;996;male;FALSE;FALSE
+5;Michel Bourez;Michel@Bourez.com;995;male;FALSE;FALSE
+6;Kelly Slater;kelly@slater.com;994;male;FALSE;FALSE
+7;Julian Wilson;julian@wilson.com;993;male;FALSE;FALSE
+8;Joel Parkinson;joel@parkinson.com;992;male;FALSE;FALSE
+9;Filipe Toledo;filipe@toledo.com;991;male;FALSE;FALSE
+10;Adriano De Souza;adriano@souza.com;990;male;FALSE;FALSE
+11;Sebastian Zietz;sebastian@zietz.com;989;male;FALSE;FALSE
+12;Josh Kerr;johsh@kerr.com;988;male;FALSE;FALSE
+13;Adrian Buchan;adrian@buchan.com;987;male;FALSE;FALSE
+14;Italo Ferreira;italo@ferreiro.com;986;male;FALSE;FALSE
+15;Mick Fanning;mick@fanning.com;985;male;FALSE;FALSE
+16;Miguel Pupo;miguel@pupo.com;984;male;FALSE;FALSE
+17;Nat Young;nat@young.com;983;male;FALSE;FALSE
+18;Keanu Asing;;982;male;FALSE;FALSE
+19;Tyler Wright;;981;male;FALSE;FALSE
+20;Courtney Conlogue;;980;female;FALSE;FALSE
+21;Carissa Moore;;979;female;FALSE;FALSE
+22;Tatiana Weston-Webb;;978;female;FALSE;FALSE
+23;Johanne Defay;;977;female;FALSE;FALSE
+24;Stephanie Gilmore;;976;female;FALSE;FALSE
+25;Malia Manuel;;975;female;FALSE;FALSE
+26;Sally Fitzgibbons;;974;female;FALSE;FALSE
+27;Sage Erickson;;973;female;FALSE;FALSE
+28;Laura Enever;;972;female;FALSE;FALSE
+29;Nikki Van Dijk;;971;female;FALSE;FALSE
+30;Bianca Buitendag;;970;female;FALSE;FALSE
+31;Coco Ho;;969;female;FALSE;FALSE
+32;Alessa Quizon;;968;female;FALSE;FALSE
+33;Lakey Peterson;;967;female;FALSE;FALSE
+34;Bronte Macaulay;;966;female;FALSE;FALSE
+35;Pauline Ado;;965;female;FALSE;FALSE
+36;Silvana Lima;;964;female;FALSE;FALSE
