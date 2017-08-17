@@ -60,8 +60,6 @@ public class ProfileExportProducerRouteBuilder extends RouterAbstractRouteBuilde
         }
 
         LineBuildProcessor processor = new LineBuildProcessor(profileExportService);
-        processor.setPropertiesDef(profileService.getAllPropertyTypes("profiles"));
-
 
         rtDef.unmarshal(jacksonDataFormat)
                 .process(processor)

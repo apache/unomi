@@ -35,7 +35,6 @@ public class LineBuildProcessor implements Processor {
     private static final Logger logger = LoggerFactory.getLogger(LineBuildProcessor.class);
 
     private ProfileExportService profileExportService;
-    private Collection<PropertyType> propertiesDef;
 
     public LineBuildProcessor(ProfileExportService profileExportService) {
         this.profileExportService = profileExportService;
@@ -46,18 +45,9 @@ public class LineBuildProcessor implements Processor {
         ExportConfiguration exportConfiguration = (ExportConfiguration) exchange.getIn().getHeader("exportConfig");
         Profile profile = exchange.getIn().getBody(Profile.class);
 
-        String lineToWrite = profileExportService.convertProfileToCSVLine(profile, exportConfiguration, propertiesDef);
+        String lineToWrite = profileExportService.convertProfileToCSVLine(profile, exportConfiguration );
 
         exchange.getIn().setBody(lineToWrite, String.class);
-    }
-
-    /**
-     * Sets the Property definitions list.
-     *
-     * @param propertiesDef Property definitions list
-     */
-    public void setPropertiesDef(Collection<PropertyType> propertiesDef) {
-        this.propertiesDef = propertiesDef;
     }
 
 }

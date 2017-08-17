@@ -20,7 +20,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.unomi.router.api.ImportLineError;
 import org.apache.unomi.router.api.RouterConstants;
-import org.apache.unomi.router.core.exception.BadProfileDataFormatException;
+import org.apache.unomi.router.api.exceptions.BadProfileDataFormatException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

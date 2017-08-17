@@ -118,8 +118,7 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces("text/csv")
     public Response processOneshotImportConfigurationCSV(ExportConfiguration exportConfiguration) {
-        String csvContent = profileExportService.extractProfilesBySegment(exportConfiguration,
-                profileService.getAllPropertyTypes("profiles"));
+        String csvContent = profileExportService.extractProfilesBySegment(exportConfiguration);
         Response.ResponseBuilder response = Response.ok(csvContent);
         response.header("Content-Disposition",
                 "attachment; filename=Profiles_export_" + new SimpleDateFormat("yyyy-MM-dd-HH-mm").format(new Date()) + ".csv");

@@ -27,8 +27,8 @@ import java.util.Collection;
  */
 public interface ProfileExportService {
 
-    String extractProfilesBySegment(ExportConfiguration exportConfiguration, Collection<PropertyType> propertiesDef);
+    String extractProfilesBySegment(ExportConfiguration exportConfiguration);
 
-    String convertProfileToCSVLine(Profile profile, ExportConfiguration exportConfiguration, Collection<PropertyType> propertiesDef);
+    String convertProfileToCSVLine(Profile profile, ExportConfiguration exportConfiguration);
 
 }

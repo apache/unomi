@@ -29,7 +29,7 @@ import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.ProfileToImport;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.RouterUtils;
-import org.apache.unomi.router.core.exception.BadProfileDataFormatException;
+import org.apache.unomi.router.api.exceptions.BadProfileDataFormatException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,7 +117,7 @@ public class LineSplitProcessor implements Processor {
                                     properties.put(fieldMappingKey, valuesArray);
                                 } else {
                                     if(StringUtils.isNotBlank(multivalueArray)) {
-                                        properties.put(fieldMappingKey, multivalueArray);
+                                        properties.put(fieldMappingKey, new String[]{multivalueArray});
                                     } else {
                                         properties.put(fieldMappingKey, new String[]{});
                                     }
@@ -132,7 +132,8 @@ public class LineSplitProcessor implements Processor {
                             properties.put(fieldMappingKey, new Integer(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
                         }
                     } catch (Exception e) {
-                        throw new BadProfileDataFormatException("Unable to convert '" + profileData[fieldsMapping.get(fieldMappingKey)].trim() + "' to " + propertyType.getValueTypeId(), new Throwable("DATA_TYPE"));
+                        e.printStackTrace();
+                        throw new BadProfileDataFormatException("Unable to convert '" + profileData[fieldsMapping.get(fieldMappingKey)].trim() + "' to " + propertyType!=null?propertyType.getValueTypeId():"Null propertyType ", new Throwable("DATA_TYPE"));
                     }
 
                 }

@@ -39,15 +39,14 @@ public class ProfileExportServiceImpl extends AbstractCustomServiceImpl implemen
 
     private ConfigSharingService configSharingService;
 
-    public String extractProfilesBySegment(ExportConfiguration exportConfiguration, Collection<PropertyType> propertiesDef) {
+    public String extractProfilesBySegment(ExportConfiguration exportConfiguration) {
         List<Profile> profileList = persistenceService.query("segments", (String) exportConfiguration.getProperty("segment"), null, Profile.class);
         StringBuilder csvContent = new StringBuilder();
         for (Profile profile : profileList) {
-            csvContent.append(convertProfileToCSVLine(profile, exportConfiguration, propertiesDef));
+            csvContent.append(convertProfileToCSVLine(profile, exportConfiguration));
             csvContent.append(RouterUtils.getCharFromLineSeparator(exportConfiguration.getLineSeparator()));
         }
         logger.debug("Exporting {} extracted profiles.", profileList.size());
-        Map<String, Object> returnMap = new HashMap();
 
         Map execution = new HashMap();
         execution.put(RouterConstants.KEY_EXECS_DATE, new Date().getTime());
@@ -56,20 +55,22 @@ public class ProfileExportServiceImpl extends AbstractCustomServiceImpl implemen
         exportConfiguration = (ExportConfiguration) RouterUtils.addExecutionEntry(exportConfiguration, execution, Integer.parseInt((String) configSharingService.getProperty(RouterConstants.KEY_HISTORY_SIZE)));
         persistenceService.save(exportConfiguration);
 
-        returnMap.put(RouterConstants.KEY_CSV_CONTENT, csvContent);
-        returnMap.put(RouterConstants.KEY_EXECS, execution);
-
         return csvContent.toString();
     }
 
-    public String convertProfileToCSVLine(Profile profile, ExportConfiguration exportConfiguration, Collection<PropertyType> propertiesDef) {
+    public String convertProfileToCSVLine(Profile profile, ExportConfiguration exportConfiguration) {
+        Collection<PropertyType> propertiesDef = persistenceService.query("target", "profiles", null, PropertyType.class);
         Map<String, String> mapping = (Map<String, String>) exportConfiguration.getProperty("mapping");
         String lineToWrite = "";
         for (int i = 0; i < mapping.size(); i++) {
             String propertyName = mapping.get(String.valueOf(i));
+            if (propertyName == null) {
+                logger.error("No index {} found in the provided mapping!", i);
+                return "";
+            }
             PropertyType propType = RouterUtils.getPropertyTypeById(propertiesDef, propertyName);
             Object propertyValue = profile.getProperty(propertyName);
-            if (BooleanUtils.isTrue(propType.isMultivalued())) {
+            if (propType != null && BooleanUtils.isTrue(propType.isMultivalued())) {
                 List<String> multiValue = (List<String>) propertyValue;
 
                 lineToWrite += StringUtils.isNotBlank(exportConfiguration.getMultiValueDelimiter()) ? exportConfiguration.getMultiValueDelimiter().charAt(0) : "";
