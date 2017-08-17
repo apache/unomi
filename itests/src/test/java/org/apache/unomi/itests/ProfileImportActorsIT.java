@@ -157,7 +157,7 @@ public class ProfileImportActorsIT extends BaseIT {
             Thread.sleep(1000);
             importConfiguration = importConfigurationService.load("6-actors-test");
         }
-        Thread.sleep(2000);
+        Thread.sleep(10000);
 
         Assert.assertEquals(1, importConfiguration.getExecutions().size());
 
