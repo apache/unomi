@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.router.core.exception;
+package org.apache.unomi.router.api.exceptions;
 
 /**
  * Created by amidani on 13/06/2017.

@@ -25,7 +25,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
-import org.apache.unomi.router.core.exception.BadProfileDataFormatException;
+import org.apache.unomi.router.api.exceptions.BadProfileDataFormatException;
 import org.apache.unomi.router.core.processor.LineSplitFailureHandler;
 import org.apache.unomi.router.core.processor.LineSplitProcessor;
 import org.slf4j.Logger;
