@@ -70,6 +70,7 @@ public class ConditionEvaluatorIT extends BaseIT {
         profile.setSegments(new HashSet<String>(Arrays.asList("s1", "s2", "s3")));
         this.item = profile;
         builder = new ConditionBuilder(definitionsService);
+
     }
 
     @Test

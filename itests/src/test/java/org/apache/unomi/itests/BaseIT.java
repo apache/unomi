@@ -95,8 +95,8 @@ public abstract class BaseIT {
                         .useDeployFolder(true),
                 replaceConfigurationFile("etc/org.apache.unomi.router.cfg", new File(
                         "src/test/resources/org.apache.unomi.router.cfg")),
-                replaceConfigurationFile("data/tmp/unomi_oneshot_import_configs/1-basic-test.csv", new File(
-                        "src/test/resources/1-basic-test.csv")),
+                //replaceConfigurationFile("data/tmp/unomi_oneshot_import_configs/1-basic-test.csv", new File(
+                //        "src/test/resources/1-basic-test.csv")),
                 replaceConfigurationFile("data/tmp/recurrent_import/2-surfers-test.csv", new File(
                         "src/test/resources/2-surfers-test.csv")),
                 replaceConfigurationFile("data/tmp/recurrent_import/3-surfers-overwrite-test.csv", new File(
