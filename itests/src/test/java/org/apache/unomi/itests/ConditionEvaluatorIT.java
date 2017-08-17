@@ -28,6 +28,7 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
+import org.ops4j.pax.exam.util.Filter;
 
 import javax.inject.Inject;
 import java.util.*;
@@ -44,11 +45,11 @@ import static org.junit.Assert.*;
 public class ConditionEvaluatorIT extends BaseIT {
 
     protected ConditionBuilder builder;
-    @Inject
+    @Inject @Filter(timeout = 60000)
     protected PersistenceService persistenceService;
     protected Item item;
     protected Date lastVisit;
-    @Inject
+    @Inject @Filter(timeout = 60000)
     private DefinitionsService definitionsService;
 
     protected boolean eval(Condition c) {
