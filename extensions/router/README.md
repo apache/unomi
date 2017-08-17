@@ -156,6 +156,7 @@ This extension is implemented using Apache Camel routes and can use Apache Kafka
          "properties": {
            "destination": "{file/ftp}://{path}?fileName=profiles-export-${date:now:yyyyMMddHHmm}.csv",
            "period": "1m",
+           "segment": "contacts",
            "mapping": {
              "0": "firstName",
              "1": "lastName",
@@ -181,6 +182,10 @@ This extension is implemented using Apache Camel routes and can use Apache Kafka
    `ftps://[username@]hostname[:port]/directoryname[?options]`
    
    See http://camel.apache.org/ftp.html for more details.
+   
+   `properties.period` is same as 'consumer.delay' option in the import source path
+   
+   `properties.segment`is the segment ID to use to collect profiles to export
    
    Concerning oneshot export configuration using the previously described service will create the export configuration, to return the generated file to download you need to call: 
    
