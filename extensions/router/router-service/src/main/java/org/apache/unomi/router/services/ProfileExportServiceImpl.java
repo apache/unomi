@@ -85,11 +85,15 @@ public class ProfileExportServiceImpl extends AbstractCustomServiceImpl implemen
                 lineToWrite += StringUtils.isNotBlank(exportConfiguration.getMultiValueDelimiter()) ? exportConfiguration.getMultiValueDelimiter().charAt(1) : "";
 
             } else {
-                propertyValue = propertyValue.toString().replaceAll("\"", "\"\"");
-                if (StringUtils.contains(propertyValue.toString(), exportConfiguration.getColumnSeparator())) {
-                    propertyValue = "\"" + propertyValue + "\"";
+                if(propertyValue != null) {
+                    propertyValue = propertyValue.toString().replaceAll("\"", "\"\"");
+                    if (StringUtils.contains(propertyValue.toString(), exportConfiguration.getColumnSeparator())) {
+                        propertyValue = "\"" + propertyValue + "\"";
+                    }
+                    lineToWrite += propertyValue.toString();
+                } else {
+                    lineToWrite += "";
                 }
-                lineToWrite += propertyValue.toString() != null ? propertyValue.toString() : "";
             }
             if (i + 1 < mapping.size()) {
                 lineToWrite += exportConfiguration.getColumnSeparator();
