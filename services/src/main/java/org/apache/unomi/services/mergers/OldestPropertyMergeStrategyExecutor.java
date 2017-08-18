@@ -23,6 +23,9 @@ import org.apache.unomi.api.PropertyType;
 
 import java.util.List;
 
+/**
+ * @todo not yet implemented !
+ */
 public class OldestPropertyMergeStrategyExecutor implements PropertyMergeStrategyExecutor {
     public boolean mergeProperty(String propertyName, PropertyType propertyType, List<Profile> profilesToMerge, Profile targetProfile) {
         return false;

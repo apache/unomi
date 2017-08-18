@@ -189,6 +189,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             // Profile has changed
             if (!masterProfile.getItemId().equals(profileId)) {
                 HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
+                // we still send back the current profile cookie. It will be changed on the next request to the ContextServlet. The current profile will be deleted only then because we cannot delete it right now (too soon)
                 sendProfileCookie(currentSession.getProfile(), httpServletResponse, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
                 final String masterProfileId = masterProfile.getItemId();
 

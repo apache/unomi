@@ -468,6 +468,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             profileIdsToMerge.add(profileToMerge.getItemId());
         }
         logger.info("Merging profiles " + profileIdsToMerge + " into profile " + masterProfile.getItemId());
+        boolean masterProfileChanged = false;
 
         for (String profileProperty : allProfileProperties) {
             PropertyType propertyType = profilePropertyTypeById.get(profileProperty);
@@ -497,7 +498,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 matchingPropertyMergeStrategyExecutors = bundleContext.getServiceReferences(PropertyMergeStrategyExecutor.class, propertyMergeStrategyType.getFilter());
                 for (ServiceReference<PropertyMergeStrategyExecutor> propertyMergeStrategyExecutorReference : matchingPropertyMergeStrategyExecutors) {
                     PropertyMergeStrategyExecutor propertyMergeStrategyExecutor = bundleContext.getService(propertyMergeStrategyExecutorReference);
-                    propertyMergeStrategyExecutor.mergeProperty(profileProperty, propertyType, profilesToMerge, masterProfile);
+                    masterProfileChanged |= propertyMergeStrategyExecutor.mergeProperty(profileProperty, propertyType, profilesToMerge, masterProfile);
                 }
             } catch (InvalidSyntaxException e) {
                 logger.error("Error retrieving strategy implementation", e);
@@ -507,7 +508,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
         // we now have to merge the profile's segments
         for (Profile profile : profilesToMerge) {
-            masterProfile.getSegments().addAll(profile.getSegments());
+            if (profile.getSegments() != null && profile.getSegments().size() > 0) {
+                masterProfile.getSegments().addAll(profile.getSegments());
+                masterProfileChanged = true;
+            }
+        }
+
+        if (masterProfileChanged) {
+            persistenceService.save(masterProfile);
         }
 
         return masterProfile;
