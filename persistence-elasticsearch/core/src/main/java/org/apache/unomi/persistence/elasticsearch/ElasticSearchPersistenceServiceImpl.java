@@ -145,6 +145,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String minimalElasticSearchVersion = "5.0.0";
     private String maximalElasticSearchVersion = "5.3.0";
 
+    private String aggregateQueryBucketSize = "5000";
+
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -238,6 +240,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setMaximalElasticSearchVersion(String maximalElasticSearchVersion) {
         this.maximalElasticSearchVersion = maximalElasticSearchVersion;
+    }
+
+    public void setAggregateQueryBucketSize(String aggregateQueryBucketSize) {
+        this.aggregateQueryBucketSize = aggregateQueryBucketSize;
     }
 
     public void start() throws Exception {
@@ -1482,7 +1488,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         fieldName = getPropertyNameWithData(fieldName, itemType);
                         //default
                         if (fieldName != null) {
-                            bucketsAggregation = AggregationBuilders.terms("buckets").field(fieldName).size(5000);
+                            bucketsAggregation = AggregationBuilders.terms("buckets").field(fieldName).size(Integer.parseInt(aggregateQueryBucketSize));
                         } else {
                             // field name could be null if no existing data exists
                         }

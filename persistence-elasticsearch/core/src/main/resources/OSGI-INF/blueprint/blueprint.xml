@@ -49,6 +49,8 @@
             <cm:property name="minimalElasticSearchVersion" value="5.0.0" />
             <cm:property name="maximalElasticSearchVersion" value="5.3.0" />
 
+            <cm:property name="aggregateQuerybucketSize" value="5000" />
+
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -105,6 +107,8 @@
 
         <property name="minimalElasticSearchVersion" value="${es.minimalElasticSearchVersion}" />
         <property name="maximalElasticSearchVersion" value="${es.maximalElasticSearchVersion}" />
+
+        <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}" />
     </bean>
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
