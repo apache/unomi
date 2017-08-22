@@ -71,19 +71,21 @@ public class ProfileExportServiceImpl extends AbstractCustomServiceImpl implemen
             PropertyType propType = RouterUtils.getPropertyTypeById(propertiesDef, propertyName);
             Object propertyValue = profile.getProperty(propertyName);
             if (propType != null && BooleanUtils.isTrue(propType.isMultivalued())) {
-                List<String> multiValue = (List<String>) propertyValue;
-
-                lineToWrite += StringUtils.isNotBlank(exportConfiguration.getMultiValueDelimiter()) ? exportConfiguration.getMultiValueDelimiter().charAt(0) : "";
-                int j = 0;
-                for (String entry : multiValue) {
-                    lineToWrite += entry.replaceAll("\"", "\"\"");
-                    if (j + 1 < multiValue.size()) {
-                        lineToWrite += exportConfiguration.getMultiValueSeparator();
+                if (propertyValue != null) {
+                    List<String> multiValue = (List<String>) propertyValue;
+                    lineToWrite += StringUtils.isNotBlank(exportConfiguration.getMultiValueDelimiter()) ? exportConfiguration.getMultiValueDelimiter().charAt(0) : "";
+                    int j = 0;
+                    for (String entry : multiValue) {
+                        lineToWrite += entry.replaceAll("\"", "\"\"");
+                        if (j + 1 < multiValue.size()) {
+                            lineToWrite += exportConfiguration.getMultiValueSeparator();
+                        }
+                        j++;
                     }
-                    j++;
+                    lineToWrite += StringUtils.isNotBlank(exportConfiguration.getMultiValueDelimiter()) ? exportConfiguration.getMultiValueDelimiter().charAt(1) : "";
+                } else {
+                    lineToWrite += "";
                 }
-                lineToWrite += StringUtils.isNotBlank(exportConfiguration.getMultiValueDelimiter()) ? exportConfiguration.getMultiValueDelimiter().charAt(1) : "";
-
             } else {
                 if(propertyValue != null) {
                     propertyValue = propertyValue.toString().replaceAll("\"", "\"\"");
