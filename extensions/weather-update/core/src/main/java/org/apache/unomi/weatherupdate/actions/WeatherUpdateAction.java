@@ -86,7 +86,6 @@ public class WeatherUpdateAction implements ActionExecutor {
 
         JsonNode currentWeatherData = getWeather(location);
 
-
         if (currentWeatherData.has(STATUS_CODE) && currentWeatherData.get(STATUS_CODE).asText().equals("200")) {
             updateSessionWithWeatherData(currentWeatherData,session);
             return EventService.SESSION_UPDATED;
@@ -99,6 +98,11 @@ public class WeatherUpdateAction implements ActionExecutor {
         return EventService.NO_CHANGE;
     }
 
+    /**
+     * Do the API call
+     * @param location
+     * @return the response
+     */
     private JsonNode getWeather(Map<String, Double> location) {
         //Call to OpenWeatherMap
         HttpGet httpGet = new HttpGet(weatherUrlBase + "/" + weatherUrlAttributes +
@@ -130,6 +134,11 @@ public class WeatherUpdateAction implements ActionExecutor {
         return currentWeatherData;
     }
 
+    /**
+     * Update the session info with the weather infos
+     * @param currentWeatherData the response from the API
+     * @param session
+     */
     private void updateSessionWithWeatherData(JsonNode currentWeatherData, Session session) {
         String temperature = extractTemperature(currentWeatherData);
         String weatherLike = extractWeatherLike(currentWeatherData);
