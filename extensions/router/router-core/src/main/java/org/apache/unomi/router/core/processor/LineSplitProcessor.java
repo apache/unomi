@@ -33,7 +33,10 @@ import org.apache.unomi.router.api.exceptions.BadProfileDataFormatException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Created by amidani on 29/12/2016.
@@ -132,8 +135,12 @@ public class LineSplitProcessor implements Processor {
                             properties.put(fieldMappingKey, new Integer(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
                         }
                     } catch (Exception e) {
-                        e.printStackTrace();
-                        throw new BadProfileDataFormatException("Unable to convert '" + profileData[fieldsMapping.get(fieldMappingKey)].trim() + "' to " + propertyType!=null?propertyType.getValueTypeId():"Null propertyType ", new Throwable("DATA_TYPE"));
+                        logger.error("Error converting profileData", e);
+                        if (fieldMappingKey != null && fieldsMapping.get(fieldMappingKey) != null && profileData[fieldsMapping.get(fieldMappingKey)] != null) {
+                            throw new BadProfileDataFormatException("Unable to convert '" + profileData[fieldsMapping.get(fieldMappingKey)].trim() + "' to " + propertyType!=null?propertyType.getValueTypeId():"Null propertyType ", new Throwable("DATA_TYPE"));
+                        } else {
+                            throw new BadProfileDataFormatException("Unable to find profile data for key " + fieldMappingKey, new Throwable("DATA_TYPE"));
+                        }
                     }
 
                 }

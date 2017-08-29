@@ -89,7 +89,7 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
             }
         } catch (Exception e) {
             logger.warn("Unable to update Camel route [{}]", importConfiguration.getItemId());
-            e.printStackTrace();
+            logger.debug("Unable to update Camel route", e);
             throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
 
         }
@@ -116,7 +116,7 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
             Files.copy(in, path);
 
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Error processing one shot configuration CSV", e);
             return Response.serverError().build();
         }
         return Response.ok().build();

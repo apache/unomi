@@ -142,7 +142,7 @@ public class ConfigSharingServiceImpl implements ConfigSharingService, Synchrono
                 }
             }
         } catch (InvalidSyntaxException e) {
-            e.printStackTrace();
+            logger.error("Error retrieving listeners", e);
             return listeners;
         }
         return listeners;

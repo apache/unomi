@@ -27,6 +27,8 @@ import org.apache.unomi.api.conditions.Condition;
 import org.mvel2.MVEL;
 import org.mvel2.ParserConfiguration;
 import org.mvel2.ParserContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -39,6 +41,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ConditionContextHelper {
+    private static final Logger logger = LoggerFactory.getLogger(ConditionContextHelper.class);
+
     private static Map<String,Serializable> mvelExpressions = new ConcurrentHashMap<>();
 
     private static MappingCharFilterFactory mappingCharFilterFactory;
@@ -145,7 +149,7 @@ public class ConditionContextHelper {
             try {
                 return IOUtils.toString(foldedStringReader);
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error("Error folding to ASCII string " + s, e);
             }
         }
         return null;

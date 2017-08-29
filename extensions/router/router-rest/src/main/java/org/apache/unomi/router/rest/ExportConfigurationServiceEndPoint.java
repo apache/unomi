@@ -99,7 +99,7 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
             }
         } catch (Exception e) {
             logger.warn("Unable to update Camel route [{}]", exportConfiguration.getItemId());
-            e.printStackTrace();
+            logger.debug("Unable to update Camel route", e);
             throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
 
         }
