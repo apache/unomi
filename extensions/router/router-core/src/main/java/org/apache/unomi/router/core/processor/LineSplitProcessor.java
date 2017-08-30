@@ -105,7 +105,11 @@ public class LineSplitProcessor implements Processor {
             for (String fieldMappingKey : fieldsMapping.keySet()) {
                 PropertyType propertyType = RouterUtils.getPropertyTypeById(profileService.getAllPropertyTypes("profiles"), fieldMappingKey);
 
-                logger.debug("$$$$ : LineSplitProcessor : PropType value : {}", profileData[fieldsMapping.get(fieldMappingKey)].trim());
+                if (fieldMappingKey != null && fieldsMapping.get(fieldMappingKey) != null && profileData != null && profileData[fieldsMapping.get(fieldMappingKey)] != null) {
+                    logger.debug("$$$$ : LineSplitProcessor : PropType value : {}", profileData[fieldsMapping.get(fieldMappingKey)].trim());
+                } else {
+                    logger.debug("$$$$ : LineSplitProcessor : no profileData found for fieldMappingKey=" + fieldMappingKey);
+                }
 
                 if (profileData.length > fieldsMapping.get(fieldMappingKey)) {
                     try {
@@ -136,7 +140,7 @@ public class LineSplitProcessor implements Processor {
                         }
                     } catch (Exception e) {
                         logger.error("Error converting profileData", e);
-                        if (fieldMappingKey != null && fieldsMapping.get(fieldMappingKey) != null && profileData[fieldsMapping.get(fieldMappingKey)] != null) {
+                        if (fieldMappingKey != null && fieldsMapping.get(fieldMappingKey) != null && profileData != null && profileData[fieldsMapping.get(fieldMappingKey)] != null) {
                             throw new BadProfileDataFormatException("Unable to convert '" + profileData[fieldsMapping.get(fieldMappingKey)].trim() + "' to " + propertyType!=null?propertyType.getValueTypeId():"Null propertyType ", new Throwable("DATA_TYPE"));
                         } else {
                             throw new BadProfileDataFormatException("Unable to find profile data for key " + fieldMappingKey, new Throwable("DATA_TYPE"));
