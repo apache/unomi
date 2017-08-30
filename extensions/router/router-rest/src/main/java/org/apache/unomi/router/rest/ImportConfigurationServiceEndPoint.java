@@ -101,6 +101,8 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
      * Save/Update the given import configuration.
      * Prepare the file to be processed with Camel routes
      *
+     * @param file file
+     * @param importConfigId config
      * @return OK / NOK Http Code.
      */
     @POST

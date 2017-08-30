@@ -157,6 +157,9 @@ public interface SegmentService {
     /**
      * Retrieves the set of all scoring metadata.
      *
+     * @param offset the offset
+     * @param size the size
+     * @param sortBy sort by
      * @return the set of all scoring metadata
      */
     PartialList<Metadata> getScoringMetadatas(int offset, int size, String sortBy);

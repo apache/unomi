@@ -95,7 +95,7 @@ public class ImportConfiguration extends ImportExportConfiguration {
     /**
      * Sets the hasHeader flag.
      *
-     * @param hasHeader
+     * @param hasHeader new value for hasHeader
      */
     public void setHasHeader(boolean hasHeader) {
         this.hasHeader = hasHeader;
@@ -113,7 +113,7 @@ public class ImportConfiguration extends ImportExportConfiguration {
     /**
      * Sets the hasDeleteColumn flag.
      *
-     * @param hasDeleteColumn
+     * @param hasDeleteColumn new value for hasDeleteColumn
      */
     public void setHasDeleteColumn(boolean hasDeleteColumn) {
         this.hasDeleteColumn = hasDeleteColumn;

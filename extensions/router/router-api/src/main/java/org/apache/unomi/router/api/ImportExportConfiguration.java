@@ -152,6 +152,7 @@ public class ImportExportConfiguration extends Item {
 
     /**
      * Retrieves the column separator.
+     * @return column separator
      */
     public String getColumnSeparator() {
         return this.columnSeparator;
@@ -169,6 +170,7 @@ public class ImportExportConfiguration extends Item {
 
     /**
      * Retrieves the line separator.
+     * @return the line separator
      */
     public String getLineSeparator() {
         return this.lineSeparator;
@@ -224,6 +226,7 @@ public class ImportExportConfiguration extends Item {
 
     /**
      * Retrieves the executions
+     * @return executions
      */
     public List<Map<String, Object>> getExecutions() {
         return this.executions;
@@ -232,7 +235,7 @@ public class ImportExportConfiguration extends Item {
 
     /**
      * Sets the executions
-     * @param executions
+     * @param executions executions
      */
     public void setExecutions(List<Map<String, Object>> executions) {
         this.executions = executions;

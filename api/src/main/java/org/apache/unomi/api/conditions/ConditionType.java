@@ -50,6 +50,7 @@ public class ConditionType extends MetadataItem  {
 
     /**
      * Instantiates a new Condition type with the specified metadata
+     * @param metadata the metadata
      */
     public ConditionType(Metadata metadata) {
         super(metadata);

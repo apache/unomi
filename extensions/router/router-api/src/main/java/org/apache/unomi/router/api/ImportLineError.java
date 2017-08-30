@@ -36,7 +36,7 @@ public class ImportLineError {
 
     /**
      * Sets the number of the line which failed to be imported
-     * @param lineNb
+     * @param lineNb new value for lineNb
      */
     public void setLineNb(long lineNb) {
         this.lineNb = lineNb;
@@ -52,7 +52,7 @@ public class ImportLineError {
 
     /**
      * Sets the error code
-     * @param errorCode
+     * @param errorCode new value for errorCode
      */
     public void setErrorCode(String errorCode) {
         this.errorCode = errorCode;
@@ -68,7 +68,7 @@ public class ImportLineError {
 
     /**
      * Sets the line content
-     * @param lineContent
+     * @param lineContent cd per    new value for lineContent
      */
     public void setLineContent(String lineContent) {
         this.lineContent = lineContent;

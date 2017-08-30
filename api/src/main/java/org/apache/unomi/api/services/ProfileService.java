@@ -230,6 +230,7 @@ public interface ProfileService {
      * Save a persona with its sessions.
      *
      * @param personaToSave the persona object containing all the persona information and sessions
+     * @return the persona with sessions
      */
     PersonaWithSessions savePersonaWithSessions(PersonaWithSessions personaToSave);
 
@@ -279,11 +280,15 @@ public interface ProfileService {
 
     /**
      * TODO
+     * @param fromPropertyTypeId fromPropertyTypeId
+     * @return property type mapping
      */
     String getPropertyTypeMapping(String fromPropertyTypeId);
 
     /**
      * TODO
+     * @param propertyName the property name
+     * @return list of property types
      */
     Collection<PropertyType> getPropertyTypeByMapping(String propertyName);
 

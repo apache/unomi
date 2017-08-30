@@ -111,6 +111,7 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
      * Save/Update the given import configuration.
      * Prepare the file to be processed with Camel routes
      *
+     * @param exportConfiguration configuration
      * @return OK / NOK Http Code.
      */
     @POST

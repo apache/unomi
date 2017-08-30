@@ -232,9 +232,9 @@ public interface DefinitionsService {
      * TODO: remove from API and move to a different class?
      * TODO: purpose and behavior not clear
      *
-     * @param rootCondition
-     * @param tagId
-     * @return
+     * @param rootCondition root condition
+     * @param tagId tag to extract
+     * @return condition
      */
     Condition extractConditionByTag(Condition rootCondition, String tagId);
 

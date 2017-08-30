@@ -129,7 +129,7 @@ public class LocalizationHelper {
      * Creates a {@link RESTParameter} based on the specified {@link Parameter} and localized using the specified {@link ResourceBundle}.
      *
      * @param parameter the {@link Parameter} to be localized
-     * @param language
+     * @param language the language
      * @return a {@link RESTParameter} based on the specified {@link ActionType} and localized using the specified {@link ResourceBundle}
      */
     public RESTParameter generateParameter(Parameter parameter, String language) {
@@ -179,6 +179,9 @@ public class LocalizationHelper {
 
     /**
      * Same as generateTages(tags, language, false).
+     * @param tags the tag
+     * @param language the language
+     * @return list of tags
      */
     public Collection<RESTTag> generateTags(Collection<Tag> tags, String language) {
         return generateTags(tags, language, false);
@@ -205,6 +208,9 @@ public class LocalizationHelper {
 
     /**
      * Same as generateTag(tag, language, false).
+     * @param tag the tag
+     * @param language the language
+     * @return tag
      */
     public RESTTag generateTag(Tag tag, String language) {
         return generateTag(tag, language, false);

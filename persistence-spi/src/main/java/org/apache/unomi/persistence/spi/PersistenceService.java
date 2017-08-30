@@ -192,7 +192,7 @@ public interface PersistenceService {
      * This method may not return any results if the implementation doesn't support property type mappings
      *
      * @param itemType the itemType we want to retrieve the mappings for
-     * @return
+     * @return properties mapping
      */
     Map<String, Map<String, Object>> getPropertiesMapping(String itemType);
 
@@ -201,15 +201,15 @@ public interface PersistenceService {
      *
      * @param property the property name (can use nested dot notation)
      * @param itemType the itemType we want to retrieve the mappings for
-     * @return
+     * @return property mapping
      */
     Map<String, Object> getPropertyMapping(String property, String itemType);
 
 
     /**
      * Create mapping
-     * @param type
-     * @param source
+     * @param type the type
+     * @param source the source
      */
     void createMapping(String type, String source);
 
@@ -228,6 +228,15 @@ public interface PersistenceService {
      * Same as {@code query(fieldName, fieldValue, sortBy, clazz, 0, -1).getList()}
      *
      * @see #query(Condition, String, Class, int, int)
+     * @param <T>         the type of the Item subclass we want to retrieve
+     * @param fieldName   the name of the field which we want items to have the specified values
+     * @param fieldValue  the value the items to retrieve should have for the specified field
+     * @param sortBy      an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *                    elements according to the property order in the
+     *                    String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
+     *                    a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * @param clazz       the {@link Item} subclass of the items we want to retrieve
+     * @return a list of items matching the specified criteria
      */
     <T extends Item> List<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz);
 
@@ -300,6 +309,14 @@ public interface PersistenceService {
     /**
      * Same as {@code query(query, sortBy, clazz, 0, -1).getList()}
      *
+     * @param <T>    the type of the Item subclass we want to retrieve
+     * @param query  the {@link Condition} the items must satisfy to be retrieved
+     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *               elements according to the property order in the
+     *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
+     *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * @param clazz  the {@link Item} subclass of the items we want to retrieve
+     * @return a {@link PartialList} of items matching the specified criteria
      * @see #query(Condition, String, Class, int, int)
      */
     <T extends Item> List<T> query(Condition query, String sortBy, Class<T> clazz);

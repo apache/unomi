@@ -260,8 +260,8 @@ public class ProfileServiceEndPoint {
     /**
      * TODO
      *
-     * @param fromPropertyTypeId
-     * @return
+     * @param fromPropertyTypeId fromPropertyTypeId
+     * @return property type mapping
      */
     @GET
     @Path("/properties/mappings/{fromPropertyTypeId}")

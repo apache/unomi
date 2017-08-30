@@ -59,6 +59,7 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
     /**
      * Retrieves a configuration by id.
      *
+     * @param configId config id
      * @return the configuration that matches the given id.
      */
     @GET
@@ -72,7 +73,7 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
     /**
      * Delete a configuration by id.
      *
-     * @return the deleted configuration.
+     * @param configId config id
      */
     @DELETE
     @Path("/{configId}")

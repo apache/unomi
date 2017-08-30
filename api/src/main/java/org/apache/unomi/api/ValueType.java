@@ -161,7 +161,7 @@ public class ValueType implements PluginType {
      * Sets the identifiers of the tags used by this ValueType.
      *
      * @param tagIds the identifiers of the tags used by this ValueType
-     * @deprecated will be rename to setTags(Set<String> tags) in next major release as tag become an open string
+     * @deprecated will be rename to setTags(Set&lt;String&gt; tags) in next major release as tag become an open string
      */
     @Deprecated
     public void setTagIds(Set<String> tagIds) {

@@ -173,6 +173,7 @@ public class Profile extends Item {
 
     /**
      * TODO: should be removed from the API
+     * @param mergedWith new value for mergedWith
      */
     public void setMergedWith(String mergedWith) {
         this.mergedWith = mergedWith;
@@ -189,6 +190,7 @@ public class Profile extends Item {
 
     /**
      * TODO: should be removed from the API
+     * @param scores new value for scores
      */
     public void setScores(Map<String, Integer> scores) {
         this.scores = scores;

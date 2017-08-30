@@ -42,6 +42,7 @@ public class ActionType extends MetadataItem {
 
     /**
      * Instantiates a new Action type.
+     * @param metadata the metadata
      */
     public ActionType(Metadata metadata) {
         super(metadata);

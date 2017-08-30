@@ -198,7 +198,7 @@ public class ContextResponse implements Serializable {
 
     /**
      * Set the user anonymous browsing status
-     * @param anonymousBrowsing
+     * @param anonymousBrowsing new value for anonymousBrowsing
      */
     public void setAnonymousBrowsing(boolean anonymousBrowsing) {
         this.anonymousBrowsing = anonymousBrowsing;
