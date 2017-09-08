@@ -847,6 +847,7 @@
         <module>kar</module>
         <module>samples</module>
         <module>package</module>
+        <module>tools</module>
     </modules>
 
     <dependencies>
