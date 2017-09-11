@@ -70,6 +70,11 @@ public interface RulesService {
     Map<String,RuleStatistics> getAllRuleStatistics();
 
     /**
+     * Resets all the rule statistics to zero, useful when testing or if you want to set a point in time.
+     */
+    void resetAllRuleStatistics();
+
+    /**
      * Persists the specified rule to the context server.
      *
      * @param rule the rule to be persisted

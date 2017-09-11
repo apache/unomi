@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RulesServiceImpl implements RulesService, EventListenerService, SynchronousBundleListener {
 
@@ -60,7 +61,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     private Timer rulesTimer;
     private Timer ruleStatisticsTimer;
 
-    private Map<String,RuleStatistics> allRuleStatistics = new HashMap<String,RuleStatistics>();
+    private Map<String,RuleStatistics> allRuleStatistics = new ConcurrentHashMap<>();
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -286,6 +287,13 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public Map<String,RuleStatistics> getAllRuleStatistics() {
         return allRuleStatistics;
+    }
+
+    @Override
+    public void resetAllRuleStatistics() {
+        Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
+        persistenceService.removeByQuery(matchAllCondition,RuleStatistics.class);
+        allRuleStatistics.clear();
     }
 
     public Set<Metadata> getRuleMetadatas() {

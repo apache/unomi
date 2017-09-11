@@ -82,14 +82,23 @@ public class RulesServiceEndPoint {
     }
 
     /**
-     * Retrieves the metadata for all known rules.
+     * Retrieves the rule statistics for all known rules.
      *
-     * @return the Set of known metadata
+     * @return a map that contains the rule key as a key and as the value a @RuleStatistics object.
      */
     @GET
     @Path("/statistics")
     public Map<String,RuleStatistics> getAllRuleStatistics() {
         return rulesService.getAllRuleStatistics();
+    }
+
+    /**
+     * Deletes all the rule statistics, which basically resets them to 0.
+     */
+    @DELETE
+    @Path("/statistics")
+    public void resetAllRuleStatistics() {
+        rulesService.resetAllRuleStatistics();
     }
 
     /**
