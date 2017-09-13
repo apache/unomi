@@ -266,6 +266,8 @@ public interface PersistenceService {
      *                   String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
      *                   a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @param clazz      the {@link Item} subclass of the items we want to retrieve
+     * @param offset     zero or a positive integer specifying the position of the first item in the total ordered collection of matching items
+     * @param size       a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved
      * @return a {@link PartialList} of items matching the specified criteria
      */
     <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz, int offset, int size);
