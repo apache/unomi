@@ -1,11 +1,14 @@
 {
-    "metadata": {     "id": "countryName", "name": "Country"   },
+    "metadata": {
+        "id": "countryName",
+        "name": "Country",
+        "tags": [
+            "properties",
+            "profileProperties",
+            "contactProfileProperties"
+        ]
+    },
     "type": "string",
-    "tags": [
-        "properties",
-        "profileProperties",
-        "contactProfileProperties"
-    ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "305.0"

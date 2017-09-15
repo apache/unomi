@@ -46,7 +46,6 @@ public class PropertyType extends MetadataItem {
     private Set<String> automaticMappingsFrom = new HashSet<>();
     private Double rank;
     private String mergeStrategy;
-    private Set<String> tags = new LinkedHashSet<>();
     private Boolean multivalued;
     private Boolean protekted;
 
@@ -125,24 +124,6 @@ public class PropertyType extends MetadataItem {
      */
     public void setValueType(ValueType valueType) {
         this.valueType = valueType;
-    }
-
-    /**
-     * Retrieves the tags used by this PropertyType.
-     *
-     * @return the tags used by this PropertyType
-     */
-    public Set<String> getTags() {
-        return tags;
-    }
-
-    /**
-     * Sets the tags used by this PropertyType.
-     *
-     * @param tags the tags used by this PropertyType
-     */
-    public void setTags(Set<String> tags) {
-        this.tags = tags;
     }
 
     /**

@@ -1,11 +1,14 @@
 {
-  "metadata": {     "id": "previousVisit", "name": "Previous visit"   },
+  "metadata": {
+    "id": "previousVisit",
+    "name": "Previous visit",
+    "tags": [
+      "properties",
+      "profileProperties",
+      "systemProfileProperties"
+    ]
+  },
   "type": "date",
-  "tags": [
-    "properties",
-    "profileProperties",
-    "systemProfileProperties"
-  ],
   "defaultValue": "",
   "automaticMappingsFrom": [ ],
   "mergeStrategy": "mostRecentMergeStrategy",

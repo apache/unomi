@@ -158,9 +158,12 @@ For profile properties you must create the JSON file inside the directory in you
 Here is an example of a property definition JSON file
 
     {
-        "metadata": {     "id": "city", "name": "City"   },
+        "metadata": {
+            "id": "city",
+            "name": "City",
+            "tags": ["properties", "profileProperties", "contactProfileProperties"]
+        },
         "type": "string",
-        "tags": ["contactProfileProperties"],
         "defaultValue": "",
         "automaticMappingsFrom": [ ],
         "rank": "304.0"

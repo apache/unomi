@@ -1,11 +1,14 @@
 {
-    "metadata": {     "id": "operatingSystemName", "name": "Operating system name"   },
+    "metadata": {
+        "id": "operatingSystemName",
+        "name": "Operating system name",
+        "tags": [
+            "properties",
+            "sessionProperties",
+            "technicalSessionProperties"
+        ]
+    },
     "type": "string",
-    "tags": [
-        "properties",
-        "sessionProperties",
-        "technicalSessionProperties"
-    ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "102.0"

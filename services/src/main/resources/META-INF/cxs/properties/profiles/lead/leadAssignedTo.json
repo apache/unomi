@@ -1,11 +1,14 @@
 {
-    "metadata": {     "id": "leadAssignedTo", "name": "Assigned to"   },
+    "metadata": {
+        "id": "leadAssignedTo",
+        "name": "Assigned to",
+        "tags": [
+            "properties",
+            "profileProperties",
+            "leadProfileProperties"
+        ]
+    },
     "type": "string",
-    "tags": [
-        "properties",
-        "profileProperties",
-        "leadProfileProperties"
-    ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "201.0"

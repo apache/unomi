@@ -1,11 +1,14 @@
 {
-    "metadata": {     "id": "city", "name": "City"   },
+    "metadata": {
+        "id": "city",
+        "name": "City",
+        "tags": [
+            "properties",
+            "profileProperties",
+            "contactProfileProperties"
+        ]
+    },
     "type": "string",
-    "tags": [
-        "properties",
-        "profileProperties",
-        "contactProfileProperties"
-    ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "304.0"

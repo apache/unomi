@@ -475,15 +475,14 @@ public class ProfileServiceEndPoint {
      * TODO: move to a different class
      * Deprecated : use a /properties/targets collection instead, this URI will be used for looking up properties by id instead.
      *
-     * @param target   the target for which we want to retrieve the associated property types
-     * @param language the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
+     * @param propertyId    the target for which we want to retrieve the associated property types
+     * @param language      the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
      * @return a collection of all the property types associated with the specified target
      */
     @GET
-    @Path("/properties/{target}")
-    @Deprecated
-    public Collection<PropertyType> getPropertyTypesByTargetDeprecated(@PathParam("target") String target, @HeaderParam("Accept-Language") String language) {
-        return profileService.getAllPropertyTypes(target);
+    @Path("/properties/{propertyId}")
+    public PropertyType getPropertyType(@PathParam("propertyId") String propertyId, @HeaderParam("Accept-Language") String language) {
+        return profileService.getPropertyType(propertyId);
     }
 
     /**
@@ -497,7 +496,6 @@ public class ProfileServiceEndPoint {
      */
     @GET
     @Path("/properties/targets/{target}")
-    @Deprecated
     public Collection<PropertyType> getPropertyTypesByTarget(@PathParam("target") String target, @HeaderParam("Accept-Language") String language) {
         return profileService.getAllPropertyTypes(target);
     }

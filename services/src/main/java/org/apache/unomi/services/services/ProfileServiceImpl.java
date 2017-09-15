@@ -641,7 +641,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     public Set<PropertyType> getPropertyTypeByTag(String tag) {
         Set<PropertyType> propertyTypes = new LinkedHashSet<PropertyType>();
-        Collection<PropertyType> directPropertyTypes = persistenceService.query("tags", tag, "rank", PropertyType.class);
+        Collection<PropertyType> directPropertyTypes = persistenceService.query("metadata.tags", tag, "rank", PropertyType.class);
 
         if (directPropertyTypes != null) {
             propertyTypes.addAll(directPropertyTypes);

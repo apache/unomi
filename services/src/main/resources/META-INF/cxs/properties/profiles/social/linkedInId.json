@@ -1,11 +1,14 @@
 {
-    "metadata": {     "id": "linkedInId", "name": "LinkedIn ID"   },
+    "metadata": {
+        "id": "linkedInId",
+        "name": "LinkedIn ID",
+        "tags": [
+            "properties",
+            "profileProperties",
+            "socialProfileProperties"
+        ]
+    },
     "type": "string",
-    "tags": [
-        "properties",
-        "profileProperties",
-        "socialProfileProperties"
-    ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "402.0"

@@ -1,14 +1,14 @@
 {
   "metadata": {
     "id": "age",
-    "name": "Age"
+    "name": "Age",
+    "tags": [
+      "properties",
+      "profileProperties",
+      "personalProfileProperties"
+    ]
   },
   "type": "integer",
-  "tags": [
-    "properties",
-    "profileProperties",
-    "personalProfileProperties"
-  ],
   "defaultValue": "",
   "numericRanges": [
     {"key":"*_10", "to" : 10 },

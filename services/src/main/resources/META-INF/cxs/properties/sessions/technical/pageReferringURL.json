@@ -1,11 +1,14 @@
 {
-    "metadata": {     "id": "pageReferringURL", "name": "Previous page URL"   },
+    "metadata": {
+        "id": "pageReferringURL",
+        "name": "Previous page URL",
+        "tags": [
+            "properties",
+            "sessionProperties",
+            "technicalSessionProperties"
+        ]
+    },
     "type": "string",
-    "tags": [
-        "properties",
-        "sessionProperties",
-        "technicalSessionProperties"
-    ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "108.0"

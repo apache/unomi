@@ -50,9 +50,9 @@ Some types can be dynamically defined at runtime by calling to the REST API whil
     "itemType": "propertyType",
     "metadata": {
         "id": "tweetNb",
-        "name": "tweetNb"
+        "name": "tweetNb",
+        "tags": ["social"]
     },
-    "tags": ["social"],
     "target": "profiles",
     "type": "integer"
 }
