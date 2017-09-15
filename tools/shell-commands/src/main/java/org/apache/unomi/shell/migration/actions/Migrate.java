@@ -14,19 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.shell.actions;
+package org.apache.unomi.shell.migration.actions;
 
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.karaf.shell.console.OsgiCommandSupport;
 import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.commands.Argument;
-import org.apache.unomi.shell.migrations.MigrationTo200;
-import org.apache.unomi.shell.utils.ConsoleUtils;
+import org.apache.unomi.shell.migration.Migration;
+import org.apache.unomi.shell.migration.utils.ConsoleUtils;
+import org.apache.unomi.shell.migration.utils.HttpUtils;
 import org.osgi.framework.Version;
 
 import java.util.*;
 
 @Command(scope = "unomi", name = "migrate", description = "This will Migrate your date in ES to be compliant with current version")
 public class Migrate extends OsgiCommandSupport {
+
+    private List<Migration> migrations;
 
     @Argument(name = "fromVersionWithoutSuffix", description = "Origin version without suffix/qualifier (e.g: 1.2.0)", required = true, multiValued = false, valueToShowInHelp = "1.2.0")
     private String fromVersionWithoutSuffix;
@@ -48,13 +52,19 @@ public class Migrate extends OsgiCommandSupport {
             return null;
         }
 
-        if (fromVersion.compareTo(new Version("2.0.0")) < 0) {
-            System.out.println("Starting migration to version 2.0.0");
+        CloseableHttpClient httpClient = HttpUtils.initHttpClient(session);
 
-            MigrationTo200 migrationTo200 = new MigrationTo200(session);
-            migrationTo200.execute();
+        for (Migration migration : migrations) {
+            if (fromVersion.compareTo(migration.getToVersion()) < 0) {
+                System.out.println("Starting migration to version " + migration.getToVersion());
+                migration.execute(session, httpClient);
 
-            System.out.println("Migration to version 2.0.0 done successfully");
+                System.out.println("Migration to version 2.0.0 done successfully");
+            }
+        }
+
+        if (httpClient != null) {
+            httpClient.close();
         }
 
         return null;
@@ -63,5 +73,9 @@ public class Migrate extends OsgiCommandSupport {
     private Version getCurrentVersionWithoutQualifier() {
         Version currentVersion = bundleContext.getBundle().getVersion();
         return new Version(currentVersion.getMajor() + "." + currentVersion.getMinor() + "." + currentVersion.getMicro());
+    }
+
+    public void setMigrations(List<Migration> migrations) {
+        this.migrations = migrations;
     }
 }

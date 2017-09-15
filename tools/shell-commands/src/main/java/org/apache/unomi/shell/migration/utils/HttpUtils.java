@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.shell.utils;
+package org.apache.unomi.shell.migration.utils;
 
+import org.apache.felix.service.command.CommandSession;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
@@ -42,6 +43,7 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -50,7 +52,10 @@ import java.util.Map;
 public class HttpUtils {
     private static final Logger logger = LoggerFactory.getLogger(HttpUtils.class);
 
-    public static CloseableHttpClient initHttpClient(boolean trustAllCertificates) {
+    public static CloseableHttpClient initHttpClient(CommandSession session) throws IOException {
+        String confirmation = ConsoleUtils.askUserWithAuthorizedAnswer(session,"We need to initialize a HttpClient, do we need to trust all certificates? (yes/no): ", Arrays.asList("yes", "no"));
+        boolean trustAllCertificates = confirmation.equalsIgnoreCase("yes");
+
         long requestStartTime = System.currentTimeMillis();
 
         HttpClientBuilder httpClientBuilder = HttpClients.custom().useSystemProperties();
@@ -98,21 +103,21 @@ public class HttpUtils {
         return httpClientBuilder.build();
     }
 
-    public static HttpEntity executeGetRequest(CloseableHttpClient httpClient, String url, Map<String, String> headers) throws IOException {
+    public static String executeGetRequest(CloseableHttpClient httpClient, String url, Map<String, String> headers) throws IOException {
         HttpGet httpGet = new HttpGet(url);
         httpGet.addHeader("accept", "application/json");
 
-        return getHttpEntity(httpClient, url, headers, httpGet);
+        return getResponse(httpClient, url, headers, httpGet);
     }
 
-    public static HttpEntity executeDeleteRequest(CloseableHttpClient httpClient, String url, Map<String, String> headers) throws IOException {
+    public static String executeDeleteRequest(CloseableHttpClient httpClient, String url, Map<String, String> headers) throws IOException {
         HttpDelete httpDelete = new HttpDelete(url);
         httpDelete.addHeader("accept", "application/json");
 
-        return getHttpEntity(httpClient, url, headers, httpDelete);
+        return getResponse(httpClient, url, headers, httpDelete);
     }
 
-    public static HttpEntity executePostRequest(CloseableHttpClient httpClient, String url, String jsonData, Map<String, String> headers) throws IOException {
+    public static String executePostRequest(CloseableHttpClient httpClient, String url, String jsonData, Map<String, String> headers) throws IOException {
         HttpPost httpPost = new HttpPost(url);
         httpPost.addHeader("accept", "application/json");
 
@@ -122,10 +127,10 @@ public class HttpUtils {
             httpPost.setEntity(input);
         }
 
-        return getHttpEntity(httpClient, url, headers, httpPost);
+        return getResponse(httpClient, url, headers, httpPost);
     }
 
-    private static HttpEntity getHttpEntity(CloseableHttpClient httpClient, String url, Map<String, String> headers, HttpRequestBase httpRequestBase) throws IOException {
+    private static String getResponse(CloseableHttpClient httpClient, String url, Map<String, String> headers, HttpRequestBase httpRequestBase) throws IOException {
         long requestStartTime = System.currentTimeMillis();
         if (headers != null) {
             for (Map.Entry<String, String> entry : headers.entrySet()) {
@@ -150,6 +155,9 @@ public class HttpUtils {
             logger.debug("Request to Apache Unomi url: " + url + " executed in " + totalRequestTime + "ms");
         }
 
-        return entity;
+        String stringResponse = EntityUtils.toString(entity);
+        EntityUtils.consumeQuietly(entity);
+
+        return stringResponse;
     }
 }

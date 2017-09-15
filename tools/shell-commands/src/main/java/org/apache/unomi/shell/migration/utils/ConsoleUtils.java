@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.shell.utils;
+package org.apache.unomi.shell.migration.utils;
 
 import jline.console.ConsoleReader;
 import org.apache.commons.lang3.StringUtils;

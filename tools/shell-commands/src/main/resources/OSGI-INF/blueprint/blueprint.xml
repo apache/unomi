@@ -18,15 +18,66 @@
 
 <blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
-           xsi:schemaLocation="http://karaf.apache.org/xmlns/shell/v1.1.0">
+           xmlns:shell="http://karaf.apache.org/xmlns/shell/v1.1.0"
+           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd">
 
-    <command-bundle xmlns="http://karaf.apache.org/xmlns/shell/v1.1.0">
-        <command>
-            <action class="org.apache.unomi.shell.actions.Migrate"/>
-        </command>
-        <command>
-            <action class="org.apache.unomi.shell.actions.Version"/>
-        </command>
-    </command-bundle>
+    <bean id="migrateTo200" class="org.apache.unomi.shell.migration.impl.MigrationTo200"/>
+
+    <shell:command-bundle>
+        <shell:command>
+            <shell:action class="org.apache.unomi.shell.migration.actions.Migrate">
+                <shell:property name="migrations">
+                    <list>
+                        <!-- Migration beans must be executed in the right order so you must place new bean at the end of this list -->
+                        <ref component-id="migrateTo200"/>
+                    </list>
+                </shell:property>
+            </shell:action>
+        </shell:command>
+        <shell:command>
+            <shell:action class="org.apache.unomi.shell.actions.Version"/>
+        </shell:command>
+        <shell:command>
+            <shell:action class="org.apache.unomi.shell.actions.Start">
+                <shell:property name="unomiManagementService" ref="unomiManagementServiceImpl"/>
+            </shell:action>
+        </shell:command>
+        <shell:command>
+            <shell:action class="org.apache.unomi.shell.actions.Stop">
+                <shell:property name="unomiManagementService" ref="unomiManagementServiceImpl"/>
+            </shell:action>
+        </shell:command>
+    </shell:command-bundle>
+
+    <bean id="unomiManagementServiceImpl" class="org.apache.unomi.shell.services.internal.UnomiManagementServiceImpl" init-method="init">
+        <property name="bundleSymbolicNames">
+            <list>
+                <value>org.apache.unomi.lifecycle-watcher</value>
+                <value>org.apache.unomi.api</value>
+                <value>org.apache.unomi.persistence-spi</value>
+                <value>org.apache.unomi.persistence-elasticsearch-core</value>
+                <value>org.apache.unomi.services</value>
+                <value>org.apache.unomi.cxs-lists-extension-services</value>
+                <value>org.apache.unomi.cxs-lists-extension-rest</value>
+                <value>org.apache.unomi.cxs-geonames-services</value>
+                <value>org.apache.unomi.cxs-geonames-rest</value>
+                <value>org.apache.unomi.cxs-privacy-extension-services</value>
+                <value>org.apache.unomi.cxs-privacy-extension-rest</value>
+                <value>org.apache.unomi.rest</value>
+                <value>org.apache.unomi.wab</value>
+                <value>org.apache.unomi.plugins-base</value>
+                <value>org.apache.unomi.plugins-request</value>
+                <value>org.apache.unomi.plugins-mail</value>
+                <value>org.apache.unomi.plugins-optimization-test</value>
+                <value>org.apache.unomi.cxs-lists-extension-actions</value>
+                <value>org.apache.unomi.router-api</value>
+                <value>org.apache.unomi.router-core</value>
+                <value>org.apache.unomi.router-service</value>
+                <value>org.apache.unomi.router-rest</value>
+            </list>
+        </property>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+    </bean>
+    <service id="unomiManagementService" ref="unomiManagementServiceImpl" auto-export="interfaces"/>
 
 </blueprint>
