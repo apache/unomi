@@ -86,6 +86,7 @@ public class LocalizationHelper {
     public RESTConditionType generateCondition(ConditionType conditionType, String language) {
         RESTConditionType result = new RESTConditionType();
         result.setId(conditionType.getItemId());
+        result.setVersion(conditionType.getVersion());
 
         result.setName(conditionType.getMetadata().getName());
         result.setDescription(conditionType.getMetadata().getDescription());
@@ -109,6 +110,7 @@ public class LocalizationHelper {
     public RESTActionType generateAction(ActionType actionType, String language) {
         RESTActionType result = new RESTActionType();
         result.setId(actionType.getItemId());
+        result.setVersion(actionType.getVersion());
 
         result.setName(actionType.getMetadata().getName());
         result.setDescription(actionType.getMetadata().getDescription());

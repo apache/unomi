@@ -40,6 +40,7 @@ public abstract class Item implements Serializable {
     protected String itemId;
     protected String itemType;
     protected String scope;
+    protected Long version;
 
     public Item() {
         try {
@@ -109,5 +110,13 @@ public abstract class Item implements Serializable {
     @Override
     public int hashCode() {
         return itemId != null ? itemId.hashCode() : 0;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }

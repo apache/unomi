@@ -30,6 +30,7 @@ public class RESTConditionType {
     private String description;
     private Set<String> tags = new LinkedHashSet<>();
     private List<RESTParameter> parameters = new ArrayList<RESTParameter>();
+    protected Long version;
 
     public RESTConditionType() {
     }
@@ -72,5 +73,13 @@ public class RESTConditionType {
 
     public void setParameters(List<RESTParameter> parameters) {
         this.parameters = parameters;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }

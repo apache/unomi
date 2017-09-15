@@ -31,6 +31,7 @@ public class RESTActionType {
     private String description;
     private Set<String> tags;
     private List<RESTParameter> parameters;
+    protected Long version;
 
     public String getId() {
         return id;
@@ -70,5 +71,13 @@ public class RESTActionType {
 
     public void setParameters(List<RESTParameter> parameters) {
         this.parameters = parameters;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }
