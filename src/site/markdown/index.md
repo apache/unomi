@@ -105,9 +105,9 @@ of all newly accepted projects until a further review indicates that the infrast
 in a manner consistent with other successful ASF projects. While incubation status is not necessarily a reflection of the completeness or stability 
 of the code, it does indicate that the project has yet to be fully endorsed by the ASF.
 
-![Unomi is incubating](images/incubator-logo.png)
+[![Unomi is incubating](images/incubator-logo.png)](http://incubator.apache.org)
 
-![Apache Software Foundation](https://www.apache.org/foundation/press/kit/asf_logo_url_small.png)
+[![Apache Software Foundation](https://www.apache.org/foundation/press/kit/asf_logo_url_small.png)](http://apache.org)
 
 ### Trademarks
 
