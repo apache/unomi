@@ -40,12 +40,8 @@
             <cm:property name="jmxUsername" value="karaf" />
             <cm:property name="jmxPassword" value="karaf" />
             <cm:property name="jmxPort" value="1099" />
-            <cm:property name="contextserver.address" value="localhost"/>
-            <cm:property name="contextserver.port" value="8181"/>
-            <cm:property name="contextserver.secureAddress" value="localhost"/>
-            <cm:property name="contextserver.securePort" value="9443"/>
-            <cm:property name="contextserver.internalAddress" value="127.0.0.1"/>
-            <cm:property name="contextserver.internalPort" value="8181"/>
+            <cm:property name="contextserver.publicAddress" value="https://localhost:9443"/>
+            <cm:property name="contextserver.internalAddress" value="http://127.0.0.1:8181"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -160,12 +156,8 @@
 
     <bean id="clusterServiceImpl" class="org.apache.unomi.services.services.ClusterServiceImpl"
           init-method="init" destroy-method="destroy">
-        <property name="address" value="${cluster.contextserver.address}"/>
-        <property name="port" value="${cluster.contextserver.port}"/>
-        <property name="secureAddress" value="${cluster.contextserver.secureAddress}"/>
-        <property name="securePort" value="${cluster.contextserver.securePort}"/>
+        <property name="publicAddress" value="${cluster.contextserver.publicAddress}"/>
         <property name="internalAddress" value="${cluster.contextserver.internalAddress}"/>
-        <property name="internalPort" value="${cluster.contextserver.internalPort}"/>
         <property name="persistenceService" ref="persistenceService"/>
         <property name="karafCellarClusterManager" ref="karafCellarClusterManager" />
         <property name="karafCellarEventProducer" ref="karafCellarEventProducer" />

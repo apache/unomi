@@ -47,13 +47,11 @@ import java.util.*;
  */
 public class ClusterServiceImpl implements ClusterService {
 
-    private static final Logger logger = LoggerFactory.getLogger(ClusterServiceImpl.class.getName());
-
     public static final String KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION = "org.apache.unomi.nodes";
     public static final String KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS = "publicEndpoints";
-    public static final String KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS = "secureEndpoints";
     public static final String KARAF_CLUSTER_CONFIGURATION_INTERNAL_ENDPOINTS = "internalEndpoints";
-
+    private static final Logger logger = LoggerFactory.getLogger(ClusterServiceImpl.class.getName());
+    PersistenceService persistenceService;
     private ClusterManager karafCellarClusterManager;
     private EventProducer karafCellarEventProducer;
     private GroupManager karafCellarGroupManager;
@@ -62,16 +60,9 @@ public class ClusterServiceImpl implements ClusterService {
     private String karafJMXUsername = "karaf";
     private String karafJMXPassword = "karaf";
     private int karafJMXPort = 1099;
-    private String address;
-    private String port;
-    private String secureAddress;
-    private String securePort;
+    private String publicAddress;
     private String internalAddress;
-    private String internalPort;
-
-    private Map<String,JMXConnector> jmxConnectors = new LinkedHashMap<>();
-
-    PersistenceService persistenceService;
+    private Map<String, JMXConnector> jmxConnectors = new LinkedHashMap<>();
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -109,28 +100,12 @@ public class ClusterServiceImpl implements ClusterService {
         this.karafJMXPort = karafJMXPort;
     }
 
-    public void setAddress(String address) {
-        this.address = address;
-    }
-
-    public void setPort(String port) {
-        this.port = port;
-    }
-
-    public void setSecureAddress(String secureAddress) {
-        this.secureAddress = secureAddress;
-    }
-
-    public void setSecurePort(String securePort) {
-        this.securePort = securePort;
+    public void setPublicAddress(String publicAddress) {
+        this.publicAddress = publicAddress;
     }
 
     public void setInternalAddress(String internalAddress) {
         this.internalAddress = internalAddress;
-    }
-
-    public void setInternalPort(String internalPort) {
-        this.internalPort = internalPort;
     }
 
     public void init() {
@@ -167,12 +142,14 @@ public class ClusterServiceImpl implements ClusterService {
                 if (karafCellarClusterNodeConfiguration == null) {
                     karafCellarClusterNodeConfiguration = new Properties();
                 }
-                Map<String,String> publicEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, thisKarafNode.getId() + "=" + address + ":" + port);
-                Map<String,String> secureEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, thisKarafNode.getId() + "=" + secureAddress + ":" + securePort);
-                publicEndpoints.put(thisKarafNode.getId(), address + ":" + port);
-                secureEndpoints.put(thisKarafNode.getId(), secureAddress + ":" + securePort);
+                Map<String, String> publicEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, thisKarafNode.getId() + "=" + publicAddress);
+                publicEndpoints.put(thisKarafNode.getId(), publicAddress);
                 setMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, publicEndpoints);
-                setMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, secureEndpoints);
+
+                Map<String, String> internalEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_INTERNAL_ENDPOINTS, thisKarafNode.getId() + "=" + internalAddress);
+                internalEndpoints.put(thisKarafNode.getId(), internalAddress);
+                setMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_INTERNAL_ENDPOINTS, internalEndpoints);
+
                 configurations.put(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION, karafCellarClusterNodeConfiguration);
                 ClusterConfigurationEvent clusterConfigurationEvent = new ClusterConfigurationEvent(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION);
                 clusterConfigurationEvent.setSourceGroup(group);
@@ -183,7 +160,7 @@ public class ClusterServiceImpl implements ClusterService {
     }
 
     public void destroy() {
-        for (Map.Entry<String,JMXConnector> jmxConnectorEntry : jmxConnectors.entrySet()) {
+        for (Map.Entry<String, JMXConnector> jmxConnectorEntry : jmxConnectors.entrySet()) {
             String url = jmxConnectorEntry.getKey();
             JMXConnector jmxConnector = jmxConnectorEntry.getValue();
             try {
@@ -204,36 +181,22 @@ public class ClusterServiceImpl implements ClusterService {
         Map<String, Properties> clusterConfigurations = karafCellarClusterManager.getMap(Constants.CONFIGURATION_MAP + Configurations.SEPARATOR + karafCellarGroupName);
         Properties karafCellarClusterNodeConfiguration = clusterConfigurations.get(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION);
         Map<String, String> publicNodeEndpoints = new TreeMap<>();
-        Map<String, String> secureNodeEndpoints = new TreeMap<>();
         Map<String, String> internalNodeEndpoints = new TreeMap<>();
         if (karafCellarClusterNodeConfiguration != null) {
-            publicNodeEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, thisKarafNode.getId() + "=" + address + ":" + port);
-            secureNodeEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_SECURE_ENDPOINTS, thisKarafNode.getId() + "=" + secureAddress + ":" + securePort);
-            internalNodeEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_INTERNAL_ENDPOINTS, thisKarafNode.getId() + "=" + internalAddress + ":" + internalPort);
+            publicNodeEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, thisKarafNode.getId() + "=" + publicAddress);
+            internalNodeEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_INTERNAL_ENDPOINTS, thisKarafNode.getId() + "=" + internalAddress);
         }
         for (org.apache.karaf.cellar.core.Node karafCellarNode : karafCellarNodes) {
             ClusterNode clusterNode = new ClusterNode();
             String publicEndpoint = publicNodeEndpoints.get(karafCellarNode.getId());
             if (publicEndpoint != null) {
-                String[] publicEndpointParts = publicEndpoint.split(":");
-                clusterNode.setHostAddress(publicEndpointParts[0]);
-                clusterNode.setPublicPort(Integer.parseInt(publicEndpointParts[1]));
-            }
-            String secureEndpoint = secureNodeEndpoints.get(karafCellarNode.getId());
-            if (secureEndpoint != null) {
-                String[] secureEndpointParts = secureEndpoint.split(":");
-                clusterNode.setSecureHostAddress(secureEndpointParts[0]);
-                clusterNode.setSecurePort(Integer.parseInt(secureEndpointParts[1]));
-                clusterNode.setMaster(false);
-                clusterNode.setData(false);
+                clusterNode.setPublicHostAddress(publicEndpoint);
             }
             String internalEndpoint = internalNodeEndpoints.get(karafCellarNode.getId());
             if (internalEndpoint != null) {
-                String[] internalEndpointParts = internalEndpoint.split(":");
-                clusterNode.setInternalHostAddress(internalEndpointParts[0]);
-                clusterNode.setInternalPort(Integer.parseInt(internalEndpointParts[1]));
+                clusterNode.setInternalHostAddress(internalEndpoint);
             }
-            String serviceUrl = "service:jmx:rmi:///jndi/rmi://"+karafCellarNode.getHost() + ":"+karafJMXPort+"/karaf-root";
+            String serviceUrl = "service:jmx:rmi:///jndi/rmi://" + karafCellarNode.getHost() + ":" + karafJMXPort + "/karaf-root";
             try {
                 JMXConnector jmxConnector = getJMXConnector(serviceUrl);
                 MBeanServerConnection mbsc = jmxConnector.getMBeanServerConnection();
@@ -249,7 +212,7 @@ public class ClusterServiceImpl implements ClusterService {
                     logger.error("Error retrieving system CPU load", e);
                 }
                 final OperatingSystemMXBean remoteOperatingSystemMXBean = ManagementFactory.newPlatformMXBeanProxy(mbsc, ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME, OperatingSystemMXBean.class);
-                clusterNode.setLoadAverage(new double[] { remoteOperatingSystemMXBean.getSystemLoadAverage()});
+                clusterNode.setLoadAverage(new double[]{remoteOperatingSystemMXBean.getSystemLoadAverage()});
                 if (systemCpuLoad != null) {
                     clusterNode.setCpuLoad(systemCpuLoad);
                 }
@@ -260,8 +223,8 @@ public class ClusterServiceImpl implements ClusterService {
                 handleTimeouts(serviceUrl, ce);
             } catch (java.rmi.ConnectException ce) {
                 handleTimeouts(serviceUrl, ce);
-            } catch (java.rmi.ConnectIOException coie) {
-                handleTimeouts(serviceUrl, coie);
+            } catch (java.rmi.ConnectIOException cioe) {
+                handleTimeouts(serviceUrl, cioe);
             } catch (IOException e) {
                 logger.error("Error retrieving remote JMX data", e);
             } catch (MalformedObjectNameException e) {
@@ -307,10 +270,10 @@ public class ClusterServiceImpl implements ClusterService {
     /**
      * Check if a configuration is allowed.
      *
-     * @param group the cluster group.
+     * @param group    the cluster group.
      * @param category the configuration category constant.
-     * @param pid the configuration PID.
-     * @param type the cluster event type.
+     * @param pid      the configuration PID.
+     * @param type     the cluster event type.
      * @return true if the cluster event type is allowed, false else.
      */
     public boolean isClusterConfigPIDAllowed(Group group, String category, String pid, EventType type) {
@@ -345,23 +308,23 @@ public class ClusterServiceImpl implements ClusterService {
         // if we reach this point either we didn't have a connector or it didn't validate
         // now let's connect to remote JMX service to retrieve information from the runtime and operating system MX beans
         JMXServiceURL jmxServiceURL = new JMXServiceURL(url);
-        Map<String,Object> environment=new HashMap<String,Object>();
+        Map<String, Object> environment = new HashMap<String, Object>();
         if (karafJMXUsername != null && karafJMXPassword != null) {
-            environment.put(JMXConnector.CREDENTIALS,new String[]{karafJMXUsername,karafJMXPassword});
+            environment.put(JMXConnector.CREDENTIALS, new String[]{karafJMXUsername, karafJMXPassword});
         }
         JMXConnector jmxConnector = JMXConnectorFactory.connect(jmxServiceURL, environment);
         jmxConnectors.put(url, jmxConnector);
         return jmxConnector;
     }
 
-    private Map<String,String> getMapProperty(Properties properties, String propertyName, String defaultValue) {
+    private Map<String, String> getMapProperty(Properties properties, String propertyName, String defaultValue) {
         String propertyValue = properties.getProperty(propertyName, defaultValue);
         return getMapProperty(propertyValue);
     }
 
     private Map<String, String> getMapProperty(String propertyValue) {
         String[] propertyValueArray = propertyValue.split(",");
-        Map<String,String> propertyMapValue = new LinkedHashMap<>();
+        Map<String, String> propertyMapValue = new LinkedHashMap<>();
         for (String propertyValueElement : propertyValueArray) {
             String[] propertyValueElementPrats = propertyValueElement.split("=");
             propertyMapValue.put(propertyValueElementPrats[0], propertyValueElementPrats[1]);
@@ -369,10 +332,10 @@ public class ClusterServiceImpl implements ClusterService {
         return propertyMapValue;
     }
 
-    private Map<String,String> setMapProperty(Properties properties, String propertyName, Map<String,String> propertyMapValue) {
+    private Map<String, String> setMapProperty(Properties properties, String propertyName, Map<String, String> propertyMapValue) {
         StringBuilder propertyValueBuilder = new StringBuilder();
         int entryCount = 0;
-        for (Map.Entry<String,String> propertyMapValueEntry : propertyMapValue.entrySet()) {
+        for (Map.Entry<String, String> propertyMapValueEntry : propertyMapValue.entrySet()) {
             propertyValueBuilder.append(propertyMapValueEntry.getKey());
             propertyValueBuilder.append("=");
             propertyValueBuilder.append(propertyMapValueEntry.getValue());

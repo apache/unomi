@@ -24,12 +24,10 @@ Changing the default configuration
 If you want to change the default configuration, you can perform any modification you want in the $MY_KARAF_HOME/etc directory.
 
 The context server configuration is kept in the $MY_KARAF_HOME/etc/org.apache.unomi.cluster.cfg . It defines the
-addresses and port where it can be found :
+addresses where it can be found :
 
-    contextserver.address=localhost
-    contextserver.port=8181
-    contextserver.secureAddress=localhost
-    contextserver.securePort=9443
+    contextserver.publicAddress=https://localhost:9443
+    contextserver.internalAddress=http://127.0.0.1:8181
 
 If you need to specify an Elasticsearch cluster name, or a host and port that are different than the default, 
 it is recommended to do this BEFORE you start the server for the first time, or you will loose all the data 
@@ -203,10 +201,8 @@ mod_proxy.
 
 In your Unomi package directory, in /etc/org.apache.unomi.cluster.cfg for unomi.apache.org
    
-   contextserver.address=unomi.apache.org
-   contextserver.port=80
-   contextserver.secureAddress=unomi.apache.org
-   contextserver.securePort=443
+   contextserver.publicAddress=https://unomi.apache.org/
+   contextserver.internalAddress=http://192.168.1.1:8181
    
 and you will also need to change the contextserver.domain in the /etc/org.apache.unomi.web.cfg file
 

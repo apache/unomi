@@ -28,12 +28,8 @@ public class ClusterNode implements Serializable {
 
     private double cpuLoad;
     private double[] loadAverage;
-    private String hostAddress;
-    private int publicPort;
-    private String secureHostAddress;
-    private int securePort;
+    private String publicHostAddress;
     private String internalHostAddress;
-    private int internalPort;
     private long uptime;
     private boolean master;
     private boolean data;
@@ -63,81 +59,27 @@ public class ClusterNode implements Serializable {
     }
 
     /**
-     * Retrieves the host address.
+     * Retrieves the public host address.
      *
-     * @return the host address
+     * @return the public host address
      */
-    public String getHostAddress() {
-        return hostAddress;
+    public String getPublicHostAddress() {
+        return publicHostAddress;
     }
 
     /**
-     * Sets the host address.
+     * Sets the public host address.
      *
-     * @param hostAddress the host address
+     * @param publicHostAddress the public host address
      */
-    public void setHostAddress(String hostAddress) {
-        this.hostAddress = hostAddress;
+    public void setPublicHostAddress(String publicHostAddress) {
+        this.publicHostAddress = publicHostAddress;
     }
 
     /**
-     * Retrieves the public port.
+     * Retrieves the internal host address which uses the HTTP/HTTPS protocol for communications between clients and the context server.
      *
-     * @return the public port
-     */
-    public int getPublicPort() {
-        return publicPort;
-    }
-
-    /**
-     * Sets the public port.
-     *
-     * @param publicPort the public port
-     */
-    public void setPublicPort(int publicPort) {
-        this.publicPort = publicPort;
-    }
-
-    /**
-     * Retrieves the secure host address which uses the HTTPS protocol for communications between clients and the context server.
-     *
-     * @return the secure host address
-     */
-    public String getSecureHostAddress() {
-        return secureHostAddress;
-    }
-
-    /**
-     * Sets the secure host address which uses the HTTPS protocol for communications between clients and the context server.
-     *
-     * @param secureHostAddress the secure host address
-     */
-    public void setSecureHostAddress(String secureHostAddress) {
-        this.secureHostAddress = secureHostAddress;
-    }
-
-    /**
-     * Retrieves the secure port.
-     *
-     * @return the secure port
-     */
-    public int getSecurePort() {
-        return securePort;
-    }
-
-    /**
-     * Sets the secure port.
-     *
-     * @param securePort the secure port
-     */
-    public void setSecurePort(int securePort) {
-        this.securePort = securePort;
-    }
-
-    /**
-     * Retrieves the secure host address which uses the HTTP/HTTPS protocol for communications between clients and the context server.
-     *
-     * @return the secure host address
+     * @return the internal host address
      */
     public String getInternalHostAddress() {
         return internalHostAddress;
@@ -150,24 +92,6 @@ public class ClusterNode implements Serializable {
      */
     public void setInternalHostAddress(String internalHostAddress) {
         this.internalHostAddress = internalHostAddress;
-    }
-
-    /**
-     * Retrieves the internal port.
-     *
-     * @return the internal port
-     */
-    public int getInternalPort() {
-        return internalPort;
-    }
-
-    /**
-     * Sets the internal port.
-     *
-     * @param internalPort the internal port
-     */
-    public void setInternalPort(int internalPort) {
-        this.internalPort = internalPort;
     }
 
     /**

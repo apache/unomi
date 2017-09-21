@@ -82,8 +82,8 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
             HttpResponse response = httpClient.execute(httpPut);
 
             if (response.getStatusLine().getStatusCode() != 200) {
-                logger.error("Failed to update the running config: Please check the acceccibilty to the URI: \n{}",
-                        "http://localhost234:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/importConfigAdmin");
+                logger.error("Failed to update the running config: Please check the accessibility to the URI: \n{}",
+                        "http://localhost:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/importConfigAdmin");
                 logger.error("HTTP Status code returned {}", response.getStatusLine().getStatusCode());
                 throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
             }
