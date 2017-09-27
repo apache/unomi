@@ -84,7 +84,7 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
         ExportConfiguration exportConfigSaved = configurationService.save(exportConfiguration);
         CloseableHttpClient httpClient = HttpClients.createDefault();
         try {
-            HttpPut httpPut = new HttpPut("http://localhost:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/exportConfigAdmin");
+            HttpPut httpPut = new HttpPut(configSharingService.getProperty("internalServerAddress") + "/configUpdate/exportConfigAdmin");
             StringEntity input = new StringEntity(new ObjectMapper().writeValueAsString(exportConfigSaved));
             input.setContentType(MediaType.APPLICATION_JSON);
             httpPut.setEntity(input);
@@ -93,7 +93,7 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
 
             if (response.getStatusLine().getStatusCode() != 200) {
                 logger.error("Failed to update the running config: Please check the acceccibilty to the URI: \n{}",
-                        "http://localhost:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/importConfigAdmin");
+                        configSharingService.getProperty("internalServerAddress") + "/configUpdate/importConfigAdmin");
                 logger.error("HTTP Status code returned {}", response.getStatusLine().getStatusCode());
                 throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
             }

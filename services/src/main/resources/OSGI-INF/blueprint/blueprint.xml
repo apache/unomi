@@ -230,7 +230,7 @@
     <bean id="configSharingServiceImpl" class="org.apache.unomi.services.services.ConfigSharingServiceImpl" destroy-method="preDestroy">
         <property name="configProperties">
             <map>
-                <entry key="internalServerPort" value="${cluster.contextserver.port}" />
+                <entry key="internalServerAddress" value="${cluster.contextserver.internalAddress}" />
             </map>
         </property>
         <property name="bundleContext" ref="blueprintBundleContext"/>

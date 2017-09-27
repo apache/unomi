@@ -74,7 +74,7 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
         ImportConfiguration importConfigSaved = configurationService.save(importConfiguration);
         CloseableHttpClient httpClient = HttpClients.createDefault();
         try {
-            HttpPut httpPut = new HttpPut("http://localhost:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/importConfigAdmin");
+            HttpPut httpPut = new HttpPut(configSharingService.getProperty("internalServerAddress") + "/configUpdate/importConfigAdmin");
             StringEntity input = new StringEntity(new ObjectMapper().writeValueAsString(importConfigSaved));
             input.setContentType(MediaType.APPLICATION_JSON);
             httpPut.setEntity(input);
@@ -83,7 +83,7 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
 
             if (response.getStatusLine().getStatusCode() != 200) {
                 logger.error("Failed to update the running config: Please check the accessibility to the URI: \n{}",
-                        "http://localhost:" + configSharingService.getProperty("internalServerPort") + "/configUpdate/importConfigAdmin");
+                        configSharingService.getProperty("internalServerAddress") + "/configUpdate/importConfigAdmin");
                 logger.error("HTTP Status code returned {}", response.getStatusLine().getStatusCode());
                 throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
             }
