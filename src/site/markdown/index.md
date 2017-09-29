@@ -81,6 +81,7 @@ All communication is done using HTTP REST requests and JSON data formats.
 
 ### News
 
+- 2017-09-28 Released version 1.2.0-incubating
 - 2017-07-19 New Salesforce CRM connector contributed
 - 2016-10-04 Released version 1.1.0-incubating
 - 2016-05-22 Released version 1.0.0-incubating

@@ -17,14 +17,34 @@
 
 # Downloading Apache Unomi
 
-## 1.1.0-incubating
+## 1.2.0-incubating
+
+### Release notes
+
+Here are the [release notes](https://issues.apache.org/jira/secure/ReleaseNote.jspa?projectId=12319220&amp;version=12338361) for this version of Apache Unomi
 
 ### Binaries
 
-* [tar.gz](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating.tar.gz) ([checksum](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating.tar.gz.md5) - [signature](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating.tar.gz.asc))
-* [zip](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating.zip) ([checksum](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating.zip.md5) - [signature](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating.zip.asc))
+We provide convenience binaries in two formats
+
+* [tar.gz](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.2.0-incubating/unomi-1.2.0-incubating.tar.gz) ([MD5](http://www.apache.org/dist/incubator/unomi/1.2.0-incubating/unomi-1.2.0-incubating.tar.gz.md5) - [SHA1](http://www.apache.org/dist/incubator/unomi/1.2.0-incubating/unomi-1.2.0-incubating.tar.gz.sha1) - [PGP](http://www.apache.org/dist/incubator/unomi/1.2.0-incubating/unomi-1.2.0-incubating.tar.gz.asc))
+* [zip](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.2.0-incubating/unomi-1.2.0-incubating.zip) ([MD5](http://www.apache.org/dist/incubator/unomi/1.2.0-incubating/unomi-1.2.0-incubating.zip.md5) - [SHA1](http://www.apache.org/dist/incubator/unomi/1.2.0-incubating/unomi-1.2.0-incubating.zip.sha1) - [PGP](http://www.apache.org/dist/incubator/unomi/1.2.0-incubating/unomi-1.2.0-incubating.zip.asc))
 
 ### Source code
 
-* [tar.gz](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating-src.tar.gz) ([checksum](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating-src.tar.gz.md5) - [signature](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating-src.tar.gz.asc))
-* [zip](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating-src.zip) ([checksum](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating-src.zip.md5) - [signature](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.1.0-incubating/unomi-1.1.0-incubating-src.zip.asc))
+* [zip](http://www.apache.org/dyn/closer.lua/incubator/unomi/1.2.0-incubating/unomi-1.2.0-incubating-src.zip) ([MD5](http://www.apache.org/dist/incubator/unomi/1.2.0-incubating/unomi-1.2.0-incubating-src.zip.md5) - [SHA1](http://www.apache.org/dist/incubator/unomi/1.2.0-incubating/unomi-1.2.0-incubating-src.zip.sha1) - [PGP](http://www.apache.org/dist/incubator/unomi/1.2.0-incubating/unomi-1.2.0-incubating-src.zip.asc))
+
+# Verify the integrity of the files
+
+It is essential that you verify the integrity of the downloaded files using the PGP or MD5 signatures.
+
+The PGP signatures can be verified using PGP or GPG. First download the [KEYS](http://www.apache.org/dist/incubator/unomi/KEYS) as well as the PGP signature file for the 
+relevant file. Make sure you get these files from the main distribution directory, rather than from a mirror. Then 
+verify the signatures using, for instance:
+
+    % gpg --import KEYS
+    % gpg --verify unomi-1.2.0-incubating.tar.gz.asc unomi-1.2.0-incubating.tar.gz
+
+# Previous releases
+
+Previous releases may be found [here](archive.html)
