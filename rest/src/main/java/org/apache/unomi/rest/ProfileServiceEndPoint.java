@@ -439,19 +439,25 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves the existing property types for the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and with the specified tag.
+     * Retrieves the existing property types for the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and with the specified tag or system tag.
      *
      * TODO: move to a different class
      *
-     * @param tag      the tag we're interested in
-     * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
-     * @param language the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
+     * @param tag           the tag we're interested in
+     * @param isSystemTag   if we should look in system tags instead of tags
+     * @param itemType      the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
+     * @param language      the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
      * @return all property types defined for the specified item type and with the specified tag
      */
     @GET
     @Path("/existingProperties")
-    public Collection<PropertyType> getExistingProperties(@QueryParam("tag") String tag, @QueryParam("itemType") String itemType, @HeaderParam("Accept-Language") String language) {
-        Set<PropertyType> properties = profileService.getExistingProperties(tag, itemType);
+    public Collection<PropertyType> getExistingProperties(@QueryParam("tag") String tag, @QueryParam("isSystemTag") boolean isSystemTag, @QueryParam("itemType") String itemType, @HeaderParam("Accept-Language") String language) {
+        Set<PropertyType> properties;
+        if (isSystemTag) {
+            properties = profileService.getExistingProperties(tag, itemType, isSystemTag);
+        } else {
+            properties = profileService.getExistingProperties(tag, itemType);
+        }
         return properties;
     }
 
