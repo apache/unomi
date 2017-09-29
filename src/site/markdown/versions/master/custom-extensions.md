@@ -29,7 +29,7 @@ An extension is simply a Maven project, with a Maven pom that looks like this:
         <parent>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-extensions</artifactId>
-            <version>1.2.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </parent>
     
         <modelVersion>4.0.0</modelVersion>
@@ -37,7 +37,7 @@ An extension is simply a Maven project, with a Maven pom that looks like this:
         <artifactId>unomi-extension-example</artifactId>
         <name>Apache Unomi :: Extensions :: Example</name>
         <description>Service implementation for the Apache Unomi Context Server extension that integrates with the Geonames database</description>
-        <version>1.2.0-incubating-SNAPSHOT</version>
+        <version>${project.version}</version>
         <packaging>bundle</packaging>
     
         <dependencies>
@@ -45,7 +45,7 @@ An extension is simply a Maven project, with a Maven pom that looks like this:
             <dependency>
                 <groupId>org.apache.unomi</groupId>
                 <artifactId>unomi-api</artifactId>
-                <version>1.2.0-incubating-SNAPSHOT</version>
+                <version>${project.version}</version>
                 <scope>provided</scope>
             </dependency>    
         </dependencies>

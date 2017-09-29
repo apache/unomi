@@ -38,7 +38,7 @@ Installing the sample
 
 2. Install the login sample using the following command:
 
-        bundle:install mvn:org.apache.unomi/login-integration-sample/1.2.0-incubating-SNAPSHOT
+        bundle:install mvn:org.apache.unomi/login-integration-sample/${project.version}
         
     when the bundle is successfully install you will get an bundle ID back we will call it BUNDLE_ID. 
     

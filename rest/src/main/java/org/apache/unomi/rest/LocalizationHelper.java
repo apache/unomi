@@ -92,6 +92,7 @@ public class LocalizationHelper {
         result.setDescription(conditionType.getMetadata().getDescription());
 
         result.setTags(conditionType.getMetadata().getTags());
+        result.setSystemTags(conditionType.getMetadata().getSystemTags());
 
         for (Parameter parameter : conditionType.getParameters()) {
             result.getParameters().add(generateParameter(parameter, language));
@@ -116,6 +117,7 @@ public class LocalizationHelper {
         result.setDescription(actionType.getMetadata().getDescription());
 
         result.setTags(actionType.getMetadata().getTags());
+        result.setSystemTags(actionType.getMetadata().getSystemTags());
 
         List<RESTParameter> parameters = new ArrayList<RESTParameter>();
         for (Parameter parameter : actionType.getParameters()) {

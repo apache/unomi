@@ -58,8 +58,7 @@ public class Migrate extends OsgiCommandSupport {
             if (fromVersion.compareTo(migration.getToVersion()) < 0) {
                 System.out.println("Starting migration to version " + migration.getToVersion());
                 migration.execute(session, httpClient);
-
-                System.out.println("Migration to version 2.0.0 done successfully");
+                System.out.println("Migration to version " + migration.getToVersion() + " done successfully");
             }
         }
 

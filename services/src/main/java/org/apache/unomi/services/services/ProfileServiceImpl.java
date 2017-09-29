@@ -640,8 +640,16 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Set<PropertyType> getPropertyTypeByTag(String tag) {
+        return getPropertyTypesBy("metadata.tags", tag);
+    }
+
+    public Set<PropertyType> getPropertyTypeBySystemTag(String tag) {
+        return getPropertyTypesBy("metadata.systemTags", tag);
+    }
+
+    private Set<PropertyType> getPropertyTypesBy( String fieldName, String fieldValue) {
         Set<PropertyType> propertyTypes = new LinkedHashSet<PropertyType>();
-        Collection<PropertyType> directPropertyTypes = persistenceService.query("metadata.tags", tag, "rank", PropertyType.class);
+        Collection<PropertyType> directPropertyTypes = persistenceService.query(fieldName, fieldValue, "rank", PropertyType.class);
 
         if (directPropertyTypes != null) {
             propertyTypes.addAll(directPropertyTypes);
@@ -718,7 +726,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
             try {
                 PersonaWithSessions persona = CustomObjectMapper.getObjectMapper().readValue(predefinedPersonaURL, PersonaWithSessions.class);
-                persistenceService.save(persona.getPersona());
+
+                String itemId = persona.getPersona().getItemId();
+                if (persistenceService.load(itemId, Persona.class) != null) {
+                    persistenceService.save(persona.getPersona());
+                }
 
                 List<PersonaSession> sessions = persona.getSessions();
                 for (PersonaSession session : sessions) {

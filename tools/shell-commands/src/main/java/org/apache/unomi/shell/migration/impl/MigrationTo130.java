@@ -32,7 +32,7 @@ import java.util.*;
 /**
  * @author dgaillard
  */
-public class MigrationTo200 implements Migration {
+public class MigrationTo130 implements Migration {
 
     private CloseableHttpClient httpClient;
     private CommandSession session;
@@ -45,7 +45,7 @@ public class MigrationTo200 implements Migration {
 
     @Override
     public Version getToVersion() {
-        return new Version("2.0.0");
+        return new Version("1.3.0");
     }
 
     @Override
@@ -65,28 +65,35 @@ public class MigrationTo200 implements Migration {
     private void migrateTags() throws IOException {
         initTagsStructurePriorTo200();
         String hostAddress = ConsoleUtils.askUserWithDefaultAnswer(session, "Host address (default = http://localhost:9200): ", "http://localhost:9200");
+        String tagsOperation = ConsoleUtils.askUserWithAuthorizedAnswer(session, "How to manage tags?\nno change: will keep tags in tags property\ncopy: will duplicate tags in systemTags property\nmove: will move tags in systemTags property\n(default/copy/move): ", Arrays.asList("no change", "copy", "move"));
+
+        String removeNamespaceOnSystemTags = "no";
+        if (tagsOperation.equals("copy") || tagsOperation.equals("move")) {
+            removeNamespaceOnSystemTags = ConsoleUtils.askUserWithAuthorizedAnswer(session,"As we will copy/move the tags, do you wish to remove existing namespace on tags before copy/move in systemTags? (e.g: hidden.) (yes/no): ", Arrays.asList("yes", "no"));
+        }
 
         List<String> typeToMigrate = Arrays.asList("actionType", "conditionType", "campaign", "goal", "rule", "scoring", "segment", "userList");
         for (String type : typeToMigrate) {
-            migrateTypeTags(hostAddress, type);
+            migrateTypeTags(hostAddress, type, tagsOperation, removeNamespaceOnSystemTags.equals("yes"));
         }
 
-        migratePropertyTypesTags(hostAddress);
+        migratePropertyTypesTags(hostAddress, tagsOperation, removeNamespaceOnSystemTags.equals("yes"));
     }
 
-    private void migrateTypeTags(String hostAddress, String type) throws IOException {
+    private void migrateTypeTags(String hostAddress, String type, String tagsOperation, boolean removeNamespaceOnSystemTags) throws IOException {
         JSONObject responseJSON = MigrationUtils.queryWithScroll(httpClient, hostAddress + "/context/" + type + "/_search");
 
-        migrateTagsInResult(responseJSON, hostAddress, type,10, true);
+        migrateTagsInResult(responseJSON, hostAddress, type,10, true, tagsOperation, removeNamespaceOnSystemTags);
     }
 
-    private void migratePropertyTypesTags(String hostAddress) throws IOException {
+    private void migratePropertyTypesTags(String hostAddress, String tagsOperation, boolean removeNamespaceOnSystemTags) throws IOException {
         JSONObject responseJSON = MigrationUtils.queryWithScroll(httpClient,hostAddress + "/context/propertyType/_search");
 
-        migrateTagsInResult(responseJSON, hostAddress, "propertyType", 10, false);
+        migrateTagsInResult(responseJSON, hostAddress, "propertyType", 10, false, tagsOperation, removeNamespaceOnSystemTags);
     }
 
-    private void migrateTagsInResult(JSONObject responseJSON, String hostAddress, String type, int currentOffset, boolean tagsInMetadata) throws IOException {
+    private void migrateTagsInResult(JSONObject responseJSON, String hostAddress, String type, int currentOffset,
+                                     boolean tagsInMetadata, String tagsOperation, boolean removeNamespaceOnSystemTags) throws IOException {
         if (responseJSON.has("hits")) {
             JSONObject hitsObject = responseJSON.getJSONObject("hits");
             if (hitsObject.has("hits")) {
@@ -100,9 +107,9 @@ public class MigrationTo200 implements Migration {
                         JSONObject hitSource = hit.getJSONObject("_source");
                         if (tagsInMetadata && hitSource.has("metadata")) {
                             JSONObject hitMetadata = hitSource.getJSONObject("metadata");
-                            updateTagsForHit(updatedHits, hit.getString("_id"), hitMetadata, tagsInMetadata);
+                            updateTagsForHit(updatedHits, hit.getString("_id"), hitMetadata, tagsInMetadata, tagsOperation, removeNamespaceOnSystemTags);
                         } else if (!tagsInMetadata) {
-                            updateTagsForHit(updatedHits, hit.getString("_id"), hitSource, tagsInMetadata);
+                            updateTagsForHit(updatedHits, hit.getString("_id"), hitSource, tagsInMetadata, tagsOperation, removeNamespaceOnSystemTags);
                         }
                     }
                 }
@@ -112,41 +119,70 @@ public class MigrationTo200 implements Migration {
                 }
 
                 if (hitsObject.getInt("total") > currentOffset) {
-                    migrateTagsInResult(MigrationUtils.continueQueryWithScroll(httpClient, hostAddress, responseJSON.getString("_scroll_id")), hostAddress, type,currentOffset + 10, tagsInMetadata);
+                    migrateTagsInResult(MigrationUtils.continueQueryWithScroll(httpClient, hostAddress, responseJSON.getString("_scroll_id")), hostAddress, type,currentOffset + 10, tagsInMetadata, tagsOperation, removeNamespaceOnSystemTags);
                 }
             }
         }
     }
 
-    private void updateTagsForHit(StringBuilder updatedHits, String hitId, JSONObject jsonObject, boolean tagsInMetadata) {
+    private void updateTagsForHit(StringBuilder updatedHits, String hitId, JSONObject jsonObject,
+                                  boolean tagsInMetadata, String tagsOperation, boolean removeNamespaceOnSystemTags) {
         if (jsonObject.has("tags")) {
             JSONArray hitTags = jsonObject.getJSONArray("tags");
             Iterator<Object> tagsIterator = hitTags.iterator();
-            List<String> tagsBeforeMigration = new ArrayList<>();
-            List<String> tagsAfterMigration = new ArrayList<>();
+            Set<String> tagsBeforeMigration = new HashSet<>();
+            Set<String> tagsAfterMigration = new HashSet<>();
             if (tagsIterator.hasNext()) {
                 while (tagsIterator.hasNext()) {
                     tagsBeforeMigration.add((String) tagsIterator.next());
                 }
 
                 for (String tag : tagsBeforeMigration) {
-                    if (tagsStructurePriorTo200.containsKey(tag) && !tagsAfterMigration.containsAll(tagsStructurePriorTo200.get(tag))) {
+                    if (tagsStructurePriorTo200.containsKey(tag)) {
                         tagsAfterMigration.addAll(tagsStructurePriorTo200.get(tag));
                     }
-
-                    if (!tagsAfterMigration.contains(tag)) {
-                        tagsAfterMigration.add(tag);
-                    }
+                    tagsAfterMigration.add(tag);
                 }
 
                 updatedHits.append("{\"update\":{\"_id\":\"").append(hitId).append("\"}}\n");
-                updatedHits.append("{\"doc\":{\"metadata\":{\"tags\":").append(new JSONArray(tagsAfterMigration)).append("}}}\n");
+                if (tagsOperation.equals("no change")) {
+                    updatedHits.append("{\"doc\":{\"metadata\":{\"tags\":").append(new JSONArray(tagsAfterMigration)).append("}}}\n");
+                }
+                if (tagsOperation.equals("copy")) {
+                    Set<String> tags = removeNamespaceOnTags(removeNamespaceOnSystemTags, tagsAfterMigration);
+                    updatedHits.append("{\"doc\":{\"metadata\":{\"tags\":").append(new JSONArray(tagsAfterMigration))
+                            .append(",\"systemTags\":").append(new JSONArray(tags)).append("}}}\n");
+                }
+                if (tagsOperation.equals("move")) {
+                    Set<String> tags = removeNamespaceOnTags(removeNamespaceOnSystemTags, tagsAfterMigration);
+                    updatedHits.append("{\"doc\":{\"metadata\":{\"systemTags\":").append(new JSONArray(tags)).append("}}}\n");
+                    if (tagsInMetadata) {
+                        updatedHits.append("{\"update\":{\"_id\":\"").append(hitId).append("\"}}\n");
+                        updatedHits.append("{\"script\":\"ctx._source.metadata.remove(\\\"tags\\\")\"}\n");
+                    }
+                }
                 if (!tagsInMetadata) {
                     updatedHits.append("{\"update\":{\"_id\":\"").append(hitId).append("\"}}\n");
                     updatedHits.append("{\"script\":\"ctx._source.remove(\\\"tags\\\")\"}\n");
                 }
             }
         }
+    }
+
+    private Set<String> removeNamespaceOnTags(boolean removeNamespaceOnSystemTags, Set<String> tagsAfterMigration) {
+        if (!removeNamespaceOnSystemTags) {
+            return tagsAfterMigration;
+        }
+
+        Set<String> tags = new HashSet<>();
+        for (String tag : tagsAfterMigration) {
+            if (StringUtils.startsWith(tag, "hidden.")) {
+                tags.add(StringUtils.substringAfter(tag, "hidden."));
+            } else {
+                tags.add(tag);
+            }
+        }
+        return tags;
     }
 
     private void initTagsStructurePriorTo200() {

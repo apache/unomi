@@ -501,7 +501,7 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves all property types with the specified tags also retrieving property types with sub-tags of the specified tags if so specified.
+     * Retrieves all property types with the specified tags.
      *
      * TODO: move to a different class
      * TODO: passing a list of tags via a comma-separated list is not very RESTful
@@ -517,6 +517,27 @@ public class ProfileServiceEndPoint {
         Set<PropertyType> results = new LinkedHashSet<>();
         for (String tag : tagsArray) {
             results.addAll(profileService.getPropertyTypeByTag(tag));
+        }
+        return results;
+    }
+
+    /**
+     * Retrieves all property types with the specified tags.
+     *
+     * TODO: move to a different class
+     * TODO: passing a list of tags via a comma-separated list is not very RESTful
+     *
+     * @param tags      a comma-separated list of tag identifiers
+     * @param language  the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
+     * @return a Set of the property types with the specified tag
+     */
+    @GET
+    @Path("/properties/systemTags/{tags}")
+    public Collection<PropertyType> getPropertyTypeBySystemTag(@PathParam("tags") String tags, @HeaderParam("Accept-Language") String language) {
+        String[] tagsArray = tags.split(",");
+        Set<PropertyType> results = new LinkedHashSet<>();
+        for (String tag : tagsArray) {
+            results.addAll(profileService.getPropertyTypeBySystemTag(tag));
         }
         return results;
     }

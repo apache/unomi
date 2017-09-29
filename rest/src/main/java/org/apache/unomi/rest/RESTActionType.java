@@ -30,6 +30,7 @@ public class RESTActionType {
     private String name;
     private String description;
     private Set<String> tags;
+    private Set<String> systemTags;
     private List<RESTParameter> parameters;
     protected Long version;
 
@@ -63,6 +64,14 @@ public class RESTActionType {
 
     public void setTags(Set<String> tags) {
         this.tags = tags;
+    }
+
+    public Set<String> getSystemTags() {
+        return systemTags;
+    }
+
+    public void setSystemTags(Set<String> systemTags) {
+        this.systemTags = systemTags;
     }
 
     public List<RESTParameter> getParameters() {

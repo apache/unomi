@@ -22,13 +22,12 @@
     <parent>
         <artifactId>unomi-tools</artifactId>
         <groupId>org.apache.unomi</groupId>
-        <version>1.2.0-incubating-unomi_117-SNAPSHOT</version>
+        <version>1.3.0-incubating-unomi_117-SNAPSHOT</version>
     </parent>
 
     <artifactId>shell-commands</artifactId>
     <name>Apache Unomi :: Tools :: Shell commands</name>
     <description>Provides the shell commands to interact with Apache Unomi Context Server</description>
-    <version>1.2.0-incubating-unomi_117-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <dependencies>

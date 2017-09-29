@@ -57,8 +57,6 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     private RulesService rulesService;
 
-    private Map<String, Set<Goal>> goalByTag = new HashMap<>();
-
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
@@ -121,20 +119,6 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
                     goal.getMetadata().setScope("systemscope");
                 }
                 if (getGoal(goal.getMetadata().getId()) == null) {
-                    for (String tag : goal.getMetadata().getTags()) {
-                        if (goalByTag.containsKey(tag)) {
-                            Set<Goal> goals = goalByTag.get(tag);
-                            if (goals == null) {
-                                goals = new LinkedHashSet<>();
-                            }
-                            goals.add(goal);
-                            goalByTag.put(tag, goals);
-                        } else {
-                            // we found a tag that is not defined, we will define it automatically
-                            logger.debug("Unknown tag " + tag + " used in goal definition " + predefinedGoalURL);
-                        }
-                    }
-
                     setGoal(goal);
                 }
             } catch (IOException e) {
@@ -537,16 +521,6 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         }
 
         return report;
-    }
-
-    public Set<Goal> getGoalByTag(String tag) {
-        Set<Goal> goals = new LinkedHashSet<>();
-        Set<Goal> directGoals = goalByTag.get(tag);
-        if (directGoals != null) {
-            goals.addAll(directGoals);
-        }
-
-        return goals;
     }
 
     // Campaign Event management methods

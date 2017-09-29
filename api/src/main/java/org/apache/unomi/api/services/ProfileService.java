@@ -256,14 +256,24 @@ public interface ProfileService {
     Map<String, Collection<PropertyType>> getAllPropertyTypes();
 
     /**
-     * Retrieves all property types with the specified tag also retrieving property types with sub-tags of the specified tag if so specified.
+     * Retrieves all property types with the specified tag
      *
      * TODO: move to a different class
      *
-     * @param tag                the tag name marking property types we want to retrieve
+     * @param tag   the tag name marking property types we want to retrieve
      * @return a Set of the property types with the specified tag
      */
     Set<PropertyType> getPropertyTypeByTag(String tag);
+
+    /**
+     * Retrieves all property types with the specified system tag
+     *
+     * TODO: move to a different class
+     *
+     * @param tag   the system tag name marking property types we want to retrieve
+     * @return a Set of the property types with the specified system tag
+     */
+    Set<PropertyType> getPropertyTypeBySystemTag(String tag);
 
     /**
      * TODO

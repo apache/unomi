@@ -72,11 +72,11 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Retrieves the set of condition types with the specified tags also retrieving condition types from sub-tags if so specified localized using the specified language.
+     * Retrieves the set of condition types with the specified tags.
      *
      * @param language  the language to use to localize.
      * @param tags      a comma-separated list of tag identifiers
-     * @return the set of condition types with the specified tag (and its sub-tags, if specified)
+     * @return the set of condition types with the specified tag
      */
     @GET
     @Path("/conditions/tags/{tags}")
@@ -85,6 +85,24 @@ public class DefinitionsServiceEndPoint {
         Set<ConditionType> results = new LinkedHashSet<>();
         for (String tag : tagsArray) {
             results.addAll(definitionsService.getConditionTypesByTag(tag));
+        }
+        return localizationHelper.generateConditions(results, language);
+    }
+
+    /**
+     * Retrieves the set of condition types with the specified system tags.
+     *
+     * @param language  the language to use to localize.
+     * @param tags      a comma-separated list of tag identifiers
+     * @return the set of condition types with the specified tag
+     */
+    @GET
+    @Path("/conditions/systemTags/{tags}")
+    public Collection<RESTConditionType> getConditionTypesBySystemTag(@PathParam("tags") String tags, @HeaderParam("Accept-Language") String language) {
+        String[] tagsArray = tags.split(",");
+        Set<ConditionType> results = new LinkedHashSet<>();
+        for (String tag : tagsArray) {
+            results.addAll(definitionsService.getConditionTypesBySystemTag(tag));
         }
         return localizationHelper.generateConditions(results, language);
     }
@@ -139,11 +157,11 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Retrieves the set of action types with the specified tags also retrieving action types from sub-tags if so specified localized using the specified language.
+     * Retrieves the set of action types with the specified tags.
      *
      * @param language  the language to use to localize.
      * @param tags      the tag marking the action types we want to retrieve
-     * @return the set of action types with the specified tag (and its sub-tags, if specified)
+     * @return the set of action types with the specified tag
      */
     @GET
     @Path("/actions/tags/{tags}")
@@ -152,6 +170,24 @@ public class DefinitionsServiceEndPoint {
         Set<ActionType> results = new LinkedHashSet<>();
         for (String tag : tagsArray) {
             results.addAll(definitionsService.getActionTypeByTag(tag));
+        }
+        return localizationHelper.generateActions(results, language);
+    }
+
+    /**
+     * Retrieves the set of action types with the specified system tags.
+     *
+     * @param language  the language to use to localize.
+     * @param tags      the tag marking the action types we want to retrieve
+     * @return the set of action types with the specified tag
+     */
+    @GET
+    @Path("/actions/systemTags/{tags}")
+    public Collection<RESTActionType> getActionTypeBySystemTag(@PathParam("tags") String tags, @HeaderParam("Accept-Language") String language) {
+        String[] tagsArray = tags.split(",");
+        Set<ActionType> results = new LinkedHashSet<>();
+        for (String tag : tagsArray) {
+            results.addAll(definitionsService.getActionTypeBySystemTag(tag));
         }
         return localizationHelper.generateActions(results, language);
     }
@@ -205,11 +241,11 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Retrieves the set of value types with the specified tags also retrieving value types from sub-tags if so specified localized using the specified language.
+     * Retrieves the set of value types with the specified tags.
      *
      * @param language  the language to use to localize.
      * @param tags      the tag marking the value types we want to retrieve
-     * @return the set of value types with the specified tag (and its sub-tags, if specified)
+     * @return the set of value types with the specified tag
      */
     @GET
     @Path("/values/tags/{tags}")

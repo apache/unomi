@@ -130,7 +130,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
             try {
                 ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(predefinedConditionURL, ConditionType.class);
-                setConditionType(conditionType);
+                // Register only if condition type does not exist yet
+                if (getConditionType(conditionType.getMetadata().getId()) == null) {
+                    setConditionType(conditionType);
+                }
             } catch (IOException e) {
                 logger.error("Error while loading condition definition " + predefinedConditionURL, e);
             }
@@ -149,7 +152,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
             try {
                 ActionType actionType = CustomObjectMapper.getObjectMapper().readValue(predefinedActionURL, ActionType.class);
-                setActionType(actionType);
+                // Register only if action type does not exist yet
+                if (getActionType(actionType.getMetadata().getId()) == null) {
+                    setActionType(actionType);
+                }
             } catch (Exception e) {
                 logger.error("Error while loading action definition " + predefinedActionURL, e);
             }
@@ -208,8 +214,16 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     public Set<ConditionType> getConditionTypesByTag(String tag) {
+        return getConditionTypesBy("metadata.tags", tag);
+    }
+
+    public Set<ConditionType> getConditionTypesBySystemTag(String tag) {
+        return getConditionTypesBy("metadata.systemTags", tag);
+    }
+
+    private Set<ConditionType> getConditionTypesBy(String fieldName, String fieldValue) {
         Set<ConditionType> conditionTypes = new LinkedHashSet<ConditionType>();
-        List<ConditionType> directConditionTypes = persistenceService.query("metadata.tags", tag,null, ConditionType.class);
+        List<ConditionType> directConditionTypes = persistenceService.query(fieldName, fieldValue,null, ConditionType.class);
         for (ConditionType type : directConditionTypes) {
             if (type.getParentCondition() != null) {
                 ParserHelper.resolveConditionType(this, type.getParentCondition());
@@ -250,8 +264,16 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     public Set<ActionType> getActionTypeByTag(String tag) {
+        return getActionTypesBy("metadata.tags", tag);
+    }
+
+    public Set<ActionType> getActionTypeBySystemTag(String tag) {
+        return getActionTypesBy("metadata.systemTags", tag);
+    }
+
+    private Set<ActionType> getActionTypesBy(String fieldName, String fieldValue) {
         Set<ActionType> actionTypes = new LinkedHashSet<ActionType>();
-        List<ActionType> directActionTypes = persistenceService.query("metadata.tags", tag,null, ActionType.class);
+        List<ActionType> directActionTypes = persistenceService.query(fieldName, fieldValue,null, ActionType.class);
         actionTypes.addAll(directActionTypes);
 
         return actionTypes;

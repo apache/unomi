@@ -41,12 +41,20 @@ public interface DefinitionsService {
     Collection<ConditionType> getAllConditionTypes();
 
     /**
-     * Retrieves the set of condition types with the specified tag also retrieving condition types from sub-tags if so specified.
+     * Retrieves the set of condition types with the specified tag.
      *
-     * @param tag                the tag marking the condition types we want to retrieve
+     * @param tag   the tag marking the condition types we want to retrieve
      * @return the set of condition types with the specified tag (and its sub-tags, if specified)
      */
     Set<ConditionType> getConditionTypesByTag(String tag);
+
+    /**
+     * Retrieves the set of condition types with the specified system tag.
+     *
+     * @param tag   the system tag marking the condition types we want to retrieve
+     * @return the set of condition types with the specified tag (and its sub-tags, if specified)
+     */
+    Set<ConditionType> getConditionTypesBySystemTag(String tag);
 
     /**
      * Retrieves the condition type associated with the specified identifier.
@@ -78,12 +86,20 @@ public interface DefinitionsService {
     Collection<ActionType> getAllActionTypes();
 
     /**
-     * Retrieves the set of action types with the specified tag also retrieving action types from sub-tags if so specified.
+     * Retrieves the set of action types with the specified tag.
      *
-     * @param tag                the tag marking the action types we want to retrieve
-     * @return the set of action types with the specified tag (and its sub-tags, if specified)
+     * @param tag   the tag marking the action types we want to retrieve
+     * @return the set of action types with the specified tag
      */
     Set<ActionType> getActionTypeByTag(String tag);
+
+    /**
+     * Retrieves the set of action types with the specified system tag.
+     *
+     * @param tag   the system tag marking the action types we want to retrieve
+     * @return the set of action types with the specified tag
+     */
+    Set<ActionType> getActionTypeBySystemTag(String tag);
 
     /**
      * Retrieves the action type associated with the specified identifier.
@@ -115,10 +131,10 @@ public interface DefinitionsService {
     Collection<ValueType> getAllValueTypes();
 
     /**
-     * Retrieves the set of value types with the specified tag also retrieving value types from sub-tags if so specified.
+     * Retrieves the set of value types with the specified tag.
      *
-     * @param tag                the tag marking the value types we want to retrieve
-     * @return the set of value types with the specified tag (and its sub-tags, if specified)
+     * @param tag   the tag marking the value types we want to retrieve
+     * @return the set of value types with the specified tag
      */
     Set<ValueType> getValueTypeByTag(String tag);
 
