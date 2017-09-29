@@ -2,7 +2,7 @@
     "metadata": {
         "id": "countryName",
         "name": "Country",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "contactProfileProperties"

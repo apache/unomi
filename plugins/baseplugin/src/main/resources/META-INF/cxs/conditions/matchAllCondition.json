@@ -3,7 +3,7 @@
     "id": "matchAllCondition",
     "name": "matchAllCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
       "profileTags",
       "logical",
       "condition",

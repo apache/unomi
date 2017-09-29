@@ -3,7 +3,7 @@
     "id": "hoverEventCondition",
     "name": "hoverEventCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
       "profileTags",
       "event",
       "condition",

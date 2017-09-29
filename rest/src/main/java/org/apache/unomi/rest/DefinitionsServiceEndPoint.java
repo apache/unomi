@@ -118,7 +118,7 @@ public class DefinitionsServiceEndPoint {
     @Path("/conditions/{conditionId}")
     public RESTConditionType getConditionType(@PathParam("conditionId") String id, @HeaderParam("Accept-Language") String language) {
         ConditionType conditionType = definitionsService.getConditionType(id);
-        return localizationHelper.generateCondition(conditionType, language);
+        return conditionType != null ? localizationHelper.generateCondition(conditionType, language) : null;
     }
 
     /**
@@ -203,7 +203,7 @@ public class DefinitionsServiceEndPoint {
     @Path("/actions/{actionId}")
     public RESTActionType getActionType(@PathParam("actionId") String id, @HeaderParam("Accept-Language") String language) {
         ActionType actionType = definitionsService.getActionType(id);
-        return localizationHelper.generateAction(actionType, language);
+        return actionType != null ? localizationHelper.generateAction(actionType, language) : null;
     }
 
     /**

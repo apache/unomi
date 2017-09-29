@@ -3,7 +3,7 @@
     "id": "videoViewEventCondition",
     "name": "videoViewEventCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
       "profileTags",
       "event",
       "condition",

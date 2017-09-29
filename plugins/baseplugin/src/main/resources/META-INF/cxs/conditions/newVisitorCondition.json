@@ -3,7 +3,7 @@
     "id": "newVisitorCondition",
     "name": "newVisitorCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
       "profileTags",
       "event",
       "condition",

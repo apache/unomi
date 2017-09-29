@@ -3,7 +3,7 @@
     "id": "sessionPropertyCondition",
     "name": "sessionPropertyCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
       "profileTags",
       "event",
       "condition",

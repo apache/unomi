@@ -2,7 +2,7 @@
   "metadata": {
     "id": "age",
     "name": "Age",
-    "tags": [
+    "systemTags": [
       "properties",
       "profileProperties",
       "personalProfileProperties"

@@ -2,7 +2,7 @@
     "metadata": {
         "id": "gender",
         "name": "Gender",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "basicProfileProperties"

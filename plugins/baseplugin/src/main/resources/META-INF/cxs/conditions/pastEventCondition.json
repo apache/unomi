@@ -3,7 +3,7 @@
     "id": "pastEventCondition",
     "name": "pastEventCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
       "profileTags",
       "event",
       "condition",

@@ -2,7 +2,7 @@
     "metadata": {
         "id": "remoteHost",
         "name": "Remote host address",
-        "tags": [
+        "systemTags": [
             "properties",
             "sessionProperties",
             "technicalSessionProperties"

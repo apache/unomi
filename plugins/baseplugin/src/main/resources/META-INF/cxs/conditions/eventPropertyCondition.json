@@ -3,7 +3,7 @@
     "id": "eventPropertyCondition",
     "name": "eventPropertyCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
       "profileTags",
       "demographic",
       "condition",

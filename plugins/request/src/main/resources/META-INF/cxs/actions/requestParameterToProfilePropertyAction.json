@@ -3,7 +3,7 @@
     "id": "requestParameterToProfilePropertyAction",
     "name": "requestParameterToProfilePropertyAction",
     "description": "",
-    "tags": [
+    "systemTags": [
       "profileTags",
       "event"
     ],

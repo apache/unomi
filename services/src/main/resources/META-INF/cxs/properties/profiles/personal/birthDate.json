@@ -2,7 +2,7 @@
   "metadata": {
     "id": "birthDate",
     "name": "Birth Date",
-    "tags": [
+    "systemTags": [
       "properties",
       "profileProperties",
       "personalProfileProperties"

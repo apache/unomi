@@ -2,7 +2,7 @@
     "metadata": {
         "id": "latitude",
         "name": "Latitude",
-        "tags": [
+        "systemTags": [
             "properties",
             "sessionProperties",
             "geographicSessionProperties"

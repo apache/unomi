@@ -2,7 +2,7 @@
     "metadata": {
         "id": "email",
         "name": "Email",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "contactProfileProperties"

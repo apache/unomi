@@ -161,7 +161,7 @@ Here is an example of a property definition JSON file
         "metadata": {
             "id": "city",
             "name": "City",
-            "tags": ["properties", "profileProperties", "contactProfileProperties"]
+            "systemTags": ["properties", "profileProperties", "contactProfileProperties"]
         },
         "type": "string",
         "defaultValue": "",
@@ -184,7 +184,7 @@ type eventTypeCondition.
         "id": "profileUpdatedEventCondition",
         "name": "profileUpdatedEventCondition",
         "description": "",
-        "tags": [
+        "systemTags": [
           "event",
           "eventCondition"
         ],
@@ -262,9 +262,9 @@ Here is an example of a JSON action definition:
         "id": "addToListsAction",
         "name": "addToListsAction",
         "description": "",
-        "tags": [
+        "systemTags": [
           "demographic",
-          "hidden.availableToEndUser"
+          "availableToEndUser"
         ],
         "readOnly": true
       },
@@ -322,7 +322,7 @@ Here is an example of JSON custom condition definition:
         "id": "matchAllCondition",
         "name": "matchAllCondition",
         "description": "",
-        "tags": [
+        "systemTags": [
           "logical",
           "profileCondition",
           "eventCondition",

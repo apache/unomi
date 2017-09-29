@@ -2,7 +2,7 @@
   "metadata": {
     "id": "weatherTemperature",
     "name": "Weather Temperature",
-    "tags": [
+    "systemTags": [
       "properties",
       "sessionProperties"
     ]

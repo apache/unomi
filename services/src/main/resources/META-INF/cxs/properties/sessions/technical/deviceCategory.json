@@ -2,7 +2,7 @@
     "metadata": {
         "id": "deviceCategory",
         "name": "Device category",
-        "tags": [
+        "systemTags": [
             "properties",
             "sessionProperties",
             "technicalSessionProperties"

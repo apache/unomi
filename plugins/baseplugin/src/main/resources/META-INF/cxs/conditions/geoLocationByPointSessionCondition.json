@@ -3,7 +3,7 @@
     "id": "geoLocationByPointSessionCondition",
     "name": "geoLocationByPointSessionCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
       "profileTags",
       "geographic",
       "condition",

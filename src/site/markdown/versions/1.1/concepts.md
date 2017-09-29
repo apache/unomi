@@ -51,7 +51,7 @@ Some types can be dynamically defined at runtime by calling to the REST API whil
     "metadata": {
         "id": "tweetNb",
         "name": "tweetNb",
-        "tags": ["social"]
+        "systemTags": ["social"]
     },
     "target": "profiles",
     "type": "integer"

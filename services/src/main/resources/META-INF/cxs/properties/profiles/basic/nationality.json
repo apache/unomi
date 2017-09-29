@@ -2,7 +2,7 @@
     "metadata": {
         "id": "nationality",
         "name": "Nationality",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "basicProfileProperties"

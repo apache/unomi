@@ -2,7 +2,7 @@
   "metadata": {
     "id": "sessionAdminSubDiv2",
     "name": "SubRegion/County",
-    "tags": [
+    "systemTags": [
       "properties",
       "sessionProperties",
       "geographicSessionProperties"

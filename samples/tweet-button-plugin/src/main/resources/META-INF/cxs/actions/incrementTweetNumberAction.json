@@ -3,7 +3,7 @@
     "id": "incrementTweetNumberAction",
     "name": "incrementTweetNumberAction",
     "description": "",
-    "tags": [
+    "systemTags": [
       "profileTags",
       "event"
     ],

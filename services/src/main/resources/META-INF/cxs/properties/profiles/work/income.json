@@ -2,7 +2,7 @@
     "metadata": {
         "id": "income",
         "name": "Income",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "workProfileProperties"

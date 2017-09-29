@@ -2,7 +2,7 @@
   "metadata": {
     "id": "weatherWindDirection",
     "name": "Weather Wind Direction",
-    "tags": [
+    "systemTags": [
       "properties",
       "sessionProperties"
     ]

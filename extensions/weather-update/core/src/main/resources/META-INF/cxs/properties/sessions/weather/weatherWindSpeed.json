@@ -2,7 +2,7 @@
   "metadata": {
     "id": "weatherWindSpeed",
     "name": "Weather Wind Speed",
-    "tags": [
+    "systemTags": [
       "properties",
       "sessionProperties"
     ]

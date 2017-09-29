@@ -2,7 +2,7 @@
     "metadata": {
         "id": "jobTitle",
         "name": "Job Title",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "workProfileProperties"

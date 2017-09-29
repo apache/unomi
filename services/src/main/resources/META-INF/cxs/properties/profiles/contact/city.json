@@ -2,7 +2,7 @@
     "metadata": {
         "id": "city",
         "name": "City",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "contactProfileProperties"

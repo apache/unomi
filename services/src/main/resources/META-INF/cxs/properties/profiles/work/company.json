@@ -2,7 +2,7 @@
     "metadata": {
         "id": "company",
         "name": "Company",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "workProfileProperties"

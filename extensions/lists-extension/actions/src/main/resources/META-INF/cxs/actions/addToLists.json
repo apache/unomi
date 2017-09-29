@@ -3,10 +3,10 @@
     "id": "addToListsAction",
     "name": "addToListsAction",
     "description": "",
-    "tags": [
+    "systemTags": [
       "profileTags",
       "demographic",
-      "hidden.availableToEndUser"
+      "availableToEndUser"
     ],
     "readOnly": true
   },

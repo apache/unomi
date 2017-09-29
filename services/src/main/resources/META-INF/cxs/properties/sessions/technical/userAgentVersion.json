@@ -2,7 +2,7 @@
     "metadata": {
         "id": "userAgentVersion",
         "name": "Browser user agent version",
-        "tags": [
+        "systemTags": [
             "properties",
             "sessionProperties",
             "technicalSessionProperties"

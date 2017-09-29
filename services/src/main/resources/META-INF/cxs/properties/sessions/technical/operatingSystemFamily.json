@@ -2,7 +2,7 @@
     "metadata": {
         "id": "operatingSystemFamily",
         "name": "Operating system family",
-        "tags": [
+        "systemTags": [
             "properties",
             "sessionProperties",
             "technicalSessionProperties"

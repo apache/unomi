@@ -2,7 +2,7 @@
     "metadata": {
         "id": "address",
         "name": "Address",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "contactProfileProperties"

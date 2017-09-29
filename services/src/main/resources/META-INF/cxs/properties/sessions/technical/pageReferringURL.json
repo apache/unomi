@@ -2,7 +2,7 @@
     "metadata": {
         "id": "pageReferringURL",
         "name": "Previous page URL",
-        "tags": [
+        "systemTags": [
             "properties",
             "sessionProperties",
             "technicalSessionProperties"

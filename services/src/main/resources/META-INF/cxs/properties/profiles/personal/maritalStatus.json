@@ -2,7 +2,7 @@
     "metadata": {
         "id": "maritalStatus",
         "name": "Marital status",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "personalProfileProperties"

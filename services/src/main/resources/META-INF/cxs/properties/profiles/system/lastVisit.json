@@ -2,7 +2,7 @@
     "metadata": {
         "id": "lastVisit",
         "name": "Last visit",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "systemProfileProperties"

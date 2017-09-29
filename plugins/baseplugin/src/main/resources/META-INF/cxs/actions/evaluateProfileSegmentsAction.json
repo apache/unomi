@@ -3,7 +3,7 @@
     "id": "evaluateProfileSegmentsAction",
     "name": "evaluateProfileSegmentsAction",
     "description": "",
-    "tags": [
+    "systemTags": [
       "profileTags",
       "event"
     ],

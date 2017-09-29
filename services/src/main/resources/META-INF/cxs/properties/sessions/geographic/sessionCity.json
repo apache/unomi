@@ -2,7 +2,7 @@
     "metadata": {
         "id": "sessionCity",
         "name": "City",
-        "tags": [
+        "systemTags": [
             "properties",
             "sessionProperties",
             "geographicSessionProperties"

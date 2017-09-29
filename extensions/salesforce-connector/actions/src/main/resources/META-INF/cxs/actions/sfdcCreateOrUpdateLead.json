@@ -3,10 +3,10 @@
     "id": "sfdcCreateOrUpdateLeadAction",
     "name": "sfdcCreateOrUpdateLeadAction",
     "description": "",
-    "tags": [
+    "systemTags": [
       "profileTags",
       "demographic",
-      "hidden.availableToEndUser"
+      "availableToEndUser"
     ],
     "readOnly": true
   },

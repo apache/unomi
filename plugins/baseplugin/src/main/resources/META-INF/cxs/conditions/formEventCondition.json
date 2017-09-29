@@ -3,7 +3,7 @@
     "id": "formEventCondition",
     "name": "formEventCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
       "profileTags",
       "event",
       "condition",

@@ -2,7 +2,7 @@
   "metadata": {
     "id": "sessionAdminSubDiv1",
     "name": "State/Region/Province",
-    "tags": [
+    "systemTags": [
       "properties",
       "sessionProperties",
       "geographicSessionProperties"

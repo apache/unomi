@@ -2,7 +2,7 @@
     "metadata": {
         "id": "remoteAddr",
         "name": "Remote IP address",
-        "tags": [
+        "systemTags": [
             "properties",
             "sessionProperties",
             "technicalSessionProperties"

@@ -2,7 +2,7 @@
     "metadata": {
         "id": "linkedInId",
         "name": "LinkedIn ID",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "socialProfileProperties"

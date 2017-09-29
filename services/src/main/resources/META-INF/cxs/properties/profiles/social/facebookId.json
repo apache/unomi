@@ -2,7 +2,7 @@
     "metadata": {
         "id": "facebookId",
         "name": "Facebook ID",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "socialProfileProperties"

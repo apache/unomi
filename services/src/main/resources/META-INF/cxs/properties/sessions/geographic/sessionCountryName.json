@@ -2,7 +2,7 @@
     "metadata": {
         "id": "sessionCountryName",
         "name": "Country",
-        "tags": [
+        "systemTags": [
             "properties",
             "sessionProperties",
             "geographicSessionProperties"

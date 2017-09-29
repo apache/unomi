@@ -2,7 +2,7 @@
     "metadata": {
       "id": "nbOfVisits",
       "name": "Number of visits",
-      "tags": [
+      "systemTags": [
         "properties",
         "profileProperties",
         "systemProfileProperties"

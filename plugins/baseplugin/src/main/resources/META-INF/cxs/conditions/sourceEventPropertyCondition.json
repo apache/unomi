@@ -3,7 +3,7 @@
     "id": "sourceEventPropertyCondition",
     "name": "sourceEventPropertyCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
       "condition",
       "sourceEventCondition"
     ],

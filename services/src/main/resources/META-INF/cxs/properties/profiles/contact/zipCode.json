@@ -2,7 +2,7 @@
     "metadata": {
         "id": "zipCode",
         "name": "ZIP Code",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "contactProfileProperties"

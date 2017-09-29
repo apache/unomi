@@ -3,7 +3,7 @@
     "id": "goalMatchCondition",
     "name": "goalMatchCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
       "condition",
       "profileCondition",
       "profileTags",

@@ -2,7 +2,7 @@
     "metadata": {
         "id": "firstVisit",
         "name": "First visit",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "systemProfileProperties"

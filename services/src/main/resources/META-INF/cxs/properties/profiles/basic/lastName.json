@@ -2,7 +2,7 @@
     "metadata": {
         "id": "lastName",
         "name": "Last name",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "basicProfileProperties"

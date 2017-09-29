@@ -3,7 +3,7 @@
     "id": "allEventToProfilePropertiesAction",
     "name": "allEventToProfilePropertiesAction",
     "description": "",
-    "tags": [
+    "systemTags": [
       "profileTags",
       "event"
     ],

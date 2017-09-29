@@ -3,7 +3,7 @@
     "id": "requestHeaderToProfilePropertyAction",
     "name": "requestHeaderToProfilePropertyAction",
     "description": "",
-    "tags": [
+    "systemTags": [
       "profileTags",
       "event"
     ],

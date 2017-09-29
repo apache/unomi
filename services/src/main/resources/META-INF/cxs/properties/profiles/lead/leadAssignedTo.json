@@ -2,7 +2,7 @@
     "metadata": {
         "id": "leadAssignedTo",
         "name": "Assigned to",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "leadProfileProperties"

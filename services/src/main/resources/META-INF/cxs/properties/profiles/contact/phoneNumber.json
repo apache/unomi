@@ -2,7 +2,7 @@
     "metadata": {
         "id": "phoneNumber",
         "name": "Phone number",
-        "tags": [
+        "systemTags": [
             "properties",
             "profileProperties",
             "contactProfileProperties"
