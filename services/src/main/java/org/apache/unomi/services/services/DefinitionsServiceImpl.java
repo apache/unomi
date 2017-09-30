@@ -239,7 +239,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             return null;
         }
         ConditionType type = conditionTypeById.get(id);
-        if (type == null) {
+        if (type == null || type.getVersion() == null) {
             type = persistenceService.load(id, ConditionType.class);
             conditionTypeById.put(id, type);
         }
@@ -281,7 +281,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     public ActionType getActionType(String id) {
         ActionType type = actionTypeById.get(id);
-        if (type == null) {
+        if (type == null || type.getVersion() == null) {
             type = persistenceService.load(id, ActionType.class);
             actionTypeById.put(id, type);
         }
