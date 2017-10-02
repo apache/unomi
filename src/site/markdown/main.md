@@ -19,7 +19,18 @@
 
 In this section we regroup the documentation by Apache Unomi version. 
 
-## Version 1.1 (current)
+## Version 1.2 (current)
+
+- [Building and deploying](versions/1.2/building-and-deploying.html)
+- [Getting started](versions/1.2/getting-started.html)
+- [Configuration](versions/1.2/configuration.html)
+- [Samples](versions/1.2/samples.html)
+- [Connectors](versions/1.2/connectors.html)
+- [Cluster setup](versions/1.2/clustering.html)
+- [Concepts](versions/1.2/concepts.html)
+- [Custom extensions](versions/1.2/custom-extensions.html)
+
+## Version 1.1 
 
 - [Building and deploying](versions/1.1/building-and-deploying.html)
 - [Getting started](versions/1.1/getting-started.html)
