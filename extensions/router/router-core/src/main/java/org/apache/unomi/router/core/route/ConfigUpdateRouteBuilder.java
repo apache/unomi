@@ -21,6 +21,7 @@ import org.apache.camel.model.rest.RestBindingMode;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.core.context.RouterCamelContext;
+import org.apache.unomi.router.core.processor.ConfigDeleteProcessor;
 import org.apache.unomi.router.core.processor.ConfigUpdateProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,26 +43,33 @@ public class ConfigUpdateRouteBuilder extends RouteBuilder {
                 .bindingMode(RestBindingMode.json)
                 .dataFormatProperty("prettyPrint", "true");
 
-        rest().put("/importConfigAdmin").consumes("application/json").type(ImportConfiguration.class)
-                .to("direct:importConfigRestDeposit");
+        rest("/importConfigAdmin")
+                .put().consumes("application/json").type(ImportConfiguration.class)
+                .to("direct:configUpdateRestDeposit")
+                .delete("/{id}").to("direct:configDeleteRestDeposit");
+
+        rest("/exportConfigAdmin")
+                .put().consumes("application/json").type(ExportConfiguration.class)
+                .to("direct:configUpdateRestDeposit")
+                .delete("/{id}").to("direct:configDeleteRestDeposit");
+
 
         ConfigUpdateProcessor profileConfigUpdateProcessor = new ConfigUpdateProcessor();
         profileConfigUpdateProcessor.setRouterCamelContext(routerCamelContext);
-        from("direct:importConfigRestDeposit")
+        from("direct:configUpdateRestDeposit")
                 .process(profileConfigUpdateProcessor)
                 .transform().constant("Success.")
                 .onException(Exception.class)
                 .transform().constant("Failure!");
 
-        rest().put("/exportConfigAdmin").consumes("application/json").type(ExportConfiguration.class)
-                .to("direct:exportConfigRestDeposit");
 
-        from("direct:exportConfigRestDeposit")
-                .process(profileConfigUpdateProcessor)
+        ConfigDeleteProcessor profileConfigDeleteProcessor = new ConfigDeleteProcessor();
+        profileConfigDeleteProcessor.setRouterCamelContext(routerCamelContext);
+        from("direct:configDeleteRestDeposit")
+                .process(profileConfigDeleteProcessor)
                 .transform().constant("Success.")
                 .onException(Exception.class)
                 .transform().constant("Failure!");
-
 
     }
 

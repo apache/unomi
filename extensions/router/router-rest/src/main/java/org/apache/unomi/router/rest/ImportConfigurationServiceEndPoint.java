@@ -21,6 +21,7 @@ import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.cxf.jaxrs.ext.multipart.Multipart;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -97,11 +98,35 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
         return importConfigSaved;
     }
 
+    @Override
+    public void deleteConfiguration(String configId) {
+        this.configurationService.delete(configId);
+
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        try {
+            HttpDelete httpDelete = new HttpDelete(configSharingService.getProperty("internalServerAddress") + "/configUpdate/importConfigAdmin/" + configId);
+
+            HttpResponse response = httpClient.execute(httpDelete);
+
+            if (response.getStatusLine().getStatusCode() != 200) {
+                logger.error("Failed to update the running config: Please check the accessibility to the URI: \n{}",
+                        configSharingService.getProperty("internalServerAddress") + "/configUpdate/importConfigAdmin/" + configId);
+                logger.error("HTTP Status code returned {}", response.getStatusLine().getStatusCode());
+                throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
+            }
+        } catch (Exception e) {
+            logger.warn("Unable to delete Camel route [{}]", configId);
+            logger.debug("Unable to delete Camel route", e);
+            throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
+
+        }
+    }
+
     /**
      * Save/Update the given import configuration.
      * Prepare the file to be processed with Camel routes
      *
-     * @param file file
+     * @param file           file
      * @param importConfigId config
      * @return OK / NOK Http Code.
      */

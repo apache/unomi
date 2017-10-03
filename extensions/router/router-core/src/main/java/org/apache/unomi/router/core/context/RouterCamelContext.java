@@ -163,7 +163,7 @@ public class RouterCamelContext implements SynchronousBundleListener {
         return camelContext.stopRoute(routeId, 10L, TimeUnit.SECONDS, true);
     }
 
-    private void killExistingRoute(String routeId) throws Exception {
+    public void killExistingRoute(String routeId) throws Exception {
         //Active routes
         Route route = camelContext.getRoute(routeId);
         if (route != null && stopRoute(routeId)) {

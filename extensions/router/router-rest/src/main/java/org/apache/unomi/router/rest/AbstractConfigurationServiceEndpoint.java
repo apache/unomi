@@ -79,9 +79,6 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
     @Path("/{configId}")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public void deleteConfiguration(@PathParam("configId") String configId) {
-        this.configurationService.delete(configId);
-    }
-
+    public abstract void deleteConfiguration(@PathParam("configId") String configId);
 
 }
