@@ -27,34 +27,126 @@ import java.util.List;
  */
 public interface PrivacyService {
 
+    /**
+     * Retrieves the server information, including the name and version of the server, the event types
+     * if recognizes as well as the capabilities supported by the system.
+     * @return
+     */
     ServerInfo getServerInfo();
 
+    /**
+     * Deletes the current profile (but has no effect on sessions and events). This will delete the
+     * persisted profile and replace it with a new empty one with the same profileId.
+     * @param profileId the identifier of the profile to delete and replace
+     * @return true if the deletion was successful
+     */
     Boolean deleteProfile(String profileId);
 
-    Boolean anonymizeProfile(String profileId);
+    /**
+     * This method will "anonymize" a profile by removing from the associated profile all the properties
+     * that have been defined as "denied properties".
+     * @param profileId the identifier of the profile that needs to be anonymized.
+     * @param scope The scope will be used to send events, once for the anonymizeProfile event, the other for the profileUpdated event
+     * @return true if the profile had some properties purged, false otherwise
+     */
+    Boolean anonymizeProfile(String profileId, String scope);
 
+    /**
+     * This method will anonymize browsing data by creating an anonymous profile for the current profile,
+     * and then re-associating all the profile's sessions and events with the new anonymous profile
+     * todo this method does not anonymize any session or event properties that may contain profile
+     * data (such as the login event)
+     * @param profileId the identifier of the profile on which to perform the anonymizations of the browsing
+     *                  data
+     * @return true if the operation was successful, false otherwise
+     */
     Boolean anonymizeBrowsingData(String profileId);
 
+    /**
+     * This method will perform two operations, first it will call the anonymizeBrowsingData method on the
+     * specified profile, and then it will delete the profile from the persistence service.
+     * @param profileId the identifier of the profile
+     * @return true if the operation was successful, false otherwise
+     */
     Boolean deleteProfileData(String profileId);
 
-    Boolean setRequireAnonymousBrowsing(String profileId, boolean anonymous);
+    /**
+     * Controls the activation/deactivation of anonymous browsing. This method will simply set a system
+     * property called requireAnonymousProfile that will be then use to know if we should associate
+     * browsing data with the main profile or the associated anonymous profile.
+     * Note that changing this setting will also reset the goals and pastEvents system properties for the
+     * profile.
+     * @param profileId the identifier of the profile on which to set the anonymous browsing property flag
+     * @param anonymous the value of the anonymous browsing flag.
+     * @param scope a scope used to send a profileUpdated event internally
+     * @return true if successful, false otherwise
+     */
+    Boolean setRequireAnonymousBrowsing(String profileId, boolean anonymous, String scope);
 
+    /**
+     * Tests if the anonymous browsing flag is set of the specified profile.
+     * @param profileId the identifier of the profile on which we want to retrieve the anonymous browsing flag
+     * @return true if successful, false otherwise
+     */
     Boolean isRequireAnonymousBrowsing(String profileId);
 
+    /**
+     * Build a new anonymous profile (but doesn't persist it in the persistence service). This will also
+     * copy the profile properties from the passed profile that are not listed as denied properties.
+     * @param profile the profile for which to create the anonymous profile
+     * @return a newly created (but not persisted) profile for the passed profile.
+     */
     Profile getAnonymousProfile(Profile profile);
 
+    /**
+     * Retrieve the list of events that the profile has deactivated. For each profile a visitor may indicate
+     * that he doesn't want some events to be collected. This method retrieves this list from the specified
+     * profile
+     * @param profileId the identifier for the profile for which we want to retrieve the list of forbidden
+     *                  event types
+     * @return a list of event types
+     */
     List<String> getFilteredEventTypes(String profileId);
 
+    /**
+     * Set the list of filtered event types for a profile. This is the list of event types that the visitor
+     * has specified he does not want the server to collect.
+     * @param profileId the identifier of the profile on which to filter the events
+     * @param eventTypes a list of event types that will be filter for the profile
+     * @return true if successfull, false otherwise.
+     */
     Boolean setFilteredEventTypes(String profileId, List<String> eventTypes);
 
+    /**
+     * Gets the list of denied
+     * @param profileId
+     * @return
+     */
     List<String> getDeniedProperties(String profileId);
 
     Boolean setDeniedProperties(String profileId, List<String> propertyNames);
 
+    /**
+     * @deprecated
+     * @param profileId
+     * @return
+     */
     List<String> getDeniedPropertyDistribution(String profileId);
 
+    /**
+     * @deprecated
+     * @param profileId
+     * @param propertyNames
+     * @return
+     */
     Boolean setDeniedPropertyDistribution(String profileId, List<String> propertyNames);
 
+    /**
+     * Removes a property from the specified profile. This change is persisted.
+     * @param profileId the identifier of the profile
+     * @param propertyName the name of the property to remove
+     * @return true if sucessfull, false otherwise
+     */
     Boolean removeProperty(String profileId, String propertyName);
 
 }

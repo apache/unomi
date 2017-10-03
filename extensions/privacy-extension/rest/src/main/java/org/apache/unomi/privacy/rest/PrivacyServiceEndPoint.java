@@ -25,7 +25,6 @@ import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
 import java.util.List;
 
@@ -66,8 +65,8 @@ public class PrivacyServiceEndPoint {
 
     @POST
     @Path("/profiles/{profileId}/anonymize")
-    public void anonymizeProfile(@PathParam("profileId") String profileId) {
-        privacyService.anonymizeProfile(profileId);
+    public void anonymizeProfile(@PathParam("profileId") String profileId, @QueryParam("scope") String scope) {
+        privacyService.anonymizeProfile(profileId, scope);
     }
 
     @GET
@@ -78,18 +77,18 @@ public class PrivacyServiceEndPoint {
 
     @POST
     @Path("/profiles/{profileId}/anonymousBrowsing")
-    public Response activateAnonymousBrowsing(@PathParam("profileId") String profileId, @QueryParam("anonymizePastBrowsing") @DefaultValue("false") boolean past) {
+    public Response activateAnonymousBrowsing(@PathParam("profileId") String profileId, @QueryParam("anonymizePastBrowsing") @DefaultValue("false") boolean past, @QueryParam("scope") String scope) {
         if (past) {
             privacyService.anonymizeBrowsingData(profileId);
         }
-        Boolean r = privacyService.setRequireAnonymousBrowsing(profileId, true);
+        Boolean r = privacyService.setRequireAnonymousBrowsing(profileId, true, scope);
         return r ? Response.ok().build() : Response.serverError().build();
     }
 
     @DELETE
     @Path("/profiles/{profileId}/anonymousBrowsing")
-    public Response deactivateAnonymousBrowsing(@PathParam("profileId") String profileId) {
-        Boolean r = privacyService.setRequireAnonymousBrowsing(profileId, false);
+    public Response deactivateAnonymousBrowsing(@PathParam("profileId") String profileId, @QueryParam("scope") String scope) {
+        Boolean r = privacyService.setRequireAnonymousBrowsing(profileId, false, scope);
         return r ? Response.ok().build() : Response.serverError().build();
     }
 

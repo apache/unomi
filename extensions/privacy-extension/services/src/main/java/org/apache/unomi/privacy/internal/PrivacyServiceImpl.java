@@ -96,16 +96,22 @@ public class PrivacyServiceImpl implements PrivacyService {
     }
 
     @Override
-    public Boolean anonymizeProfile(String profileId) {
+    public Boolean anonymizeProfile(String profileId, String scope) {
         Profile profile = profileService.load(profileId);
         if (profile == null) {
             return false;
         }
+
+        // first we send out the anonymize profile event to make sure other systems can still use external identifiers to lookup the profile and anonymize it.
+        Event anonymizeProfileEvent = new Event("anonymizeProfile", null, profile, scope, null, profile, new Date());
+        anonymizeProfileEvent.setPersistent(true);
+        eventService.send(anonymizeProfileEvent);
+
         boolean res = profile.getProperties().keySet().removeAll(getDeniedProperties(profile.getItemId()));
 
-        Event profileUpdated = new Event("profileUpdated", null, profile, null, null, profile, new Date());
-        profileUpdated.setPersistent(false);
-        eventService.send(profileUpdated);
+        Event profileUpdatedEvent = new Event("profileUpdated", null, profile, scope, null, profile, new Date());
+        profileUpdatedEvent.setPersistent(false);
+        eventService.send(profileUpdatedEvent);
 
         profileService.save(profile);
 
@@ -144,7 +150,7 @@ public class PrivacyServiceImpl implements PrivacyService {
     }
 
     @Override
-    public Boolean setRequireAnonymousBrowsing(String profileId, boolean anonymous) {
+    public Boolean setRequireAnonymousBrowsing(String profileId, boolean anonymous, String scope) {
         Profile profile = profileService.load(profileId);
         if (profile == null) {
             return false;
@@ -154,7 +160,7 @@ public class PrivacyServiceImpl implements PrivacyService {
             profile.getSystemProperties().remove("goals");
             profile.getSystemProperties().remove("pastEvents");
         }
-        Event profileUpdated = new Event("profileUpdated", null, profile, null, null, profile, new Date());
+        Event profileUpdated = new Event("profileUpdated", null, profile, scope, null, profile, new Date());
         profileUpdated.setPersistent(false);
         eventService.send(profileUpdated);
 
