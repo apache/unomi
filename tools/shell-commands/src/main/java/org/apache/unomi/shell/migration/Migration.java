@@ -23,12 +23,28 @@ import org.osgi.framework.Version;
 import java.io.IOException;
 
 /**
+ * This interface must be implemented if you create a new migration class
  * @author dgaillard
  */
 public interface Migration {
+    /**
+     * This method return the minimal version before applying this migration
+     * TODO: not used for now
+     * @return return the version
+     */
     Version getFromVersion();
 
+    /**
+     * This method return the target version after migration
+     * @return the target version
+     */
     Version getToVersion();
 
+    /**
+     * This method is called to execute the migration
+     * @param session       CommandSession
+     * @param httpClient    CloseableHttpClient
+     * @throws IOException
+     */
     void execute(CommandSession session, CloseableHttpClient httpClient) throws IOException;
 }

@@ -19,11 +19,20 @@ package org.apache.unomi.shell.services;
 import org.osgi.framework.BundleException;
 
 /**
+ * This service provide method to manage unomi
  * @author dgaillard
  */
 public interface UnomiManagementService {
 
+    /**
+     * This method will start Apache Unomi
+     * @throws BundleException
+     */
     void startUnomi() throws BundleException;
 
+    /**
+     * This method will stop Apache Unomi
+     * @throws BundleException
+     */
     void stopUnomi() throws BundleException;
 }

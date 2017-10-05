@@ -21,6 +21,7 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
 /**
+ * This CustomObjectMapper is used to avoid the version parameter to be registered in ES
  * @author dgaillard
  */
 public class ESCustomObjectMapper extends CustomObjectMapper {

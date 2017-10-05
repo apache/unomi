@@ -101,19 +101,19 @@ object AdminScenario {
 
   // view the engaged users for the picked campaign ID
   val campaignEngaged = feed(requestsFeed)
-    .exec(http("Profile tags").get("/cxs/definitions/tags/profileTags")
+    .exec(http("Profile system tags").get("/cxs/definitions/systemTags/profileTags")
       .headers(adminHeaders)
       .check(jsonPath("$..id").find.is("profileTags")))
 
-    .exec(http("Existing profile properties").get("/cxs/profiles/existingProperties?tag=profileProperties&itemType=profile")
+    .exec(http("Existing profile properties").get("/cxs/profiles/existingProperties?tag=profileProperties&itemType=profile&isSystemTag=true")
       .headers(adminHeaders)
       .check(jsonPath("$..itemId").find.exists))
       
-    .exec(http("Profile conditions").get("/cxs/definitions/conditions/tags/profileCondition")
+    .exec(http("Profile conditions").get("/cxs/definitions/conditions/systemTags/profileCondition")
       .headers(adminHeaders)
       .check(jsonPath("$..id").find.is("booleanCondition")))
     
-    .exec(http("Profile conditions").get("/cxs/definitions/conditions/tags/usableInPastEventCondition")
+    .exec(http("Profile conditions").get("/cxs/definitions/conditions/systemTags/usableInPastEventCondition")
       .headers(adminHeaders)
       .check(jsonPath("$..id").find.exists))
     

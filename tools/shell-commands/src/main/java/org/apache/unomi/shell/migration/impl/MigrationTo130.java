@@ -36,7 +36,7 @@ public class MigrationTo130 implements Migration {
 
     private CloseableHttpClient httpClient;
     private CommandSession session;
-    private LinkedHashMap<String, List<String>> tagsStructurePriorTo200;
+    private LinkedHashMap<String, List<String>> tagsStructurePriorTo130;
 
     @Override
     public Version getFromVersion() {
@@ -63,7 +63,7 @@ public class MigrationTo130 implements Migration {
     }
 
     private void migrateTags() throws IOException {
-        initTagsStructurePriorTo200();
+        initTagsStructurePriorTo130();
         String hostAddress = ConsoleUtils.askUserWithDefaultAnswer(session, "Host address (default = http://localhost:9200): ", "http://localhost:9200");
         String tagsOperation = ConsoleUtils.askUserWithAuthorizedAnswer(session, "How to manage tags?\nno change: will keep tags in tags property\ncopy: will duplicate tags in systemTags property\nmove: will move tags in systemTags property\n(default/copy/move): ", Arrays.asList("no change", "copy", "move"));
 
@@ -138,8 +138,8 @@ public class MigrationTo130 implements Migration {
                 }
 
                 for (String tag : tagsBeforeMigration) {
-                    if (tagsStructurePriorTo200.containsKey(tag)) {
-                        tagsAfterMigration.addAll(tagsStructurePriorTo200.get(tag));
+                    if (tagsStructurePriorTo130.containsKey(tag)) {
+                        tagsAfterMigration.addAll(tagsStructurePriorTo130.get(tag));
                     }
                     tagsAfterMigration.add(tag);
                 }
@@ -185,46 +185,46 @@ public class MigrationTo130 implements Migration {
         return tags;
     }
 
-    private void initTagsStructurePriorTo200() {
-        tagsStructurePriorTo200 = new LinkedHashMap<>();
-        tagsStructurePriorTo200.put("landing", Collections.singletonList("campaign"));
-        tagsStructurePriorTo200.put("parameter", Collections.singletonList("campaign"));
-        tagsStructurePriorTo200.put("referrer", Collections.singletonList("campaign"));
+    private void initTagsStructurePriorTo130() {
+        tagsStructurePriorTo130 = new LinkedHashMap<>();
+        tagsStructurePriorTo130.put("landing", Collections.singletonList("campaign"));
+        tagsStructurePriorTo130.put("parameter", Collections.singletonList("campaign"));
+        tagsStructurePriorTo130.put("referrer", Collections.singletonList("campaign"));
 
-        tagsStructurePriorTo200.put("eventCondition", Collections.singletonList("condition"));
-        tagsStructurePriorTo200.put("profileCondition", Collections.singletonList("condition"));
-        tagsStructurePriorTo200.put("sessionCondition", Collections.singletonList("condition"));
-        tagsStructurePriorTo200.put("sourceEventCondition", Collections.singletonList("condition"));
-        tagsStructurePriorTo200.put("trackedCondition", Collections.singletonList("condition"));
-        tagsStructurePriorTo200.put("usableInPastEventCondition", Collections.singletonList("condition"));
+        tagsStructurePriorTo130.put("eventCondition", Collections.singletonList("condition"));
+        tagsStructurePriorTo130.put("profileCondition", Collections.singletonList("condition"));
+        tagsStructurePriorTo130.put("sessionCondition", Collections.singletonList("condition"));
+        tagsStructurePriorTo130.put("sourceEventCondition", Collections.singletonList("condition"));
+        tagsStructurePriorTo130.put("trackedCondition", Collections.singletonList("condition"));
+        tagsStructurePriorTo130.put("usableInPastEventCondition", Collections.singletonList("condition"));
 
-        tagsStructurePriorTo200.put("formMappingRule", Collections.<String>emptyList());
+        tagsStructurePriorTo130.put("formMappingRule", Collections.<String>emptyList());
 
-        tagsStructurePriorTo200.put("downloadGoal", Collections.singletonList("goal"));
-        tagsStructurePriorTo200.put("formGoal", Collections.singletonList("goal"));
-        tagsStructurePriorTo200.put("funnelGoal", Collections.singletonList("goal"));
-        tagsStructurePriorTo200.put("landingPageGoal", Collections.singletonList("goal"));
-        tagsStructurePriorTo200.put("pageVisitGoal", Collections.singletonList("goal"));
-        tagsStructurePriorTo200.put("videoGoal", Collections.singletonList("goal"));
+        tagsStructurePriorTo130.put("downloadGoal", Collections.singletonList("goal"));
+        tagsStructurePriorTo130.put("formGoal", Collections.singletonList("goal"));
+        tagsStructurePriorTo130.put("funnelGoal", Collections.singletonList("goal"));
+        tagsStructurePriorTo130.put("landingPageGoal", Collections.singletonList("goal"));
+        tagsStructurePriorTo130.put("pageVisitGoal", Collections.singletonList("goal"));
+        tagsStructurePriorTo130.put("videoGoal", Collections.singletonList("goal"));
 
-        tagsStructurePriorTo200.put("aggregated", Collections.singletonList("profileTags"));
-        tagsStructurePriorTo200.put("autocompleted", Collections.singletonList("profileTags"));
-        tagsStructurePriorTo200.put("demographic", Collections.singletonList("profileTags"));
-        tagsStructurePriorTo200.put("event", Collections.singletonList("profileTags"));
-        tagsStructurePriorTo200.put("geographic", Collections.singletonList("profileTags"));
-        tagsStructurePriorTo200.put("logical", Collections.singletonList("profileTags"));
+        tagsStructurePriorTo130.put("aggregated", Collections.singletonList("profileTags"));
+        tagsStructurePriorTo130.put("autocompleted", Collections.singletonList("profileTags"));
+        tagsStructurePriorTo130.put("demographic", Collections.singletonList("profileTags"));
+        tagsStructurePriorTo130.put("event", Collections.singletonList("profileTags"));
+        tagsStructurePriorTo130.put("geographic", Collections.singletonList("profileTags"));
+        tagsStructurePriorTo130.put("logical", Collections.singletonList("profileTags"));
 
-        tagsStructurePriorTo200.put("profileProperties", Collections.singletonList("properties"));
-        tagsStructurePriorTo200.put("systemProfileProperties", Arrays.asList("properties", "profileProperties"));
-        tagsStructurePriorTo200.put("basicProfileProperties", Arrays.asList("properties", "profileProperties"));
-        tagsStructurePriorTo200.put("leadProfileProperties", Arrays.asList("properties", "profileProperties"));
-        tagsStructurePriorTo200.put("contactProfileProperties", Arrays.asList("properties", "profileProperties"));
-        tagsStructurePriorTo200.put("socialProfileProperties", Arrays.asList("properties", "profileProperties"));
-        tagsStructurePriorTo200.put("personalProfileProperties", Arrays.asList("properties", "profileProperties"));
-        tagsStructurePriorTo200.put("workProfileProperties", Arrays.asList("properties", "profileProperties"));
+        tagsStructurePriorTo130.put("profileProperties", Collections.singletonList("properties"));
+        tagsStructurePriorTo130.put("systemProfileProperties", Arrays.asList("properties", "profileProperties"));
+        tagsStructurePriorTo130.put("basicProfileProperties", Arrays.asList("properties", "profileProperties"));
+        tagsStructurePriorTo130.put("leadProfileProperties", Arrays.asList("properties", "profileProperties"));
+        tagsStructurePriorTo130.put("contactProfileProperties", Arrays.asList("properties", "profileProperties"));
+        tagsStructurePriorTo130.put("socialProfileProperties", Arrays.asList("properties", "profileProperties"));
+        tagsStructurePriorTo130.put("personalProfileProperties", Arrays.asList("properties", "profileProperties"));
+        tagsStructurePriorTo130.put("workProfileProperties", Arrays.asList("properties", "profileProperties"));
 
-        tagsStructurePriorTo200.put("sessionProperties", Collections.singletonList("properties"));
-        tagsStructurePriorTo200.put("geographicSessionProperties", Arrays.asList("properties", "sessionProperties"));
-        tagsStructurePriorTo200.put("technicalSessionProperties", Arrays.asList("properties", "sessionProperties"));
+        tagsStructurePriorTo130.put("sessionProperties", Collections.singletonList("properties"));
+        tagsStructurePriorTo130.put("geographicSessionProperties", Arrays.asList("properties", "sessionProperties"));
+        tagsStructurePriorTo130.put("technicalSessionProperties", Arrays.asList("properties", "sessionProperties"));
     }
 }
