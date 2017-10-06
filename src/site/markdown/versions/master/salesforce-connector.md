@@ -60,7 +60,7 @@ change the following settings:
            
 7. Deploy into Apache Unomi using the following commands from the Apache Karaf shell:
 
-        feature:repo-add mvn:org.apache.unomi/unomi-salesforce-connector-karaf-kar/1.2.0-incubating-SNAPSHOT/xml/features
+        feature:repo-add mvn:org.apache.unomi/unomi-salesforce-connector-karaf-kar/${project.version}/xml/features
         feature:install unomi-salesforce-connector-karaf-kar
         
 8. You can then test the connection to Salesforce by accessing the following URLs:
