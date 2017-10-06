@@ -17,14 +17,17 @@
 package org.apache.unomi.router.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.cxf.jaxrs.ext.MessageContext;
 import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.cxf.jaxrs.ext.multipart.Multipart;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpPut;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.SSLContextBuilder;
+import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
@@ -34,6 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -44,6 +48,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * A JAX-RS endpoint to manage {@link ImportConfiguration}s.
@@ -57,8 +64,14 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
 
     private static final Logger logger = LoggerFactory.getLogger(ImportConfigurationServiceEndPoint.class.getName());
 
-    public ImportConfigurationServiceEndPoint() {
+    public ImportConfigurationServiceEndPoint() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
         logger.info("Initializing import configuration service endpoint...");
+        SSLContextBuilder builder = new SSLContextBuilder();
+        builder.loadTrustMaterial(null, new TrustSelfSignedStrategy());
+        SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(
+                builder.build(), SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+        httpClient = HttpClients.custom().setSSLSocketFactory(
+                sslsf).build();
     }
 
     @WebMethod(exclude = true)
@@ -71,11 +84,16 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
      *
      * @return the import configuration saved.
      */
-    public ImportConfiguration saveConfiguration(ImportConfiguration importConfiguration) {
+    @Override
+    public ImportConfiguration saveConfiguration(ImportConfiguration importConfiguration, MessageContext context) {
+
+        HttpServletRequest request = context.getHttpServletRequest();
+        String localBasePath = request.getScheme() + "://127.0.0.1:" + request.getLocalPort();
+
         ImportConfiguration importConfigSaved = configurationService.save(importConfiguration);
-        CloseableHttpClient httpClient = HttpClients.createDefault();
+
         try {
-            HttpPut httpPut = new HttpPut(configSharingService.getProperty("internalServerAddress") + "/configUpdate/importConfigAdmin");
+            HttpPut httpPut = new HttpPut(localBasePath + "/configUpdate/importConfigAdmin");
             StringEntity input = new StringEntity(new ObjectMapper().writeValueAsString(importConfigSaved));
             input.setContentType(MediaType.APPLICATION_JSON);
             httpPut.setEntity(input);
@@ -84,7 +102,7 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
 
             if (response.getStatusLine().getStatusCode() != 200) {
                 logger.error("Failed to update the running config: Please check the accessibility to the URI: \n{}",
-                        configSharingService.getProperty("internalServerAddress") + "/configUpdate/importConfigAdmin");
+                        localBasePath + "/configUpdate/importConfigAdmin");
                 logger.error("HTTP Status code returned {}", response.getStatusLine().getStatusCode());
                 throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
             }
@@ -99,18 +117,20 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
     }
 
     @Override
-    public void deleteConfiguration(String configId) {
+    public void deleteConfiguration(String configId, MessageContext context) {
         this.configurationService.delete(configId);
 
-        CloseableHttpClient httpClient = HttpClients.createDefault();
+        HttpServletRequest request = context.getHttpServletRequest();
+        String localBasePath = request.getScheme() + "://127.0.0.1:" + request.getLocalPort();
+
         try {
-            HttpDelete httpDelete = new HttpDelete(configSharingService.getProperty("internalServerAddress") + "/configUpdate/importConfigAdmin/" + configId);
+            HttpDelete httpDelete = new HttpDelete(localBasePath + "/configUpdate/importConfigAdmin/" + configId);
 
             HttpResponse response = httpClient.execute(httpDelete);
 
             if (response.getStatusLine().getStatusCode() != 200) {
                 logger.error("Failed to update the running config: Please check the accessibility to the URI: \n{}",
-                        configSharingService.getProperty("internalServerAddress") + "/configUpdate/importConfigAdmin/" + configId);
+                        localBasePath + "/configUpdate/importConfigAdmin/" + configId);
                 logger.error("HTTP Status code returned {}", response.getStatusLine().getStatusCode());
                 throw new PartialContentException("RUNNING_CONFIG_UPDATE_FAILED");
             }

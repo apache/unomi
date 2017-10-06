@@ -16,12 +16,18 @@
  */
 package org.apache.unomi.router.rest;
 
+import org.apache.cxf.jaxrs.ext.MessageContext;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 
 import javax.jws.WebMethod;
 import javax.ws.rs.*;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
 /**
@@ -31,6 +37,7 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
 
     protected ImportExportConfigurationService<T> configurationService;
     protected ConfigSharingService configSharingService;
+    protected CloseableHttpClient httpClient;
 
     @WebMethod(exclude = true)
     public void setConfigSharingService(ConfigSharingService configSharingService) {
@@ -54,7 +61,7 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public abstract T saveConfiguration(T configuration);
+    public abstract T saveConfiguration(T configuration, @Context MessageContext context) throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException;
 
     /**
      * Retrieves a configuration by id.
@@ -79,6 +86,6 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
     @Path("/{configId}")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public abstract void deleteConfiguration(@PathParam("configId") String configId);
+    public abstract void deleteConfiguration(@PathParam("configId") String configId, @Context MessageContext context);
 
 }
