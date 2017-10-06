@@ -1,7 +1,14 @@
 {
-    "metadata": {     "id": "income", "name": "Income"   },
+    "metadata": {
+        "id": "income",
+        "name": "Income",
+        "systemTags": [
+            "properties",
+            "profileProperties",
+            "workProfileProperties"
+        ]
+    },
     "type": "integer",
-    "tags": [ "workProfileProperties" ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "603.0"

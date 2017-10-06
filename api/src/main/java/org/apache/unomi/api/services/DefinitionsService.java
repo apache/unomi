@@ -19,7 +19,6 @@ package org.apache.unomi.api.services;
 
 import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.PropertyMergeStrategyType;
-import org.apache.unomi.api.Tag;
 import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
@@ -35,42 +34,6 @@ import java.util.Set;
  */
 public interface DefinitionsService {
     /**
-     * Retrieves all known tags.
-     *
-     * @return the set of all known tags
-     * @deprecated will be removed in next major release as tag become an open string
-     */
-    @Deprecated
-    Set<Tag> getAllTags();
-
-    /**
-     * Retrieves the set of all root tags from which all other tags are derived via sub-tags.
-     *
-     * @return the set of all root tags
-     * @deprecated will be removed in next major release as tag become an open string
-     */
-    @Deprecated
-    Set<Tag> getRootTags();
-
-    /**
-     * Retrieves the tag with the specified identifier.
-     *
-     * @param tagId the identifier of the tag to retrieve
-     * @return the tag with the specified identifier
-     * @deprecated will be removed in next major release as tag become an open string
-     */
-    @Deprecated
-    Tag getTag(String tagId);
-
-    /**
-     * Add a new tag to the list of tags
-     * @param tag the tag to add
-     * @deprecated will be removed in next major release as tag become an open string
-     */
-    @Deprecated
-    void addTag(Tag tag);
-
-    /**
      * Retrieves all condition types.
      *
      * @return a Collection of all collection types
@@ -78,23 +41,20 @@ public interface DefinitionsService {
     Collection<ConditionType> getAllConditionTypes();
 
     /**
-     * Retrieves the set of condition types with the specified tag also retrieving condition types from sub-tags if so specified.
+     * Retrieves the set of condition types with the specified tag.
      *
-     * @param tag                the tag marking the condition types we want to retrieve
-     * @param includeFromSubtags {@code true} if we want to also include condition types marked by sub-tags of the specified tag
-     * @return the set of condition types with the specified tag (and its sub-tags, if specified)
-     * @deprecated will be replace by {@link #getConditionTypesByTag(String)}
-     */
-    @Deprecated
-    Set<ConditionType> getConditionTypesByTag(Tag tag, boolean includeFromSubtags);
-
-    /**
-     * Retrieves the set of condition types with the specified tag also retrieving condition types from sub-tags if so specified.
-     *
-     * @param tag                the tag marking the condition types we want to retrieve
+     * @param tag   the tag marking the condition types we want to retrieve
      * @return the set of condition types with the specified tag (and its sub-tags, if specified)
      */
     Set<ConditionType> getConditionTypesByTag(String tag);
+
+    /**
+     * Retrieves the set of condition types with the specified system tag.
+     *
+     * @param tag   the system tag marking the condition types we want to retrieve
+     * @return the set of condition types with the specified tag (and its sub-tags, if specified)
+     */
+    Set<ConditionType> getConditionTypesBySystemTag(String tag);
 
     /**
      * Retrieves the condition type associated with the specified identifier.
@@ -126,23 +86,20 @@ public interface DefinitionsService {
     Collection<ActionType> getAllActionTypes();
 
     /**
-     * Retrieves the set of action types with the specified tag also retrieving action types from sub-tags if so specified.
+     * Retrieves the set of action types with the specified tag.
      *
-     * @param tag                the tag marking the action types we want to retrieve
-     * @param includeFromSubtags {@code true} if we want to also include action types marked by sub-tags of the specified tag
-     * @return the set of action types with the specified tag (and its sub-tags, if specified)
-     * @deprecated will be replace by {@link #getActionTypeByTag(String)}
-     */
-    @Deprecated
-    Set<ActionType> getActionTypeByTag(Tag tag, boolean includeFromSubtags);
-
-    /**
-     * Retrieves the set of action types with the specified tag also retrieving action types from sub-tags if so specified.
-     *
-     * @param tag                the tag marking the action types we want to retrieve
-     * @return the set of action types with the specified tag (and its sub-tags, if specified)
+     * @param tag   the tag marking the action types we want to retrieve
+     * @return the set of action types with the specified tag
      */
     Set<ActionType> getActionTypeByTag(String tag);
+
+    /**
+     * Retrieves the set of action types with the specified system tag.
+     *
+     * @param tag   the system tag marking the action types we want to retrieve
+     * @return the set of action types with the specified tag
+     */
+    Set<ActionType> getActionTypeBySystemTag(String tag);
 
     /**
      * Retrieves the action type associated with the specified identifier.
@@ -174,21 +131,10 @@ public interface DefinitionsService {
     Collection<ValueType> getAllValueTypes();
 
     /**
-     * Retrieves the set of value types with the specified tag also retrieving value types from sub-tags if so specified.
+     * Retrieves the set of value types with the specified tag.
      *
-     * @param tag                the tag marking the value types we want to retrieve
-     * @param includeFromSubtags {@code true} if we want to also include value types marked by sub-tags of the specified tag
-     * @return the set of value types with the specified tag (and its sub-tags, if specified)
-     * @deprecated will be replace by {@link #getValueTypeByTag(String)}
-     */
-    @Deprecated
-    Set<ValueType> getValueTypeByTag(Tag tag, boolean includeFromSubtags);
-
-    /**
-     * Retrieves the set of value types with the specified tag also retrieving value types from sub-tags if so specified.
-     *
-     * @param tag                the tag marking the value types we want to retrieve
-     * @return the set of value types with the specified tag (and its sub-tags, if specified)
+     * @param tag   the tag marking the value types we want to retrieve
+     * @return the set of value types with the specified tag
      */
     Set<ValueType> getValueTypeByTag(String tag);
 
@@ -232,11 +178,11 @@ public interface DefinitionsService {
      * TODO: remove from API and move to a different class?
      * TODO: purpose and behavior not clear
      *
-     * @param rootCondition root condition
-     * @param tagId tag to extract
-     * @return condition
+     * @param rootCondition
+     * @param tag
+     * @return
      */
-    Condition extractConditionByTag(Condition rootCondition, String tagId);
+    Condition extractConditionByTag(Condition rootCondition, String tag);
 
     /**
      * Resolves (if possible) the {@link ConditionType}s for the specified condition and its sub-conditions (if any) from the type identifiers existing on the specified condition

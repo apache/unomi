@@ -3,8 +3,10 @@
     "id": "goalMatchCondition",
     "name": "goalMatchCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "condition",
       "profileCondition",
+      "profileTags",
       "event"
     ],
     "readOnly": true

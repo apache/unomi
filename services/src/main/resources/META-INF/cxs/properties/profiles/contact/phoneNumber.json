@@ -1,7 +1,14 @@
 {
-    "metadata": {     "id": "phoneNumber", "name": "Phone number"   },
+    "metadata": {
+        "id": "phoneNumber",
+        "name": "Phone number",
+        "systemTags": [
+            "properties",
+            "profileProperties",
+            "contactProfileProperties"
+        ]
+    },
     "type": "string",
-    "tags": ["contactProfileProperties"],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "302.0"

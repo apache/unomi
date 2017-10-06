@@ -3,8 +3,10 @@
     "id": "geoLocationSessionCondition",
     "name": "geoLocationSessionCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "geographic",
+      "condition",
       "sessionCondition"
     ],
     "readOnly": true

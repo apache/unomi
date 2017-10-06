@@ -36,6 +36,7 @@ public class Metadata implements Comparable<Metadata> {
     private String description;
     private String scope;
     private Set<String> tags = new LinkedHashSet<>();
+    private Set<String> systemTags = new LinkedHashSet<>();
     private boolean enabled = true;
     private boolean missingPlugins = false;
     private boolean hidden = false;
@@ -145,9 +146,9 @@ public class Metadata implements Comparable<Metadata> {
     }
 
     /**
-     * Retrieves a set of {@link Tag} names associated with this Metadata
+     * Retrieves a set of {@link String} tag names associated with this Metadata
      *
-     * @return a set of {@link Tag} names associated with this Metadata
+     * @return a set of {@link String} tag names associated with this Metadata
      */
     public Set<String> getTags() {
         return tags;
@@ -156,10 +157,28 @@ public class Metadata implements Comparable<Metadata> {
     /**
      * Sets the tags.
      *
-     * @param tagIDs the tag i ds
+     * @param tags the tag ids
      */
-    public void setTags(Set<String> tagIDs) {
-        this.tags = tagIDs;
+    public void setTags(Set<String> tags) {
+        this.tags = tags;
+    }
+
+    /**
+     * Retrieves a set of {@link String} system tag names associated with this Metadata
+     *
+     * @return a set of {@link String} system tag names associated with this Metadata
+     */
+    public Set<String> getSystemTags() {
+        return systemTags;
+    }
+
+    /**
+     * Sets the system tags.
+     *
+     * @param systemTags the system tag ids
+     */
+    public void setSystemTags(Set<String> systemTags) {
+        this.systemTags = systemTags;
     }
 
     /**

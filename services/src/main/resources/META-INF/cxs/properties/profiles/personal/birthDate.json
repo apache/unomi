@@ -1,10 +1,14 @@
 {
   "metadata": {
     "id": "birthDate",
-    "name": "Birth Date"
+    "name": "Birth Date",
+    "systemTags": [
+      "properties",
+      "profileProperties",
+      "personalProfileProperties"
+    ]
   },
   "type": "date",
-  "tags": ["personalProfileProperties"],
   "defaultValue": "",
   "dateRanges": [
     {"key":"*_10", "from": "now-10y/y" },

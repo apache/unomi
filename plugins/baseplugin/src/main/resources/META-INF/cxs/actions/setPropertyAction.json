@@ -3,10 +3,11 @@
     "id": "setPropertyAction",
     "name": "setPropertyAction",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "demographic",
-      "hidden.availableToEndUser",
-      "hidden.allowMultipleInstances"
+      "availableToEndUser",
+      "allowMultipleInstances"
     ],
     "readOnly": true
   },

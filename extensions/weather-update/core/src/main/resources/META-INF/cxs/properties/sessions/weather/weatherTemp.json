@@ -1,12 +1,13 @@
 {
   "metadata": {
     "id": "weatherTemperature",
-    "name": "Weather Temperature"
+    "name": "Weather Temperature",
+    "systemTags": [
+      "properties",
+      "sessionProperties"
+    ]
   },
   "type": "integer",
-  "tags": [
-    "sessionProperties"
-  ],
   "defaultValue": "",
   "automaticMappingsFrom": [],
   "rank": "302.0"

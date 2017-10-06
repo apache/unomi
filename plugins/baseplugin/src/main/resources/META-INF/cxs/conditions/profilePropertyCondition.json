@@ -3,8 +3,10 @@
     "id": "profilePropertyCondition",
     "name": "profilePropertyCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "demographic",
+      "condition",
       "profileCondition"
     ],
     "readOnly": true

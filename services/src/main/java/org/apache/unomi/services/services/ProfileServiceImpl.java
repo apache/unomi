@@ -294,10 +294,15 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     @Override
-    public Set<PropertyType> getExistingProperties(String tagId, String itemType) {
+    public Set<PropertyType> getExistingProperties(String tag, String itemType) {
+        return getExistingProperties(tag, itemType, false);
+    }
+
+    @Override
+    public Set<PropertyType> getExistingProperties(String tag, String itemType, boolean systemTag) {
         Set<PropertyType> filteredProperties = new LinkedHashSet<PropertyType>();
         // TODO: here we limit the result to the definition we have, but what if some properties haven't definition but exist in ES mapping ?
-        Set<PropertyType> profileProperties = getPropertyTypeByTag(tagId, true);
+        Set<PropertyType> profileProperties = systemTag ? getPropertyTypeBySystemTag(tag) : getPropertyTypeByTag(tag);
         Map<String, Map<String, Object>> itemMapping = persistenceService.getPropertiesMapping(itemType);
 
         if (itemMapping == null || itemMapping.isEmpty() || itemMapping.get("properties") == null || itemMapping.get("properties").get("properties") == null) {
@@ -593,9 +598,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
         for (Profile profile : profiles) {
             if (PropertyHelper.setProperty(profile, update.getPropertyName(), update.getPropertyValue(), update.getStrategy())) {
-//                Event profileUpdated = new Event("profileUpdated", null, profile, null, null, profile, new Date());
-//                profileUpdated.setPersistent(false);
-//                eventService.send(profileUpdated);
                 save(profile);
             }
         }
@@ -642,29 +644,17 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return propertyTypes;
     }
 
-    @Deprecated
-    public Set<PropertyType> getPropertyTypeByTag(String tagId, boolean includeFromSubtags) {
-        Set<PropertyType> propertyTypes = new LinkedHashSet<PropertyType>();
-        Collection<PropertyType> directPropertyTypes = persistenceService.query("tags", tagId, "rank", PropertyType.class);
-
-        if (directPropertyTypes != null) {
-            propertyTypes.addAll(directPropertyTypes);
-        }
-        if (includeFromSubtags) {
-            Tag tag = definitionsService.getTag(tagId);
-            if (tag != null) {
-                for (Tag subTag : tag.getSubTags()) {
-                    Set<PropertyType> childPropertyTypes = getPropertyTypeByTag(subTag.getId(), true);
-                    propertyTypes.addAll(childPropertyTypes);
-                }
-            }
-        }
-        return propertyTypes;
+    public Set<PropertyType> getPropertyTypeByTag(String tag) {
+        return getPropertyTypesBy("metadata.tags", tag);
     }
 
-    public Set<PropertyType> getPropertyTypeByTag(String tag) {
+    public Set<PropertyType> getPropertyTypeBySystemTag(String tag) {
+        return getPropertyTypesBy("metadata.systemTags", tag);
+    }
+
+    private Set<PropertyType> getPropertyTypesBy( String fieldName, String fieldValue) {
         Set<PropertyType> propertyTypes = new LinkedHashSet<PropertyType>();
-        Collection<PropertyType> directPropertyTypes = persistenceService.query("tags", tag, "rank", PropertyType.class);
+        Collection<PropertyType> directPropertyTypes = persistenceService.query(fieldName, fieldValue, "rank", PropertyType.class);
 
         if (directPropertyTypes != null) {
             propertyTypes.addAll(directPropertyTypes);
@@ -741,7 +731,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
             try {
                 PersonaWithSessions persona = CustomObjectMapper.getObjectMapper().readValue(predefinedPersonaURL, PersonaWithSessions.class);
-                persistenceService.save(persona.getPersona());
+
+                String itemId = persona.getPersona().getItemId();
+                if (persistenceService.load(itemId, Persona.class) != null) {
+                    persistenceService.save(persona.getPersona());
+                }
 
                 List<PersonaSession> sessions = persona.getSessions();
                 for (PersonaSession session : sessions) {

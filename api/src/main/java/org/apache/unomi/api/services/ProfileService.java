@@ -256,27 +256,24 @@ public interface ProfileService {
     Map<String, Collection<PropertyType>> getAllPropertyTypes();
 
     /**
-     * Retrieves all property types with the specified tag also retrieving property types with sub-tags of the specified tag if so specified.
+     * Retrieves all property types with the specified tag
      *
      * TODO: move to a different class
      *
-     * @param tag                the tag name marking property types we want to retrieve
-     * @param includeFromSubtags {@code true} if sub-tags of the specified tag should also be considered, {@code false} otherwise
-     * @return a Set of the property types with the specified tag
-     * @deprecated will be replace by {@link #getPropertyTypeByTag(String)} in next major release
-     */
-    @Deprecated
-    Set<PropertyType> getPropertyTypeByTag(String tag, boolean includeFromSubtags);
-
-    /**
-     * Retrieves all property types with the specified tag also retrieving property types with sub-tags of the specified tag if so specified.
-     *
-     * TODO: move to a different class
-     *
-     * @param tag                the tag name marking property types we want to retrieve
+     * @param tag   the tag name marking property types we want to retrieve
      * @return a Set of the property types with the specified tag
      */
     Set<PropertyType> getPropertyTypeByTag(String tag);
+
+    /**
+     * Retrieves all property types with the specified system tag
+     *
+     * TODO: move to a different class
+     *
+     * @param tag   the system tag name marking property types we want to retrieve
+     * @return a Set of the property types with the specified system tag
+     */
+    Set<PropertyType> getPropertyTypeBySystemTag(String tag);
 
     /**
      * TODO
@@ -327,11 +324,22 @@ public interface ProfileService {
      *
      * TODO: move to a different class
      *
-     * @param tagId    the tag we're interested in
+     * @param tag      the tag we're interested in
      * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
      * @return all property types defined for the specified item type and with the specified tag
      */
-    Set<PropertyType> getExistingProperties(String tagId, String itemType);
+    Set<PropertyType> getExistingProperties(String tag, String itemType);
+
+    /**
+     * Retrieves the existing property types for the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and with the specified tag.
+     *
+     * TODO: move to a different class
+     *
+     * @param tag      the tag we're interested in
+     * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
+     * @return all property types defined for the specified item type and with the specified tag
+     */
+    Set<PropertyType> getExistingProperties(String tag, String itemType, boolean systemTag);
 
 
 }

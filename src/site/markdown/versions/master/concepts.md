@@ -50,9 +50,9 @@ Some types can be dynamically defined at runtime by calling to the REST API whil
     "itemType": "propertyType",
     "metadata": {
         "id": "tweetNb",
-        "name": "tweetNb"
+        "name": "tweetNb",
+        "systemTags": ["social"]
     },
-    "tags": ["social"],
     "target": "profiles",
     "type": "integer"
 }
@@ -142,7 +142,7 @@ Being built on top of Apache Karaf, Unomi leverages OSGi to support plugins. A U
 | Rule | rules |
 | Scoring | scorings |
 | Segment | segments |
-| Tag | tags then `<category name>` directory |
+| Tag | tags |
 | ValueType | values |
 
 [Blueprint](http://aries.apache.org/modules/blueprint.html) is used to declare what the plugin provides and inject any required dependency. The Blueprint file is located, as usual, at `OSGI-INF/blueprint/blueprint.xml` in the bundle JAR file.
@@ -188,7 +188,7 @@ Definition for a profile or session property, specifying how possible values are
 `Segment`s represent dynamically evaluated groups of similar profiles in order to categorize the associated users. To be considered part of a given segment, users must satisfies the segment’s condition. If they match, users are automatically added to the segment. Similarly, if at any given point during, they cease to satisfy the segment’s condition, they are automatically removed from it.
 
 ### Tag
-`Tag`s are simple labels that are used to classify all other objects inside Unomi. Tags can define sub-tags.
+`Tag`s are simple labels that are used to classify all other objects inside Unomi. 
 
 ### ValueType
 Definition for values that can be assigned to properties ("primitive" types).

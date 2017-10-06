@@ -3,8 +3,10 @@
     "id": "sessionDurationCondition",
     "name": "sessionDurationCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "event",
+      "condition",
       "sessionCondition"
     ],
     "readOnly": true

@@ -1,7 +1,14 @@
 {
-    "metadata": {     "id": "zipCode", "name": "ZIP Code"   },
+    "metadata": {
+        "id": "zipCode",
+        "name": "ZIP Code",
+        "systemTags": [
+            "properties",
+            "profileProperties",
+            "contactProfileProperties"
+        ]
+    },
     "type": "string",
-    "tags": ["contactProfileProperties"],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "306.0"

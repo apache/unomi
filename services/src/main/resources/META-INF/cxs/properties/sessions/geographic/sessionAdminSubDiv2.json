@@ -1,7 +1,14 @@
 {
-  "metadata": {     "id": "sessionAdminSubDiv2", "name": "SubRegion/County"   },
+  "metadata": {
+    "id": "sessionAdminSubDiv2",
+    "name": "SubRegion/County",
+    "systemTags": [
+      "properties",
+      "sessionProperties",
+      "geographicSessionProperties"
+    ]
+  },
   "type": "string",
-  "tags": ["geographicSessionProperties"],
   "defaultValue": "",
   "automaticMappingsFrom": [ ],
   "rank": "2.0"

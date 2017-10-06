@@ -439,19 +439,25 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves the existing property types for the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and with the specified tag.
+     * Retrieves the existing property types for the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and with the specified tag or system tag.
      *
      * TODO: move to a different class
      *
-     * @param tagId    the tag we're interested in
-     * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
-     * @param language the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
+     * @param tag           the tag we're interested in
+     * @param isSystemTag   if we should look in system tags instead of tags
+     * @param itemType      the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
+     * @param language      the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
      * @return all property types defined for the specified item type and with the specified tag
      */
     @GET
     @Path("/existingProperties")
-    public Collection<PropertyType> getExistingProperties(@QueryParam("tagId") String tagId, @QueryParam("itemType") String itemType, @HeaderParam("Accept-Language") String language) {
-        Set<PropertyType> properties = profileService.getExistingProperties(tagId, itemType);
+    public Collection<PropertyType> getExistingProperties(@QueryParam("tag") String tag, @QueryParam("isSystemTag") boolean isSystemTag, @QueryParam("itemType") String itemType, @HeaderParam("Accept-Language") String language) {
+        Set<PropertyType> properties;
+        if (isSystemTag) {
+            properties = profileService.getExistingProperties(tag, itemType, isSystemTag);
+        } else {
+            properties = profileService.getExistingProperties(tag, itemType);
+        }
         return properties;
     }
 
@@ -470,20 +476,18 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves all the property types associated with the specified target.
+     * Retrieves the property type associated with the specified property ID.
      *
      * TODO: move to a different class
-     * Deprecated : use a /properties/targets collection instead, this URI will be used for looking up properties by id instead.
      *
-     * @param target   the target for which we want to retrieve the associated property types
-     * @param language the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
-     * @return a collection of all the property types associated with the specified target
+     * @param propertyId    the property ID for which we want to retrieve the associated property type
+     * @param language      the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
+     * @return the property type associated with the specified ID
      */
     @GET
-    @Path("/properties/{target}")
-    @Deprecated
-    public Collection<PropertyType> getPropertyTypesByTargetDeprecated(@PathParam("target") String target, @HeaderParam("Accept-Language") String language) {
-        return profileService.getAllPropertyTypes(target);
+    @Path("/properties/{propertyId}")
+    public PropertyType getPropertyType(@PathParam("propertyId") String propertyId, @HeaderParam("Accept-Language") String language) {
+        return profileService.getPropertyType(propertyId);
     }
 
     /**
@@ -497,29 +501,48 @@ public class ProfileServiceEndPoint {
      */
     @GET
     @Path("/properties/targets/{target}")
-    @Deprecated
     public Collection<PropertyType> getPropertyTypesByTarget(@PathParam("target") String target, @HeaderParam("Accept-Language") String language) {
         return profileService.getAllPropertyTypes(target);
     }
 
     /**
-     * Retrieves all property types with the specified tags also retrieving property types with sub-tags of the specified tags if so specified.
+     * Retrieves all property types with the specified tags.
      *
      * TODO: move to a different class
      * TODO: passing a list of tags via a comma-separated list is not very RESTful
      *
      * @param tags      a comma-separated list of tag identifiers
-     * @param recursive {@code true} if sub-tags of the specified tag should also be considered, {@code false} otherwise
      * @param language  the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
      * @return a Set of the property types with the specified tag
      */
     @GET
-    @Path("/properties/tags/{tagId}")
-    public Collection<PropertyType> getPropertyTypeByTag(@PathParam("tagId") String tags, @Deprecated @QueryParam("recursive") @DefaultValue("false") boolean recursive, @HeaderParam("Accept-Language") String language) {
+    @Path("/properties/tags/{tags}")
+    public Collection<PropertyType> getPropertyTypeByTag(@PathParam("tags") String tags, @HeaderParam("Accept-Language") String language) {
         String[] tagsArray = tags.split(",");
         Set<PropertyType> results = new LinkedHashSet<>();
-        for (String s : tagsArray) {
-            results.addAll(profileService.getPropertyTypeByTag(s, recursive));
+        for (String tag : tagsArray) {
+            results.addAll(profileService.getPropertyTypeByTag(tag));
+        }
+        return results;
+    }
+
+    /**
+     * Retrieves all property types with the specified tags.
+     *
+     * TODO: move to a different class
+     * TODO: passing a list of tags via a comma-separated list is not very RESTful
+     *
+     * @param tags      a comma-separated list of tag identifiers
+     * @param language  the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
+     * @return a Set of the property types with the specified tag
+     */
+    @GET
+    @Path("/properties/systemTags/{tags}")
+    public Collection<PropertyType> getPropertyTypeBySystemTag(@PathParam("tags") String tags, @HeaderParam("Accept-Language") String language) {
+        String[] tagsArray = tags.split(",");
+        Set<PropertyType> results = new LinkedHashSet<>();
+        for (String tag : tagsArray) {
+            results.addAll(profileService.getPropertyTypeBySystemTag(tag));
         }
         return results;
     }
@@ -536,6 +559,24 @@ public class ProfileServiceEndPoint {
     @Path("/properties")
     public boolean setPropertyType(PropertyType property) {
         return profileService.setPropertyType(property);
+    }
+
+    /**
+     * Persists the specified properties type in the context server.
+     *
+     * TODO: move to a different class
+     *
+     * @param properties the properties type to persist
+     * @return {@code true} if the property type was properly created, {@code false} otherwise (for example, if the property type already existed
+     */
+    @POST
+    @Path("/properties/bulk")
+    public boolean setPropertyTypes(List<PropertyType> properties) {
+        boolean saved = false;
+        for (PropertyType property : properties) {
+            saved |= profileService.setPropertyType(property);
+        }
+        return saved;
     }
 
     /**

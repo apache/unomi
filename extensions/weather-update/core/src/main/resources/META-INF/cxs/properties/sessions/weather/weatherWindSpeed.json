@@ -1,12 +1,13 @@
 {
   "metadata": {
     "id": "weatherWindSpeed",
-    "name": "Weather Wind Speed"
+    "name": "Weather Wind Speed",
+    "systemTags": [
+      "properties",
+      "sessionProperties"
+    ]
   },
   "type": "integer",
-  "tags": [
-    "sessionProperties"
-  ],
   "defaultValue": "",
   "automaticMappingsFrom": [],
   "rank": "302.0"

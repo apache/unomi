@@ -299,7 +299,7 @@ Let's now look at our custom [`incrementTweetNumberAction`](https://github.com/a
 {
   "id": "incrementTweetNumberAction",
   "actionExecutor": "incrementTweetNumber",
-  "tags": [
+  "systemTags": [
     "event"
   ],
   "parameters": []

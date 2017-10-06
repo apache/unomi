@@ -46,9 +46,6 @@ public class PropertyType extends MetadataItem {
     private Set<String> automaticMappingsFrom = new HashSet<>();
     private Double rank;
     private String mergeStrategy;
-    @Deprecated
-    private Set<Tag> tags = new TreeSet<Tag>();
-    private Set<String> tagIds = new LinkedHashSet<String>();
     private Boolean multivalued;
     private Boolean protekted;
 
@@ -127,52 +124,6 @@ public class PropertyType extends MetadataItem {
      */
     public void setValueType(ValueType valueType) {
         this.valueType = valueType;
-    }
-
-    /**
-     * Retrieves the tags used by this PropertyType.
-     *
-     * @return the tags used by this PropertyType
-     * @deprecated will be removed in next major release as tag become an open string
-     */
-    @XmlTransient
-    @Deprecated
-    public Set<Tag> getTags() {
-        return tags;
-    }
-
-    /**
-     * Sets the tags used by this PropertyType.
-     *
-     * @param tags the tags used by this PropertyType
-     * @deprecated will be removed in next major release as tag become an open string
-     */
-    @Deprecated
-    public void setTags(Set<Tag> tags) {
-        this.tags = tags;
-    }
-
-    /**
-     * Retrieves the identifiers of the tags used by this PropertyType.
-     *
-     * @return the identifiers of the tags used by this PropertyType
-     * @deprecated will be rename to getTags() in next major release as tag become an open string
-     */
-    @XmlElement(name = "tags")
-    @Deprecated
-    public Set<String> getTagIds() {
-        return tagIds;
-    }
-
-    /**
-     * Sets the identifiers of the tags used by this PropertyType.
-     *
-     * @param tagIds the identifiers of the tags used by this PropertyType
-     * @deprecated will be rename to setTags(Set&lt;String&gt; tags) in next major release as tag become an open string
-     */
-    @Deprecated
-    public void setTagIds(Set<String> tagIds) {
-        this.tagIds = tagIds;
     }
 
     /**

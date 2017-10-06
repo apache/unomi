@@ -3,9 +3,10 @@
     "id": "sfdcUpdateProfileFromLeadAction",
     "name": "sfdcUpdateProfileFromLeadAction",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "demographic",
-      "hidden.availableToEndUser"
+      "availableToEndUser"
     ],
     "readOnly": true
   },

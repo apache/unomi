@@ -1,7 +1,14 @@
 {
-    "metadata": {     "id": "firstName", "name": "First name"   },
+    "metadata": {
+        "id": "firstName",
+        "name": "First name",
+        "systemTags": [
+            "properties",
+            "profileProperties",
+            "basicProfileProperties"
+        ]
+    },
     "type": "string",
-    "tags": [ "basicProfileProperties" ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "101.0"

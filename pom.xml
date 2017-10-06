@@ -844,6 +844,7 @@
         <module>wab</module>
         <module>plugins</module>
         <module>extensions</module>
+        <module>tools</module>
         <module>kar</module>
         <module>samples</module>
         <module>package</module>

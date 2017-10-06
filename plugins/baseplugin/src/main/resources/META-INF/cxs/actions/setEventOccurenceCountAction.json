@@ -3,7 +3,8 @@
     "id": "setEventOccurenceCountAction",
     "name": "setEventOccurenceCountAction",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "demographic"
     ],
     "readOnly": true

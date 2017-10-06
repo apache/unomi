@@ -19,7 +19,7 @@ package org.apache.unomi.rest;
 
 import org.apache.unomi.api.ValueType;
 
-import java.util.Collection;
+import java.util.Set;
 
 /**
  * A representation of a {@link ValueType} better suited for definitions.
@@ -29,7 +29,7 @@ public class RESTValueType {
     private String id;
     private String name;
     private String description;
-    private Collection<RESTTag> tags;
+    private Set<String> tags;
 
     public RESTValueType() {
     }
@@ -58,11 +58,11 @@ public class RESTValueType {
         this.description = description;
     }
 
-    public Collection<RESTTag> getTags() {
+    public Set<String> getTags() {
         return tags;
     }
 
-    public void setTags(Collection<RESTTag> tags) {
+    public void setTags(Set<String> tags) {
         this.tags = tags;
     }
 }

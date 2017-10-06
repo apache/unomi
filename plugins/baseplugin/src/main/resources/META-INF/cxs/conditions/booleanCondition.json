@@ -3,8 +3,10 @@
     "id": "booleanCondition",
     "name": "booleanCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "logical",
+      "condition",
       "profileCondition",
       "eventCondition",
       "sessionCondition",

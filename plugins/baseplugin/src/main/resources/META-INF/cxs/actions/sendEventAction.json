@@ -3,7 +3,8 @@
     "id": "sendEventAction",
     "name": "sendEventAction",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "event"
     ],
     "readOnly": true

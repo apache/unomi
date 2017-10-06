@@ -1,7 +1,14 @@
 {
-    "metadata": {     "id": "remoteHost", "name": "Remote host address"   },
+    "metadata": {
+        "id": "remoteHost",
+        "name": "Remote host address",
+        "systemTags": [
+            "properties",
+            "sessionProperties",
+            "technicalSessionProperties"
+        ]
+    },
     "type": "string",
-    "tags": ["technicalSessionProperties"],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "107.0"

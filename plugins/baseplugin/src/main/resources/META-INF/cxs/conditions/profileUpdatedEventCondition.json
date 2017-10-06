@@ -3,8 +3,10 @@
     "id": "profileUpdatedEventCondition",
     "name": "profileUpdatedEventCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "event",
+      "condition",
       "eventCondition"
     ],
     "readOnly": true

@@ -3,8 +3,10 @@
     "id": "returningVisitorCondition",
     "name": "returningVisitorCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "event",
+      "condition",
       "sessionCondition"
     ],
     "readOnly": true

@@ -29,7 +29,7 @@ An extension is simply a Maven project, with a Maven pom that looks like this:
         <parent>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-extensions</artifactId>
-            <version>1.2.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </parent>
     
         <modelVersion>4.0.0</modelVersion>
@@ -37,7 +37,7 @@ An extension is simply a Maven project, with a Maven pom that looks like this:
         <artifactId>unomi-extension-example</artifactId>
         <name>Apache Unomi :: Extensions :: Example</name>
         <description>Service implementation for the Apache Unomi Context Server extension that integrates with the Geonames database</description>
-        <version>1.2.0-incubating-SNAPSHOT</version>
+        <version>${project.version}</version>
         <packaging>bundle</packaging>
     
         <dependencies>
@@ -45,7 +45,7 @@ An extension is simply a Maven project, with a Maven pom that looks like this:
             <dependency>
                 <groupId>org.apache.unomi</groupId>
                 <artifactId>unomi-api</artifactId>
-                <version>1.2.0-incubating-SNAPSHOT</version>
+                <version>${project.version}</version>
                 <scope>provided</scope>
             </dependency>    
         </dependencies>
@@ -158,9 +158,12 @@ For profile properties you must create the JSON file inside the directory in you
 Here is an example of a property definition JSON file
 
     {
-        "metadata": {     "id": "city", "name": "City"   },
+        "metadata": {
+            "id": "city",
+            "name": "City",
+            "systemTags": ["properties", "profileProperties", "contactProfileProperties"]
+        },
         "type": "string",
-        "tags": ["contactProfileProperties"],
         "defaultValue": "",
         "automaticMappingsFrom": [ ],
         "rank": "304.0"
@@ -181,7 +184,7 @@ type eventTypeCondition.
         "id": "profileUpdatedEventCondition",
         "name": "profileUpdatedEventCondition",
         "description": "",
-        "tags": [
+        "systemTags": [
           "event",
           "eventCondition"
         ],
@@ -259,9 +262,9 @@ Here is an example of a JSON action definition:
         "id": "addToListsAction",
         "name": "addToListsAction",
         "description": "",
-        "tags": [
+        "systemTags": [
           "demographic",
-          "hidden.availableToEndUser"
+          "availableToEndUser"
         ],
         "readOnly": true
       },
@@ -319,7 +322,7 @@ Here is an example of JSON custom condition definition:
         "id": "matchAllCondition",
         "name": "matchAllCondition",
         "description": "",
-        "tags": [
+        "systemTags": [
           "logical",
           "profileCondition",
           "eventCondition",

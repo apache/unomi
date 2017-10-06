@@ -3,7 +3,8 @@
     "id": "evaluateProfileAgeAction",
     "name": "evaluateProfileAgeAction",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "event"
     ],
     "readOnly": true

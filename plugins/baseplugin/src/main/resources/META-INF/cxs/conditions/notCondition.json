@@ -3,8 +3,10 @@
     "id": "notCondition",
     "name": "notCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "logical",
+      "condition",
       "profileCondition",
       "eventCondition",
       "sessionCondition",

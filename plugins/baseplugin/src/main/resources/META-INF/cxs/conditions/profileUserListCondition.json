@@ -3,8 +3,10 @@
     "id": "profileUserListCondition",
     "name": "profileUserListCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "aggregated",
+      "condition",
       "profileCondition"
     ],
     "readOnly": true

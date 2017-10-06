@@ -152,7 +152,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
             try {
                 Rule rule = CustomObjectMapper.getObjectMapper().readValue(predefinedSegmentURL, Rule.class);
-                setRule(rule);
+                if (getRule(rule.getMetadata().getId()) == null) {
+                    setRule(rule);
+                }
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
             }

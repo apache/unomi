@@ -1,7 +1,14 @@
 {
-    "metadata": {     "id": "nationality", "name": "Nationality"   },
+    "metadata": {
+        "id": "nationality",
+        "name": "Nationality",
+        "systemTags": [
+            "properties",
+            "profileProperties",
+            "basicProfileProperties"
+        ]
+    },
     "type": "string",
-    "tags": [ "basicProfileProperties" ],
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "rank": "103.0"

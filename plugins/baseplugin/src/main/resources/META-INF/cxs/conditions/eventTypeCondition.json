@@ -3,8 +3,10 @@
     "id": "eventTypeCondition",
     "name": "eventTypeCondition",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "event",
+      "condition",
       "eventCondition"
     ],
     "readOnly": true

@@ -26,7 +26,6 @@ import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
 import org.apache.unomi.persistence.elasticsearch.conditions.*;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
 import org.elasticsearch.action.admin.cluster.node.info.NodeInfo;
@@ -654,8 +653,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 .actionGet();
                         if (response.isExists()) {
                             String sourceAsString = response.getSourceAsString();
-                            final T value = CustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
+                            final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
                             value.setItemId(response.getId());
+                            value.setVersion(response.getVersion());
                             return value;
                         } else {
                             return null;
@@ -663,10 +663,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                 } catch (IndexNotFoundException e) {
                     throw new Exception("No index found for itemType=" + clazz.getName() + " itemId=" + itemId, e);
-                } catch (IllegalAccessException e) {
-                    throw new Exception("Error loading itemType=" + clazz.getName() + " itemId=" + itemId, e);
-                } catch (Exception t) {
-                    throw new Exception("Error loading itemType=" + clazz.getName() + " itemId=" + itemId, t);
+                } catch (Exception ex) {
+                    throw new Exception("Error loading itemType=" + clazz.getName() + " itemId=" + itemId, ex);
                 }
             }
         }.catchingExecuteInClassLoader(true);
@@ -683,7 +681,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         Boolean result =  new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) throws Exception {
                 try {
-                    String source = CustomObjectMapper.getObjectMapper().writeValueAsString(item);
+                    String source = ESCustomObjectMapper.getObjectMapper().writeValueAsString(item);
                     String itemType = item.getItemType();
                     String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
                             (itemsMonthlyIndexed.contains(itemType) ? getMonthlyIndex(((TimestampedItem) item).getTimeStamp()) : indexName);
@@ -1341,6 +1339,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                     }
                     SearchResponse response = requestBuilder
+                            .setVersion(true)
                             .execute()
                             .actionGet();
                     if (size == -1) {
@@ -1350,8 +1349,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             for (SearchHit searchHit : response.getHits().getHits()) {
                                 // add hit to results
                                 String sourceAsString = searchHit.getSourceAsString();
-                                final T value = CustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
+                                final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
                                 value.setItemId(searchHit.getId());
+                                value.setVersion(searchHit.getVersion());
                                 results.add(value);
                             }
 
@@ -1369,8 +1369,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         totalHits = searchHits.getTotalHits();
                         for (SearchHit searchHit : searchHits) {
                             String sourceAsString = searchHit.getSourceAsString();
-                            final T value = CustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
+                            final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
                             value.setItemId(searchHit.getId());
+                            value.setVersion(searchHit.getVersion());
                             results.add(value);
                         }
                     }
@@ -1406,8 +1407,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         for (SearchHit searchHit : response.getHits().getHits()) {
                             // add hit to results
                             String sourceAsString = searchHit.getSourceAsString();
-                            final T value = CustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
+                            final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
                             value.setItemId(searchHit.getId());
+                            value.setVersion(searchHit.getVersion());
                             results.add(value);
                         }
                     }

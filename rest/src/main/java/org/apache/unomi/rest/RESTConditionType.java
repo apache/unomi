@@ -19,10 +19,7 @@ package org.apache.unomi.rest;
 
 import org.apache.unomi.api.conditions.ConditionType;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
  * A representation of a {@link ConditionType} better suited for definitions.
@@ -31,8 +28,10 @@ public class RESTConditionType {
     private String id;
     private String name;
     private String description;
-    private Collection<String> tags = new TreeSet<String>();
+    private Set<String> tags = new LinkedHashSet<>();
+    private Set<String> systemTags = new LinkedHashSet<>();
     private List<RESTParameter> parameters = new ArrayList<RESTParameter>();
+    protected Long version;
 
     public RESTConditionType() {
     }
@@ -61,12 +60,20 @@ public class RESTConditionType {
         this.description = description;
     }
 
-    public Collection<String> getTags() {
+    public Set<String> getTags() {
         return tags;
     }
 
-    public void setTags(Collection<String> tags) {
+    public void setTags(Set<String> tags) {
         this.tags = tags;
+    }
+
+    public Set<String> getSystemTags() {
+        return systemTags;
+    }
+
+    public void setSystemTags(Set<String> systemTags) {
+        this.systemTags = systemTags;
     }
 
     public List<RESTParameter> getParameters() {
@@ -75,5 +82,13 @@ public class RESTConditionType {
 
     public void setParameters(List<RESTParameter> parameters) {
         this.parameters = parameters;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }

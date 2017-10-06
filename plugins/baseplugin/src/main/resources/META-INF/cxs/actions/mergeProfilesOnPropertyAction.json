@@ -3,7 +3,8 @@
     "id": "mergeProfilesOnPropertyAction",
     "name": "mergeProfilesOnPropertyAction",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "demographic"
     ],
     "readOnly": true

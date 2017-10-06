@@ -3,7 +3,8 @@
     "id": "setRemoteHostInfoAction",
     "name": "setRemoteHostInfoAction",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "event"
     ],
     "readOnly": true

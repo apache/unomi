@@ -3,10 +3,11 @@
     "id": "sendMailAction",
     "name": "sendMailAction",
     "description": "",
-    "tags": [
+    "systemTags": [
+      "profileTags",
       "event",
-      "hidden.availableToEndUser",
-      "hidden.allowMultipleInstances"
+      "availableToEndUser",
+      "allowMultipleInstances"
     ],
     "readOnly": true
   },

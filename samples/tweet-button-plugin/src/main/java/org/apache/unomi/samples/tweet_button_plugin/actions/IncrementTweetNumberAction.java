@@ -45,14 +45,14 @@ public class IncrementTweetNumberAction implements ActionExecutor {
             // create tweet number property type
             PropertyType propertyType = new PropertyType(new Metadata(event.getScope(), TWEET_NB_PROPERTY, TWEET_NB_PROPERTY, "Number of times a user tweeted"));
             propertyType.setValueTypeId("integer");
-            propertyType.setTagIds(Collections.singleton("social"));
+            propertyType.getMetadata().setTags(Collections.singleton("social"));
             propertyType.setTarget(TARGET);
             service.setPropertyType(propertyType);
 
             // create tweeted from property type
             propertyType = new PropertyType(new Metadata(event.getScope(), TWEETED_FROM_PROPERTY, TWEETED_FROM_PROPERTY, "The list of pages a user tweeted from"));
             propertyType.setValueTypeId("string");
-            propertyType.setTagIds(Collections.singleton("social"));
+            propertyType.getMetadata().setTags(Collections.singleton("social"));
             propertyType.setTarget(TARGET);
             propertyType.setMultivalued(true);
             service.setPropertyType(propertyType);
