@@ -476,14 +476,13 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves all the property types associated with the specified target.
+     * Retrieves the property type associated with the specified property ID.
      *
      * TODO: move to a different class
-     * Deprecated : use a /properties/targets collection instead, this URI will be used for looking up properties by id instead.
      *
-     * @param propertyId    the target for which we want to retrieve the associated property types
+     * @param propertyId    the property ID for which we want to retrieve the associated property type
      * @param language      the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
-     * @return a collection of all the property types associated with the specified target
+     * @return the property type associated with the specified ID
      */
     @GET
     @Path("/properties/{propertyId}")
@@ -560,6 +559,24 @@ public class ProfileServiceEndPoint {
     @Path("/properties")
     public boolean setPropertyType(PropertyType property) {
         return profileService.setPropertyType(property);
+    }
+
+    /**
+     * Persists the specified properties type in the context server.
+     *
+     * TODO: move to a different class
+     *
+     * @param properties the properties type to persist
+     * @return {@code true} if the property type was properly created, {@code false} otherwise (for example, if the property type already existed
+     */
+    @POST
+    @Path("/properties/bulk")
+    public boolean setPropertyTypes(List<PropertyType> properties) {
+        boolean saved = false;
+        for (PropertyType property : properties) {
+            saved |= profileService.setPropertyType(property);
+        }
+        return saved;
     }
 
     /**
