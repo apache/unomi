@@ -75,14 +75,14 @@ public class ProfileImportRankingIT extends BaseIT {
         /*** Create Missing Properties ***/
         PropertyType propertyTypeUciId = new PropertyType(new Metadata("integration", "uciId", "UCI ID", "UCI ID"));
         propertyTypeUciId.setValueTypeId("string");
-        propertyTypeUciId.setTagIds(Collections.singleton("basicProfileProperties"));
+        propertyTypeUciId.getMetadata().setSystemTags(Collections.singleton("basicProfileProperties"));
         propertyTypeUciId.setTarget("profiles");
 
         profileService.setPropertyType(propertyTypeUciId);
 
         PropertyType propertyTypeRank = new PropertyType(new Metadata("integration", "rank", "Rank", "Rank"));
         propertyTypeRank.setValueTypeId("integer");
-        propertyTypeRank.setTagIds(Collections.singleton("basicProfileProperties"));
+        propertyTypeRank.getMetadata().setSystemTags(Collections.singleton("basicProfileProperties"));
         propertyTypeRank.setTarget("profiles");
 
         profileService.setPropertyType(propertyTypeRank);

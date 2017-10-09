@@ -74,7 +74,7 @@ public class ProfileImportSurfersIT extends BaseIT {
         /*** Create Missing Properties ***/
         PropertyType propertyType = new PropertyType(new Metadata("integration", "alive", "Alive", "Is the person alive?"));
         propertyType.setValueTypeId("boolean");
-        propertyType.setTagIds(Collections.singleton("basicProfileProperties"));
+        propertyType.getMetadata().setSystemTags(Collections.singleton("basicProfileProperties"));
         propertyType.setTarget("profiles");
 
         profileService.setPropertyType(propertyType);

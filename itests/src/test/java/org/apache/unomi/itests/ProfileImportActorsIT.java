@@ -72,13 +72,13 @@ public class ProfileImportActorsIT extends BaseIT {
         /*** Create Missing Properties ***/
         PropertyType propertyTypeTwitterId = new PropertyType(new Metadata("integration", "twitterId", "Twitter ID", "Twitter ID"));
         propertyTypeTwitterId.setValueTypeId("integer");
-        propertyTypeTwitterId.setTagIds(Collections.singleton("basicProfileProperties"));
+        propertyTypeTwitterId.getMetadata().setSystemTags(Collections.singleton("basicProfileProperties"));
         propertyTypeTwitterId.setTarget("profiles");
 
         PropertyType propertyTypeActorsGenres = new PropertyType(new Metadata("integration", "movieGenres", "Movie Genres", "Movie Genres"));
         propertyTypeActorsGenres.setValueTypeId("string");
         propertyTypeActorsGenres.setMultivalued(true);
-        propertyTypeActorsGenres.setTagIds(Collections.singleton("basicProfileProperties"));
+        propertyTypeActorsGenres.getMetadata().setSystemTags(Collections.singleton("basicProfileProperties"));
         propertyTypeActorsGenres.setTarget("profiles");
 
         profileService.setPropertyType(propertyTypeActorsGenres);
