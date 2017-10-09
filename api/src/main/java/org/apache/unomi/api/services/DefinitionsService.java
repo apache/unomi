@@ -182,7 +182,20 @@ public interface DefinitionsService {
      * @param tag
      * @return
      */
+    @Deprecated
     Condition extractConditionByTag(Condition rootCondition, String tag);
+
+    /**
+     * Retrieves a condition matching the specified tag identifier from the specified root condition.
+     *
+     * TODO: remove from API and move to a different class?
+     * TODO: purpose and behavior not clear
+     *
+     * @param rootCondition
+     * @param tag
+     * @return
+     */
+    Condition extractConditionBySystemTag(Condition rootCondition, String tag);
 
     /**
      * Resolves (if possible) the {@link ConditionType}s for the specified condition and its sub-conditions (if any) from the type identifiers existing on the specified condition

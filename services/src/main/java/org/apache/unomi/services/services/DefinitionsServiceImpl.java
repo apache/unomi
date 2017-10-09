@@ -368,6 +368,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         }
     }
 
+    @Deprecated
     public Condition extractConditionByTag(Condition rootCondition, String tag) {
         if (rootCondition.containsParameter("subConditions")) {
             @SuppressWarnings("unchecked")
@@ -396,6 +397,40 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             }
             throw new IllegalArgumentException();
         } else if (rootCondition.getConditionType() != null && rootCondition.getConditionType().getMetadata().getTags().contains(tag)) {
+            return rootCondition;
+        } else {
+            return null;
+        }
+    }
+
+    public Condition extractConditionBySystemTag(Condition rootCondition, String systemTag) {
+        if (rootCondition.containsParameter("subConditions")) {
+            @SuppressWarnings("unchecked")
+            List<Condition> subConditions = (List<Condition>) rootCondition.getParameter("subConditions");
+            List<Condition> matchingConditions = new ArrayList<Condition>();
+            for (Condition condition : subConditions) {
+                Condition c = extractConditionBySystemTag(condition, systemTag);
+                if (c != null) {
+                    matchingConditions.add(c);
+                }
+            }
+            if (matchingConditions.size() == 0) {
+                return null;
+            } else if (matchingConditions.equals(subConditions)) {
+                return rootCondition;
+            } else if (rootCondition.getConditionTypeId().equals("booleanCondition") && "and".equals(rootCondition.getParameter("operator"))) {
+                if (matchingConditions.size() == 1) {
+                    return matchingConditions.get(0);
+                } else {
+                    Condition res = new Condition();
+                    res.setConditionType(getConditionType("booleanCondition"));
+                    res.setParameter("operator", "and");
+                    res.setParameter("subConditions", matchingConditions);
+                    return res;
+                }
+            }
+            throw new IllegalArgumentException();
+        } else if (rootCondition.getConditionType() != null && rootCondition.getConditionType().getMetadata().getSystemTags().contains(systemTag)) {
             return rootCondition;
         } else {
             return null;

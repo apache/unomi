@@ -178,7 +178,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             long ruleConditionStartTime = System.currentTimeMillis();
             String scope = rule.getMetadata().getScope();
             if (scope.equals(Metadata.SYSTEM_SCOPE) || scope.equals(event.getScope())) {
-                Condition eventCondition = definitionsService.extractConditionByTag(rule.getCondition(), "eventCondition");
+                Condition eventCondition = definitionsService.extractConditionBySystemTag(rule.getCondition(), "eventCondition");
 
                 if (eventCondition == null) {
                     updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
@@ -190,7 +190,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                     continue;
                 }
 
-                Condition sourceCondition = definitionsService.extractConditionByTag(rule.getCondition(), "sourceEventCondition");
+                Condition sourceCondition = definitionsService.extractConditionBySystemTag(rule.getCondition(), "sourceEventCondition");
                 if (sourceCondition != null && !persistenceService.testMatch(sourceCondition, event.getSource())) {
                     updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
                     continue;
@@ -210,12 +210,12 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                     }
                 }
 
-                Condition profileCondition = definitionsService.extractConditionByTag(rule.getCondition(), "profileCondition");
+                Condition profileCondition = definitionsService.extractConditionBySystemTag(rule.getCondition(), "profileCondition");
                 if (profileCondition != null && !persistenceService.testMatch(profileCondition, event.getProfile())) {
                     updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
                     continue;
                 }
-                Condition sessionCondition = definitionsService.extractConditionByTag(rule.getCondition(), "sessionCondition");
+                Condition sessionCondition = definitionsService.extractConditionBySystemTag(rule.getCondition(), "sessionCondition");
                 if (sessionCondition != null && !persistenceService.testMatch(sessionCondition, event.getSession())) {
                     updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
                     continue;
@@ -340,7 +340,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         if (condition != null) {
             if (rule.getMetadata().isEnabled() && !rule.getMetadata().isMissingPlugins()) {
                 ParserHelper.resolveConditionType(definitionsService, condition);
-                definitionsService.extractConditionByTag(condition, "eventCondition");
+                definitionsService.extractConditionBySystemTag(condition, "eventCondition");
             }
         }
         persistenceService.save(rule);
@@ -352,9 +352,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             if (!r.getMetadata().isEnabled()) {
                 continue;
             }
-            Condition trackedCondition = definitionsService.extractConditionByTag(r.getCondition(), "trackedCondition");
+            Condition trackedCondition = definitionsService.extractConditionBySystemTag(r.getCondition(), "trackedCondition");
             if(trackedCondition != null){
-                Condition sourceEventPropertyCondition = definitionsService.extractConditionByTag(r.getCondition(), "sourceEventCondition");
+                Condition sourceEventPropertyCondition = definitionsService.extractConditionBySystemTag(r.getCondition(), "sourceEventCondition");
                 if(source != null && sourceEventPropertyCondition != null) {
                     ParserHelper.resolveConditionType(definitionsService, sourceEventPropertyCondition);
                     if(persistenceService.testMatch(sourceEventPropertyCondition, source)){

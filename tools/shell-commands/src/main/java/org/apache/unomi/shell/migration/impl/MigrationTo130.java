@@ -65,12 +65,8 @@ public class MigrationTo130 implements Migration {
     private void migrateTags() throws IOException {
         initTagsStructurePriorTo130();
         String hostAddress = ConsoleUtils.askUserWithDefaultAnswer(session, "Host address (default = http://localhost:9200): ", "http://localhost:9200");
-        String tagsOperation = ConsoleUtils.askUserWithAuthorizedAnswer(session, "How to manage tags?\nno change: will keep tags in tags property\ncopy: will duplicate tags in systemTags property\nmove: will move tags in systemTags property\n(default/copy/move): ", Arrays.asList("no change", "copy", "move"));
-
-        String removeNamespaceOnSystemTags = "no";
-        if (tagsOperation.equals("copy") || tagsOperation.equals("move")) {
-            removeNamespaceOnSystemTags = ConsoleUtils.askUserWithAuthorizedAnswer(session,"As we will copy/move the tags, do you wish to remove existing namespace on tags before copy/move in systemTags? (e.g: hidden.) (yes/no): ", Arrays.asList("yes", "no"));
-        }
+        String tagsOperation = ConsoleUtils.askUserWithAuthorizedAnswer(session, "How to manage tags?\n1. copy: will duplicate tags in systemTags property\n2. move: will move tags in systemTags property\n[1 - 2]: ", Arrays.asList("1", "2"));
+        String removeNamespaceOnSystemTags = ConsoleUtils.askUserWithAuthorizedAnswer(session,"As we will copy/move the tags, do you wish to remove existing namespace on tags before copy/move in systemTags? (e.g: hidden.) (yes/no): ", Arrays.asList("yes", "no"));
 
         List<String> typeToMigrate = Arrays.asList("actionType", "conditionType", "campaign", "goal", "rule", "scoring", "segment", "userList");
         for (String type : typeToMigrate) {
@@ -145,15 +141,12 @@ public class MigrationTo130 implements Migration {
                 }
 
                 updatedHits.append("{\"update\":{\"_id\":\"").append(hitId).append("\"}}\n");
-                if (tagsOperation.equals("no change")) {
-                    updatedHits.append("{\"doc\":{\"metadata\":{\"tags\":").append(new JSONArray(tagsAfterMigration)).append("}}}\n");
-                }
-                if (tagsOperation.equals("copy")) {
+                if (tagsOperation.equals("1")) {
                     Set<String> tags = removeNamespaceOnTags(removeNamespaceOnSystemTags, tagsAfterMigration);
                     updatedHits.append("{\"doc\":{\"metadata\":{\"tags\":").append(new JSONArray(tagsAfterMigration))
                             .append(",\"systemTags\":").append(new JSONArray(tags)).append("}}}\n");
                 }
-                if (tagsOperation.equals("move")) {
+                if (tagsOperation.equals("2")) {
                     Set<String> tags = removeNamespaceOnTags(removeNamespaceOnSystemTags, tagsAfterMigration);
                     updatedHits.append("{\"doc\":{\"metadata\":{\"systemTags\":").append(new JSONArray(tags)).append("}}}\n");
                     if (tagsInMetadata) {

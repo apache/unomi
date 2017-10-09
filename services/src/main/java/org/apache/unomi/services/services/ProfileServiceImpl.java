@@ -583,8 +583,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             }
             return subConditions.size() > 0 && isAnd;
         } else {
-            Condition profileCondition = definitionsService.extractConditionByTag(condition, "profileCondition");
-            Condition sessionCondition = definitionsService.extractConditionByTag(condition, "sessionCondition");
+            Condition profileCondition = definitionsService.extractConditionBySystemTag(condition, "profileCondition");
+            Condition sessionCondition = definitionsService.extractConditionBySystemTag(condition, "sessionCondition");
             if (profileCondition != null && !persistenceService.testMatch(profileCondition, profile)) {
                 return false;
             }
