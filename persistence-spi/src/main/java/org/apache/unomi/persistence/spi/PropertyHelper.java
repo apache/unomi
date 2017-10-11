@@ -40,8 +40,7 @@ public class PropertyHelper {
 
     public static boolean setProperty(Object target, String propertyName, Object propertyValue, String setPropertyStrategy) {
         try {
-            String parentPropertyName =  null;
-            Object parentTarget = null;
+            String parentPropertyName;
             if(setPropertyStrategy!=null && setPropertyStrategy.equals("remove")){
                 if(resolver.hasNested(propertyName)) {
                     parentPropertyName = propertyName.substring(0, propertyName.lastIndexOf('.'));
@@ -129,4 +128,16 @@ public class PropertyHelper {
         }
 
     }
+
+    public static Object getValueByTypeId(Object propertyValue, String valueTypeId) {
+        if(("boolean".equals(valueTypeId)) ) {
+            return getBooleanValue(propertyValue);
+        } else if("integer".equals(valueTypeId)) {
+            return getInteger(propertyValue);
+        } else {
+            return propertyValue.toString();
+        }
+    }
+
+
 }

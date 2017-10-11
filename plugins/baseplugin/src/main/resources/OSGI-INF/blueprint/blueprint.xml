@@ -151,7 +151,6 @@
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.AllEventToProfilePropertiesAction">
             <property name="profileService" ref="profileService"/>
-            <property name="privacyService" ref="privacyService"/>
         </bean>
     </service>
 
@@ -159,17 +158,23 @@
         <service-properties>
             <entry key="actionExecutorId" value="eventToProfileProperty"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.actions.EventToProfilePropertyAction">
-            <property name="privacyService" ref="privacyService"/>
-        </bean>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.EventToProfilePropertyAction"/>
     </service>
 
     <service auto-export="interfaces">
         <service-properties>
             <entry key="actionExecutorId" value="setProperty"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.actions.SetPropertyAction">
-            <property name="privacyService" ref="privacyService"/>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.SetPropertyAction"/>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="actionExecutorId" value="updateProfileProperties"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.UpdateProfilePropertiesAction">
+            <property name="profileService" ref="profileService"/>
+            <property name="eventService" ref="eventService"/>
         </bean>
     </service>
 

@@ -22,7 +22,6 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 
 import java.util.HashMap;
@@ -31,20 +30,15 @@ import java.util.Map;
 public class AllEventToProfilePropertiesAction implements ActionExecutor {
 
     private ProfileService profileService;
-    private PrivacyService privacyService;
 
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;
     }
 
-    public void setPrivacyService(PrivacyService privacyService) {
-        this.privacyService = privacyService;
-    }
-
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public int execute(Action action, Event event) {
         boolean changed = false;
-        Map<String, Object> properties = new HashMap<String,Object>();
+        Map<String, Object> properties = new HashMap<String, Object>();
         if (event.getProperties() != null) {
             properties.putAll(event.getProperties());
         }
@@ -53,7 +47,7 @@ public class AllEventToProfilePropertiesAction implements ActionExecutor {
         try {
             Object targetProperties = BeanUtilsBean.getInstance().getPropertyUtils().getProperty(event.getTarget(), "properties");
             if (targetProperties instanceof Map) {
-                properties.putAll( (Map)targetProperties );
+                properties.putAll((Map) targetProperties);
             }
         } catch (Exception e) {
             // Ignore

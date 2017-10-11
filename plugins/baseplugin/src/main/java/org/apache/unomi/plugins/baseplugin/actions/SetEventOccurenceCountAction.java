@@ -55,18 +55,18 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         conditions.add(eventCondition);
 
         Condition c = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        c.setParameter("propertyName","profileId");
+        c.setParameter("propertyName", "profileId");
         c.setParameter("comparisonOperator", "equals");
-        c.setParameter("propertyValue",event.getProfileId());
+        c.setParameter("propertyValue", event.getProfileId());
         conditions.add(c);
 
         if (pastEventCondition.getParameter("numberOfDays") != null) {
             int i = (Integer) pastEventCondition.getParameter("numberOfDays");
 
             Condition timeCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-            timeCondition.setParameter("propertyName","timeStamp");
-            timeCondition.setParameter("comparisonOperator","greaterThan");
-            timeCondition.setParameter("propertyValueDateExpr","now-"+i+"d");
+            timeCondition.setParameter("propertyName", "timeStamp");
+            timeCondition.setParameter("comparisonOperator", "greaterThan");
+            timeCondition.setParameter("propertyValueDateExpr", "now-" + i + "d");
 
             conditions.add(timeCondition);
         }
@@ -75,7 +75,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
         long count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
 
-        Map<String,Object> pastEvents = (Map<String,Object>) event.getProfile().getSystemProperties().get("pastEvents");
+        Map<String, Object> pastEvents = (Map<String, Object>) event.getProfile().getSystemProperties().get("pastEvents");
         if (pastEvents == null) {
             pastEvents = new LinkedHashMap<>();
             event.getProfile().getSystemProperties().put("pastEvents", pastEvents);

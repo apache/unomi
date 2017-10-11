@@ -32,9 +32,9 @@ public class EvaluateProfileAgeAction implements ActionExecutor {
     @Override
     public int execute(Action action, Event event) {
         boolean updated = false;
-        if(event.getProfile().getProperty("birthDate") != null) {
+        if (event.getProfile().getProperty("birthDate") != null) {
             Integer y = Years.yearsBetween(new DateTime(event.getProfile().getProperty("birthDate")), new DateTime()).getYears();
-            if(event.getProfile().getProperty("age") == null || event.getProfile().getProperty("age") != y){
+            if (event.getProfile().getProperty("age") == null || event.getProfile().getProperty("age") != y) {
                 updated = true;
                 event.getProfile().setProperty("age", y);
             }

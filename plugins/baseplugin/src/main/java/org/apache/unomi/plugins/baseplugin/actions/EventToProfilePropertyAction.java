@@ -21,18 +21,11 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.PrivacyService;
 
 /**
  * A action to copy an event property to a profile property
  */
 public class EventToProfilePropertyAction implements ActionExecutor {
-
-    private PrivacyService privacyService;
-
-    public void setPrivacyService(PrivacyService privacyService) {
-        this.privacyService = privacyService;
-    }
 
     public int execute(Action action, Event event) {
         String eventPropertyName = (String) action.getParameterValues().get("eventPropertyName");

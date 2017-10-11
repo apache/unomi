@@ -1,0 +1,18 @@
+{
+  "metadata": {
+    "id": "updateProfilePropertiesAction",
+    "name": "updateProfilePropertiesAction",
+    "description": "Update multiple profile properties",
+    "systemTags": [
+      "profileTags",
+      "demographic",
+      "availableToEndUser",
+      "allowMultipleInstances"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "updateProfileProperties",
+  "parameters": [
+
+  ]
+}

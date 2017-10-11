@@ -18,12 +18,9 @@
 package org.apache.unomi.plugins.baseplugin.actions;
 
 import org.apache.unomi.api.Event;
-import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.PrivacyService;
-import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
 
 import java.text.SimpleDateFormat;
@@ -31,24 +28,13 @@ import java.util.TimeZone;
 
 public class SetPropertyAction implements ActionExecutor {
 
-    private PrivacyService privacyService;
-    private ProfileService profileService;
-
-    public void setPrivacyService(PrivacyService privacyService) {
-        this.privacyService = privacyService;
-    }
-
-    public void setProfileService(ProfileService profileService) {
-        this.profileService = profileService;
-    }
-
     public int execute(Action action, Event event) {
         boolean storeInSession = Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"));
 
         String propertyName = (String) action.getParameterValues().get("setPropertyName");
 
         Object propertyValue = action.getParameterValues().get("setPropertyValue");
-        if(propertyValue == null) {
+        if (propertyValue == null) {
             propertyValue = action.getParameterValues().get("setPropertyValueMultiple");
         }
         Object propertyValueInteger = action.getParameterValues().get("setPropertyValueInteger");
@@ -60,7 +46,7 @@ public class SetPropertyAction implements ActionExecutor {
                 propertyValue = PropertyHelper.getInteger(propertyValueInteger);
             }
             if (setPropertyValueMultiple != null) {
-               propertyValue = setPropertyValueMultiple;
+                propertyValue = setPropertyValueMultiple;
             }
             if (setPropertyValueBoolean != null) {
                 propertyValue = PropertyHelper.getBooleanValue(setPropertyValueBoolean);
