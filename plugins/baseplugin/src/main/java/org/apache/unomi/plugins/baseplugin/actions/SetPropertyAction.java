@@ -24,9 +24,14 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
 
 import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.TimeZone;
 
 public class SetPropertyAction implements ActionExecutor {
+
+    private EventService eventService;
 
     public int execute(Action action, Event event) {
         boolean storeInSession = Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"));
@@ -40,6 +45,9 @@ public class SetPropertyAction implements ActionExecutor {
         Object propertyValueInteger = action.getParameterValues().get("setPropertyValueInteger");
         Object setPropertyValueMultiple = action.getParameterValues().get("setPropertyValueMultiple");
         Object setPropertyValueBoolean = action.getParameterValues().get("setPropertyValueBoolean");
+
+        Event updateProfileProperties = new Event("updateProfileProperties", null, event.getProfile(), null, null, event.getProfile(), new Date());
+        updateProfileProperties.setPersistent(false);
 
         if (propertyValue == null) {
             if (propertyValueInteger != null) {
@@ -58,12 +66,21 @@ public class SetPropertyAction implements ActionExecutor {
             propertyValue = format.format(event.getTimeStamp());
         }
 
-        Object target = storeInSession ? event.getSession() : event.getProfile();
+        Map<String, Object> propertyToUpdate = new HashMap<>();
+        propertyToUpdate.put(propertyName, propertyValue);
 
-        if (PropertyHelper.setProperty(target, propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {
+        updateProfileProperties.setProperty(UpdateProfilePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
+        int changes = eventService.send(updateProfileProperties);
+
+        if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
             return storeInSession ? EventService.SESSION_UPDATED : EventService.PROFILE_UPDATED;
         }
+
         return EventService.NO_CHANGE;
+    }
+
+    public void setEventService(EventService eventService) {
+        this.eventService = eventService;
     }
 
 }

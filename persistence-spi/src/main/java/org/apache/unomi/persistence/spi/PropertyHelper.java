@@ -139,7 +139,7 @@ public class PropertyHelper {
         } else if ("integer".equals(valueTypeId)) {
             return getInteger(propertyValue);
         } else {
-            return propertyValue.toString();
+            return propertyValue;
         }
     }
 

@@ -61,27 +61,35 @@ public class UpdateProfilePropertiesAction implements ActionExecutor {
         boolean isProfileUpdated = false;
 
         Map<String, Object> propsToAdd = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_ADD);
-        for (String prop : propsToAdd.keySet()) {
-            String[] splitPropName = prop.split(Pattern.quote("."));
-            PropertyType propType = profileService.getPropertyType(splitPropName[splitPropName.length - 1]);
-            if (propType != null) {
-                isProfileUpdated |= PropertyHelper.setProperty(target, prop, PropertyHelper.getValueByTypeId(propsToAdd.get(prop), propType.getValueTypeId()), "setIfMissing");
+        if (propsToAdd != null) {
+            for (String prop : propsToAdd.keySet()) {
+                String[] splitPropName = prop.split(Pattern.quote("."));
+                PropertyType propType = profileService.getPropertyType(splitPropName[splitPropName.length - 1]);
+                if (propType != null) {
+                    isProfileUpdated |= PropertyHelper.setProperty(target, prop, PropertyHelper.getValueByTypeId(propsToAdd.get(prop), propType.getValueTypeId()), "setIfMissing");
+                }
             }
         }
+
         Map<String, Object> propsToUpdate = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_UPDATE);
-        for (String prop : propsToUpdate.keySet()) {
-            String[] splitPropName = prop.split(Pattern.quote("."));
-            PropertyType propType = profileService.getPropertyType(splitPropName[splitPropName.length - 1]);
-            if (propType != null) {
-                isProfileUpdated |= PropertyHelper.setProperty(target, prop, PropertyHelper.getValueByTypeId(propsToUpdate.get(prop), propType.getValueTypeId()), "alwaysSet");
+        if (propsToUpdate != null) {
+            for (String prop : propsToUpdate.keySet()) {
+                String[] splitPropName = prop.split(Pattern.quote("."));
+                PropertyType propType = profileService.getPropertyType(splitPropName[splitPropName.length - 1]);
+                if (propType != null) {
+                    isProfileUpdated |= PropertyHelper.setProperty(target, prop, PropertyHelper.getValueByTypeId(propsToUpdate.get(prop), propType.getValueTypeId()), "alwaysSet");
+                }
             }
         }
+
         List<String> propsToDelete = (List<String>) event.getProperties().get(PROPS_TO_DELETE);
-        for (String prop : propsToDelete) {
-            String[] splitPropName = prop.split(Pattern.quote("."));
-            PropertyType propType = profileService.getPropertyType(splitPropName[splitPropName.length - 1]);
-            if (propType != null) {
-                isProfileUpdated |= PropertyHelper.setProperty(target, prop, null, "remove");
+        if (propsToDelete != null) {
+            for (String prop : propsToDelete) {
+                String[] splitPropName = prop.split(Pattern.quote("."));
+                PropertyType propType = profileService.getPropertyType(splitPropName[splitPropName.length - 1]);
+                if (propType != null) {
+                    isProfileUpdated |= PropertyHelper.setProperty(target, prop, null, "remove");
+                }
             }
         }
 

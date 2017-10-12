@@ -165,7 +165,9 @@
         <service-properties>
             <entry key="actionExecutorId" value="setProperty"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.actions.SetPropertyAction"/>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.SetPropertyAction">
+            <property name="eventService" ref="eventService"/>
+        </bean>
     </service>
 
     <service auto-export="interfaces">
