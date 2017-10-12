@@ -39,7 +39,8 @@ import org.junit.runners.Suite.SuiteClasses;
         ProfileImportSurfersDeleteIT.class,
         ProfileImportRankingIT.class,
         ProfileImportActorsIT.class,
-        ProfileExportIT.class
+        ProfileExportIT.class,
+        ProfilePropertiesUpdateActionIT.class
     })
 public class AllITs {
 }

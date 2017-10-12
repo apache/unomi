@@ -40,6 +40,7 @@ public class UpdateProfilePropertiesAction implements ActionExecutor {
     public static final String PROPS_TO_ADD = "propertiesToAdd";
     public static final String PROPS_TO_UPDATE = "propertiesToUpdate";
     public static final String PROPS_TO_DELETE = "propertiesToDelete";
+    public static final String PROFILE_TARGET_ID_KEY = "targetProfileId";
     Logger logger = LoggerFactory.getLogger(UpdateProfilePropertiesAction.class.getName());
 
     private ProfileService profileService;
@@ -49,7 +50,7 @@ public class UpdateProfilePropertiesAction implements ActionExecutor {
 
         Profile target = event.getProfile();
 
-        String targetProfileId = (String) event.getProperty("targetProfileId");
+        String targetProfileId = (String) event.getProperty(PROFILE_TARGET_ID_KEY);
         if (StringUtils.isNotBlank(targetProfileId) && event.getProfile() != null && !targetProfileId.equals(event.getProfile().getItemId())) {
             target = profileService.load(targetProfileId);
             if (target == null) {

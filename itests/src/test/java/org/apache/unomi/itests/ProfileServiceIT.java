@@ -35,7 +35,7 @@ import javax.inject.Inject;
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileServiceIT extends BaseIT {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(SegmentIT.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(ProfileServiceIT.class);
     private final static String TEST_PROFILE_ID = "test-profile-id";
     @Inject
     protected ProfileService profileService;
