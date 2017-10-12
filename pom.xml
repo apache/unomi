@@ -70,7 +70,7 @@
         <version.karaf>3.0.8</version.karaf>
         <version.karaf.cellar>3.0.3</version.karaf.cellar>
         <version.pax.exam>4.11.0</version.pax.exam>
-        <elasticsearch.version>5.2.2</elasticsearch.version>
+        <elasticsearch.version>5.6.3</elasticsearch.version>
 
         <maven.compiler.source>1.7</maven.compiler.source>
         <maven.compiler.target>1.7</maven.compiler.target>

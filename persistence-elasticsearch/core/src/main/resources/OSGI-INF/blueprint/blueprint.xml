@@ -39,7 +39,6 @@
             <cm:property name="monthlyIndex.numberOfReplicas" value="0"/>
             <cm:property name="defaultQueryLimit" value="10"/>
 
-            <cm:property name="bulkProcessor.name" value="unomi-bulk" />
             <cm:property name="bulkProcessor.concurrentRequests" value="1" />
             <cm:property name="bulkProcessor.bulkActions" value="1000" />
             <cm:property name="bulkProcessor.bulkSize" value="5MB" />
@@ -47,7 +46,7 @@
             <cm:property name="bulkProcessor.backoffPolicy" value="exponential" />
 
             <cm:property name="minimalElasticSearchVersion" value="5.0.0" />
-            <cm:property name="maximalElasticSearchVersion" value="5.3.0" />
+            <cm:property name="maximalElasticSearchVersion" value="5.7.0" />
 
             <cm:property name="aggregateQueryBucketSize" value="5000" />
 
@@ -98,7 +97,6 @@
                 <entry key="geonameEntry" value="geonames"/>
             </map>
         </property>
-        <property name="bulkProcessorName" value="${es.bulkProcessor.name}" />
         <property name="bulkProcessorConcurrentRequests" value="${es.bulkProcessor.concurrentRequests}" />
         <property name="bulkProcessorBulkActions" value="${es.bulkProcessor.bulkActions}" />
         <property name="bulkProcessorBulkSize" value="${es.bulkProcessor.bulkSize}" />

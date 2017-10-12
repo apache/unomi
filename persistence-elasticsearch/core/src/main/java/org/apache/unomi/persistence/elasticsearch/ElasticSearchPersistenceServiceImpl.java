@@ -55,7 +55,7 @@ import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
-import org.elasticsearch.index.reindex.BulkIndexByScrollResponse;
+import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.UpdateByQueryAction;
 import org.elasticsearch.index.reindex.UpdateByQueryRequestBuilder;
 import org.elasticsearch.script.Script;
@@ -134,7 +134,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private Timer timer;
 
-    private String bulkProcessorName = "unomi-bulk";
     private String bulkProcessorConcurrentRequests = "1";
     private String bulkProcessorBulkActions = "1000";
     private String bulkProcessorBulkSize = "5MB";
@@ -142,7 +141,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String bulkProcessorBackoffPolicy = "exponential";
 
     private String minimalElasticSearchVersion = "5.0.0";
-    private String maximalElasticSearchVersion = "5.3.0";
+    private String maximalElasticSearchVersion = "5.7.0";
 
     private String aggregateQueryBucketSize = "5000";
 
@@ -209,10 +208,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.conditionESQueryBuilderDispatcher = conditionESQueryBuilderDispatcher;
     }
 
-    public void setBulkProcessorName(String bulkProcessorName) {
-        this.bulkProcessorName = bulkProcessorName;
-    }
-
     public void setBulkProcessorConcurrentRequests(String bulkProcessorConcurrentRequests) {
         this.bulkProcessorConcurrentRequests = bulkProcessorConcurrentRequests;
     }
@@ -254,7 +249,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             public Object execute(Object... args) throws Exception {
                 logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index name " + indexName + "...");
 
-                bulkProcessorName = System.getProperty(BULK_PROCESSOR_NAME, bulkProcessorName);
                 bulkProcessorConcurrentRequests = System.getProperty(BULK_PROCESSOR_CONCURRENT_REQUESTS, bulkProcessorConcurrentRequests);
                 bulkProcessorBulkActions = System.getProperty(BULK_PROCESSOR_BULK_ACTIONS, bulkProcessorBulkActions);
                 bulkProcessorBulkSize = System.getProperty(BULK_PROCESSOR_BULK_SIZE, bulkProcessorBulkSize);
@@ -437,9 +431,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         logger.error("After Bulk (failure)", failure);
                     }
                 });
-        if (bulkProcessorName != null && bulkProcessorName.length() > 0) {
-            bulkProcessorBuilder.setName(bulkProcessorName);
-        }
         if (bulkProcessorConcurrentRequests != null) {
             int concurrentRequests = Integer.parseInt(bulkProcessorConcurrentRequests);
             if (concurrentRequests > 1) {
@@ -787,7 +778,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                         UpdateByQueryRequestBuilder ubqrb = UpdateByQueryAction.INSTANCE.newRequestBuilder(client);
                         ubqrb.source(index).source().setTypes(itemType);
-                        BulkIndexByScrollResponse response = ubqrb.setSlices(2)
+                        BulkByScrollResponse response = ubqrb.setSlices(2)
                                 .setMaxRetries(1000).abortOnVersionConflict(false).script(actualScript)
                                 .filter(conditionESQueryBuilderDispatcher.buildFilter(conditions[i])).get();
                         if (response.getBulkFailures().size() > 0) {
@@ -1067,8 +1058,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             }
                         }
                     }
-                } catch (IOException e) {
-                    throw new Exception("Cannot get mapping", e);
+                } catch (Throwable t) {
+                    throw new Exception("Cannot get mapping for itemType="+ itemType, t);
                 }
                 return propertyMap;
             }

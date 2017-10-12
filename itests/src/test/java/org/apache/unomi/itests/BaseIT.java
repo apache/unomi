@@ -19,7 +19,6 @@ package org.apache.unomi.itests;
 
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.Option;
-import org.ops4j.pax.exam.karaf.options.KarafDistributionConfigurationFileReplacementOption;
 import org.ops4j.pax.exam.karaf.options.LogLevelOption.LogLevel;
 import org.ops4j.pax.exam.options.MavenArtifactUrlReference;
 import org.ops4j.pax.exam.options.MavenUrlReference;
@@ -115,6 +114,8 @@ public abstract class BaseIT {
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.itests.elasticsearch.transport.port").value("9500"),
                 systemProperty("org.apache.unomi.itests.elasticsearch.http.port").value("9400"),
+                systemProperty("unomi.autoStart").value("true"),
+                features(karafPaxWebRepo, "shell"),
                 features(karafPaxWebRepo, "war"),
                 features(karafCxfRepo, "cxf"),
                 features(karafCellarRepo, "cellar"),

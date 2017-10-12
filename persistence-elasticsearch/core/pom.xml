@@ -215,6 +215,8 @@
                             com.fasterxml.jackson.dataformat.xml;resolution:=optional,
                             com.fasterxml.jackson.dataformat.xml.annotation;resolution:=optional,
                             com.fasterxml.jackson.dataformat.xml.util;resolution:=optional,
+                            io.netty.internal.tcnative;resolution:=optional,
+                            org.conscrypt;resolution:=optional,
                             *
                         </Import-Package>
                         <Export-Package>

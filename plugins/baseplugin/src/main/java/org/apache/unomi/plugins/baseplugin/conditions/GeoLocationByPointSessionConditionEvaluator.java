@@ -45,7 +45,7 @@ public class GeoLocationByPointSessionConditionEvaluator implements ConditionEva
                 Double circleLongitude = (Double) condition.getParameter("circleLongitude");
                 DistanceUnit.Distance distance = DistanceUnit.Distance.parseDistance(condition.getParameter("distance").toString());
 
-                double d = GeoDistance.DEFAULT.calculate(circleLatitude, circleLongitude, latitudeProperty, longitudeProperty, distance.unit);
+                double d = GeoDistance.PLANE.calculate(circleLatitude, circleLongitude, latitudeProperty, longitudeProperty, distance.unit);
                 return d < distance.value;
             } else if("rectangle".equals(type)) {
                 Double rectLatitudeNE = (Double) condition.getParameter("rectLatitudeNE");
