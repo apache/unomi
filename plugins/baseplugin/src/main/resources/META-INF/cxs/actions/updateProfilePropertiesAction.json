@@ -5,9 +5,7 @@
     "description": "Update multiple profile properties",
     "systemTags": [
       "profileTags",
-      "demographic",
-      "availableToEndUser",
-      "allowMultipleInstances"
+      "demographic"
     ],
     "readOnly": true
   },

@@ -41,17 +41,21 @@ public class PropertyHelper {
     public static boolean setProperty(Object target, String propertyName, Object propertyValue, String setPropertyStrategy) {
         try {
             String parentPropertyName;
-            if(setPropertyStrategy!=null && setPropertyStrategy.equals("remove")){
-                if(resolver.hasNested(propertyName)) {
+            if (setPropertyStrategy != null && setPropertyStrategy.equals("remove")) {
+                if (resolver.hasNested(propertyName)) {
                     parentPropertyName = propertyName.substring(0, propertyName.lastIndexOf('.'));
-                    try{
+                    try {
                         Object parentPropertyValue = PropertyUtils.getNestedProperty(target, parentPropertyName);
-                        if(parentPropertyValue instanceof HashMap){
-                            ((HashMap)parentPropertyValue).remove(propertyName.substring(propertyName.lastIndexOf('.')+1));
-                            PropertyUtils.setNestedProperty(target, parentPropertyName, parentPropertyValue);
-                            return true;
+                        if (parentPropertyValue instanceof HashMap) {
+                            if (((HashMap) parentPropertyValue).keySet().contains(propertyName.substring(propertyName.lastIndexOf('.') + 1))) {
+                                ((HashMap) parentPropertyValue).remove(propertyName.substring(propertyName.lastIndexOf('.') + 1));
+                                PropertyUtils.setNestedProperty(target, parentPropertyName, parentPropertyValue);
+                                return true;
+                            } else {
+                                return false;
+                            }
                         }
-                    } catch(NestedNullException ex){
+                    } catch (NestedNullException ex) {
                         return false;
                     }
 
@@ -81,7 +85,7 @@ public class PropertyHelper {
                     BeanUtils.setProperty(target, propertyName, values);
                     return true;
                 }
-            } else if (propertyValue != null && !propertyValue.equals(BeanUtils.getProperty(target, propertyName))) {
+            } else if (propertyValue != null && !compareValues(propertyValue, BeanUtils.getProperty(target, propertyName))) {
                 if (setPropertyStrategy == null ||
                         setPropertyStrategy.equals("alwaysSet") ||
                         (setPropertyStrategy.equals("setIfMissing") && BeanUtils.getProperty(target, propertyName) == null)) {
@@ -97,7 +101,7 @@ public class PropertyHelper {
 
     public static Integer getInteger(Object value) {
         if (value instanceof Number) {
-            return ((Number)value).intValue();
+            return ((Number) value).intValue();
         } else {
             try {
                 return Integer.parseInt(value.toString());
@@ -111,31 +115,46 @@ public class PropertyHelper {
     public static Boolean getBooleanValue(Object setPropertyValueBoolean) {
 
         if (setPropertyValueBoolean instanceof Boolean) {
-            return((Boolean)setPropertyValueBoolean);
+            return ((Boolean) setPropertyValueBoolean);
         } else if (setPropertyValueBoolean instanceof Number) {
-            if (((Number)setPropertyValueBoolean).intValue() >= 1) {
-                return  new Boolean(true);
+            if (((Number) setPropertyValueBoolean).intValue() >= 1) {
+                return new Boolean(true);
             } else {
-                return  new Boolean(false);
+                return new Boolean(false);
             }
         } else {
-            if (((String)setPropertyValueBoolean).equalsIgnoreCase("true") || ((String)setPropertyValueBoolean).equalsIgnoreCase("on") ||
-                    ((String)setPropertyValueBoolean).equalsIgnoreCase("yes") || ((String)setPropertyValueBoolean).equalsIgnoreCase("1")) {
-                return  new Boolean(true);
+            if (((String) setPropertyValueBoolean).equalsIgnoreCase("true") || ((String) setPropertyValueBoolean).equalsIgnoreCase("on") ||
+                    ((String) setPropertyValueBoolean).equalsIgnoreCase("yes") || ((String) setPropertyValueBoolean).equalsIgnoreCase("1")) {
+                return new Boolean(true);
             } else {
-                return  new Boolean(false);
+                return new Boolean(false);
             }
         }
 
     }
 
     public static Object getValueByTypeId(Object propertyValue, String valueTypeId) {
-        if(("boolean".equals(valueTypeId)) ) {
+        if (("boolean".equals(valueTypeId))) {
             return getBooleanValue(propertyValue);
-        } else if("integer".equals(valueTypeId)) {
+        } else if ("integer".equals(valueTypeId)) {
             return getInteger(propertyValue);
         } else {
             return propertyValue.toString();
+        }
+    }
+
+    public static boolean compareValues(Object propertyValue, Object beanPropertyValue) {
+        if (propertyValue == null) {
+            return true;
+        } else if (beanPropertyValue == null) {
+            return false;
+        }
+        if (propertyValue instanceof Integer) {
+            return propertyValue.equals(getInteger(beanPropertyValue));
+        } else if (propertyValue instanceof Boolean) {
+            return propertyValue.equals(getBooleanValue(beanPropertyValue));
+        } else {
+            return propertyValue.equals(beanPropertyValue);
         }
     }
 

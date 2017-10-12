@@ -33,6 +33,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class UpdateProfilePropertiesAction implements ActionExecutor {
 
@@ -61,27 +62,31 @@ public class UpdateProfilePropertiesAction implements ActionExecutor {
 
         Map<String, Object> propsToAdd = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_ADD);
         for (String prop : propsToAdd.keySet()) {
-            PropertyType propType = profileService.getPropertyType(prop);
+            String[] splitPropName = prop.split(Pattern.quote("."));
+            PropertyType propType = profileService.getPropertyType(splitPropName[splitPropName.length - 1]);
             if (propType != null) {
-                isProfileUpdated = PropertyHelper.setProperty(target, "properties." + prop, PropertyHelper.getValueByTypeId(propsToAdd.get(prop), propType.getValueTypeId()), "setIfMissing") || isProfileUpdated;
+                isProfileUpdated |= PropertyHelper.setProperty(target, prop, PropertyHelper.getValueByTypeId(propsToAdd.get(prop), propType.getValueTypeId()), "setIfMissing");
             }
         }
         Map<String, Object> propsToUpdate = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_UPDATE);
         for (String prop : propsToUpdate.keySet()) {
-            PropertyType propType = profileService.getPropertyType(prop);
+            String[] splitPropName = prop.split(Pattern.quote("."));
+            PropertyType propType = profileService.getPropertyType(splitPropName[splitPropName.length - 1]);
             if (propType != null) {
-                isProfileUpdated = PropertyHelper.setProperty(target, "properties." + prop, PropertyHelper.getValueByTypeId(propsToUpdate.get(prop), propType.getValueTypeId()), "alwaysSet") || isProfileUpdated;
+                isProfileUpdated |= PropertyHelper.setProperty(target, prop, PropertyHelper.getValueByTypeId(propsToUpdate.get(prop), propType.getValueTypeId()), "alwaysSet");
             }
         }
         List<String> propsToDelete = (List<String>) event.getProperties().get(PROPS_TO_DELETE);
         for (String prop : propsToDelete) {
-            PropertyType propType = profileService.getPropertyType(prop);
+            String[] splitPropName = prop.split(Pattern.quote("."));
+            PropertyType propType = profileService.getPropertyType(splitPropName[splitPropName.length - 1]);
             if (propType != null) {
-                isProfileUpdated = PropertyHelper.setProperty(target, "properties." + prop, null, "remove") || isProfileUpdated;
+                isProfileUpdated |= PropertyHelper.setProperty(target, prop, null, "remove");
             }
         }
 
-        if ((StringUtils.isNotBlank(targetProfileId) || (event.getProfile() != null && StringUtils.isNotBlank(event.getProfile().getItemId()))) && isProfileUpdated) {
+        if (StringUtils.isNotBlank(targetProfileId) && isProfileUpdated &&
+                event.getProfile() != null && !targetProfileId.equals(event.getProfile().getItemId())) {
             profileService.save(target);
             Event profileUpdated = new Event("profileUpdated", null, target, null, null, target, new Date());
             profileUpdated.setPersistent(false);
@@ -89,7 +94,10 @@ public class UpdateProfilePropertiesAction implements ActionExecutor {
             if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
                 profileService.save(target);
             }
+            return EventService.NO_CHANGE;
+
         }
+
         return isProfileUpdated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
 
     }
