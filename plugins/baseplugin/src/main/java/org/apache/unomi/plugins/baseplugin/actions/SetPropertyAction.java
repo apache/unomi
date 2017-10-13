@@ -66,14 +66,24 @@ public class SetPropertyAction implements ActionExecutor {
             propertyValue = format.format(event.getTimeStamp());
         }
 
-        Map<String, Object> propertyToUpdate = new HashMap<>();
-        propertyToUpdate.put(propertyName, propertyValue);
+        if (storeInSession) {
+            // in the case of session storage we directly update the session
+            Object target =  event.getSession();
 
-        updateProfileProperties.setProperty(UpdateProfilePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
-        int changes = eventService.send(updateProfileProperties);
+            if (PropertyHelper.setProperty(target, propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {
+                return EventService.SESSION_UPDATED;
+            }
+        } else {
+            // in the case of profile storage we use the update profile properties event instead.
+            Map<String, Object> propertyToUpdate = new HashMap<>();
+            propertyToUpdate.put(propertyName, propertyValue);
 
-        if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
-            return storeInSession ? EventService.SESSION_UPDATED : EventService.PROFILE_UPDATED;
+            updateProfileProperties.setProperty(UpdateProfilePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
+            int changes = eventService.send(updateProfileProperties);
+
+            if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
+                return EventService.PROFILE_UPDATED;
+            }
         }
 
         return EventService.NO_CHANGE;
