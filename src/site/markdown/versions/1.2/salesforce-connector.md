@@ -76,7 +76,16 @@ change the following settings:
     in the etc/users.properties file.
     
 9. You can now use the connector's defined actions in rules to push or pull data to/from the Salesforce CRM. You can 
-    find more information about rules in the [Concepts](concepts.html) and the [Getting Started](getting-started.html) pages. 
+    find more information about rules in the [Concepts](concepts.html) and the [Getting Started](getting-started.html) pages.
+    
+## Troubleshooting
+
+In case you're having problem retrieving or sending data to Salesforce, make sure you check the logs (log:display from the
+Karaf shell) or in the data/log/karaf.log file. It should usually tell you what went wrong.
+
+Common problems include trying to send profiles that don't include mandatory fields in Salesforce. By default the
+mandatory fields are : Last name, Company and Email. If you are missing some mandatory fields, the connector will not 
+pushed any new leads to Salesforce.     
     
 ## Upgrading the Salesforce connector
 
