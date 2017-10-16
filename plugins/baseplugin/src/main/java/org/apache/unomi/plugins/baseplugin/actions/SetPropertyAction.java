@@ -46,7 +46,7 @@ public class SetPropertyAction implements ActionExecutor {
         Object setPropertyValueMultiple = action.getParameterValues().get("setPropertyValueMultiple");
         Object setPropertyValueBoolean = action.getParameterValues().get("setPropertyValueBoolean");
 
-        Event updateProfileProperties = new Event("updateProfileProperties", null, event.getProfile(), null, null, event.getProfile(), new Date());
+        Event updateProfileProperties = new Event("updateProfileProperties", event.getSession(), event.getProfile(), event.getScope(), null, event.getProfile(), new Date());
         updateProfileProperties.setPersistent(false);
 
         if (propertyValue == null) {

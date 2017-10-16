@@ -33,7 +33,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 public class UpdateProfilePropertiesAction implements ActionExecutor {
 
@@ -64,10 +63,14 @@ public class UpdateProfilePropertiesAction implements ActionExecutor {
         Map<String, Object> propsToAdd = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_ADD);
         if (propsToAdd != null) {
             for (String prop : propsToAdd.keySet()) {
-                String[] splitPropName = prop.split(Pattern.quote("."));
-                PropertyType propType = profileService.getPropertyType(splitPropName[splitPropName.length - 1]);
+                PropertyType propType = null;
+                if (prop.startsWith("properties.")) {
+                    propType = profileService.getPropertyType(prop.substring("properties.".length()));
+                }
                 if (propType != null) {
                     isProfileUpdated |= PropertyHelper.setProperty(target, prop, PropertyHelper.getValueByTypeId(propsToAdd.get(prop), propType.getValueTypeId()), "setIfMissing");
+                } else {
+                    isProfileUpdated |= PropertyHelper.setProperty(target, prop, propsToAdd.get(prop), "setIfMissing");
                 }
             }
         }
@@ -75,10 +78,14 @@ public class UpdateProfilePropertiesAction implements ActionExecutor {
         Map<String, Object> propsToUpdate = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_UPDATE);
         if (propsToUpdate != null) {
             for (String prop : propsToUpdate.keySet()) {
-                String[] splitPropName = prop.split(Pattern.quote("."));
-                PropertyType propType = profileService.getPropertyType(splitPropName[splitPropName.length - 1]);
+                PropertyType propType = null;
+                if (prop.startsWith("properties.")) {
+                    propType = profileService.getPropertyType(prop.substring("properties.".length()));
+                }
                 if (propType != null) {
                     isProfileUpdated |= PropertyHelper.setProperty(target, prop, PropertyHelper.getValueByTypeId(propsToUpdate.get(prop), propType.getValueTypeId()), "alwaysSet");
+                } else {
+                    isProfileUpdated |= PropertyHelper.setProperty(target, prop, propsToUpdate.get(prop), "alwaysSet");
                 }
             }
         }
@@ -86,11 +93,7 @@ public class UpdateProfilePropertiesAction implements ActionExecutor {
         List<String> propsToDelete = (List<String>) event.getProperties().get(PROPS_TO_DELETE);
         if (propsToDelete != null) {
             for (String prop : propsToDelete) {
-                String[] splitPropName = prop.split(Pattern.quote("."));
-                PropertyType propType = profileService.getPropertyType(splitPropName[splitPropName.length - 1]);
-                if (propType != null) {
-                    isProfileUpdated |= PropertyHelper.setProperty(target, prop, null, "remove");
-                }
+                isProfileUpdated |= PropertyHelper.setProperty(target, prop, null, "remove");
             }
         }
 
