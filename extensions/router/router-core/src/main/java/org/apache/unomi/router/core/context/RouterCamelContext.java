@@ -25,6 +25,7 @@ import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ExportConfiguration;
+import org.apache.unomi.router.api.IRouterCamelContext;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
@@ -43,12 +44,11 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by amidani on 04/05/2017.
  */
-public class RouterCamelContext implements SynchronousBundleListener {
+public class RouterCamelContext implements SynchronousBundleListener, IRouterCamelContext {
 
     private Logger logger = LoggerFactory.getLogger(RouterCamelContext.class.getName());
     private CamelContext camelContext;
@@ -155,24 +155,22 @@ public class RouterCamelContext implements SynchronousBundleListener {
             }
         }
         bundleContext.addBundleListener(this);
+
+        importConfigurationService.setRouterCamelContext(this);
+        exportConfigurationService.setRouterCamelContext(this);
+
         logger.info("Camel Context {} initialized successfully.");
 
-    }
-
-    private boolean stopRoute(String routeId) throws Exception {
-        return camelContext.stopRoute(routeId, 10L, TimeUnit.SECONDS, true);
     }
 
     public void killExistingRoute(String routeId) throws Exception {
         //Active routes
         Route route = camelContext.getRoute(routeId);
-        if (route != null && stopRoute(routeId)) {
-            camelContext.removeRoute(routeId);
-        }
-        //Inactive routes
-        RouteDefinition routeDefinition = camelContext.getRouteDefinition(routeId);
-        if (routeDefinition != null) {
-            camelContext.removeRouteDefinition(routeDefinition);
+        if (route != null) {
+            RouteDefinition routeDefinition = camelContext.getRouteDefinition(routeId);
+            if (routeDefinition != null) {
+                camelContext.removeRouteDefinition(routeDefinition);
+            }
         }
     }
 

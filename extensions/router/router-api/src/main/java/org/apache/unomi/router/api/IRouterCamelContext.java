@@ -14,30 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.router.core.processor;
-
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
-import org.apache.camel.Processor;
-import org.apache.unomi.router.core.context.RouterCamelContext;
+package org.apache.unomi.router.api;
 
 /**
- * Created by amidani on 03/10/2017.
+ * Created by amidani on 18/10/2017.
  */
-public class ConfigDeleteProcessor implements Processor {
+public interface IRouterCamelContext {
 
-    private RouterCamelContext routerCamelContext;
+    void killExistingRoute(String routeId) throws Exception;
 
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        if (exchange.getIn() != null) {
-            Message message = exchange.getIn();
-            String routeId = message.getHeader("id", String.class);
-            routerCamelContext.killExistingRoute(routeId);
-        }
-    }
-
-    public void setRouterCamelContext(RouterCamelContext routerCamelContext) {
-        this.routerCamelContext = routerCamelContext;
-    }
+    void updateProfileReaderRoute(Object configuration) throws Exception;
 }

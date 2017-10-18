@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.router.services;
 
+import org.apache.unomi.router.api.IRouterCamelContext;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.slf4j.Logger;
@@ -50,12 +51,29 @@ public class ImportConfigurationServiceImpl extends AbstractConfigurationService
         if (importConfiguration.getItemId() == null) {
             importConfiguration.setItemId(UUID.randomUUID().toString());
         }
+
+        try {
+            routerCamelContext.updateProfileReaderRoute(importConfiguration);
+        } catch (Exception e) {
+            logger.error("Error when trying to save/update running Apache Camel Route: {}", importConfiguration.getItemId());
+        }
+
         persistenceService.save(importConfiguration);
         return persistenceService.load(importConfiguration.getItemId(), ImportConfiguration.class);
     }
 
     @Override
     public void delete(String configId) {
+        try {
+            routerCamelContext.killExistingRoute(configId);
+        } catch (Exception e) {
+            logger.error("Error when trying to delete running Apache Camel Route: {}", configId);
+        }
         persistenceService.remove(configId, ImportConfiguration.class);
+    }
+
+    @Override
+    public void setRouterCamelContext(IRouterCamelContext routerCamelContext) {
+        super.setRouterCamelContext(routerCamelContext);
     }
 }

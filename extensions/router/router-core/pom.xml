@@ -88,12 +88,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.camel</groupId>
-            <artifactId>camel-servlet</artifactId>
-            <version>${camel.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.camel</groupId>
             <artifactId>camel-ftp</artifactId>
             <version>${camel.version}</version>
         </dependency>

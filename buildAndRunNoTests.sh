@@ -40,7 +40,7 @@ if [ -f "../../allCountries.zip" ]; then
   cp ../../allCountries.zip unomi-$UNOMI_VERSION/etc
 fi
 cd unomi-$UNOMI_VERSION/bin
-echo Starting Unomi...
+echo echo Apache Unomi features installed, use [unomi:start] to start it.
 ./karaf debug
 popd
 

@@ -61,7 +61,7 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public abstract T saveConfiguration(T configuration, @Context MessageContext context) throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException;
+    public abstract T saveConfiguration(T configuration);
 
     /**
      * Retrieves a configuration by id.
@@ -86,6 +86,6 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
     @Path("/{configId}")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public abstract void deleteConfiguration(@PathParam("configId") String configId, @Context MessageContext context);
+    public abstract void deleteConfiguration(@PathParam("configId") String configId);
 
 }

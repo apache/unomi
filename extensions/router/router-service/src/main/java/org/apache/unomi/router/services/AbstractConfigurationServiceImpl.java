@@ -17,6 +17,7 @@
 package org.apache.unomi.router.services;
 
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.router.api.IRouterCamelContext;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -27,12 +28,13 @@ import org.slf4j.LoggerFactory;
 /**
  * Created by amidani on 26/06/2017.
  */
-public class AbstractConfigurationServiceImpl implements SynchronousBundleListener {
+public abstract class AbstractConfigurationServiceImpl implements SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractConfigurationServiceImpl.class.getName());
 
     protected BundleContext bundleContext;
     protected PersistenceService persistenceService;
+    protected IRouterCamelContext routerCamelContext;
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -40,6 +42,10 @@ public class AbstractConfigurationServiceImpl implements SynchronousBundleListen
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
+    }
+
+    public void setRouterCamelContext(IRouterCamelContext routerCamelContext) {
+        this.routerCamelContext = routerCamelContext;
     }
 
     public void postConstruct() {

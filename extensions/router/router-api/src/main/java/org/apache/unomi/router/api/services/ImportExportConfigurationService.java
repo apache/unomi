@@ -17,6 +17,7 @@
 package org.apache.unomi.router.api.services;
 
 import org.apache.unomi.router.api.ExportConfiguration;
+import org.apache.unomi.router.api.IRouterCamelContext;
 import org.apache.unomi.router.api.ImportConfiguration;
 
 import java.util.List;
@@ -31,7 +32,7 @@ public interface ImportExportConfigurationService<T> {
      *
      * @return the list of import/export configurations
      */
-    public List<T> getAll();
+    List<T> getAll();
 
     /**
      * Retrieves the import/export configuration identified by the specified identifier.
@@ -40,7 +41,7 @@ public interface ImportExportConfigurationService<T> {
      * @return the import/export configuration identified by the specified identifier or
      * {@code null} if no such import/export configuration exists
      */
-    public T load(String configId);
+    T load(String configId);
 
     /**
      * Saves the specified import/export configuration in the context server.
@@ -48,14 +49,21 @@ public interface ImportExportConfigurationService<T> {
      * @param configuration the import/export configuration to be saved
      * @return the newly saved import/export configuration
      */
-    public T save(T configuration);
+    T save(T configuration);
 
     /**
      * Deletes the import/export configuration identified by the specified identifier.
      *
      * @param configId the identifier of the import/export configuration to delete
      */
-    public void delete(String configId);
+    void delete(String configId);
+
+    /**
+     * Set the router camel context to share
+     *
+     * @param routerCamelContext
+     */
+    void setRouterCamelContext(IRouterCamelContext routerCamelContext);
 
 
 }

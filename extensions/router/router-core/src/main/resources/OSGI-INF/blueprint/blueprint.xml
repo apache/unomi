@@ -80,16 +80,6 @@
         <property name="library" value="Jackson"/>
     </bean>
 
-    <bean class="org.apache.camel.component.servlet.osgi.OsgiServletRegisterer"
-          init-method="register"
-          destroy-method="unregister">
-        <property name="alias" value="/configUpdate"/>
-        <property name="httpService" ref="httpService"/>
-        <property name="servlet" ref="camelServlet"/>
-    </bean>
-
-    <bean id="camelServlet" class="org.apache.camel.component.servlet.CamelHttpTransportServlet"/>
-
 
     <bean id="camelContext" class="org.apache.unomi.router.core.context.RouterCamelContext"
           init-method="initCamelContext" destroy-method="preDestroy">
@@ -124,20 +114,11 @@
         <property name="profileService" ref="profileService"/>
     </bean>
 
-    <camel:camelContext id="httpEndpoint" xmlns="http://camel.apache.org/schema/blueprint">
-        <camel:routeBuilder ref="configUpdateRouteBuilder" />
-    </camel:camelContext>
-
-    <bean id="configUpdateRouteBuilder" class="org.apache.unomi.router.core.route.ConfigUpdateRouteBuilder">
-        <property name="routerCamelContext" ref="camelContext"/>
-    </bean>
-
     <bean id="collectProfileBean" class="org.apache.unomi.router.core.bean.CollectProfileBean">
         <property name="persistenceService" ref="persistenceService"/>
     </bean>
 
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />
-    <reference id="httpService" interface="org.osgi.service.http.HttpService"/>
     <reference id="profileImportService" interface="org.apache.unomi.router.api.services.ProfileImportService"/>
     <reference id="profileExportService" interface="org.apache.unomi.router.api.services.ProfileExportService"/>
     <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
