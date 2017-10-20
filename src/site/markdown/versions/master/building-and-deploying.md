@@ -56,7 +56,7 @@ Installing an ElasticSearch server
 Starting with version 1.2, Apache Unomi no longer embeds an ElasticSearch server as this is no longer supported by 
 the developers of ElasticSearch. Therefore you will need to install a standalone ElasticSearch using the following steps:
 
-1. Download an ElasticSearch 5.x version (5.1.1 or more recent, but not 6.x). Here's the version you will need depending
+1. Download an ElasticSearch version. Here's the version you will need depending
 on your version of Apache Unomi.
 
     Apache Unomi <= 1.2 : [https://www.elastic.co/downloads/past-releases/elasticsearch-5-1-2](https://www.elastic.co/downloads/past-releases/elasticsearch-5-1-2)    

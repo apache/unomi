@@ -56,18 +56,26 @@ Installing an ElasticSearch server
 Starting with version 1.2, Apache Unomi no longer embeds an ElasticSearch server as this is no longer supported by 
 the developers of ElasticSearch. Therefore you will need to install a standalone ElasticSearch using the following steps:
 
-1. Download an ElasticSearch 5.x version (5.1.1 or more recent, but not 6.x) from the following site:
+1. Download an ElasticSearch version. Here's the version you will need depending
+on your version of Apache Unomi.
 
-    https://www.elastic.co/downloads/elasticsearch
+    Apache Unomi <= 1.2 : [https://www.elastic.co/downloads/past-releases/elasticsearch-5-1-2](https://www.elastic.co/downloads/past-releases/elasticsearch-5-1-2)    
+    Apache Unomi >= 1.3 : [https://www.elastic.co/downloads/past-releases/elasticsearch-5-6-3](https://www.elastic.co/downloads/past-releases/elasticsearch-5-6-3)
+        
+2. Uncompress the downloaded package into a directory
+
+3. In the config/elasticsearch.yml file, uncomment and modify the following line :
+
+        cluster.name: contextElasticSearch
     
-2. Uncompress the downloaded package into a directory and launch the server using
+4. Launch the server using
 
-    bin/elasticsearch (Mac, Linux)
-    bin\elasticsearch.bat (Windows)
-    
-3. Check that the ElasticSearch is up and running by accessing the following URL : 
+        bin/elasticsearch (Mac, Linux)
+        bin\elasticsearch.bat (Windows)
 
-    http://localhost:9200    
+5. Check that the ElasticSearch is up and running by accessing the following URL : 
+
+    [http://localhost:9200](http://localhost:9200)    
 
 Deploying the generated binary package
 --------------------------------------
