@@ -19,6 +19,7 @@ package org.apache.unomi.router.core.route;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
+import org.apache.camel.ShutdownRunningTask;
 import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.camel.model.ProcessorDefinition;
 import org.apache.commons.lang3.StringUtils;
@@ -94,6 +95,7 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                     ProcessorDefinition prDef = from(endpoint)
                             .routeId(importConfiguration.getItemId())// This allow identification of the route for manual start/stop
                             .autoStartup(importConfiguration.isActive())// Auto-start if the import configuration is set active
+                            .shutdownRunningTask(ShutdownRunningTask.CompleteAllTasks)
                             .onCompletion()
                             // this route is only invoked when the original route is complete as a kind
                             // of completion callback
@@ -104,7 +106,7 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                                 @Override
                                 public void process(Exchange exchange) throws Exception {
                                     importConfiguration.setStatus(RouterConstants.CONFIG_STATUS_RUNNING);
-                                    importConfigurationService.save(importConfiguration);
+                                    importConfigurationService.save(importConfiguration, false);
                                 }
                             })
                             .split(bodyAs(String.class).tokenize(importConfiguration.getLineSeparator()))

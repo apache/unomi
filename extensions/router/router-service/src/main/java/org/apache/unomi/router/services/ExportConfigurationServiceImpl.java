@@ -47,14 +47,16 @@ public class ExportConfigurationServiceImpl extends AbstractConfigurationService
     }
 
     @Override
-    public ExportConfiguration save(ExportConfiguration exportConfiguration) {
+    public ExportConfiguration save(ExportConfiguration exportConfiguration, boolean updateRunningRoute) {
         if (exportConfiguration.getItemId() == null) {
             exportConfiguration.setItemId(UUID.randomUUID().toString());
         }
-        try {
-            routerCamelContext.updateProfileReaderRoute(exportConfiguration);
-        } catch (Exception e) {
-            logger.error("Error when trying to save/update running Apache Camel Route: {}", exportConfiguration.getItemId());
+        if(updateRunningRoute) {
+            try {
+                routerCamelContext.updateProfileReaderRoute(exportConfiguration);
+            } catch (Exception e) {
+                logger.error("Error when trying to save/update running Apache Camel Route: {}", exportConfiguration.getItemId());
+            }
         }
         persistenceService.save(exportConfiguration);
         return persistenceService.load(exportConfiguration.getItemId(), ExportConfiguration.class);

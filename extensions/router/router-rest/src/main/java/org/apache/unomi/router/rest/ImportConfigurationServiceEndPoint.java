@@ -70,7 +70,7 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
     @Override
     public ImportConfiguration saveConfiguration(ImportConfiguration importConfiguration) {
 
-        ImportConfiguration importConfigSaved = configurationService.save(importConfiguration);
+        ImportConfiguration importConfigSaved = configurationService.save(importConfiguration, true);
 
         return importConfigSaved;
     }

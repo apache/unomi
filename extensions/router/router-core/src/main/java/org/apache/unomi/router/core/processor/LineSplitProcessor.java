@@ -113,7 +113,8 @@ public class LineSplitProcessor implements Processor {
 
                 if (profileData.length > fieldsMapping.get(fieldMappingKey)) {
                     try {
-                        if (propertyType.getValueTypeId().equals("string") || propertyType.getValueTypeId().equals("email")) {
+                        if (propertyType.getValueTypeId().equals("string") || propertyType.getValueTypeId().equals("email") ||
+                                propertyType.getValueTypeId().equals("date")) {
                             if (BooleanUtils.isTrue(propertyType.isMultivalued())) {
                                 String multivalueArray = profileData[fieldsMapping.get(fieldMappingKey)].trim();
                                 if (StringUtils.isNotBlank(multiValueDelimiter) && multiValueDelimiter.length() == 2) {

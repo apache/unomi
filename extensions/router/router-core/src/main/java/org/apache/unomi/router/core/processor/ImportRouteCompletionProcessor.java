@@ -85,7 +85,7 @@ public class ImportRouteCompletionProcessor implements Processor {
         } else if (failureCount == 0 && successCount > 0) {
             importConfiguration.setStatus(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS);
         }
-        importConfigurationService.save(importConfiguration);
+        importConfigurationService.save(importConfiguration, false);
         logger.info("Processing route {} completed. completion date: {}.", exchange.getFromRouteId(), new Date());
     }
 

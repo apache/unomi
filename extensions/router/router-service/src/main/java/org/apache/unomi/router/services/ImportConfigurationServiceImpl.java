@@ -47,17 +47,17 @@ public class ImportConfigurationServiceImpl extends AbstractConfigurationService
     }
 
     @Override
-    public ImportConfiguration save(ImportConfiguration importConfiguration) {
+    public ImportConfiguration save(ImportConfiguration importConfiguration, boolean updateRunningRoute) {
         if (importConfiguration.getItemId() == null) {
             importConfiguration.setItemId(UUID.randomUUID().toString());
         }
-
-        try {
-            routerCamelContext.updateProfileReaderRoute(importConfiguration);
-        } catch (Exception e) {
-            logger.error("Error when trying to save/update running Apache Camel Route: {}", importConfiguration.getItemId());
+        if(updateRunningRoute) {
+            try {
+                routerCamelContext.updateProfileReaderRoute(importConfiguration);
+            } catch (Exception e) {
+                logger.error("Error when trying to save/update running Apache Camel Route: {}", importConfiguration.getItemId());
+            }
         }
-
         persistenceService.save(importConfiguration);
         return persistenceService.load(importConfiguration.getItemId(), ImportConfiguration.class);
     }

@@ -49,7 +49,7 @@ public interface ImportExportConfigurationService<T> {
      * @param configuration the import/export configuration to be saved
      * @return the newly saved import/export configuration
      */
-    T save(T configuration);
+    T save(T configuration, boolean updateRunningRoute);
 
     /**
      * Deletes the import/export configuration identified by the specified identifier.

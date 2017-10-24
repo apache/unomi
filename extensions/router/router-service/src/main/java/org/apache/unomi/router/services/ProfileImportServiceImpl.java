@@ -75,7 +75,7 @@ public class ProfileImportServiceImpl extends AbstractCustomServiceImpl implemen
                 return false;
             }
         } else {
-            logger.error("Merging property '{}' has no value in the current profile.");
+            logger.error("Merging property '{}' has no value in the current profile.", profileToImport.getMergingProperty());
             return false;
         }
     }

@@ -51,7 +51,7 @@ public class ExportRouteCompletionProcessor implements Processor {
         exportConfiguration = (ExportConfiguration) RouterUtils.addExecutionEntry(exportConfiguration, execution, executionsHistorySize);
         exportConfiguration.setStatus(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS);
 
-        exportConfigurationService.save(exportConfiguration);
+        exportConfigurationService.save(exportConfiguration, false);
 
         logger.info("Processing route {} completed.", exchange.getFromRouteId());
     }

@@ -79,7 +79,7 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
      */
     @Override
     public ExportConfiguration saveConfiguration(ExportConfiguration exportConfiguration) {
-        ExportConfiguration exportConfigSaved = configurationService.save(exportConfiguration);
+        ExportConfiguration exportConfigSaved = configurationService.save(exportConfiguration, true);
 
         return exportConfigSaved;
     }
