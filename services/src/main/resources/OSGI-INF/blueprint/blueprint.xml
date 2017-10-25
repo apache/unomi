@@ -82,6 +82,7 @@
                 <value>sessionReassigned</value>
                 <value>profileUpdated</value>
                 <value>ruleFired</value>
+                <value>updateProfileProperties</value>
             </set>
         </property>
         <property name="thirdPartyConfiguration">
