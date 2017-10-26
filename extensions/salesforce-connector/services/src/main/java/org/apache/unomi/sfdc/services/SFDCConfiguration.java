@@ -51,8 +51,9 @@ public class SFDCConfiguration extends Item {
     private String unomiIdentifierField;
     private String sfdcIdentifierField;
 
-    public SFDCConfiguration() {
-    }
+    private boolean sfdcCheckIfContactExistBeforeLeadCreation;
+
+    public SFDCConfiguration() { }
 
     public String getSfdcLoginEndpoint() {
         return sfdcLoginEndpoint;
@@ -114,18 +115,6 @@ public class SFDCConfiguration extends Item {
         return sfdcFieldMappings;
     }
 
-    public String getSfdcFieldMappingsIdentifier() {
-        return sfdcFieldMappingsIdentifier;
-    }
-
-    public long getSfdcSessionTimeout() {
-        return sfdcSessionTimeout;
-    }
-
-    public void setSfdcSessionTimeout(long sfdcSessionTimeout) {
-        this.sfdcSessionTimeout = sfdcSessionTimeout;
-    }
-
     public void setSfdcFieldMappings(String sfdcFieldMappings) {
         this.sfdcFieldMappings = sfdcFieldMappings;
         String[] mappings = sfdcFieldMappings.split(",");
@@ -147,6 +136,22 @@ public class SFDCConfiguration extends Item {
             unomiIdentifierField = sfdcFieldMappingsIdentifierParts[0];
             sfdcIdentifierField = sfdcFieldMappingsIdentifierParts[1];
         }
+    }
+
+    public long getSfdcSessionTimeout() {
+        return sfdcSessionTimeout;
+    }
+
+    public void setSfdcSessionTimeout(long sfdcSessionTimeout) {
+        this.sfdcSessionTimeout = sfdcSessionTimeout;
+    }
+
+    public boolean isSfdcCheckIfContactExistBeforeLeadCreation() {
+        return sfdcCheckIfContactExistBeforeLeadCreation;
+    }
+
+    public void setSfdcCheckIfContactExistBeforeLeadCreation(boolean sfdcCheckIfContactExistBeforeLeadCreation) {
+        this.sfdcCheckIfContactExistBeforeLeadCreation = sfdcCheckIfContactExistBeforeLeadCreation;
     }
 
     public Map<String, String> getUnomiToSfdcFieldMappings() {

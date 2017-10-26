@@ -34,6 +34,7 @@
             <cm:property name="sfdc.fields.mappings.identifier" value=""/>
             <cm:property name="sfdc.fields.mappings" value=""/>
             <cm:property name="sfdc.session.timeout" value="900000"/>
+            <cm:property name="sfdc.checkIfContactExistBeforeLeadCreation" value="false"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -52,6 +53,8 @@
         <property name="sfdcFieldMappings" value="${sfdc.fields.mappings}"/>
         <property name="sfdcFieldMappingsIdentifier" value="${sfdc.fields.mappings.identifier}"/>
         <property name="sfdcSessionTimeout" value="${sfdc.session.timeout}" />
+        <property name="sfdcCheckIfContactExistBeforeLeadCreation"
+                  value="${sfdc.checkIfContactExistBeforeLeadCreation}"/>
     </bean>
 
     <bean id="sfdcServiceImpl" class="org.apache.unomi.sfdc.services.internal.SFDCServiceImpl" init-method="start"
