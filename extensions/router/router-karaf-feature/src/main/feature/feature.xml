@@ -27,7 +27,6 @@
         <bundle start-level="90">mvn:org.apache.camel/camel-blueprint/2.19.1</bundle>
         <bundle start-level="90">mvn:org.apache.camel/camel-jackson/2.19.1</bundle>
         <bundle start-level="90">mvn:org.apache.camel/camel-http-common/2.19.1</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-servlet/2.19.1</bundle>
         <bundle start-level="90">mvn:org.apache.camel/camel-ftp/2.19.1</bundle>
         <bundle start-level="90">mvn:org.apache.camel/camel-stream/2.19.1</bundle>
         <bundle start-level="90">mvn:org.apache.camel/camel-kafka/2.19.1</bundle>

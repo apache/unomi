@@ -37,7 +37,6 @@ public class ImportExportConfiguration extends Item {
     private String multiValueSeparator = ";";
     private String multiValueDelimiter = "";
     private boolean active;
-    private boolean delayedUpdate;
     private String status;
 
     private List<Map<String, Object>> executions = new ArrayList();
@@ -132,25 +131,6 @@ public class ImportExportConfiguration extends Item {
     public void setActive(boolean active) {
         this.active = active;
     }
-
-    /**
-     * Retrieves the import configuration delayedUpdate flag.
-     *
-     * @return true if the running import configuration update was delayed (Running config when trying to update)
-     */
-    public boolean isDelayedUpdate() {
-        return this.delayedUpdate;
-    }
-
-    /**
-     * Sets the delayedUpdate flag true/false.
-     *
-     * @param delayedUpdate a boolean to set to delay or not the running import configuration update
-     */
-    public void setDelayedUpdate(boolean delayedUpdate) {
-        this.delayedUpdate = delayedUpdate;
-    }
-
 
     /**
      * Retrieves the import configuration status for last execution.

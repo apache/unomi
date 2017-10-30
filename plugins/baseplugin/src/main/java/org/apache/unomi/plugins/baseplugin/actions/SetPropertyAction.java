@@ -46,8 +46,8 @@ public class SetPropertyAction implements ActionExecutor {
         Object setPropertyValueMultiple = action.getParameterValues().get("setPropertyValueMultiple");
         Object setPropertyValueBoolean = action.getParameterValues().get("setPropertyValueBoolean");
 
-        Event updateProfileProperties = new Event("updateProfileProperties", event.getSession(), event.getProfile(), event.getScope(), null, event.getProfile(), new Date());
-        updateProfileProperties.setPersistent(false);
+        Event updateProperties = new Event("updateProperties", event.getSession(), event.getProfile(), event.getScope(), null, event.getProfile(), new Date());
+        updateProperties.setPersistent(false);
 
         if (propertyValue == null) {
             if (propertyValueInteger != null) {
@@ -78,8 +78,8 @@ public class SetPropertyAction implements ActionExecutor {
             Map<String, Object> propertyToUpdate = new HashMap<>();
             propertyToUpdate.put(propertyName, propertyValue);
 
-            updateProfileProperties.setProperty(UpdateProfilePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
-            int changes = eventService.send(updateProfileProperties);
+            updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
+            int changes = eventService.send(updateProperties);
 
             if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
                 return EventService.PROFILE_UPDATED;

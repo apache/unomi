@@ -1,0 +1,23 @@
+{
+  "metadata" : {
+    "id": "updateProperties",
+    "name": "Update profile/persona properties",
+    "description" : "Update profile/persona properties",
+    "readOnly":true
+  },
+
+  "condition" : {
+    "type": "updatePropertiesEventCondition",
+    "parameterValues": {
+    }
+  },
+
+  "actions" : [
+    {
+      "type": "updatePropertiesAction",
+      "parameterValues": {
+      }
+    }
+  ]
+
+}

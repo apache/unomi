@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "id": "updateProfilePropertiesEventCondition",
-    "name": "updateProfilePropertiesEventCondition",
+    "id": "updatePropertiesEventCondition",
+    "name": "updatePropertiesEventCondition",
     "description": "",
     "systemTags": [
       "profileTags",
@@ -14,7 +14,7 @@
   "parentCondition": {
     "type": "eventTypeCondition",
     "parameterValues": {
-      "eventTypeId": "updateProfileProperties"
+      "eventTypeId": "updateProperties"
     }
   },
 
