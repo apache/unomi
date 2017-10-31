@@ -21,6 +21,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.RulesService;
 
 import java.io.Serializable;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -49,6 +50,8 @@ public class ContextResponse implements Serializable {
     private Set<Condition> trackedConditions;
 
     private boolean anonymousBrowsing;
+
+    private Map<String, Consent> consents = new LinkedHashMap<>();
 
     /**
      * Retrieves the profile identifier associated with the profile of the user on behalf of which the client performed the context request.
@@ -202,5 +205,25 @@ public class ContextResponse implements Serializable {
      */
     public void setAnonymousBrowsing(boolean anonymousBrowsing) {
         this.anonymousBrowsing = anonymousBrowsing;
+    }
+
+    /**
+     * Retrieves the map of consents for the current profile.
+     * @return a Map where the key is the name of the consent identifier, and the value is a consent object that
+     * contains all the consent data such as whether the consent was granted or deny, the date of granting/denying
+     * the date at which the consent will be revoked automatically.
+     */
+    public Map<String, Consent> getConsents() {
+        return consents;
+    }
+
+    /**
+     * Sets the map of consents for the current profile.
+     * @param consents a Map where the key is the name of the consent identifier, and the value is a consent object that
+     * contains all the consent data such as whether the consent was granted or deny, the date of granting/denying
+     * the date at which the consent will be revoked automatically.
+     */
+    public void setConsents(Map<String, Consent> consents) {
+        this.consents = consents;
     }
 }

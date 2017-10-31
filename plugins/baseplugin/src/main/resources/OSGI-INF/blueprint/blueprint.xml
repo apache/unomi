@@ -182,6 +182,14 @@
 
     <service auto-export="interfaces">
         <service-properties>
+            <entry key="actionExecutorId" value="modifyConsents"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.ModifyConsentsAction">
+        </bean>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
             <entry key="actionExecutorId" value="evaluateProfileSegments"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.EvaluateProfileSegmentsAction">

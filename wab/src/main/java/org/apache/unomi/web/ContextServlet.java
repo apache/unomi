@@ -373,6 +373,7 @@ public class ContextServlet extends HttpServlet {
         }
 
         data.setAnonymousBrowsing(privacyService.isRequireAnonymousBrowsing(profile.getItemId()));
+        data.setConsents(profile.getConsents());
 
         return changes;
     }
