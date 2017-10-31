@@ -112,20 +112,7 @@ public class ProfileExportIT extends BaseIT {
         exportConfiguration.getProperties().put("destination", "file://" + exportDir.getAbsolutePath() + "?fileName=profiles-actors-export.csv");
         exportConfiguration.setActive(true);
 
-        ExportConfiguration savedExportConfig = exportConfigurationService.save(exportConfiguration, true);
-
-        CloseableHttpClient httpclient = HttpClients.createDefault();
-        HttpPut httpPut = new HttpPut(URL + "/configUpdate/exportConfigAdmin");
-
-        String json = new ObjectMapper().writeValueAsString(savedExportConfig);
-        StringEntity entity = new StringEntity(json);
-        entity.setContentType(MediaType.APPLICATION_JSON);
-        httpPut.setEntity(entity);
-
-        HttpResponse response = httpclient.execute(httpPut);
-        assertThat(response.getStatusLine().getStatusCode(), equalTo(200));
-
-        httpclient.close();
+        exportConfigurationService.save(exportConfiguration, true);
 
     }
 

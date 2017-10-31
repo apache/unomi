@@ -106,20 +106,7 @@ public class ProfileImportActorsIT extends BaseIT {
         importConfigActors.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=6-actors-test.csv&consumer.delay=10m&move=.done");
         importConfigActors.setActive(true);
 
-        ImportConfiguration savedImportConfig = importConfigurationService.save(importConfigActors, true);
-
-        CloseableHttpClient httpclient = HttpClients.createDefault();
-        HttpPut httpPut = new HttpPut(URL + "/configUpdate/importConfigAdmin");
-
-        String json = new ObjectMapper().writeValueAsString(savedImportConfig);
-        StringEntity entity = new StringEntity(json);
-        entity.setContentType(MediaType.APPLICATION_JSON);
-        httpPut.setEntity(entity);
-
-        HttpResponse response = httpclient.execute(httpPut);
-        assertThat(response.getStatusLine().getStatusCode(), equalTo(200));
-
-        httpclient.close();
+        importConfigurationService.save(importConfigActors, true);
 
     }
 
