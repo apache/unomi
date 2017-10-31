@@ -35,7 +35,5 @@
         <bundle start-level="90" start="false">mvn:org.apache.unomi/unomi-router-core/${project.version}</bundle>
         <bundle start-level="90" start="false">mvn:org.apache.unomi/unomi-router-service/${project.version}</bundle>
         <bundle start-level="90" start="false">mvn:org.apache.unomi/unomi-router-rest/${project.version}</bundle>
-        <bundle start-level="90">mvn:org.apache.httpcomponents/httpclient-osgi/4.3.6</bundle>
-        <bundle start-level="90">mvn:org.apache.httpcomponents/httpcore-osgi/4.3.3</bundle>
     </feature>
 </features>
