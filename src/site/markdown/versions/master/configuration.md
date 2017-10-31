@@ -58,7 +58,7 @@ trusted third party server, you need to add these 3 lines :
 
     thirdparty.provider1.key=secret-key
     thirdparty.provider1.ipAddresses=127.0.0.1,::1
-    thirdparty.provider1.allowedEvents=login,download
+    thirdparty.provider1.allowedEvents=login,updateProperties
 
 The events set in allowedEvents will be secured and will only be accepted if the call comes from the specified IP
 address, and if the secret-key is passed in the X-Unomi-Peer header.    
