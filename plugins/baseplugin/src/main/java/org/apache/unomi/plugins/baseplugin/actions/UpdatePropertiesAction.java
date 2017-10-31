@@ -37,13 +37,9 @@ import java.util.Map;
 
 public class UpdatePropertiesAction implements ActionExecutor {
 
-    public static final String PROPS_TO_ADD = "propertiesToAdd";
-    public static final String PROPS_TO_UPDATE = "propertiesToUpdate";
-    public static final String PROPS_TO_DELETE = "propertiesToDelete";
-
-    public static final String SYS_PROPS_TO_ADD = "systemPropertiesToAdd";
-    public static final String SYS_PROPS_TO_UPDATE = "systemPropertiesToUpdate";
-    public static final String SYS_PROPS_TO_DELETE = "systemPropertiesToDelete";
+    public static final String PROPS_TO_ADD = "add";
+    public static final String PROPS_TO_UPDATE = "update";
+    public static final String PROPS_TO_DELETE = "delete";
 
     public static final String TARGET_ID_KEY = "targetId";
     public static final String TARGET_TYPE_KEY = "targetType";
@@ -73,12 +69,8 @@ public class UpdatePropertiesAction implements ActionExecutor {
         boolean isProfileOrPersonaUpdated = false;
 
         Map<String, Object> propsToAdd = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_ADD);
-        HashMap<String, Object> sysPropsToAdd = (HashMap<String, Object>) event.getProperties().get(SYS_PROPS_TO_ADD);
 
         if (propsToAdd != null) {
-            if(sysPropsToAdd != null) {
-                propsToAdd.putAll(sysPropsToAdd);
-            }
             for (String prop : propsToAdd.keySet()) {
                 PropertyType propType = null;
                 if (prop.startsWith("properties.")) {
@@ -93,11 +85,7 @@ public class UpdatePropertiesAction implements ActionExecutor {
         }
 
         Map<String, Object> propsToUpdate = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_UPDATE);
-        Map<String, Object> sysPropsToUpdate = (HashMap<String, Object>) event.getProperties().get(SYS_PROPS_TO_UPDATE);
         if (propsToUpdate != null) {
-            if (sysPropsToUpdate != null) {
-                propsToUpdate.putAll(sysPropsToUpdate);
-            }
             for (String prop : propsToUpdate.keySet()) {
                 PropertyType propType = null;
                 if (prop.startsWith("properties.")) {
@@ -112,11 +100,7 @@ public class UpdatePropertiesAction implements ActionExecutor {
         }
 
         List<String> propsToDelete = (List<String>) event.getProperties().get(PROPS_TO_DELETE);
-        List<String> sysPropsToDelete = (List<String>) event.getProperties().get(SYS_PROPS_TO_DELETE);
         if (propsToDelete != null) {
-            if (sysPropsToDelete != null) {
-                propsToDelete.addAll(sysPropsToDelete);
-            }
             for (String prop : propsToDelete) {
                 isProfileOrPersonaUpdated |= PropertyHelper.setProperty(target, prop, null, "remove");
             }
