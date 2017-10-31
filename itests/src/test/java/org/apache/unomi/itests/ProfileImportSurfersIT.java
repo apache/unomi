@@ -103,23 +103,10 @@ public class ProfileImportSurfersIT extends BaseIT {
         importConfigSurfers.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=2-surfers-test.csv&consumer.delay=10m&move=.done");
         importConfigSurfers.setActive(true);
 
-        ImportConfiguration savedImportConfig = importConfigurationService.save(importConfigSurfers, true);
+        importConfigurationService.save(importConfigSurfers, true);
 
         //Wait for data to be processed
         Thread.sleep(10000);
-
-        CloseableHttpClient httpclient = HttpClients.createDefault();
-        HttpPut httpPut = new HttpPut(URL + "/configUpdate/importConfigAdmin");
-
-        String json = new ObjectMapper().writeValueAsString(savedImportConfig);
-        StringEntity entity = new StringEntity(json);
-        entity.setContentType(MediaType.APPLICATION_JSON);
-        httpPut.setEntity(entity);
-
-        HttpResponse response = httpclient.execute(httpPut);
-        assertThat(response.getStatusLine().getStatusCode(), equalTo(200));
-
-        httpclient.close();
 
     }
 

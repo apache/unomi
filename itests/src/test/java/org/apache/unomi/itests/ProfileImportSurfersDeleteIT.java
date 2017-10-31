@@ -16,12 +16,6 @@
  */
 package org.apache.unomi.itests;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.ProfileService;
@@ -40,15 +34,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * Created by amidani on 11/08/2017.
@@ -93,20 +83,7 @@ public class ProfileImportSurfersDeleteIT extends BaseIT {
         importConfigSurfersDelete.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=4-surfers-delete-test.csv&consumer.delay=10m&move=.done");
         importConfigSurfersDelete.setActive(true);
 
-        ImportConfiguration savedImportConfigDelete = importConfigurationService.save(importConfigSurfersDelete, true);
-
-        CloseableHttpClient httpclient = HttpClients.createDefault();
-        HttpPut httpPut = new HttpPut(URL + "/configUpdate/importConfigAdmin");
-
-        String jsonDelete = new ObjectMapper().writeValueAsString(savedImportConfigDelete);
-        StringEntity entityDelete = new StringEntity(jsonDelete);
-        entityDelete.setContentType(MediaType.APPLICATION_JSON);
-        httpPut.setEntity(entityDelete);
-
-        HttpResponse responseDelete = httpclient.execute(httpPut);
-        assertThat(responseDelete.getStatusLine().getStatusCode(), equalTo(200));
-
-        httpclient.close();
+        importConfigurationService.save(importConfigSurfersDelete, true);
 
     }
 
