@@ -102,7 +102,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         propertyToUpdate.put("properties.firstName", "UPDATED FIRST NAME");
 
         updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
-        updateProperties.setProperty(UpdatePropertiesAction.PROFILE_TARGET_ID_KEY, PROFILE_TEST_ID);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TEST_ID);
         int changes = eventService.send(updateProperties);
 
         LOGGER.info("Changes of the event : {}", changes);

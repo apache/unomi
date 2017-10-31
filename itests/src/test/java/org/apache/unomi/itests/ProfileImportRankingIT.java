@@ -109,7 +109,7 @@ public class ProfileImportRankingIT extends BaseIT {
         importConfigRanking.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=5-ranking-test.csv&consumer.delay=10m&move=.done");
         importConfigRanking.setActive(true);
 
-        ImportConfiguration savedImportConfig = importConfigurationService.save(importConfigRanking);
+        ImportConfiguration savedImportConfig = importConfigurationService.save(importConfigRanking, true);
 
         CloseableHttpClient httpclient = HttpClients.createDefault();
         HttpPut httpPut = new HttpPut(URL + "/configUpdate/importConfigAdmin");

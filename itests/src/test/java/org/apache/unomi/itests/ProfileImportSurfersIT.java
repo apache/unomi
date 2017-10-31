@@ -103,7 +103,7 @@ public class ProfileImportSurfersIT extends BaseIT {
         importConfigSurfers.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=2-surfers-test.csv&consumer.delay=10m&move=.done");
         importConfigSurfers.setActive(true);
 
-        ImportConfiguration savedImportConfig = importConfigurationService.save(importConfigSurfers);
+        ImportConfiguration savedImportConfig = importConfigurationService.save(importConfigSurfers, true);
 
         //Wait for data to be processed
         Thread.sleep(10000);

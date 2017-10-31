@@ -93,7 +93,7 @@ public class ProfileImportSurfersDeleteIT extends BaseIT {
         importConfigSurfersDelete.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=4-surfers-delete-test.csv&consumer.delay=10m&move=.done");
         importConfigSurfersDelete.setActive(true);
 
-        ImportConfiguration savedImportConfigDelete = importConfigurationService.save(importConfigSurfersDelete);
+        ImportConfiguration savedImportConfigDelete = importConfigurationService.save(importConfigSurfersDelete, true);
 
         CloseableHttpClient httpclient = HttpClients.createDefault();
         HttpPut httpPut = new HttpPut(URL + "/configUpdate/importConfigAdmin");

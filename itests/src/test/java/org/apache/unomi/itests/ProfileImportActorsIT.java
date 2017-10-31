@@ -106,7 +106,7 @@ public class ProfileImportActorsIT extends BaseIT {
         importConfigActors.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=6-actors-test.csv&consumer.delay=10m&move=.done");
         importConfigActors.setActive(true);
 
-        ImportConfiguration savedImportConfig = importConfigurationService.save(importConfigActors);
+        ImportConfiguration savedImportConfig = importConfigurationService.save(importConfigActors, true);
 
         CloseableHttpClient httpclient = HttpClients.createDefault();
         HttpPut httpPut = new HttpPut(URL + "/configUpdate/importConfigAdmin");

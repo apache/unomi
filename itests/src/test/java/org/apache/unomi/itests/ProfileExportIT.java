@@ -45,7 +45,9 @@ import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -110,7 +112,7 @@ public class ProfileExportIT extends BaseIT {
         exportConfiguration.getProperties().put("destination", "file://" + exportDir.getAbsolutePath() + "?fileName=profiles-actors-export.csv");
         exportConfiguration.setActive(true);
 
-        ExportConfiguration savedExportConfig = exportConfigurationService.save(exportConfiguration);
+        ExportConfiguration savedExportConfig = exportConfigurationService.save(exportConfiguration, true);
 
         CloseableHttpClient httpclient = HttpClients.createDefault();
         HttpPut httpPut = new HttpPut(URL + "/configUpdate/exportConfigAdmin");

@@ -18,7 +18,6 @@ package org.apache.unomi.itests;
 
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
@@ -75,7 +74,7 @@ public class ProfileImportBasicIT extends BaseIT {
         importConfiguration.getProperties().put("mapping", mapping);
         importConfiguration.setActive(true);
 
-        importConfigurationService.save(importConfiguration);
+        importConfigurationService.save(importConfiguration, true);
 
     }
 

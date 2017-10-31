@@ -93,7 +93,7 @@ public class ProfileImportSurfersOverwriteIT extends BaseIT {
         importConfigSurfers.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=3-surfers-overwrite-test.csv&consumer.delay=10m&move=.done");
         importConfigSurfers.setActive(true);
 
-        ImportConfiguration savedImportConfig = importConfigurationService.save(importConfigSurfers);
+        ImportConfiguration savedImportConfig = importConfigurationService.save(importConfigSurfers, true);
 
         CloseableHttpClient httpclient = HttpClients.createDefault();
         HttpPut httpPut = new HttpPut(URL + "/configUpdate/importConfigAdmin");
