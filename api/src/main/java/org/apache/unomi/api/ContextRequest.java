@@ -21,6 +21,7 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.EventListenerService;
+import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
 
@@ -54,8 +55,8 @@ public class ContextRequest {
     private List<String> requiredProfileProperties;
     private List<String> requiredSessionProperties;
     private List<Event> events;
-    private List<FilteredContent> filters;
-    private List<SortRequest> sorts;
+    private List<PersonalizationService.PersonalizedContent> filters;
+    private List<PersonalizationService.PersonalizationRequest> personalizations;
 
     // the following overrides make it possible to override temporarily the current profile segments, properties or
     // even session properties. This is useful for building UIs to temporarily override one of these parameters to
@@ -147,7 +148,7 @@ public class ContextRequest {
      * @see ProfileService#matchCondition(Condition, Profile, Session) Details on how the filter conditions are evaluated
      * @see ContextResponse#getFilteringResults() Details on how the evaluation results are returned to the client
      */
-    public List<FilteredContent> getFilters() {
+    public List<PersonalizationService.PersonalizedContent> getFilters() {
         return filters;
     }
 
@@ -156,16 +157,16 @@ public class ContextRequest {
      *
      * @param filters the content filters to be evaluated
      */
-    public void setFilters(List<FilteredContent> filters) {
+    public void setFilters(List<PersonalizationService.PersonalizedContent> filters) {
         this.filters = filters;
     }
 
-    public List<SortRequest> getSorts() {
-        return sorts;
+    public List<PersonalizationService.PersonalizationRequest> getPersonalizations() {
+        return personalizations;
     }
 
-    public void setSorts(List<SortRequest> sorts) {
-        this.sorts = sorts;
+    public void setPersonalizations(List<PersonalizationService.PersonalizationRequest> personalizations) {
+        this.personalizations = personalizations;
     }
 
     /**
@@ -223,195 +224,4 @@ public class ContextRequest {
         this.sessionPropertiesOverrides = sessionPropertiesOverrides;
     }
 
-    /**
-     *
-     */
-    public static class SortRequest {
-        private String id;
-        private String strategy;
-        private Map<String, Object> strategyOptions;
-        private List<FilteredContent> contents;
-
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public String getStrategy() {
-            return strategy;
-        }
-
-        public void setStrategy(String strategy) {
-            this.strategy = strategy;
-        }
-
-        public List<FilteredContent> getContents() {
-            return contents;
-        }
-
-        public void setContents(List<FilteredContent> contents) {
-            this.contents = contents;
-        }
-
-        public Map<String, Object> getStrategyOptions() {
-            return strategyOptions;
-        }
-
-        public void setStrategyOptions(Map<String, Object> strategyOptions) {
-            this.strategyOptions = strategyOptions;
-        }
-    }
-
-    /**
-     * A content filtering definition.
-     */
-    public static class FilteredContent {
-        private String filterid;
-        private List<Filter> filters;
-        private Map<String,Object> properties;
-
-        /**
-         * Retrieves the filter identifier associated with this content filtering definition.
-         *
-         * @return the filter identifier associated with this content filtering definition
-         */
-        public String getFilterid() {
-            return filterid;
-        }
-
-        /**
-         * Sets the filter identifier associated with this content filtering definition.
-         *
-         * @param filterid the filter identifier associated with this content filtering definition
-         */
-        public void setFilterid(String filterid) {
-            this.filterid = filterid;
-        }
-
-        /**
-         * Retrieves the filters.
-         *
-         * @return the filters
-         */
-        public List<Filter> getFilters() {
-            return filters;
-        }
-
-        /**
-         * Sets the filters.
-         *
-         * @param filters the filters
-         */
-        public void setFilters(List<Filter> filters) {
-            this.filters = filters;
-        }
-
-        public Map<String, Object> getProperties() {
-            return properties;
-        }
-
-        public void setProperties(Map<String, Object> properties) {
-            this.properties = properties;
-        }
-    }
-
-    /**
-     * A filter definition for content filtering
-     */
-    public static class Filter {
-        private List<Target> appliesOn;
-        private Condition condition;
-        private Map<String,Object> properties;
-
-        /**
-         * Retrieves the list of targets this filter applies on.
-         *
-         * @return the applies on
-         */
-        public List<Target> getAppliesOn() {
-            return appliesOn;
-        }
-
-        /**
-         * Specifies which targets this filter applies on.
-         *
-         * @param appliesOn the list of {@link ContextRequest.Target} this filter should be applied on
-         */
-        public void setAppliesOn(List<Target> appliesOn) {
-            this.appliesOn = appliesOn;
-        }
-
-        /**
-         * Retrieves the condition associated with this filter.
-         *
-         * @return the condition associated with this filter
-         */
-        public Condition getCondition() {
-            return condition;
-        }
-
-        /**
-         * Sets the condition associated with this filter.
-         *
-         * @param condition the condition associated with this filter
-         */
-        public void setCondition(Condition condition) {
-            this.condition = condition;
-        }
-
-        public Map<String, Object> getProperties() {
-            return properties;
-        }
-
-        public void setProperties(Map<String, Object> properties) {
-            this.properties = properties;
-        }
-    }
-
-    /**
-     * A target for content filtering.
-     */
-    public static class Target {
-        private String target;
-        private List<String> values;
-
-        /**
-         * Retrieves the target.
-         *
-         * @return the target
-         */
-        public String getTarget() {
-            return target;
-        }
-
-        /**
-         * Sets the target.
-         *
-         * @param target the target
-         */
-        public void setTarget(String target) {
-            this.target = target;
-        }
-
-        /**
-         * Retrieves the values.
-         *
-         * @return the values
-         */
-        public List<String> getValues() {
-            return values;
-        }
-
-        /**
-         * Sets the values.
-         *
-         * @param values the values
-         */
-        public void setValues(List<String> values) {
-            this.values = values;
-        }
-    }
 }

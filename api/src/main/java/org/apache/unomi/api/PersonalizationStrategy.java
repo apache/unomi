@@ -14,17 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.unomi.api;
 
-package org.apache.unomi.api.services;
-
-import org.apache.unomi.api.ContextRequest;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.Session;
+import org.apache.unomi.api.services.PersonalizationService;
 
 import java.util.List;
 
-public interface SortService {
-
-    List<String> sort(Profile profile, Session session, ContextRequest.SortRequest sortRequest);
-
+/**
+ *
+ */
+public interface PersonalizationStrategy {
+    List<String> personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest);
 }

@@ -17,17 +17,17 @@
 
 package org.apache.unomi.services.sorts;
 
-import org.apache.unomi.api.ContextRequest;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
-import org.apache.unomi.api.SortStrategy;
+import org.apache.unomi.api.PersonalizationStrategy;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.ProfileService;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class FilterSortStrategy implements SortStrategy {
+public class FilterPersonalizationStrategy implements PersonalizationStrategy {
 
     private ProfileService profileService;
 
@@ -36,20 +36,20 @@ public class FilterSortStrategy implements SortStrategy {
     }
 
     @Override
-    public List<String> sort(Profile profile, Session session, ContextRequest.SortRequest sortRequest) {
+    public List<String> personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest) {
         List<String> sortedContent = new ArrayList<>();
-        for (ContextRequest.FilteredContent filteredContent : sortRequest.getContents()) {
+        for (PersonalizationService.PersonalizedContent personalizedContent : personalizationRequest.getContents()) {
             boolean result = true;
-            for (ContextRequest.Filter filter : filteredContent.getFilters()) {
+            for (PersonalizationService.Filter filter : personalizedContent.getFilters()) {
                 Condition condition = filter.getCondition();
                 result &= profileService.matchCondition(condition, profile, session);
             }
             if (result) {
-                sortedContent.add(filteredContent.getFilterid());
+                sortedContent.add(personalizedContent.getId());
             }
         }
 
-        String fallback = (String) sortRequest.getStrategyOptions().get("fallback");
+        String fallback = (String) personalizationRequest.getStrategyOptions().get("fallback");
         if (fallback != null && !sortedContent.contains(fallback)) {
             sortedContent.add(fallback);
         }

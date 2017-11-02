@@ -14,11 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.api;
 
+package org.apache.unomi.services.sorts;
+
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Session;
+import org.apache.unomi.api.services.PersonalizationService;
+
+import java.util.Collections;
 import java.util.List;
 
-public interface SortStrategy {
+public class RandomPersonalizationStrategy extends FilterPersonalizationStrategy {
 
-    List<String> sort(Profile profile, Session session, ContextRequest.SortRequest sortRequest);
+    @Override
+    public List<String> personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest) {
+        List<String> r = super.personalizeList(profile, session, personalizationRequest);
+        Collections.shuffle(r);
+        return r;
+    }
 }

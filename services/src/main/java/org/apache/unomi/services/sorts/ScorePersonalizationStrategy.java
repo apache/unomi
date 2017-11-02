@@ -17,16 +17,16 @@
 
 package org.apache.unomi.services.sorts;
 
-import org.apache.unomi.api.ContextRequest;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
-import org.apache.unomi.api.SortStrategy;
+import org.apache.unomi.api.PersonalizationStrategy;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.ProfileService;
 
 import java.util.*;
 
-public class ScoreSortStrategy implements SortStrategy {
+public class ScorePersonalizationStrategy implements PersonalizationStrategy {
 
     private ProfileService profileService;
 
@@ -35,19 +35,19 @@ public class ScoreSortStrategy implements SortStrategy {
     }
 
     @Override
-    public List<String> sort(Profile profile, Session session, ContextRequest.SortRequest sortRequest) {
+    public List<String> personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest) {
         List<String> sortedContent = new ArrayList<>();
         final Map<String,Integer> t = new HashMap<>();
 
-        Integer threshold = (Integer) sortRequest.getStrategyOptions().get("threshold");
+        Integer threshold = (Integer) personalizationRequest.getStrategyOptions().get("threshold");
         if (threshold == null) {
             threshold = 0;
         }
 
-        for (ContextRequest.FilteredContent filteredContent : sortRequest.getContents()) {
+        for (PersonalizationService.PersonalizedContent personalizedContent : personalizationRequest.getContents()) {
             int score = 0;
 
-            String interestList = (String) (filteredContent.getProperties() != null ? filteredContent.getProperties().get("interests") : null);
+            String interestList = (String) (personalizedContent.getProperties() != null ? personalizedContent.getProperties().get("interests") : null);
             if (interestList != null) {
                 Map<String,Integer> interestValues = (Map<String, Integer>) profile.getProperties().get("interests");
                 for (String interest : interestList.split(" ")) {
@@ -57,7 +57,7 @@ public class ScoreSortStrategy implements SortStrategy {
                 }
             }
 
-            String scoringPlanList = (String) (filteredContent.getProperties() != null ? filteredContent.getProperties().get("scoringPlans") : null);
+            String scoringPlanList = (String) (personalizedContent.getProperties() != null ? personalizedContent.getProperties().get("scoringPlans") : null);
             if (scoringPlanList != null) {
                 Map<String,Integer> scoreValues = (Map<String, Integer>) profile.getScores();
                 for (String scoringPlan : scoringPlanList.split(" ")) {
@@ -67,7 +67,7 @@ public class ScoreSortStrategy implements SortStrategy {
                 }
             }
 
-            for (ContextRequest.Filter filter : filteredContent.getFilters()) {
+            for (PersonalizationService.Filter filter : personalizedContent.getFilters()) {
                 Condition condition = filter.getCondition();
                 if (condition.getConditionType() != null) {
                     if (profileService.matchCondition(condition, profile, session)) {
@@ -80,8 +80,8 @@ public class ScoreSortStrategy implements SortStrategy {
                 }
             }
             if (score >= threshold) {
-                t.put(filteredContent.getFilterid(), score);
-                sortedContent.add(filteredContent.getFilterid());
+                t.put(personalizedContent.getId(), score);
+                sortedContent.add(personalizedContent.getId());
             }
         }
         Collections.sort(sortedContent, new Comparator<String>() {
@@ -91,7 +91,7 @@ public class ScoreSortStrategy implements SortStrategy {
             }
         });
 
-        String fallback = (String) sortRequest.getStrategyOptions().get("fallback");
+        String fallback = (String) personalizationRequest.getStrategyOptions().get("fallback");
         if (fallback != null && !sortedContent.contains(fallback)) {
             sortedContent.add(fallback);
         }

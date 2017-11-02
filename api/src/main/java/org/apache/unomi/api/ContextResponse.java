@@ -48,7 +48,7 @@ public class ContextResponse implements Serializable {
 
     private Map<String, Boolean> filteringResults;
 
-    private Map<String, List<String>> sortResults;
+    private Map<String, List<String>> personalizations;
 
     private Set<Condition> trackedConditions;
 
@@ -169,12 +169,12 @@ public class ContextResponse implements Serializable {
         this.filteringResults = filteringResults;
     }
 
-    public Map<String, List<String>> getSortResults() {
-        return sortResults;
+    public Map<String, List<String>> getPersonalizations() {
+        return personalizations;
     }
 
-    public void setSortResults(Map<String, List<String>> sortResults) {
-        this.sortResults = sortResults;
+    public void setPersonalizations(Map<String, List<String>> personalizations) {
+        this.personalizations = personalizations;
     }
 
     /**
