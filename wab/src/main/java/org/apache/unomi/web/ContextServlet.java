@@ -53,6 +53,7 @@ public class ContextServlet extends HttpServlet {
     private EventService eventService;
     private RulesService rulesService;
     private PrivacyService privacyService;
+    private SortService sortService;
     private ConfigSharingService configSharingService;
 
     private String profileIdCookieName = "context-profile-id";
@@ -360,9 +361,19 @@ public class ContextServlet extends HttpServlet {
                 boolean result = true;
                 for (ContextRequest.Filter filter : filteredContent.getFilters()) {
                     Condition condition = filter.getCondition();
-                    result &= profileService.matchCondition(condition, profile, session);
+                    if (condition.getConditionType() != null) {
+                        result &= profileService.matchCondition(condition, profile, session);
+                    }
                 }
                 data.getFilteringResults().put(filteredContent.getFilterid(), result);
+            }
+        }
+
+        List<ContextRequest.SortRequest> sorts = contextRequest.getSorts();
+        if (sorts != null) {
+            data.setSortResults(new HashMap<String, List<String>>());
+            for (ContextRequest.SortRequest sort : sorts) {
+                data.getSortResults().put(sort.getId(), sortService.sort(profile, session, sort));
             }
         }
 
@@ -449,6 +460,10 @@ public class ContextServlet extends HttpServlet {
 
     public void setPrivacyService(PrivacyService privacyService) {
         this.privacyService = privacyService;
+    }
+
+    public void setSortService(SortService sortService) {
+        this.sortService = sortService;
     }
 
     public void setConfigSharingService(ConfigSharingService configSharingService) {

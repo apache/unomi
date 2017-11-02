@@ -171,6 +171,12 @@
     </bean>
     <service id="clusterService" ref="clusterServiceImpl" auto-export="interfaces"/>
 
+
+    <bean id="sortServiceImpl" class="org.apache.unomi.services.services.SortServiceImpl">
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+    </bean>
+    <service id="sortService" ref="sortServiceImpl" auto-export="interfaces"/>
+
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
     <reference-list id="eventListenerServices"
                     interface="org.apache.unomi.api.services.EventListenerService"
@@ -184,6 +190,13 @@
                     availability="optional">
         <reference-listener
                 bind-method="bindExecutor" unbind-method="unbindExecutor" ref="rulesServiceImpl"/>
+    </reference-list>
+
+    <reference-list id="sortStrategies"
+                    interface="org.apache.unomi.api.SortStrategy"
+                    availability="optional">
+        <reference-listener
+                bind-method="addSortStrategy" unbind-method="removeSortStrategy" ref="sortServiceImpl"/>
     </reference-list>
 
     <!-- Property merge strategy executors -->
@@ -227,6 +240,34 @@
         <bean class="org.apache.unomi.services.mergers.NonEmptyPropertyMergeStrategyExecutor">
         </bean>
     </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="sortStrategyId" value="matching-first"/>
+        </service-properties>
+        <bean class="org.apache.unomi.services.sorts.FilterSortStrategy">
+            <property name="profileService" ref="profileServiceImpl"/>
+        </bean>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="sortStrategyId" value="random"/>
+        </service-properties>
+        <bean class="org.apache.unomi.services.sorts.RandomSortStrategy">
+            <property name="profileService" ref="profileServiceImpl"/>
+        </bean>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="sortStrategyId" value="score-sorted"/>
+        </service-properties>
+        <bean class="org.apache.unomi.services.sorts.ScoreSortStrategy">
+            <property name="profileService" ref="profileServiceImpl"/>
+        </bean>
+    </service>
+
 
     <bean id="configSharingServiceImpl" class="org.apache.unomi.services.services.ConfigSharingServiceImpl" destroy-method="preDestroy">
         <property name="configProperties">

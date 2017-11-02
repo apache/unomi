@@ -55,6 +55,7 @@ public class ContextRequest {
     private List<String> requiredSessionProperties;
     private List<Event> events;
     private List<FilteredContent> filters;
+    private List<SortRequest> sorts;
 
     // the following overrides make it possible to override temporarily the current profile segments, properties or
     // even session properties. This is useful for building UIs to temporarily override one of these parameters to
@@ -159,6 +160,14 @@ public class ContextRequest {
         this.filters = filters;
     }
 
+    public List<SortRequest> getSorts() {
+        return sorts;
+    }
+
+    public void setSorts(List<SortRequest> sorts) {
+        this.sorts = sorts;
+    }
+
     /**
      * Retrieves the events that the client has generated as part of its processes and wishes the context server to process.
      *
@@ -215,11 +224,54 @@ public class ContextRequest {
     }
 
     /**
+     *
+     */
+    public static class SortRequest {
+        private String id;
+        private String strategy;
+        private Map<String, Object> strategyOptions;
+        private List<FilteredContent> contents;
+
+        public String getId() {
+            return id;
+        }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        public String getStrategy() {
+            return strategy;
+        }
+
+        public void setStrategy(String strategy) {
+            this.strategy = strategy;
+        }
+
+        public List<FilteredContent> getContents() {
+            return contents;
+        }
+
+        public void setContents(List<FilteredContent> contents) {
+            this.contents = contents;
+        }
+
+        public Map<String, Object> getStrategyOptions() {
+            return strategyOptions;
+        }
+
+        public void setStrategyOptions(Map<String, Object> strategyOptions) {
+            this.strategyOptions = strategyOptions;
+        }
+    }
+
+    /**
      * A content filtering definition.
      */
     public static class FilteredContent {
         private String filterid;
         private List<Filter> filters;
+        private Map<String,Object> properties;
 
         /**
          * Retrieves the filter identifier associated with this content filtering definition.
@@ -256,6 +308,14 @@ public class ContextRequest {
         public void setFilters(List<Filter> filters) {
             this.filters = filters;
         }
+
+        public Map<String, Object> getProperties() {
+            return properties;
+        }
+
+        public void setProperties(Map<String, Object> properties) {
+            this.properties = properties;
+        }
     }
 
     /**
@@ -264,6 +324,7 @@ public class ContextRequest {
     public static class Filter {
         private List<Target> appliesOn;
         private Condition condition;
+        private Map<String,Object> properties;
 
         /**
          * Retrieves the list of targets this filter applies on.
@@ -299,6 +360,14 @@ public class ContextRequest {
          */
         public void setCondition(Condition condition) {
             this.condition = condition;
+        }
+
+        public Map<String, Object> getProperties() {
+            return properties;
+        }
+
+        public void setProperties(Map<String, Object> properties) {
+            this.properties = properties;
         }
     }
 
