@@ -21,7 +21,7 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.plugins.baseplugin.actions.UpdateProfilePropertiesAction;
+import org.apache.unomi.plugins.baseplugin.actions.UpdatePropertiesAction;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,9 +44,9 @@ import java.util.Map;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
-public class ProfilePropertiesUpdateActionIT extends BaseIT {
+public class PropertiesUpdateActionIT extends BaseIT {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(ProfilePropertiesUpdateActionIT.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(PropertiesUpdateActionIT.class);
     private final static String PROFILE_TARGET_TEST_ID = "profile-target-event";
     private final static String PROFILE_TEST_ID = "profile-to-update-by-event";
 
@@ -74,14 +74,14 @@ public class ProfilePropertiesUpdateActionIT extends BaseIT {
         Profile profile = profileService.load(PROFILE_TARGET_TEST_ID);
         Assert.assertNull(profile.getProperty("firstName"));
 
-        Event updateProfileProperties = new Event("updateProfileProperties", null, profile, null, null, profile, new Date());
-        updateProfileProperties.setPersistent(false);
+        Event updateProperties = new Event("updateProperties", null, profile, null, null, profile, new Date());
+        updateProperties.setPersistent(false);
 
         Map<String, Object> propertyToUpdate = new HashMap<>();
         propertyToUpdate.put("properties.firstName", "UPDATED FIRST NAME CURRENT PROFILE");
 
-        updateProfileProperties.setProperty(UpdateProfilePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
-        int changes = eventService.send(updateProfileProperties);
+        updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
+        int changes = eventService.send(updateProperties);
 
         LOGGER.info("Changes of the event : {}", changes);
 
@@ -95,15 +95,15 @@ public class ProfilePropertiesUpdateActionIT extends BaseIT {
         Profile profileToUpdate = profileService.load(PROFILE_TEST_ID);
         Assert.assertNull(profileToUpdate.getProperty("firstName"));
 
-        Event updateProfileProperties = new Event("updateProfileProperties", null, profile, null, null, profile, new Date());
-        updateProfileProperties.setPersistent(false);
+        Event updateProperties = new Event("updateProperties", null, profile, null, null, profile, new Date());
+        updateProperties.setPersistent(false);
 
         Map<String, Object> propertyToUpdate = new HashMap<>();
         propertyToUpdate.put("properties.firstName", "UPDATED FIRST NAME");
 
-        updateProfileProperties.setProperty(UpdateProfilePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
-        updateProfileProperties.setProperty(UpdateProfilePropertiesAction.PROFILE_TARGET_ID_KEY, PROFILE_TEST_ID);
-        int changes = eventService.send(updateProfileProperties);
+        updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TEST_ID);
+        int changes = eventService.send(updateProperties);
 
         LOGGER.info("Changes of the event : {}", changes);
 

@@ -109,20 +109,7 @@ public class ProfileImportRankingIT extends BaseIT {
         importConfigRanking.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=5-ranking-test.csv&consumer.delay=10m&move=.done");
         importConfigRanking.setActive(true);
 
-        ImportConfiguration savedImportConfig = importConfigurationService.save(importConfigRanking);
-
-        CloseableHttpClient httpclient = HttpClients.createDefault();
-        HttpPut httpPut = new HttpPut(URL + "/configUpdate/importConfigAdmin");
-
-        String json = new ObjectMapper().writeValueAsString(savedImportConfig);
-        StringEntity entity = new StringEntity(json);
-        entity.setContentType(MediaType.APPLICATION_JSON);
-        httpPut.setEntity(entity);
-
-        HttpResponse response = httpclient.execute(httpPut);
-        assertThat(response.getStatusLine().getStatusCode(), equalTo(200));
-
-        httpclient.close();
+        importConfigurationService.save(importConfigRanking, true);
 
     }
 

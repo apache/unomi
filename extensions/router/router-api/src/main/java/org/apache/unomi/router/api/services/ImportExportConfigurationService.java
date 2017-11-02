@@ -47,6 +47,7 @@ public interface ImportExportConfigurationService<T> {
      * Saves the specified import/export configuration in the context server.
      *
      * @param configuration the import/export configuration to be saved
+     * @param updateRunningRoute set to true if running routes should be updated too
      * @return the newly saved import/export configuration
      */
     T save(T configuration, boolean updateRunningRoute);

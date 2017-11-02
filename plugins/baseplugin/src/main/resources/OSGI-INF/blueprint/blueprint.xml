@@ -172,11 +172,19 @@
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="actionExecutorId" value="updateProfileProperties"/>
+            <entry key="actionExecutorId" value="updateProperties"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.actions.UpdateProfilePropertiesAction">
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.UpdatePropertiesAction">
             <property name="profileService" ref="profileService"/>
             <property name="eventService" ref="eventService"/>
+        </bean>
+    </service>
+
+    <service auto-export="interfaces">
+        <service-properties>
+            <entry key="actionExecutorId" value="modifyConsents"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.ModifyConsentsAction">
         </bean>
     </service>
 

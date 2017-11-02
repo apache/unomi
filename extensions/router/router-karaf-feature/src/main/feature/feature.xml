@@ -27,7 +27,6 @@
         <bundle start-level="90">mvn:org.apache.camel/camel-blueprint/2.19.1</bundle>
         <bundle start-level="90">mvn:org.apache.camel/camel-jackson/2.19.1</bundle>
         <bundle start-level="90">mvn:org.apache.camel/camel-http-common/2.19.1</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-servlet/2.19.1</bundle>
         <bundle start-level="90">mvn:org.apache.camel/camel-ftp/2.19.1</bundle>
         <bundle start-level="90">mvn:org.apache.camel/camel-stream/2.19.1</bundle>
         <bundle start-level="90">mvn:org.apache.camel/camel-kafka/2.19.1</bundle>
@@ -36,7 +35,5 @@
         <bundle start-level="90" start="false">mvn:org.apache.unomi/unomi-router-core/${project.version}</bundle>
         <bundle start-level="90" start="false">mvn:org.apache.unomi/unomi-router-service/${project.version}</bundle>
         <bundle start-level="90" start="false">mvn:org.apache.unomi/unomi-router-rest/${project.version}</bundle>
-        <bundle start-level="90">mvn:org.apache.httpcomponents/httpclient-osgi/4.3.6</bundle>
-        <bundle start-level="90">mvn:org.apache.httpcomponents/httpcore-osgi/4.3.3</bundle>
     </feature>
 </features>

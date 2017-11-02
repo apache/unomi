@@ -1,0 +1,16 @@
+{
+  "metadata": {
+    "id": "updatePropertiesAction",
+    "name": "updatePropertiesAction",
+    "description": "Update multiple properties in profile/persona",
+    "systemTags": [
+      "profileTags",
+      "demographic"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "updateProperties",
+  "parameters": [
+
+  ]
+}

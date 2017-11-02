@@ -21,10 +21,7 @@ import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
 
 import javax.xml.bind.annotation.XmlTransient;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * A user profile gathering all known information about a given user as well as segments it is part of and scores.
@@ -58,6 +55,8 @@ public class Profile extends Item {
     private Map<String, Integer> scores;
 
     private String mergedWith;
+
+    private Map<String, Consent> consents = new LinkedHashMap<>();
 
     /**
      * Instantiates a new Profile.
@@ -196,10 +195,51 @@ public class Profile extends Item {
         this.scores = scores;
     }
 
+    public Map<String, Consent> getConsents() {
+        return consents;
+    }
+
     @XmlTransient
     public boolean isAnonymousProfile() {
         Boolean anonymous = (Boolean) getSystemProperties().get("isAnonymousProfile");
         return anonymous != null && anonymous;
+    }
+
+    @XmlTransient
+    public boolean grantConsent(String consentTypeId, Date grantDate, Date revokeDate) {
+        Consent consent = new Consent(itemId, consentTypeId, ConsentGrant.GRANT, grantDate, revokeDate);
+        consents.put(consentTypeId, consent);
+        return true;
+    }
+
+    @XmlTransient
+    public boolean denyConsent(String consentTypeId, Date grantDate, Date revokeDate) {
+        Consent consent = new Consent(itemId, consentTypeId, ConsentGrant.DENY, grantDate, revokeDate);
+        consents.put(consentTypeId, consent);
+        return true;
+    }
+
+    @XmlTransient
+    public boolean revokeConsent(String consentTypeId) {
+        if (consents.containsKey(consentTypeId)) {
+            consents.remove(consentTypeId);
+            return true;
+        }
+        return false;
+    }
+
+    @XmlTransient
+    public boolean isConsentGiven(String consentTypeId) {
+        if (consents.containsKey(consentTypeId)) {
+            Consent consent = consents.get(consentTypeId);
+            Date nowDate = new Date();
+            if (consent.getGrantDate().before(nowDate) && (consent.getRevokeDate() == null || (consent.getRevokeDate().after(nowDate)))) {
+                if (consent.getGrant().equals(ConsentGrant.GRANT)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @Override
