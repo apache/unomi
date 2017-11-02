@@ -70,4 +70,17 @@
             <entry key="urlPatterns" value="/eventcollector"/>
         </service-properties>
     </service>
+
+    <bean id="clientServlet" class="org.apache.unomi.web.ClientServlet">
+        <property name="profileService" ref="profileService"/>
+        <property name="profileIdCookieDomain" value="${web.contextserver.domain}" />
+        <property name="profileIdCookieName" value="${web.contextserver.profileIdCookieName}"/>
+    </bean>
+
+    <service id="clientServletService" auto-export="interfaces" ref="clientServlet">
+        <service-properties>
+            <entry key="urlPatterns" value="/client"/>
+        </service-properties>
+    </service>
+
 </blueprint>
