@@ -35,8 +35,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -110,7 +110,7 @@ public class ClientServlet extends HttpServlet {
                         prepareJsonFileToDownload(response, currentProfile);
                         break;
                     case "csv":
-                        prepareCsvFileToDownload(response, currentProfile);
+                        prepareCsvFileToDownload(response, currentProfile, request.getParameter("vertical") != null);
                         break;
                     default:
                         return;
@@ -121,7 +121,7 @@ public class ClientServlet extends HttpServlet {
         }
     }
 
-    private void prepareCsvFileToDownload(HttpServletResponse response, Profile currentProfile) {
+    private void prepareCsvFileToDownload(HttpServletResponse response, Profile currentProfile, boolean vertical) {
         response.setContentType("text/csv");
         response.setHeader("Content-Disposition", "attachment; filename=\"" + currentProfile.getItemId() + ".csv\"");
         try {
@@ -129,14 +129,21 @@ public class ClientServlet extends HttpServlet {
 
             //using custom delimiter and quote character
             CSVWriter csvWriter = new CSVWriter(writer);
-            Set<String> keySet = currentProfile.getProperties().keySet();
-            List<String> values = new ArrayList();
-            for (Object value : currentProfile.getProperties().values()) {
-                values.add(value.toString().trim().replace("\n", ""));
-            }
-            csvWriter.writeNext(keySet.toArray(new String[keySet.size()]));
-            csvWriter.writeNext(values.toArray(new String[values.size()]));
             OutputStream outputStream = response.getOutputStream();
+            if (vertical) {
+                csvWriter.writeNext(new String[] {"name", "value"});
+                for (Map.Entry<String,Object> entry : currentProfile.getProperties().entrySet()) {
+                    csvWriter.writeNext(new String[] { entry.getKey(), entry.getValue().toString().trim().replace("\n", "")});
+                }
+            } else {
+                Set<String> keySet = currentProfile.getProperties().keySet();
+                List<String> values = new ArrayList();
+                for (Object value : currentProfile.getProperties().values()) {
+                    values.add(value.toString().trim().replace("\n", ""));
+                }
+                csvWriter.writeNext(keySet.toArray(new String[keySet.size()]));
+                csvWriter.writeNext(values.toArray(new String[values.size()]));
+            }
             outputStream.write(writer.toString().getBytes());
             outputStream.flush();
             outputStream.close();
