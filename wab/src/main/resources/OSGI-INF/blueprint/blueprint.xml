@@ -26,6 +26,7 @@
     <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
     <reference id="rulesService" interface="org.apache.unomi.api.services.RulesService"/>
     <reference id="privacyService" interface="org.apache.unomi.api.services.PrivacyService"/>
+    <reference id="personalizationService" interface="org.apache.unomi.api.services.PersonalizationService"/>
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />
 
     <cm:property-placeholder persistent-id="org.apache.unomi.web"
@@ -44,6 +45,7 @@
         <property name="eventService" ref="eventService"/>
         <property name="rulesService" ref="rulesService"/>
         <property name="privacyService" ref="privacyService" />
+        <property name="personalizationService" ref="personalizationService"/>
         <property name="configSharingService" ref="configSharingService"/>
         <property name="profileIdCookieDomain" value="${web.contextserver.domain}" />
         <property name="profileIdCookieName" value="${web.contextserver.profileIdCookieName}"/>

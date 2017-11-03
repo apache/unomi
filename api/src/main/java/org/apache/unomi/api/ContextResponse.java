@@ -22,6 +22,7 @@ import org.apache.unomi.api.services.RulesService;
 
 import java.io.Serializable;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -46,6 +47,8 @@ public class ContextResponse implements Serializable {
     private Set<String> profileSegments;
 
     private Map<String, Boolean> filteringResults;
+
+    private Map<String, List<String>> personalizations;
 
     private Set<Condition> trackedConditions;
 
@@ -164,6 +167,14 @@ public class ContextResponse implements Serializable {
      */
     public void setFilteringResults(Map<String, Boolean> filteringResults) {
         this.filteringResults = filteringResults;
+    }
+
+    public Map<String, List<String>> getPersonalizations() {
+        return personalizations;
+    }
+
+    public void setPersonalizations(Map<String, List<String>> personalizations) {
+        this.personalizations = personalizations;
     }
 
     /**

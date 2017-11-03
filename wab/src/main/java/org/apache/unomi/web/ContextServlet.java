@@ -53,6 +53,7 @@ public class ContextServlet extends HttpServlet {
     private EventService eventService;
     private RulesService rulesService;
     private PrivacyService privacyService;
+    private PersonalizationService personalizationService;
     private ConfigSharingService configSharingService;
 
     private String profileIdCookieName = "context-profile-id";
@@ -353,16 +354,19 @@ public class ContextServlet extends HttpServlet {
 
         processOverrides(contextRequest, profile, session);
 
-        List<ContextRequest.FilteredContent> filterNodes = contextRequest.getFilters();
+        List<PersonalizationService.PersonalizedContent> filterNodes = contextRequest.getFilters();
         if (filterNodes != null) {
             data.setFilteringResults(new HashMap<String, Boolean>());
-            for (ContextRequest.FilteredContent filteredContent : filterNodes) {
-                boolean result = true;
-                for (ContextRequest.Filter filter : filteredContent.getFilters()) {
-                    Condition condition = filter.getCondition();
-                    result &= profileService.matchCondition(condition, profile, session);
-                }
-                data.getFilteringResults().put(filteredContent.getFilterid(), result);
+            for (PersonalizationService.PersonalizedContent personalizedContent : filterNodes) {
+                data.getFilteringResults().put(personalizedContent.getId(), personalizationService.filter(profile, session, personalizedContent));
+            }
+        }
+
+        List<PersonalizationService.PersonalizationRequest> personalizations = contextRequest.getPersonalizations();
+        if (personalizations != null) {
+            data.setPersonalizations(new HashMap<String, List<String>>());
+            for (PersonalizationService.PersonalizationRequest personalization : personalizations) {
+                data.getPersonalizations().put(personalization.getId(), personalizationService.personalizeList(profile, session, personalization));
             }
         }
 
@@ -449,6 +453,10 @@ public class ContextServlet extends HttpServlet {
 
     public void setPrivacyService(PrivacyService privacyService) {
         this.privacyService = privacyService;
+    }
+
+    public void setPersonalizationService(PersonalizationService personalizationService) {
+        this.personalizationService = personalizationService;
     }
 
     public void setConfigSharingService(ConfigSharingService configSharingService) {
