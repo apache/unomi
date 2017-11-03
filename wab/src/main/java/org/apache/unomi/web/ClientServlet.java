@@ -19,6 +19,7 @@ package org.apache.unomi.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.opencsv.CSVWriter;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.ProfileService;
 import org.slf4j.Logger;
@@ -32,6 +33,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 
 /**
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
@@ -59,12 +65,12 @@ public class ClientServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String[] pathInfo = req.getPathInfo().substring(1).split("/");
+        String[] pathInfo = req.getPathInfo().substring(1).split("\\.");
         if (pathInfo != null && pathInfo.length > 0) {
             String operation = pathInfo[0];
             String param = pathInfo[1];
             switch (operation) {
-                case "downloadMyProfile":
+                case "myprofile":
                     if (allowedProfileDownloadFormats.contains(param)) {
                         donwloadCurrentProfile(req, resp, param);
                     } else {
@@ -103,12 +109,39 @@ public class ClientServlet extends HttpServlet {
                     case "json":
                         prepareJsonFileToDownload(response, currentProfile);
                         break;
+                    case "csv":
+                        prepareCsvFileToDownload(response, currentProfile);
+                        break;
                     default:
                         return;
 
                 }
 
             }
+        }
+    }
+
+    private void prepareCsvFileToDownload(HttpServletResponse response, Profile currentProfile) {
+        response.setContentType("text/csv");
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + currentProfile.getItemId() + ".csv\"");
+        try {
+            StringWriter writer = new StringWriter();
+
+            //using custom delimiter and quote character
+            CSVWriter csvWriter = new CSVWriter(writer);
+            Set<String> keySet = currentProfile.getProperties().keySet();
+            List<String> values = new ArrayList();
+            for (Object value : currentProfile.getProperties().values()) {
+                values.add(value.toString().trim().replace("\n", ""));
+            }
+            csvWriter.writeNext(keySet.toArray(new String[keySet.size()]));
+            csvWriter.writeNext(values.toArray(new String[values.size()]));
+            OutputStream outputStream = response.getOutputStream();
+            outputStream.write(writer.toString().getBytes());
+            outputStream.flush();
+            outputStream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
