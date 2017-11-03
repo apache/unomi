@@ -17,30 +17,21 @@
 
 package org.apache.unomi.web;
 
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.*;
-import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.services.*;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.services.ProfileService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.Writer;
-import java.util.*;
 
 /**
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
@@ -52,7 +43,7 @@ public class ClientServlet extends HttpServlet {
     private ProfileService profileService;
 
     private String profileIdCookieName = "context-profile-id";
-    private String profileIdCookieDomain;
+    private String allowedProfileDownloadFormats;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -68,22 +59,33 @@ public class ClientServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String operation = req.getParameter("op");
-        switch (operation){
-            case "downloadMyProfile" :
-                donwloadCurrentProfile(req, resp);
-                break;
-            default:
-                return;
+        String[] pathInfo = req.getPathInfo().substring(1).split("/");
+        if (pathInfo != null && pathInfo.length > 0) {
+            String operation = pathInfo[0];
+            String param = pathInfo[1];
+            switch (operation) {
+                case "downloadMyProfile":
+                    if (allowedProfileDownloadFormats.contains(param)) {
+                        donwloadCurrentProfile(req, resp, param);
+                    } else {
+                        resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    }
+                    break;
+                default:
+                    resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
 
+            }
+        } else {
+            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
         }
+
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
     }
 
-    public void donwloadCurrentProfile(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    public void donwloadCurrentProfile(HttpServletRequest request, HttpServletResponse response, String downloadFileType) throws ServletException, IOException {
         String cookieProfileId = null;
         Cookie[] cookies = request.getCookies();
         for (Cookie cookie : cookies) {
@@ -91,27 +93,53 @@ public class ClientServlet extends HttpServlet {
                 cookieProfileId = cookie.getValue();
             }
         }
-        if(cookieProfileId != null) {
+        if (cookieProfileId != null) {
             Profile currentProfile = profileService.load(cookieProfileId);
-            if(currentProfile != null) {
-                response.setContentType("text/csv");
-                response.setHeader("Content-Disposition", "attachment; filename=\""+cookieProfileId+".csv\"");
-                try {
-                    OutputStream outputStream = response.getOutputStream();
-                    String outputResult = "";
+            if (currentProfile != null) {
+                switch (downloadFileType) {
+                    case "yaml":
+                        prepareYamlFileToDownload(response, currentProfile);
+                        break;
+                    case "json":
+                        prepareJsonFileToDownload(response, currentProfile);
+                        break;
+                    default:
+                        return;
 
-                    for (String prop : currentProfile.getProperties().keySet()) {
-                        outputResult += prop + "," + currentProfile.getProperties().get(prop) + "\n";
-                    }
+                }
 
-                    outputStream.write(outputResult.getBytes());
-                    outputStream.flush();
-                    outputStream.close();
-                }
-                catch(Exception e) {
-                    e.printStackTrace();
-                }
             }
+        }
+    }
+
+    private void prepareJsonFileToDownload(HttpServletResponse response, Profile currentProfile) {
+        response.setContentType("text/json");
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + currentProfile.getItemId() + ".json\"");
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            String jsonContent = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(currentProfile.getProperties());
+            OutputStream outputStream = response.getOutputStream();
+            outputStream.write(jsonContent.getBytes());
+            outputStream.flush();
+            outputStream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void prepareYamlFileToDownload(HttpServletResponse response, Profile currentProfile) {
+        response.setContentType("text/yaml");
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + currentProfile.getItemId() + ".yml\"");
+        try {
+            YAMLFactory yf = new YAMLFactory();
+            ObjectMapper mapper = new ObjectMapper(yf);
+            String yamlContent = mapper.writeValueAsString(currentProfile.getProperties());
+            OutputStream outputStream = response.getOutputStream();
+            outputStream.write(yamlContent.getBytes());
+            outputStream.flush();
+            outputStream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -119,8 +147,8 @@ public class ClientServlet extends HttpServlet {
         this.profileService = profileService;
     }
 
-    public void setProfileIdCookieDomain(String profileIdCookieDomain) {
-        this.profileIdCookieDomain = profileIdCookieDomain;
+    public void setAllowedProfileDownloadFormats(String allowedProfileDownloadFormats) {
+        this.allowedProfileDownloadFormats = allowedProfileDownloadFormats;
     }
 
     public void setProfileIdCookieName(String profileIdCookieName) {

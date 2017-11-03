@@ -62,6 +62,18 @@
           <artifactId>jackson-databind</artifactId>
           <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+            <version>${version.jackson.core}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>1.19</version>
+        </dependency>
+
+
         <!-- Builds on core streaming API; also needs core annotations -->
         <dependency>
           <groupId>com.fasterxml.jackson.core</groupId>
