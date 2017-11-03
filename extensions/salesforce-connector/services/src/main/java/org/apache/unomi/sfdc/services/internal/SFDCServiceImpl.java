@@ -66,6 +66,9 @@ public class SFDCServiceImpl implements SFDCService {
     private static final String REST_ENDPOINT_URI = "/services/data/v38.0";
     private static final String STREAMING_ENDPOINT_URI = "/cometd/38.0";
 
+    private static final String RESULTSET_KEY_CONTACT = "CONTACT";
+    private static final String RESULTSET_KEY_LEAD = "LEAD";
+
     private static final int CONNECTION_TIMEOUT = 20 * 1000;  // milliseconds
     private static final int READ_TIMEOUT = 120 * 1000; // milliseconds
 
@@ -192,13 +195,13 @@ public class SFDCServiceImpl implements SFDCService {
         return recentLeadIds;
     }
 
-    public Map<String,Object> getSObject(String sobjectName, String objectId) {
+    public Map<String, Object> getSObject(String sobjectName, String objectId) {
         if (!isConnected()) {
             return null;
         }
         Map<String, Object> sobjectMap = new LinkedHashMap<>();
 
-        String baseUrl = sfdcSession.getEndPoint() + REST_ENDPOINT_URI + "/sobjects/" + sobjectName +"/" + objectId;
+        String baseUrl = sfdcSession.getEndPoint() + REST_ENDPOINT_URI + "/sobjects/" + sobjectName + "/" + objectId;
         HttpGet getSObject = new HttpGet(baseUrl);
 
         try {
@@ -221,13 +224,13 @@ public class SFDCServiceImpl implements SFDCService {
         return sobjectMap;
     }
 
-    public Map<String,Object> getSObjectDescribe(String sobjectName) {
+    public Map<String, Object> getSObjectDescribe(String sobjectName) {
         Map<String, Object> sobjectDescribe = new LinkedHashMap<>();
         if (!isConnected()) {
             return null;
         }
 
-        String baseUrl = sfdcSession.getEndPoint() + REST_ENDPOINT_URI + "/sobjects/" + sobjectName +"/describe";
+        String baseUrl = sfdcSession.getEndPoint() + REST_ENDPOINT_URI + "/sobjects/" + sobjectName + "/describe";
         HttpGet getSObjectDescribe = new HttpGet(baseUrl);
 
         try {
@@ -259,12 +262,12 @@ public class SFDCServiceImpl implements SFDCService {
         if (!isConnected()) {
             return null;
         }
-        Map<String,Object> leadDescribe = getSObjectDescribe("Lead");
+        Map<String, Object> leadDescribe = getSObjectDescribe("Lead");
         Object[] fields = (Object[]) leadDescribe.get("fields");
         Set<String> updateableFields = new TreeSet<>();
         Set<String> compoundFieldNames = new TreeSet<>();
         for (Object field : fields) {
-            Map<String,Object> fieldDescribe = (Map<String,Object>) field;
+            Map<String, Object> fieldDescribe = (Map<String, Object>) field;
             String fieldName = (String) fieldDescribe.get("name");
             String compoundFieldName = (String) fieldDescribe.get("compoundFieldName");
             if (compoundFieldName != null) {
@@ -304,15 +307,7 @@ public class SFDCServiceImpl implements SFDCService {
         return true;
     }
 
-    public Set<String> findLeadIdsByIdentifierValue(String identifierFieldValue) {
-        Set<String> results = new LinkedHashSet<String>();
-        if (!isConnected()) {
-            return results;
-        }
-        Object response = query("SELECT Id FROM Lead WHERE " + sfdcConfiguration.getSfdcIdentifierField() + "='" + identifierFieldValue + "'");
-        if (response == null) {
-            return results;
-        }
+    private Set<String> mappingResponse(Object response, Set<String> results) {
         Map<String, Object> result = (Map<String, Object>) response;
         Long totalSize = (Long) result.get("totalSize");
         Boolean done = (Boolean) result.get("done");
@@ -329,13 +324,47 @@ public class SFDCServiceImpl implements SFDCService {
         return results;
     }
 
+    public Set<String> findLeadIdsByIdentifierValue(String identifierFieldValue) {
+        Set<String> results = new LinkedHashSet<>();
+        if (!isConnected()) {
+            return results;
+        }
+        Object response = query("SELECT Id FROM Lead WHERE " + sfdcConfiguration.getSfdcIdentifierField() + "='" +
+                identifierFieldValue + "'");
+        if (response == null) {
+            return results;
+        }
+        return mappingResponse(response, results);
+    }
+
+    private boolean isProfileInContacts(String identifierFieldValue) {
+        logger.info("Checking if we have a contact for identifier value {}...", identifierFieldValue);
+        if (sfdcConfiguration.isSfdcCheckIfContactExistBeforeLeadCreation()) {
+            Object response;
+            Set<String> queryResult = new LinkedHashSet<>();
+            response = query("SELECT Id FROM Contact WHERE " + sfdcConfiguration.getSfdcIdentifierField() +
+                    "='" + identifierFieldValue + "'");
+            queryResult = mappingResponse(response, queryResult);
+            if (queryResult.size() > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public String createOrUpdateLead(Profile profile) {
         if (!isConnected()) {
             return null;
         }
-        // first we must check if an existing lead exists for the profile.
+        // first we must check if an existing contact exists for the profile.
         String unomiIdentifierValue = (String) profile.getProperty(sfdcConfiguration.getUnomiIdentifierField());
+        if (isProfileInContacts(unomiIdentifierValue)) {
+            logger.info("Contact {}  found in SFDC... No SFDC field value to send, will not send anything to " +
+                    "Salesforce. ", unomiIdentifierValue);
+            return null;
+        }
+        // then we must check if an existing lead exists for the profile.
         logger.info("Checking if we have a lead for identifier value {}...", unomiIdentifierValue);
         Set<String> foundExistingSfdcLeadIds = findLeadIdsByIdentifierValue(unomiIdentifierValue);
 
@@ -345,7 +374,8 @@ public class SFDCServiceImpl implements SFDCService {
 
         if (foundExistingSfdcLeadIds.size() > 1) {
             // we found multiple leads matching the identifier value !
-            logger.warn("Found multiple matching leads for identifier value {}, will use first matching one !", unomiIdentifierValue);
+            logger.warn("Found multiple matching leads for identifier value {}, will use first matching one !",
+                    unomiIdentifierValue);
         }
 
         if (foundExistingSfdcLeadIds.size() > 0) {
@@ -411,7 +441,8 @@ public class SFDCServiceImpl implements SFDCService {
         String baseUrl = sfdcSession.getEndPoint() + REST_ENDPOINT_URI + "/sobjects/Lead";
         HttpEntityEnclosingRequestBase request = new HttpPost(baseUrl);
         if (foundExistingSfdcLeadIds.size() > 0) {
-            baseUrl = sfdcSession.getEndPoint() + REST_ENDPOINT_URI + "/sobjects/Lead/" + foundExistingSfdcLeadIds.iterator().next();
+            baseUrl = sfdcSession.getEndPoint() + REST_ENDPOINT_URI + "/sobjects/Lead/" + foundExistingSfdcLeadIds
+                    .iterator().next();
             sfdcLeadFields.remove("Id");
             request = new HttpPatch(baseUrl);
         }
@@ -460,17 +491,19 @@ public class SFDCServiceImpl implements SFDCService {
             // we didn't find a corresponding lead in salesforce.
             return false;
         } else if (foundSfdcLeadIds.size() > 1) {
-            logger.warn("Found multiple leads in Salesforce for identifier value {}, will use first one.", foundSfdcLeadIds);
+            logger.warn("Found multiple leads in Salesforce for identifier value {}, will use first one.",
+                    foundSfdcLeadIds);
         } else {
             logger.info("Found corresponding lead with identifier value {}", unomiIdentifierValue);
         }
-        Map<String,Object> sfdcLead = getLead(foundSfdcLeadIds.iterator().next());
+        Map<String, Object> sfdcLead = getLead(foundSfdcLeadIds.iterator().next());
         if (sfdcLead == null) {
-            logger.error("Error retrieving lead {} from Salesforce", foundSfdcLeadIds );
+            logger.error("Error retrieving lead {} from Salesforce", foundSfdcLeadIds);
             return false;
         }
         boolean profileUpdated = false;
-        for (Map.Entry<String,String> sfdcToUnomiFieldMappingEntry : sfdcConfiguration.getSfdcToUnomiFieldMappings().entrySet()) {
+        for (Map.Entry<String, String> sfdcToUnomiFieldMappingEntry : sfdcConfiguration.getSfdcToUnomiFieldMappings()
+                .entrySet()) {
             String sfdcFieldName = sfdcToUnomiFieldMappingEntry.getKey();
             String unomiFieldName = sfdcToUnomiFieldMappingEntry.getValue();
             if (sfdcLead.get(sfdcFieldName) != null) {
@@ -486,7 +519,7 @@ public class SFDCServiceImpl implements SFDCService {
     }
 
     @Override
-    public Map<String,Object> query(String query) {
+    public Map<String, Object> query(String query) {
         if (!isConnected()) {
             return null;
         }
@@ -502,7 +535,7 @@ public class SFDCServiceImpl implements SFDCService {
                 return null;
             }
             if (responseObject != null && responseObject instanceof Map) {
-                return (Map<String,Object>) responseObject;
+                return (Map<String, Object>) responseObject;
             }
             return null;
         } catch (UnsupportedEncodingException e) {
@@ -536,7 +569,7 @@ public class SFDCServiceImpl implements SFDCService {
             }
 
             if (responseObject instanceof Map) {
-                return (Map<String,Object>) responseObject;
+                return (Map<String, Object>) responseObject;
             }
             return null;
         } catch (UnsupportedEncodingException e) {
@@ -584,7 +617,8 @@ public class SFDCServiceImpl implements SFDCService {
         return client;
     }
 
-    public void setupPushListener(String channelName, ClientSessionChannel.MessageListener messageListener) throws Exception {
+    public void setupPushListener(String channelName, ClientSessionChannel.MessageListener messageListener) throws
+            Exception {
         if (!isConnected()) {
             return;
         }
@@ -668,7 +702,8 @@ public class SFDCServiceImpl implements SFDCService {
 
     private void setupPushTopics(String host, String sessionId) throws HttpException, IOException {
 
-        String baseUrl = host + REST_ENDPOINT_URI + "/query?q=" + URLEncoder.encode("SELECT Id from PushTopic WHERE name = 'LeadUpdates'", "UTF-8");
+        String baseUrl = host + REST_ENDPOINT_URI + "/query?q=" + URLEncoder.encode("SELECT Id from PushTopic WHERE " +
+                "name = 'LeadUpdates'", "UTF-8");
         HttpGet get = new HttpGet(baseUrl);
 
         Map<String, String> queryResponse = (Map<String, String>) handleRequest(get);
@@ -685,12 +720,13 @@ public class SFDCServiceImpl implements SFDCService {
         List<BasicNameValuePair> parametersBody = new ArrayList<>();
         parametersBody.add(new BasicNameValuePair("grant_type", "password"));
         parametersBody.add(new BasicNameValuePair("username", sfdcConfiguration.getSfdcUserUsername()));
-        parametersBody.add(new BasicNameValuePair("password", sfdcConfiguration.getSfdcUserPassword() + sfdcConfiguration.getSfdcUserSecurityToken()));
+        parametersBody.add(new BasicNameValuePair("password", sfdcConfiguration.getSfdcUserPassword() +
+                sfdcConfiguration.getSfdcUserSecurityToken()));
         parametersBody.add(new BasicNameValuePair("client_id", sfdcConfiguration.getSfdcConsumerKey()));
         parametersBody.add(new BasicNameValuePair("client_secret", sfdcConfiguration.getSfdcConsumerSecret()));
         oauthPost.setEntity(new UrlEncodedFormEntity(parametersBody, "UTF-8"));
 
-        Map<String, String> oauthLoginResponse = (Map<String,String>) handleRequest(oauthPost, 0, false);
+        Map<String, String> oauthLoginResponse = (Map<String, String>) handleRequest(oauthPost, 0, false);
         if (oauthLoginResponse == null) {
             return false;
         }
@@ -744,7 +780,8 @@ public class SFDCServiceImpl implements SFDCService {
         return handleRequest(request, 1, true);
     }
 
-    private Object handleRequest(HttpUriRequest request, int retryCount, boolean addAuthorizationHeader) throws IOException, HttpException {
+    private Object handleRequest(HttpUriRequest request, int retryCount, boolean addAuthorizationHeader) throws
+            IOException, HttpException {
         CloseableHttpClient client = HttpClientBuilder.create().build();
         if (addAuthorizationHeader) {
             SFDCSession sfdcSession = getValidSession();
@@ -764,7 +801,8 @@ public class SFDCServiceImpl implements SFDCService {
 
         CloseableHttpResponse response = client.execute(request);
         if (response.getStatusLine().getStatusCode() >= 400) {
-            if ((response.getStatusLine().getStatusCode() == 401 || response.getStatusLine().getStatusCode() == 403) && retryCount > 0) {
+            if ((response.getStatusLine().getStatusCode() == 401 || response.getStatusLine().getStatusCode() == 403)
+                    && retryCount > 0) {
                 // probably the session has expired, let's try to login again
                 logger.warn("Unauthorized request, attempting to login again...");
                 boolean loginSuccessful = login(sfdcConfiguration);
@@ -775,7 +813,8 @@ public class SFDCServiceImpl implements SFDCService {
                 logger.warn("Retrying request {} once again...", request);
                 return handleRequest(request, 0, true);
             } else {
-                logger.error("Error executing request {}: {}-{}", request, response.getStatusLine().getStatusCode(), response.getStatusLine().getStatusCode());
+                logger.error("Error executing request {}: {}-{}", request, response.getStatusLine().getStatusCode(),
+                        response.getStatusLine().getStatusCode());
                 if (response.getEntity() != null) {
                     logger.error("Entity={}", EntityUtils.toString(response.getEntity()));
                 }
