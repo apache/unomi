@@ -1002,7 +1002,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
         if (itemsMonthlyIndexed.contains(type)) {
             createMonthlyIndexTemplate();
-            if (client.admin().indices().prepareExists(indexName + "-*").execute().actionGet().isExists()){
+            if (client.admin().indices().prepareExists(indexName + "-*").execute().actionGet().isExists()) {
                 createMapping(type, source, indexName + "-*");
             }
         } else if (indexNames.containsKey(type)) {
