@@ -104,13 +104,16 @@ public class ClientServlet extends HttpServlet {
             if (currentProfile != null) {
                 switch (downloadFileType) {
                     case "yaml":
-                        prepareYamlFileToDownload(response, currentProfile);
+                        prepareYamlFileToDownload(response, currentProfile, false);
                         break;
                     case "json":
                         prepareJsonFileToDownload(response, currentProfile);
                         break;
                     case "csv":
                         prepareCsvFileToDownload(response, currentProfile, request.getParameter("vertical") != null);
+                        break;
+                    case "text":
+                        prepareYamlFileToDownload(response, currentProfile, true);
                         break;
                     default:
                         return;
@@ -131,9 +134,9 @@ public class ClientServlet extends HttpServlet {
             CSVWriter csvWriter = new CSVWriter(writer);
             OutputStream outputStream = response.getOutputStream();
             if (vertical) {
-                csvWriter.writeNext(new String[] {"name", "value"});
-                for (Map.Entry<String,Object> entry : currentProfile.getProperties().entrySet()) {
-                    csvWriter.writeNext(new String[] { entry.getKey(), entry.getValue().toString().trim().replace("\n", "")});
+                csvWriter.writeNext(new String[]{"name", "value"});
+                for (Map.Entry<String, Object> entry : currentProfile.getProperties().entrySet()) {
+                    csvWriter.writeNext(new String[]{entry.getKey(), entry.getValue().toString().trim().replace("\n", "")});
                 }
             } else {
                 Set<String> keySet = currentProfile.getProperties().keySet();
@@ -167,9 +170,9 @@ public class ClientServlet extends HttpServlet {
         }
     }
 
-    private void prepareYamlFileToDownload(HttpServletResponse response, Profile currentProfile) {
-        response.setContentType("text/yaml");
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + currentProfile.getItemId() + ".yml\"");
+    private void prepareYamlFileToDownload(HttpServletResponse response, Profile currentProfile, boolean asTextFile) {
+        response.setContentType("text/" + (asTextFile ? "plain" : "yaml"));
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + currentProfile.getItemId() + (asTextFile ? ".txt" : ".yml") + "\"");
         try {
             YAMLFactory yf = new YAMLFactory();
             ObjectMapper mapper = new ObjectMapper(yf);
