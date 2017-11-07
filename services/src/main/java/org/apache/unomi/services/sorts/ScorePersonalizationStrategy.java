@@ -69,7 +69,7 @@ public class ScorePersonalizationStrategy implements PersonalizationStrategy {
 
             for (PersonalizationService.Filter filter : personalizedContent.getFilters()) {
                 Condition condition = filter.getCondition();
-                if (condition.getConditionType() != null) {
+                if (condition != null && condition.getConditionTypeId() != null) {
                     if (profileService.matchCondition(condition, profile, session)) {
                         if (filter.getProperties().get("score") != null) {
                             score += (int) filter.getProperties().get("score");

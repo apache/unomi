@@ -62,7 +62,7 @@ public class PersonalizationServiceImpl implements PersonalizationService {
         boolean result = true;
         for (Filter filter : personalizedContent.getFilters()) {
             Condition condition = filter.getCondition();
-            if (condition.getConditionType() != null) {
+            if (condition != null && condition.getConditionTypeId() != null) {
                 result &= profileService.matchCondition(condition, profile, session);
             }
         }
