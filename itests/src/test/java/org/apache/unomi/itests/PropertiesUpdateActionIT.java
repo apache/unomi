@@ -103,12 +103,13 @@ public class PropertiesUpdateActionIT extends BaseIT {
 
         updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TEST_ID);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
         int changes = eventService.send(updateProperties);
 
         LOGGER.info("Changes of the event : {}", changes);
 
         profileToUpdate = profileService.load(PROFILE_TEST_ID);
-        Assert.assertEquals(profileToUpdate.getProperty("firstName"), "UPDATED FIRST NAME");
+        Assert.assertEquals("UPDATED FIRST NAME", profileToUpdate.getProperty("firstName"));
 
     }
 }

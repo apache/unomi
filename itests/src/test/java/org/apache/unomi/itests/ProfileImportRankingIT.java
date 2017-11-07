@@ -140,18 +140,7 @@ public class ProfileImportRankingIT extends BaseIT {
     public void testImportRanking() throws InterruptedException {
 
         //Wait for data to be processed
-        //Check import config status
-        ImportConfiguration importConfiguration = importConfigurationService.load("5-ranking-test");
-        while (importConfiguration != null && !RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS.equals(importConfiguration.getStatus())) {
-            logger.info("$$$$ : testImportRanking : Waiting for data to be processed ...");
-            Thread.sleep(1000);
-            importConfiguration = importConfigurationService.load("5-ranking-test");
-        }
         Thread.sleep(10000);
-
-        Assert.assertEquals(1, importConfiguration.getExecutions().size());
-
-        //Assert.assertEquals(28, profileService.getAllProfilesCount());
 
         PartialList<Profile> gregProfile = profileService.findProfilesByPropertyValue("properties.uciId", "10004451371", 0, 10, null);
         Assert.assertEquals(1, gregProfile.getList().size());
