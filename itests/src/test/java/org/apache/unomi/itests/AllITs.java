@@ -37,7 +37,7 @@ import org.junit.runners.Suite.SuiteClasses;
         ProfileImportSurfersIT.class,
         ProfileImportSurfersOverwriteIT.class,
         ProfileImportSurfersDeleteIT.class,
-        //ProfileImportRankingIT.class,
+        ProfileImportRankingIT.class,
         ProfileImportActorsIT.class,
         ProfileExportIT.class,
         PropertiesUpdateActionIT.class
