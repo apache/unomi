@@ -66,30 +66,26 @@ public class MigrationTo130 implements Migration {
         initTagsStructurePriorTo130();
         String hostAddress = ConsoleUtils.askUserWithDefaultAnswer(session, "Host address (default = http://localhost:9200): ", "http://localhost:9200");
         String tagsOperation = ConsoleUtils.askUserWithAuthorizedAnswer(session, "How to manage tags?\n1. copy: will duplicate tags in systemTags property\n2. move: will move tags in systemTags property\n[1 - 2]: ", Arrays.asList("1", "2"));
-        String removeNamespaceOnSystemTags = ConsoleUtils.askUserWithAuthorizedAnswer(session,"As we will copy/move the tags, do you wish to remove existing namespace on tags before copy/move in systemTags? (e.g: hidden.) (yes/no): ", Arrays.asList("yes", "no"));
+        String removeNamespaceOnSystemTags = ConsoleUtils.askUserWithAuthorizedAnswer(session, "As we will copy/move the tags, do you wish to remove existing namespace on tags before copy/move in systemTags? (e.g: hidden.) (yes/no): ", Arrays.asList("yes", "no"));
 
         List<String> typeToMigrate = Arrays.asList("actionType", "conditionType", "campaign", "goal", "rule", "scoring", "segment", "userList");
         for (String type : typeToMigrate) {
-            migrateTypeTags(hostAddress, type, tagsOperation, removeNamespaceOnSystemTags.equals("yes"));
+            migrateTagsInResult(hostAddress, type, 10, true, tagsOperation, removeNamespaceOnSystemTags.equals("yes"), null);
         }
 
-        migratePropertyTypesTags(hostAddress, tagsOperation, removeNamespaceOnSystemTags.equals("yes"));
+        migrateTagsInResult(hostAddress, "propertyType", 10, false, tagsOperation, removeNamespaceOnSystemTags.equals("yes"), null);
     }
 
-    private void migrateTypeTags(String hostAddress, String type, String tagsOperation, boolean removeNamespaceOnSystemTags) throws IOException {
-        JSONObject responseJSON = MigrationUtils.queryWithScroll(httpClient, hostAddress + "/context/" + type + "/_search");
+    private void migrateTagsInResult(String hostAddress, String type, int currentOffset,
+                                     boolean tagsInMetadata, String tagsOperation, boolean removeNamespaceOnSystemTags, String scrollId) throws IOException {
 
-        migrateTagsInResult(responseJSON, hostAddress, type,10, true, tagsOperation, removeNamespaceOnSystemTags);
-    }
+        JSONObject responseJSON;
+        if (StringUtils.isNotBlank(scrollId)) {
+            responseJSON = MigrationUtils.continueQueryWithScroll(httpClient, hostAddress, scrollId);
+        } else {
+            responseJSON = MigrationUtils.queryWithScroll(httpClient, hostAddress + "/context/" + type + "/_search");
+        }
 
-    private void migratePropertyTypesTags(String hostAddress, String tagsOperation, boolean removeNamespaceOnSystemTags) throws IOException {
-        JSONObject responseJSON = MigrationUtils.queryWithScroll(httpClient,hostAddress + "/context/propertyType/_search");
-
-        migrateTagsInResult(responseJSON, hostAddress, "propertyType", 10, false, tagsOperation, removeNamespaceOnSystemTags);
-    }
-
-    private void migrateTagsInResult(JSONObject responseJSON, String hostAddress, String type, int currentOffset,
-                                     boolean tagsInMetadata, String tagsOperation, boolean removeNamespaceOnSystemTags) throws IOException {
         if (responseJSON.has("hits")) {
             JSONObject hitsObject = responseJSON.getJSONObject("hits");
             if (hitsObject.has("hits")) {
@@ -115,7 +111,7 @@ public class MigrationTo130 implements Migration {
                 }
 
                 if (hitsObject.getInt("total") > currentOffset) {
-                    migrateTagsInResult(MigrationUtils.continueQueryWithScroll(httpClient, hostAddress, responseJSON.getString("_scroll_id")), hostAddress, type,currentOffset + 10, tagsInMetadata, tagsOperation, removeNamespaceOnSystemTags);
+                    migrateTagsInResult(hostAddress, type, currentOffset + 10, tagsInMetadata, tagsOperation, removeNamespaceOnSystemTags, responseJSON.getString("_scroll_id"));
                 }
             }
         }
@@ -215,6 +211,7 @@ public class MigrationTo130 implements Migration {
         tagsStructurePriorTo130.put("socialProfileProperties", Arrays.asList("properties", "profileProperties"));
         tagsStructurePriorTo130.put("personalProfileProperties", Arrays.asList("properties", "profileProperties"));
         tagsStructurePriorTo130.put("workProfileProperties", Arrays.asList("properties", "profileProperties"));
+        tagsStructurePriorTo130.put("personalIdentifierProperties", Arrays.asList("properties", "profileProperties"));
 
         tagsStructurePriorTo130.put("sessionProperties", Collections.singletonList("properties"));
         tagsStructurePriorTo130.put("geographicSessionProperties", Arrays.asList("properties", "sessionProperties"));

@@ -66,6 +66,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     private List<PropertyType> allPropertyTypes;
 
+    private final String PERSONAL_IDENTIFIER_TAG_NAME = "personalIdentifierProperties";
+
     public ProfileServiceImpl() {
         logger.info("Initializing profile service...");
     }
@@ -559,7 +561,24 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         if (session.getItemId() == null) {
             return null;
         }
+        if(session.getProfile()!=null && session.getProfile().getProperties()!=null) {
+            session.getProfile().setProperties(removePersonalIdentifiersFromSessionProfile(session.getProfile().getProperties()));
+        }
         return persistenceService.save(session) ? session : null;
+    }
+
+    private Map removePersonalIdentifiersFromSessionProfile(final Map<String, Object> profileProperties){
+        Set<PropertyType> personalIdsProps = getPropertyTypeBySystemTag(PERSONAL_IDENTIFIER_TAG_NAME);
+        final List personalIdsPropsNames = new ArrayList<String>();
+        personalIdsProps.forEach(propType -> personalIdsPropsNames.add(propType.getMetadata().getId()));
+        Set propsToRemove = new HashSet<String>();
+        profileProperties.keySet().forEach( propKey -> {
+            if(personalIdsPropsNames.contains(propKey)) {
+                propsToRemove.add(propKey);
+            }
+        });
+        propsToRemove.forEach(propId -> profileProperties.remove(propId));
+        return profileProperties;
     }
 
     public PartialList<Session> findProfileSessions(String profileId) {

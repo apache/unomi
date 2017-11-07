@@ -5,7 +5,8 @@
         "systemTags": [
             "properties",
             "profileProperties",
-            "contactProfileProperties"
+            "contactProfileProperties",
+            "personalIdentifierProperties"
         ]
     },
     "type": "string",

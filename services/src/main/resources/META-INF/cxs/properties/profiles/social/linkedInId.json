@@ -5,7 +5,8 @@
         "systemTags": [
             "properties",
             "profileProperties",
-            "socialProfileProperties"
+            "socialProfileProperties",
+            "personalIdentifierProperties"
         ]
     },
     "type": "string",
