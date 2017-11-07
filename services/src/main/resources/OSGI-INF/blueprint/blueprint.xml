@@ -37,11 +37,9 @@
                              update-strategy="reload" placeholder-prefix="${cluster.">
         <cm:default-properties>
             <cm:property name="group" value="default" />
-            <cm:property name="jmxUsername" value="karaf" />
-            <cm:property name="jmxPassword" value="karaf" />
-            <cm:property name="jmxPort" value="1099" />
             <cm:property name="contextserver.publicAddress" value="https://localhost:9443"/>
             <cm:property name="contextserver.internalAddress" value="http://127.0.0.1:8181"/>
+            <cm:property name="nodeStatisticsUpdateFrequency" value="10000"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -165,9 +163,7 @@
         <property name="karafCellarGroupManager" ref="karafCellarGroupManager" />
         <property name="karafCellarGroupName" value="${cluster.group}" />
         <property name="osgiConfigurationAdmin" ref="osgiConfigurationAdmin" />
-        <property name="karafJMXUsername" value="${cluster.jmxUsername}" />
-        <property name="karafJMXPassword" value="${cluster.jmxPassword}" />
-        <property name="karafJMXPort" value="${cluster.jmxPort}" />
+        <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}" />
     </bean>
     <service id="clusterService" ref="clusterServiceImpl" auto-export="interfaces"/>
 
@@ -281,5 +277,20 @@
 
     <service id="configSharingService" ref="configSharingServiceImpl" auto-export="interfaces">
     </service>
+
+    <!-- Cluster System Statistics Event Handler -->
+    <bean id="clusterSystemStatisticsEventHandler" class="org.apache.unomi.services.services.ClusterSystemStatisticsEventHandler"
+          init-method="init" destroy-method="destroy">
+        <property name="configurationAdmin" ref="osgiConfigurationAdmin"/>
+        <property name="clusterManager" ref="karafCellarClusterManager"/>
+        <property name="groupManager" ref="karafCellarGroupManager"/>
+        <property name="clusterServiceImpl" ref="clusterServiceImpl" />
+    </bean>
+    <service ref="clusterSystemStatisticsEventHandler" interface="org.apache.karaf.cellar.core.event.EventHandler">
+        <service-properties>
+            <entry key="managed" value="true"/>
+        </service-properties>
+    </service>
+
 
 </blueprint>

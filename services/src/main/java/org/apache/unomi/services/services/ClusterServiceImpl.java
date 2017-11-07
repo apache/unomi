@@ -17,6 +17,7 @@
 
 package org.apache.unomi.services.services;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.karaf.cellar.config.ClusterConfigurationEvent;
 import org.apache.karaf.cellar.config.Constants;
 import org.apache.karaf.cellar.core.*;
@@ -31,16 +32,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.management.*;
-import javax.management.remote.JMXConnector;
-import javax.management.remote.JMXConnectorFactory;
-import javax.management.remote.JMXServiceURL;
-import java.io.IOException;
+import java.io.Serializable;
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
-import java.net.ConnectException;
-import java.net.MalformedURLException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Implementation of the persistence service interface
@@ -57,12 +54,13 @@ public class ClusterServiceImpl implements ClusterService {
     private GroupManager karafCellarGroupManager;
     private String karafCellarGroupName = Configurations.DEFAULT_GROUP_NAME;
     private ConfigurationAdmin osgiConfigurationAdmin;
-    private String karafJMXUsername = "karaf";
-    private String karafJMXPassword = "karaf";
-    private int karafJMXPort = 1099;
     private String publicAddress;
     private String internalAddress;
-    private Map<String, JMXConnector> jmxConnectors = new LinkedHashMap<>();
+    private Map<String, Map<String,Serializable>> nodeSystemStatistics = new ConcurrentHashMap<>();
+    private Group group = null;
+
+    private Timer nodeStatisticsUpdateTimer;
+    private long nodeStatisticsUpdateFrequency = 10000;
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -88,18 +86,6 @@ public class ClusterServiceImpl implements ClusterService {
         this.osgiConfigurationAdmin = osgiConfigurationAdmin;
     }
 
-    public void setKarafJMXUsername(String karafJMXUsername) {
-        this.karafJMXUsername = karafJMXUsername;
-    }
-
-    public void setKarafJMXPassword(String karafJMXPassword) {
-        this.karafJMXPassword = karafJMXPassword;
-    }
-
-    public void setKarafJMXPort(int karafJMXPort) {
-        this.karafJMXPort = karafJMXPort;
-    }
-
     public void setPublicAddress(String publicAddress) {
         this.publicAddress = publicAddress;
     }
@@ -108,11 +94,19 @@ public class ClusterServiceImpl implements ClusterService {
         this.internalAddress = internalAddress;
     }
 
+    public void setNodeStatisticsUpdateFrequency(long nodeStatisticsUpdateFrequency) {
+        this.nodeStatisticsUpdateFrequency = nodeStatisticsUpdateFrequency;
+    }
+
+    public Map<String, Map<String, Serializable>> getNodeSystemStatistics() {
+        return nodeSystemStatistics;
+    }
+
     public void init() {
         if (karafCellarEventProducer != null && karafCellarClusterManager != null) {
 
             boolean setupConfigOk = true;
-            Group group = karafCellarGroupManager.findGroupByName(karafCellarGroupName);
+            group = karafCellarGroupManager.findGroupByName(karafCellarGroupName);
             if (setupConfigOk && group == null) {
                 logger.error("Cluster group " + karafCellarGroupName + " doesn't exist, creating it...");
                 group = karafCellarGroupManager.createGroup(karafCellarGroupName);
@@ -155,20 +149,21 @@ public class ClusterServiceImpl implements ClusterService {
                 clusterConfigurationEvent.setSourceGroup(group);
                 karafCellarEventProducer.produce(clusterConfigurationEvent);
             }
+
+            nodeStatisticsUpdateTimer = new Timer();
+            TimerTask statisticsTask = new TimerTask() {
+                @Override
+                public void run() {
+                    updateSystemStats();
+                }
+            };
+            nodeStatisticsUpdateTimer.schedule(statisticsTask, 0, nodeStatisticsUpdateFrequency);
+
         }
         logger.info("Cluster service initialized.");
     }
 
     public void destroy() {
-        for (Map.Entry<String, JMXConnector> jmxConnectorEntry : jmxConnectors.entrySet()) {
-            String url = jmxConnectorEntry.getKey();
-            JMXConnector jmxConnector = jmxConnectorEntry.getValue();
-            try {
-                jmxConnector.close();
-            } catch (IOException e) {
-                logger.error("Error closing JMX connector for url {}", url, e);
-            }
-        }
         logger.info("Cluster service shutdown.");
     }
 
@@ -196,65 +191,27 @@ public class ClusterServiceImpl implements ClusterService {
             if (internalEndpoint != null) {
                 clusterNode.setInternalHostAddress(internalEndpoint);
             }
-            String serviceUrl = "service:jmx:rmi:///jndi/rmi://" + karafCellarNode.getHost() + ":" + karafJMXPort + "/karaf-root";
-            try {
-                JMXConnector jmxConnector = getJMXConnector(serviceUrl);
-                MBeanServerConnection mbsc = jmxConnector.getMBeanServerConnection();
-                final RuntimeMXBean remoteRuntime = ManagementFactory.newPlatformMXBeanProxy(mbsc, ManagementFactory.RUNTIME_MXBEAN_NAME, RuntimeMXBean.class);
-                clusterNode.setUptime(remoteRuntime.getUptime());
-                ObjectName operatingSystemMXBeanName = new ObjectName(ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME);
-                Double systemCpuLoad = null;
-                try {
-                    systemCpuLoad = (Double) mbsc.getAttribute(operatingSystemMXBeanName, "SystemCpuLoad");
-                } catch (MBeanException e) {
-                    logger.error("Error retrieving system CPU load", e);
-                } catch (AttributeNotFoundException e) {
-                    logger.error("Error retrieving system CPU load", e);
+            Map<String,Serializable> nodeStatistics = nodeSystemStatistics.get(karafCellarNode.getId());
+            if (nodeStatistics != null) {
+                Long uptime = (Long) nodeStatistics.get("uptime");
+                if (uptime != null) {
+                    clusterNode.setUptime(uptime);
                 }
-                final OperatingSystemMXBean remoteOperatingSystemMXBean = ManagementFactory.newPlatformMXBeanProxy(mbsc, ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME, OperatingSystemMXBean.class);
-                clusterNode.setLoadAverage(new double[]{remoteOperatingSystemMXBean.getSystemLoadAverage()});
+                Double systemCpuLoad = (Double) nodeStatistics.get("systemCpuLoad");
                 if (systemCpuLoad != null) {
                     clusterNode.setCpuLoad(systemCpuLoad);
                 }
-
-            } catch (MalformedURLException e) {
-                logger.error("Error connecting to remote JMX server", e);
-            } catch (ConnectException ce) {
-                handleTimeouts(serviceUrl, ce);
-            } catch (java.rmi.ConnectException ce) {
-                handleTimeouts(serviceUrl, ce);
-            } catch (java.rmi.ConnectIOException cioe) {
-                handleTimeouts(serviceUrl, cioe);
-            } catch (IOException e) {
-                logger.error("Error retrieving remote JMX data", e);
-            } catch (MalformedObjectNameException e) {
-                logger.error("Error retrieving remote JMX data", e);
-            } catch (InstanceNotFoundException e) {
-                logger.error("Error retrieving remote JMX data", e);
-            } catch (ReflectionException e) {
-                logger.error("Error retrieving remote JMX data", e);
+                List<Double> loadAverage = (List<Double>) nodeStatistics.get("systemLoadAverage");
+                if (loadAverage != null) {
+                    Double[] loadAverageArray = loadAverage.toArray(new Double[loadAverage.size()]);
+                    ArrayUtils.toPrimitive(loadAverageArray);
+                    clusterNode.setLoadAverage(ArrayUtils.toPrimitive(loadAverageArray));
+                }
             }
             clusterNodes.put(karafCellarNode.getId(), clusterNode);
         }
 
         return new ArrayList<ClusterNode>(clusterNodes.values());
-    }
-
-    private void handleTimeouts(String serviceUrl, Throwable throwable) {
-        Throwable rootCause = throwable;
-        while (rootCause.getCause() != null) {
-            rootCause = rootCause.getCause();
-        }
-        logger.warn("JMX RMI Connection error, will reconnect on next request. Active debug logging for access to detailed stack trace. Root cause=" + rootCause.getMessage());
-        logger.debug("Detailed stacktrace", throwable);
-        JMXConnector jmxConnector = jmxConnectors.remove(serviceUrl);
-        try {
-            if (jmxConnector != null) {
-                jmxConnector.close();
-            }
-        } catch (Throwable t) {
-            // ignore any exception when closing a timed out connection.
-        }
     }
 
     @Override
@@ -282,39 +239,6 @@ public class ClusterServiceImpl implements ClusterService {
         support.setGroupManager(this.karafCellarGroupManager);
         support.setConfigurationAdmin(this.osgiConfigurationAdmin);
         return support.isAllowed(group, category, pid, type);
-    }
-
-    private JMXConnector getJMXConnector(String url) throws IOException {
-        if (jmxConnectors.containsKey(url)) {
-            JMXConnector jmxConnector = jmxConnectors.get(url);
-            try {
-                jmxConnector.getMBeanServerConnection();
-                return jmxConnector;
-            } catch (IOException e) {
-                jmxConnectors.remove(url);
-                try {
-                    jmxConnector.close();
-                } catch (IOException e1) {
-                    logger.warn("Closing invalid JMX connection resulted in :" + e1.getMessage() + ", this is probably ok.");
-                    logger.debug("Error closing invalid JMX connection", e1);
-                }
-                if (e.getMessage() != null && e.getMessage().contains("Connection closed")) {
-                    logger.warn("JMX connection to url {} was closed (Cause:{}). Reconnecting...", url, e.getMessage());
-                } else {
-                    logger.error("Error using the JMX connection to url {}, closed and will reconnect", url, e);
-                }
-            }
-        }
-        // if we reach this point either we didn't have a connector or it didn't validate
-        // now let's connect to remote JMX service to retrieve information from the runtime and operating system MX beans
-        JMXServiceURL jmxServiceURL = new JMXServiceURL(url);
-        Map<String, Object> environment = new HashMap<String, Object>();
-        if (karafJMXUsername != null && karafJMXPassword != null) {
-            environment.put(JMXConnector.CREDENTIALS, new String[]{karafJMXUsername, karafJMXPassword});
-        }
-        JMXConnector jmxConnector = JMXConnectorFactory.connect(jmxServiceURL, environment);
-        jmxConnectors.put(url, jmxConnector);
-        return jmxConnector;
     }
 
     private Map<String, String> getMapProperty(Properties properties, String propertyName, String defaultValue) {
@@ -348,6 +272,39 @@ public class ClusterServiceImpl implements ClusterService {
             return null;
         }
         return getMapProperty(oldPropertyValue);
+    }
+
+    private void updateSystemStats() {
+        final RuntimeMXBean remoteRuntime = ManagementFactory.getRuntimeMXBean();
+        long uptime = remoteRuntime.getUptime();
+        ObjectName operatingSystemMXBeanName = ManagementFactory.getOperatingSystemMXBean().getObjectName();
+        Double systemCpuLoad = null;
+        try {
+            systemCpuLoad = (Double) ManagementFactory.getPlatformMBeanServer().getAttribute(operatingSystemMXBeanName, "SystemCpuLoad");
+        } catch (MBeanException e) {
+            logger.error("Error retrieving system CPU load", e);
+        } catch (AttributeNotFoundException e) {
+            logger.error("Error retrieving system CPU load", e);
+        } catch (InstanceNotFoundException e) {
+            logger.error("Error retrieving system CPU load", e);
+        } catch (ReflectionException e) {
+            logger.error("Error retrieving system CPU load", e);
+        }
+        final OperatingSystemMXBean operatingSystemMXBean = ManagementFactory.getOperatingSystemMXBean();
+        double systemLoadAverage = operatingSystemMXBean.getSystemLoadAverage();
+
+        ClusterSystemStatisticsEvent clusterSystemStatisticsEvent = new ClusterSystemStatisticsEvent("org.apache.unomi.cluster.system.statistics");
+        clusterSystemStatisticsEvent.setSourceGroup(group);
+        clusterSystemStatisticsEvent.setSourceNode(karafCellarClusterManager.getNode());
+        Map<String,Serializable> systemStatistics = new TreeMap<>();
+        ArrayList<Double> systemLoadAverageArray = new ArrayList<>();
+        systemLoadAverageArray.add(systemLoadAverage);
+        systemStatistics.put("systemLoadAverage", systemLoadAverageArray);
+        systemStatistics.put("systemCpuLoad", systemCpuLoad);
+        systemStatistics.put("uptime", uptime);
+        clusterSystemStatisticsEvent.setStatistics(systemStatistics);
+        nodeSystemStatistics.put(karafCellarClusterManager.getNode().getId(), systemStatistics);
+        karafCellarEventProducer.produce(clusterSystemStatisticsEvent);
     }
 
 }
