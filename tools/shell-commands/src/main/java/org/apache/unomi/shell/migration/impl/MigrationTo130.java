@@ -37,6 +37,7 @@ public class MigrationTo130 implements Migration {
     private CloseableHttpClient httpClient;
     private CommandSession session;
     private LinkedHashMap<String, List<String>> tagsStructurePriorTo130;
+    private List propsTaggedAsPersonalIdentifier = Arrays.asList("firstName", "lastName", "email", "phoneNumber", "address", "facebookId", "googleId", "linkedInId", "twitterId");
 
     @Override
     public Version getFromVersion() {
@@ -139,11 +140,17 @@ public class MigrationTo130 implements Migration {
                 updatedHits.append("{\"update\":{\"_id\":\"").append(hitId).append("\"}}\n");
                 if (tagsOperation.equals("1")) {
                     Set<String> tags = removeNamespaceOnTags(removeNamespaceOnSystemTags, tagsAfterMigration);
+                    if (propsTaggedAsPersonalIdentifier.contains(hitId)) {
+                        tags.add("personalIdentifierProperties");
+                    }
                     updatedHits.append("{\"doc\":{\"metadata\":{\"tags\":").append(new JSONArray(tagsAfterMigration))
                             .append(",\"systemTags\":").append(new JSONArray(tags)).append("}}}\n");
                 }
                 if (tagsOperation.equals("2")) {
                     Set<String> tags = removeNamespaceOnTags(removeNamespaceOnSystemTags, tagsAfterMigration);
+                    if (propsTaggedAsPersonalIdentifier.contains(hitId)) {
+                        tags.add("personalIdentifierProperties");
+                    }
                     updatedHits.append("{\"doc\":{\"metadata\":{\"systemTags\":").append(new JSONArray(tags)).append("}}}\n");
                     if (tagsInMetadata) {
                         updatedHits.append("{\"update\":{\"_id\":\"").append(hitId).append("\"}}\n");
@@ -211,7 +218,6 @@ public class MigrationTo130 implements Migration {
         tagsStructurePriorTo130.put("socialProfileProperties", Arrays.asList("properties", "profileProperties"));
         tagsStructurePriorTo130.put("personalProfileProperties", Arrays.asList("properties", "profileProperties"));
         tagsStructurePriorTo130.put("workProfileProperties", Arrays.asList("properties", "profileProperties"));
-        tagsStructurePriorTo130.put("personalIdentifierProperties", Arrays.asList("properties", "profileProperties"));
 
         tagsStructurePriorTo130.put("sessionProperties", Collections.singletonList("properties"));
         tagsStructurePriorTo130.put("geographicSessionProperties", Arrays.asList("properties", "sessionProperties"));
