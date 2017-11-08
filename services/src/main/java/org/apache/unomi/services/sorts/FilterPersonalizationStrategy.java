@@ -40,9 +40,11 @@ public class FilterPersonalizationStrategy implements PersonalizationStrategy {
         List<String> sortedContent = new ArrayList<>();
         for (PersonalizationService.PersonalizedContent personalizedContent : personalizationRequest.getContents()) {
             boolean result = true;
-            for (PersonalizationService.Filter filter : personalizedContent.getFilters()) {
-                Condition condition = filter.getCondition();
-                result &= profileService.matchCondition(condition, profile, session);
+            if (personalizedContent.getFilters() != null) {
+                for (PersonalizationService.Filter filter : personalizedContent.getFilters()) {
+                    Condition condition = filter.getCondition();
+                    result &= profileService.matchCondition(condition, profile, session);
+                }
             }
             if (result) {
                 sortedContent.add(personalizedContent.getId());

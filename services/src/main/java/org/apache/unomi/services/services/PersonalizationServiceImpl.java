@@ -60,10 +60,12 @@ public class PersonalizationServiceImpl implements PersonalizationService {
     @Override
     public boolean filter(Profile profile, Session session, PersonalizedContent personalizedContent) {
         boolean result = true;
-        for (Filter filter : personalizedContent.getFilters()) {
-            Condition condition = filter.getCondition();
-            if (condition != null && condition.getConditionTypeId() != null) {
-                result &= profileService.matchCondition(condition, profile, session);
+        if (personalizedContent.getFilters() != null) {
+            for (Filter filter : personalizedContent.getFilters()) {
+                Condition condition = filter.getCondition();
+                if (condition != null && condition.getConditionTypeId() != null) {
+                    result &= profileService.matchCondition(condition, profile, session);
+                }
             }
         }
         return result;
