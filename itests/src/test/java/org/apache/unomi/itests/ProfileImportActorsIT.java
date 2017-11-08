@@ -16,12 +16,6 @@
  */
 package org.apache.unomi.itests;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
@@ -31,24 +25,16 @@ import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import javax.ws.rs.core.MediaType;
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
-
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * Created by amidani on 14/08/2017.
@@ -63,11 +49,9 @@ public class ProfileImportActorsIT extends BaseIT {
 
     @Inject
     protected ProfileService profileService;
-    private Logger logger = LoggerFactory.getLogger(ProfileImportActorsIT.class);
 
-
-    @Before
-    public void setUp() throws IOException {
+    @Test
+    public void testImportActors() throws InterruptedException {
 
         /*** Create Missing Properties ***/
         PropertyType propertyTypeTwitterId = new PropertyType(new Metadata("integration", "twitterId", "Twitter ID", "Twitter ID"));
@@ -81,7 +65,18 @@ public class ProfileImportActorsIT extends BaseIT {
         propertyTypeActorsGenres.getMetadata().setSystemTags(Collections.singleton("basicProfileProperties"));
         propertyTypeActorsGenres.setTarget("profiles");
 
+        profileService.setPropertyType(propertyTypeTwitterId);
         profileService.setPropertyType(propertyTypeActorsGenres);
+
+        //Wait for data to be processed
+        Thread.sleep(10000);
+
+        PropertyType propTwitterId = profileService.getPropertyType("twitterId");
+        Assert.assertNotNull(propTwitterId);
+
+        PropertyType propActorsGenre = profileService.getPropertyType("movieGenres");
+        Assert.assertNotNull(propActorsGenre);
+
 
         /*** Actors Test ***/
         ImportConfiguration importConfigActors = new ImportConfiguration();
@@ -108,61 +103,25 @@ public class ProfileImportActorsIT extends BaseIT {
 
         importConfigurationService.save(importConfigActors, true);
 
-    }
-
-    @Test
-    public void testCheckImportConfigListActors() {
+        //Wait for data to be processed
+        Thread.sleep(10000);
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(5, importConfigurations.size());
-
-    }
-
-
-    @Test
-    public void testCheckAddedPropertiesActors() throws IOException, InterruptedException {
-
-        //Wait for data to be processed
-        Thread.sleep(1000);
-
-        PropertyType propTwitterId = profileService.getPropertyType("twitterId");
-        Assert.assertNotNull(propTwitterId);
-
-        PropertyType propActorsGenre = profileService.getPropertyType("movieGenres");
-        Assert.assertNotNull(propActorsGenre);
-
-    }
-
-    @Test
-    public void testImportActors() throws InterruptedException {
-
-        //Wait for data to be processed
-        //Check import config status
-        ImportConfiguration importConfiguration = importConfigurationService.load("6-actors-test");
-        while (importConfiguration != null && !RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS.equals(importConfiguration.getStatus())) {
-            logger.info("$$$$ : testImportActors : Waiting for data to be processed ...");
-            Thread.sleep(1000);
-            importConfiguration = importConfigurationService.load("6-actors-test");
-        }
-        Thread.sleep(10000);
-
-        Assert.assertEquals(1, importConfiguration.getExecutions().size());
-
-        //Assert.assertEquals(34, profileService.getAllProfilesCount());
 
         PartialList<Profile> jeanneProfile = profileService.findProfilesByPropertyValue("properties.twitterId", "4", 0, 10, null);
         Assert.assertEquals(1, jeanneProfile.getList().size());
         Assert.assertNotNull(jeanneProfile.get(0));
         Assert.assertEquals("Jeanne; D'arc", jeanneProfile.get(0).getProperty("lastName"));
         Assert.assertEquals("jean@darc.com", jeanneProfile.get(0).getProperty("email"));
-        Assert.assertArrayEquals(new String[]{}, ((List)jeanneProfile.get(0).getProperty("movieGenres")).toArray());
+        Assert.assertArrayEquals(new String[]{}, ((List) jeanneProfile.get(0).getProperty("movieGenres")).toArray());
 
         PartialList<Profile> rockProfile = profileService.findProfilesByPropertyValue("properties.twitterId", "6", 0, 10, null);
         Assert.assertEquals(1, rockProfile.getList().size());
         Assert.assertNotNull(rockProfile.get(0));
         Assert.assertEquals("The Rock", rockProfile.get(0).getProperty("lastName"));
         Assert.assertEquals("the.rock@gmail.com", rockProfile.get(0).getProperty("email"));
-        Assert.assertEquals(Arrays.asList("Adventure","Action","Romance","Comedy"), rockProfile.get(0).getProperty("movieGenres"));
+        Assert.assertEquals(Arrays.asList("Adventure", "Action", "Romance", "Comedy"), rockProfile.get(0).getProperty("movieGenres"));
 
     }
 

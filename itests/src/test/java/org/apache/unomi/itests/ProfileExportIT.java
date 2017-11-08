@@ -73,9 +73,8 @@ public class ProfileExportIT extends BaseIT {
 
     File exportDir;
 
-
-    @Before
-    public void setUp() throws IOException, InterruptedException {
+    @Test
+    public void testExport() throws InterruptedException {
 
         Condition condition = new Condition();
         condition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
@@ -90,7 +89,12 @@ public class ProfileExportIT extends BaseIT {
 
         segmentService.setSegmentDefinition(segment);
 
-        Thread.sleep(2000);
+        Thread.sleep(10000);
+
+        segment = segmentService.getSegmentDefinition("exportItSeg");
+
+        Assert.assertNotNull(segment);
+        Assert.assertEquals("Export IT Segment", segment.getMetadata().getName());
 
         /*** Export Test ***/
         ExportConfiguration exportConfiguration = new ExportConfiguration();
@@ -114,28 +118,11 @@ public class ProfileExportIT extends BaseIT {
 
         exportConfigurationService.save(exportConfiguration, true);
 
-    }
 
-    @Test
-    public void testCheckSegment() {
-        Segment segment = segmentService.getSegmentDefinition("exportItSeg");
-
-        Assert.assertNotNull(segment);
-        Assert.assertEquals("Export IT Segment", segment.getMetadata().getName());
-    }
-
-    @Test
-    public void testCheckExportConfigList() {
+        Thread.sleep(10000);
 
         List<ExportConfiguration> exportConfigurations = exportConfigurationService.getAll();
         Assert.assertEquals(1, exportConfigurations.size());
-
-    }
-
-    @Test
-    public void testExport() throws InterruptedException {
-
-        Thread.sleep(5000);
 
         File exportResult = new File(exportDir+"/profiles-actors-export.csv");
         logger.info("PATH : {}", exportResult.getAbsolutePath());

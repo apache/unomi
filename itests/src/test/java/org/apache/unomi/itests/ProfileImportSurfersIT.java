@@ -16,12 +16,6 @@
  */
 package org.apache.unomi.itests;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
@@ -31,7 +25,6 @@ import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -42,15 +35,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * Created by amidani on 09/08/2017.
@@ -67,9 +57,8 @@ public class ProfileImportSurfersIT extends BaseIT {
     protected ProfileService profileService;
     private Logger logger = LoggerFactory.getLogger(ProfileImportSurfersIT.class);
 
-
-    @Before
-    public void setUp() throws IOException, InterruptedException {
+    @Test
+    public void testImportSurfers() throws IOException, InterruptedException {
 
         /*** Create Missing Properties ***/
         PropertyType propertyType = new PropertyType(new Metadata("integration", "alive", "Alive", "Is the person alive?"));
@@ -78,6 +67,16 @@ public class ProfileImportSurfersIT extends BaseIT {
         propertyType.setTarget("profiles");
 
         profileService.setPropertyType(propertyType);
+
+        //Wait for data to be processed
+        Thread.sleep(1000);
+
+        PropertyType propAlive = profileService.getPropertyType("alive");
+
+        Assert.assertNotNull(propAlive);
+
+        //Wait for data to be processed
+        Thread.sleep(5000);
 
         /*** Surfers Test ***/
         ImportConfiguration importConfigSurfers = new ImportConfiguration();
@@ -105,30 +104,13 @@ public class ProfileImportSurfersIT extends BaseIT {
 
         importConfigurationService.save(importConfigSurfers, true);
 
-        //Wait for data to be processed
-        Thread.sleep(10000);
-
-    }
-
-    @Test
-    public void testCheckAddedPropertiesSurfers() throws IOException, InterruptedException {
-
-        //Wait for data to be processed
-        Thread.sleep(1000);
-
-        PropertyType propAlive = profileService.getPropertyType("alive");
-
-        Assert.assertNotNull(propAlive);
-
-    }
-
-    @Test
-    public void testImportSurfers() throws IOException, InterruptedException {
+        logger.info("ProfileImportSurfersIT setup successfully.");
 
         //Wait for data to be processed
         Thread.sleep(10000);
 
-        //Assert.assertEquals(37, profileService.getAllProfilesCount());
+        List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
+        Assert.assertEquals(1, importConfigurations.size());
 
         //Profile not to delete
         PartialList<Profile> jordyProfile = profileService.findProfilesByPropertyValue("properties.email", "jordy@smith.com", 0, 10, null);
@@ -148,6 +130,78 @@ public class ProfileImportSurfersIT extends BaseIT {
         ImportConfiguration importConfiguration = importConfigurationService.load("2-surfers-test");
         Assert.assertEquals(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS, importConfiguration.getStatus());
         Assert.assertEquals(1, importConfiguration.getExecutions().size());
+
+        //Wait for data to be processed
+        Thread.sleep(10000);
+
+        /*** Surfers Test OVERWRITE ***/
+        ImportConfiguration importConfigSurfersOverwrite = new ImportConfiguration();
+        importConfigSurfersOverwrite.setItemId("3-surfers-overwrite-test");
+        importConfigSurfersOverwrite.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
+        importConfigSurfersOverwrite.setMergingProperty("linkedInId");
+        importConfigSurfersOverwrite.setOverwriteExistingProfiles(true);
+        importConfigSurfersOverwrite.setColumnSeparator(";");
+        importConfigSurfersOverwrite.setHasHeader(true);
+        importConfigSurfersOverwrite.setHasDeleteColumn(true);
+
+        importConfigSurfersOverwrite.getProperties().put("mapping", mappingSurfers);
+        importConfigSurfersOverwrite.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=3-surfers-overwrite-test.csv&consumer.delay=10m&move=.done");
+        importConfigSurfersOverwrite.setActive(true);
+
+        importConfigurationService.save(importConfigSurfersOverwrite, true);
+
+        logger.info("ProfileImportSurfersOverwriteIT setup successfully.");
+
+        //Wait for data to be processed
+        Thread.sleep(10000);
+
+
+        importConfigurations = importConfigurationService.getAll();
+        Assert.assertEquals(2, importConfigurations.size());
+
+        //Profile not to delete
+        PartialList<Profile> aliveProfiles = profileService.findProfilesByPropertyValue("properties.alive", "true", 0, 50, null);
+        PartialList<Profile> deadProfiles = profileService.findProfilesByPropertyValue("properties.alive", "false", 0, 50, null);
+
+        Assert.assertEquals(0, aliveProfiles.getList().size());
+        Assert.assertEquals(36, deadProfiles.getList().size());
+
+        //Profile to delete = false, was to delete
+        PartialList<Profile> paulineProfileOverwrite = profileService.findProfilesByPropertyValue("properties.lastName", "Pauline Ado", 0, 10, null);
+        Assert.assertEquals(1, paulineProfileOverwrite.getList().size());
+
+        //Wait for data to be processed
+        Thread.sleep(10000);
+
+        /*** Surfers Delete Test ***/
+
+        ImportConfiguration importConfigSurfersDelete = new ImportConfiguration();
+        importConfigSurfersDelete.setItemId("4-surfers-delete-test");
+        importConfigSurfersDelete.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
+        importConfigSurfersDelete.setMergingProperty("linkedInId");
+        importConfigSurfersDelete.setOverwriteExistingProfiles(true);
+        importConfigSurfersDelete.setColumnSeparator(";");
+        importConfigSurfersDelete.setHasHeader(true);
+        importConfigSurfersDelete.setHasDeleteColumn(true);
+
+        importConfigSurfersDelete.getProperties().put("mapping", mappingSurfers);
+
+        importConfigSurfersDelete.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=4-surfers-delete-test.csv&consumer.delay=10m&move=.done");
+        importConfigSurfersDelete.setActive(true);
+
+        importConfigurationService.save(importConfigSurfersDelete, true);
+
+        logger.info("ProfileImportSurfersDeleteIT setup successfully.");
+
+        //Wait for data to be processed
+        Thread.sleep(10000);
+
+        importConfigurations = importConfigurationService.getAll();
+        Assert.assertEquals(3, importConfigurations.size());
+
+        PartialList<Profile> jordyProfileDelete = profileService.findProfilesByPropertyValue("properties.email", "jordy@smith.com", 0, 10, null);
+        Assert.assertEquals(0, jordyProfileDelete.getList().size());
+
 
     }
 

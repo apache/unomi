@@ -16,12 +16,6 @@
  */
 package org.apache.unomi.itests;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
@@ -31,27 +25,19 @@ import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import javax.ws.rs.core.MediaType;
 import java.io.File;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * Created by amidani on 09/08/2017.
@@ -66,11 +52,9 @@ public class ProfileImportRankingIT extends BaseIT {
 
     @Inject
     protected ProfileService profileService;
-    private Logger logger = LoggerFactory.getLogger(ProfileImportRankingIT.class);
 
-
-    @Before
-    public void setUp() throws IOException {
+    @Test
+    public void testImportRanking() throws InterruptedException {
 
         /*** Create Missing Properties ***/
         PropertyType propertyTypeUciId = new PropertyType(new Metadata("integration", "uciId", "UCI ID", "UCI ID"));
@@ -86,6 +70,16 @@ public class ProfileImportRankingIT extends BaseIT {
         propertyTypeRank.setTarget("profiles");
 
         profileService.setPropertyType(propertyTypeRank);
+
+        //Wait for data to be processed
+        Thread.sleep(10000);
+
+        PropertyType propUciId = profileService.getPropertyType("uciId");
+        Assert.assertNotNull(propUciId);
+
+        PropertyType propRankId = profileService.getPropertyType("rank");
+        Assert.assertNotNull(propRankId);
+
 
         /*** Surfers Test ***/
         ImportConfiguration importConfigRanking = new ImportConfiguration();
@@ -111,36 +105,12 @@ public class ProfileImportRankingIT extends BaseIT {
 
         importConfigurationService.save(importConfigRanking, true);
 
-    }
-
-    @Test
-    public void testCheckImportConfigListRanking() {
-
-        List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(4, importConfigurations.size());
-
-    }
-
-
-    @Test
-    public void testCheckAddedPropertiesRanking() throws IOException, InterruptedException {
-
-        //Wait for data to be processed
-        Thread.sleep(1000);
-
-        PropertyType propUciId = profileService.getPropertyType("uciId");
-        Assert.assertNotNull(propUciId);
-
-        PropertyType propRankId = profileService.getPropertyType("rank");
-        Assert.assertNotNull(propRankId);
-
-    }
-
-    @Test
-    public void testImportRanking() throws InterruptedException {
 
         //Wait for data to be processed
         Thread.sleep(10000);
+
+        List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
+        Assert.assertEquals(4, importConfigurations.size());
 
         PartialList<Profile> gregProfile = profileService.findProfilesByPropertyValue("properties.uciId", "10004451371", 0, 10, null);
         Assert.assertEquals(1, gregProfile.getList().size());
