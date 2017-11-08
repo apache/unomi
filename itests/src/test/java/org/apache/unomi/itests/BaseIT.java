@@ -113,6 +113,7 @@ public abstract class BaseIT {
 //                systemProperty("org.osgi.service.http.port").value(HTTP_PORT),
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.itests.elasticsearch.transport.port").value("9500"),
+                systemProperty("org.apache.unomi.itests.elasticsearch.cluster.name").value("contextElasticSearchITests"),
                 systemProperty("org.apache.unomi.itests.elasticsearch.http.port").value("9400"),
                 systemProperty("unomi.autoStart").value("true"),
                 features(karafPaxWebRepo, "shell"),

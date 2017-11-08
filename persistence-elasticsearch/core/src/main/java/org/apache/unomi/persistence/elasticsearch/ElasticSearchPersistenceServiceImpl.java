@@ -248,7 +248,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         // on startup
         new InClassLoaderExecute<Object>() {
             public Object execute(Object... args) throws Exception {
-                logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index name " + indexName + "...");
 
                 bulkProcessorConcurrentRequests = System.getProperty(BULK_PROCESSOR_CONCURRENT_REQUESTS, bulkProcessorConcurrentRequests);
                 bulkProcessorBulkActions = System.getProperty(BULK_PROCESSOR_BULK_ACTIONS, bulkProcessorBulkActions);
@@ -256,14 +255,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 bulkProcessorFlushInterval = System.getProperty(BULK_PROCESSOR_FLUSH_INTERVAL, bulkProcessorFlushInterval);
                 bulkProcessorBackoffPolicy = System.getProperty(BULK_PROCESSOR_BACKOFF_POLICY, bulkProcessorBackoffPolicy);
 
-                Settings transportSettings = Settings.builder()
-                        .put(CLUSTER_NAME, clusterName).build();
-
                 // this property is used for integration tests, to make sure we don't conflict with an already running ElasticSearch instance.
                 if (System.getProperty("org.apache.unomi.itests.elasticsearch.transport.port") != null) {
                     elasticSearchAddressList.clear();
                     elasticSearchAddressList.add("localhost:" + System.getProperty("org.apache.unomi.itests.elasticsearch.transport.port"));
+                    logger.info("Overriding ElasticSearch address list from system property=" + elasticSearchAddressList);
                 }
+                // this property is used for integration tests, to make sure we don't conflict with an already running ElasticSearch instance.
+                if (System.getProperty("org.apache.unomi.itests.elasticsearch.cluster.name") != null) {
+                    clusterName = System.getProperty("org.apache.unomi.itests.elasticsearch.cluster.name");
+                    logger.info("Overriding cluster name from system property=" + clusterName);
+                }
+
+                Settings transportSettings = Settings.builder()
+                        .put(CLUSTER_NAME, clusterName).build();
+
+                logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index name " + indexName + "...");
 
                 client = new PreBuiltTransportClient(transportSettings);
                 for (String elasticSearchAddress : elasticSearchAddressList) {
