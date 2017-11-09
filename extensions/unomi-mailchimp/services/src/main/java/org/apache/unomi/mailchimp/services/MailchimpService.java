@@ -27,5 +27,4 @@ import java.util.List;
 public interface MailchimpService {
     List<HashMap<String, String>> executeGetAllLists();
     boolean executePostAddToMCList(Profile profile, Action action);
-
 }

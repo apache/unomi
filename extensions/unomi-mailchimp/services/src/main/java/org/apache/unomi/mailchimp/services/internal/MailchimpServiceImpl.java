@@ -36,32 +36,25 @@ public class MailchimpServiceImpl implements MailchimpService {
 
     private static Logger logger = LoggerFactory.getLogger(MailchimpServiceImpl.class);
     private String headerAuthorizationPassword;
-    private String urlList;
     private String url;
     private CloseableHttpClient httpClient;
     private HashMap<String, String> headers = new HashMap();
     private JsonNode response;
 
-
-
-
     public void setHeaderAuthorizationPassword(String headerAuthorizationPassword) {
         this.headerAuthorizationPassword = headerAuthorizationPassword;
     }
 
-    public void setUrlList(String urlList) {
-        this.urlList = urlList;
-    }
-
-
-    private boolean isConfigured(){
-        if (headerAuthorizationPassword  != null && urlList != null){
+    private boolean isConfigured() {
+        if (headerAuthorizationPassword != null) {
+            logger.info("The extension is correctly configured ");
             return true;
-        }
-        else{
+        } else {
+            logger.info("The extension isn't correctly configured, please check cfg file ");
             return false;
         }
     }
+
     /***
      *Initialization of the HttpClient
      * @return httpClient
@@ -78,8 +71,6 @@ public class MailchimpServiceImpl implements MailchimpService {
      * Add the headers request into a HashMap
      * @return headers
      */
-
-
     private HashMap<String, String> addHeaders() {
         headers.put("Accept", "application/json");
         headers.put("Authorization", "apikey " + headerAuthorizationPassword);
@@ -104,15 +95,14 @@ public class MailchimpServiceImpl implements MailchimpService {
         return urlBuilder() + "/" + otherParameter;
     }
 
-
     /***
      * Get All lists available on Mailchimp
      * @return List of Mailchimp's list
      */
     @Override
     public List<HashMap<String, String>> executeGetAllLists() {
-        if (!isConfigured()){
-            return  null;
+        if (!isConfigured()) {
+            return null;
         }
         initHttpUtils();
         response = executeRequestDoGet();
@@ -163,9 +153,8 @@ public class MailchimpServiceImpl implements MailchimpService {
     @Override
     public boolean executePostAddToMCList(Profile profile, Action action) {
         initHttpUtils();
-        if (!isConfigured()){
-            logger.info("Failed :  No Update, APIKEY not configured");
-            return  false;
+        if (!isConfigured()) {
+            return false;
         }
         String listIdentifier = (String) action.getParameterValues().get("listIdentifier");
         response = executeRequestDoPost(profile, listIdentifier);
@@ -173,7 +162,7 @@ public class MailchimpServiceImpl implements MailchimpService {
             if (response.has("errors") && response.get("errors").elements().hasNext() && response.get("errors")
                     .elements().next().has("error")) {
 
-                logger.info("Error :" + response.get("errors")
+                logger.info("Info :" + response.get("errors")
                         .elements().next().get("error"));
                 return false;
             } else {
@@ -184,7 +173,6 @@ public class MailchimpServiceImpl implements MailchimpService {
         } else {
             logger.info("Failed :  No Update");
             return false;
-
         }
     }
 
@@ -212,7 +200,6 @@ public class MailchimpServiceImpl implements MailchimpService {
      * @return The body to send to the request
      */
     private JSONObject CreateBodyPostAddMCList(Profile profile) {
-
         if (profile.getProperty("firstName") == null || profile.getProperty("lastName") == null || profile
                 .getProperty("email") == null) {
             logger.info("Error to get Profile's info");
@@ -240,6 +227,4 @@ public class MailchimpServiceImpl implements MailchimpService {
 
         return dataMembers;
     }
-
-
 }

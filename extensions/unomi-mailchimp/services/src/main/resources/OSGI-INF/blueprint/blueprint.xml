@@ -26,15 +26,11 @@
         <cm:default-properties>
 
             <cm:property name="mailchimpConnector.headers.authorization.password" value=""/>
-            <cm:property name="mailchimpConnector.url.list" value=""/>
         </cm:default-properties>
     </cm:property-placeholder>
 
-
     <bean id="mailchimpServiceImpl" class="org.apache.unomi.mailchimp.services.internal.MailchimpServiceImpl">
         <property name="headerAuthorizationPassword" value="${mailchimpConnector.headers.authorization.password}"/>
-        <property name="urlList" value="${mailchimpConnector.url.list}"/>
-
     </bean>
 
     <service id="mailchimpService" ref="mailchimpServiceImpl" auto-export="interfaces"/>

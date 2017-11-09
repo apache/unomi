@@ -44,23 +44,15 @@ import java.util.Map;
 public class HttpUtils {
 
     private static Logger logger = LoggerFactory.getLogger(HttpUtils.class);
-
-
     public static JsonNode doPostHttp(CloseableHttpClient request, String url, Map<String, String> headers,
                                       JSONObject body) {
-
-
-
         AbstractHttpEntity entity;
         JsonNode jsonNode = null;
         HttpPost httpPost = new HttpPost(url);
 
         try {
             entity = new ByteArrayEntity(body.toString().getBytes("UTF8"));
-
             CloseableHttpResponse response = null;
-
-
             entity.setContentType(new BasicHeader(HTTP.CONTENT_TYPE, "application/json"));
 
             try {
@@ -143,7 +135,6 @@ public class HttpUtils {
     public static CloseableHttpClient initHttpClient() {
         return HttpClients.createDefault();
     }
-
 }
 
 
