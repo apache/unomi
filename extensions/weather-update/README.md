@@ -31,13 +31,12 @@ This extension will retrieve the weather associated with the resolved location o
 
         https://home.openweathermap.org/api_keys
 
-2.  Configure the Apache Unomi Weather Update. In the etc/org.apache.unomi.weatherUpdate.cfg file 
+3.  Configure the Apache Unomi Weather Update. In the etc/org.apache.unomi.weatherUpdate.cfg file 
 change the following settings:
 
          weatherUpdate.apiKey=YOUR_WEATHER_APIKEY
-  
-           
-3.  Deploy into Apache Unomi using the following commands from the Apache Karaf shell:
+         
+4. Deploy into Apache Unomi using the following commands from the Apache Karaf shell:
 
         feature:repo-add mvn:org.apache.unomi/unomi-weather-update-karaf-kar/${project.version}/xml/features
         feature:install unomi-weather-update-karaf-kar
