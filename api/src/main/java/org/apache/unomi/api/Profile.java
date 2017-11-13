@@ -195,57 +195,57 @@ public class Profile extends Item {
         this.scores = scores;
     }
 
+    /**
+     * Returns all the consents, including the revokes ones.
+     * @return a map that contains the consent type ID as key, and the consent itself as a value
+     */
     public Map<String, Consent> getConsents() {
         return consents;
     }
 
+    /**
+     * Returns true if this profile is an anonymous profile.
+     */
     @XmlTransient
     public boolean isAnonymousProfile() {
         Boolean anonymous = (Boolean) getSystemProperties().get("isAnonymousProfile");
         return anonymous != null && anonymous;
     }
 
+    /**
+     * Set a consent into the profile.
+     * @param consent if the consent is a REVOKE grant, it will try to remove a consent with the same type id if it
+     *                exists for the profile.
+     * @return true if the operation was successful (inserted excpetion in the case of a revoke grant, in which case
+     * it is successful if there was a consent to revoke).
+     */
     @XmlTransient
-    public boolean grantConsent(String consentTypeId, Date grantDate, Date revokeDate) {
-        Consent consent = new Consent(itemId, consentTypeId, ConsentGrant.GRANT, grantDate, revokeDate);
-        consents.put(consentTypeId, consent);
-        return true;
-    }
-
-    @XmlTransient
-    public boolean denyConsent(String consentTypeId, Date grantDate, Date revokeDate) {
-        Consent consent = new Consent(itemId, consentTypeId, ConsentGrant.DENY, grantDate, revokeDate);
-        consents.put(consentTypeId, consent);
-        return true;
-    }
-
-    @XmlTransient
-    public boolean revokeConsent(String consentTypeId) {
-        if (consents.containsKey(consentTypeId)) {
-            consents.remove(consentTypeId);
-            return true;
-        }
-        return false;
-    }
-
-    @XmlTransient
-    public boolean isConsentGiven(String consentTypeId) {
-        if (consents.containsKey(consentTypeId)) {
-            Consent consent = consents.get(consentTypeId);
-            Date nowDate = new Date();
-            if (consent.getGrantDate().before(nowDate) && (consent.getRevokeDate() == null || (consent.getRevokeDate().after(nowDate)))) {
-                if (consent.getGrant().equals(ConsentGrant.GRANT)) {
-                    return true;
-                }
+    public boolean setConsent(Consent consent) {
+        if (ConsentGrant.REVOKE.equals(consent.getGrant())) {
+            if (consents.containsKey(consent.getTypeIdentifier())) {
+                consents.remove(consent.getTypeIdentifier());
+                return true;
             }
+            return false;
         }
-        return false;
+        consents.put(consent.getTypeIdentifier(), consent);
+        return true;
     }
 
     @Override
     public String toString() {
-        return new StringBuilder(512).append("{id: \"").append(getItemId()).append("\", segments: ")
-                .append(getSegments()).append(", scores: ").append(getScores()).append(", properties: ")
-                .append(getProperties()).append("}").toString();
+        final StringBuilder sb = new StringBuilder("Profile{");
+        sb.append("properties=").append(properties);
+        sb.append(", systemProperties=").append(systemProperties);
+        sb.append(", segments=").append(segments);
+        sb.append(", scores=").append(scores);
+        sb.append(", mergedWith='").append(mergedWith).append('\'');
+        sb.append(", consents=").append(consents);
+        sb.append(", itemId='").append(itemId).append('\'');
+        sb.append(", itemType='").append(itemType).append('\'');
+        sb.append(", scope='").append(scope).append('\'');
+        sb.append(", version=").append(version);
+        sb.append('}');
+        return sb.toString();
     }
 }

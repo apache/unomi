@@ -37,7 +37,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -214,6 +213,7 @@ public class EventsCollectorServlet extends HttpServlet {
             profileService.saveSession(session);
         }
 
+        response.setContentType("application/json");
         PrintWriter responseWriter = response.getWriter();
         responseWriter.append("{\"updated\":" + changes + "}");
         responseWriter.flush();

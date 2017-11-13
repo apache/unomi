@@ -1,0 +1,16 @@
+{
+  "metadata": {
+    "id": "modifyConsentAction",
+    "name": "modifyConsentAction",
+    "description": "Modify a profile consent",
+    "systemTags": [
+      "profileTags",
+      "demographic"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "modifyConsent",
+  "parameters": [
+
+  ]
+}

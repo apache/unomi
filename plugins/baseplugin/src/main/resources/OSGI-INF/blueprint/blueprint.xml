@@ -182,9 +182,9 @@
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="actionExecutorId" value="modifyConsents"/>
+            <entry key="actionExecutorId" value="modifyConsent"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.actions.ModifyConsentsAction">
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.ModifyConsentAction">
         </bean>
     </service>
 

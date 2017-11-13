@@ -1,0 +1,23 @@
+{
+  "metadata" : {
+    "id": "modifyConsent",
+    "name": "Modify consent",
+    "description" : "Modify a consent",
+    "readOnly":true
+  },
+
+  "condition" : {
+    "type": "modifyConsentEventCondition",
+    "parameterValues": {
+    }
+  },
+
+  "actions" : [
+    {
+      "type": "modifyConsentAction",
+      "parameterValues": {
+      }
+    }
+  ]
+
+}

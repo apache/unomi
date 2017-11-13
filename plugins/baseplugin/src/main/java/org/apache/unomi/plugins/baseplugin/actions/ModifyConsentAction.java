@@ -16,52 +16,48 @@
  */
 package org.apache.unomi.plugins.baseplugin.actions;
 
+import com.fasterxml.jackson.databind.util.ISO8601DateFormat;
 import org.apache.unomi.api.Consent;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.List;
+import java.text.ParseException;
+import java.util.Map;
 
 /**
  * This class will process consent modification actions and update the profile's consents accordingly.
  */
-public class ModifyConsentsAction implements ActionExecutor {
+public class ModifyConsentAction implements ActionExecutor {
 
-    public static final String GRANTED_CONSENTS = "grantedConsents";
-    public static final String DENIED_CONSENTS = "deniedConsents";
-    public static final String REVOKED_CONSENTS = "revokedConsents";
+    private static final Logger logger = LoggerFactory.getLogger(ModifyConsentAction.class.getName());
+
+    public static final String CONSENT_PROPERTY_NAME = "consent";
 
     @Override
     public int execute(Action action, Event event) {
-
         Profile profile = event.getProfile();
         boolean isProfileUpdated = false;
 
-        List<Consent> grantedConsents = (List<Consent>) event.getProperties().get(GRANTED_CONSENTS);
-        if (grantedConsents != null) {
-            for (Consent consent : grantedConsents) {
-                profile.grantConsent(consent.getTypeId(), consent.getGrantDate(), consent.getRevokeDate());
+        ISO8601DateFormat dateFormat = new ISO8601DateFormat();
+        Map consentMap = (Map) event.getProperties().get(CONSENT_PROPERTY_NAME);
+        if (consentMap != null) {
+            if (consentMap.containsKey("typeIdentifier") && consentMap.containsKey("grant")) {
+                Consent consent = null;
+                try {
+                    consent = new Consent(consentMap, dateFormat);
+                    isProfileUpdated = profile.setConsent(consent);
+                } catch (ParseException e) {
+                    logger.error("Error parsing date format", e);
+                }
+            } else {
+                logger.warn("Event properties for modifyConsent is missing typeIdentifier and grant properties. We will ignore this event.");
             }
-            isProfileUpdated = true;
         }
-        List<Consent> deniedConsents = (List<Consent>) event.getProperties().get(DENIED_CONSENTS);
-        if (deniedConsents != null) {
-            for (Consent consent : deniedConsents) {
-                profile.denyConsent(consent.getTypeId(), consent.getGrantDate(), consent.getRevokeDate());
-            }
-            isProfileUpdated = true;
-        }
-        List<Consent> revokedConsents = (List<Consent>) event.getProperties().get(REVOKED_CONSENTS);
-        if (revokedConsents != null) {
-            for (Consent consent : revokedConsents) {
-                profile.revokeConsent(consent.getTypeId());
-            }
-            isProfileUpdated = true;
-        }
-
         return isProfileUpdated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
     }
 }

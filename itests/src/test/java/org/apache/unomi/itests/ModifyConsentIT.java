@@ -1,0 +1,99 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License
+ */
+package org.apache.unomi.itests;
+
+import com.fasterxml.jackson.databind.util.ISO8601DateFormat;
+import org.apache.unomi.api.Consent;
+import org.apache.unomi.api.ConsentGrant;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.ProfileService;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.ops4j.pax.exam.junit.PaxExam;
+import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
+import org.ops4j.pax.exam.spi.reactors.PerSuite;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import java.io.IOException;
+import java.util.Date;
+
+/**
+ * An integration test for consent modifications using Apache Unomi @Event
+ */
+@RunWith(PaxExam.class)
+@ExamReactorStrategy(PerSuite.class)
+public class ModifyConsentIT extends BaseIT {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(ModifyConsentIT.class);
+
+    private final static String PROFILE_TEST_ID = "profile-consent";
+
+    @Inject
+    protected ProfileService profileService;
+
+    @Inject
+    protected EventService eventService;
+
+    @Before
+    public void setUp() throws IOException {
+        Profile profile = new Profile();
+        profile.setItemId(PROFILE_TEST_ID);
+        profileService.save(profile);
+        LOGGER.info("Profile saved with ID [{}].", profile.getItemId());
+    }
+
+    @Test
+    public void testConsentGrant() throws InterruptedException {
+        Profile profile = profileService.load(PROFILE_TEST_ID);
+        Assert.assertNotNull(profile);
+        Assert.assertTrue(profile.getConsents().size() == 0);
+
+        Event modifyConsentEvent = new Event("modifyConsent", null, profile, null, null, profile, new Date());
+        modifyConsentEvent.setPersistent(false);
+
+        ISO8601DateFormat dateFormat = new ISO8601DateFormat();
+        Consent consent1 = new Consent("consentType01", ConsentGrant.GRANT, new Date(), null);
+        modifyConsentEvent.setProperty("consent", consent1.toMap(dateFormat));
+        int changes = eventService.send(modifyConsentEvent);
+        Consent consent2 = new Consent("consentType02", ConsentGrant.GRANT, new Date(), null);
+        modifyConsentEvent.setProperty("consent", consent2.toMap(dateFormat));
+        changes |= eventService.send(modifyConsentEvent);
+
+        if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
+            profileService.save(profile);
+        }
+
+        LOGGER.info("Changes of the event : {}", changes);
+
+        Assert.assertTrue(changes > 0);
+
+        //Wait for data to be processed
+        Thread.sleep(10000);
+
+        profile = profileService.load(PROFILE_TEST_ID);
+
+        Assert.assertTrue(profile.getConsents().size() == 2);
+
+
+    }
+}

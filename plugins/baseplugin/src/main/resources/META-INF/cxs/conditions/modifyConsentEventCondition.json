@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "id": "modifyConsentsEventCondition",
-    "name": "modifyConsentsEventCondition",
+    "id": "modifyConsentEventCondition",
+    "name": "modifyConsentEventCondition",
     "description": "",
     "systemTags": [
       "profileTags",
@@ -14,7 +14,7 @@
   "parentCondition": {
     "type": "eventTypeCondition",
     "parameterValues": {
-      "eventTypeId": "modifyConsents"
+      "eventTypeId": "modifyConsent"
     }
   },
 
