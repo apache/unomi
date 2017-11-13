@@ -115,6 +115,7 @@ public abstract class BaseIT {
                 systemProperty("org.apache.unomi.itests.elasticsearch.transport.port").value("9500"),
                 systemProperty("org.apache.unomi.itests.elasticsearch.cluster.name").value("contextElasticSearchITests"),
                 systemProperty("org.apache.unomi.itests.elasticsearch.http.port").value("9400"),
+                systemProperty("org.apache.unomi.itests.elasticsearch.bootstrap.seccomp").value("false"),
                 systemProperty("unomi.autoStart").value("true"),
                 features(karafPaxWebRepo, "shell"),
                 features(karafPaxWebRepo, "war"),
