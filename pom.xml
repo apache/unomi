@@ -225,6 +225,16 @@
                 <role>PPMC</role>
             </roles>
         </developer>
+        <developer>
+            <id>amidani</id>
+            <name>Abdelkader Midani</name>
+            <email>amidani@apache.org</email>
+            <timezone>+1</timezone>
+            <roles>
+                <role>committer</role>
+                <role>PPMC</role>
+            </roles>
+        </developer>
     </developers>
 
     <distributionManagement>
