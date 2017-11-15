@@ -121,6 +121,7 @@ public class EventServiceImpl implements EventService {
     }
 
     public String authenticateThirdPartyServer(String key, String ip) {
+        logger.debug("Authenticating third party server with key: " + key + " and IP: " + ip);
         if (key != null) {
             for (Map.Entry<String, ThirdPartyServer> entry : thirdPartyServers.entrySet()) {
                 ThirdPartyServer server = entry.getValue();
