@@ -47,7 +47,7 @@ import java.util.*;
 
 
 public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener {
-    private static final Logger logger = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(GoalsServiceImpl.class.getName());
 
     private BundleContext bundleContext;
 
