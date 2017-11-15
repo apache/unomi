@@ -2,7 +2,7 @@
   "metadata": {
     "id": "modifyConsentEventCondition",
     "name": "modifyConsentEventCondition",
-    "description": "",
+    "description": "Used to match grant modifications on a specific consent",
     "systemTags": [
       "profileTags",
       "event",
@@ -12,12 +12,47 @@
     "readOnly": true
   },
   "parentCondition": {
-    "type": "eventTypeCondition",
+    "type": "booleanCondition",
     "parameterValues": {
-      "eventTypeId": "modifyConsent"
+      "operator": "and",
+      "subConditions": [
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "modifyConsent"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "properties.consent.typeIdentifier",
+            "comparisonOperator": "equals",
+            "propertyValue": "parameter::consentTypeId"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "properties.consent.grant",
+            "comparisonOperator": "equals",
+            "propertyValue": "parameter::consentGrant"
+          }
+        }
+      ]
     }
+
   },
 
   "parameters": [
+    {
+      "id": "consentTypeId",
+      "type": "String",
+      "multivalued": false
+    },
+    {
+      "id": "consentGrant",
+      "type": "String",
+      "multivalued": false
+    }
   ]
 }

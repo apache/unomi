@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "id": "modifyAnyConsentEventCondition",
+    "name": "modifyAnyConsentEventCondition",
+    "description": "Used to match any consent modification",
+    "systemTags": [
+      "profileTags",
+      "event",
+      "condition",
+      "eventCondition"
+    ],
+    "readOnly": true
+  },
+  "parentCondition": {
+    "type": "eventTypeCondition",
+    "parameterValues": {
+      "eventTypeId": "modifyConsent"
+    }
+  },
+
+  "parameters": [
+  ]
+}

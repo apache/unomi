@@ -1,13 +1,13 @@
 {
   "metadata" : {
-    "id": "modifyConsent",
-    "name": "Modify consent",
-    "description" : "Modify a consent",
+    "id": "modifyAnyConsent",
+    "name": "Modify any consent",
+    "description" : "Modify any consent and sets the consent in the profile",
     "readOnly":true
   },
 
   "condition" : {
-    "type": "modifyConsentEventCondition",
+    "type": "modifyAnyConsentEventCondition",
     "parameterValues": {
     }
   },
