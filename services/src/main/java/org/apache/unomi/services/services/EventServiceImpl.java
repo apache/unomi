@@ -39,7 +39,7 @@ import java.net.UnknownHostException;
 import java.util.*;
 
 public class EventServiceImpl implements EventService {
-    private static final Logger logger = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(EventServiceImpl.class.getName());
 
     private List<EventListenerService> eventListeners = new ArrayList<EventListenerService>();
 
