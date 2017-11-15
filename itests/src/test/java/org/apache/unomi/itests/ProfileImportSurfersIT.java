@@ -110,7 +110,7 @@ public class ProfileImportSurfersIT extends BaseIT {
         Thread.sleep(10000);
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(1, importConfigurations.size());
+        Assert.assertEquals(2, importConfigurations.size());
 
         //Profile not to delete
         PartialList<Profile> jordyProfile = profileService.findProfilesByPropertyValue("properties.email", "jordy@smith.com", 0, 10, null);
@@ -157,7 +157,7 @@ public class ProfileImportSurfersIT extends BaseIT {
 
 
         importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(2, importConfigurations.size());
+        Assert.assertEquals(3, importConfigurations.size());
 
         //Profile not to delete
         PartialList<Profile> aliveProfiles = profileService.findProfilesByPropertyValue("properties.alive", "true", 0, 50, null);
@@ -197,7 +197,7 @@ public class ProfileImportSurfersIT extends BaseIT {
         Thread.sleep(10000);
 
         importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(3, importConfigurations.size());
+        Assert.assertEquals(4, importConfigurations.size());
 
         PartialList<Profile> jordyProfileDelete = profileService.findProfilesByPropertyValue("properties.email", "jordy@smith.com", 0, 10, null);
         Assert.assertEquals(0, jordyProfileDelete.getList().size());

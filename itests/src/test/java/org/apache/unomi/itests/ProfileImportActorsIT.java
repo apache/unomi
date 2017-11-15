@@ -107,7 +107,7 @@ public class ProfileImportActorsIT extends BaseIT {
         Thread.sleep(10000);
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(5, importConfigurations.size());
+        Assert.assertEquals(6, importConfigurations.size());
 
         PartialList<Profile> jeanneProfile = profileService.findProfilesByPropertyValue("properties.twitterId", "4", 0, 10, null);
         Assert.assertEquals(1, jeanneProfile.getList().size());

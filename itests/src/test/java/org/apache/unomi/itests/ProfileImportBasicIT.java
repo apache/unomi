@@ -72,10 +72,13 @@ public class ProfileImportBasicIT extends BaseIT {
         importConfigurationService.save(importConfiguration, true);
 
         //Wait for the csv to be processed
-        Thread.sleep(5000);
+        Thread.sleep(10000);
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(1, importConfigurations.size());
+
+        //Wait for the csv to be processed
+        Thread.sleep(50000);
 
         //Check saved profiles
         PartialList<Profile> profiles = profileService.findProfilesByPropertyValue("properties.email", "basic1@test.com", 0, 10, null);
@@ -89,11 +92,6 @@ public class ProfileImportBasicIT extends BaseIT {
         importConfiguration = importConfigurationService.load("1-basic-test");
         Assert.assertEquals(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS, importConfiguration.getStatus());
         Assert.assertEquals(1, importConfiguration.getExecutions().size());
-
-    }
-
-    @After
-    public void tearDown() {
 
     }
 

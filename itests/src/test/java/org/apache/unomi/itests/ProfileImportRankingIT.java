@@ -110,7 +110,7 @@ public class ProfileImportRankingIT extends BaseIT {
         Thread.sleep(10000);
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(4, importConfigurations.size());
+        Assert.assertEquals(5, importConfigurations.size());
 
         PartialList<Profile> gregProfile = profileService.findProfilesByPropertyValue("properties.uciId", "10004451371", 0, 10, null);
         Assert.assertEquals(1, gregProfile.getList().size());

@@ -22,11 +22,15 @@ import org.apache.camel.component.file.GenericFile;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.api.RouterConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by amidani on 22/05/2017.
  */
 public class ImportConfigByFileNameProcessor implements Processor {
+
+    private static final Logger logger = LoggerFactory.getLogger(ImportConfigByFileNameProcessor.class.getName());
 
     private ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
 
@@ -36,7 +40,13 @@ public class ImportConfigByFileNameProcessor implements Processor {
         String fileName = exchange.getIn().getBody(GenericFile.class).getFileName();
         String importConfigId = fileName.substring(0, fileName.indexOf('.'));
         ImportConfiguration importConfiguration = importConfigurationService.load(importConfigId);
-        exchange.getIn().setHeader(RouterConstants.HEADER_IMPORT_CONFIG_ONESHOT, importConfiguration);
+        if(importConfiguration != null) {
+            logger.debug("Set a header with import configuration found for ID : {}", importConfigId);
+            exchange.getIn().setHeader(RouterConstants.HEADER_IMPORT_CONFIG_ONESHOT, importConfiguration);
+        } else {
+            logger.warn("No import configuration found with ID : {}", importConfigId);
+            exchange.setProperty(Exchange.ROUTE_STOP, Boolean.TRUE);
+        }
     }
 
     public void setImportConfigurationService(ImportExportConfigurationService<ImportConfiguration> importConfigurationService) {
