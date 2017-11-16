@@ -78,7 +78,7 @@ public class ProfileImportBasicIT extends BaseIT {
         Assert.assertEquals(1, importConfigurations.size());
 
         //Wait for the csv to be processed
-        Thread.sleep(50000);
+        Thread.sleep(70000);
 
         //Check saved profiles
         PartialList<Profile> profiles = profileService.findProfilesByPropertyValue("properties.email", "basic1@test.com", 0, 10, null);
