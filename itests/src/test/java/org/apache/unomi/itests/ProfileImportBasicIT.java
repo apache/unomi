@@ -33,11 +33,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.OpenOption;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,11 +49,10 @@ import java.util.Map;
 public class ProfileImportBasicIT extends BaseIT {
 
     private Logger logger = LoggerFactory.getLogger(ProfileImportBasicIT.class);
-
+    
     @Inject
     @Filter("(configDiscriminator=IMPORT)")
     protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
-
     @Inject
     protected ProfileService profileService;
 
