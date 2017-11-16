@@ -22,7 +22,6 @@ import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -30,9 +29,15 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.OpenOption;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +48,8 @@ import java.util.Map;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileImportBasicIT extends BaseIT {
+
+    private Logger logger = LoggerFactory.getLogger(ProfileImportBasicIT.class);
 
     @Inject
     @Filter("(configDiscriminator=IMPORT)")
@@ -69,16 +76,31 @@ public class ProfileImportBasicIT extends BaseIT {
         importConfiguration.getProperties().put("mapping", mapping);
         importConfiguration.setActive(true);
 
-        importConfigurationService.save(importConfiguration, true);
+        logger.info("Save import config oneshot with ID : {}.", importConfiguration.getItemId());
+
+        importConfigurationService.save(importConfiguration, false);
 
         //Wait for the csv to be processed
-        Thread.sleep(10000);
+        Thread.sleep(5000);
+
+        logger.info("Check import config oneshot with ID : {}.", importConfiguration.getItemId());
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(1, importConfigurations.size());
 
+        String content = "basic1@test.com,Basic1,User1\n" +
+                "basic2@test.com,Basic2,User2\n" +
+                "basic3@test.com,Basic3,User3";
+        File basicFile = new File("data/tmp/unomi_oneshot_import_configs/1-basic-test.csv");
+        basicFile.getParentFile().mkdirs();
+        BufferedWriter out = new BufferedWriter(new FileWriter(basicFile));
+        out.write(content);
+        out.close();
+
+        logger.info("Write the file {}.", "data/tmp/unomi_oneshot_import_configs/1-basic-test.csv");
+
         //Wait for the csv to be processed
-        Thread.sleep(70000);
+        Thread.sleep(75000);
 
         //Check saved profiles
         PartialList<Profile> profiles = profileService.findProfilesByPropertyValue("properties.email", "basic1@test.com", 0, 10, null);
