@@ -66,8 +66,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     private List<PropertyType> allPropertyTypes;
 
-    private final String PERSONAL_IDENTIFIER_TAG_NAME = "personalIdentifierProperties";
-
     public ProfileServiceImpl() {
         logger.info("Initializing profile service...");
     }

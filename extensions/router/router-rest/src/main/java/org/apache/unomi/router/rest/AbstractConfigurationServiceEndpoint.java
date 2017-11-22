@@ -37,7 +37,6 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
 
     protected ImportExportConfigurationService<T> configurationService;
     protected ConfigSharingService configSharingService;
-    protected CloseableHttpClient httpClient;
 
     @WebMethod(exclude = true)
     public void setConfigSharingService(ConfigSharingService configSharingService) {

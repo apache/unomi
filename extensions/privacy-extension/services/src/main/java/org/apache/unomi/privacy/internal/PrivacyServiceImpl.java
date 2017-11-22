@@ -24,6 +24,8 @@ import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.osgi.framework.BundleContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -32,11 +34,22 @@ import java.util.*;
  */
 public class PrivacyServiceImpl implements PrivacyService {
 
+    private static final Logger logger = LoggerFactory.getLogger(PrivacyServiceImpl.class);
+
     private PersistenceService persistenceService;
     private ProfileService profileService;
     private EventService eventService;
-    private List<String> defaultDeniedProperties;
+    private List deniedProperties = new ArrayList<String>();
     private BundleContext bundleContext;
+
+    public PrivacyServiceImpl() {
+        logger.info("Initializing privacy service...");
+    }
+
+    public void initService() {
+        Set<PropertyType> personalIdsProps = profileService.getPropertyTypeBySystemTag(ProfileService.PERSONAL_IDENTIFIER_TAG_NAME);
+        personalIdsProps.forEach(propType -> deniedProperties.add(propType.getMetadata().getId()));
+    }
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -50,14 +63,6 @@ public class PrivacyServiceImpl implements PrivacyService {
         this.eventService = eventService;
     }
 
-    public void setDefaultDeniedProperties(List<String> defaultDeniedProperties) {
-        this.defaultDeniedProperties = defaultDeniedProperties;
-    }
-
-    public void setDefaultDeniedProperties(String defaultDeniedProperties) {
-        this.defaultDeniedProperties = Arrays.asList(defaultDeniedProperties.split(","));
-    }
-
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
@@ -69,9 +74,9 @@ public class PrivacyServiceImpl implements PrivacyService {
         serverInfo.setServerVersion(bundleContext.getBundle().getVersion().toString());
 
         // let's retrieve all the event types the server has seen.
-        Map<String,Long> eventTypeCounts = persistenceService.aggregateQuery(null, new TermsAggregate("eventType"), Event.ITEM_TYPE);
+        Map<String, Long> eventTypeCounts = persistenceService.aggregateQuery(null, new TermsAggregate("eventType"), Event.ITEM_TYPE);
         List<EventInfo> eventTypes = new ArrayList<EventInfo>();
-        for (Map.Entry<String,Long> eventTypeEntry : eventTypeCounts.entrySet()) {
+        for (Map.Entry<String, Long> eventTypeEntry : eventTypeCounts.entrySet()) {
             EventInfo eventInfo = new EventInfo();
             eventInfo.setName(eventTypeEntry.getKey());
             eventInfo.setOccurences(eventTypeEntry.getValue());
@@ -79,7 +84,7 @@ public class PrivacyServiceImpl implements PrivacyService {
         }
         serverInfo.setEventTypes(eventTypes);
 
-        serverInfo.setCapabilities(new HashMap<String,String>());
+        serverInfo.setCapabilities(new HashMap<String, String>());
         return serverInfo;
     }
 
@@ -208,7 +213,7 @@ public class PrivacyServiceImpl implements PrivacyService {
 
     @Override
     public List<String> getDeniedProperties(String profileId) {
-        return defaultDeniedProperties;
+        return deniedProperties;
     }
 
     @Override

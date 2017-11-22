@@ -28,6 +28,8 @@ import java.util.*;
  */
 public interface ProfileService {
 
+    String PERSONAL_IDENTIFIER_TAG_NAME = "personalIdentifierProperties";
+
     /**
      * Retrieves the number of unique profiles.
      *
