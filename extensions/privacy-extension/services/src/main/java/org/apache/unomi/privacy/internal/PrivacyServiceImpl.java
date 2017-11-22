@@ -39,16 +39,10 @@ public class PrivacyServiceImpl implements PrivacyService {
     private PersistenceService persistenceService;
     private ProfileService profileService;
     private EventService eventService;
-    private List deniedProperties = new ArrayList<String>();
     private BundleContext bundleContext;
 
     public PrivacyServiceImpl() {
         logger.info("Initializing privacy service...");
-    }
-
-    public void initService() {
-        Set<PropertyType> personalIdsProps = profileService.getPropertyTypeBySystemTag(ProfileService.PERSONAL_IDENTIFIER_TAG_NAME);
-        personalIdsProps.forEach(propType -> deniedProperties.add(propType.getMetadata().getId()));
     }
 
     public void setPersistenceService(PersistenceService persistenceService) {
@@ -213,6 +207,9 @@ public class PrivacyServiceImpl implements PrivacyService {
 
     @Override
     public List<String> getDeniedProperties(String profileId) {
+        List deniedProperties = new ArrayList<String>();
+        Set<PropertyType> personalIdsProps = profileService.getPropertyTypeBySystemTag(ProfileService.PERSONAL_IDENTIFIER_TAG_NAME);
+        personalIdsProps.forEach(propType -> deniedProperties.add(propType.getMetadata().getId()));
         return deniedProperties;
     }
 

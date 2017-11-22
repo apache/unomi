@@ -31,7 +31,7 @@
 
     <!-- Privacy service -->
 
-    <bean id="privacyServiceImpl" class="org.apache.unomi.privacy.internal.PrivacyServiceImpl" init-method="initService">
+    <bean id="privacyServiceImpl" class="org.apache.unomi.privacy.internal.PrivacyServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="eventService" ref="eventService" />
         <property name="profileService" ref="profileService" />
