@@ -530,7 +530,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                         if(masterProfile.getConsents().get(key).getRevokeDate().before(new Date())) {
                             masterProfile.getConsents().remove(key);
                             masterProfileChanged[0] = true;
-                        } else if(masterProfile.getConsents().get(key).getGrantDate().before(value.getGrantDate())) {
+                        } else if(masterProfile.getConsents().get(key).getStatusDate().before(value.getStatusDate())) {
                             masterProfile.getConsents().replace(key, value);
                             masterProfileChanged[0] = true;
                         }

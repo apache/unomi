@@ -2,7 +2,7 @@
   "metadata": {
     "id": "modifyConsentEventCondition",
     "name": "modifyConsentEventCondition",
-    "description": "Used to match grant modifications on a specific consent",
+    "description": "Used to match status modifications on a specific consent",
     "systemTags": [
       "profileTags",
       "event",
@@ -33,9 +33,9 @@
         {
           "type": "eventPropertyCondition",
           "parameterValues": {
-            "propertyName": "properties.consent.grant",
+            "propertyName": "properties.consent.status",
             "comparisonOperator": "equals",
-            "propertyValue": "parameter::consentGrant"
+            "propertyValue": "parameter::consentStatus"
           }
         }
       ]
@@ -50,7 +50,7 @@
       "multivalued": false
     },
     {
-      "id": "consentGrant",
+      "id": "consentStatus",
       "type": "String",
       "multivalued": false
     }

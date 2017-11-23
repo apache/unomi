@@ -20,8 +20,8 @@ package org.apache.unomi.api;
  * This enum class represents the type of grant a @Consent might have. The revoke grant type is a special one used to
  * remove a consent for a profile.
  */
-public enum ConsentGrant {
-    GRANT,
-    DENY,
-    REVOKE
+public enum ConsentStatus {
+    GRANTED,
+    DENIED,
+    REVOKED
 }

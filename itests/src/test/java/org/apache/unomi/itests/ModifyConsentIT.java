@@ -18,7 +18,7 @@ package org.apache.unomi.itests;
 
 import com.fasterxml.jackson.databind.util.ISO8601DateFormat;
 import org.apache.unomi.api.Consent;
-import org.apache.unomi.api.ConsentGrant;
+import org.apache.unomi.api.ConsentStatus;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.EventService;
@@ -72,10 +72,10 @@ public class ModifyConsentIT extends BaseIT {
         modifyConsentEvent.setPersistent(false);
 
         ISO8601DateFormat dateFormat = new ISO8601DateFormat();
-        Consent consent1 = new Consent("consentType01", ConsentGrant.GRANT, new Date(), null);
+        Consent consent1 = new Consent("consentType01", ConsentStatus.GRANTED, new Date(), null);
         modifyConsentEvent.setProperty("consent", consent1.toMap(dateFormat));
         int changes = eventService.send(modifyConsentEvent);
-        Consent consent2 = new Consent("consentType02", ConsentGrant.GRANT, new Date(), null);
+        Consent consent2 = new Consent("consentType02", ConsentStatus.GRANTED, new Date(), null);
         modifyConsentEvent.setProperty("consent", consent2.toMap(dateFormat));
         changes |= eventService.send(modifyConsentEvent);
 

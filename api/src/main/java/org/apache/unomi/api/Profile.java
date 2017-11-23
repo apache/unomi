@@ -214,14 +214,14 @@ public class Profile extends Item {
 
     /**
      * Set a consent into the profile.
-     * @param consent if the consent is a REVOKE grant, it will try to remove a consent with the same type id if it
+     * @param consent if the consent is REVOKED, it will try to remove a consent with the same type id if it
      *                exists for the profile.
-     * @return true if the operation was successful (inserted excpetion in the case of a revoke grant, in which case
+     * @return true if the operation was successful (inserted exception in the case of a revoked consent, in which case
      * it is successful if there was a consent to revoke).
      */
     @XmlTransient
     public boolean setConsent(Consent consent) {
-        if (ConsentGrant.REVOKE.equals(consent.getGrant())) {
+        if (ConsentStatus.REVOKED.equals(consent.getStatus())) {
             if (consents.containsKey(consent.getTypeIdentifier())) {
                 consents.remove(consent.getTypeIdentifier());
                 return true;

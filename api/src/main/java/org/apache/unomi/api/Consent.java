@@ -31,8 +31,8 @@ import java.util.Map;
 public class Consent {
 
     private String typeIdentifier; // type identifiers are defined and managed externally of Apache Unomi
-    private ConsentGrant grant;
-    private Date grantDate;
+    private ConsentStatus status;
+    private Date statusDate;
     private Date revokeDate;
 
     /**
@@ -44,36 +44,36 @@ public class Consent {
     /**
      * A constructor to directly build a consent with all it's properties
      * @param typeIdentifier the identifier of the type this consent applies to
-     * @param grant the type of grant that we are storing for this consent. May be one of @ConsentGrant.DENY, @ConsentGrant.GRANT, @ConsentGrant.REVOKE
-     * @param grantDate the starting date at which this consent was given
+     * @param status the type of status that we are storing for this consent. May be one of @ConsentStatus.DENIED, @ConsentStatus.GRANTED, @ConsentStatus.REVOKED
+     * @param statusDate the starting date at which this consent was given
      * @param revokeDate the date at which this consent will (automatically) revoke
      */
-    public Consent(String typeIdentifier, ConsentGrant grant, Date grantDate, Date revokeDate) {
+    public Consent(String typeIdentifier, ConsentStatus status, Date statusDate, Date revokeDate) {
         this.typeIdentifier = typeIdentifier;
-        this.grant = grant;
-        this.grantDate = grantDate;
+        this.status = status;
+        this.statusDate = statusDate;
         this.revokeDate = revokeDate;
     }
 
     /**
      * A constructor from a map used for example when we use the deserialized data from event
      * properties.
-     * @param consentMap a Map that contains the following key-value pairs : typeIdentifier:String, grant:String (must
-     *                   be one of GRANT, DENY or REVOKE), grantDate:String (ISO8601 date format !), revokeDate:String (ISO8601 date format !)
+     * @param consentMap a Map that contains the following key-value pairs : typeIdentifier:String, status:String (must
+     *                   be one of GRANTED, DENIED or REVOKED), statusDate:String (ISO8601 date format !), revokeDate:String (ISO8601 date format !)
      * @param dateFormat a DateFormat instance to convert the date string to date objects
      */
     public Consent(Map<String,Object> consentMap, DateFormat dateFormat) throws ParseException {
         if (consentMap.containsKey("typeIdentifier")) {
             setTypeIdentifier((String) consentMap.get("typeIdentifier"));
         }
-        if (consentMap.containsKey("grant")) {
-            String grantString = (String) consentMap.get("grant");
-            setGrant(ConsentGrant.valueOf(grantString));
+        if (consentMap.containsKey("status")) {
+            String consentStatus = (String) consentMap.get("status");
+            setStatus(ConsentStatus.valueOf(consentStatus));
         }
-        if (consentMap.containsKey("grantDate")) {
-            String grantDateStr = (String) consentMap.get("grantDate");
-            if (grantDateStr != null && grantDateStr.trim().length() > 0) {
-                setGrantDate(dateFormat.parse(grantDateStr));
+        if (consentMap.containsKey("statusDate")) {
+            String statusDateStr = (String) consentMap.get("statusDate");
+            if (statusDateStr != null && statusDateStr.trim().length() > 0) {
+                setStatusDate(dateFormat.parse(statusDateStr));
             }
         }
         if (consentMap.containsKey("revokeDate")) {
@@ -102,19 +102,19 @@ public class Consent {
     }
 
     /**
-     * Retrieves the grant for this consent. This is of type @ConsentGrant
-     * @return the current value for the grant.
+     * Retrieves the status for this consent. This is of type @ConsentStatus
+     * @return the current value for the status.
      */
-    public ConsentGrant getGrant() {
-        return grant;
+    public ConsentStatus getStatus() {
+        return status;
     }
 
     /**
-     * Sets the grant for this consent. A Consent Grant of type REVOKE means that this consent is meant to be destroyed.
-     * @param grant the grant to set on this consent
+     * Sets the status for this consent. A Consent status of type REVOKED means that this consent is meant to be destroyed.
+     * @param status the status to set on this consent
      */
-    public void setGrant(ConsentGrant grant) {
-        this.grant = grant;
+    public void setStatus(ConsentStatus status) {
+        this.status = status;
     }
 
     /**
@@ -122,16 +122,16 @@ public class Consent {
      * considered valid yet.
      * @return a valid date or null if this date was not set.
      */
-    public Date getGrantDate() {
-        return grantDate;
+    public Date getStatusDate() {
+        return statusDate;
     }
 
     /**
      * Sets the date from which this consent applies.
-     * @param grantDate a valid Date or null if we set not starting date (immediately valid)
+     * @param statusDate a valid Date or null if we set not starting date (immediately valid)
      */
-    public void setGrantDate(Date grantDate) {
-        this.grantDate = grantDate;
+    public void setStatusDate(Date statusDate) {
+        this.statusDate = statusDate;
     }
 
     /**
@@ -169,8 +169,8 @@ public class Consent {
      */
     @XmlTransient
     public boolean isConsentGrantedAtDate(Date testDate) {
-        if (getGrantDate().before(testDate) && (getRevokeDate() == null || (getRevokeDate().after(testDate)))) {
-            if (getGrant().equals(ConsentGrant.GRANT)) {
+        if (getStatusDate().before(testDate) && (getRevokeDate() == null || (getRevokeDate().after(testDate)))) {
+            if (getStatus().equals(ConsentStatus.GRANTED)) {
                 return true;
             }
         }
@@ -182,18 +182,18 @@ public class Consent {
      * same as the one used in the Map Consent constructor. For dates you must specify a dateFormat that will be used
      * to format the dates. This dateFormat should usually support ISO8601 to make integrate with Javascript clients
      * easy to integrate.
-     * @param dateFormat a dateFormat instance such as ISO8601DateFormat to generate the String formats for the grantDate
+     * @param dateFormat a dateFormat instance such as ISO8601DateFormat to generate the String formats for the statusDate
      *                   and revokeDate map entries.
-     * @return a Map that contains the following key-value pairs : typeIdentifier:String, grant:String (must
-     *                   be one of GRANT, DENY or REVOKE), grantDate:String (generated by the dateFormat), revokeDate:String (generated by the dateFormat)
+     * @return a Map that contains the following key-value pairs : typeIdentifier:String, status:String (must
+     *                   be one of GRANTED, DENIED or REVOKED), statusDate:String (generated by the dateFormat), revokeDate:String (generated by the dateFormat)
      */
     @XmlTransient
     public Map<String,Object> toMap(DateFormat dateFormat) {
         Map<String,Object> map = new LinkedHashMap<>();
         map.put("typeIdentifier", typeIdentifier);
-        map.put("grant", grant.toString());
-        if (grantDate != null) {
-            map.put("grantDate", dateFormat.format(grantDate));
+        map.put("status", status.toString());
+        if (statusDate != null) {
+            map.put("statusDate", dateFormat.format(statusDate));
         }
         if (revokeDate != null) {
             map.put("revokeDate", dateFormat.format(revokeDate));
@@ -205,8 +205,8 @@ public class Consent {
     public String toString() {
         final StringBuilder sb = new StringBuilder("Consent{");
         sb.append("typeIdentifier='").append(typeIdentifier).append('\'');
-        sb.append(", grant=").append(grant);
-        sb.append(", grantDate=").append(grantDate);
+        sb.append(", status=").append(status);
+        sb.append(", statusDate=").append(statusDate);
         sb.append(", revokeDate=").append(revokeDate);
         sb.append('}');
         return sb.toString();

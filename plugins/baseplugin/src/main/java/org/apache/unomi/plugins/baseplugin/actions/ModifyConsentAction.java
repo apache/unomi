@@ -46,7 +46,7 @@ public class ModifyConsentAction implements ActionExecutor {
         ISO8601DateFormat dateFormat = new ISO8601DateFormat();
         Map consentMap = (Map) event.getProperties().get(CONSENT_PROPERTY_NAME);
         if (consentMap != null) {
-            if (consentMap.containsKey("typeIdentifier") && consentMap.containsKey("grant")) {
+            if (consentMap.containsKey("typeIdentifier") && consentMap.containsKey("status")) {
                 Consent consent = null;
                 try {
                     consent = new Consent(consentMap, dateFormat);
