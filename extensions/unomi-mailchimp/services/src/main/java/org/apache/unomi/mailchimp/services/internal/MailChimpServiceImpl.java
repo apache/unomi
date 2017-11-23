@@ -44,7 +44,7 @@ public class MailChimpServiceImpl implements MailChimpService {
     @Override
     public List<HashMap<String, String>> getAllLists() {
         List<HashMap<String, String>> mcLists = new ArrayList<>();
-        if (isMailChimpConnectorConfigured() && isMailChimpServerOnline()) {
+        if (isMailChimpConnectorConfigured()) {
             JsonNode response = HttpUtils.executeGetRequest(httpClient, getBaseUrl() + "/lists", getHeaders());
             if (response != null) {
                 if (response.has("lists") && response.get("lists").size() > 0) {
@@ -91,6 +91,7 @@ public class MailChimpServiceImpl implements MailChimpService {
                 return MailChimpResult.NO_CHANGE;
             }
         }
+
         JSONObject nameStruct = new JSONObject();
         nameStruct.put("FNAME", profile.getProperty("firstName").toString());
         nameStruct.put("LNAME", profile.getProperty("lastName").toString());
@@ -108,9 +109,6 @@ public class MailChimpServiceImpl implements MailChimpService {
         body.put("members", dataMember);
 
 
-        // BEFORE DOING THAT CHECK IF THE USER IS NOT ALREADY IN THE LIST
-        // THEN IF THE USER IS ALREADY IN THE LIST CHECK IF HE IS SUBSCRIBE OR UNSUBSCRIBE
-        // IF UNSUBSCRIBE SHOULD WE CHANGE IT TO SUBSCRIBE ?
         JsonNode response = HttpUtils.executePostRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier, getHeaders(), body.toString());
         if (response != null) {
             if (response.has("errors") && response.get("errors").elements().hasNext() && response.get("errors")
@@ -199,6 +197,7 @@ public class MailChimpServiceImpl implements MailChimpService {
         return false;
     }
 
+    //This method is not use yet, it can be used in the future
     private boolean isMailChimpServerOnline() {
         JsonNode response = HttpUtils.executeGetRequest(httpClient, getBaseUrl() + "/ping", getHeaders());
         if (response != null) {
