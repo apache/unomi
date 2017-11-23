@@ -87,9 +87,9 @@ public class WeatherUpdateAction implements ActionExecutor {
         JsonNode currentWeatherData = getWeather(location);
 
         if (currentWeatherData.has(STATUS_CODE) && currentWeatherData.get(STATUS_CODE).asText().equals("200")) {
-            updateSessionWithWeatherData(currentWeatherData,session);
+            updateSessionWithWeatherData(currentWeatherData, session);
             return EventService.SESSION_UPDATED;
-        }else {
+        } else {
             if (currentWeatherData.has("message"))
                 logger.warn(currentWeatherData.get("message").asText());
         }
@@ -100,6 +100,7 @@ public class WeatherUpdateAction implements ActionExecutor {
 
     /**
      * Do the API call
+     *
      * @param location
      * @return the response
      */
@@ -136,6 +137,7 @@ public class WeatherUpdateAction implements ActionExecutor {
 
     /**
      * Update the session info with the weather infos
+     *
      * @param currentWeatherData the response from the API
      * @param session
      */
@@ -145,23 +147,23 @@ public class WeatherUpdateAction implements ActionExecutor {
         String windDirection = extractWindDirection(currentWeatherData);
         String windSpeed = extractWindSpeed(currentWeatherData);
         if (temperature != null) {
-            fillPropreties(session, WEATHER_TEMPERATURE, temperature);
+            session.setProperty(WEATHER_TEMPERATURE, temperature);
         }
         if (weatherLike != null) {
-            fillPropreties(session, WEATHER_LIKE, weatherLike);
+            session.setProperty(WEATHER_LIKE, weatherLike);
         }
         if (windDirection != null) {
-            fillPropreties(session, WEATHER_WIND_DIRECTION, windDirection);
+            session.setProperty(WEATHER_WIND_DIRECTION, windDirection);
         }
         if (windSpeed != null) {
-            fillPropreties(session, WEATHER_WIND_SPEED, windSpeed);
+            session.setProperty(WEATHER_WIND_SPEED, windSpeed);
         }
     }
 
     /**
      * Extract the temperature property from the response
      *
-     * @param currentWeatherData
+     * @param currentWeatherData the response from the API
      * @return String temperature in celsius
      */
     private String extractTemperature(JsonNode currentWeatherData) {
@@ -184,7 +186,7 @@ public class WeatherUpdateAction implements ActionExecutor {
     /**
      * Extract the wind speed property from the response
      *
-     * @param currentWeatherData
+     * @param currentWeatherData the response from the API
      * @return String wind speed in km/h
      */
     private String extractWindSpeed(JsonNode currentWeatherData) {
@@ -199,13 +201,12 @@ public class WeatherUpdateAction implements ActionExecutor {
         }
         logger.info("API Response doesn't contains the wind speed");
         return null;
-
     }
 
     /**
      * Extract the wind direction property from the response
      *
-     * @param currentWeatherData
+     * @param currentWeatherData the response from the API
      * @return String wind direction in cardinal points format
      */
     private String extractWindDirection(JsonNode currentWeatherData) {
@@ -239,14 +240,14 @@ public class WeatherUpdateAction implements ActionExecutor {
                 }
             }
         }
-        logger.info("API Response doesn't contains the wind direction");
+        logger.warn("API Response doesn't contains the wind direction");
         return null;
     }
 
     /**
      * Extract the weather like property from the response
      *
-     * @param currentWeatherData
+     * @param currentWeatherData the response from the API
      * @return String weather like
      */
     private String extractWeatherLike(JsonNode currentWeatherData) {
@@ -259,17 +260,8 @@ public class WeatherUpdateAction implements ActionExecutor {
                 return weatherLike.asText();
             }
         }
-        logger.info("API Response doesn't contains the weather description");
+        logger.warn("API Response doesn't contains the weather description");
         return null;
-    }
-
-    /**
-     * @param session  the current session
-     * @param property session property to fill
-     * @param value    of property
-     */
-    private void fillPropreties(Session session, String property, String value) {
-        session.setProperty(property, value);
     }
 
     //Setters
