@@ -1,0 +1,20 @@
+{
+  "metadata": {
+    "id": "addVisitorToMailChimpListsAction",
+    "name": "Add the visitor to a MailChimp list",
+    "description": "This action add the visitor to a defined MailChimp list",
+    "systemTags": [
+      "event",
+      "availableToEndUser"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "addVisitorToMailChimpLists",
+  "parameters": [
+    {
+      "id": "listIdentifier",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
+}

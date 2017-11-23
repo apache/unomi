@@ -20,7 +20,7 @@
            xmlns:jaxrs="http://cxf.apache.org/blueprint/jaxrs"
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
-  http://cxf.apache.org/blueprint/jaxrs http://cxf.apache.org/schemas/blueprint/jaxrs.xsd">
+           http://cxf.apache.org/blueprint/jaxrs http://cxf.apache.org/schemas/blueprint/jaxrs.xsd">
     <bean id="cors-filter" class="org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter"/>
     <bean id="jacksonMapper" class="org.apache.unomi.persistence.spi.CustomObjectMapper"/>
     <bean id="jaxb-provider" class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider">
@@ -45,7 +45,7 @@
         <!--property name="redirectURI" value="/login.jsp"/-->
     </bean>
 
-    <jaxrs:server address="/mc" id="restMCService">
+    <jaxrs:server address="/mailchimp" id="restMCService">
         <jaxrs:providers>
             <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter"/>
@@ -53,13 +53,13 @@
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
-            <ref component-id="mCEndPoint"/>
+            <ref component-id="mailChimpEndPoint"/>
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
-    <reference id="mailChimpService" interface="org.apache.unomi.mailchimp.services.MailchimpService"/>
+    <reference id="mailChimpService" interface="org.apache.unomi.mailchimp.services.MailChimpService"/>
 
-    <bean id="mCEndPoint" class="org.apache.unomi.mailchimp.rest.MCEndPoint">
+    <bean id="mailChimpEndPoint" class="org.apache.unomi.mailchimp.rest.MailChimpEndPoint">
         <property name="mailChimpService" ref="mailChimpService"/>
     </bean>
 </blueprint>

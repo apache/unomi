@@ -18,18 +18,18 @@
 
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-mailchimp-connector</artifactId>
         <version>1.3.0-incubating-SNAPSHOT</version>
     </parent>
-    <modelVersion>4.0.0</modelVersion>
 
     <artifactId>unomi-mailchimp-connector-karaf-kar</artifactId>
-    <name>Apache Unomi :: Extensions :: Mailchimp Beta Connector :: Apache Karaf Feature and KAR archive</name>
+    <name>Apache Unomi :: Extensions :: MailChimp Connector :: Apache Karaf Feature and KAR archive</name>
     <description>This is a simple Apache Unomi plugin.</description>
     <packaging>kar</packaging>
-
 
     <dependencies>
         <dependency>
@@ -50,7 +50,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-mailchimp-connector-core</artifactId>
+            <artifactId>unomi-mailchimp-connector-actions</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

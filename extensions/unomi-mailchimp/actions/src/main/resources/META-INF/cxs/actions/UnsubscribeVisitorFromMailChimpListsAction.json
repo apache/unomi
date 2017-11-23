@@ -1,0 +1,20 @@
+{
+  "metadata": {
+    "id": "unsubscribeVisitorFromMailChimpListsAction",
+    "name": "Unsubscribe a visitor from a MailChimp List",
+    "description": "Unsubscribe the visitor from a defined MailChimp list",
+    "systemTags": [
+      "event",
+      "availableToEndUser"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "unsubscribeVisitorFromMailChimpLists",
+  "parameters": [
+    {
+      "id": "listIdentifier",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
+}

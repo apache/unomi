@@ -13,27 +13,37 @@
   ~ distributed under the License is distributed on an "AS IS" BASIS,
   ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
+  ~ limitations under the License
   -->
-
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.apache.unomi</groupId>
-        <artifactId>unomi-extensions</artifactId>
+        <artifactId>unomi-mailchimp-connector</artifactId>
         <version>1.3.0-incubating-SNAPSHOT</version>
     </parent>
 
-    <artifactId>unomi-mailchimp-connector</artifactId>
-    <name>Apache Unomi :: Extensions :: MailChimp Beta Connector</name>
-    <description>Connector with the MailChimp API service</description>
-    <packaging>pom</packaging>
+    <artifactId>unomi-mailchimp-connector-actions</artifactId>
+    <name>Apache Unomi :: Extensions :: MailChimp Connector :: Actions</name>
+    <description>A connector between Apache Unomi and MailChimp API</description>
+    <packaging>bundle</packaging>
 
-    <modules>
-        <module>services</module>
-        <module>rest</module>
-        <module>actions</module>
-        <module>karaf-kar</module>
-    </modules>
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-mailchimp-connector-services</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
 </project>

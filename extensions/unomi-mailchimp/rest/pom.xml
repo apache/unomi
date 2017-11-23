@@ -26,8 +26,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>unomi-mailchimp-connector-rest</artifactId>
-    <name>Apache Unomi :: Extensions :: Mailchimp Beta Connector :: REST API</name>
-    <description>REST API for the Apache Unomi Context Server extension that integrates with Mailchimp</description>
+    <name>Apache Unomi :: Extensions :: MailChimp Connector :: REST API</name>
+    <description>REST API for the Apache Unomi Context Server extension that integrates with MailChimp</description>
     <packaging>bundle</packaging>
 
     <dependencies>
@@ -42,8 +42,6 @@
             <artifactId>javax.servlet-api</artifactId>
             <scope>provided</scope>
         </dependency>
-
-
         <dependency>
             <groupId>org.apache.cxf</groupId>
             <artifactId>cxf-rt-frontend-jaxws</artifactId>

@@ -36,7 +36,6 @@
         <module>geonames</module>
         <module>router</module>
         <module>salesforce-connector</module>
-        <module>weather-update</module>
         <module>unomi-mailchimp</module>
     </modules>
 
