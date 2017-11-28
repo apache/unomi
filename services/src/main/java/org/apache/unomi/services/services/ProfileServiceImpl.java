@@ -474,8 +474,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
         logger.info("Merging profiles " + profileIdsToMerge + " into profile " + masterProfile.getItemId());
 
-        //Array with a single element used to be able to update inside a lambda expression
-        final Boolean[] masterProfileChanged = {false};
+        boolean masterProfileChanged = false;
 
         for (String profileProperty : allProfileProperties) {
             PropertyType propertyType = profilePropertyTypeById.get(profileProperty);
@@ -505,7 +504,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 matchingPropertyMergeStrategyExecutors = bundleContext.getServiceReferences(PropertyMergeStrategyExecutor.class, propertyMergeStrategyType.getFilter());
                 for (ServiceReference<PropertyMergeStrategyExecutor> propertyMergeStrategyExecutorReference : matchingPropertyMergeStrategyExecutors) {
                     PropertyMergeStrategyExecutor propertyMergeStrategyExecutor = bundleContext.getService(propertyMergeStrategyExecutorReference);
-                    masterProfileChanged[0] |= propertyMergeStrategyExecutor.mergeProperty(profileProperty, propertyType, profilesToMerge, masterProfile);
+                    masterProfileChanged |= propertyMergeStrategyExecutor.mergeProperty(profileProperty, propertyType, profilesToMerge, masterProfile);
                 }
             } catch (InvalidSyntaxException e) {
                 logger.error("Error retrieving strategy implementation", e);
@@ -517,33 +516,32 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         for (Profile profile : profilesToMerge) {
             if (profile.getSegments() != null && profile.getSegments().size() > 0) {
                 masterProfile.getSegments().addAll(profile.getSegments());
-                masterProfileChanged[0] = true;
+                masterProfileChanged = true;
             }
         }
 
         // we now have to merge the profile's consents
         for (Profile profile : profilesToMerge) {
             if (profile.getConsents() != null && profile.getConsents().size() > 0) {
-                profile.getConsents().forEach((key, value) -> {
-
-                    if(masterProfile.getConsents().containsKey(key)) {
-                        if(masterProfile.getConsents().get(key).getRevokeDate().before(new Date())) {
-                            masterProfile.getConsents().remove(key);
-                            masterProfileChanged[0] = true;
-                        } else if(masterProfile.getConsents().get(key).getStatusDate().before(value.getStatusDate())) {
-                            masterProfile.getConsents().replace(key, value);
-                            masterProfileChanged[0] = true;
+                for(String consentId : profile.getConsents().keySet()) {
+                    if(masterProfile.getConsents().containsKey(consentId)) {
+                        if(masterProfile.getConsents().get(consentId).getRevokeDate().before(new Date())) {
+                            masterProfile.getConsents().remove(consentId);
+                            masterProfileChanged = true;
+                        } else if(masterProfile.getConsents().get(consentId).getStatusDate().before(profile.getConsents().get(consentId).getStatusDate())) {
+                            masterProfile.getConsents().replace(consentId, profile.getConsents().get(consentId));
+                            masterProfileChanged = true;
                         }
                     } else {
-                        masterProfile.getConsents().put(key, value);
-                        masterProfileChanged[0] = true;
+                        masterProfile.getConsents().put(consentId, profile.getConsents().get(consentId));
+                        masterProfileChanged = true;
                     }
 
-                });
+                }
             }
         }
 
-        if (masterProfileChanged[0]) {
+        if (masterProfileChanged) {
             persistenceService.save(masterProfile);
         }
 
