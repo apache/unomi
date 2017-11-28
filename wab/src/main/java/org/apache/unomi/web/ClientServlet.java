@@ -51,6 +51,8 @@ public class ClientServlet extends HttpServlet {
     private String profileIdCookieName = "context-profile-id";
     private String allowedProfileDownloadFormats;
 
+    private final String FILE_NAME_WO_EXT = "my-profile";
+
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
@@ -126,7 +128,7 @@ public class ClientServlet extends HttpServlet {
 
     private void prepareCsvFileToDownload(HttpServletResponse response, Profile currentProfile, boolean vertical) {
         response.setContentType("text/csv");
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + currentProfile.getItemId() + ".csv\"");
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + FILE_NAME_WO_EXT + ".csv\"");
         try {
             StringWriter writer = new StringWriter();
 
@@ -157,7 +159,7 @@ public class ClientServlet extends HttpServlet {
 
     private void prepareJsonFileToDownload(HttpServletResponse response, Profile currentProfile) {
         response.setContentType("text/json");
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + currentProfile.getItemId() + ".json\"");
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + FILE_NAME_WO_EXT + ".json\"");
         try {
             ObjectMapper mapper = new ObjectMapper();
             String jsonContent = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(currentProfile.getProperties());
@@ -172,7 +174,7 @@ public class ClientServlet extends HttpServlet {
 
     private void prepareYamlFileToDownload(HttpServletResponse response, Profile currentProfile, boolean asTextFile) {
         response.setContentType("text/" + (asTextFile ? "plain" : "yaml"));
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + currentProfile.getItemId() + (asTextFile ? ".txt" : ".yml") + "\"");
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + FILE_NAME_WO_EXT + (asTextFile ? ".txt" : ".yml") + "\"");
         try {
             YAMLFactory yf = new YAMLFactory();
             ObjectMapper mapper = new ObjectMapper(yf);
