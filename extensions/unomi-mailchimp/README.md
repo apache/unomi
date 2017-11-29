@@ -16,7 +16,7 @@
   -->
 
 
-Apache Unomi :: Extensions :: MailChimp Beta Connector
+Apache Unomi :: Extensions :: MailChimp Connector
 =================================
 
 This extension have 3 actions. 
@@ -41,7 +41,7 @@ This extension have 3 actions.
 
         https://usX.admin.mailchimp.com/account/api/
 
-3.  Configure the MailChimp Beta Connector. In the etc/org.apache.unomi.mailchimpconnector.cfg file change the following settings:
+3.  Configure the MailChimp Connector. In the etc/org.apache.unomi.mailchimpconnector.cfg file change the following settings:
     
         mailChimpConnector.apiKey=YOUR_APIKEY
         mailChimpConnector.url.subDomain=YOUR_SUB_DOMAIN  (exemple: https://usX.admin.mailchimp.com/account/api/, the X is the SUB_DOMAIN)

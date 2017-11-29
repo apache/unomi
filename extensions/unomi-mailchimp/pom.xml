@@ -26,7 +26,7 @@
     </parent>
 
     <artifactId>unomi-mailchimp-connector</artifactId>
-    <name>Apache Unomi :: Extensions :: MailChimp Beta Connector</name>
+    <name>Apache Unomi :: Extensions :: MailChimp Connector</name>
     <description>Connector with the MailChimp API service</description>
     <packaging>pom</packaging>
 
