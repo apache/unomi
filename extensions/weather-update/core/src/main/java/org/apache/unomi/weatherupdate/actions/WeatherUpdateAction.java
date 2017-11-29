@@ -58,6 +58,8 @@ public class WeatherUpdateAction implements ActionExecutor {
     private static final String WEATHER_LIKE = "weatherLike";
     private static final String WEATHER_WIND_DIRECTION = "weatherWindDirection";
     private static final String WEATHER_WIND_SPEED = "weatherWindSpeed";
+    private static final String LOCATION = "location";
+    private static final String MESSAGE = "message";
     private static Logger logger = LoggerFactory.getLogger(WeatherUpdateAction.class);
     private CloseableHttpClient httpClient;
     private String weatherApiKey;
@@ -77,24 +79,32 @@ public class WeatherUpdateAction implements ActionExecutor {
         }
 
         Map<String, Object> sessionProperties = session.getProperties();
-        if (!sessionProperties.containsKey("location")) {
+        if (!sessionProperties.containsKey(LOCATION)) {
             logger.warn("No location info found in the session.");
             return EventService.NO_CHANGE;
         }
 
-        Map<String, Double> location = (Map<String, Double>) session.getProperty("location");
-
+        Map<String, Double> location = (Map<String, Double>) session.getProperty(LOCATION);
         JsonNode currentWeatherData = getWeather(location);
+        if (currentWeatherData == null) {
+            logger.error("No response from the request");
+            return EventService.NO_CHANGE;
+        }
 
         if (currentWeatherData.has(STATUS_CODE) && currentWeatherData.get(STATUS_CODE).asText().equals("200")) {
             updateSessionWithWeatherData(currentWeatherData, session);
             return EventService.SESSION_UPDATED;
         } else {
-            if (currentWeatherData.has("message"))
-                logger.warn(currentWeatherData.get("message").asText());
+            if (currentWeatherData.has(MESSAGE) && currentWeatherData.has(STATUS_CODE)) {
+                logger.error("Something went wrong, the status code was {} and the message response was {}",
+                        currentWeatherData.get(STATUS_CODE),
+                        currentWeatherData.get(MESSAGE));
+            } else {
+                logger.error("Something went wrong, the response was {}", currentWeatherData);
+            }
         }
 
-        logger.warn("No update made.");
+        logger.info("No update made");
         return EventService.NO_CHANGE;
     }
 
@@ -121,12 +131,12 @@ public class WeatherUpdateAction implements ActionExecutor {
                         ObjectMapper objectMapper = new ObjectMapper();
                         currentWeatherData = objectMapper.readTree(responseString);
                     } catch (IOException e) {
-                        logger.error("Error : With the API json response.", e.getMessage());
+                        logger.error("Error with the API json response.", e);
                     }
                 }
             }
         } catch (IOException e) {
-            logger.error("Error : With the Http Request execution. Wrong parameters given", e.getMessage());
+            logger.error("Error with the Http Request execution. Wrong parameters given", e);
         } finally {
             if (response != null) {
                 EntityUtils.consumeQuietly(response.getEntity());
@@ -176,8 +186,8 @@ public class WeatherUpdateAction implements ActionExecutor {
             if (temperature - temperatureTreated > ROUND_TO_THE_TENTH) {
                 temperatureTreated++;
             }
-            logger.debug("Temperature: " + temperatureTreated);
-            return temperatureTreated + "";
+            logger.debug("Temperature: {}", temperatureTreated);
+            return String.valueOf(temperatureTreated);
         }
         logger.info("API Response doesn't contains the temperature");
         return null;
@@ -196,8 +206,8 @@ public class WeatherUpdateAction implements ActionExecutor {
             float speed = Float.parseFloat(WindInfoSpeed.toString());
             speed *= SECOND_TO_HOUR;
             int speedTreated = (int) speed;
-            logger.debug("Wind speed: " + speedTreated);
-            return speedTreated + "";
+            logger.debug("Wind speed: {}", speedTreated);
+            return String.valueOf(speedTreated);
         }
         logger.info("API Response doesn't contains the wind speed");
         return null;
@@ -235,7 +245,7 @@ public class WeatherUpdateAction implements ActionExecutor {
                     } else if (290 < deg && deg < 340) {
                         direction = ("NW");
                     }
-                    logger.debug("Wind direction: " + direction);
+                    logger.debug("Wind direction: {} ", direction);
                     return direction;
                 }
             }
@@ -256,7 +266,7 @@ public class WeatherUpdateAction implements ActionExecutor {
             weatherLike = currentWeatherData.get(WEATHER_LIKE_INFO);
             if (weatherLike.size() > 0) {
                 weatherLike = weatherLike.get(0).get(MAIN_INFO_WEATHER);
-                logger.debug("Weather like: " + weatherLike);
+                logger.debug("Weather like: {}", weatherLike);
                 return weatherLike.asText();
             }
         }
@@ -264,31 +274,14 @@ public class WeatherUpdateAction implements ActionExecutor {
         return null;
     }
 
-    //Setters
-
-    /**
-     * Set the weatherApiKey
-     *
-     * @param weatherApiKey
-     */
     public void setWeatherApiKey(String weatherApiKey) {
         this.weatherApiKey = weatherApiKey;
     }
 
-    /**
-     * Set the weatherUrlBase
-     *
-     * @param weatherUrlBase
-     */
     public void setWeatherUrlBase(String weatherUrlBase) {
         this.weatherUrlBase = weatherUrlBase;
     }
 
-    /**
-     * Set the weatherUrlAttributes
-     *
-     * @param weatherUrlAttributes
-     */
     public void setWeatherUrlAttributes(String weatherUrlAttributes) {
         this.weatherUrlAttributes = weatherUrlAttributes;
     }
