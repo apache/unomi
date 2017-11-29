@@ -35,8 +35,24 @@ import java.util.HashMap;
 import java.util.List;
 
 public class MailChimpServiceImpl implements MailChimpService {
+    private static final String LISTS = "lists";
+    private static final String ID = "id";
+    private static final String NAME = "name";
+    private static final String MERGE_FIELDS = "merge_fields";
+    private static final String EMAIL_TYPE = "email_type";
+    private static final String EMAIL_ADDRESS = "email_address";
+    private static final String EMAIL = "email";
+    private static final String ERRORS = "errors";
+    private static final String FIRST_NAME = "firstName";
+    private static final String LAST_NAME = "lastName";
+    private static final String MEMBERS = "members";
+    private static final String FNAME = "FNAME";
+    private static final String LNAME = "LNAME";
+    private static final String LIST_IDENTIFIER = "listIdentifier";
+    private static final String STATUS = "status";
+    private static final String SUBSCRIBED = "subscribed";
+    private static final String UNSUBSCRIBED = "unsubscribed";
     private static Logger logger = LoggerFactory.getLogger(MailChimpServiceImpl.class);
-
     private String apiKey;
     private String urlSubDomain;
     private CloseableHttpClient httpClient;
@@ -47,12 +63,12 @@ public class MailChimpServiceImpl implements MailChimpService {
         if (isMailChimpConnectorConfigured()) {
             JsonNode response = HttpUtils.executeGetRequest(httpClient, getBaseUrl() + "/lists", getHeaders());
             if (response != null) {
-                if (response.has("lists") && response.get("lists").size() > 0) {
-                    for (JsonNode list : response.get("lists")) {
-                        if (list.has("id") && list.has("name")) {
+                if (response.has(LISTS) && response.get(LISTS).size() > 0) {
+                    for (JsonNode list : response.get(LISTS)) {
+                        if (list.has(ID) && list.has(NAME)) {
                             HashMap<String, String> mcListInfo = new HashMap<>();
-                            mcListInfo.put("id", list.get("id").asText());
-                            mcListInfo.put("name", list.get("name").asText());
+                            mcListInfo.put(ID, list.get(ID).asText());
+                            mcListInfo.put(NAME, list.get(NAME).asText());
                             mcLists.add(mcListInfo);
                         } else {
                             logger.warn("Missing mandatory information for list, {}", list.asText());
@@ -72,54 +88,46 @@ public class MailChimpServiceImpl implements MailChimpService {
             return MailChimpResult.ERROR;
         }
 
-        String listIdentifier = (String) action.getParameterValues().get("listIdentifier");
+        String listIdentifier = (String) action.getParameterValues().get(LIST_IDENTIFIER);
         if (StringUtils.isBlank(listIdentifier)) {
             logger.error("MailChimp list identifier not found");
             return MailChimpResult.ERROR;
         }
 
         JsonNode member = isMemberOfMailChimpList(profile, action);
-        if (member != null) {
-            if (member.has("status")) {
-                if (member.get("status").asText().equals("unsubscribed")) {
-                    logger.info("The visitor is already in the list, this status is unsubscribed");
-                    JSONObject body = new JSONObject();
-                    body.put("status", "subscribed");
-                    MailChimpResult response = updateSubscription(listIdentifier, body.toString(), member, true);
-                    return updateSubscription(listIdentifier, body.toString(), member, true);
-                }
-                return MailChimpResult.NO_CHANGE;
+        if (member != null && member.has(STATUS)) {
+            if (member.get(STATUS).asText().equals(UNSUBSCRIBED)) {
+                logger.info("The visitor is already in the MailChimp list, his status is unsubscribed");
+                JSONObject body = new JSONObject();
+                body.put(STATUS, SUBSCRIBED);
+                return updateSubscription(listIdentifier, body.toString(), member, true);
             }
+            return MailChimpResult.NO_CHANGE;
         }
 
         JSONObject nameStruct = new JSONObject();
-        nameStruct.put("FNAME", profile.getProperty("firstName").toString());
-        nameStruct.put("LNAME", profile.getProperty("lastName").toString());
+        nameStruct.put(FNAME, profile.getProperty(FIRST_NAME).toString());
+        nameStruct.put(LNAME, profile.getProperty(LAST_NAME).toString());
 
         JSONObject userData = new JSONObject();
-        userData.put("merge_fields", nameStruct);
-        userData.put("email_type", "html");
-        userData.put("email_address", profile.getProperty("email").toString());
-        userData.put("status", "subscribed");
+        userData.put(MERGE_FIELDS, nameStruct);
+        userData.put(EMAIL_TYPE, "html");
+        userData.put(EMAIL_ADDRESS, profile.getProperty(EMAIL).toString());
+        userData.put(STATUS, SUBSCRIBED);
 
         JSONArray dataMember = new JSONArray();
         dataMember.put(userData);
 
         JSONObject body = new JSONObject();
-        body.put("members", dataMember);
+        body.put(MEMBERS, dataMember);
 
 
         JsonNode response = HttpUtils.executePostRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier, getHeaders(), body.toString());
-        if (response != null) {
-            if (response.has("errors") && response.get("errors").elements().hasNext() && response.get("errors")
-                    .elements().next().has("error")) {
-                return MailChimpResult.NO_CHANGE;
-            } else {
-                return MailChimpResult.UPDATED;
-            }
+        if (response == null || (response.has(ERRORS) && response.get(ERRORS).size() > 0)) {
+                logger.error("Error when adding user to MailChimp list, list identifier was {} and response was {}", listIdentifier, response);
+                return MailChimpResult.ERROR;
         }
-        return MailChimpResult.ERROR;
-
+        return MailChimpResult.UPDATED;
     }
 
     @Override
@@ -128,7 +136,7 @@ public class MailChimpServiceImpl implements MailChimpService {
             return MailChimpResult.ERROR;
         }
 
-        String listIdentifier = (String) action.getParameterValues().get("listIdentifier");
+        String listIdentifier = (String) action.getParameterValues().get(LIST_IDENTIFIER);
         if (StringUtils.isBlank(listIdentifier)) {
             logger.warn("Couldn't get the list identifier from Unomi");
             return MailChimpResult.ERROR;
@@ -136,16 +144,12 @@ public class MailChimpServiceImpl implements MailChimpService {
 
         JsonNode member = isMemberOfMailChimpList(profile, action);
         if (member == null) {
-            return MailChimpResult.ERROR;
-        }
-        if (!member.has("id")) {
             return MailChimpResult.NO_CHANGE;
         }
 
-
-        JsonNode response = HttpUtils.executeDeleteRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/members/" + member.get("id").asText(), getHeaders());
-        if (response == null) {
-            logger.error("Couldn't remove the visitor from the list");
+        JsonNode response = HttpUtils.executeDeleteRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/members/" + member.get(ID).asText(), getHeaders());
+        if (response == null || (response.has(ERRORS) && response.get(ERRORS).size() > 0)) {
+            logger.error("Couldn't remove the visitor from the MailChimp list, list identifier was {} and response was {}", listIdentifier, response);
             return MailChimpResult.ERROR;
         }
         return MailChimpResult.REMOVED;
@@ -157,29 +161,20 @@ public class MailChimpServiceImpl implements MailChimpService {
             return MailChimpResult.ERROR;
         }
 
-        String listIdentifier = (String) action.getParameterValues().get("listIdentifier");
+        String listIdentifier = (String) action.getParameterValues().get(LIST_IDENTIFIER);
         if (StringUtils.isBlank(listIdentifier)) {
             logger.warn("Couldn't get the list identifier from Unomi");
             return MailChimpResult.ERROR;
         }
 
         JsonNode member = isMemberOfMailChimpList(profile, action);
-        if (member == null) {
-            logger.error("Visitor was not part of the list");
-            return MailChimpResult.ERROR;
-        }
-
-        if (member.get("status").asText().equals("unsubscribed")) {
+        if (member == null || member.get(STATUS).asText().equals(UNSUBSCRIBED)) {
             return MailChimpResult.NO_CHANGE;
         }
 
         JSONObject body = new JSONObject();
-        body.put("status", "unsubscribed");
-
-
+        body.put(STATUS, UNSUBSCRIBED);
         return updateSubscription(listIdentifier, body.toString(), member, false);
-
-
     }
 
     private void initHttpClient() {
@@ -197,24 +192,10 @@ public class MailChimpServiceImpl implements MailChimpService {
         return false;
     }
 
-    //This method is not use yet, it can be used in the future
-    private boolean isMailChimpServerOnline() {
-        JsonNode response = HttpUtils.executeGetRequest(httpClient, getBaseUrl() + "/ping", getHeaders());
-        if (response != null) {
-            if (response.has("health_status") && response.get("health_status").textValue().equals("Everything's Chimpy!")) {
-                return true;
-            } else {
-                logger.error("Error when communicating with MailChimp server, response was: {}", response.asText());
-                return false;
-            }
-        }
-        return false;
-    }
-
     private boolean visitorHasMandatoryProperties(Profile profile) {
-        if (profile.getProperty("firstName") == null
-                || profile.getProperty("lastName") == null
-                || profile.getProperty("email") == null) {
+        if (profile.getProperty(FIRST_NAME) == null
+                || profile.getProperty(LAST_NAME) == null
+                || profile.getProperty(EMAIL) == null) {
             logger.warn("Visitor mandatory properties are missing");
             return false;
         }
@@ -222,49 +203,35 @@ public class MailChimpServiceImpl implements MailChimpService {
     }
 
     private JsonNode isMemberOfMailChimpList(Profile profile, Action action) {
-        String listIdentifier = (String) action.getParameterValues().get("listIdentifier");
+        String listIdentifier = (String) action.getParameterValues().get(LIST_IDENTIFIER);
         if (StringUtils.isBlank(listIdentifier)) {
             logger.warn("MailChimp list identifier not found");
             return null;
         }
-        String email = profile.getProperty("email").toString();
+        String email = profile.getProperty(EMAIL).toString();
         JsonNode response = HttpUtils.executeGetRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/members/", getHeaders());
-        JsonNode member = null;
         if (response != null) {
-            if (response.has("members")) {
-                if (response.get("members").iterator().hasNext()
-                        && response.get("members").iterator().next().has("email_address")) {
-                    for (JsonNode m : response.get("members")) {
-                        if (m.get("email_address").textValue().equals(email)) {
-                            member = m;
-                            break;
-                        }
-                    }
-                    if (member == null) {
-                        return response;
-
-                    } else {
+            if (response.has(MEMBERS)) {
+                for (JsonNode member : response.get(MEMBERS)) {
+                    if (member.get(EMAIL_ADDRESS).asText().equals(email)) {
                         return member;
                     }
                 }
             }
-            return response;
         }
         return null;
     }
 
     private MailChimpResult updateSubscription(String listIdentifier, String jsonData, JsonNode member, boolean toSubscribe) {
-        JsonNode response = HttpUtils.executePatchRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/members/" + member.get("id").asText(), getHeaders(), jsonData);
+        JsonNode response = HttpUtils.executePatchRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/members/" + member.get(ID).asText(), getHeaders(), jsonData);
         if (response != null) {
-            if (response.has("status")) {
-                String responseStatus = response.get("status").asText();
-                if ((toSubscribe && responseStatus.equals("subscribed")) || (!toSubscribe && responseStatus.equals("unsubscribed"))) {
+            if (response.has(STATUS)) {
+                String responseStatus = response.get(STATUS).asText();
+                if ((toSubscribe && responseStatus.equals(SUBSCRIBED)) || (!toSubscribe && responseStatus.equals(UNSUBSCRIBED))) {
                     return MailChimpResult.UPDATED;
                 } else {
                     return MailChimpResult.NO_CHANGE;
                 }
-
-
             }
         }
         logger.error("Couldn't update the subscription of the visitor");

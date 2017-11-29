@@ -26,8 +26,8 @@ import org.apache.unomi.mailchimp.services.MailChimpService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class UnsubscribeVisitorFromMailChimpListsAction implements ActionExecutor {
-    private static Logger logger = LoggerFactory.getLogger(UnsubscribeVisitorFromMailChimpListsAction.class);
+public class RemoveVisitorFromMailChimpListAction implements ActionExecutor {
+    private static Logger logger = LoggerFactory.getLogger(RemoveVisitorFromMailChimpListAction.class);
     private MailChimpService mailChimpService;
 
     public void setMailChimpService(MailChimpService mailChimpService) {
@@ -36,14 +36,14 @@ public class UnsubscribeVisitorFromMailChimpListsAction implements ActionExecuto
 
     @Override
     public int execute(Action action, Event event) {
-        MailChimpResult result = mailChimpService.unsubscribeFromMCList(event.getProfile(), action);
+        MailChimpResult result = mailChimpService.removeFromMCList(event.getProfile(), action);
         switch (result) {
 
-            case UPDATED:
-                logger.info("The visitor has been successfully unsubscribed from MailChimp list");
+            case REMOVED:
+                logger.info("The visitor has been successfully removed from MailChimp list");
                 break;
             case NO_CHANGE:
-                logger.info("Visitor is already unsubscribed");
+                logger.info("Visitor was not part of the list");
                 break;
             default:
                 break;
@@ -52,8 +52,3 @@ public class UnsubscribeVisitorFromMailChimpListsAction implements ActionExecuto
 
     }
 }
-
-
-
-
-

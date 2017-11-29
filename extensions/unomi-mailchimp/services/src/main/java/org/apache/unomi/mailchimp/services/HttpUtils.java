@@ -84,7 +84,7 @@ public class HttpUtils {
 
             return executeRequest(httpClient, request);
         } catch (UnsupportedEncodingException e) {
-            logger.error("The subDomain or the ApiKey were wrong {}", e.getMessage());
+            logger.error("Error when executing request", e);
             return null;
         }
     }
@@ -95,7 +95,7 @@ public class HttpUtils {
 
             return extractResponse(response);
         } catch (IOException e) {
-            logger.error("The subDomain or the ApiKey were wrong {}", e.getMessage());
+            logger.error("Error when executing request", e);
             return null;
         }
     }
@@ -114,7 +114,7 @@ public class HttpUtils {
                 try {
                     responseString = EntityUtils.toString(response.getEntity());
                 } catch (IOException e) {
-                    logger.error("Error when retrieving entity response {}", e.getMessage());
+                    logger.error("Error when parsing entity response", e);
                     return null;
                 }
             }
@@ -129,13 +129,13 @@ public class HttpUtils {
                     try {
                         response.close();
                     } catch (IOException e) {
-                        logger.error("Error when trying to close response {}", e.getMessage());
+                        logger.error("Error when trying to close response", e);
                     }
                 }
 
                 return jsonNode;
             } catch (IOException e) {
-                logger.error("Error when parsing response with ObjectMapper {}", e.getMessage());
+                logger.error("Error when parsing response with ObjectMapper", e);
                 return null;
             }
         }

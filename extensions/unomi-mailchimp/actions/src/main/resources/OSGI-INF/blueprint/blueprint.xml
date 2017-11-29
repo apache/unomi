@@ -25,27 +25,27 @@
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="actionExecutorId" value="addVisitorToMailChimpLists"/>
+            <entry key="actionExecutorId" value="addVisitorToMailChimpList"/>
         </service-properties>
-        <bean class="org.apache.unomi.mailchimp.actions.AddVisitorToMailChimpListsAction">
+        <bean class="org.apache.unomi.mailchimp.actions.AddVisitorToMailChimpListAction">
             <property name="mailChimpService" ref="mailChimpService"/>
         </bean>
     </service>
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="actionExecutorId" value="removeVisitorFromMailChimpLists"/>
+            <entry key="actionExecutorId" value="removeVisitorFromMailChimpList"/>
         </service-properties>
-        <bean class="org.apache.unomi.mailchimp.actions.RemoveVisitorFromMailChimpListsAction">
+        <bean class="org.apache.unomi.mailchimp.actions.RemoveVisitorFromMailChimpListAction">
             <property name="mailChimpService" ref="mailChimpService"/>
         </bean>
     </service>
 
     <service auto-export="interfaces">
         <service-properties>
-            <entry key="actionExecutorId" value="unsubscribeVisitorFromMailChimpLists"/>
+            <entry key="actionExecutorId" value="unsubscribeVisitorFromMailChimpList"/>
         </service-properties>
-        <bean class="org.apache.unomi.mailchimp.actions.UnsubscribeVisitorFromMailChimpListsAction">
+        <bean class="org.apache.unomi.mailchimp.actions.UnsubscribeVisitorFromMailChimpListAction">
             <property name="mailChimpService" ref="mailChimpService"/>
         </bean>
     </service>

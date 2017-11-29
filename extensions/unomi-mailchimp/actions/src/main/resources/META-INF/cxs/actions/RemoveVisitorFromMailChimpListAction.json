@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "id": "removeVisitorFromMailChimpListsAction",
+    "id": "removeVisitorFromMailChimpListAction",
     "name": "Remove a visitor from a MailChimp List",
     "description": "Remove the visitor from a defined MailChimp list",
     "systemTags": [
@@ -9,7 +9,7 @@
     ],
     "readOnly": true
   },
-  "actionExecutor": "removeVisitorFromMailChimpLists",
+  "actionExecutor": "removeVisitorFromMailChimpList",
   "parameters": [
     {
       "id": "listIdentifier",
