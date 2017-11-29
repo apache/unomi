@@ -180,7 +180,7 @@ Let's look at the context request structure:
             - profileProperties: <optional map of property name / value pairs>,
             - scores: <optional map of score id / value pairs>
     sessionPropertiesOverrides: <optional map of property name / value pairs>,
-    requiresSegments: <boolean, whether to return the associated segments>
+    requireSegments: <boolean, whether to return the associated segments>
 }
 ```
 
@@ -196,7 +196,7 @@ A client wishing to perform content personalization might also specify filtering
 It is also possible for clients wishing to perform user impersonation to specify properties or segments to override the proper ones so as to emulate a specific profile, in which case the overridden value will temporarily replace the proper values so that all rules will be evaluated with these values instead of the proper ones. The `segments` (array of segment identifiers), `profileProperties` (maps of property name and associated object value) and `scores` (maps of score id and value) all wrapped in a profileOverrides object and the `sessionPropertiesOverrides` (maps of property name and associated object value) fields allow to provide such information. Providing such overrides will, of course, impact content filtering results and segments matching for this specific request.
 
 #### Controlling the content of the response
-The clients can also specify which information to include in the response by setting the `requiresSegments` property to true if segments the current profile matches should be returned or provide an array of property identifiers for `requiredProfileProperties` or `requiredSessionProperties` fields to ask the context server to return the values for the specified profile or session properties, respectively. This information is provided by the `profileProperties`, `sessionProperties` and `profileSegments` fields of the context server response.
+The clients can also specify which information to include in the response by setting the `requireSegments` property to true if segments the current profile matches should be returned or provide an array of property identifiers for `requiredProfileProperties` or `requiredSessionProperties` fields to ask the context server to return the values for the specified profile or session properties, respectively. This information is provided by the `profileProperties`, `sessionProperties` and `profileSegments` fields of the context server response.
 
 Additionally, the context server will also returns any tracked conditions associated with the source of the context request. Upon evaluating the incoming request, the context server will determine if there are any rules marked with the `trackedCondition` tag and which source condition matches the source of the incoming request and return these tracked conditions to the client. The client can use these tracked conditions to learn that the context server can react to events matching the tracked condition and coming from that source. This is, in particular, used to implement form mapping (a solution that allows clients to update user profiles based on values provided when a form is submitted).
 
