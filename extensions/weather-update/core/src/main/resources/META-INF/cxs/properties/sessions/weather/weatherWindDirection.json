@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "id": "weatherWindDirection",
+    "name": "Weather Wind Direction",
+    "systemTags": [
+      "properties",
+      "sessionProperties"
+    ]
+  },
+  "type": "string",
+  "defaultValue": "",
+  "automaticMappingsFrom": [],
+  "rank": "302.0"
+}
