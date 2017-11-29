@@ -1,8 +1,0 @@
-/.classpath
-/.project
-/.settings
-.idea
-*.iml
-*.ipr
-target
-repository.xml.generated
