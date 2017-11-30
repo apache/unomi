@@ -171,7 +171,7 @@ public class EventsCollectorServlet extends HttpServlet {
             }
         }
 
-        String thirdPartyId = eventService.authenticateThirdPartyServer(((HttpServletRequest)request).getHeader("X-Unomi-Peer"), HttpUtils.getRemoteAddr(request));
+        String thirdPartyId = eventService.authenticateThirdPartyServer(((HttpServletRequest)request).getHeader("X-Unomi-Peer"), request.getRemoteAddr());
 
         int changes = 0;
 

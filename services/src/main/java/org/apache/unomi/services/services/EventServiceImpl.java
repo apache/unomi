@@ -133,6 +133,7 @@ public class EventServiceImpl implements EventService {
                     logger.error("Cannot resolve address",e);
                 }
             }
+            logger.debug("Could not authenticate any third party servers");
         }
         return null;
     }

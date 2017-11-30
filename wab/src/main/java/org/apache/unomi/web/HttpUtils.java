@@ -66,7 +66,7 @@ public class HttpUtils {
         if (httpServletRequest.getQueryString() != null) {
             stringBuilder.append("?").append(httpServletRequest.getQueryString());
         }
-        stringBuilder.append(" serverName=").append(httpServletRequest.getServerName()).append(" serverPort=").append(httpServletRequest.getServerPort()).append(" remoteAddr=").append(getRemoteAddr(httpServletRequest)).append(" remotePort=").append(httpServletRequest.getRemotePort()).append("\n");
+        stringBuilder.append(" serverName=").append(httpServletRequest.getServerName()).append(" serverPort=").append(httpServletRequest.getServerPort()).append(" remoteAddr=").append(httpServletRequest.getRemoteAddr()).append(" remotePort=").append(httpServletRequest.getRemotePort()).append("\n");
         return stringBuilder.toString();
     }
 
@@ -151,20 +151,5 @@ public class HttpUtils {
             return request.getParameter("payload");
         }
         return null;
-    }
-
-    public static String getRemoteAddr(HttpServletRequest request) {
-        String remoteAddr = request.getRemoteAddr();
-        String remoteAddrParameter = request.getParameter("remoteAddr");
-        String xff = request.getHeader("X-Forwarded-For");
-        if (remoteAddrParameter != null && remoteAddrParameter.length() > 0) {
-            remoteAddr = remoteAddrParameter;
-        } else if (xff != null && !xff.equals("")) {
-            if (xff.indexOf(',') > -1) {
-                xff = xff.substring(0, xff.indexOf(','));
-            }
-            remoteAddr = xff;
-        }
-        return remoteAddr;
     }
 }
