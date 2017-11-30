@@ -300,7 +300,7 @@ public class ContextServlet extends HttpServlet {
             throws IOException {
         List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile.getItemId());
 
-        String thirdPartyId = eventService.authenticateThirdPartyServer(((HttpServletRequest)request).getHeader("X-Unomi-Peer"), request.getRemoteAddr());
+        String thirdPartyId = eventService.authenticateThirdPartyServer(((HttpServletRequest)request).getHeader("X-Unomi-Peer"), HttpUtils.getRemoteAddr((HttpServletRequest) request));
 
         int changes = EventService.NO_CHANGE;
         // execute provided events if any
