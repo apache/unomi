@@ -20,6 +20,7 @@ package org.apache.unomi.mailchimp.services;
 
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.actions.Action;
+import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.List;
@@ -56,7 +57,17 @@ public interface MailChimpService {
      *
      * @param profile @see org.apache.unomi.api.Profile
      * @param action  @see org.apache.unomi.api.actions.Action
-     * @return ue if the visitor is successfully unsbscribed to a MailChimp list.
+     * @return true if the visitor is successfully unsbscribed to a MailChimp list.
      */
     MailChimpResult unsubscribeFromMCList(Profile profile, Action action);
+
+    /**
+     * This function will update merger properties of MailChimp list.
+     *
+     * @param action @see org.apache.unomi.api.actions.Action
+     * @return true if the visitor is successfully unsbscribed to a MailChimp list.
+     */
+    MailChimpResult updateMergerPropertiesForList(Profile profile,Action action,JSONObject nameStruct);
 }
+
+
