@@ -47,9 +47,10 @@ with the following contents:
     index.name=context
     
 Secured events configuration
----------------------------
+----------------------------
 
-If you need to secure some events, that will be sent only by a trusted third party server, you can update the file :
+Unomi secures some events by default. You can find the default configuration in the following file (created after the
+first server startup):
 
     $MY_KARAF_HOME/etc/org.apache.unomi.thirdparty.cfg
 
