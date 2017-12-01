@@ -26,12 +26,14 @@
         <cm:default-properties>
             <cm:property name="mailChimpConnector.apiKey" value=""/>
             <cm:property name="mailChimpConnector.url.subDomain" value=""/>
+            <cm:property name="mailChimpConnector.list.merge-fields" value=""/>
         </cm:default-properties>
     </cm:property-placeholder>
 
     <bean id="mailChimpServiceImpl" class="org.apache.unomi.mailchimp.services.internal.MailChimpServiceImpl">
         <property name="apiKey" value="${mailChimpConnector.apiKey}"/>
         <property name="urlSubDomain" value="${mailChimpConnector.url.subDomain}"/>
+        <property name="listMergeField" value="${mailChimpConnector.list.merge-fields}"/>
     </bean>
 
     <service id="mailChimpService" ref="mailChimpServiceImpl" auto-export="interfaces"/>
