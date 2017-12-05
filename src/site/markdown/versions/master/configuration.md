@@ -113,15 +113,6 @@ You should now have SSL setup on Karaf with your certificate, and you can test i
 
 3. Changing the default Karaf password can be done by modifying the etc/users.properties file
 
-4. You will also need to change the user/password information in the org.apache.unomi.cluster.cfg file : 
-
-```
-    cluster.group=default
-    cluster.jmxUsername=karaf
-    cluster.jmxPassword=karaf
-    cluster.jmxPort=1099
-```
-
 Automatic profile merging
 -------------------------
 
