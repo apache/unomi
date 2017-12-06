@@ -92,6 +92,10 @@ or on Windows shell :
 
     bin\karaf.bat start
     
+You will then need to launch (only on the first Karaf start) the Apache Unomi packages using the following Apache Karaf 
+shell command:
+
+    unomi:start        
 
 Deploying into an existing Karaf server
 ---------------------------------------
