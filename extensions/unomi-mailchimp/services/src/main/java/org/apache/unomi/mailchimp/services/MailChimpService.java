@@ -67,7 +67,7 @@ public interface MailChimpService {
      * @param action @see org.apache.unomi.api.actions.Action
      * @return true if the visitor is successfully unsbscribed to a MailChimp list.
      */
-    MailChimpResult updateMergerPropertiesForList(Profile profile,Action action,JSONObject nameStruct);
+    MailChimpResult updateMCProfileProperties(Profile profile, Action action);
 }
 
 
