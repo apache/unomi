@@ -33,7 +33,7 @@ This extension have 3 actions.
 ## Getting started
 
 
-1.  Create a new MailChimp account :
+1.  Create a new MailChimp account:
 
         https://login.mailchimp.com/signup/
            
@@ -41,12 +41,23 @@ This extension have 3 actions.
 
         https://usX.admin.mailchimp.com/account/api/
 
-3.  Configure the MailChimp Connector. In the etc/org.apache.unomi.mailchimpconnector.cfg file change the following settings:
+3. Configure the MailChimp Connector
+    1.  In the etc/org.apache.unomi.mailchimpconnector.cfg file change the following settings:
     
-        mailChimpConnector.apiKey=YOUR_APIKEY
-        mailChimpConnector.url.subDomain=YOUR_SUB_DOMAIN  (exemple: https://usX.admin.mailchimp.com/account/api/, the X is the SUB_DOMAIN)
+            mailChimpConnector.apiKey=YOUR_APIKEY
+            mailChimpConnector.url.subDomain=YOUR_SUB_DOMAIN  (exemple: https://usX.admin.mailchimp.com/account/api/, the X is the SUB_DOMAIN)
+            
+    2.   Mapping between Apache Unomi to MailChimp:
+         
+                mailChimpConnector.list.merge-fields.activate={Boolean} if you like to active mapping feature.
+                mailChimpConnector.list.merge-fields.mapping={Tag for MailChimp, 10 characters max}:{Apache Unomi property name}:{MailChimp display property name}:{property type}  
+                (exemple : COMPANY:company:Company:text)
 
 4.  Deploy into Apache Unomi using the following commands from the Apache Karaf shell:
 
         feature:repo-add mvn:org.apache.unomi/unomi-mailchimp-connector-karaf-kar/${project.version}/xml/features
         feature:install unomi-mailchimp-connector-karaf-kar
+        
+
+
+        

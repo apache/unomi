@@ -62,7 +62,7 @@ public interface MailChimpService {
     MailChimpResult unsubscribeFromMCList(Profile profile, Action action);
 
     /**
-     * This function will update merger properties of MailChimp list.
+     * This function will update merge properties of MailChimp list.
      *
      * @param action @see org.apache.unomi.api.actions.Action
      * @return true if the visitor is successfully unsbscribed to a MailChimp list.

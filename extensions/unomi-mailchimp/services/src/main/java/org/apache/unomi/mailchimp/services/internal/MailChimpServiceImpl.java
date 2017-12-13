@@ -53,12 +53,14 @@ public class MailChimpServiceImpl implements MailChimpService {
     private static final String STATUS = "status";
     private static final String SUBSCRIBED = "subscribed";
     private static final String UNSUBSCRIBED = "unsubscribed";
+    private static final String TAG = "tag";
     private static Logger logger = LoggerFactory.getLogger(MailChimpServiceImpl.class);
     private String apiKey;
     private String urlSubDomain;
     private String listMergeFieldMapping;
     private Boolean isMergeFieldsActivate;
     private CloseableHttpClient httpClient;
+
 
     @Override
     public List<HashMap<String, String>> getAllLists() {
@@ -87,21 +89,18 @@ public class MailChimpServiceImpl implements MailChimpService {
 
     @Override
     public MailChimpResult addToMCList(Profile profile, Action action) {
+        //return updateMCProfileProperties(profile, action);
         if (!isMailChimpConnectorConfigured() || !visitorHasMandatoryProperties(profile)) {
             return MailChimpResult.ERROR;
         }
 
         String listIdentifier = (String) action.getParameterValues().get(LIST_IDENTIFIER);
-        if (StringUtils.isBlank(listIdentifier)) {
-            logger.error("MailChimp list identifier not found");
-            return MailChimpResult.ERROR;
-        }
-
-        JsonNode member = isMemberOfMailChimpList(profile, action);
+        JsonNode currentMember = isMemberOfMailChimpList(profile, listIdentifier);
         JSONObject memberProperties = new JSONObject();
-        if (member != null && member.has(STATUS)) {
+
+        if (currentMember != null && currentMember.has(STATUS)) {
             JSONObject body = new JSONObject();
-            if (member.get(STATUS).asText().equals(UNSUBSCRIBED)) {
+            if (currentMember.get(STATUS).asText().equals(UNSUBSCRIBED)) {
                 logger.info("The visitor is already in the MailChimp list, his status is unsubscribed");
                 body.put(STATUS, SUBSCRIBED);
             }
@@ -109,8 +108,7 @@ public class MailChimpServiceImpl implements MailChimpService {
             if (isMergeFieldsActivate && addProfilePropertiesToObject(profile, listIdentifier, memberProperties) == MailChimpResult.SUCCESS) {
                 body.put(MERGE_FIELDS, memberProperties);
             }
-
-            return updateSubscription(listIdentifier, body.toString(), member, true);
+            return updateSubscription(listIdentifier, body.toString(), currentMember, true);
         }
 
         memberProperties.put(FNAME, profile.getProperty(FIRST_NAME).toString());
@@ -153,12 +151,12 @@ public class MailChimpServiceImpl implements MailChimpService {
             return MailChimpResult.ERROR;
         }
 
-        JsonNode member = isMemberOfMailChimpList(profile, action);
-        if (member == null) {
+        JsonNode currentMember = isMemberOfMailChimpList(profile, listIdentifier);
+        if (currentMember == null) {
             return MailChimpResult.NO_CHANGE;
         }
 
-        JsonNode response = HttpUtils.executeDeleteRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/members/" + member.get(ID).asText(), getHeaders());
+        JsonNode response = HttpUtils.executeDeleteRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/members/" + currentMember.get(ID).asText(), getHeaders());
         if (response == null || (response.has(ERRORS) && response.get(ERRORS).size() > 0)) {
             logger.error("Couldn't remove the visitor from the MailChimp list, list identifier was {} and response was {}", listIdentifier, response);
             return MailChimpResult.ERROR;
@@ -179,15 +177,16 @@ public class MailChimpServiceImpl implements MailChimpService {
             return MailChimpResult.ERROR;
         }
 
-        JsonNode member = isMemberOfMailChimpList(profile, action);
-        if (member == null || member.get(STATUS).asText().equals(UNSUBSCRIBED)) {
+        JsonNode currentMember = isMemberOfMailChimpList(profile, listIdentifier);
+        if (currentMember == null || currentMember.get(STATUS).asText().equals(UNSUBSCRIBED)) {
             return MailChimpResult.NO_CHANGE;
         }
 
         JSONObject body = new JSONObject();
         body.put(STATUS, UNSUBSCRIBED);
-        return updateSubscription(listIdentifier, body.toString(), member, false);
+        return updateSubscription(listIdentifier, body.toString(), currentMember, false);
     }
+
 
     @Override
     public MailChimpResult updateMCProfileProperties(Profile profile, Action action) {
@@ -195,15 +194,18 @@ public class MailChimpServiceImpl implements MailChimpService {
             return MailChimpResult.ERROR;
         }
 
-        JsonNode currentMember = isMemberOfMailChimpList(profile, action);
-        if (currentMember == null) {
-            return MailChimpResult.ERROR;
-        }
         String listIdentifier = (String) action.getParameterValues().get(LIST_IDENTIFIER);
         if (StringUtils.isBlank(listIdentifier)) {
             logger.warn("MailChimp list identifier not found");
             return MailChimpResult.ERROR;
         }
+
+        JsonNode currentMember = isMemberOfMailChimpList(profile, listIdentifier);
+        if (currentMember == null) {
+            logger.warn("The visitor was not part of the list");
+            return MailChimpResult.NO_CHANGE;
+        }
+
 
         JSONObject profileProperties = new JSONObject();
         MailChimpResult result = addProfilePropertiesToObject(profile, listIdentifier, profileProperties);
@@ -211,7 +213,10 @@ public class MailChimpServiceImpl implements MailChimpService {
             return result;
         }
 
-        JsonNode response = HttpUtils.executePatchRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/members/" + currentMember.get(ID).asText(), getHeaders(), profileProperties.toString());
+        JSONObject body = new JSONObject();
+        body.put(MERGE_FIELDS, profileProperties);
+
+        JsonNode response = HttpUtils.executePatchRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/members/" + currentMember.get(ID).asText(), getHeaders(), body.toString());
         if (response == null || (response.has(ERRORS) && response.get(ERRORS).size() > 0)) {
             logger.error("Error when updating visitor properties to MailChimp list, list identifier was {} and response was {}", listIdentifier, response);
             return MailChimpResult.ERROR;
@@ -223,7 +228,7 @@ public class MailChimpServiceImpl implements MailChimpService {
     private MailChimpResult addProfilePropertiesToObject(Profile profile, String listIdentifier, JSONObject memberProperties) {
         String mergeFields[] = StringUtils.split(listMergeFieldMapping, ",");
         if (mergeFields.length <= 0) {
-            logger.error("List of merger fields is not correctly configured");
+            logger.error("List of merge fields is not correctly configured");
             return MailChimpResult.ERROR;
         }
 
@@ -233,41 +238,46 @@ public class MailChimpServiceImpl implements MailChimpService {
             return MailChimpResult.ERROR;
         }
 
+        HashMap<String, String> listProfileAndMCmergeFields = new HashMap<>();
         for (String mergeField : mergeFields) {
             String mergeFieldInfo[] = StringUtils.split(mergeField, ":");
             if (mergeFieldInfo.length == 4) {
                 boolean isPropertyPresent = false;
                 for (JsonNode currentMergeField : currentMergeFields.get(MERGE_FIELDS)) {
-                    if (currentMergeField.has("tag") && mergeFieldInfo[0].toUpperCase().equals(currentMergeField.get("tag").asText().toUpperCase())) {
-                        logger.info("Property is already present  MailChimp's tag: {}, tag(for Apache Unomi) {}, name: {}, type: {}", mergeFieldInfo[0], mergeFieldInfo[1], mergeFieldInfo[2], mergeFieldInfo[3]);
+                    if (currentMergeField.has(TAG) && mergeFieldInfo[0].toUpperCase().equals(currentMergeField.get(TAG).asText().toUpperCase())) {
+                        listProfileAndMCmergeFields.put(mergeFieldInfo[0], mergeFieldInfo[1]);
+                        logger.info("Property is already present MailChimp's tag: {}, Apache Unomi tag {}, name: {}, type: {}", mergeFieldInfo[0], mergeFieldInfo[1], mergeFieldInfo[2], mergeFieldInfo[3]);
                         isPropertyPresent = true;
                     }
                 }
                 if (!isPropertyPresent) {
-                    JSONObject bodyMergerField = new JSONObject();
-                    bodyMergerField.put("tag", mergeFieldInfo[1]);
-                    bodyMergerField.put("name", mergeFieldInfo[2]);
-                    bodyMergerField.put("type", mergeFieldInfo[3]);
-                    JsonNode response = HttpUtils.executePostRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/merge-fields", getHeaders(), bodyMergerField.toString());
+                    JSONObject bodyMergeField = new JSONObject();
+                    bodyMergeField.put(TAG, mergeFieldInfo[1]);
+                    bodyMergeField.put("name", mergeFieldInfo[2]);
+                    bodyMergeField.put("type", mergeFieldInfo[3]);
+                    JsonNode response = HttpUtils.executePostRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/merge-fields", getHeaders(), bodyMergeField.toString());
                     if (response != null && response.has("merge_id")) {
-                        logger.info("property added {}", bodyMergerField);
+                        logger.info("property added {}", bodyMergeField);
                     } else {
-                        logger.warn("couldn't add property {}", bodyMergerField);
+                        logger.warn("couldn't add property {}", bodyMergeField);
                     }
                 }
             } else {
-                logger.error("List of merger fields is not correctly configured");
+                logger.error("List of merge fields is not correctly configured");
                 return MailChimpResult.ERROR;
             }
         }
 
         for (JsonNode currentMergeField : currentMergeFields.get(MERGE_FIELDS)) {
-            if (currentMergeField.has("tag")) {
-                Map<String, Object> properties = profile.getProperties();
+            if (currentMergeField.has(TAG)) {
+                for (Map.Entry<String, String> mappingProperty : listProfileAndMCmergeFields.entrySet()) {
+                    String property = mappingProperty.getKey().toUpperCase();
+                    if (mappingProperty.getKey().length() > 10) {
+                        property = mappingProperty.getKey().substring(0, 10).toUpperCase();
+                    }
+                    if (property.equals(currentMergeField.get(TAG).asText())) {
 
-                for (Map.Entry<String, Object> entry : properties.entrySet()) {
-                    if (entry.getKey().toUpperCase().equals(currentMergeField.get("tag").asText())) {
-                        memberProperties.put(currentMergeField.get("tag").asText(), entry.getValue().toString());
+                        memberProperties.put(currentMergeField.get(TAG).asText(), profile.getProperty(mappingProperty.getValue()));
                     }
                 }
             }
@@ -285,6 +295,7 @@ public class MailChimpServiceImpl implements MailChimpService {
 
         return currentMergeFields;
     }
+
 
     private void initHttpClient() {
         if (httpClient == null) {
@@ -311,12 +322,8 @@ public class MailChimpServiceImpl implements MailChimpService {
         return true;
     }
 
-    private JsonNode isMemberOfMailChimpList(Profile profile, Action action) {
-        String listIdentifier = (String) action.getParameterValues().get(LIST_IDENTIFIER);
-        if (StringUtils.isBlank(listIdentifier)) {
-            logger.warn("MailChimp list identifier not found");
-            return null;
-        }
+    private JsonNode isMemberOfMailChimpList(Profile profile, String listIdentifier) {
+
         String email = profile.getProperty(EMAIL).toString().toLowerCase();
         JsonNode response = HttpUtils.executeGetRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/members/", getHeaders());
         if (response != null) {
