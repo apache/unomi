@@ -178,7 +178,10 @@ public class MailChimpServiceImpl implements MailChimpService {
         }
 
         JsonNode currentMember = isMemberOfMailChimpList(profile, listIdentifier);
-        if (currentMember == null || currentMember.get(STATUS).asText().equals(UNSUBSCRIBED)) {
+        if (currentMember == null) {
+            return MailChimpResult.REMOVED;
+        }
+        if (currentMember.get(STATUS).asText().equals(UNSUBSCRIBED)) {
             return MailChimpResult.NO_CHANGE;
         }
 
