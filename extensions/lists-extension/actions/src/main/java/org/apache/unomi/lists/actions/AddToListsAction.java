@@ -23,6 +23,7 @@ import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -44,15 +45,32 @@ public class AddToListsAction implements ActionExecutor {
 
     @Override
     public int execute(Action action, Event event) {
-        List<String> listIdentifiers = (List<String>) action.getParameterValues().get("listIdentifiers");
+        List<String> newListIdentifiers = (List<String>) action.getParameterValues().get("listIdentifiers");
+        if (newListIdentifiers == null || newListIdentifiers.size() == 0) {
+            return EventService.NO_CHANGE;
+        }
         Profile profile = event.getProfile();
 
-        profile.getSystemProperties().put("lists", listIdentifiers);
-        Event profileUpdated = new Event("profileUpdated", null, profile, event.getScope(), null, profile, new Date());
-        profileUpdated.setPersistent(false);
-        eventService.send(profileUpdated);
-        profileService.save(profile);
+        List<String> existingListIdentifiers = (List<String>) profile.getSystemProperties().get("lists");
+        if (existingListIdentifiers == null) {
+            existingListIdentifiers = new ArrayList<>();
+        }
+        boolean listsChanged = false;
+        for (String newListIdentifier : newListIdentifiers) {
+            if (!existingListIdentifiers.contains(newListIdentifier)) {
+                existingListIdentifiers.add(newListIdentifier);
+                listsChanged = true;
+            }
+        }
 
-        return EventService.PROFILE_UPDATED;
+        if (listsChanged) {
+            profile.getSystemProperties().put("lists", existingListIdentifiers);
+            Event profileUpdated = new Event("profileUpdated", null, profile, event.getScope(), null, profile, new Date());
+            profileUpdated.setPersistent(false);
+            eventService.send(profileUpdated);
+            return EventService.PROFILE_UPDATED;
+        } else {
+            return EventService.NO_CHANGE;
+        }
     }
 }
