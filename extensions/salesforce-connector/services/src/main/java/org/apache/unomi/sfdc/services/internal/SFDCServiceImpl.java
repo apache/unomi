@@ -31,6 +31,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
+import org.apache.unomi.api.Consent;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.sfdc.services.SFDCConfiguration;
@@ -352,11 +353,44 @@ public class SFDCServiceImpl implements SFDCService {
         return false;
     }
 
+    private boolean isMappingConsent(Profile profile, Map<String, Object> sfdcLeadFields) {
+        Map<String, Consent> consents = profile.getConsents();
+        String mappingConsentsString = sfdcConfiguration.getSfdcFieldsConsent();
+        if (mappingConsentsString.isEmpty()) {
+            return false;
+        }
+        String[] mappingConsents = mappingConsentsString.split(",");
+        if (mappingConsents.length <= 0) {
+            logger.error("Error with the mapping field {} please check the cfg file", mappingConsentsString);
+            return false;
+        }
+        boolean isPerfectlyMapped = true;
+        for (String oneMappingConsent : mappingConsents) {
+            String[] oneRawMappingConsent = oneMappingConsent.split(":");
+
+            if (oneRawMappingConsent.length <= 0) {
+                logger.error("Error with the mapping field {} please check the cfg file", mappingConsentsString);
+                isPerfectlyMapped = false;
+            } else {
+                if (consents.get(oneRawMappingConsent[0]) == null) {
+                    logger.warn("Consent {} not found or didn't answer yet", oneRawMappingConsent[0]);
+                    isPerfectlyMapped = false;
+                }
+                if (isPerfectlyMapped) {
+                    sfdcLeadFields.put(oneRawMappingConsent[1], consents.get(oneRawMappingConsent[0]).getStatus().toString());
+                    logger.info("Consent {} was mapped with {}", oneRawMappingConsent[0], oneRawMappingConsent[1]);
+                }
+            }
+        }
+        return isPerfectlyMapped;
+    }
+
     @Override
     public String createOrUpdateLead(Profile profile) {
         if (!isConnected()) {
             return null;
         }
+
         // first we must check if an existing contact exists for the profile.
         String unomiIdentifierValue = (String) profile.getProperty(sfdcConfiguration.getUnomiIdentifierField());
         if (isProfileInContacts(unomiIdentifierValue)) {
@@ -414,6 +448,12 @@ public class SFDCServiceImpl implements SFDCService {
                 }
             }
         }
+        if (isMappingConsent(profile, sfdcLeadFields)) {
+            logger.warn("Ok Well Done");
+        } else {
+            logger.warn("The consents mapping went wrong");
+        }
+
 
         if (sfdcLeadFields.size() == 0) {
             logger.info("No SFDC field value to send, will not send anything to Salesforce.");
