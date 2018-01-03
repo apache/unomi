@@ -355,7 +355,7 @@ public class SFDCServiceImpl implements SFDCService {
 
     private boolean isMappingConsent(Profile profile, Map<String, Object> sfdcLeadFields) {
         Map<String, Consent> consents = profile.getConsents();
-        String mappingConsentsString = sfdcConfiguration.getSfdcFieldsConsent();
+        String mappingConsentsString = sfdcConfiguration.getSfdcFieldsConsents();
         if (mappingConsentsString.isEmpty()) {
             return false;
         }
@@ -390,7 +390,6 @@ public class SFDCServiceImpl implements SFDCService {
         if (!isConnected()) {
             return null;
         }
-
         // first we must check if an existing contact exists for the profile.
         String unomiIdentifierValue = (String) profile.getProperty(sfdcConfiguration.getUnomiIdentifierField());
         if (isProfileInContacts(unomiIdentifierValue)) {

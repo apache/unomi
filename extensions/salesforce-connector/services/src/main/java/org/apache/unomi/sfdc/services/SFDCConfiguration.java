@@ -43,21 +43,18 @@ public class SFDCConfiguration extends Item {
     private String sfdcChannel;
     private String sfdcFieldMappings;
     private String sfdcFieldMappingsIdentifier;
-
+    private String unomiIdentifierField;
+    private String sfdcIdentifierField;
+    private boolean sfdcCheckIfContactExistBeforeLeadCreation;
+    private String sfdcFieldsConsents;
 
     private long sfdcSessionTimeout = 15 * 60 * 1000L; // 15 minutes by default
 
     private Map<String, String> unomiToSfdcFieldMappings = new HashMap<>();
     private Map<String, String> sfdcToUnomiFieldMappings = new HashMap<>();
 
-    private String unomiIdentifierField;
-    private String sfdcIdentifierField;
-
-    private boolean sfdcCheckIfContactExistBeforeLeadCreation;
-
-    private String sfdcFieldsConsent;
-
-    public SFDCConfiguration() { }
+    public SFDCConfiguration() {
+    }
 
     public String getSfdcLoginEndpoint() {
         return sfdcLoginEndpoint;
@@ -158,12 +155,12 @@ public class SFDCConfiguration extends Item {
         this.sfdcCheckIfContactExistBeforeLeadCreation = sfdcCheckIfContactExistBeforeLeadCreation;
     }
 
-    public String getSfdcFieldsConsent() {
-        return sfdcFieldsConsent;
+    public String getSfdcFieldsConsents() {
+        return sfdcFieldsConsents;
     }
 
-    public void setSfdcFieldsConsent(String sfdcFieldsConsent) {
-        this.sfdcFieldsConsent = sfdcFieldsConsent;
+    public void setSfdcFieldsConsents(String sfdcFieldsConsents) {
+        this.sfdcFieldsConsents = sfdcFieldsConsents;
     }
 
     public Map<String, String> getUnomiToSfdcFieldMappings() {
