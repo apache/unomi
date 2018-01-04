@@ -78,9 +78,10 @@ All communication is done using HTTP REST requests and JSON data formats.
 4. Launch ElasticSearch using : `bin/elasticsearch`
 5. Download Apache Unomi here : [http://unomi.incubator.apache.org/download.html](http://unomi.incubator.apache.org/download.html)
 6. Start it using : `./bin/karaf`
-7. Wait for startup to complete
-8. Try accessing [https://localhost:9443/cxs/cluster](https://localhost:9443/cxs/cluster) with username/password: karaf/karaf . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
-9. Request your first context by simply accessing : [http://localhost:8181/context.js?sessionId=1234](http://localhost:8181/context.js?sessionId=1234)
+7. Start the Apache Unomi packages using `unomi:start` in the Apache Karaf Shell
+8. Wait for startup to complete
+9. Try accessing [https://localhost:9443/cxs/cluster](https://localhost:9443/cxs/cluster) with username/password: karaf/karaf . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
+10. Request your first context by simply accessing : [http://localhost:8181/context.js?sessionId=1234](http://localhost:8181/context.js?sessionId=1234)
 
 ### News
 

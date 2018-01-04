@@ -50,7 +50,10 @@ public class ProfileImportOneShotRouteBuilder extends RouterAbstractRouteBuilder
         ProcessorDefinition prDefErr = onException(BadProfileDataFormatException.class)
                 .log(LoggingLevel.ERROR, "Error processing record ${exchangeProperty.CamelSplitIndex}++ !")
                 .handled(true)
-                .process(new LineSplitFailureHandler());
+                .process(new LineSplitFailureHandler())
+                .onException(Exception.class)
+                .log(LoggingLevel.ERROR, "Failed to process file.")
+                .handled(true);
 
         if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
             prDefErr.to((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_IMPORT_DEPOSIT_BUFFER));
@@ -61,7 +64,7 @@ public class ProfileImportOneShotRouteBuilder extends RouterAbstractRouteBuilder
         LineSplitProcessor lineSplitProcessor = new LineSplitProcessor();
         lineSplitProcessor.setProfileService(profileService);
 
-        ProcessorDefinition prDef = from("file://" + uploadDir + "?include=.*.csv&consumer.delay=1m")
+        ProcessorDefinition prDef = from("file://" + uploadDir + "?moveFailed=.error&include=.*.csv&consumer.delay=1m")
                 .routeId(RouterConstants.IMPORT_ONESHOT_ROUTE_ID)
                 .autoStartup(true)
                 .process(importConfigByFileNameProcessor)

@@ -63,7 +63,10 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
         ProcessorDefinition prDefErr = onException(BadProfileDataFormatException.class)
                 .log(LoggingLevel.ERROR, "Error processing record ${exchangeProperty.CamelSplitIndex}++ !")
                 .handled(true)
-                .process(new LineSplitFailureHandler());
+                .process(new LineSplitFailureHandler())
+                .onException(Exception.class)
+                .log(LoggingLevel.ERROR, "Failed to process file.")
+                .handled(true);
 
         if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
             prDefErr.to((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_IMPORT_DEPOSIT_BUFFER));
@@ -90,6 +93,7 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                 lineSplitProcessor.setProfileService(profileService);
 
                 String endpoint = (String) importConfiguration.getProperties().get("source");
+                endpoint += "&moveFailed=.error";
 
                 if (StringUtils.isNotBlank(endpoint) && allowedEndpoints.contains(endpoint.substring(0, endpoint.indexOf(':')))) {
                     ProcessorDefinition prDef = from(endpoint)

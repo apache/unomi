@@ -47,9 +47,10 @@ with the following contents:
     index.name=context
     
 Secured events configuration
----------------------------
+----------------------------
 
-If you need to secure some events, that will be sent only by a trusted third party server, you can update the file :
+Unomi secures some events by default. You can find the default configuration in the following file (created after the
+first server startup):
 
     $MY_KARAF_HOME/etc/org.apache.unomi.thirdparty.cfg
 
@@ -111,15 +112,6 @@ The generated package is also configured with a default SSL certificate. You can
 You should now have SSL setup on Karaf with your certificate, and you can test it by trying to access it on port 9443.
 
 3. Changing the default Karaf password can be done by modifying the etc/users.properties file
-
-4. You will also need to change the user/password information in the org.apache.unomi.cluster.cfg file : 
-
-```
-    cluster.group=default
-    cluster.jmxUsername=karaf
-    cluster.jmxPassword=karaf
-    cluster.jmxPort=1099
-```
 
 Automatic profile merging
 -------------------------

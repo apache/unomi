@@ -122,6 +122,9 @@
                 contentType: 'application/json; charset=utf-8',
                 dataType: 'json',
                 async: false,
+                headers : {
+                    'X-Unomi-Peer' : '670c26d1cc413346c3b2fd9ce65dab41' // this is configured in the etc/org.apache.unomi.thirdparty.cfg
+                },
                 success: function (data) {
                     console.log("Unomi response:", data);
                     bootstrapAlert.success("Successfully sent login event to Apache Unomi ! (profileId=" + data.profileId + ",properties.email=" + data.profileProperties.email + ",nbOfVisits=" + data.profileProperties.nbOfVisits + ")");

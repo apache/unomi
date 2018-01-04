@@ -338,8 +338,8 @@ public class SFDCServiceImpl implements SFDCService {
     }
 
     private boolean isProfileInContacts(String identifierFieldValue) {
-        logger.info("Checking if we have a contact for identifier value {}...", identifierFieldValue);
         if (sfdcConfiguration.isSfdcCheckIfContactExistBeforeLeadCreation()) {
+            logger.info("Checking if we have a contact for identifier value {}...", identifierFieldValue);
             Object response;
             Set<String> queryResult = new LinkedHashSet<>();
             response = query("SELECT Id FROM Contact WHERE " + sfdcConfiguration.getSfdcIdentifierField() +
