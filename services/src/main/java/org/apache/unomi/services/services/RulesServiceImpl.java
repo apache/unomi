@@ -319,6 +319,17 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         return new PartialList<>(descriptions, rules.getOffset(), rules.getPageSize(), rules.getTotalSize());
     }
 
+    public PartialList<Rule> getRuleDetails(Query query) {
+        if (query.isForceRefresh()) {
+            persistenceService.refresh();
+        }
+        definitionsService.resolveConditionType(query.getCondition());
+        PartialList<Rule> rules = persistenceService.query(query.getCondition(), query.getSortby(), Rule.class, query.getOffset(), query.getLimit());
+        List<Rule> details = new LinkedList<>();
+        details.addAll(rules.getList());
+        return new PartialList<>(details, rules.getOffset(), rules.getPageSize(), rules.getTotalSize());
+    }
+
     public Rule getRule(String ruleId) {
         Rule rule = persistenceService.load(ruleId, Rule.class);
         if (rule != null) {

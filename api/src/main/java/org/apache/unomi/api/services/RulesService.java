@@ -49,6 +49,14 @@ public interface RulesService {
     PartialList<Metadata> getRuleMetadatas(Query query);
 
     /**
+     * Retrieves rule details for rules matching the specified query.
+     *
+     * @param query the query specifying which rules to retrieve
+     * @return a {@link PartialList} of rule details for the rules matching the specified query
+     */
+    PartialList<Rule> getRuleDetails(Query query);
+
+    /**
      * Retrieves the rule identified by the specified identifier.
      *
      * @param ruleId the identifier of the rule we want to retrieve
