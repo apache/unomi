@@ -45,6 +45,10 @@ public class UnsubscribeVisitorFromMailChimpListAction implements ActionExecutor
             case NO_CHANGE:
                 logger.info("Visitor is already unsubscribed");
                 break;
+            case REMOVED:
+                logger.info("Visitor was not part of the list");
+                break;
+
             default:
                 break;
         }

@@ -23,5 +23,6 @@ public enum MailChimpResult {
     UPDATED,
     REMOVED,
     ERROR,
+    SUCCESS,
     NO_CHANGE
 }
