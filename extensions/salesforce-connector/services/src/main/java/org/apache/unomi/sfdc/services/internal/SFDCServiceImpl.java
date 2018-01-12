@@ -447,7 +447,7 @@ public class SFDCServiceImpl implements SFDCService {
             }
         }
         if (isMappingConsent(profile, sfdcLeadFields)) {
-            logger.warn("Ok Well Done");
+            logger.info("The consents were mapped correctly");
         } else {
             logger.warn("The consents mapping went wrong");
         }
