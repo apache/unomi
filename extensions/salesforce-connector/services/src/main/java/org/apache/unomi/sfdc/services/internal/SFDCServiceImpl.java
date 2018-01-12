@@ -66,7 +66,6 @@ public class SFDCServiceImpl implements SFDCService {
 
     private static final String REST_ENDPOINT_URI = "/services/data/v38.0";
     private static final String STREAMING_ENDPOINT_URI = "/cometd/38.0";
-
     private static final String RESULTSET_KEY_CONTACT = "CONTACT";
     private static final String RESULTSET_KEY_LEAD = "LEAD";
 
@@ -452,7 +451,6 @@ public class SFDCServiceImpl implements SFDCService {
         } else {
             logger.warn("The consents mapping went wrong");
         }
-
 
         if (sfdcLeadFields.size() == 0) {
             logger.info("No SFDC field value to send, will not send anything to Salesforce.");

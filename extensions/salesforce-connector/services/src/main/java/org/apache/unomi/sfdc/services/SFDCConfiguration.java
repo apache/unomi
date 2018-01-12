@@ -53,8 +53,7 @@ public class SFDCConfiguration extends Item {
     private Map<String, String> unomiToSfdcFieldMappings = new HashMap<>();
     private Map<String, String> sfdcToUnomiFieldMappings = new HashMap<>();
 
-    public SFDCConfiguration() {
-    }
+    public SFDCConfiguration() { }
 
     public String getSfdcLoginEndpoint() {
         return sfdcLoginEndpoint;
@@ -84,9 +83,7 @@ public class SFDCConfiguration extends Item {
         return sfdcUserSecurityToken;
     }
 
-    public void setSfdcUserSecurityToken(String sfdcUserSecurityToken) {
-        this.sfdcUserSecurityToken = sfdcUserSecurityToken;
-    }
+    public void setSfdcUserSecurityToken(String sfdcUserSecurityToken) { this.sfdcUserSecurityToken = sfdcUserSecurityToken; }
 
     public String getSfdcConsumerKey() {
         return sfdcConsumerKey;
@@ -138,7 +135,6 @@ public class SFDCConfiguration extends Item {
             sfdcIdentifierField = sfdcFieldMappingsIdentifierParts[1];
         }
     }
-
     public long getSfdcSessionTimeout() {
         return sfdcSessionTimeout;
     }
