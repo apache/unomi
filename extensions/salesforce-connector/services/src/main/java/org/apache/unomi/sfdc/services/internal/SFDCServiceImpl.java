@@ -352,36 +352,30 @@ public class SFDCServiceImpl implements SFDCService {
         return false;
     }
 
-    private boolean isMappingConsent(Profile profile, Map<String, Object> sfdcLeadFields) {
+    private void addConsents(Profile profile, Map<String, Object> sfdcLeadFields) {
         Map<String, Consent> consents = profile.getConsents();
         String mappingConsentsString = sfdcConfiguration.getSfdcFieldsConsents();
-        if (mappingConsentsString.isEmpty()) {
-            return false;
-        }
-        String[] mappingConsents = mappingConsentsString.split(",");
-        if (mappingConsents.length <= 0) {
-            logger.error("Error with the mapping field {} please check the cfg file", mappingConsentsString);
-            return false;
-        }
-        boolean isPerfectlyMapped = true;
-        for (String oneMappingConsent : mappingConsents) {
-            String[] oneRawMappingConsent = oneMappingConsent.split(":");
-
-            if (oneRawMappingConsent.length <= 0) {
-                logger.error("Error with the mapping field {} please check the cfg file", mappingConsentsString);
-                isPerfectlyMapped = false;
-            } else {
-                if (consents.get(oneRawMappingConsent[0]) == null) {
-                    logger.warn("Consent {} not found or didn't answer yet", oneRawMappingConsent[0]);
-                    isPerfectlyMapped = false;
-                }
-                if (isPerfectlyMapped) {
-                    sfdcLeadFields.put(oneRawMappingConsent[1], consents.get(oneRawMappingConsent[0]).getStatus().toString());
-                    logger.info("Consent {} was mapped with {}", oneRawMappingConsent[0], oneRawMappingConsent[1]);
+        if (!mappingConsentsString.isEmpty()) {
+            String[] mappingConsents = mappingConsentsString.split(",");
+            if (mappingConsents.length > 0) {
+                for (String mappingConsent : mappingConsents) {
+                    String[] mappingConsentArray = mappingConsent.split(":");
+                    if (mappingConsentArray.length <= 0) {
+                        logger.error("Error with the mapping for field {}, this field will not be mapped please check the cfg file", mappingConsentsString);
+                    } else {
+                        String consentUnomiId = mappingConsentArray[0];
+                        if (consents.containsKey(consentUnomiId)) {
+                            String consentSfdcId = mappingConsentArray[1];
+                            String consentValue = consents.get(consentUnomiId).getStatus().toString();
+                            sfdcLeadFields.put(consentSfdcId, consentValue);
+                            logger.debug("Consent {} with value {} was mapped with {}", consentUnomiId, consentValue, consentSfdcId);
+                        } else {
+                            logger.debug("Consent {} not found in current profile or not answered yet", consentUnomiId);
+                        }
+                    }
                 }
             }
         }
-        return isPerfectlyMapped;
     }
 
     @Override
@@ -446,11 +440,7 @@ public class SFDCServiceImpl implements SFDCService {
                 }
             }
         }
-        if (isMappingConsent(profile, sfdcLeadFields)) {
-            logger.info("The consents were mapped correctly");
-        } else {
-            logger.warn("The consents mapping went wrong");
-        }
+        addConsents(profile, sfdcLeadFields);
 
         if (sfdcLeadFields.size() == 0) {
             logger.info("No SFDC field value to send, will not send anything to Salesforce.");
