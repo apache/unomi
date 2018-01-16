@@ -43,15 +43,15 @@ public class SFDCConfiguration extends Item {
     private String sfdcChannel;
     private String sfdcFieldMappings;
     private String sfdcFieldMappingsIdentifier;
+    private String unomiIdentifierField;
+    private String sfdcIdentifierField;
+    private boolean sfdcCheckIfContactExistBeforeLeadCreation;
+    private String sfdcFieldsConsents;
+
     private long sfdcSessionTimeout = 15 * 60 * 1000L; // 15 minutes by default
 
     private Map<String, String> unomiToSfdcFieldMappings = new HashMap<>();
     private Map<String, String> sfdcToUnomiFieldMappings = new HashMap<>();
-
-    private String unomiIdentifierField;
-    private String sfdcIdentifierField;
-
-    private boolean sfdcCheckIfContactExistBeforeLeadCreation;
 
     public SFDCConfiguration() { }
 
@@ -83,9 +83,7 @@ public class SFDCConfiguration extends Item {
         return sfdcUserSecurityToken;
     }
 
-    public void setSfdcUserSecurityToken(String sfdcUserSecurityToken) {
-        this.sfdcUserSecurityToken = sfdcUserSecurityToken;
-    }
+    public void setSfdcUserSecurityToken(String sfdcUserSecurityToken) { this.sfdcUserSecurityToken = sfdcUserSecurityToken; }
 
     public String getSfdcConsumerKey() {
         return sfdcConsumerKey;
@@ -137,7 +135,6 @@ public class SFDCConfiguration extends Item {
             sfdcIdentifierField = sfdcFieldMappingsIdentifierParts[1];
         }
     }
-
     public long getSfdcSessionTimeout() {
         return sfdcSessionTimeout;
     }
@@ -152,6 +149,14 @@ public class SFDCConfiguration extends Item {
 
     public void setSfdcCheckIfContactExistBeforeLeadCreation(boolean sfdcCheckIfContactExistBeforeLeadCreation) {
         this.sfdcCheckIfContactExistBeforeLeadCreation = sfdcCheckIfContactExistBeforeLeadCreation;
+    }
+
+    public String getSfdcFieldsConsents() {
+        return sfdcFieldsConsents;
+    }
+
+    public void setSfdcFieldsConsents(String sfdcFieldsConsents) {
+        this.sfdcFieldsConsents = sfdcFieldsConsents;
     }
 
     public Map<String, String> getUnomiToSfdcFieldMappings() {

@@ -31,6 +31,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
+import org.apache.unomi.api.Consent;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.sfdc.services.SFDCConfiguration;
@@ -65,7 +66,6 @@ public class SFDCServiceImpl implements SFDCService {
 
     private static final String REST_ENDPOINT_URI = "/services/data/v38.0";
     private static final String STREAMING_ENDPOINT_URI = "/cometd/38.0";
-
     private static final String RESULTSET_KEY_CONTACT = "CONTACT";
     private static final String RESULTSET_KEY_LEAD = "LEAD";
 
@@ -352,6 +352,32 @@ public class SFDCServiceImpl implements SFDCService {
         return false;
     }
 
+    private void addConsents(Profile profile, Map<String, Object> sfdcLeadFields) {
+        Map<String, Consent> consents = profile.getConsents();
+        String mappingConsentsString = sfdcConfiguration.getSfdcFieldsConsents();
+        if (!mappingConsentsString.isEmpty()) {
+            String[] mappingConsents = mappingConsentsString.split(",");
+            if (mappingConsents.length > 0) {
+                for (String mappingConsent : mappingConsents) {
+                    String[] mappingConsentArray = mappingConsent.split(":");
+                    if (mappingConsentArray.length <= 0) {
+                        logger.error("Error with the mapping for field {}, this field will not be mapped please check the cfg file", mappingConsentsString);
+                    } else {
+                        String consentUnomiId = mappingConsentArray[0];
+                        if (consents.containsKey(consentUnomiId)) {
+                            String consentSfdcId = mappingConsentArray[1];
+                            String consentValue = consents.get(consentUnomiId).getStatus().toString();
+                            sfdcLeadFields.put(consentSfdcId, consentValue);
+                            logger.debug("Consent {} with value {} was mapped with {}", consentUnomiId, consentValue, consentSfdcId);
+                        } else {
+                            logger.debug("Consent {} not found in current profile or not answered yet", consentUnomiId);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     @Override
     public String createOrUpdateLead(Profile profile) {
         if (!isConnected()) {
@@ -414,6 +440,7 @@ public class SFDCServiceImpl implements SFDCService {
                 }
             }
         }
+        addConsents(profile, sfdcLeadFields);
 
         if (sfdcLeadFields.size() == 0) {
             logger.info("No SFDC field value to send, will not send anything to Salesforce.");
