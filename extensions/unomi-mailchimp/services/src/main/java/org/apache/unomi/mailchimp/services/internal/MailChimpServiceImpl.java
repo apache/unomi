@@ -391,7 +391,7 @@ public class MailChimpServiceImpl implements MailChimpService {
             if (mergeFields.length > 0) {
                 for (String mergeField : mergeFields) {
                     if (StringUtils.isNotBlank(mergeField)) {
-                        String mergeFieldInfo[] = StringUtils.split(mergeField, ":");
+                        String mergeFieldInfo[] = StringUtils.split(mergeField, "<=>");
                         if (mergeFieldInfo.length > 0) {
                             Map<String, String> fieldInfo = new HashMap<>();
                             fieldInfo.put(UNOMI_ID, mergeFieldInfo[0]);

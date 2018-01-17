@@ -359,7 +359,7 @@ public class SFDCServiceImpl implements SFDCService {
             String[] mappingConsents = mappingConsentsString.split(",");
             if (mappingConsents.length > 0) {
                 for (String mappingConsent : mappingConsents) {
-                    String[] mappingConsentArray = mappingConsent.split(":");
+                    String[] mappingConsentArray = mappingConsent.split("<=>");
                     if (mappingConsentArray.length <= 0) {
                         logger.error("Error with the mapping for field {}, this field will not be mapped please check the cfg file", mappingConsentsString);
                     } else {

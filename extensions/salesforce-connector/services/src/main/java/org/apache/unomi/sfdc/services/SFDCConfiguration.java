@@ -118,7 +118,7 @@ public class SFDCConfiguration extends Item {
         String[] mappings = sfdcFieldMappings.split(",");
         if (mappings != null && mappings.length > 0) {
             for (String mapping : mappings) {
-                String[] parts = mapping.split("=");
+                String[] parts = mapping.split("<=>");
                 if (parts != null && parts.length == 2) {
                     unomiToSfdcFieldMappings.put(parts[0], parts[1]);
                     sfdcToUnomiFieldMappings.put(parts[1], parts[0]);
@@ -129,7 +129,7 @@ public class SFDCConfiguration extends Item {
 
     public void setSfdcFieldMappingsIdentifier(String sfdcFieldMappingsIdentifier) {
         this.sfdcFieldMappingsIdentifier = sfdcFieldMappingsIdentifier;
-        String[] sfdcFieldMappingsIdentifierParts = sfdcFieldMappingsIdentifier.split("=");
+        String[] sfdcFieldMappingsIdentifierParts = sfdcFieldMappingsIdentifier.split("<=>");
         if (sfdcFieldMappingsIdentifierParts != null && sfdcFieldMappingsIdentifierParts.length == 2) {
             unomiIdentifierField = sfdcFieldMappingsIdentifierParts[0];
             sfdcIdentifierField = sfdcFieldMappingsIdentifierParts[1];
