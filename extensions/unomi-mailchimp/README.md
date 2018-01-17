@@ -57,11 +57,11 @@ This extension has 3 actions.
     ```
     This is the property to configure for the mapping, the format is as shown.
     ```
-        mailChimpConnector.list.merge-fields.mapping={Apache Unomi property ID}:{MailChimp Tag name} 
+        mailChimpConnector.list.merge-fields.mapping={Apache Unomi property ID}<=>{MailChimp Tag name} 
     ```
     NOTE: there is a particular format for the address
     ```
-        {Apache Unomi property ID}:{MailChimp Tag name}:{MailChimp tag sub entry}
+        {Apache Unomi property ID}<=>{MailChimp Tag name}<=>{MailChimp tag sub entry}
     ```
     
     MailChimp type supported are:
@@ -88,10 +88,10 @@ This extension has 3 actions.
     7. Address  
     Example:
     ```
-        address:ADDRESS:addr1, 
-        city:ADDRESS:city,
-        zipCode:ADDRESS:zip,
-        countryName:ADDRESS:country
+        address<=>ADDRESS<=>addr1, 
+        city<=>ADDRESS<=>city,
+        zipCode<=>ADDRESS<=>zip,
+        countryName<=>ADDRESS<=>country
     ```
     
 5. Deploy into Apache Unomi using the following commands from the Apache Karaf shell:
