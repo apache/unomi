@@ -30,6 +30,7 @@ import java.util.Map;
  */
 public class Consent {
 
+    private String scope;
     private String typeIdentifier; // type identifiers are defined and managed externally of Apache Unomi
     private ConsentStatus status;
     private Date statusDate;
@@ -43,12 +44,14 @@ public class Consent {
 
     /**
      * A constructor to directly build a consent with all it's properties
+     * @param scope the scope for this consent
      * @param typeIdentifier the identifier of the type this consent applies to
      * @param status the type of status that we are storing for this consent. May be one of @ConsentStatus.DENIED, @ConsentStatus.GRANTED, @ConsentStatus.REVOKED
      * @param statusDate the starting date at which this consent was given
      * @param revokeDate the date at which this consent will (automatically) revoke
      */
-    public Consent(String typeIdentifier, ConsentStatus status, Date statusDate, Date revokeDate) {
+    public Consent(String scope, String typeIdentifier, ConsentStatus status, Date statusDate, Date revokeDate) {
+        this.scope = scope;
         this.typeIdentifier = typeIdentifier;
         this.status = status;
         this.statusDate = statusDate;
@@ -63,6 +66,9 @@ public class Consent {
      * @param dateFormat a DateFormat instance to convert the date string to date objects
      */
     public Consent(Map<String,Object> consentMap, DateFormat dateFormat) throws ParseException {
+        if (consentMap.containsKey("scope")) {
+            setScope((String) consentMap.get("scope"));
+        }
         if (consentMap.containsKey("typeIdentifier")) {
             setTypeIdentifier((String) consentMap.get("typeIdentifier"));
         }
@@ -82,6 +88,22 @@ public class Consent {
                 setRevokeDate(dateFormat.parse(revokeDateStr));
             }
         }
+    }
+
+    /**
+     * Retrieve the scope for this consent
+     * @return a scope identifier
+     */
+    public String getScope() {
+        return scope;
+    }
+
+    /**
+     * Set the scope for this consent
+     * @param scope a scope identifier
+     */
+    public void setScope(String scope) {
+        this.scope = scope;
     }
 
     /**
@@ -190,6 +212,7 @@ public class Consent {
     @XmlTransient
     public Map<String,Object> toMap(DateFormat dateFormat) {
         Map<String,Object> map = new LinkedHashMap<>();
+        map.put("scope", scope);
         map.put("typeIdentifier", typeIdentifier);
         map.put("status", status.toString());
         if (statusDate != null) {
@@ -204,7 +227,8 @@ public class Consent {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("Consent{");
-        sb.append("typeIdentifier='").append(typeIdentifier).append('\'');
+        sb.append("scope='").append(scope).append('\'');
+        sb.append(", typeIdentifier='").append(typeIdentifier).append('\'');
         sb.append(", status=").append(status);
         sb.append(", statusDate=").append(statusDate);
         sb.append(", revokeDate=").append(revokeDate);

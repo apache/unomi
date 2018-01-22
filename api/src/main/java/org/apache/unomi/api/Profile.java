@@ -197,7 +197,7 @@ public class Profile extends Item {
 
     /**
      * Returns all the consents, including the revokes ones.
-     * @return a map that contains the consent type ID as key, and the consent itself as a value
+     * @return a map that contains as a key the scope + "/" + consent type ID (or just the consent type ID if no scope was set on the consent), and the consent itself as a value
      */
     public Map<String, Consent> getConsents() {
         return consents;
@@ -228,7 +228,11 @@ public class Profile extends Item {
             }
             return false;
         }
-        consents.put(consent.getTypeIdentifier(), consent);
+        if (consent.getScope() != null) {
+            consents.put(consent.getScope() + "/" + consent.getTypeIdentifier(), consent);
+        } else {
+            consents.put(consent.getTypeIdentifier(), consent);
+        }
         return true;
     }
 
