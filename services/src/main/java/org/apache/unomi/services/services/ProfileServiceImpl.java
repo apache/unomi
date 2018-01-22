@@ -772,7 +772,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 PersonaWithSessions persona = CustomObjectMapper.getObjectMapper().readValue(predefinedPersonaURL, PersonaWithSessions.class);
 
                 String itemId = persona.getPersona().getItemId();
-                if (persistenceService.load(itemId, Persona.class) != null) {
+                if (persistenceService.load(itemId, Persona.class) == null) {
                     persistenceService.save(persona.getPersona());
                 }
 
