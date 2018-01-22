@@ -51,5 +51,11 @@ MY_DIRNAME=`dirname $0`
 MY_KARAF_HOME=`cd "$MY_DIRNAME/.."; pwd`
 
 export JAVA_MAX_MEM=3G
-# export YOURKIT_AGENTPATH="/Applications/YourKit_Java_Profiler_2013_build_13048.app/bin/mac/libyjpagent.jnilib"
-# export KARAF_OPTS="-agentpath:$YOURKIT_AGENTPATH=disablestacktelemetry,disableexceptiontelemetry,delay=10000"
+# In order to activate the Yourkit Profiler agent, uncomment one of the following lines depending on the operating
+# system and adjust the path to the location of the installation directory.
+# On MacOS:
+# export YOURKIT_AGENTPATH="/Applications/YourKit-Java-Profiler-2017.02.app/Contents/Resources/bin/mac/libyjpagent.jnilib"
+# On Linux:
+# export YOURKIT_AGENTPATH="/home/jahia/install/yourkit/YourKit-JavaProfiler-2017.02/bin/linux-x86-64/libyjpagent.so"
+# Also activate this line to activate the agent on the JVM command line:
+# export KARAF_OPTS="-agentpath:$YOURKIT_AGENTPATH=disablestacktelemetry,exceptions=disable,delay=10000,probe_disable=*"
