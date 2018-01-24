@@ -65,27 +65,30 @@ This extension has 3 actions.
     ```
     
     MailChimp type supported are:
-    1. Date 
+    * Date 
      ```
         The format is (DD/MM/YYYY) or  (MM/DD/YYYY)
     ``` 
-    2. Birthday 
+    * Birthday 
      ```    
         The format is (DD/MM) or  (MM/DD)
      ```
-    3. Website or Text
+    * Website or Text
      ```
         They are text
      ```
-    4. Number 
+    * Number 
      ```
         The number will be parse into a Integer 
      ```
-    6. Phone
+    * Phone
      ```
         The North American format is not supported, use international
      ```
-    7. Address  
+    * Address 
+    
+    NOTE : Street, City, Country and Zip are mandatory properties, otherwise the address property will be skipped
+    
     Example:
     ```
         address<=>ADDRESS<=>addr1, 

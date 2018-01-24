@@ -60,12 +60,12 @@ public class HttpUtils {
         return addBodyAndExecuteRequest(httpClient, body, httpPost);
     }
 
-    public static JsonNode executeGetRequest(CloseableHttpClient httpClient, String url, Map<String, String> headers) {
+    public static JsonNode executeGetRequest(CloseableHttpClient httpClient, String url, Map<String, String> headers, boolean allow404Response) {
         HttpGet httpGet = new HttpGet(url);
 
         addHeaders(headers, httpGet);
 
-        return executeRequest(httpClient, httpGet);
+        return executeRequest(httpClient, httpGet, allow404Response);
     }
 
     public static JsonNode executeDeleteRequest(CloseableHttpClient httpClient, String url, Map<String, String> headers) {
@@ -73,7 +73,7 @@ public class HttpUtils {
 
         addHeaders(headers, httpDelete);
 
-        return executeRequest(httpClient, httpDelete);
+        return executeRequest(httpClient, httpDelete, false);
     }
 
     private static JsonNode addBodyAndExecuteRequest(CloseableHttpClient httpClient, String body, HttpEntityEnclosingRequestBase request) {
@@ -82,38 +82,43 @@ public class HttpUtils {
             stringEntity.setContentType(new BasicHeader(HTTP.CONTENT_TYPE, "application/json"));
             request.setEntity(stringEntity);
 
-            return executeRequest(httpClient, request);
+            return executeRequest(httpClient, request, false);
         } catch (UnsupportedEncodingException e) {
             logger.error("Error when executing request", e);
             return null;
         }
     }
 
-    private static JsonNode executeRequest(CloseableHttpClient httpClient, HttpRequestBase request) {
+    private static JsonNode executeRequest(CloseableHttpClient httpClient, HttpRequestBase request, boolean allow404Response) {
         try {
             CloseableHttpResponse response = httpClient.execute(request);
 
-            return extractResponse(response);
+            return extractResponse(response, allow404Response);
         } catch (IOException e) {
             logger.error("Error when executing request", e);
             return null;
         }
     }
 
-    private static JsonNode extractResponse(CloseableHttpResponse response) {
+    private static JsonNode extractResponse(CloseableHttpResponse response, boolean allow404Response) {
         if (response != null) {
-            if (response.getStatusLine().getStatusCode() >= 400) {
-                logger.error("Error when communicating with MailChimp server, response code was {} and response message was {}", response.getStatusLine().getStatusCode(), response.getStatusLine().getReasonPhrase());
+            int statusCode = response.getStatusLine().getStatusCode();
+            if (((statusCode >= 400) && !allow404Response) || (allow404Response && (statusCode  >= 400 && statusCode != 404 ))) {
+                EntityUtils.consumeQuietly(response.getEntity());
+                logger.error("Error when communicating with MailChimp server, response code was {} and response message was {}", statusCode, response.getStatusLine().getReasonPhrase());
                 return null;
             }
 
             String responseString;
-            if (response.getStatusLine().getStatusCode() == 204) {
+            if (statusCode == 204) {
+                // The response is build for the delete member, because the Api return no content
                 responseString = ("{ \"response\": \" " + response.getStatusLine().toString() + "\" }");
             } else {
+                // Other request
                 try {
                     responseString = EntityUtils.toString(response.getEntity());
                 } catch (IOException e) {
+                    EntityUtils.consumeQuietly(response.getEntity());
                     logger.error("Error when parsing entity response", e);
                     return null;
                 }
@@ -123,18 +128,11 @@ public class HttpUtils {
             try {
                 JsonNode jsonNode = objectMapper.readTree(responseString);
 
-                if (response.getStatusLine().getStatusCode() != 204) {
-                    EntityUtils.consumeQuietly(response.getEntity());
-                } else {
-                    try {
-                        response.close();
-                    } catch (IOException e) {
-                        logger.error("Error when trying to close response", e);
-                    }
-                }
+                EntityUtils.consumeQuietly(response.getEntity());
 
                 return jsonNode;
             } catch (IOException e) {
+                EntityUtils.consumeQuietly(response.getEntity());
                 logger.error("Error when parsing response with ObjectMapper", e);
                 return null;
             }

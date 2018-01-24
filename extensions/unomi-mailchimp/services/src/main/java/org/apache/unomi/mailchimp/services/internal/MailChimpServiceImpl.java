@@ -18,6 +18,7 @@
 package org.apache.unomi.mailchimp.services.internal;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.unomi.api.Profile;
@@ -32,7 +33,10 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class MailChimpServiceImpl implements MailChimpService {
     private static final String LISTS = "lists";
@@ -43,9 +47,6 @@ public class MailChimpServiceImpl implements MailChimpService {
     private static final String EMAIL_ADDRESS = "email_address";
     private static final String EMAIL = "email";
     private static final String ERRORS = "errors";
-    private static final String FIRST_NAME = "firstName";
-    private static final String LAST_NAME = "lastName";
-    private static final String MEMBERS = "members";
     private static final String LIST_IDENTIFIER = "listIdentifier";
     private static final String STATUS = "status";
     private static final String SUBSCRIBED = "subscribed";
@@ -56,6 +57,25 @@ public class MailChimpServiceImpl implements MailChimpService {
     private static final String DATE_FORMAT = "date_format";
     private static final String UNOMI_ID = "unomiId";
     private static final String MC_SUB_TAG_NAME = "mcSubTagName";
+    private static final String ADDR_1 = "addr1";
+    private static final String ADDR_2 = "addr2";
+    private static final String CITY = "city";
+    private static final String COUNTRY = "country";
+    private static final String STATE = "state";
+    private static final String ZIP = "zip";
+    private static final String ADDRESS = "address";
+    private static final String DATE = "date";
+    private static final String MM_DD_YYYY = "MM/DD/YYYY";
+    private static final String MM_DD_YYYY1 = "MM/dd/yyyy";
+    private static final String DD_MM_YYYY = "dd/MM/yyyy";
+    private static final String BIRTHDAY = "birthday";
+    private static final String MM_DD = "MM/DD";
+    private static final String MM_DD_LOWERCASE = "MM/dd";
+    private static final String DD_MM = "dd/MM";
+    private static final String ACCEPT = "Accept";
+    private static final String AUTHORIZATION = "Authorization";
+    private static final String SEPARATOR_CHARS_PROPERTIES = ",";
+    private static final String SEPARATOR_CHARS_PROPERTY = "<=>";
     private static Logger logger = LoggerFactory.getLogger(MailChimpServiceImpl.class);
     private String apiKey;
     private String urlSubDomain;
@@ -68,7 +88,7 @@ public class MailChimpServiceImpl implements MailChimpService {
     public List<HashMap<String, String>> getAllLists() {
         List<HashMap<String, String>> mcLists = new ArrayList<>();
         if (isMailChimpConnectorConfigured()) {
-            JsonNode response = HttpUtils.executeGetRequest(httpClient, getBaseUrl() + "/lists", getHeaders());
+            JsonNode response = HttpUtils.executeGetRequest(httpClient, getBaseUrl() + "/lists", getHeaders(), false);
             if (response != null) {
                 if (response.has(LISTS) && response.get(LISTS).size() > 0) {
                     for (JsonNode list : response.get(LISTS)) {
@@ -82,7 +102,7 @@ public class MailChimpServiceImpl implements MailChimpService {
                         }
                     }
                 } else {
-                    logger.info("No list to return, response was {}", response.asText());
+                    logger.debug("No list to return, response was {}", response.asText());
                 }
             }
         }
@@ -91,7 +111,8 @@ public class MailChimpServiceImpl implements MailChimpService {
 
     @Override
     public MailChimpResult addToMCList(Profile profile, Action action) {
-        if (!isMailChimpConnectorConfigured() || !visitorHasMandatoryProperties(profile)) {
+        if (!isMailChimpConnectorConfigured() || profile.getProperty(EMAIL) == null) {
+            logger.error("The visitor hasn't email address");
             return MailChimpResult.ERROR;
         }
 
@@ -102,7 +123,7 @@ public class MailChimpServiceImpl implements MailChimpService {
         if (currentMember != null && currentMember.has(STATUS)) {
             JSONObject body = new JSONObject();
             if (currentMember.get(STATUS).asText().equals(UNSUBSCRIBED)) {
-                logger.info("The visitor is already in the MailChimp list, his status is unsubscribed");
+                logger.debug("The visitor is already in the MailChimp list, his status is unsubscribed");
                 body.put(STATUS, SUBSCRIBED);
             }
 
@@ -133,7 +154,7 @@ public class MailChimpServiceImpl implements MailChimpService {
 
     @Override
     public MailChimpResult removeFromMCList(Profile profile, Action action) {
-        if (!isMailChimpConnectorConfigured() || !visitorHasMandatoryProperties(profile)) {
+        if (!isMailChimpConnectorConfigured() || profile.getProperty(EMAIL) == null) {
             return MailChimpResult.ERROR;
         }
 
@@ -159,7 +180,7 @@ public class MailChimpServiceImpl implements MailChimpService {
 
     @Override
     public MailChimpResult unsubscribeFromMCList(Profile profile, Action action) {
-        if (!isMailChimpConnectorConfigured() || !visitorHasMandatoryProperties(profile)) {
+        if (!isMailChimpConnectorConfigured() || profile.getProperty(EMAIL) == null) {
             return MailChimpResult.ERROR;
         }
 
@@ -185,7 +206,7 @@ public class MailChimpServiceImpl implements MailChimpService {
 
     @Override
     public MailChimpResult updateMCProfileProperties(Profile profile, Action action) {
-        if (!isMailChimpConnectorConfigured() || !visitorHasMandatoryProperties(profile)) {
+        if (!isMailChimpConnectorConfigured() || profile.getProperty(EMAIL) == null) {
             return MailChimpResult.ERROR;
         }
 
@@ -241,46 +262,26 @@ public class MailChimpServiceImpl implements MailChimpService {
                         String unomiId = fieldInfo.get(UNOMI_ID);
                         if (profile.getProperty(unomiId) != null) {
                             switch (mergeFieldDefinition.get(TYPE).asText()) {
-                                case "address":
+                                case ADDRESS:
                                     if (mergeFields.has(mcTagName)) {
                                         mergeFields.getJSONObject(mcTagName).put(fieldInfo.get(MC_SUB_TAG_NAME), profile.getProperty(unomiId));
                                     } else {
                                         JSONObject address = new JSONObject();
-                                        address.put("addr1", "");
-                                        address.put("addr2", "");
-                                        address.put("city", "");
-                                        address.put("country", "");
-                                        address.put("state", "");
-                                        address.put("zip", "");
+                                        address.put(ADDR_1, "");
+                                        address.put(ADDR_2, "");
+                                        address.put(CITY, "");
+                                        address.put(COUNTRY, "");
+                                        address.put(STATE, "");
+                                        address.put(ZIP, "");
                                         address.put(fieldInfo.get(MC_SUB_TAG_NAME), profile.getProperty(unomiId));
                                         mergeFields.put(mcTagName, address);
                                     }
                                     break;
-                                case "date":
-                                    if (mergeFieldDefinition.has(OPTIONS) && mergeFieldDefinition.get(OPTIONS).has(DATE_FORMAT)) {
-                                        String mcDateFormat = mergeFieldDefinition.get(OPTIONS).get(DATE_FORMAT).asText();
-                                        DateTime dateTime = new DateTime(profile.getProperty(unomiId));
-                                        DateTimeFormatter dateTimeFormatter;
-                                        if (mcDateFormat.equals("MM/DD/YYYY")) {
-                                            dateTimeFormatter = DateTimeFormat.forPattern("MM/dd/yyyy");
-                                        } else {
-                                            dateTimeFormatter = DateTimeFormat.forPattern("dd/MM/yyyy");
-                                        }
-                                        mergeFields.put(mcTagName, dateTimeFormatter.print(dateTime));
-                                    }
+                                case DATE:
+                                    formatDate(profile, mergeFields, mergeFieldDefinition, mcTagName, unomiId, MM_DD_YYYY, MM_DD_YYYY1, DD_MM_YYYY);
                                     break;
-                                case "birthday":
-                                    if (mergeFieldDefinition.has(OPTIONS) && mergeFieldDefinition.get(OPTIONS).has(DATE_FORMAT)) {
-                                        String mcDateFormat = mergeFieldDefinition.get(OPTIONS).get(DATE_FORMAT).asText();
-                                        DateTime dateTime = new DateTime(profile.getProperty(unomiId));
-                                        DateTimeFormatter dateTimeFormatter;
-                                        if (mcDateFormat.equals("MM/DD")) {
-                                            dateTimeFormatter = DateTimeFormat.forPattern("MM/dd");
-                                        } else {
-                                            dateTimeFormatter = DateTimeFormat.forPattern("dd/MM");
-                                        }
-                                        mergeFields.put(mcTagName, dateTimeFormatter.print(dateTime));
-                                    }
+                                case BIRTHDAY:
+                                    formatDate(profile, mergeFields, mergeFieldDefinition, mcTagName, unomiId, MM_DD, MM_DD_LOWERCASE, DD_MM);
                                     break;
                                 default:
                                     mergeFields.put(mcTagName, profile.getProperty(unomiId));
@@ -288,8 +289,16 @@ public class MailChimpServiceImpl implements MailChimpService {
                             }
                         }
                     }
+                    if (mergeFieldDefinition.get(TYPE).asText().equals(ADDRESS) && mergeFields.has(mcTagName)
+                            && (StringUtils.isBlank(mergeFields.getJSONObject(mcTagName).get(ADDR_1).toString())
+                            || StringUtils.isBlank(mergeFields.getJSONObject(mcTagName).get(ZIP).toString())
+                            || StringUtils.isBlank(mergeFields.getJSONObject(mcTagName).get(CITY).toString())
+                            || StringUtils.isBlank(mergeFields.getJSONObject(mcTagName).get(COUNTRY).toString()))) {
+                            mergeFields.remove(mcTagName);
+                        logger.debug("Can't map the address property {}, one of the mandatory field is missing (addr1, zip, city, country)", mcTagName);
+                    }
                 } else {
-                    logger.warn("Found property {} in MC list, if you need this property please update mapping or add the property to your MC list", mcTagName);
+                    logger.debug("Found property {} in MC list, if you need this property please update mapping or add the property to your MC list", mcTagName);
                 }
             }
         }
@@ -297,8 +306,22 @@ public class MailChimpServiceImpl implements MailChimpService {
         return MailChimpResult.SUCCESS;
     }
 
+    private void formatDate(Profile profile, JSONObject mergeFields, JsonNode mergeFieldDefinition, String mcTagName, String unomiId, String mmDdYyyy, String mmDdYyyy1, String ddMmYyyy) {
+        if (mergeFieldDefinition.has(OPTIONS) && mergeFieldDefinition.get(OPTIONS).has(DATE_FORMAT)) {
+            String mcDateFormat = mergeFieldDefinition.get(OPTIONS).get(DATE_FORMAT).asText();
+            DateTime dateTime = new DateTime(profile.getProperty(unomiId));
+            DateTimeFormatter dateTimeFormatter;
+            if (mcDateFormat.equals(mmDdYyyy)) {
+                dateTimeFormatter = DateTimeFormat.forPattern(mmDdYyyy1);
+            } else {
+                dateTimeFormatter = DateTimeFormat.forPattern(ddMmYyyy);
+            }
+            mergeFields.put(mcTagName, dateTimeFormatter.print(dateTime));
+        }
+    }
+
     private JsonNode getMCListProperties(String listIdentifier) {
-        JsonNode currentMergeFields = HttpUtils.executeGetRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/merge-fields", getHeaders());
+        JsonNode currentMergeFields = HttpUtils.executeGetRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/merge-fields", getHeaders(), false);
         if (currentMergeFields == null || !currentMergeFields.has(MERGE_FIELDS)) {
             logger.error("Can't find merge_fields from the response, the response was {}", currentMergeFields);
             return null;
@@ -323,26 +346,15 @@ public class MailChimpServiceImpl implements MailChimpService {
         return false;
     }
 
-    private boolean visitorHasMandatoryProperties(Profile profile) {
-        if (profile.getProperty(FIRST_NAME) == null
-                || profile.getProperty(LAST_NAME) == null
-                || profile.getProperty(EMAIL) == null) {
-            logger.warn("Visitor mandatory properties are missing");
-            return false;
-        }
-        return true;
-    }
-
     private JsonNode isMemberOfMailChimpList(Profile profile, String listIdentifier) {
-
         String email = profile.getProperty(EMAIL).toString().toLowerCase();
-        JsonNode response = HttpUtils.executeGetRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/members/", getHeaders());
+        String md5Hex = DigestUtils.md5Hex(email);
+
+        JsonNode response = HttpUtils.executeGetRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/members/" + md5Hex, getHeaders(), true);
         if (response != null) {
-            if (response.has(MEMBERS)) {
-                for (JsonNode member : response.get(MEMBERS)) {
-                    if (member.get(EMAIL_ADDRESS).asText().toLowerCase().equals(email)) {
-                        return member;
-                    }
+            if (response.has(EMAIL_ADDRESS)) {
+                if (response.get(EMAIL_ADDRESS).asText().toLowerCase().equals(email)) {
+                    return response;
                 }
             }
         }
@@ -371,8 +383,8 @@ public class MailChimpServiceImpl implements MailChimpService {
 
     private HashMap<String, String> getHeaders() {
         HashMap<String, String> headers = new HashMap<>();
-        headers.put("Accept", "application/json");
-        headers.put("Authorization", "apikey " + apiKey);
+        headers.put(ACCEPT, "application/json");
+        headers.put(AUTHORIZATION, "apikey " + apiKey);
         return headers;
     }
 
@@ -387,11 +399,11 @@ public class MailChimpServiceImpl implements MailChimpService {
     public void setListMergeFieldMapping(String listMergeFields) {
         this.listMergeFieldMapping = new HashMap<>();
         if (StringUtils.isNotBlank(listMergeFields)) {
-            String mergeFields[] = StringUtils.split(listMergeFields, ",");
+            String mergeFields[] = StringUtils.split(listMergeFields, SEPARATOR_CHARS_PROPERTIES);
             if (mergeFields.length > 0) {
                 for (String mergeField : mergeFields) {
                     if (StringUtils.isNotBlank(mergeField)) {
-                        String mergeFieldInfo[] = StringUtils.split(mergeField, "<=>");
+                        String mergeFieldInfo[] = StringUtils.split(mergeField, SEPARATOR_CHARS_PROPERTY);
                         if (mergeFieldInfo.length > 0) {
                             Map<String, String> fieldInfo = new HashMap<>();
                             fieldInfo.put(UNOMI_ID, mergeFieldInfo[0]);
