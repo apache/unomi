@@ -28,7 +28,6 @@ import org.apache.unomi.mailchimp.services.MailChimpResult;
 import org.apache.unomi.mailchimp.services.MailChimpService;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +38,11 @@ import java.util.List;
 import java.util.Map;
 
 public class MailChimpServiceImpl implements MailChimpService {
+
+    private static Logger logger = LoggerFactory.getLogger(MailChimpServiceImpl.class);
+    
+    private static final String ACCEPT = "Accept";
+    private static final String AUTHORIZATION = "Authorization";
     private static final String LISTS = "lists";
     private static final String ID = "id";
     private static final String NAME = "name";
@@ -53,8 +57,6 @@ public class MailChimpServiceImpl implements MailChimpService {
     private static final String UNSUBSCRIBED = "unsubscribed";
     private static final String TAG = "tag";
     private static final String TYPE = "type";
-    private static final String OPTIONS = "options";
-    private static final String DATE_FORMAT = "date_format";
     private static final String UNOMI_ID = "unomiId";
     private static final String MC_SUB_TAG_NAME = "mcSubTagName";
     private static final String ADDR_1 = "addr1";
@@ -64,19 +66,19 @@ public class MailChimpServiceImpl implements MailChimpService {
     private static final String STATE = "state";
     private static final String ZIP = "zip";
     private static final String ADDRESS = "address";
+    private static final String DATE_FORMAT = "date_format";
+    private static final String OPTIONS = "options";
     private static final String DATE = "date";
     private static final String MM_DD_YYYY = "MM/DD/YYYY";
-    private static final String MM_DD_YYYY1 = "MM/dd/yyyy";
-    private static final String DD_MM_YYYY = "dd/MM/yyyy";
+    private static final String MC_BIRTDATE_MM_DD_YYYY = "MM/dd/yyyy";
+    private static final String MC_BIRTDATE_DD_MM_YYYY = "dd/MM/yyyy";
     private static final String BIRTHDAY = "birthday";
     private static final String MM_DD = "MM/DD";
-    private static final String MM_DD_LOWERCASE = "MM/dd";
-    private static final String DD_MM = "dd/MM";
-    private static final String ACCEPT = "Accept";
-    private static final String AUTHORIZATION = "Authorization";
+    private static final String MC_BIRTDAY_MM_DD = "MM/dd";
+    private static final String MC_BIRTDAY_DD_MM = "dd/MM";
     private static final String SEPARATOR_CHARS_PROPERTIES = ",";
     private static final String SEPARATOR_CHARS_PROPERTY = "<=>";
-    private static Logger logger = LoggerFactory.getLogger(MailChimpServiceImpl.class);
+   
     private String apiKey;
     private String urlSubDomain;
     private Map<String, List<Map<String, String>>> listMergeFieldMapping;
@@ -112,7 +114,7 @@ public class MailChimpServiceImpl implements MailChimpService {
     @Override
     public MailChimpResult addToMCList(Profile profile, Action action) {
         if (!isMailChimpConnectorConfigured() || profile.getProperty(EMAIL) == null) {
-            logger.error("The visitor hasn't email address");
+            logger.error("The visitor does not have an email address");
             return MailChimpResult.ERROR;
         }
 
@@ -278,10 +280,19 @@ public class MailChimpServiceImpl implements MailChimpService {
                                     }
                                     break;
                                 case DATE:
-                                    formatDate(profile, mergeFields, mergeFieldDefinition, mcTagName, unomiId, MM_DD_YYYY, MM_DD_YYYY1, DD_MM_YYYY);
+                                    if (mergeFieldDefinition.has(OPTIONS) && mergeFieldDefinition.get(OPTIONS).has(DATE_FORMAT)) {
+                                        DateTime unomiDate = new DateTime(profile.getProperty(unomiId));
+                                        String mcDateFormat = mergeFieldDefinition.get(OPTIONS).get(DATE_FORMAT).asText();
+                                        mergeFields.put(mcTagName,  formatDate(MM_DD_YYYY, MC_BIRTDATE_MM_DD_YYYY, MC_BIRTDATE_DD_MM_YYYY, mcDateFormat, unomiDate));
+                                    }
                                     break;
                                 case BIRTHDAY:
-                                    formatDate(profile, mergeFields, mergeFieldDefinition, mcTagName, unomiId, MM_DD, MM_DD_LOWERCASE, DD_MM);
+                                    if (mergeFieldDefinition.has(OPTIONS) && mergeFieldDefinition.get(OPTIONS).has(DATE_FORMAT)) {
+                                        DateTime unomiDate = new DateTime(profile.getProperty(unomiId));
+                                        String mcDateFormat = mergeFieldDefinition.get(OPTIONS).get(DATE_FORMAT).asText();
+                                        mergeFields.put(mcTagName,  formatDate(MM_DD_YYYY, MC_BIRTDATE_MM_DD_YYYY, MC_BIRTDATE_DD_MM_YYYY, mcDateFormat,unomiDate));
+                                    }
+
                                     break;
                                 default:
                                     mergeFields.put(mcTagName, profile.getProperty(unomiId));
@@ -294,7 +305,7 @@ public class MailChimpServiceImpl implements MailChimpService {
                             || StringUtils.isBlank(mergeFields.getJSONObject(mcTagName).get(ZIP).toString())
                             || StringUtils.isBlank(mergeFields.getJSONObject(mcTagName).get(CITY).toString())
                             || StringUtils.isBlank(mergeFields.getJSONObject(mcTagName).get(COUNTRY).toString()))) {
-                            mergeFields.remove(mcTagName);
+                        mergeFields.remove(mcTagName);
                         logger.debug("Can't map the address property {}, one of the mandatory field is missing (addr1, zip, city, country)", mcTagName);
                     }
                 } else {
@@ -306,19 +317,14 @@ public class MailChimpServiceImpl implements MailChimpService {
         return MailChimpResult.SUCCESS;
     }
 
-    private void formatDate(Profile profile, JSONObject mergeFields, JsonNode mergeFieldDefinition, String mcTagName, String unomiId, String mmDdYyyy, String mmDdYyyy1, String ddMmYyyy) {
-        if (mergeFieldDefinition.has(OPTIONS) && mergeFieldDefinition.get(OPTIONS).has(DATE_FORMAT)) {
-            String mcDateFormat = mergeFieldDefinition.get(OPTIONS).get(DATE_FORMAT).asText();
-            DateTime dateTime = new DateTime(profile.getProperty(unomiId));
-            DateTimeFormatter dateTimeFormatter;
-            if (mcDateFormat.equals(mmDdYyyy)) {
-                dateTimeFormatter = DateTimeFormat.forPattern(mmDdYyyy1);
-            } else {
-                dateTimeFormatter = DateTimeFormat.forPattern(ddMmYyyy);
-            }
-            mergeFields.put(mcTagName, dateTimeFormatter.print(dateTime));
+    private String formatDate(String mcDateFormatOption, String FranceLocalDateFormat, String UnitedStatesOfAmericaLocalDateFormat, String mcDateFormat, DateTime unomiDate) {
+        if (mcDateFormat.equals(mcDateFormatOption)) {
+           return   DateTimeFormat.forPattern(FranceLocalDateFormat).print(unomiDate);
+        } else {
+            return DateTimeFormat.forPattern(UnitedStatesOfAmericaLocalDateFormat).print(unomiDate);
         }
     }
+
 
     private JsonNode getMCListProperties(String listIdentifier) {
         JsonNode currentMergeFields = HttpUtils.executeGetRequest(httpClient, getBaseUrl() + "/lists/" + listIdentifier + "/merge-fields", getHeaders(), false);
