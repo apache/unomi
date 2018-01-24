@@ -40,7 +40,7 @@ import java.util.Map;
 public class MailChimpServiceImpl implements MailChimpService {
 
     private static Logger logger = LoggerFactory.getLogger(MailChimpServiceImpl.class);
-    
+
     private static final String ACCEPT = "Accept";
     private static final String AUTHORIZATION = "Authorization";
     private static final String LISTS = "lists";
@@ -69,16 +69,16 @@ public class MailChimpServiceImpl implements MailChimpService {
     private static final String DATE_FORMAT = "date_format";
     private static final String OPTIONS = "options";
     private static final String DATE = "date";
-    private static final String MM_DD_YYYY = "MM/DD/YYYY";
-    private static final String MC_BIRTDATE_MM_DD_YYYY = "MM/dd/yyyy";
-    private static final String MC_BIRTDATE_DD_MM_YYYY = "dd/MM/yyyy";
+    private static final String MC_MM_DD_YYYY = "MM/DD/YYYY";
+    private static final String MM_DD_YYYY = "MM/dd/yyyy";
+    private static final String DD_MM_YYYY = "dd/MM/yyyy";
     private static final String BIRTHDAY = "birthday";
-    private static final String MM_DD = "MM/DD";
-    private static final String MC_BIRTDAY_MM_DD = "MM/dd";
-    private static final String MC_BIRTDAY_DD_MM = "dd/MM";
+    private static final String MC_MM_DD = "MM/DD";
+    private static final String MM_DD = "MM/dd";
+    private static final String DD_MM = "dd/MM";
     private static final String SEPARATOR_CHARS_PROPERTIES = ",";
     private static final String SEPARATOR_CHARS_PROPERTY = "<=>";
-   
+
     private String apiKey;
     private String urlSubDomain;
     private Map<String, List<Map<String, String>>> listMergeFieldMapping;
@@ -281,18 +281,13 @@ public class MailChimpServiceImpl implements MailChimpService {
                                     break;
                                 case DATE:
                                     if (mergeFieldDefinition.has(OPTIONS) && mergeFieldDefinition.get(OPTIONS).has(DATE_FORMAT)) {
-                                        DateTime unomiDate = new DateTime(profile.getProperty(unomiId));
-                                        String mcDateFormat = mergeFieldDefinition.get(OPTIONS).get(DATE_FORMAT).asText();
-                                        mergeFields.put(mcTagName,  formatDate(MM_DD_YYYY, MC_BIRTDATE_MM_DD_YYYY, MC_BIRTDATE_DD_MM_YYYY, mcDateFormat, unomiDate));
+                                        mergeFields.put(mcTagName, formatDate(mergeFieldDefinition.get(OPTIONS).get(DATE_FORMAT).asText(), profile.getProperty(unomiId)));
                                     }
                                     break;
                                 case BIRTHDAY:
                                     if (mergeFieldDefinition.has(OPTIONS) && mergeFieldDefinition.get(OPTIONS).has(DATE_FORMAT)) {
-                                        DateTime unomiDate = new DateTime(profile.getProperty(unomiId));
-                                        String mcDateFormat = mergeFieldDefinition.get(OPTIONS).get(DATE_FORMAT).asText();
-                                        mergeFields.put(mcTagName,  formatDate(MM_DD_YYYY, MC_BIRTDATE_MM_DD_YYYY, MC_BIRTDATE_DD_MM_YYYY, mcDateFormat,unomiDate));
+                                        mergeFields.put(mcTagName, formatDate(mergeFieldDefinition.get(OPTIONS).get(DATE_FORMAT).asText(), profile.getProperty(unomiId)));
                                     }
-
                                     break;
                                 default:
                                     mergeFields.put(mcTagName, profile.getProperty(unomiId));
@@ -317,11 +312,12 @@ public class MailChimpServiceImpl implements MailChimpService {
         return MailChimpResult.SUCCESS;
     }
 
-    private String formatDate(String mcDateFormatOption, String FranceLocalDateFormat, String UnitedStatesOfAmericaLocalDateFormat, String mcDateFormat, DateTime unomiDate) {
-        if (mcDateFormat.equals(mcDateFormatOption)) {
-           return   DateTimeFormat.forPattern(FranceLocalDateFormat).print(unomiDate);
+    private String formatDate(String mcDateFormat, Object date) {
+        DateTime dateTime = new DateTime(date);
+        if (StringUtils.contains(mcDateFormat, "/YYYY")) {
+            return DateTimeFormat.forPattern((mcDateFormat.equals(MC_MM_DD_YYYY) ? MM_DD_YYYY : DD_MM_YYYY)).print(dateTime);
         } else {
-            return DateTimeFormat.forPattern(UnitedStatesOfAmericaLocalDateFormat).print(unomiDate);
+            return DateTimeFormat.forPattern((mcDateFormat.equals(MC_MM_DD) ? MM_DD : DD_MM)).print(dateTime);
         }
     }
 
