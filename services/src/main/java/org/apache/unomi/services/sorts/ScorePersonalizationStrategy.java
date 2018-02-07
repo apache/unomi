@@ -67,11 +67,13 @@ public class ScorePersonalizationStrategy implements PersonalizationStrategy {
                 }
             }
 
+            boolean matchesAtLeastOneCondition = false;
             if (personalizedContent.getFilters() != null) {
                 for (PersonalizationService.Filter filter : personalizedContent.getFilters()) {
                     Condition condition = filter.getCondition();
                     if (condition != null && condition.getConditionTypeId() != null) {
                         if (profileService.matchCondition(condition, profile, session)) {
+                            matchesAtLeastOneCondition = true;
                             if (filter.getProperties().get("score") != null) {
                                 score += (int) filter.getProperties().get("score");
                             } else {
@@ -81,7 +83,7 @@ public class ScorePersonalizationStrategy implements PersonalizationStrategy {
                     }
                 }
             }
-            if (score >= threshold) {
+            if (matchesAtLeastOneCondition && score >= threshold) {
                 t.put(personalizedContent.getId(), score);
                 sortedContent.add(personalizedContent.getId());
             }
