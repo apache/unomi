@@ -36,6 +36,7 @@ public class MigrationTo130 implements Migration {
 
     private CloseableHttpClient httpClient;
     private CommandSession session;
+    private String esAddress;
     private LinkedHashMap<String, List<String>> tagsStructurePriorTo130;
     private List propsTaggedAsPersonalIdentifier = Arrays.asList("firstName", "lastName", "email", "phoneNumber", "address", "facebookId", "googleId", "linkedInId", "twitterId");
 
@@ -50,10 +51,11 @@ public class MigrationTo130 implements Migration {
     }
 
     @Override
-    public void execute(CommandSession session, CloseableHttpClient httpClient) throws IOException {
+    public void execute(CommandSession session, CloseableHttpClient httpClient, String esAddress) throws IOException {
         try {
             this.httpClient = httpClient;
             this.session = session;
+            this.esAddress = esAddress;
             migrateTags();
         } catch (IOException e) {
             if (httpClient != null) {
@@ -65,16 +67,15 @@ public class MigrationTo130 implements Migration {
 
     private void migrateTags() throws IOException {
         initTagsStructurePriorTo130();
-        String hostAddress = ConsoleUtils.askUserWithDefaultAnswer(session, "Host address (default = http://localhost:9200): ", "http://localhost:9200");
         String tagsOperation = ConsoleUtils.askUserWithAuthorizedAnswer(session, "How to manage tags?\n1. copy: will duplicate tags in systemTags property\n2. move: will move tags in systemTags property\n[1 - 2]: ", Arrays.asList("1", "2"));
         String removeNamespaceOnSystemTags = ConsoleUtils.askUserWithAuthorizedAnswer(session, "As we will copy/move the tags, do you wish to remove existing namespace on tags before copy/move in systemTags? (e.g: hidden.) (yes/no): ", Arrays.asList("yes", "no"));
 
         List<String> typeToMigrate = Arrays.asList("actionType", "conditionType", "campaign", "goal", "rule", "scoring", "segment", "userList");
         for (String type : typeToMigrate) {
-            migrateTagsInResult(hostAddress, type, 10, true, tagsOperation, removeNamespaceOnSystemTags.equals("yes"), null);
+            migrateTagsInResult(esAddress, type, 10, true, tagsOperation, removeNamespaceOnSystemTags.equals("yes"), null);
         }
 
-        migrateTagsInResult(hostAddress, "propertyType", 10, false, tagsOperation, removeNamespaceOnSystemTags.equals("yes"), null);
+        migrateTagsInResult(esAddress, "propertyType", 10, false, tagsOperation, removeNamespaceOnSystemTags.equals("yes"), null);
     }
 
     private void migrateTagsInResult(String hostAddress, String type, int currentOffset,

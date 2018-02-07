@@ -46,5 +46,5 @@ public interface Migration {
      * @param httpClient    CloseableHttpClient
      * @throws IOException
      */
-    void execute(CommandSession session, CloseableHttpClient httpClient) throws IOException;
+    void execute(CommandSession session, CloseableHttpClient httpClient, String esAddress) throws IOException;
 }
