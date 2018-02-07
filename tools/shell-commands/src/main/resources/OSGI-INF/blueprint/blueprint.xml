@@ -22,6 +22,7 @@
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd">
 
     <bean id="migrateTo130" class="org.apache.unomi.shell.migration.impl.MigrationTo130"/>
+    <bean id="migrateTo130IndexTemplate" class="org.apache.unomi.shell.migration.impl.MigrationTo130IndexTemplate"/>
 
     <shell:command-bundle>
         <shell:command>
@@ -30,6 +31,7 @@
                     <list>
                         <!-- Migration beans must be executed in the right order so you must place new bean at the end of this list -->
                         <ref component-id="migrateTo130"/>
+                        <ref component-id="migrateTo130IndexTemplate"/>
                     </list>
                 </shell:property>
             </shell:action>

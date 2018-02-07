@@ -141,7 +141,7 @@ public class HttpUtils {
         CloseableHttpResponse response = httpClient.execute(httpRequestBase);
         final int statusCode = response.getStatusLine().getStatusCode();
         if (statusCode >= 400) {
-            throw new IOException("Couldn't execute " + httpRequestBase + " response: " + EntityUtils.toString(response.getEntity()));
+            throw new HttpRequestException("Couldn't execute " + httpRequestBase + " response: " + EntityUtils.toString(response.getEntity()), statusCode);
         }
 
         HttpEntity entity = response.getEntity();

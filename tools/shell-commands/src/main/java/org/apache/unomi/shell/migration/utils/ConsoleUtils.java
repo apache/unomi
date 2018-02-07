@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.List;
 
 /**
@@ -78,5 +79,15 @@ public class ConsoleUtils {
     public static String promptMessageToUser(CommandSession session, String msg) throws IOException {
         ConsoleReader reader = (ConsoleReader) session.get(".jline.reader");
         return reader.readLine(msg, null);
+    }
+
+    /**
+     * Print a message in the console.
+     * @param session
+     * @param msg
+     */
+    public static void printMessage(CommandSession session, String msg) {
+        PrintStream writer = session.getConsole();
+        writer.println(msg);
     }
 }
