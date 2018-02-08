@@ -42,6 +42,11 @@ public class MigrationTo122 implements Migration {
     }
 
     @Override
+    public String getDescription() {
+        return "Delete old index template";
+    }
+
+    @Override
     public void execute(CommandSession session, CloseableHttpClient httpClient, String esAddress) throws IOException {
         this.httpClient = httpClient;
         this.session = session;

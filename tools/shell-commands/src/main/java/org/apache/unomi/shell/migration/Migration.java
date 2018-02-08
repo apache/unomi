@@ -41,6 +41,12 @@ public interface Migration {
     Version getToVersion();
 
     /**
+     * This method returns a short description of the changes performed during this migration
+     * @return the migration description
+     */
+    String getDescription();
+
+    /**
      * This method is called to execute the migration
      * @param session       CommandSession
      * @param httpClient    CloseableHttpClient

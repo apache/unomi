@@ -32,10 +32,15 @@ public class Migrate extends OsgiCommandSupport {
 
     private List<Migration> migrations;
 
-    @Argument(name = "fromVersionWithoutSuffix", description = "Origin version without suffix/qualifier (e.g: 1.2.0)", required = true, multiValued = false, valueToShowInHelp = "1.2.0")
+    @Argument(name = "fromVersionWithoutSuffix", description = "Origin version without suffix/qualifier (e.g: 1.2.0)", multiValued = false, valueToShowInHelp = "1.2.0")
     private String fromVersionWithoutSuffix;
 
     protected Object doExecute() throws Exception {
+        if (fromVersionWithoutSuffix == null) {
+            listMigrations();
+            return null;
+        }
+
         String confirmation = ConsoleUtils.askUserWithAuthorizedAnswer(session,"[WARNING] You are about to execute a migration, this a very sensitive operation, are you sure? (yes/no): ", Arrays.asList("yes", "no"));
         if (confirmation.equalsIgnoreCase("no")) {
             System.out.println("Migration process aborted");
@@ -81,6 +86,19 @@ public class Migrate extends OsgiCommandSupport {
     private Version getCurrentVersionWithoutQualifier() {
         Version currentVersion = bundleContext.getBundle().getVersion();
         return new Version(currentVersion.getMajor() + "." + currentVersion.getMinor() + "." + currentVersion.getMicro());
+    }
+
+    private void listMigrations() {
+        Version previousVersion = new Version("0.0.0");
+        for (Migration migration : migrations) {
+            if (migration.getToVersion().getMajor() > previousVersion.getMajor() || migration.getToVersion().getMinor() > previousVersion.getMinor()) {
+                System.out.println("From " + migration.getToVersion().getMajor() + "." + migration.getToVersion().getMinor() + ".0:");
+            }
+            System.out.println("- " + migration.getToVersion() + " " + migration.getDescription());
+            previousVersion = migration.getToVersion();
+        }
+        System.out.println("Select your migration starting point by specifying the current version (e.g. 1.2.0) or the last script that was already run (e.g. 1.2.1)");
+
     }
 
     public void setMigrations(List<Migration> migrations) {

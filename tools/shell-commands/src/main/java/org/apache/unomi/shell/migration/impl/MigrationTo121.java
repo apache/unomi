@@ -51,6 +51,11 @@ public class MigrationTo121 implements Migration {
     }
 
     @Override
+    public String getDescription() {
+        return "Migrate tags";
+    }
+
+    @Override
     public void execute(CommandSession session, CloseableHttpClient httpClient, String esAddress) throws IOException {
         this.httpClient = httpClient;
         this.session = session;
