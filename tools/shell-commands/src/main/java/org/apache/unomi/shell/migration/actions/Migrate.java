@@ -60,7 +60,11 @@ public class Migrate extends OsgiCommandSupport {
 
             for (Migration migration : migrations) {
                 if (fromVersion.compareTo(migration.getToVersion()) < 0) {
-                    System.out.println("Starting migration to version " + migration.getToVersion());
+                    String migrateConfirmation = ConsoleUtils.askUserWithAuthorizedAnswer(session,"Starting migration to version " + migration.getToVersion() + ", do you want to proceed? (yes/no): ", Arrays.asList("yes", "no"));
+                    if (migrateConfirmation.equalsIgnoreCase("no")) {
+                        System.out.println("Migration process aborted");
+                        break;
+                    }
                     migration.execute(session, httpClient, esAddress);
                     System.out.println("Migration to version " + migration.getToVersion() + " done successfully");
                 }
