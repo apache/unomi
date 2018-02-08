@@ -26,7 +26,7 @@ import org.osgi.framework.Version;
 
 import java.io.IOException;
 
-public class MigrationTo130IndexTemplate implements Migration {
+public class MigrationTo122 implements Migration {
     private CloseableHttpClient httpClient;
     private CommandSession session;
     private String esAddress;
@@ -38,7 +38,7 @@ public class MigrationTo130IndexTemplate implements Migration {
 
     @Override
     public Version getToVersion() {
-        return new Version("1.3.0");
+        return new Version("1.2.2");
     }
 
     @Override

@@ -32,7 +32,7 @@ import java.util.*;
 /**
  * @author dgaillard
  */
-public class MigrationTo130 implements Migration {
+public class MigrationTo121 implements Migration {
 
     private CloseableHttpClient httpClient;
     private CommandSession session;
@@ -47,7 +47,7 @@ public class MigrationTo130 implements Migration {
 
     @Override
     public Version getToVersion() {
-        return new Version("1.3.0");
+        return new Version("1.2.1");
     }
 
     @Override
