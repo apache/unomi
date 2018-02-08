@@ -44,8 +44,6 @@ public class Migrate extends OsgiCommandSupport {
 
         System.out.println("Starting migration process from version: " + fromVersionWithoutSuffix);
 
-        String esAddress = ConsoleUtils.askUserWithDefaultAnswer(session, "Elasticsearch address (default = http://localhost:9200): ", "http://localhost:9200");
-
         Version fromVersion = new Version(fromVersionWithoutSuffix);
         Version currentVersion = getCurrentVersionWithoutQualifier();
         System.out.println("current version: " + currentVersion.toString());
@@ -55,6 +53,8 @@ public class Migrate extends OsgiCommandSupport {
         }
 
         CloseableHttpClient httpClient = HttpUtils.initHttpClient(session);
+
+        String esAddress = ConsoleUtils.askUserWithDefaultAnswer(session, "Elasticsearch address (default = http://localhost:9200): ", "http://localhost:9200");
 
         for (Migration migration : migrations) {
             if (fromVersion.compareTo(migration.getToVersion()) < 0) {
