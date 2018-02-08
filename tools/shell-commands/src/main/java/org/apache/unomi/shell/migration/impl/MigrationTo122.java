@@ -43,17 +43,10 @@ public class MigrationTo122 implements Migration {
 
     @Override
     public void execute(CommandSession session, CloseableHttpClient httpClient, String esAddress) throws IOException {
-        try {
-            this.httpClient = httpClient;
-            this.session = session;
-            this.esAddress = esAddress;
-            deleteOldIndexTemplate();
-        } catch (IOException e) {
-            if (httpClient != null) {
-                httpClient.close();
-            }
-            throw e;
-        }
+        this.httpClient = httpClient;
+        this.session = session;
+        this.esAddress = esAddress;
+        deleteOldIndexTemplate();
 
     }
 

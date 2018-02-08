@@ -52,20 +52,23 @@ public class Migrate extends OsgiCommandSupport {
             return null;
         }
 
-        CloseableHttpClient httpClient = HttpUtils.initHttpClient(session);
+        CloseableHttpClient httpClient = null;
+        try {
+            httpClient = HttpUtils.initHttpClient(session);
 
-        String esAddress = ConsoleUtils.askUserWithDefaultAnswer(session, "Elasticsearch address (default = http://localhost:9200): ", "http://localhost:9200");
+            String esAddress = ConsoleUtils.askUserWithDefaultAnswer(session, "Elasticsearch address (default = http://localhost:9200): ", "http://localhost:9200");
 
-        for (Migration migration : migrations) {
-            if (fromVersion.compareTo(migration.getToVersion()) < 0) {
-                System.out.println("Starting migration to version " + migration.getToVersion());
-                migration.execute(session, httpClient, esAddress);
-                System.out.println("Migration to version " + migration.getToVersion() + " done successfully");
+            for (Migration migration : migrations) {
+                if (fromVersion.compareTo(migration.getToVersion()) < 0) {
+                    System.out.println("Starting migration to version " + migration.getToVersion());
+                    migration.execute(session, httpClient, esAddress);
+                    System.out.println("Migration to version " + migration.getToVersion() + " done successfully");
+                }
             }
-        }
-
-        if (httpClient != null) {
-            httpClient.close();
+        } finally {
+            if (httpClient != null) {
+                httpClient.close();
+            }
         }
 
         return null;

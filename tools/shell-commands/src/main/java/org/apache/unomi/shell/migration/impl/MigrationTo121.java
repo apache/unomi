@@ -52,17 +52,10 @@ public class MigrationTo121 implements Migration {
 
     @Override
     public void execute(CommandSession session, CloseableHttpClient httpClient, String esAddress) throws IOException {
-        try {
-            this.httpClient = httpClient;
-            this.session = session;
-            this.esAddress = esAddress;
-            migrateTags();
-        } catch (IOException e) {
-            if (httpClient != null) {
-                httpClient.close();
-            }
-            throw e;
-        }
+        this.httpClient = httpClient;
+        this.session = session;
+        this.esAddress = esAddress;
+        migrateTags();
     }
 
     private void migrateTags() throws IOException {
