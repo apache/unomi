@@ -32,10 +32,15 @@ public class Migrate extends OsgiCommandSupport {
 
     private List<Migration> migrations;
 
-    @Argument(name = "fromVersionWithoutSuffix", description = "Origin version without suffix/qualifier (e.g: 1.2.0)", required = true, multiValued = false, valueToShowInHelp = "1.2.0")
+    @Argument(name = "fromVersionWithoutSuffix", description = "Origin version without suffix/qualifier (e.g: 1.2.0)", multiValued = false, valueToShowInHelp = "1.2.0")
     private String fromVersionWithoutSuffix;
 
     protected Object doExecute() throws Exception {
+        if (fromVersionWithoutSuffix == null) {
+            listMigrations();
+            return null;
+        }
+
         String confirmation = ConsoleUtils.askUserWithAuthorizedAnswer(session,"[WARNING] You are about to execute a migration, this a very sensitive operation, are you sure? (yes/no): ", Arrays.asList("yes", "no"));
         if (confirmation.equalsIgnoreCase("no")) {
             System.out.println("Migration process aborted");
@@ -52,18 +57,27 @@ public class Migrate extends OsgiCommandSupport {
             return null;
         }
 
-        CloseableHttpClient httpClient = HttpUtils.initHttpClient(session);
+        CloseableHttpClient httpClient = null;
+        try {
+            httpClient = HttpUtils.initHttpClient(session);
 
-        for (Migration migration : migrations) {
-            if (fromVersion.compareTo(migration.getToVersion()) < 0) {
-                System.out.println("Starting migration to version " + migration.getToVersion());
-                migration.execute(session, httpClient);
-                System.out.println("Migration to version " + migration.getToVersion() + " done successfully");
+            String esAddress = ConsoleUtils.askUserWithDefaultAnswer(session, "Elasticsearch address (default = http://localhost:9200): ", "http://localhost:9200");
+
+            for (Migration migration : migrations) {
+                if (fromVersion.compareTo(migration.getToVersion()) < 0) {
+                    String migrateConfirmation = ConsoleUtils.askUserWithAuthorizedAnswer(session,"Starting migration to version " + migration.getToVersion() + ", do you want to proceed? (yes/no): ", Arrays.asList("yes", "no"));
+                    if (migrateConfirmation.equalsIgnoreCase("no")) {
+                        System.out.println("Migration process aborted");
+                        break;
+                    }
+                    migration.execute(session, httpClient, esAddress);
+                    System.out.println("Migration to version " + migration.getToVersion() + " done successfully");
+                }
             }
-        }
-
-        if (httpClient != null) {
-            httpClient.close();
+        } finally {
+            if (httpClient != null) {
+                httpClient.close();
+            }
         }
 
         return null;
@@ -72,6 +86,19 @@ public class Migrate extends OsgiCommandSupport {
     private Version getCurrentVersionWithoutQualifier() {
         Version currentVersion = bundleContext.getBundle().getVersion();
         return new Version(currentVersion.getMajor() + "." + currentVersion.getMinor() + "." + currentVersion.getMicro());
+    }
+
+    private void listMigrations() {
+        Version previousVersion = new Version("0.0.0");
+        for (Migration migration : migrations) {
+            if (migration.getToVersion().getMajor() > previousVersion.getMajor() || migration.getToVersion().getMinor() > previousVersion.getMinor()) {
+                System.out.println("From " + migration.getToVersion().getMajor() + "." + migration.getToVersion().getMinor() + ".0:");
+            }
+            System.out.println("- " + migration.getToVersion() + " " + migration.getDescription());
+            previousVersion = migration.getToVersion();
+        }
+        System.out.println("Select your migration starting point by specifying the current version (e.g. 1.2.0) or the last script that was already run (e.g. 1.2.1)");
+
     }
 
     public void setMigrations(List<Migration> migrations) {

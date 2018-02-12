@@ -21,7 +21,8 @@
            xmlns:shell="http://karaf.apache.org/xmlns/shell/v1.1.0"
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd">
 
-    <bean id="migrateTo130" class="org.apache.unomi.shell.migration.impl.MigrationTo130"/>
+    <bean id="migrateTo121" class="org.apache.unomi.shell.migration.impl.MigrationTo121"/>
+    <bean id="migrateTo122" class="org.apache.unomi.shell.migration.impl.MigrationTo122"/>
 
     <shell:command-bundle>
         <shell:command>
@@ -29,7 +30,8 @@
                 <shell:property name="migrations">
                     <list>
                         <!-- Migration beans must be executed in the right order so you must place new bean at the end of this list -->
-                        <ref component-id="migrateTo130"/>
+                        <ref component-id="migrateTo121"/>
+                        <ref component-id="migrateTo122"/>
                     </list>
                 </shell:property>
             </shell:action>
