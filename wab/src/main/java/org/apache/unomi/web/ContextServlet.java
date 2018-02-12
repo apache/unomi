@@ -119,7 +119,7 @@ public class ContextServlet extends HttpServlet {
         boolean invalidateProfile = request.getParameter("invalidateProfile")!=null?new Boolean(request.getParameter("invalidateProfile")):false;
 
         if (cookieProfileId == null && sessionId == null && personaId == null) {
-            ((HttpServletResponse)response).sendError(HttpServletResponse.SC_BAD_REQUEST);
+            ((HttpServletResponse)response).sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
             logger.error("Couldn't find cookieProfileId, sessionId or personaId in incoming request! Stopped processing request. See debug level for more information");
             if (logger.isDebugEnabled()) {
                 logger.debug("Request dump:" + HttpUtils.dumpRequestInfo(httpServletRequest));
@@ -136,6 +136,7 @@ public class ContextServlet extends HttpServlet {
             try {
                 contextRequest = mapper.readValue(factory.createParser(stringPayload), ContextRequest.class);
             } catch (Exception e) {
+                ((HttpServletResponse)response).sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
                 logger.error("Cannot read payload " + stringPayload, e);
                 return;
             }
