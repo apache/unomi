@@ -506,7 +506,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private String getMonthlyIndexName(Date date) {
-        String d = new SimpleDateFormat("-YYYY-MM").format(date);
+        String d = new SimpleDateFormat("-yyyy-MM").format(date);
         String monthlyIndexName = indexName + d;
         return monthlyIndexName;
     }
