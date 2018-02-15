@@ -33,6 +33,12 @@ public class SetPropertyAction implements ActionExecutor {
 
     private EventService eventService;
 
+    private boolean useEventToUpdateProfile = true;
+
+    public void setUseEventToUpdateProfile(boolean useEventToUpdateProfile) {
+        this.useEventToUpdateProfile = useEventToUpdateProfile;
+    }
+
     public int execute(Action action, Event event) {
         boolean storeInSession = Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"));
 
@@ -45,9 +51,6 @@ public class SetPropertyAction implements ActionExecutor {
         Object propertyValueInteger = action.getParameterValues().get("setPropertyValueInteger");
         Object setPropertyValueMultiple = action.getParameterValues().get("setPropertyValueMultiple");
         Object setPropertyValueBoolean = action.getParameterValues().get("setPropertyValueBoolean");
-
-        Event updateProperties = new Event("updateProperties", event.getSession(), event.getProfile(), event.getScope(), null, event.getProfile(), new Date());
-        updateProperties.setPersistent(false);
 
         if (propertyValue == null) {
             if (propertyValueInteger != null) {
@@ -68,21 +71,28 @@ public class SetPropertyAction implements ActionExecutor {
 
         if (storeInSession) {
             // in the case of session storage we directly update the session
-            Object target =  event.getSession();
-
-            if (PropertyHelper.setProperty(target, propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {
+            if (PropertyHelper.setProperty(event.getSession(), propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {
                 return EventService.SESSION_UPDATED;
             }
         } else {
-            // in the case of profile storage we use the update profile properties event instead.
-            Map<String, Object> propertyToUpdate = new HashMap<>();
-            propertyToUpdate.put(propertyName, propertyValue);
+            if (useEventToUpdateProfile) {
+                // in the case of profile storage we use the update profile properties event instead.
+                Map<String, Object> propertyToUpdate = new HashMap<>();
+                propertyToUpdate.put(propertyName, propertyValue);
 
-            updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
-            int changes = eventService.send(updateProperties);
+                Event updateProperties = new Event("updateProperties", event.getSession(), event.getProfile(), event.getScope(), null, event.getProfile(), new Date());
+                updateProperties.setPersistent(false);
 
-            if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
-                return EventService.PROFILE_UPDATED;
+                updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
+                int changes = eventService.send(updateProperties);
+
+                if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
+                    return EventService.PROFILE_UPDATED;
+                }
+            } else {
+                if (PropertyHelper.setProperty(event.getProfile(), propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {
+                    return EventService.SESSION_UPDATED;
+                }
             }
         }
 
