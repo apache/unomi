@@ -17,6 +17,7 @@
 
 package org.apache.unomi.rest;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
@@ -30,7 +31,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
@@ -451,7 +454,12 @@ public class ProfileServiceEndPoint {
      */
     @GET
     @Path("/existingProperties")
-    public Collection<PropertyType> getExistingProperties(@QueryParam("tag") String tag, @QueryParam("isSystemTag") boolean isSystemTag, @QueryParam("itemType") String itemType, @HeaderParam("Accept-Language") String language) {
+    public Collection<PropertyType> getExistingProperties(@QueryParam("tag") String tag, @QueryParam("isSystemTag") boolean isSystemTag, @QueryParam("itemType") String itemType, @HeaderParam("Accept-Language") String language, @Context final HttpServletResponse response) {
+        if (StringUtils.isBlank(tag) || StringUtils.isBlank(itemType)) {
+            logger.error("Missing mandatory query parameters when requesting /cxs/profiles/existingProperties, mandatory query parameters are tag and itemType");
+            response.setStatus(Response.Status.BAD_REQUEST.getStatusCode());
+            return null;
+        }
         Set<PropertyType> properties;
         if (isSystemTag) {
             properties = profileService.getExistingProperties(tag, itemType, isSystemTag);
