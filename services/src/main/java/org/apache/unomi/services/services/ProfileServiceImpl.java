@@ -772,14 +772,18 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 PersonaWithSessions persona = CustomObjectMapper.getObjectMapper().readValue(predefinedPersonaURL, PersonaWithSessions.class);
 
                 String itemId = persona.getPersona().getItemId();
+                // Register only if persona does not exist yet
                 if (persistenceService.load(itemId, Persona.class) == null) {
                     persistenceService.save(persona.getPersona());
-                }
 
-                List<PersonaSession> sessions = persona.getSessions();
-                for (PersonaSession session : sessions) {
-                    session.setProfile(persona.getPersona());
-                    persistenceService.save(session);
+                    List<PersonaSession> sessions = persona.getSessions();
+                    for (PersonaSession session : sessions) {
+                        session.setProfile(persona.getPersona());
+                        persistenceService.save(session);
+                    }
+                    logger.info("Predefined persona with id {} registered", itemId);
+                } else {
+                    logger.info("The predefined persona with id {} is already registered, this persona type will be skipped", itemId);
                 }
             } catch (IOException e) {
                 logger.error("Error while loading persona " + predefinedPersonaURL, e);
@@ -800,12 +804,16 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
             try {
                 PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeURL, PropertyType.class);
+                // Register only if property type does not exist yet
                 if (getPropertyType(propertyType.getMetadata().getId()) == null) {
                     String[] splitPath = predefinedPropertyTypeURL.getPath().split("/");
                     String target = splitPath[4];
                     propertyType.setTarget(target);
 
                     persistenceService.save(propertyType);
+                    logger.info("Predefined property type with id {} registered", propertyType.getMetadata().getId());
+                } else {
+                    logger.info("The predefined property type with id {} is already registered, this property type will be skipped", propertyType.getMetadata().getId());
                 }
             } catch (IOException e) {
                 logger.error("Error while loading properties " + predefinedPropertyTypeURL, e);

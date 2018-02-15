@@ -133,6 +133,9 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 // Register only if condition type does not exist yet
                 if (getConditionType(conditionType.getMetadata().getId()) == null) {
                     setConditionType(conditionType);
+                    logger.info("Predefined condition type with id {} registered", conditionType.getMetadata().getId());
+                } else {
+                    logger.info("The predefined condition type with id {} is already registered, this condition type will be skipped", conditionType.getMetadata().getId());
                 }
             } catch (IOException e) {
                 logger.error("Error while loading condition definition " + predefinedConditionURL, e);
@@ -155,6 +158,9 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 // Register only if action type does not exist yet
                 if (getActionType(actionType.getMetadata().getId()) == null) {
                     setActionType(actionType);
+                    logger.info("Predefined action type with id {} registered", actionType.getMetadata().getId());
+                } else {
+                    logger.info("The predefined action type with id {} is already registered, this action type will be skipped", actionType.getMetadata().getId());
                 }
             } catch (Exception e) {
                 logger.error("Error while loading action definition " + predefinedActionURL, e);
