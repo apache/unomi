@@ -72,10 +72,10 @@ public class ModifyConsentIT extends BaseIT {
         modifyConsentEvent.setPersistent(false);
 
         ISO8601DateFormat dateFormat = new ISO8601DateFormat();
-        Consent consent1 = new Consent("consentType01", ConsentStatus.GRANTED, new Date(), null);
+        Consent consent1 = new Consent("scope", "consentType01", ConsentStatus.GRANTED, new Date(), null);
         modifyConsentEvent.setProperty("consent", consent1.toMap(dateFormat));
         int changes = eventService.send(modifyConsentEvent);
-        Consent consent2 = new Consent("consentType02", ConsentStatus.GRANTED, new Date(), null);
+        Consent consent2 = new Consent("scope", "consentType02", ConsentStatus.GRANTED, new Date(), null);
         modifyConsentEvent.setProperty("consent", consent2.toMap(dateFormat));
         changes |= eventService.send(modifyConsentEvent);
 
@@ -93,7 +93,6 @@ public class ModifyConsentIT extends BaseIT {
         profile = profileService.load(PROFILE_TEST_ID);
 
         Assert.assertTrue(profile.getConsents().size() == 2);
-
 
     }
 }
