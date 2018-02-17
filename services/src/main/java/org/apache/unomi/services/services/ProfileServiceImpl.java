@@ -70,6 +70,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private Map<String,List<PropertyType>> propertyTypesBySystemTags = new HashMap<>();
     private Map<String,List<PropertyType>> propertyTypesByTarget = new HashMap<>();
 
+    private boolean forceRefreshOnSave = false;
+
     public ProfileServiceImpl() {
         logger.info("Initializing profile service...");
     }
@@ -88,6 +90,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
+    }
+
+    public void setForceRefreshOnSave(boolean forceRefreshOnSave) {
+        this.forceRefreshOnSave = forceRefreshOnSave;
     }
 
     public void postConstruct() {
@@ -428,11 +434,22 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Profile save(Profile profile) {
+        return save(profile, forceRefreshOnSave);
+    }
+
+    private Profile save(Profile profile, boolean forceRefresh) {
         if (profile.getItemId() == null) {
             return null;
         }
-        persistenceService.save(profile);
-        return persistenceService.load(profile.getItemId(), Profile.class);
+        if (persistenceService.save(profile)) {
+            if (forceRefresh) {
+                // triggering a load will force an in-place refresh, that may be expensive in performance but will make data immediately available.
+                return persistenceService.load(profile.getItemId(), Profile.class);
+            } else {
+                return profile;
+            }
+        }
+        return null;
     }
 
     public Profile saveOrMerge(Profile profile) {
