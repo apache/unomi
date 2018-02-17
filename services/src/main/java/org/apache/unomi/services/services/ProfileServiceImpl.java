@@ -404,15 +404,22 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return persistenceService.load(profile.getItemId(), Profile.class);
     }
 
-    public boolean saveOrMerge(Profile profile) {
+    public Profile saveOrMerge(Profile profile) {
         Profile previousProfile = persistenceService.load(profile.getItemId(), Profile.class);
         if (previousProfile == null) {
-            return persistenceService.save(profile);
+            if (persistenceService.save(profile)) {
+                return profile;
+            } else {
+                return null;
+            }
         } else if (merge(previousProfile, profile)) {
-            return persistenceService.save(previousProfile);
+            if (persistenceService.save(previousProfile)) {
+                return previousProfile;
+            } else {
+                return null;
+            }
         }
-
-        return false;
+        return null;
     }
 
     public Persona savePersona(Persona profile) {

@@ -91,6 +91,13 @@ public interface PrivacyService {
     Boolean isRequireAnonymousBrowsing(String profileId);
 
     /**
+     * Tests if the anonymous browsing flag is set of the specified profile.
+     * @param profile the profile on which we want to retrieve the anonymous browsing flag
+     * @return true if successful, false otherwise
+     */
+    Boolean isRequireAnonymousBrowsing(Profile profile);
+
+    /**
      * Build a new anonymous profile (but doesn't persist it in the persistence service). This will also
      * copy the profile properties from the passed profile that are not listed as denied properties.
      * @param profile the profile for which to create the anonymous profile
@@ -107,6 +114,16 @@ public interface PrivacyService {
      * @return a list of event types
      */
     List<String> getFilteredEventTypes(String profileId);
+
+    /**
+     * Retrieve the list of events that the profile has deactivated. For each profile a visitor may indicate
+     * that he doesn't want some events to be collected. This method retrieves this list from the specified
+     * profile
+     * @param profile the profile for which we want to retrieve the list of forbidden
+     *                  event types
+     * @return a list of event types
+     */
+    List<String> getFilteredEventTypes(Profile profile);
 
     /**
      * Set the list of filtered event types for a profile. This is the list of event types that the visitor
