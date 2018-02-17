@@ -17,10 +17,12 @@
 
 package org.apache.unomi.api.query;
 
+import java.io.Serializable;
+
 /**
  * An IP address range.
  */
-public class IpRange {
+public class IpRange implements Serializable {
     private String key;
     private String from;
     private String to;

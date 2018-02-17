@@ -17,10 +17,12 @@
 
 package org.apache.unomi.api.query;
 
+import java.io.Serializable;
+
 /**
  * A data range.
  */
-public class DateRange {
+public class DateRange implements Serializable {
     private String key;
     private Object from;
     private Object to;

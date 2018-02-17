@@ -53,10 +53,16 @@
             <cm:property name="transportClientClassName" value="" />
             <cm:property name="transportClientJarDirectory" value="" />
             <cm:property name="transportClientProperties" value="" />
+
+            <cm:property name="itemClassesToCache" value="" />
+            <cm:property name="useBatchingForSave" value="false" />
+
         </cm:default-properties>
     </cm:property-placeholder>
 
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService" />
+    <reference id="hazelcastInstance" interface="com.hazelcast.core.HazelcastInstance" />
+
     <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl">
         <interfaces>
             <value>org.apache.unomi.persistence.spi.PersistenceService</value>
@@ -115,7 +121,11 @@
         <property name="transportClientClassName" value="${es.transportClientClassName}" />
         <property name="transportClientJarDirectory" value="${es.transportClientJarDirectory}" />
         <property name="transportClientProperties" value="${es.transportClientProperties}" />
+
         <property name="metricsService" ref="metricsService" />
+        <property name="hazelcastInstance" ref="hazelcastInstance" />
+        <property name="itemClassesToCache" value="${es.itemClassesToCache}" />
+        <property name="useBatchingForSave" value="${es.useBatchingForSave}" />
     </bean>
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->

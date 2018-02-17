@@ -17,6 +17,7 @@
 
 package org.apache.unomi.persistence.elasticsearch;
 
+import com.hazelcast.core.HazelcastInstance;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.PartialList;
@@ -159,6 +160,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String transportClientJarDirectory = null;
 
     private MetricsService metricsService;
+    private HazelcastInstance hazelcastInstance;
+    private Set<String> itemClassesToCacheSet = new HashSet<>();
+    private String itemClassesToCache;
+    private boolean useBatchingForSave = false;
+
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -269,6 +275,28 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
     }
+
+    public void setHazelcastInstance(HazelcastInstance hazelcastInstance) {
+        this.hazelcastInstance = hazelcastInstance;
+    }
+
+    public void setItemClassesToCache(String itemClassesToCache) {
+        this.itemClassesToCache = itemClassesToCache;
+        if (itemClassesToCache != null && itemClassesToCache.trim().length() > 0) {
+            String[] itemClassesToCacheParts = itemClassesToCache.split(",");
+            if (itemClassesToCacheParts != null) {
+                itemClassesToCacheSet.clear();
+                for (String itemClassToCache : itemClassesToCacheParts) {
+                    itemClassesToCacheSet.add(itemClassToCache.trim());
+                }
+            }
+        }
+    }
+
+    public void setUseBatchingForSave(boolean useBatchingForSave) {
+        this.useBatchingForSave = useBatchingForSave;
+    }
+
     public void start() throws Exception {
 
         // on startup
@@ -608,6 +636,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected T execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
+                    T itemFromCache = getFromCache(itemId, clazz);
+                    if (itemFromCache != null) {
+                        return itemFromCache;
+                    }
 
                     if (itemsMonthlyIndexed.contains(itemType) && dateHint == null) {
                         return new MetricAdapter<T>(metricsService, ".loadItemWithQuery") {
@@ -632,6 +664,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
                             value.setItemId(response.getId());
                             value.setVersion(response.getVersion());
+                            putInCache(itemId, value);
                             return value;
                         } else {
                             return null;
@@ -650,7 +683,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean save(final Item item) {
-        return save(item, false);
+        return save(item, useBatchingForSave);
     }
 
     @Override
@@ -660,6 +693,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String source = ESCustomObjectMapper.getObjectMapper().writeValueAsString(item);
                     String itemType = item.getItemType();
+                    putInCache(item.getItemId(), item);
                     String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
                             (itemsMonthlyIndexed.contains(itemType) ? getMonthlyIndexName(((TimestampedItem) item).getTimeStamp()) : indexName);
                     IndexRequestBuilder indexBuilder = client.prepareIndex(index, itemType, item.getItemId())
@@ -856,7 +890,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                         for (SearchHit hit : response.getHits().getHits()) {
                             // add hit to bulk delete
-                            deleteByScope.add(Requests.deleteRequest(hit.index()).type(hit.type()).id(hit.id()));
+                            deleteFromCache(hit.getId(), clazz);
+                            deleteByScope.add(Requests.deleteRequest(hit.getIndex()).type(hit.getType()).id(hit.getId()));
                         }
 
                         response = client.prepareSearchScroll(response.getScrollId()).setScroll(keepAlive).execute().actionGet();
@@ -1834,6 +1869,43 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             logger.error("Error creating transport client with class" + transportClientClassName, e);
         }
         return null;
+    }
+
+    private <T extends Item> boolean isCacheActiveForClass(Class<T> clazz) {
+        if (itemClassesToCacheSet.contains("*")) {
+            return true;
+        }
+        if (itemClassesToCacheSet.contains(clazz.getName())) {
+            return true;
+        }
+        return false;
+    }
+
+    private <T extends Item> T getFromCache(String itemId, Class<T> clazz) {
+        if (!isCacheActiveForClass(clazz)) {
+            return null;
+        }
+        String itemType = Item.getItemType(clazz);
+        Map<String,T> itemCache = hazelcastInstance.getMap("org.apache.unomi.persistence." + itemType);
+        return itemCache.get(itemId);
+    }
+
+    private <T extends Item> T putInCache(String itemId, T item) {
+        if (!isCacheActiveForClass(item.getClass())) {
+            return null;
+        }
+        String itemType = Item.getItemType(item.getClass());
+        Map<String,T> itemCache = hazelcastInstance.getMap("org.apache.unomi.persistence." + itemType);
+        return itemCache.put(itemId, item);
+    }
+
+    private <T extends Item> T deleteFromCache(String itemId, Class clazz) {
+        if (!isCacheActiveForClass(clazz)) {
+            return null;
+        }
+        String itemType = Item.getItemType(clazz);
+        Map<String,T> itemCache = hazelcastInstance.getMap("org.apache.unomi.persistence." + itemType);
+        return itemCache.remove(itemId);
     }
 
 }

@@ -22,6 +22,7 @@ import org.apache.unomi.api.rules.Rule;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,7 +31,7 @@ import java.util.Map;
  * ActionType} and parameter values.
  */
 @XmlRootElement
-public class Action {
+public class Action implements Serializable {
     private ActionType actionType;
     private String actionTypeId;
     private Map<String, Object> parameterValues = new HashMap<>();

@@ -19,12 +19,14 @@ package org.apache.unomi.api.query;
 
 import org.apache.unomi.api.conditions.Condition;
 
+import java.io.Serializable;
+
 /**
  * A query wrapper gathering all elements needed for a potentially complex CXS query: {@link Condition}, offset, limit, sorting specification, etc.
  *
  * Created by kevan on 14/05/15.
  */
-public class Query {
+public class Query implements Serializable {
     private String text;
     private int offset;
     private int limit = Integer.MIN_VALUE;

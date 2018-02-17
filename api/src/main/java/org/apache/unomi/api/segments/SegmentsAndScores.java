@@ -19,13 +19,14 @@ package org.apache.unomi.api.segments;
 
 import org.apache.unomi.api.Profile;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 
 /**
  * A combination of {@link Segment} and scores (usually associated with a {@link Profile}).
  */
-public class SegmentsAndScores {
+public class SegmentsAndScores implements Serializable {
     private Set<String> segments;
     private Map<String,Integer> scores;
 

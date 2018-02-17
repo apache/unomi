@@ -18,12 +18,13 @@
 package org.apache.unomi.api;
 
 import javax.xml.bind.annotation.XmlTransient;
+import java.io.Serializable;
 import java.util.List;
 
 /**
  * A convenience object gathering a {@link Persona} and its associated {@link PersonaSession}s.
  */
-public class PersonaWithSessions {
+public class PersonaWithSessions implements Serializable {
     private Persona persona;
 
     private List<PersonaSession> sessions;

@@ -20,6 +20,7 @@ package org.apache.unomi.api.conditions;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,7 +28,7 @@ import java.util.Map;
  * A set of elements that can be evaluated.
  */
 @XmlRootElement
-public class Condition {
+public class Condition implements Serializable {
 
     ConditionType conditionType;
     String conditionTypeId;

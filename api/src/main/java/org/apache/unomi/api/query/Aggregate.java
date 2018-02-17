@@ -17,6 +17,7 @@
 
 package org.apache.unomi.api.query;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,7 +26,7 @@ import java.util.Map;
 /**
  * A specification for an aggregate as part of {@link AggregateQuery}s
  */
-public class Aggregate {
+public class Aggregate implements Serializable {
     private String type;
     private String property;
     private Map<String, Object> parameters = new HashMap<>();

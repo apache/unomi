@@ -17,10 +17,12 @@
 
 package org.apache.unomi.api.query;
 
+import java.io.Serializable;
+
 /**
  * A numeric range.
  */
-public class NumericRange {
+public class NumericRange implements Serializable {
     private String key;
     private Double from;
     private Double to;

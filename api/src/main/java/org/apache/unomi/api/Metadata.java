@@ -17,6 +17,7 @@
 
 package org.apache.unomi.api;
 
+import java.io.Serializable;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -25,7 +26,9 @@ import java.util.Set;
  *
  * @see MetadataItem
  */
-public class Metadata implements Comparable<Metadata> {
+public class Metadata implements Comparable<Metadata>, Serializable {
+
+    private static final long serialVersionUID = 7446061538573517071L;
 
     /**
      * Default scope, gathers default entities and can also be used to share entities across scopes.

@@ -19,11 +19,13 @@ package org.apache.unomi.api.query;
 
 import org.apache.unomi.api.conditions.Condition;
 
+import java.io.Serializable;
+
 /**
  * A query by aggregate: results matching the specified {@link Condition} are aggregated using a given {@link Aggregate} specification, creating buckets which cardinality is
  * calculated. The results of the query are returned as Map associating the bucket key to the cardinality of its member.
  */
-public class AggregateQuery {
+public class AggregateQuery implements Serializable {
     private Aggregate aggregate;
     private Condition condition;
 

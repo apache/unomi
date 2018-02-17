@@ -150,6 +150,13 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast-all</artifactId>
+            <version>3.4.2</version>
+            <scope>provided</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -224,6 +231,16 @@
                             com.fasterxml.jackson.dataformat.xml.util;resolution:=optional,
                             io.netty.internal.tcnative;resolution:=optional,
                             org.conscrypt;resolution:=optional,
+                            org.apache.unomi.api,
+                            org.apache.unomi.api.rules,
+                            org.apache.unomi.api.actions,
+                            org.apache.unomi.api.campaigns,
+                            org.apache.unomi.api.campaigns.events,
+                            org.apache.unomi.api.conditions,
+                            org.apache.unomi.api.goals,
+                            org.apache.unomi.api.lists,
+                            org.apache.unomi.api.query,
+                            org.apache.unomi.api.segments,
                             *
                         </Import-Package>
                         <Export-Package>
