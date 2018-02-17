@@ -21,6 +21,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A context server tracked entity. All tracked entities need to extend this class so as to provide the minimal information the context server needs to be able to track such
@@ -37,16 +39,35 @@ public abstract class Item implements Serializable {
     private static final Logger logger = LoggerFactory.getLogger(Item.class.getName());
 
     private static final long serialVersionUID = 7446061538573517071L;
+
+    private static final Map<Class,String> itemTypeCache = new ConcurrentHashMap<>();
+
+    public static String getItemType(Class clazz) {
+        String itemType = itemTypeCache.get(clazz);
+        if (itemType != null) {
+            return itemType;
+        }
+        try {
+            itemType = (String) clazz.getField("ITEM_TYPE").get(null);
+            itemTypeCache.put(clazz, itemType);
+            return itemType;
+        } catch (NoSuchFieldException e) {
+            logger.error("Class " + clazz.getName() + " doesn't define a publicly accessible ITEM_TYPE field", e);
+        } catch (IllegalAccessException e) {
+            logger.error("Error resolving itemType for class " + clazz.getName(), e);
+        }
+        return null;
+    }
+
     protected String itemId;
     protected String itemType;
     protected String scope;
     protected Long version;
 
     public Item() {
-        try {
-            this.itemType = (String) this.getClass().getField("ITEM_TYPE").get(null);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-            logger.error("Item implementations must provide a public String constant named ITEM_TYPE to uniquely identify this Item for the persistence service.", e);
+        this.itemType = getItemType(this.getClass());
+        if (itemType == null) {
+            logger.error("Item implementations must provide a public String constant named ITEM_TYPE to uniquely identify this Item for the persistence service.");
         }
     }
 

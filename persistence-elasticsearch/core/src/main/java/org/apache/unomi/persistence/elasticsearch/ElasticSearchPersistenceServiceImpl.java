@@ -566,7 +566,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return new InClassLoaderExecute<T>() {
             protected T execute(Object... args) throws Exception {
                 try {
-                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
+                    String itemType = Item.getItemType(clazz);
+                    T itemFromCache = getFromCache(itemId, clazz);
+                    if (itemFromCache != null) {
+                        return itemFromCache;
+                    }
 
                     if (itemsMonthlyIndexed.contains(itemType) && dateHint == null) {
                         PartialList<T> r = query(QueryBuilders.idsQuery(itemType).addIds(itemId), null, clazz, 0, 1, null, null);
@@ -653,7 +657,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         Boolean result = new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) throws Exception {
                 try {
-                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
+                    String itemType = Item.getItemType(clazz);
 
                     String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
                             (itemsMonthlyIndexed.contains(itemType) && dateHint != null ? getMonthlyIndexName(dateHint) : indexName);
@@ -669,10 +673,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     return true;
                 } catch (IndexNotFoundException e) {
                     throw new Exception("No index found for itemType=" + clazz.getName() + "itemId=" + itemId, e);
-                } catch (NoSuchFieldException e) {
-                    throw new Exception("Error updating item " + itemId, e);
-                } catch (IllegalAccessException e) {
-                    throw new Exception("Error updating item " + itemId, e);
                 }
             }
         }.catchingExecuteInClassLoader(true);
@@ -688,7 +688,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         Boolean result = new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) throws Exception {
                 try {
-                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
+                    String itemType = Item.getItemType(clazz);
 
                     String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
                             (itemsMonthlyIndexed.contains(itemType) && dateHint != null ? getMonthlyIndexName(dateHint) : indexName);
@@ -723,10 +723,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     return true;
                 } catch (IndexNotFoundException e) {
                     throw new Exception("No index found for itemType=" + clazz.getName(), e);
-                } catch (NoSuchFieldException e) {
-                    throw new Exception("Error updating item ", e);
-                } catch (IllegalAccessException e) {
-                    throw new Exception("Error updating item ", e);
                 } catch (ScriptException e) {
                     logger.error("Error in the update script : {}\n{}\n{}", e.getScript(), e.getDetailedMessage(), e.getScriptStack());
                     throw new Exception("Error in the update script");
@@ -747,7 +743,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         Boolean result = new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) throws Exception {
                 try {
-                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
+                    String itemType = Item.getItemType(clazz);
 
                     String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
                             (itemsMonthlyIndexed.contains(itemType) && dateHint != null ? getMonthlyIndexName(dateHint) : indexName);
@@ -765,10 +761,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     return true;
                 } catch (IndexNotFoundException e) {
                     throw new Exception("No index found for itemType=" + clazz.getName() + "itemId=" + itemId, e);
-                } catch (NoSuchFieldException e) {
-                    throw new Exception("Error updating item " + itemId, e);
-                } catch (IllegalAccessException e) {
-                    throw new Exception("Error updating item " + itemId, e);
                 }
             }
         }.catchingExecuteInClassLoader(true);
@@ -783,9 +775,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public <T extends Item> boolean remove(final String itemId, final Class<T> clazz) {
         Boolean result = new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) throws Exception {
-                //Index the query = register it in the percolator
                 try {
-                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
+                    String itemType = Item.getItemType(clazz);
 
                     client.prepareDelete(getIndexNameForQuery(itemType), itemType, itemId)
                             .execute().actionGet();
@@ -806,7 +797,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         Boolean result = new InClassLoaderExecute<Boolean>() {
             protected Boolean execute(Object... args) throws Exception {
                 try {
-                    String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
+                    String itemType = Item.getItemType(clazz);
 
                     BulkRequestBuilder deleteByScope = client.prepareBulk();
 
@@ -1160,18 +1151,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
         try {
             final Class<? extends Item> clazz = item.getClass();
-            String itemType = (String) clazz.getField("ITEM_TYPE").get(null);
+            String itemType = Item.getItemType(clazz);
 
             QueryBuilder builder = QueryBuilders.boolQuery()
                     .must(QueryBuilders.idsQuery(itemType).addIds(item.getItemId()))
                     .must(conditionESQueryBuilderDispatcher.buildFilter(query));
             return queryCount(builder, itemType) > 0;
-        } catch (IllegalAccessException e) {
-            logger.error("Error getting query for item=" + item, e);
-        } catch (NoSuchFieldException e) {
-            logger.error("Error getting query for item=" + item, e);
         }
-        return false;
     }
 
     @Override
@@ -1257,7 +1243,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 String scrollIdentifier = null;
                 long totalHits = 0;
                 try {
-                    String itemType = getItemType(clazz);
+                    String itemType = Item.getItemType(clazz);
                     TimeValue keepAlive = TimeValue.timeValueHours(1);
                     SearchRequestBuilder requestBuilder = null;
                     if (scrollTimeValidity != null) {
@@ -1533,19 +1519,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.catchingExecuteInClassLoader(true);
     }
 
-    private <T extends Item> String getItemType(Class<T> clazz) {
-        try {
-            return (String) clazz.getField("ITEM_TYPE").get(null);
-        } catch (NoSuchFieldException e) {
-            logger.error("Class " + clazz.getName() + " doesn't define a publicly accessible ITEM_TYPE field", e);
-        } catch (IllegalAccessException e) {
-            logger.error("Error loading itemType=" + clazz.getName(), e);
-        }
-        return null;
-    }
-
     private <T extends Item> String[] getRouting(String fieldName, String[] fieldValues, Class<T> clazz) {
-        String itemType = getItemType(clazz);
+        String itemType = Item.getItemType(clazz);
         String[] routing = null;
         if (routingByType.containsKey(itemType) && routingByType.get(itemType).equals(fieldName)) {
             routing = fieldValues;
