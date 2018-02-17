@@ -198,7 +198,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                 event.setProfile(masterProfile);
 
                 currentSession.setProfile(masterProfile);
-                if (privacyService.isRequireAnonymousBrowsing(profileId)) {
+                if (privacyService.isRequireAnonymousBrowsing(profile)) {
                     privacyService.setRequireAnonymousBrowsing(masterProfileId, true, event.getScope());
                 }
                 final Boolean anonymousBrowsing = privacyService.isRequireAnonymousBrowsing(masterProfileId);

@@ -175,7 +175,7 @@ public class EventsCollectorServlet extends HttpServlet {
 
         int changes = 0;
 
-        List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile.getItemId());
+        List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile);
 
         for (Event event : events.getEvents()){
             if(event.getEventType() != null){

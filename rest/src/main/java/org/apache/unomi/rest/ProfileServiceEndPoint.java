@@ -196,17 +196,16 @@ public class ProfileServiceEndPoint {
     @POST
     @Path("/")
     public Profile save(Profile profile) {
-        if (profileService.saveOrMerge(profile)) {
-            profile = profileService.load(profile.getItemId());
-            Event profileUpdated = new Event("profileUpdated", null, profile, null, null, profile, new Date());
+        Profile savedProfile = profileService.saveOrMerge(profile);
+        if (savedProfile != null) {
+            Event profileUpdated = new Event("profileUpdated", null, savedProfile, null, null, savedProfile, new Date());
             profileUpdated.setPersistent(false);
             int changes = eventService.send(profileUpdated);
             if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
-                profileService.save(profile);
+                profileService.save(savedProfile);
             }
         }
-
-        return profile;
+        return savedProfile;
     }
 
     /**

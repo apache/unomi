@@ -169,6 +169,11 @@ public class PrivacyServiceImpl implements PrivacyService {
 
     public Boolean isRequireAnonymousBrowsing(String profileId) {
         Profile profile = profileService.load(profileId);
+        return isRequireAnonymousBrowsing(profile);
+    }
+
+    @Override
+    public Boolean isRequireAnonymousBrowsing(Profile profile) {
         if (profile == null) {
             return false;
         }
@@ -188,6 +193,11 @@ public class PrivacyServiceImpl implements PrivacyService {
     @Override
     public List<String> getFilteredEventTypes(String profileId) {
         Profile profile = profileService.load(profileId);
+        return getFilteredEventTypes(profile);
+    }
+
+    @Override
+    public List<String> getFilteredEventTypes(Profile profile) {
         if (profile == null) {
             return new ArrayList<String>();
         }

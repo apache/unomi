@@ -177,7 +177,7 @@ public class ContextServlet extends HttpServlet {
                         HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
                     }
 
-                    Boolean requireAnonymousBrowsing = privacyService.isRequireAnonymousBrowsing(profile.getItemId());
+                    Boolean requireAnonymousBrowsing = privacyService.isRequireAnonymousBrowsing(profile);
 
                     if (requireAnonymousBrowsing && anonymousProfile) {
                         // User wants to browse anonymously, anonymous profile is already set.
@@ -203,7 +203,7 @@ public class ContextServlet extends HttpServlet {
             }
 
             if (session == null || invalidateSession) {
-                sessionProfile = privacyService.isRequireAnonymousBrowsing(profile.getItemId()) ? privacyService.getAnonymousProfile(profile) : profile;
+                sessionProfile = privacyService.isRequireAnonymousBrowsing(profile) ? privacyService.getAnonymousProfile(profile) : profile;
                 session = new Session(sessionId, sessionProfile, timestamp, scope);
 
                 if (sessionId != null && sessionId.trim().length() > 0) {
@@ -275,7 +275,7 @@ public class ContextServlet extends HttpServlet {
     }
 
     private Profile checkMergedProfile(ServletResponse response, Profile profile, Session session) {
-        if (profile.getMergedWith() != null && !privacyService.isRequireAnonymousBrowsing(profile.getItemId()) && !profile.isAnonymousProfile()) {
+        if (profile.getMergedWith() != null && !privacyService.isRequireAnonymousBrowsing(profile) && !profile.isAnonymousProfile()) {
             String profileId = profile.getMergedWith();
             Profile profileToDelete = profile;
             profile = profileService.load(profileId);
@@ -299,7 +299,7 @@ public class ContextServlet extends HttpServlet {
 
     private int handleRequest(ContextRequest contextRequest, Profile profile, Session session, ContextResponse data, ServletRequest request, ServletResponse response, Date timestamp)
             throws IOException {
-        List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile.getItemId());
+        List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile);
 
         String thirdPartyId = eventService.authenticateThirdPartyServer(((HttpServletRequest)request).getHeader("X-Unomi-Peer"), request.getRemoteAddr());
 
@@ -377,7 +377,7 @@ public class ContextServlet extends HttpServlet {
             data.setTrackedConditions(Collections.<Condition>emptySet());
         }
 
-        data.setAnonymousBrowsing(privacyService.isRequireAnonymousBrowsing(profile.getItemId()));
+        data.setAnonymousBrowsing(privacyService.isRequireAnonymousBrowsing(profile));
         data.setConsents(profile.getConsents());
 
         return changes;
