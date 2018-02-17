@@ -567,10 +567,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected T execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
-                    T itemFromCache = getFromCache(itemId, clazz);
-                    if (itemFromCache != null) {
-                        return itemFromCache;
-                    }
 
                     if (itemsMonthlyIndexed.contains(itemType) && dateHint == null) {
                         PartialList<T> r = query(QueryBuilders.idsQuery(itemType).addIds(itemId), null, clazz, 0, 1, null, null);
