@@ -65,6 +65,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private Timer purgeProfileTimer;
 
     private List<PropertyType> allPropertyTypes;
+    private Map<String,PropertyType> propertyTypesById = new HashMap<>();
+    private Map<String,List<PropertyType>> propertyTypesByTags = new HashMap<>();
+    private Map<String,List<PropertyType>> propertyTypesBySystemTags = new HashMap<>();
+    private Map<String,List<PropertyType>> propertyTypesByTarget = new HashMap<>();
 
     public ProfileServiceImpl() {
         logger.info("Initializing profile service...");
@@ -145,14 +149,41 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             @Override
             public void run() {
                 try {
-                    allPropertyTypes = persistenceService.getAllItems(PropertyType.class);
+                    allPropertyTypes = persistenceService.getAllItems(PropertyType.class, 0, -1, "rank").getList();
+                    Map<String,PropertyType> newPropertyTypesById = new HashMap<>();
+                    Map<String,List<PropertyType>> newPropertyTypesByTags = new HashMap<>();
+                    Map<String,List<PropertyType>> newPropertyTypesBySystemTags = new HashMap<>();
+                    Map<String,List<PropertyType>> newPropertyTypesByTarget = new HashMap<>();
+                    for (PropertyType propertyType : allPropertyTypes) {
+                        newPropertyTypesById.put(propertyType.getItemId(), propertyType);
+                        for (String propertyTypeTag : propertyType.getMetadata().getTags()) {
+                            updateListMap(newPropertyTypesByTags, propertyType, propertyTypeTag);
+                        }
+                        for (String propertyTypeSystemTag : propertyType.getMetadata().getSystemTags()) {
+                            updateListMap(newPropertyTypesBySystemTags, propertyType, propertyTypeSystemTag);
+                        }
+                        updateListMap(newPropertyTypesByTarget, propertyType, propertyType.getTarget());
+                    }
+                    propertyTypesById = newPropertyTypesById;
+                    propertyTypesByTags = newPropertyTypesByTags;
+                    propertyTypesBySystemTags = newPropertyTypesBySystemTags;
+                    propertyTypesByTarget = newPropertyTypesByTarget;
                 } catch (Exception e) {
-                    logger.error(e.getMessage(), e);
+                    logger.error("Error loading property types from persistence service", e);
                 }
             }
         };
         allPropertyTypesTimer.scheduleAtFixedRate(task, 0, 5000);
         logger.info("Scheduled task for property type loading each 5s");
+    }
+
+    private void updateListMap(Map<String, List<PropertyType>> listMap, PropertyType propertyType, String key) {
+        List<PropertyType> propertyTypes = listMap.get(key);
+        if (propertyTypes == null) {
+            propertyTypes = new ArrayList<>();
+        }
+        propertyTypes.add(propertyType);
+        listMap.put(key, propertyTypes);
     }
 
     private void cancelPropertyTypeLoad() {
@@ -470,7 +501,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             allProfileProperties.addAll(profile.getProperties().keySet());
         }
 
-        Collection<PropertyType> profilePropertyTypes = getAllPropertyTypes("profiles");
+        Collection<PropertyType> profilePropertyTypes = getTargetPropertyTypes("profiles");
         Map<String, PropertyType> profilePropertyTypeById = new HashMap<>();
         for (PropertyType propertyType : profilePropertyTypes) {
             profilePropertyTypeById.put(propertyType.getMetadata().getId(), propertyType);
@@ -673,40 +704,44 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
 
-    public Collection<PropertyType> getAllPropertyTypes(String target) {
-        return persistenceService.query("target", target, null, PropertyType.class);
-    }
-
-    public Map<String, Collection<PropertyType>> getAllPropertyTypes() {
-        Collection<PropertyType> props = persistenceService.getAllItems(PropertyType.class, 0, -1, "rank").getList();
-
-        HashMap<String, Collection<PropertyType>> propertyTypes = new HashMap<>();
-        for (PropertyType prop : props) {
-            if (!propertyTypes.containsKey(prop.getTarget())) {
-                propertyTypes.put(prop.getTarget(), new LinkedHashSet<PropertyType>());
-            }
-            propertyTypes.get(prop.getTarget()).add(prop);
+    public Collection<PropertyType> getTargetPropertyTypes(String target) {
+        if (target == null) {
+            return null;
+        }
+        List<PropertyType> propertyTypes = propertyTypesByTarget.get(target);
+        if (propertyTypes == null) {
+            return new ArrayList<>();
         }
         return propertyTypes;
+    }
+
+    public Map<String, Collection<PropertyType>> getTargetPropertyTypes() {
+        if (propertyTypesByTarget == null) {
+            return new HashMap<>();
+        }
+        return new HashMap<>(propertyTypesByTarget);
     }
 
     public Set<PropertyType> getPropertyTypeByTag(String tag) {
-        return getPropertyTypesBy("metadata.tags", tag);
+        if (tag == null) {
+            return null;
+        }
+        List<PropertyType> propertyTypes = propertyTypesByTags.get(tag);
+        if (propertyTypes == null) {
+            return new LinkedHashSet<>();
+        }
+        return new LinkedHashSet<>(propertyTypes);
     }
 
     public Set<PropertyType> getPropertyTypeBySystemTag(String tag) {
-        return getPropertyTypesBy("metadata.systemTags", tag);
-    }
-
-    private Set<PropertyType> getPropertyTypesBy(String fieldName, String fieldValue) {
-        Set<PropertyType> propertyTypes = new LinkedHashSet<PropertyType>();
-        Collection<PropertyType> directPropertyTypes = persistenceService.query(fieldName, fieldValue, "rank", PropertyType.class);
-
-        if (directPropertyTypes != null) {
-            propertyTypes.addAll(directPropertyTypes);
+        if (tag == null) {
+            return null;
         }
-
-        return propertyTypes;
+        List<PropertyType> propertyTypes = propertyTypesBySystemTags.get(tag);
+        if (propertyTypes == null) {
+            return new LinkedHashSet<>();
+        }
+        return new LinkedHashSet<>(propertyTypes);
     }
 
     public Collection<PropertyType> getPropertyTypeByMapping(String propertyName) {
@@ -732,7 +767,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public PropertyType getPropertyType(String id) {
-        return persistenceService.load(id, PropertyType.class);
+        return propertyTypesById.get(id);
     }
 
     public PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy) {

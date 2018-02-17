@@ -103,7 +103,7 @@ public class LineSplitProcessor implements Processor {
             logger.debug("$$$$ : LineSplitProcessor : MAPPING : " + fieldsMapping.keySet());
             Map<String, Object> properties = new HashMap<>();
             for (String fieldMappingKey : fieldsMapping.keySet()) {
-                PropertyType propertyType = RouterUtils.getPropertyTypeById(profileService.getAllPropertyTypes("profiles"), fieldMappingKey);
+                PropertyType propertyType = RouterUtils.getPropertyTypeById(profileService.getTargetPropertyTypes("profiles"), fieldMappingKey);
 
                 if (fieldMappingKey != null && fieldsMapping.get(fieldMappingKey) != null && profileData != null && profileData[fieldsMapping.get(fieldMappingKey)] != null) {
                     logger.debug("$$$$ : LineSplitProcessor : PropType value : {}", profileData[fieldsMapping.get(fieldMappingKey)].trim());

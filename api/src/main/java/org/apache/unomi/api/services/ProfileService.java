@@ -245,7 +245,7 @@ public interface ProfileService {
      * @param target the target for which we want to retrieve the associated property types
      * @return a collection of all the property types associated with the specified target
      */
-    Collection<PropertyType> getAllPropertyTypes(String target);
+    Collection<PropertyType> getTargetPropertyTypes(String target);
 
     /**
      * Retrieves all known property types.
@@ -255,7 +255,7 @@ public interface ProfileService {
      *
      * @return a Map associating targets as keys to related {@link PropertyType}s
      */
-    Map<String, Collection<PropertyType>> getAllPropertyTypes();
+    Map<String, Collection<PropertyType>> getTargetPropertyTypes();
 
     /**
      * Retrieves all property types with the specified tag

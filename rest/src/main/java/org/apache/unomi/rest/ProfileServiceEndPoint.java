@@ -479,7 +479,7 @@ public class ProfileServiceEndPoint {
     @GET
     @Path("/properties")
     public Map<String, Collection<PropertyType>> getPropertyTypes(@HeaderParam("Accept-Language") String language) {
-        return profileService.getAllPropertyTypes();
+        return profileService.getTargetPropertyTypes();
     }
 
     /**
@@ -509,7 +509,7 @@ public class ProfileServiceEndPoint {
     @GET
     @Path("/properties/targets/{target}")
     public Collection<PropertyType> getPropertyTypesByTarget(@PathParam("target") String target, @HeaderParam("Accept-Language") String language) {
-        return profileService.getAllPropertyTypes(target);
+        return profileService.getTargetPropertyTypes(target);
     }
 
     /**
