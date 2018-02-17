@@ -846,6 +846,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     final TimeValue keepAlive = TimeValue.timeValueHours(1);
                     SearchResponse response = client.prepareSearch(indexName + "*")
                             .setIndices(getIndexNameForQuery(itemType))
+                            .setTypes(itemType)
                             .setScroll(keepAlive)
                             .setQuery(conditionESQueryBuilderDispatcher.getQueryBuilder(query))
                             .setSize(100).execute().actionGet();
