@@ -123,6 +123,13 @@
             <artifactId>org.apache.karaf.cellar.config</artifactId>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-metrics</artifactId>
+            <version>1.3.0-incubating-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>

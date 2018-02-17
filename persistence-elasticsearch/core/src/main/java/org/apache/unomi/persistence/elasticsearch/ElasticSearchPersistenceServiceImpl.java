@@ -25,6 +25,8 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
+import org.apache.unomi.metrics.MetricAdapter;
+import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.persistence.elasticsearch.conditions.*;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
@@ -148,6 +150,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private String aggregateQueryBucketSize = "5000";
 
+    private MetricsService metricsService;
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -243,10 +246,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.aggregateQueryBucketSize = aggregateQueryBucketSize;
     }
 
+    public void setMetricsService(MetricsService metricsService) {
+        this.metricsService = metricsService;
+    }
     public void start() throws Exception {
 
         // on startup
-        new InClassLoaderExecute<Object>() {
+        new InClassLoaderExecute<Object>(null, null) {
             public Object execute(Object... args) throws Exception {
 
                 bulkProcessorConcurrentRequests = System.getProperty(BULK_PROCESSOR_CONCURRENT_REQUESTS, bulkProcessorConcurrentRequests);
@@ -452,7 +458,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void stop() {
 
-        new InClassLoaderExecute<Object>() {
+        new InClassLoaderExecute<Object>(null, null) {
             protected Object execute(Object... args) {
                 logger.info("Closing ElasticSearch persistence backend...");
                 if (bulkProcessor != null) {
@@ -553,7 +559,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy) {
-        return query(QueryBuilders.matchAllQuery(), sortBy, clazz, offset, size, null, null);
+        long startTime = System.currentTimeMillis();
+        try {
+            return query(QueryBuilders.matchAllQuery(), sortBy, clazz, offset, size, null, null);
+        } finally {
+            if (metricsService != null && metricsService.isActivated()) {
+                metricsService.updateTimer(this.getClass().getName() + ".getAllItems", startTime);
+            }
+        }
+
     }
 
     @Override
@@ -563,17 +577,23 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> T load(final String itemId, final Date dateHint, final Class<T> clazz) {
-        return new InClassLoaderExecute<T>() {
+        return new InClassLoaderExecute<T>(metricsService, this.getClass().getName() + ".loadItem") {
             protected T execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
 
                     if (itemsMonthlyIndexed.contains(itemType) && dateHint == null) {
-                        PartialList<T> r = query(QueryBuilders.idsQuery(itemType).addIds(itemId), null, clazz, 0, 1, null, null);
-                        if (r.size() > 0) {
-                            return r.get(0);
-                        }
-                        return null;
+                        return new MetricAdapter<T>(metricsService, ".loadItemWithQuery") {
+                            @Override
+                            public T execute(Object... args) throws Exception {
+                                PartialList<T> r = query(QueryBuilders.idsQuery(itemType).addIds(itemId), null, clazz, 0, 1, null, null);
+                                if (r.size() > 0) {
+                                    putInCache(itemId, r.get(0));
+                                    return r.get(0);
+                                }
+                                return null;
+                            }
+                        }.execute();
                     } else {
                         String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
                                 (itemsMonthlyIndexed.contains(itemType) ? getMonthlyIndexName(dateHint) : indexName);
@@ -609,7 +629,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean save(final Item item, final boolean useBatching) {
-        Boolean result =  new InClassLoaderExecute<Boolean>() {
+        Boolean result =  new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveItem") {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String source = ESCustomObjectMapper.getObjectMapper().writeValueAsString(item);
@@ -650,7 +670,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean update(final String itemId, final Date dateHint, final Class clazz, final Map source) {
-        Boolean result = new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem") {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
@@ -681,7 +701,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts, final Map<String, Object>[] scriptParams, final Condition[] conditions) {
-        Boolean result = new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithQueryAndScript") {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
@@ -736,7 +756,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean updateWithScript(final String itemId, final Date dateHint, final Class<?> clazz, final String script, final Map<String, Object> scriptParams) {
-        Boolean result = new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithScript") {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
@@ -769,10 +789,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> boolean remove(final String itemId, final Class<T> clazz) {
-        Boolean result = new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeItem") {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
+                    deleteFromCache(itemId, clazz);
 
                     client.prepareDelete(getIndexNameForQuery(itemType), itemType, itemId)
                             .execute().actionGet();
@@ -790,7 +811,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public <T extends Item> boolean removeByQuery(final Condition query, final Class<T> clazz) {
-        Boolean result = new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeByQuery") {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
@@ -845,7 +866,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
 
     public boolean indexTemplateExists(final String templateName) {
-        Boolean result = new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".indexTemplateExists") {
             protected Boolean execute(Object... args) {
                 GetIndexTemplatesResponse getIndexTemplatesResponse = client.admin().indices().prepareGetTemplates(templateName).execute().actionGet();
                 return getIndexTemplatesResponse.getIndexTemplates().size() == 1;
@@ -859,7 +880,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public boolean removeIndexTemplate(final String templateName) {
-        Boolean result = new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeIndexTemplate") {
             protected Boolean execute(Object... args) {
                 DeleteIndexTemplateResponse deleteIndexTemplateResponse = client.admin().indices().deleteTemplate(new DeleteIndexTemplateRequest(templateName)).actionGet();
                 return deleteIndexTemplateResponse.isAcknowledged();
@@ -873,7 +894,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public boolean createMonthlyIndexTemplate() {
-        Boolean result = new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createMonthlyIndexTemplate") {
             protected Boolean execute(Object... args) {
                 PutIndexTemplateRequest putIndexTemplateRequest = new PutIndexTemplateRequest("context-monthly-indices")
                         .template(indexName + "-*")
@@ -912,7 +933,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public boolean createIndex(final String indexName) {
-        Boolean result = new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createItem") {
             protected Boolean execute(Object... args) {
                 IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(indexName).execute().actionGet();
                 boolean indexExists = indicesExistsResponse.isExists();
@@ -937,7 +958,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public boolean removeIndex(final String indexName) {
-        Boolean result = new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeIndex") {
             protected Boolean execute(Object... args) {
                 IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(indexName).execute().actionGet();
                 boolean indexExists = indicesExistsResponse.isExists();
@@ -1010,7 +1031,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public Map<String, Map<String, Object>> getPropertiesMapping(final String itemType) {
-        return new InClassLoaderExecute<Map<String, Map<String, Object>>>() {
+        return new InClassLoaderExecute<Map<String, Map<String, Object>>>(metricsService, this.getClass().getName() + ".getPropertiesMapping") {
             @SuppressWarnings("unchecked")
             protected Map<String, Map<String, Object>> execute(Object... args) throws Exception {
                 GetMappingsResponse getMappingsResponse = client.admin().indices().prepareGetMappings().setTypes(itemType).execute().actionGet();
@@ -1085,7 +1106,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public boolean saveQuery(final String queryName, final String query) {
-        Boolean result = new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveQuery") {
             protected Boolean execute(Object... args) throws Exception {
                 //Index the query = register it in the percolator
                 try {
@@ -1118,7 +1139,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean removeQuery(final String queryName) {
-        Boolean result = new InClassLoaderExecute<Boolean>() {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeQuery") {
             protected Boolean execute(Object... args) throws Exception {
                 //Index the query = register it in the percolator
                 try {
@@ -1140,18 +1161,30 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean testMatch(Condition query, Item item) {
+        long startTime = System.currentTimeMillis();
         try {
             return conditionEvaluatorDispatcher.eval(query, item);
         } catch (UnsupportedOperationException e) {
             logger.error("Eval not supported, continue with query", e);
+        } finally {
+            if (metricsService != null && metricsService.isActivated()) {
+                metricsService.updateTimer(this.getClass().getName() + ".testMatchLocally", startTime);
+            }
         }
-        final Class<? extends Item> clazz = item.getClass();
-        String itemType = Item.getItemType(clazz);
+        startTime = System.currentTimeMillis();
+        try {
+            final Class<? extends Item> clazz = item.getClass();
+            String itemType = Item.getItemType(clazz);
 
-        QueryBuilder builder = QueryBuilders.boolQuery()
-                .must(QueryBuilders.idsQuery(itemType).addIds(item.getItemId()))
-                .must(conditionESQueryBuilderDispatcher.buildFilter(query));
-        return queryCount(builder, itemType) > 0;
+            QueryBuilder builder = QueryBuilders.boolQuery()
+                    .must(QueryBuilders.idsQuery(itemType).addIds(item.getItemId()))
+                    .must(conditionESQueryBuilderDispatcher.buildFilter(query));
+            return queryCount(builder, itemType) > 0;
+        } finally {
+            if (metricsService != null && metricsService.isActivated()) {
+                metricsService.updateTimer(this.getClass().getName() + ".testMatchInElasticSearch", startTime);
+            }
+        }
     }
 
     @Override
@@ -1213,7 +1246,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private long queryCount(final QueryBuilder filter, final String itemType) {
-        return new InClassLoaderExecute<Long>() {
+        return new InClassLoaderExecute<Long>(metricsService, this.getClass().getName() + ".queryCount") {
 
             @Override
             protected Long execute(Object... args) {
@@ -1229,7 +1262,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz, final int offset, final int size, final String[] routing, final String scrollTimeValidity) {
-        return new InClassLoaderExecute<PartialList<T>>() {
+        return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".query") {
 
             @Override
             protected PartialList<T> execute(Object... args) throws Exception {
@@ -1353,7 +1386,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> PartialList<T> continueScrollQuery(final Class<T> clazz, final String scrollIdentifier, final String scrollTimeValidity) {
-        return new InClassLoaderExecute<PartialList<T>>() {
+        return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".continueScrollQuery") {
 
             @Override
             protected PartialList<T> execute(Object... args) throws Exception {
@@ -1390,7 +1423,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType) {
-        return new InClassLoaderExecute<Map<String, Long>>() {
+        return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery") {
 
             @Override
             protected Map<String, Long> execute(Object... args) {
@@ -1525,7 +1558,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void refresh() {
-        new InClassLoaderExecute<Boolean>() {
+        new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".refresh") {
             protected Boolean execute(Object... args) {
                 if (bulkProcessor != null) {
                     bulkProcessor.flush();
@@ -1540,7 +1573,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void purge(final Date date) {
-        new InClassLoaderExecute<Object>() {
+        new InClassLoaderExecute<Object>(metricsService, this.getClass().getName() + ".purgeWithDate") {
             @Override
             protected Object execute(Object... args) throws Exception {
                 IndicesStatsResponse statsResponse = client.admin().indices().prepareStats(indexName + "-*")
@@ -1582,7 +1615,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void purge(final String scope) {
-        new InClassLoaderExecute<Void>() {
+        new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope") {
             @Override
             protected Void execute(Object... args) {
                 QueryBuilder query = termQuery("scope", scope);
@@ -1627,7 +1660,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public Map<String, Double> getSingleValuesMetrics(final Condition condition, final String[] metrics, final String field, final String itemType) {
-        return new InClassLoaderExecute<Map<String, Double>>() {
+        return new InClassLoaderExecute<Map<String, Double>>(metricsService, this.getClass().getName() + ".getSingleValuesMetrics") {
 
             @Override
             protected Map<String, Double> execute(Object... args) {
@@ -1691,23 +1724,38 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public abstract static class InClassLoaderExecute<T> {
 
+        private String timerName;
+        private MetricsService metricsService;
+
+        public InClassLoaderExecute(MetricsService metricsService, String timerName) {
+            this.timerName = timerName;
+            this.metricsService = metricsService;
+        }
+
         protected abstract T execute(Object... args) throws Exception;
 
         public T executeInClassLoader(Object... args) throws Exception {
+
+            long startTime = System.currentTimeMillis();
             ClassLoader tccl = Thread.currentThread().getContextClassLoader();
             try {
                 Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
                 return execute(args);
             } finally {
+                if (metricsService != null && metricsService.isActivated()) {
+                    metricsService.updateTimer(timerName, startTime);
+                }
                 Thread.currentThread().setContextClassLoader(tccl);
             }
         }
 
         public T catchingExecuteInClassLoader(boolean logError, Object... args) {
             try {
-                return executeInClassLoader(args);
+                return executeInClassLoader(timerName, args);
             } catch (Exception e) {
-                logger.error("Error while executing in class loader", e);
+                if (logError) {
+                    logger.error("Error while executing in class loader", e);
+                }
             }
             return null;
         }

@@ -19,6 +19,8 @@ package org.apache.unomi.persistence.elasticsearch.conditions;
 
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.metrics.MetricAdapter;
+import org.apache.unomi.metrics.MetricsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +35,12 @@ public class ConditionEvaluatorDispatcher {
     private static final Logger logger = LoggerFactory.getLogger(ConditionEvaluatorDispatcher.class.getName());
 
     private Map<String, ConditionEvaluator> evaluators = new ConcurrentHashMap<>();
+
+    private MetricsService metricsService;
+
+    public void setMetricsService(MetricsService metricsService) {
+        this.metricsService = metricsService;
+    }
 
     public void addEvaluator(String name, ConditionEvaluator evaluator) {
         evaluators.put(name, evaluator);
@@ -59,11 +67,21 @@ public class ConditionEvaluatorDispatcher {
 
         if (evaluators.containsKey(conditionEvaluatorKey)) {
             ConditionEvaluator evaluator = evaluators.get(conditionEvaluatorKey);
-            Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context);
-            if (contextualCondition != null) {
-                return evaluator.eval(contextualCondition, item, context, this);
-            } else {
-                return true;
+            final ConditionEvaluatorDispatcher dispatcher = this;
+            try {
+                return new MetricAdapter<Boolean>(metricsService, this.getClass().getName() + ".conditions." + conditionEvaluatorKey) {
+                    @Override
+                    public Boolean execute(Object... args) throws Exception {
+                        Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context);
+                        if (contextualCondition != null) {
+                            return evaluator.eval(contextualCondition, item, context, dispatcher);
+                        } else {
+                            return true;
+                        }
+                    }
+                }.runWithTimer();
+            } catch (Exception e) {
+                logger.error("Error executing condition evaluator with key=" + conditionEvaluatorKey, e);
             }
         }
 

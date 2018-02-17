@@ -53,6 +53,7 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
+    <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService" />
     <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl">
         <interfaces>
             <value>org.apache.unomi.persistence.spi.PersistenceService</value>
@@ -65,6 +66,7 @@
 
     <bean id="conditionEvaluatorDispatcherImpl"
           class="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher">
+        <property name="metricsService" ref="metricsService" />
     </bean>
 
     <bean id="elasticSearchPersistenceServiceImpl"
@@ -107,6 +109,7 @@
         <property name="maximalElasticSearchVersion" value="${es.maximalElasticSearchVersion}" />
 
         <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}" />
+        <property name="metricsService" ref="metricsService" />
     </bean>
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->

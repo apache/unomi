@@ -846,6 +846,8 @@
 
     <modules>
         <module>api</module>
+        <module>common</module>
+        <module>metrics</module>
         <module>persistence-spi</module>
         <module>lifecycle-watcher</module>
         <module>persistence-elasticsearch</module>

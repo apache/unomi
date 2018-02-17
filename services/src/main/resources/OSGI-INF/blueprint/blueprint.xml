@@ -50,6 +50,7 @@
     <reference id="karafCellarEventProducer" interface="org.apache.karaf.cellar.core.event.EventProducer" />
     <reference id="karafCellarGroupManager" interface="org.apache.karaf.cellar.core.GroupManager" />
     <reference id="osgiConfigurationAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
+    <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService" />
 
     <!-- Service definitions -->
 
@@ -100,6 +101,7 @@
 
     <bean id="actionExecutorDispatcherImpl"
           class="org.apache.unomi.services.actions.ActionExecutorDispatcher">
+        <property name="metricsService" ref="metricsService" />
     </bean>
 
     <bean id="rulesServiceImpl" class="org.apache.unomi.services.services.RulesServiceImpl"

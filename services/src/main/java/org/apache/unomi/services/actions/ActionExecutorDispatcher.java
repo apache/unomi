@@ -23,6 +23,8 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.metrics.MetricAdapter;
+import org.apache.unomi.metrics.MetricsService;
 import org.mvel2.MVEL;
 import org.mvel2.ParserConfiguration;
 import org.mvel2.ParserContext;
@@ -41,6 +43,11 @@ public class ActionExecutorDispatcher {
     private final Map<String, Serializable> mvelExpressions = new ConcurrentHashMap<>();
     private final Map<String, ValueExtractor> valueExtractors = new HashMap<>(11);
     private Map<String, ActionExecutor> executors = new ConcurrentHashMap<>();
+    private MetricsService metricsService;
+
+    public void setMetricsService(MetricsService metricsService) {
+        this.metricsService = metricsService;
+    }
 
     public ActionExecutorDispatcher() {
         valueExtractors.put("profileProperty", new ValueExtractor() {
@@ -177,7 +184,16 @@ public class ActionExecutorDispatcher {
 
         if (executors.containsKey(actionKey)) {
             ActionExecutor actionExecutor = executors.get(actionKey);
-            return actionExecutor.execute(getContextualAction(action, event), event);
+            try {
+                return new MetricAdapter<Integer>(metricsService, this.getClass().getName() + ".action." + actionKey) {
+                    @Override
+                    public Integer execute(Object... args) throws Exception {
+                        return actionExecutor.execute(getContextualAction(action, event), event);
+                    }
+                }.runWithTimer();
+            } catch (Exception e) {
+                logger.error("Error executing action with key=" + actionKey, e);
+            }
         }
         return EventService.NO_CHANGE;
     }

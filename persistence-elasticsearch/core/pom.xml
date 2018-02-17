@@ -133,6 +133,13 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-metrics</artifactId>
+            <version>1.3.0-incubating-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
