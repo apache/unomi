@@ -588,7 +588,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             public T execute(Object... args) throws Exception {
                                 PartialList<T> r = query(QueryBuilders.idsQuery(itemType).addIds(itemId), null, clazz, 0, 1, null, null);
                                 if (r.size() > 0) {
-                                    putInCache(itemId, r.get(0));
                                     return r.get(0);
                                 }
                                 return null;
@@ -793,7 +792,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
-                    deleteFromCache(itemId, clazz);
 
                     client.prepareDelete(getIndexNameForQuery(itemType), itemType, itemId)
                             .execute().actionGet();
