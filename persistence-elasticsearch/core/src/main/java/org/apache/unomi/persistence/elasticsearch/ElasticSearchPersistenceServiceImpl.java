@@ -92,9 +92,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.text.ParseException;
@@ -149,6 +153,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String maximalElasticSearchVersion = "5.7.0";
 
     private String aggregateQueryBucketSize = "5000";
+
+    private String transportClientClassName = null;
+    private String transportClientProperties = null;
+    private String transportClientJarDirectory = null;
 
     private MetricsService metricsService;
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
@@ -246,6 +254,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.aggregateQueryBucketSize = aggregateQueryBucketSize;
     }
 
+    public void setTransportClientClassName(String transportClientClassName) {
+        this.transportClientClassName = transportClientClassName;
+    }
+
+    public void setTransportClientProperties(String transportClientProperties) {
+        this.transportClientProperties = transportClientProperties;
+    }
+
+    public void setTransportClientJarDirectory(String transportClientJarDirectory) {
+        this.transportClientJarDirectory = transportClientJarDirectory;
+    }
+
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
     }
@@ -273,12 +293,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     logger.info("Overriding cluster name from system property=" + clusterName);
                 }
 
-                Settings transportSettings = Settings.builder()
-                        .put(CLUSTER_NAME, clusterName).build();
+                Settings.Builder transportSettings = Settings.builder()
+                        .put(CLUSTER_NAME, clusterName);
 
-                logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index name " + indexName + "...");
-
-                client = new PreBuiltTransportClient(transportSettings);
+                if (transportClientClassName != null && transportClientClassName.trim().length() > 0 &&
+                        transportClientJarDirectory != null && transportClientJarDirectory.trim().length() > 0) {
+                    logger.info("Connecting to ElasticSearch persistence backend using transport class " + transportClientClassName +
+                            " with JAR directory "+transportClientJarDirectory +
+                            " using cluster name " + clusterName + " and index name " + indexName + "...");
+                    client = newTransportClient(transportSettings, transportClientClassName, transportClientJarDirectory, transportClientProperties);
+                } else {
+                    logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index name " + indexName + "...");
+                    client = new PreBuiltTransportClient(transportSettings.build());
+                }
                 for (String elasticSearchAddress : elasticSearchAddressList) {
                     String[] elasticSearchAddressParts = elasticSearchAddress.split(":");
                     String elasticSearchHostName = elasticSearchAddressParts[0];
@@ -1759,5 +1786,53 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
+    public TransportClient newTransportClient(Settings.Builder settingsBuilder,
+                                              String transportClientClassName,
+                                              String transportClientJarDirectory,
+                                              String transportClientProperties) {
+
+        ArrayList<URL> urls = new ArrayList<>();
+        File pluginLocationFile = new File(transportClientJarDirectory);
+
+        File[] pluginLocationFiles = pluginLocationFile.listFiles();
+        for (File pluginFile : pluginLocationFiles) {
+            if (pluginFile.getName().toLowerCase().endsWith(".jar")) {
+                try {
+                    urls.add(pluginFile.toURI().toURL());
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        ChildFirstClassLoader childFirstClassLoader = new ChildFirstClassLoader(this.getClass().getClassLoader(), urls.toArray(new URL[urls.size()]));
+
+        if (transportClientProperties != null && transportClientProperties.trim().length() > 0) {
+            String[] clientProperties = transportClientProperties.split(",");
+            if (clientProperties.length > 0) {
+                for (String clientProperty : clientProperties) {
+                    String[] clientPropertyParts = clientProperty.split("=");
+                    settingsBuilder.put(clientPropertyParts[0], clientPropertyParts[1]);
+                }
+            }
+        }
+
+        try {
+            Class<?> transportClientClass = childFirstClassLoader.loadClass(transportClientClassName);
+            Constructor<?> transportClientConstructor = transportClientClass.getConstructor(Settings.class, Class[].class);
+            return (TransportClient) transportClientConstructor.newInstance(settingsBuilder.build(), new Class[0]);
+        } catch (ClassNotFoundException e) {
+            logger.error("Couldn't find class " + transportClientClassName, e);
+        } catch (NoSuchMethodException e) {
+            logger.error("Error creating transport client with class" + transportClientClassName, e);
+        } catch (IllegalAccessException e) {
+            logger.error("Error creating transport client with class" + transportClientClassName, e);
+        } catch (InstantiationException e) {
+            logger.error("Error creating transport client with class" + transportClientClassName, e);
+        } catch (InvocationTargetException e) {
+            logger.error("Error creating transport client with class" + transportClientClassName, e);
+        }
+        return null;
+    }
 
 }

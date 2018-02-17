@@ -50,6 +50,9 @@
 
             <cm:property name="aggregateQueryBucketSize" value="5000" />
 
+            <cm:property name="transportClientClassName" value="" />
+            <cm:property name="transportClientJarDirectory" value="" />
+            <cm:property name="transportClientProperties" value="" />
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -109,6 +112,9 @@
         <property name="maximalElasticSearchVersion" value="${es.maximalElasticSearchVersion}" />
 
         <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}" />
+        <property name="transportClientClassName" value="${es.transportClientClassName}" />
+        <property name="transportClientJarDirectory" value="${es.transportClientJarDirectory}" />
+        <property name="transportClientProperties" value="${es.transportClientProperties}" />
         <property name="metricsService" ref="metricsService" />
     </bean>
 

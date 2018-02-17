@@ -300,3 +300,51 @@ The Apache Karaf SSH console is available inside Apache Unomi, but the port has 
     ssh -p 8102 karaf@localhost
     
 or the user/password you have setup to protect the system if you have changed it.
+
+ElasticSearch X-Pack Support
+--------------------------------------
+
+It is now possible to use X-Pack to connect to ElasticSearch. However, for licensing reasons this is not provided out 
+of the box. Here is the procedure to install X-Pack with Apache Unomi:
+
+#Important ! 
+
+Do not start Unomi directly with unomi:start, perform the following steps below first !
+
+#Installation steps
+
+1. Create a directory for all the JARs that you will download, we will call it XPACK_JARS_DIRECTORY
+2. Download https://artifacts.elastic.co/maven/org/elasticsearch/client/x-pack-transport/5.6.3/x-pack-transport-5.6.3.jar to XPACK_JARS_DIRECTORY
+3. Download https://artifacts.elastic.co/maven/org/elasticsearch/plugin/x-pack-api/5.6.3/x-pack-api-5.6.3.jar to XPACK_JARS_DIRECTORY
+4. Download http://central.maven.org/maven2/com/unboundid/unboundid-ldapsdk/3.2.0/unboundid-ldapsdk-3.2.0.jar to XPACK_JARS_DIRECTORY
+5. Download http://central.maven.org/maven2/org/bouncycastle/bcpkix-jdk15on/1.55/bcpkix-jdk15on-1.55.jar to XPACK_JARS_DIRECTORY
+6. Download http://central.maven.org/maven2/org/bouncycastle/bcprov-jdk15on/1.55/bcprov-jdk15on-1.55.jar to XPACK_JARS_DIRECTORY
+7. Download http://central.maven.org/maven2/com/sun/mail/javax.mail/1.5.3/javax.mail-1.5.3.jar to XPACK_JARS_DIRECTORY
+8. Edit etc/org.apache.unomi.persistence.elasticsearch.cfg to add the following settings:
+
+        transportClientClassName=org.elasticsearch.xpack.client.PreBuiltXPackTransportClient
+        transportClientJarDirectory=XPACK_JARS_DIRECTORY
+        transportClientProperties=xpack.security.user=elastic:changeme
+
+    You can setup more properties (for example for SSL/TLS support) by seperating the properties with commas, 
+    as in the following example:
+    
+        transportClientProperties=xpack.security.user=elastic:changeme,xpack.ssl.key=/home/user/elasticsearch-5.6.3/config/x-pack/localhost/localhost.key,xpack.ssl.certificate=/home/user/elasticsearch-5.6.3/config/x-pack/localhost/localhost.crt,xpack.ssl.certificate_authorities=/home/user/elasticsearch-5.6.3/config/x-pack/ca/ca.crt,xpack.security.transport.ssl.enabled=true
+
+9. Launch Karaf and launch unomi using the command from the shell :
+
+        unomi:start
+        
+Alternatively you could edit the configuration directly from the Karaf shell using the following commands:
+        
+    config:edit org.apache.unomi.persistence.elasticsearch
+    config:property-set transportClientClassName org.elasticsearch.xpack.client.PreBuiltXPackTransportClient
+    config:property-set transportClientJarDirectory XPACK_JARS_DIRECTORY
+    config:property-set transportClientProperties xpack.security.user=elastic:changeme
+    config:update
+    unomi:start
+
+You can setup more properties (for example for SSL/TLS support) by seperating the properties with commas, 
+as in the following example:
+    
+    config:property-set transportClientProperties xpack.security.user=elastic:changeme,xpack.ssl.key=/home/user/elasticsearch-5.6.3/config/x-pack/localhost/localhost.key,xpack.ssl.certificate=/home/user/elasticsearch-5.6.3/config/x-pack/localhost/localhost.crt,xpack.ssl.certificate_authorities=/home/user/elasticsearch-5.6.3/config/x-pack/ca/ca.crt,xpack.security.transport.ssl.enabled=true
