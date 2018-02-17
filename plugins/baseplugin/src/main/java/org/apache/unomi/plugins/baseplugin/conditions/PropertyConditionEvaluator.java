@@ -24,8 +24,7 @@ import ognl.OgnlException;
 import ognl.enhance.ExpressionAccessor;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Item;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
@@ -39,6 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.LongSupplier;
 import java.util.regex.Pattern;
 
@@ -50,6 +50,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     private static final Logger logger = LoggerFactory.getLogger(PropertyConditionEvaluator.class.getName());
 
     private static final SimpleDateFormat yearMonthDayDateFormat = new SimpleDateFormat("yyyyMMdd");
+    public static final String NOT_OPTIMIZED_MARKER = "$$$###NOT_OPTIMIZED###$$$";
 
     private Map<String, Map<String, ExpressionAccessor>> expressionCache = new HashMap<>(64);
 
@@ -244,9 +245,99 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         return false;
     }
 
-    private Object getPropertyValue(Item item, String expression) throws Exception {
+    protected Object getPropertyValue(Item item, String expression) throws Exception {
+        Object result = getHardcodedPropertyValue(item, expression);
+        if (!NOT_OPTIMIZED_MARKER.equals(result)) {
+            return result;
+        }
+        return getOGNLPropertyValue(item, expression);
+    }
+
+    protected Object getHardcodedPropertyValue(Item item, String expression) {
+        // the following are optimizations to avoid using the expressions that are slower. The main objective here is
+        // to avoid the most used expression that may also trigger calls to the Java Reflection API.
+        if (item instanceof Event) {
+            Event event = (Event) item;
+            if (expression.startsWith("properties.")) {
+                return getNestedPropertyValue(expression.substring("properties.".length()), event.getProperties());
+            }
+            if ("target.itemId".equals(expression)) {
+                return event.getTarget().getItemId();
+            }
+            if (expression.startsWith("target.properties.")) {
+                if (event.getTarget() instanceof CustomItem) {
+                    CustomItem customItem = (CustomItem) event.getTarget();
+                    String expressionPart = expression.substring("target.properties.".length());
+                    return getNestedPropertyValue(expressionPart, customItem.getProperties());
+                }
+            }
+            if ("target.scope".equals(expression)) {
+                return event.getTarget().getScope();
+            }
+            if ("scope".equals(expression)) {
+                return event.getScope();
+            }
+        } else if (item instanceof Session) {
+            Session session = (Session) item;
+            if ("timeStamp".equals(expression)) {
+                return session.getTimeStamp();
+            }
+            if ("duration".equals(expression)) {
+                return session.getDuration();
+            }
+            if ("size".equals(expression)) {
+                return session.getSize();
+            }
+            if (expression.startsWith("properties.")) {
+                return getNestedPropertyValue(expression.substring("properties.".length()), session.getProperties());
+            }
+            if (expression.startsWith("systemProperties.")) {
+                return getNestedPropertyValue(expression.substring("systemProperties.".length()), session.getSystemProperties());
+            }
+        } else if (item instanceof Profile) {
+            Profile profile = (Profile) item;
+            if ("segments".equals(expression)) {
+                return profile.getSegments();
+            }
+            if ("consents".equals(expression)) {
+                return profile.getConsents();
+            }
+            if (expression.startsWith("scores.")) {
+                return profile.getScores().get(expression.substring("scores.".length()));
+            }
+            if (expression.startsWith("properties.")) {
+                return getNestedPropertyValue(expression.substring("properties.".length()), profile.getProperties());
+            }
+            if (expression.startsWith("systemProperties.")) {
+                return getNestedPropertyValue(expression.substring("systemProperties.".length()), profile.getSystemProperties());
+            }
+        } else if (item instanceof CustomItem) {
+            CustomItem customItem = (CustomItem) item;
+            if (expression.startsWith("properties.")) {
+                return getNestedPropertyValue(expression.substring("properties.".length()), customItem.getProperties());
+            }
+        }
+        return NOT_OPTIMIZED_MARKER;
+    }
+
+    protected Object getOGNLPropertyValue(Item item, String expression) throws Exception {
         ExpressionAccessor accessor = getPropertyAccessor(item, expression);
         return accessor != null ? accessor.get((OgnlContext) Ognl.createDefaultContext(null), item) : null;
+    }
+
+    private Object getNestedPropertyValue(String expressionPart, Map<String, Object> properties) {
+        int nextDotPos = expressionPart.indexOf(".");
+        if (nextDotPos > -1) {
+            String mapKey = expressionPart.substring(0, nextDotPos);
+            Object mapValue = properties.get(mapKey);
+            if (mapValue == null) {
+                return null;
+            }
+            String nextExpression = expressionPart.substring(nextDotPos+1);
+            return getNestedPropertyValue(nextExpression, (Map<String,Object>) mapValue);
+        } else {
+            return properties.get(expressionPart);
+        }
     }
 
     private ExpressionAccessor getPropertyAccessor(Item item, String expression) throws Exception {
@@ -275,8 +366,10 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             } else {
                 logger.warn("Unable to compile expression for {} and {}", clazz, expression);
             }
-            time = System.nanoTime() - time;
-            logger.info("Expression compilation for {} took {}", expression, time / 1000000L);
+            if (logger.isInfoEnabled()) {
+                time = System.nanoTime() - time;
+                logger.info("Expression compilation for item={} expression={} took {}", item.getClass().getName(), expression, time / 1000000L);
+            }
         }
 
         return accessor;
