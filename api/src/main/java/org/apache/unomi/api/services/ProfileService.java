@@ -111,9 +111,9 @@ public interface ProfileService {
      * Merge the specified profile properties in an existing profile,or save new profile if it does not exist yet
      *
      * @param profile the profile to be saved
-     * @return the newly saved profile
+     * @return the newly saved or merged profile or null if the save or merge operation failed.
      */
-    boolean saveOrMerge(Profile profile);
+    Profile saveOrMerge(Profile profile);
 
     /**
      * Removes the profile (or persona if the {@code persona} parameter is set to {@code true}) identified by the specified identifier.
