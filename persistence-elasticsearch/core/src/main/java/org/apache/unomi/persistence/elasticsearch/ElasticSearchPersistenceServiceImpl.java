@@ -1149,15 +1149,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         } catch (UnsupportedOperationException e) {
             logger.error("Eval not supported, continue with query", e);
         }
-        try {
-            final Class<? extends Item> clazz = item.getClass();
-            String itemType = Item.getItemType(clazz);
+        final Class<? extends Item> clazz = item.getClass();
+        String itemType = Item.getItemType(clazz);
 
-            QueryBuilder builder = QueryBuilders.boolQuery()
-                    .must(QueryBuilders.idsQuery(itemType).addIds(item.getItemId()))
-                    .must(conditionESQueryBuilderDispatcher.buildFilter(query));
-            return queryCount(builder, itemType) > 0;
-        }
+        QueryBuilder builder = QueryBuilders.boolQuery()
+                .must(QueryBuilders.idsQuery(itemType).addIds(item.getItemId()))
+                .must(conditionESQueryBuilderDispatcher.buildFilter(query));
+        return queryCount(builder, itemType) > 0;
     }
 
     @Override
