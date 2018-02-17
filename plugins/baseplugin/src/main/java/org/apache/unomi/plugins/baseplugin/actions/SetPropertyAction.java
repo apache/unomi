@@ -33,7 +33,7 @@ public class SetPropertyAction implements ActionExecutor {
 
     private EventService eventService;
 
-    private boolean useEventToUpdateProfile = true;
+    private boolean useEventToUpdateProfile = false;
 
     public void setUseEventToUpdateProfile(boolean useEventToUpdateProfile) {
         this.useEventToUpdateProfile = useEventToUpdateProfile;
@@ -91,7 +91,7 @@ public class SetPropertyAction implements ActionExecutor {
                 }
             } else {
                 if (PropertyHelper.setProperty(event.getProfile(), propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {
-                    return EventService.SESSION_UPDATED;
+                    return EventService.PROFILE_UPDATED;
                 }
             }
         }
