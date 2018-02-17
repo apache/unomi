@@ -61,6 +61,7 @@
         <bundle start-level="85" start="false">mvn:org.apache.unomi/unomi-plugins-mail/${project.version}</bundle>
         <bundle start-level="85" start="false">mvn:org.apache.unomi/unomi-plugins-optimization-test/${project.version}</bundle>
         <bundle start-level="85" start="false">mvn:org.apache.unomi/cxs-lists-extension-actions/${project.version}</bundle>
+        <bundle start-level="85" start="false">mvn:org.apache.unomi/shell-dev-commands/${project.version}</bundle>
 
         <bundle start-level="99">mvn:org.apache.unomi/shell-commands/${project.version}</bundle>
     </feature>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one or more
+  ~ contributor license agreements.  See the NOTICE file distributed with
+  ~ this work for additional information regarding copyright ownership.
+  ~ The ASF licenses this file to You under the Apache License, Version 2.0
+  ~ (the "License"); you may not use this file except in compliance with
+  ~ the License.  You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
+           xmlns:cxf="http://cxf.apache.org/blueprint/core" xmlns:jaxrs="http://cxf.apache.org/blueprint/jaxrs"
+           xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+           xmlns:shell="http://karaf.apache.org/xmlns/shell/v1.1.0"
+           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+  http://cxf.apache.org/blueprint/jaxrs http://cxf.apache.org/schemas/blueprint/jaxrs.xsd
+  http://cxf.apache.org/blueprint/core http://cxf.apache.org/schemas/blueprint/core.xsd
+  http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
+
+    <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
+    <reference id="userListService" interface="org.apache.unomi.api.services.UserListService"/>
+    <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
+    <reference id="goalsService" interface="org.apache.unomi.api.services.GoalsService"/>
+    <reference id="rulesService" interface="org.apache.unomi.api.services.RulesService"/>
+    <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
+    <reference id="clusterService" interface="org.apache.unomi.api.services.ClusterService"/>
+    <reference id="queryService" interface="org.apache.unomi.api.services.QueryService"/>
+    <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
+
+    <shell:command-bundle>
+        <shell:command>
+            <shell:action class="org.apache.unomi.shell.commands.RuleListCommand">
+                <shell:property name="rulesService" ref="rulesService" />
+            </shell:action>
+        </shell:command>
+        <shell:command>
+            <shell:action class="org.apache.unomi.shell.commands.RuleViewcommand">
+                <shell:property name="rulesService" ref="rulesService" />
+            </shell:action>
+        </shell:command>
+        <shell:command>
+            <shell:action class="org.apache.unomi.shell.commands.RuleResetStatsCommand">
+                <shell:property name="rulesService" ref="rulesService" />
+            </shell:action>
+        </shell:command>
+        <shell:command>
+            <shell:action class="org.apache.unomi.shell.commands.ActionListCommand">
+                <shell:property name="definitionsService" ref="definitionsService" />
+            </shell:action>
+        </shell:command>
+        <shell:command>
+            <shell:action class="org.apache.unomi.shell.commands.ActionViewCommand">
+                <shell:property name="definitionsService" ref="definitionsService" />
+            </shell:action>
+        </shell:command>
+        <shell:command>
+            <shell:action class="org.apache.unomi.shell.commands.SegmentListCommand">
+                <shell:property name="segmentService" ref="segmentService" />
+            </shell:action>
+        </shell:command>
+        <shell:command>
+            <shell:action class="org.apache.unomi.shell.commands.SegmentViewCommand">
+                <shell:property name="segmentService" ref="segmentService" />
+            </shell:action>
+        </shell:command>
+    </shell:command-bundle>
+
+</blueprint>

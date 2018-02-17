@@ -31,6 +31,7 @@
 
     <modules>
         <module>shell-commands</module>
+        <module>shell-dev-commands</module>
     </modules>
 
 </project>
