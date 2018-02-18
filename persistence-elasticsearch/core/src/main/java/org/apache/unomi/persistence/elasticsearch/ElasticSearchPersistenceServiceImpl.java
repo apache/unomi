@@ -1871,40 +1871,40 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return null;
     }
 
-    private <T extends Item> boolean isCacheActiveForClass(Class<T> clazz) {
+    private <T extends Item> boolean isCacheActiveForClass(String className) {
         if (itemClassesToCacheSet.contains("*")) {
             return true;
         }
-        if (itemClassesToCacheSet.contains(clazz.getName())) {
+        if (itemClassesToCacheSet.contains(className)) {
             return true;
         }
         return false;
     }
 
     private <T extends Item> T getFromCache(String itemId, Class<T> clazz) {
-        if (!isCacheActiveForClass(clazz)) {
+        String className = clazz.getName();
+        if (!isCacheActiveForClass(className)) {
             return null;
         }
-        String itemType = Item.getItemType(clazz);
-        Map<String,T> itemCache = hazelcastInstance.getMap("org.apache.unomi.persistence." + itemType);
+        Map<String,T> itemCache = hazelcastInstance.getMap(className);
         return itemCache.get(itemId);
     }
 
     private <T extends Item> T putInCache(String itemId, T item) {
-        if (!isCacheActiveForClass(item.getClass())) {
+        String className = item.getClass().getName();
+        if (!isCacheActiveForClass(className)) {
             return null;
         }
-        String itemType = Item.getItemType(item.getClass());
-        Map<String,T> itemCache = hazelcastInstance.getMap("org.apache.unomi.persistence." + itemType);
+        Map<String,T> itemCache = hazelcastInstance.getMap(className);
         return itemCache.put(itemId, item);
     }
 
     private <T extends Item> T deleteFromCache(String itemId, Class clazz) {
-        if (!isCacheActiveForClass(clazz)) {
+        String className = clazz.getName();
+        if (!isCacheActiveForClass(className)) {
             return null;
         }
-        String itemType = Item.getItemType(clazz);
-        Map<String,T> itemCache = hazelcastInstance.getMap("org.apache.unomi.persistence." + itemType);
+        Map<String,T> itemCache = hazelcastInstance.getMap(className);
         return itemCache.remove(itemId);
     }
 
