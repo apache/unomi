@@ -16,19 +16,18 @@
  */
 package org.apache.unomi.metrics.internal;
 
-import org.apache.unomi.metrics.CalleeCount;
+import org.apache.unomi.metrics.CallerCount;
 import org.apache.unomi.metrics.Metric;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class MetricImpl implements Metric {
 
     private String name;
     private long totalCount = 0L;
     private long totalTime = 0L;
-    private Map<String,CalleeCount> calleeCounts = new ConcurrentHashMap<String, CalleeCount>();
+    private Map<String,CallerCount> callerCounts = new ConcurrentHashMap<String, CallerCount>();
 
     public MetricImpl(String name) {
         this.name = name;
@@ -60,7 +59,7 @@ public class MetricImpl implements Metric {
     }
 
     @Override
-    public Map<String, CalleeCount> getCalleeCounts() {
-        return calleeCounts;
+    public Map<String, CallerCount> getCallerCounts() {
+        return callerCounts;
     }
 }

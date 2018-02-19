@@ -37,7 +37,7 @@ public class ViewCommand extends MetricsCommandSupport{
             return null;
         }
         // by default pretty printer will use spaces between array values, we change this to linefeeds to make
-        // the callee values easier to read.
+        // the caller values easier to read.
         DefaultPrettyPrinter defaultPrettyPrinter = new DefaultPrettyPrinter();
         defaultPrettyPrinter = defaultPrettyPrinter.withArrayIndenter(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE);
         String jsonMetric = CustomObjectMapper.getObjectMapper().writer(defaultPrettyPrinter).writeValueAsString(metric);

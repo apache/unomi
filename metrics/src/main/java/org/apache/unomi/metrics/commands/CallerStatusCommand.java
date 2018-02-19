@@ -26,8 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-@Command(scope = "metrics", name = "callee-status", description = "This command will list all the callee configurations, or change the callee status of a specific metric")
-public class CalleeStatusCommand extends MetricsCommandSupport {
+@Command(scope = "metrics", name = "caller-status", description = "This command will list all the caller configurations, or change the caller status of a specific metric")
+public class CallerStatusCommand extends MetricsCommandSupport {
 
     @Option(name = "--no-format", description = "Disable table rendered output", required = false, multiValued = false)
     boolean noFormat;
@@ -35,25 +35,25 @@ public class CalleeStatusCommand extends MetricsCommandSupport {
     @Argument(index = 0, name = "metricName", description = "The identifier for the metric", required = false, multiValued = false)
     String metricName;
 
-    @Argument(index = 1, name = "status", description = "The new status for the metric's callee tracing", required = false, multiValued = false)
+    @Argument(index = 1, name = "status", description = "The new status for the metric's caller tracing", required = false, multiValued = false)
     Boolean metricStatus;
 
     @Override
     protected Object doExecute() throws Exception {
         if (metricName != null && metricStatus != null) {
-            metricsService.setCalleeActivated(metricName, metricStatus);
-            System.out.println("Metric callees " + metricName + " set to " + metricStatus);
+            metricsService.setCallerActivated(metricName, metricStatus);
+            System.out.println("Metric callers " + metricName + " set to " + metricStatus);
             return null;
         }
-        Map<String,Boolean> calleesStatus = metricsService.getCalleesStatus();
+        Map<String,Boolean> callersStatus = metricsService.getCallersStatus();
         ShellTable shellTable = new ShellTable();
         shellTable.column("Metric");
         shellTable.column("Activated");
 
-        for (Map.Entry<String,Boolean> calleeStatusEntry : calleesStatus.entrySet()) {
+        for (Map.Entry<String,Boolean> callerStatusEntry : callersStatus.entrySet()) {
             List<Object> rowData = new ArrayList<Object>();
-            rowData.add(calleeStatusEntry.getKey());
-            rowData.add(calleeStatusEntry.getValue() ? "x" : "");
+            rowData.add(callerStatusEntry.getKey());
+            rowData.add(callerStatusEntry.getValue() ? "x" : "");
             Row row = shellTable.addRow();
             row.addContent(rowData);
         }

@@ -28,6 +28,6 @@ public interface Metric {
     long getTotalTime();
     long addTotalTime(long time);
 
-    Map<String,CalleeCount> getCalleeCounts();
+    Map<String,CallerCount> getCallerCounts();
 
 }

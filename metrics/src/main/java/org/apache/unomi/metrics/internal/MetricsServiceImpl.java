@@ -16,7 +16,7 @@
  */
 package org.apache.unomi.metrics.internal;
 
-import org.apache.unomi.metrics.CalleeCount;
+import org.apache.unomi.metrics.CallerCount;
 import org.apache.unomi.metrics.Metric;
 import org.apache.unomi.metrics.MetricsService;
 
@@ -29,7 +29,7 @@ public class MetricsServiceImpl implements MetricsService {
 
     boolean activated = false;
     Map<String,Metric> metrics = new ConcurrentHashMap<String,Metric>();
-    Map<String,Boolean> calleesStatus = new ConcurrentHashMap<>();
+    Map<String,Boolean> callersStatus = new ConcurrentHashMap<>();
 
     public void setActivated(boolean activated) {
         this.activated = activated;
@@ -65,7 +65,7 @@ public class MetricsServiceImpl implements MetricsService {
         }
         metric.incTotalCount();
         metric.addTotalTime(totalTime);
-        if (isCalleeActivated(timerName)) {
+        if (isCallerActivated(timerName)) {
             StackTraceElement[] stackTraceElements = new Throwable().getStackTrace();
             List<String> stackTraces = new ArrayList<String>();
             if (stackTraceElements != null && stackTraceElements.length > 2) {
@@ -74,43 +74,43 @@ public class MetricsServiceImpl implements MetricsService {
                     stackTraces.add(String.valueOf(stackTraceElements[i]));
                 }
                 String stackTraceHash = Integer.toString(stackTraces.hashCode());
-                CalleeCount calleeCount = metric.getCalleeCounts().get(stackTraceHash);
-                if (calleeCount == null) {
-                    calleeCount = new CalleeCountImpl(stackTraceHash, stackTraces);
-                    calleeCount.incCount();
-                    calleeCount.addTime(totalTime);
-                    metric.getCalleeCounts().put(stackTraceHash, calleeCount);
+                CallerCount callerCount = metric.getCallerCounts().get(stackTraceHash);
+                if (callerCount == null) {
+                    callerCount = new CallerCountImpl(stackTraceHash, stackTraces);
+                    callerCount.incCount();
+                    callerCount.addTime(totalTime);
+                    metric.getCallerCounts().put(stackTraceHash, callerCount);
                 } else {
-                    calleeCount.incCount();
-                    calleeCount.addTime(totalTime);
+                    callerCount.incCount();
+                    callerCount.addTime(totalTime);
                 }
             }
         }
     }
 
     @Override
-    public Map<String, Boolean> getCalleesStatus() {
-        return calleesStatus;
+    public Map<String, Boolean> getCallersStatus() {
+        return callersStatus;
     }
 
     @Override
-    public void setCalleeActivated(String timerName, boolean activated) {
+    public void setCallerActivated(String timerName, boolean activated) {
         if (!activated) {
-            if (calleesStatus.containsKey(timerName)) {
-                calleesStatus.remove(timerName);
+            if (callersStatus.containsKey(timerName)) {
+                callersStatus.remove(timerName);
             }
         } else {
-            calleesStatus.put(timerName, true);
+            callersStatus.put(timerName, true);
         }
     }
 
     @Override
-    public boolean isCalleeActivated(String timerName) {
-        if (calleesStatus.containsKey(timerName)) {
-            return calleesStatus.get(timerName);
+    public boolean isCallerActivated(String timerName) {
+        if (callersStatus.containsKey(timerName)) {
+            return callersStatus.get(timerName);
         }
-        if (calleesStatus.containsKey("*")) {
-            return calleesStatus.get("*");
+        if (callersStatus.containsKey("*")) {
+            return callersStatus.get("*");
         }
         return false;
     }

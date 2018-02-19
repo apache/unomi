@@ -18,12 +18,10 @@ package org.apache.unomi.metrics.commands;
 
 import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.commands.Option;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
 import org.apache.karaf.shell.table.Row;
 import org.apache.karaf.shell.table.ShellTable;
 import org.apache.unomi.common.DataTable;
 import org.apache.unomi.metrics.Metric;
-import org.apache.unomi.metrics.MetricsService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +45,7 @@ public class ListCommand extends MetricsCommandSupport {
 
         String[] headers = {
                 "Name",
-                "Callees",
+                "Callers",
                 "Count",
                 "Time [ms]"
         };
@@ -55,7 +53,7 @@ public class ListCommand extends MetricsCommandSupport {
         DataTable dataTable = new DataTable();
         for (Map.Entry<String,Metric> metricEntry : metrics.entrySet()) {
             Metric metric = metricEntry.getValue();
-            dataTable.addRow(metric.getName(), metric.getCalleeCounts().size(), metric.getTotalCount(), metric.getTotalTime());
+            dataTable.addRow(metric.getName(), metric.getCallerCounts().size(), metric.getTotalCount(), metric.getTotalTime());
         }
         dataTable.sort(new DataTable.SortCriteria(3, DataTable.SortOrder.DESCENDING),
                 new DataTable.SortCriteria(2, DataTable.SortOrder.DESCENDING),
@@ -67,10 +65,10 @@ public class ListCommand extends MetricsCommandSupport {
         }
 
         ShellTable shellTable = new ShellTable();
-        shellTable.column("Name");
-        shellTable.column("Callees");
-        shellTable.column("Count");
-        shellTable.column("Time [ms]");
+
+        for (String header : headers) {
+            shellTable.column(header);
+        }
 
         for (DataTable.Row dataTableRow :dataTable.getRows()) {
             List<Object> rowData = new ArrayList<Object>();

@@ -16,21 +16,21 @@
  */
 package org.apache.unomi.metrics.internal;
 
-import org.apache.unomi.metrics.CalleeCount;
+import org.apache.unomi.metrics.CallerCount;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class CalleeCountImpl implements CalleeCount {
+public class CallerCountImpl implements CallerCount {
 
     private String hash;
-    private List<String> callee;
+    private List<String> caller;
     private AtomicLong count = new AtomicLong();
     private AtomicLong totalTime = new AtomicLong();
 
-    public CalleeCountImpl(String hash, List<String> callee) {
+    public CallerCountImpl(String hash, List<String> caller) {
         this.hash = hash;
-        this.callee = callee;
+        this.caller = caller;
     }
 
     @Override
@@ -39,8 +39,8 @@ public class CalleeCountImpl implements CalleeCount {
     }
 
     @Override
-    public List<String> getCallee() {
-        return callee;
+    public List<String> getCaller() {
+        return caller;
     }
 
     @Override

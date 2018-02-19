@@ -18,10 +18,10 @@ package org.apache.unomi.metrics;
 
 import java.util.List;
 
-public interface CalleeCount {
+public interface CallerCount {
 
     String getHash();
-    List<String> getCallee();
+    List<String> getCaller();
     long getCount();
     long incCount();
     long getTotalTime();

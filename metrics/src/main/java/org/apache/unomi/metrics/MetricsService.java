@@ -18,17 +18,26 @@ package org.apache.unomi.metrics;
 
 import java.util.Map;
 
+/**
+ * This is the main interface for the metrics service, that makes it possible to count calls, callers and accumulated
+ * times for sections of code.
+ */
 public interface MetricsService {
 
+    /**
+     * Enables or disables the metrics service.
+     * @param activated if true the metrics service will be activated, false will deactivate it and clear any exists
+     *                  in-memory metrics
+     */
     void setActivated(boolean activated);
 
     boolean isActivated();
 
-    Map<String,Boolean> getCalleesStatus();
+    Map<String,Boolean> getCallersStatus();
 
-    void setCalleeActivated(String timerName, boolean activated);
+    void setCallerActivated(String timerName, boolean activated);
 
-    boolean isCalleeActivated(String timerName);
+    boolean isCallerActivated(String timerName);
 
     Map<String,Metric> getMetrics();
 

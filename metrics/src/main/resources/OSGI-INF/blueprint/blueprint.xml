@@ -67,7 +67,7 @@
             </shell:action>
         </shell:command>
         <shell:command>
-            <shell:action class="org.apache.unomi.metrics.commands.CalleeStatusCommand">
+            <shell:action class="org.apache.unomi.metrics.commands.CallerStatusCommand">
                 <shell:property name="metricsService" ref="metricsServiceImpl" />
             </shell:action>
         </shell:command>
