@@ -282,7 +282,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setItemClassesToCache(String itemClassesToCache) {
         this.itemClassesToCache = itemClassesToCache;
-        if (itemClassesToCache != null && itemClassesToCache.trim().length() > 0) {
+        if (StringUtils.isNotBlank(itemClassesToCache)) {
             String[] itemClassesToCacheParts = itemClassesToCache.split(",");
             if (itemClassesToCacheParts != null) {
                 itemClassesToCacheSet.clear();
