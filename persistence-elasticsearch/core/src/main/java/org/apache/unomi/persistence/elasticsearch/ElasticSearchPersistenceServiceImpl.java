@@ -324,8 +324,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 Settings.Builder transportSettings = Settings.builder()
                         .put(CLUSTER_NAME, clusterName);
 
-                if (transportClientClassName != null && transportClientClassName.trim().length() > 0 &&
-                        transportClientJarDirectory != null && transportClientJarDirectory.trim().length() > 0) {
+                if (StringUtils.isNotBlank(transportClientClassName) && StringUtils.isNotBlank(transportClientJarDirectory)) {
                     logger.info("Connecting to ElasticSearch persistence backend using transport class " + transportClientClassName +
                             " with JAR directory "+transportClientJarDirectory +
                             " using cluster name " + clusterName + " and index name " + indexName + "...");
@@ -1843,7 +1842,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
         ChildFirstClassLoader childFirstClassLoader = new ChildFirstClassLoader(this.getClass().getClassLoader(), urls.toArray(new URL[urls.size()]));
 
-        if (transportClientProperties != null && transportClientProperties.trim().length() > 0) {
+        if (StringUtils.isNotBlank(transportClientProperties)) {
             String[] clientProperties = transportClientProperties.split(",");
             if (clientProperties.length > 0) {
                 for (String clientProperty : clientProperties) {
