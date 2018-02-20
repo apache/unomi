@@ -61,7 +61,7 @@ public class ActionListCommand extends OsgiCommandSupport{
             dataTable.addRow(rowData.toArray(new Comparable[rowData.size()]));
         }
 
-        dataTable.sort(new DataTable.SortCriteria(2, DataTable.SortOrder.ASCENDING));
+        dataTable.sort(new DataTable.SortCriteria(1, DataTable.SortOrder.ASCENDING));
 
         if (csv) {
             System.out.println(dataTable.toCSV(headers));

@@ -66,6 +66,8 @@ public class SegmentListCommand extends OsgiCommandSupport {
             dataTable.addRow(rowData.toArray(new Comparable[rowData.size()]));
         }
 
+        dataTable.sort(new DataTable.SortCriteria(4, DataTable.SortOrder.ASCENDING));
+
         if (csv) {
             System.out.println(dataTable.toCSV(headers));
             return null;
