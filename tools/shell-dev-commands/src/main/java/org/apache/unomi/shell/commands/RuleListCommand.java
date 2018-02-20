@@ -18,10 +18,6 @@ package org.apache.unomi.shell.commands;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.karaf.shell.commands.Command;
-import org.apache.karaf.shell.commands.Option;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
-import org.apache.karaf.shell.table.Row;
-import org.apache.karaf.shell.table.ShellTable;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.rules.RuleStatistics;
 import org.apache.unomi.api.services.RulesService;
@@ -32,23 +28,17 @@ import java.util.Map;
 import java.util.Set;
 
 @Command(scope = "rule", name = "list", description = "This will list all the rules deployed in the Apache Unomi Context Server")
-public class RuleListCommand extends OsgiCommandSupport {
+public class RuleListCommand extends ListCommandSupport {
 
     private RulesService rulesService;
-
-    @Option(name = "--csv", description = "Output table in CSV format", required = false, multiValued = false)
-    boolean csv;
 
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
     }
 
     @Override
-    protected Object doExecute() throws Exception {
-        Set<Metadata> ruleMetadatas = rulesService.getRuleMetadatas();
-        Map<String,RuleStatistics> allRuleStatistics = rulesService.getAllRuleStatistics();
-
-        String[] headers = {
+    protected String[] getHeaders() {
+        return new String[] {
                 "Activated",
                 "Hidden",
                 "Read-only",
@@ -61,6 +51,12 @@ public class RuleListCommand extends OsgiCommandSupport {
                 "Conditions [ms]",
                 "Actions [ms]"
         };
+    }
+
+    @Override
+    protected DataTable buildDataTable() {
+        Set<Metadata> ruleMetadatas = rulesService.getRuleMetadatas();
+        Map<String,RuleStatistics> allRuleStatistics = rulesService.getAllRuleStatistics();
 
         DataTable dataTable = new DataTable();
         for (Metadata ruleMetadata : ruleMetadatas) {
@@ -89,27 +85,7 @@ public class RuleListCommand extends OsgiCommandSupport {
         dataTable.sort(new DataTable.SortCriteria(9, DataTable.SortOrder.DESCENDING),
                 new DataTable.SortCriteria(10, DataTable.SortOrder.DESCENDING),
                 new DataTable.SortCriteria(5, DataTable.SortOrder.ASCENDING));
-
-        if (csv) {
-            System.out.println(dataTable.toCSV(headers));
-            return null;
-        }
-
-        ShellTable shellTable = new ShellTable();
-        for (String header : headers) {
-            shellTable.column(header);
-        }
-        for (DataTable.Row dataTableRow : dataTable.getRows()) {
-            ArrayList<Object> rowData = new ArrayList<Object>();
-            for (int i=0 ; i < dataTable.getMaxColumns(); i++) {
-                rowData.add(dataTableRow.getData(i));
-            }
-            Row row = shellTable.addRow();
-            row.addContent(rowData);
-        }
-
-        shellTable.print(System.out);
-
-        return null;
+        return dataTable;
     }
+
 }

@@ -14,47 +14,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.metrics.commands;
+package org.apache.unomi.shell.commands;
 
-import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.commands.Option;
+import org.apache.karaf.shell.console.OsgiCommandSupport;
 import org.apache.karaf.shell.table.Row;
 import org.apache.karaf.shell.table.ShellTable;
 import org.apache.unomi.common.DataTable;
-import org.apache.unomi.metrics.Metric;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
-@Command(scope = "metrics", name = "list", description = "This will list all the metrics")
-public class ListCommand extends MetricsCommandSupport {
+/**
+ * A utility class to make it easier to build tables for listing Apache Unomi objects.
+ */
+public abstract class ListCommandSupport extends OsgiCommandSupport {
 
     @Option(name = "--csv", description = "Output table in CSV format", required = false, multiValued = false)
     boolean csv;
 
+    /**
+     * Returns a String array containing the header names for the table
+     * @return a String array with the headers that will be used to render the table
+     */
+    protected abstract String[] getHeaders();
+
+    /**
+     * Build a DataTable object that contains all the data for the object. Note that you might want to sort the data
+     * inside this method.
+     * @return a populated (and optionally sorted) DataTable object ready to be rendered either as a rendered table
+     * or as CSV
+     */
+    protected abstract DataTable buildDataTable();
+
     @Override
     protected Object doExecute() throws Exception {
 
-        System.out.println("Metrics service status: " + (metricsService.isActivated() ? "active" : "inactive"));
+        DataTable dataTable = buildDataTable();
 
-        Map<String,Metric> metrics = metricsService.getMetrics();
-
-        String[] headers = {
-                "Name",
-                "Callers",
-                "Count",
-                "Time [ms]"
-        };
-
-        DataTable dataTable = new DataTable();
-        for (Map.Entry<String,Metric> metricEntry : metrics.entrySet()) {
-            Metric metric = metricEntry.getValue();
-            dataTable.addRow(metric.getName(), metric.getCallerCounts().size(), metric.getTotalCount(), metric.getTotalTime());
-        }
-        dataTable.sort(new DataTable.SortCriteria(3, DataTable.SortOrder.DESCENDING),
-                new DataTable.SortCriteria(2, DataTable.SortOrder.DESCENDING),
-                new DataTable.SortCriteria(0, DataTable.SortOrder.ASCENDING));
+        String[] headers = getHeaders();
 
         if (csv) {
             System.out.println(dataTable.toCSV(headers));
@@ -62,21 +59,20 @@ public class ListCommand extends MetricsCommandSupport {
         }
 
         ShellTable shellTable = new ShellTable();
-
         for (String header : headers) {
             shellTable.column(header);
         }
-
-        for (DataTable.Row dataTableRow :dataTable.getRows()) {
-            List<Object> rowData = new ArrayList<Object>();
-            rowData.add(dataTableRow.getData(0));
-            rowData.add(dataTableRow.getData(1));
-            rowData.add(dataTableRow.getData(2));
-            rowData.add(dataTableRow.getData(3));
+        for (DataTable.Row dataTableRow : dataTable.getRows()) {
+            ArrayList<Object> rowData = new ArrayList<Object>();
+            for (int i=0 ; i < dataTable.getMaxColumns(); i++) {
+                rowData.add(dataTableRow.getData(i));
+            }
             Row row = shellTable.addRow();
             row.addContent(rowData);
         }
+
         shellTable.print(System.out);
         return null;
     }
+
 }
