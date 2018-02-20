@@ -25,6 +25,7 @@
                              update-strategy="reload" placeholder-prefix="${base.">
         <cm:default-properties>
             <cm:property name="useEventToUpdateProfile" value="false" />
+            <cm:property name="usePropertyConditionOptimizations" value="true" />
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -115,7 +116,9 @@
         <service-properties>
             <entry key="conditionEvaluatorId" value="propertyConditionEvaluator"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator"/>
+        <bean class="org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator">
+            <property name="usePropertyConditionOptimizations" value="${base.usePropertyConditionOptimizations}" />
+        </bean>
     </service>
 
     <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">

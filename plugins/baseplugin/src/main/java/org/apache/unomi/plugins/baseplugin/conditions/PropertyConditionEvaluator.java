@@ -38,7 +38,6 @@ import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.LongSupplier;
 import java.util.regex.Pattern;
 
@@ -53,6 +52,11 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     public static final String NOT_OPTIMIZED_MARKER = "$$$###NOT_OPTIMIZED###$$$";
 
     private Map<String, Map<String, ExpressionAccessor>> expressionCache = new HashMap<>(64);
+    private boolean usePropertyConditionOptimizations = true;
+
+    public void setUsePropertyConditionOptimizations(boolean usePropertyConditionOptimizations) {
+        this.usePropertyConditionOptimizations = usePropertyConditionOptimizations;
+    }
 
     private int compare(Object actualValue, String expectedValue, Object expectedValueDate, Object expectedValueInteger, Object expectedValueDateExpr) {
         if (expectedValue == null && expectedValueDate == null && expectedValueInteger == null && getDate(expectedValueDateExpr) == null) {
@@ -246,9 +250,11 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     }
 
     protected Object getPropertyValue(Item item, String expression) throws Exception {
-        Object result = getHardcodedPropertyValue(item, expression);
-        if (!NOT_OPTIMIZED_MARKER.equals(result)) {
-            return result;
+        if (usePropertyConditionOptimizations) {
+            Object result = getHardcodedPropertyValue(item, expression);
+            if (!NOT_OPTIMIZED_MARKER.equals(result)) {
+                return result;
+            }
         }
         return getOGNLPropertyValue(item, expression);
     }
