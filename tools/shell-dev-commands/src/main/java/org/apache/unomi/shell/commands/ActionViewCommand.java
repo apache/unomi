@@ -26,7 +26,7 @@ import org.apache.unomi.persistence.spi.CustomObjectMapper;
 @Command(scope = "action", name = "view", description = "This will display a single action deployed in the Apache Unomi Context Server")
 public class ActionViewCommand extends OsgiCommandSupport {
 
-    DefinitionsService definitionsService;
+    private DefinitionsService definitionsService;
 
     @Argument(index = 0, name = "actionId", description = "The identifier for the action", required = true, multiValued = false)
     String actionTypeIdentifier;

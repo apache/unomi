@@ -23,7 +23,8 @@ import org.apache.unomi.api.services.RulesService;
 @Command(scope = "rule", name = "reset-stats", description = "This command will reset the rule statistics")
 public class RuleResetStatsCommand extends OsgiCommandSupport {
 
-    RulesService rulesService;
+    private RulesService rulesService;
+
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
     }

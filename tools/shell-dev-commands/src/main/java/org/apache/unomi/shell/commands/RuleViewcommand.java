@@ -26,7 +26,7 @@ import org.apache.unomi.persistence.spi.CustomObjectMapper;
 @Command(scope = "rule", name = "view", description = "This will allows to view a rule in the Apache Unomi Context Server")
 public class RuleViewcommand extends OsgiCommandSupport {
 
-    RulesService rulesService;
+    private RulesService rulesService;
 
     @Argument(index = 0, name = "rule", description = "The identifier for the rule", required = true, multiValued = false)
     String ruleIdentifier;

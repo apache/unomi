@@ -34,10 +34,7 @@ import java.util.Set;
 @Command(scope = "rule", name = "list", description = "This will list all the rules deployed in the Apache Unomi Context Server")
 public class RuleListCommand extends OsgiCommandSupport {
 
-    RulesService rulesService;
-
-    @Option(name = "--no-format", description = "Disable table rendered output", required = false, multiValued = false)
-    boolean noFormat;
+    private RulesService rulesService;
 
     @Option(name = "--csv", description = "Output table in CSV format", required = false, multiValued = false)
     boolean csv;
@@ -67,7 +64,7 @@ public class RuleListCommand extends OsgiCommandSupport {
 
         DataTable dataTable = new DataTable();
         for (Metadata ruleMetadata : ruleMetadatas) {
-            ArrayList<Comparable> rowData = new ArrayList<Comparable>();
+            ArrayList<Comparable> rowData = new ArrayList<>();
             String ruleId = ruleMetadata.getId();
             rowData.add(ruleMetadata.isEnabled() ? "x" : "");
             rowData.add(ruleMetadata.isHidden() ? "x" : "");
@@ -111,7 +108,7 @@ public class RuleListCommand extends OsgiCommandSupport {
             row.addContent(rowData);
         }
 
-        shellTable.print(System.out, !noFormat);
+        shellTable.print(System.out);
 
         return null;
     }

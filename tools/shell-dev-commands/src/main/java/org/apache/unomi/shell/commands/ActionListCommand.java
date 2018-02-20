@@ -32,17 +32,14 @@ import java.util.Collection;
 @Command(scope = "action", name = "list", description = "This will list all the actions deployed in the Apache Unomi Context Server")
 public class ActionListCommand extends OsgiCommandSupport{
 
-    DefinitionsService definitionsService;
+    private DefinitionsService definitionsService;
+
+    @Option(name = "--csv", description = "Output table in CSV format", required = false, multiValued = false)
+    boolean csv;
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
     }
-
-    @Option(name = "--no-format", description = "Disable table rendered output", required = false, multiValued = false)
-    boolean noFormat;
-
-    @Option(name = "--csv", description = "Output table in CSV format", required = false, multiValued = false)
-    boolean csv;
 
     @Override
     protected Object doExecute() throws Exception {
@@ -57,7 +54,7 @@ public class ActionListCommand extends OsgiCommandSupport{
         DataTable dataTable = new DataTable();
 
         for (ActionType actionType : allActions) {
-            ArrayList<Object> rowData = new ArrayList<Object>();
+            ArrayList<Comparable> rowData = new ArrayList<>();
             rowData.add(actionType.getItemId());
             rowData.add(actionType.getMetadata().getName());
             rowData.add(StringUtils.join(actionType.getMetadata().getSystemTags(), ","));
@@ -84,7 +81,7 @@ public class ActionListCommand extends OsgiCommandSupport{
             row.addContent(rowData);
         }
 
-        shellTable.print(System.out, !noFormat);
+        shellTable.print(System.out);
         return null;
     }
 }

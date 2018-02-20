@@ -34,15 +34,12 @@ public class SegmentListCommand extends OsgiCommandSupport {
 
     private SegmentService segmentService;
 
+    @Option(name = "--csv", description = "Output table in CSV format", required = false, multiValued = false)
+    boolean csv;
+
     public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
     }
-
-    @Option(name = "--no-format", description = "Disable table rendered output", required = false, multiValued = false)
-    boolean noFormat;
-
-    @Option(name = "--csv", description = "Output table in CSV format", required = false, multiValued = false)
-    boolean csv;
 
     @Override
     protected Object doExecute() throws Exception {
@@ -59,7 +56,7 @@ public class SegmentListCommand extends OsgiCommandSupport {
 
         DataTable dataTable = new DataTable();
         for (Metadata metadata : segmentMetadatas.getList()) {
-            ArrayList<Object> rowData = new ArrayList<Object>();
+            ArrayList<Comparable> rowData = new ArrayList<>();
             rowData.add(metadata.isEnabled() ? "x" : "");
             rowData.add(metadata.isHidden() ? "x" : "");
             rowData.add(metadata.getId());
@@ -67,6 +64,11 @@ public class SegmentListCommand extends OsgiCommandSupport {
             rowData.add(metadata.getName());
             rowData.add(StringUtils.join(metadata.getSystemTags(), ","));
             dataTable.addRow(rowData.toArray(new Comparable[rowData.size()]));
+        }
+
+        if (csv) {
+            System.out.println(dataTable.toCSV(headers));
+            return null;
         }
 
         ShellTable shellTable = new ShellTable();
@@ -81,7 +83,7 @@ public class SegmentListCommand extends OsgiCommandSupport {
             Row row = shellTable.addRow();
             row.addContent(rowData);
         }
-        shellTable.print(System.out, !noFormat);
+        shellTable.print(System.out);
 
         return null;
     }
