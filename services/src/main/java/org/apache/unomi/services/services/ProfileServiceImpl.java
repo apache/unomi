@@ -99,6 +99,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 
+        loadPropertyTypesFromPersistence();
         processBundleStartup(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
             if (bundle.getBundleContext() != null) {
@@ -154,33 +155,37 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                try {
-                    allPropertyTypes = persistenceService.getAllItems(PropertyType.class, 0, -1, "rank").getList();
-                    Map<String,PropertyType> newPropertyTypesById = new HashMap<>();
-                    Map<String,List<PropertyType>> newPropertyTypesByTags = new HashMap<>();
-                    Map<String,List<PropertyType>> newPropertyTypesBySystemTags = new HashMap<>();
-                    Map<String,List<PropertyType>> newPropertyTypesByTarget = new HashMap<>();
-                    for (PropertyType propertyType : allPropertyTypes) {
-                        newPropertyTypesById.put(propertyType.getItemId(), propertyType);
-                        for (String propertyTypeTag : propertyType.getMetadata().getTags()) {
-                            updateListMap(newPropertyTypesByTags, propertyType, propertyTypeTag);
-                        }
-                        for (String propertyTypeSystemTag : propertyType.getMetadata().getSystemTags()) {
-                            updateListMap(newPropertyTypesBySystemTags, propertyType, propertyTypeSystemTag);
-                        }
-                        updateListMap(newPropertyTypesByTarget, propertyType, propertyType.getTarget());
-                    }
-                    propertyTypesById = newPropertyTypesById;
-                    propertyTypesByTags = newPropertyTypesByTags;
-                    propertyTypesBySystemTags = newPropertyTypesBySystemTags;
-                    propertyTypesByTarget = newPropertyTypesByTarget;
-                } catch (Exception e) {
-                    logger.error("Error loading property types from persistence service", e);
-                }
+                loadPropertyTypesFromPersistence();
             }
         };
-        allPropertyTypesTimer.scheduleAtFixedRate(task, 0, 5000);
+        allPropertyTypesTimer.scheduleAtFixedRate(task, 5000, 5000);
         logger.info("Scheduled task for property type loading each 5s");
+    }
+
+    private void loadPropertyTypesFromPersistence() {
+        try {
+            allPropertyTypes = persistenceService.getAllItems(PropertyType.class, 0, -1, "rank").getList();
+            Map<String,PropertyType> newPropertyTypesById = new HashMap<>();
+            Map<String,List<PropertyType>> newPropertyTypesByTags = new HashMap<>();
+            Map<String,List<PropertyType>> newPropertyTypesBySystemTags = new HashMap<>();
+            Map<String,List<PropertyType>> newPropertyTypesByTarget = new HashMap<>();
+            for (PropertyType propertyType : allPropertyTypes) {
+                newPropertyTypesById.put(propertyType.getItemId(), propertyType);
+                for (String propertyTypeTag : propertyType.getMetadata().getTags()) {
+                    updateListMap(newPropertyTypesByTags, propertyType, propertyTypeTag);
+                }
+                for (String propertyTypeSystemTag : propertyType.getMetadata().getSystemTags()) {
+                    updateListMap(newPropertyTypesBySystemTags, propertyType, propertyTypeSystemTag);
+                }
+                updateListMap(newPropertyTypesByTarget, propertyType, propertyType.getTarget());
+            }
+            propertyTypesById = newPropertyTypesById;
+            propertyTypesByTags = newPropertyTypesByTags;
+            propertyTypesBySystemTags = newPropertyTypesBySystemTags;
+            propertyTypesByTarget = newPropertyTypesByTarget;
+        } catch (Exception e) {
+            logger.error("Error loading property types from persistence service", e);
+        }
     }
 
     private void updateListMap(Map<String, List<PropertyType>> listMap, PropertyType propertyType, String key) {
