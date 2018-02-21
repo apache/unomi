@@ -842,7 +842,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                     }
                     logger.info("Predefined persona with id {} registered", itemId);
                 } else {
-                    logger.info("The predefined persona with id {} is already registered, this persona type will be skipped", itemId);
+                    logger.info("The predefined persona with id {} is already registered, this persona will be skipped", itemId);
                 }
             } catch (IOException e) {
                 logger.error("Error while loading persona " + predefinedPersonaURL, e);
