@@ -19,6 +19,7 @@ package org.apache.unomi.api.services;
 
 import org.apache.unomi.api.ClusterNode;
 
+import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 
@@ -49,4 +50,11 @@ public interface ClusterService {
      */
     void purge(final String scope);
 
+    /**
+     * This function will send an event to the nodes of the cluster
+     * The function takes a Serializable to avoid dependency on any clustering framework
+     *
+     * @param event this object will be cast to {@link org.apache.karaf.cellar.core.event.Event}
+     */
+    void sendEvent(Serializable event);
 }

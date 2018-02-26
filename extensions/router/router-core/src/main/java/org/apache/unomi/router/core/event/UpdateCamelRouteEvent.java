@@ -14,14 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.router.api;
+package org.apache.unomi.router.core.event;
+
+import org.apache.karaf.cellar.core.event.Event;
 
 /**
- * Created by amidani on 18/10/2017.
+ * @author dgaillard
  */
-public interface IRouterCamelContext {
+public class UpdateCamelRouteEvent extends Event {
+    private String routeId;
+    private Object configuration;
 
-    void killExistingRoute(String routeId, boolean fireEvent) throws Exception;
+    public UpdateCamelRouteEvent(String id) {
+        super(id);
+    }
 
-    void updateProfileReaderRoute(Object configuration, boolean fireEvent) throws Exception;
+    public String getRouteId() {
+        return routeId;
+    }
+
+    public void setRouteId(String routeId) {
+        this.routeId = routeId;
+    }
+
+    public Object getConfiguration() {
+        return configuration;
+    }
+
+    public void setConfiguration(Object configuration) {
+        this.configuration = configuration;
+    }
 }

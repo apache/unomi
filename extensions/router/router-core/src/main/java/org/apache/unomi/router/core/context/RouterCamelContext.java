@@ -21,6 +21,7 @@ import org.apache.camel.Route;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.core.osgi.OsgiDefaultCamelContext;
 import org.apache.camel.model.RouteDefinition;
+import org.apache.unomi.api.services.ClusterService;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -30,6 +31,7 @@ import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.api.services.ProfileExportService;
+import org.apache.unomi.router.core.event.UpdateCamelRouteEvent;
 import org.apache.unomi.router.core.processor.ExportRouteCompletionProcessor;
 import org.apache.unomi.router.core.processor.ImportConfigByFileNameProcessor;
 import org.apache.unomi.router.core.processor.ImportRouteCompletionProcessor;
@@ -70,6 +72,7 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
     private String allowedEndpoints;
     private BundleContext bundleContext;
     private ConfigSharingService configSharingService;
+    private ClusterService clusterService;
 
     public void setExecHistorySize(String execHistorySize) {
         this.execHistorySize = execHistorySize;
@@ -85,6 +88,10 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
 
     public void setConfigSharingService(ConfigSharingService configSharingService) {
         this.configSharingService = configSharingService;
+    }
+
+    public void setClusterService(ClusterService clusterService) {
+        this.clusterService = clusterService;
     }
 
     public void initCamelContext() throws Exception {
@@ -160,10 +167,9 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
         exportConfigurationService.setRouterCamelContext(this);
 
         logger.info("Camel Context {} initialized successfully.");
-
     }
 
-    public void killExistingRoute(String routeId) throws Exception {
+    public void killExistingRoute(String routeId, boolean fireEvent) throws Exception {
         //Active routes
         Route route = camelContext.getRoute(routeId);
         if (route != null) {
@@ -172,18 +178,24 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
                 camelContext.removeRouteDefinition(routeDefinition);
             }
         }
-    }
 
-    public void updateProfileReaderRoute(Object configuration) throws Exception {
-        if (configuration instanceof ImportConfiguration) {
-            updateProfileImportReaderRoute((ImportConfiguration) configuration);
-        } else {
-            updateProfileExportReaderRoute((ExportConfiguration) configuration);
+        if (fireEvent) {
+            UpdateCamelRouteEvent event = new UpdateCamelRouteEvent("org.apache.unomi.router.event.remove");
+            event.setRouteId(routeId);
+            clusterService.sendEvent(event);
         }
     }
 
-    private void updateProfileImportReaderRoute(ImportConfiguration importConfiguration) throws Exception {
-        killExistingRoute(importConfiguration.getItemId());
+    public void updateProfileReaderRoute(Object configuration, boolean fireEvent) throws Exception {
+        if (configuration instanceof ImportConfiguration) {
+            updateProfileImportReaderRoute((ImportConfiguration) configuration, fireEvent);
+        } else {
+            updateProfileExportReaderRoute((ExportConfiguration) configuration, fireEvent);
+        }
+    }
+
+    private void updateProfileImportReaderRoute(ImportConfiguration importConfiguration, boolean fireEvent) throws Exception {
+        killExistingRoute(importConfiguration.getItemId(), false);
         //Handle transforming an import config oneshot <--> recurrent
         if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(importConfiguration.getConfigType())) {
             ProfileImportFromSourceRouteBuilder builder = new ProfileImportFromSourceRouteBuilder(kafkaProps, configType);
@@ -194,11 +206,17 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
             builder.setJacksonDataFormat(jacksonDataFormat);
             builder.setContext(camelContext);
             camelContext.addRoutes(builder);
+
+            if (fireEvent) {
+                UpdateCamelRouteEvent event = new UpdateCamelRouteEvent("org.apache.unomi.router.event.import");
+                event.setConfiguration(importConfiguration);
+                clusterService.sendEvent(event);
+            }
         }
     }
 
-    private void updateProfileExportReaderRoute(ExportConfiguration exportConfiguration) throws Exception {
-        killExistingRoute(exportConfiguration.getItemId());
+    private void updateProfileExportReaderRoute(ExportConfiguration exportConfiguration, boolean fireEvent) throws Exception {
+        killExistingRoute(exportConfiguration.getItemId(), false);
         //Handle transforming an import config oneshot <--> recurrent
         if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(exportConfiguration.getConfigType())) {
             ProfileExportCollectRouteBuilder profileExportCollectRouteBuilder = new ProfileExportCollectRouteBuilder(kafkaProps, configType);
@@ -209,6 +227,12 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
             profileExportCollectRouteBuilder.setJacksonDataFormat(jacksonDataFormat);
             profileExportCollectRouteBuilder.setContext(camelContext);
             camelContext.addRoutes(profileExportCollectRouteBuilder);
+
+            if (fireEvent) {
+                UpdateCamelRouteEvent event = new UpdateCamelRouteEvent("org.apache.unomi.router.event.export");
+                event.setConfiguration(exportConfiguration);
+                clusterService.sendEvent(event);
+            }
         }
     }
 

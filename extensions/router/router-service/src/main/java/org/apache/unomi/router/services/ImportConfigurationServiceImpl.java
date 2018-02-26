@@ -53,7 +53,7 @@ public class ImportConfigurationServiceImpl extends AbstractConfigurationService
         }
         if(updateRunningRoute) {
             try {
-                routerCamelContext.updateProfileReaderRoute(importConfiguration);
+                routerCamelContext.updateProfileReaderRoute(importConfiguration, true);
             } catch (Exception e) {
                 logger.error("Error when trying to save/update running Apache Camel Route: {}", importConfiguration.getItemId());
             }
@@ -65,7 +65,7 @@ public class ImportConfigurationServiceImpl extends AbstractConfigurationService
     @Override
     public void delete(String configId) {
         try {
-            routerCamelContext.killExistingRoute(configId);
+            routerCamelContext.killExistingRoute(configId, true);
         } catch (Exception e) {
             logger.error("Error when trying to delete running Apache Camel Route: {}", configId);
         }

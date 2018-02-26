@@ -22,6 +22,7 @@ import org.apache.karaf.cellar.config.ClusterConfigurationEvent;
 import org.apache.karaf.cellar.config.Constants;
 import org.apache.karaf.cellar.core.*;
 import org.apache.karaf.cellar.core.control.SwitchStatus;
+import org.apache.karaf.cellar.core.event.Event;
 import org.apache.karaf.cellar.core.event.EventProducer;
 import org.apache.karaf.cellar.core.event.EventType;
 import org.apache.unomi.api.ClusterNode;
@@ -222,6 +223,14 @@ public class ClusterServiceImpl implements ClusterService {
     @Override
     public void purge(String scope) {
         persistenceService.purge(scope);
+    }
+
+    @Override
+    public void sendEvent(Serializable eventObject) {
+        Event event = (Event) eventObject;
+        event.setSourceGroup(group);
+        event.setSourceNode(karafCellarClusterManager.getNode());
+        karafCellarEventProducer.produce(event);
     }
 
     /**
