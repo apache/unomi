@@ -67,7 +67,7 @@
         <cxf.version>3.1.10</cxf.version>
         <version.jackson.core>2.8.6</version.jackson.core>
         <version.jackson.jaxb>2.8.6</version.jackson.jaxb>
-        <version.karaf>4.1.1</version.karaf>
+        <version.karaf>4.1.5</version.karaf>
         <version.karaf.cellar>4.1.0</version.karaf.cellar>
         <version.pax.exam>4.11.2</version.pax.exam>
         <elasticsearch.version>5.6.3</elasticsearch.version>
@@ -79,6 +79,16 @@
 
         <gatling.version>2.1.2</gatling.version>
         <scala-maven-plugin.version>3.2.0</scala-maven-plugin.version>
+
+        <!-- Librairies for Karaf packaging -->
+        <xerces.version>2.11.0_1</xerces.version>
+        <servicemix.specs.version>2.9.0</servicemix.specs.version>
+        <xalan.bundle.version>2.7.2_3</xalan.bundle.version>
+        <xalan-serializer.bundle.version>2.7.2_1</xalan-serializer.bundle.version>
+        <jna.version>4.5.0</jna.version>
+        <httpclient-osgi.version>4.5.5</httpclient-osgi.version>
+        <httpcore-osgi.version>4.4.9</httpcore-osgi.version>
+
     </properties>
 
     <mailingLists>
@@ -254,6 +264,30 @@
         <repository>
             <id>jahia.3rdparty</id>
             <url>https://devtools.jahia.com/nexus/content/repositories/thirdparty-releases/</url>
+        </repository>
+        <!-- Apache snapshots -->
+        <repository>
+            <id>apache-snapshots</id>
+            <name>Apache Snapshots Repository</name>
+            <url>http://repository.apache.org/content/groups/snapshots-group</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <!-- OPS4J SNAPSHOT repository -->
+        <repository>
+            <id>ops4j.sonatype.snapshots.deploy</id>
+            <name>OPS4J snapshot repository</name>
+            <url>https://oss.sonatype.org/content/repositories/ops4j-snapshots/</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
         </repository>
     </repositories>
 
@@ -643,7 +677,6 @@
                 <classifier>features</classifier>
                 <version>${version.karaf}</version>
                 <type>xml</type>
-                <scope>runtime</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.karaf.features</groupId>
@@ -705,13 +738,18 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient-osgi</artifactId>
-                <version>4.3.6</version>
+                <version>${httpclient-osgi.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient-osgi</artifactId>
+                <version>${httpclient-osgi.version}</version>
                 <type>bundle</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore-osgi</artifactId>
-                <version>4.3.3</version>
+                <version>${httpcore-osgi.version}</version>
             </dependency>
 
             <!-- Dependencies for pax exam karaf container -->

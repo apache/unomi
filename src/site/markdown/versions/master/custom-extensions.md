@@ -292,7 +292,7 @@ content:
     
         <!-- Action executors -->
     
-        <service auto-export="interfaces">
+        <service interface="org.apache.unomi.api.actions.ActionExecutor">
             <service-properties>
                 <entry key="actionExecutorId" value="addToLists"/>
             </service-properties>

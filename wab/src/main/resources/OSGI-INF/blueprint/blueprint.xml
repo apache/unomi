@@ -90,7 +90,12 @@
         <property name="profileIdCookieName" value="${web.contextserver.profileIdCookieName}"/>
     </bean>
 
-    <service id="clientServletService" auto-export="interfaces" ref="clientServlet">
+    <service id="clientServletService" ref="clientServlet">
+        <interfaces>
+            <value>javax.servlet.Servlet</value>
+            <value>javax.servlet.ServletConfig</value>
+            <value>java.io.Serializable</value>
+        </interfaces>
         <service-properties>
             <entry key="urlPatterns" value="/client/*"/>
         </service-properties>

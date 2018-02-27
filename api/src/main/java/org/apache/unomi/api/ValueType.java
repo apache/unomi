@@ -17,7 +17,6 @@
 
 package org.apache.unomi.api;
 
-import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -25,7 +24,6 @@ import java.util.Set;
 /**
  * A value type to be used to constrain property values.
  */
-@XmlRootElement
 public class ValueType implements PluginType {
 
     private String id;

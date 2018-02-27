@@ -94,9 +94,11 @@ public class ContextServlet extends HttpServlet {
 
         String cookieProfileId = null;
         Cookie[] cookies = httpServletRequest.getCookies();
-        for (Cookie cookie : cookies) {
-            if (profileIdCookieName.equals(cookie.getName())) {
-                cookieProfileId = cookie.getValue();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (profileIdCookieName.equals(cookie.getName())) {
+                    cookieProfileId = cookie.getValue();
+                }
             }
         }
 

@@ -18,8 +18,8 @@ package org.apache.unomi.shell.commands;
 
 import org.apache.karaf.shell.commands.Option;
 import org.apache.karaf.shell.console.OsgiCommandSupport;
-import org.apache.karaf.shell.table.Row;
-import org.apache.karaf.shell.table.ShellTable;
+import org.apache.karaf.shell.support.table.Row;
+import org.apache.karaf.shell.support.table.ShellTable;
 import org.apache.unomi.common.DataTable;
 
 import java.util.ArrayList;

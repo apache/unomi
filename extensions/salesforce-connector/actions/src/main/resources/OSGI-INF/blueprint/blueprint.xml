@@ -23,7 +23,7 @@
     <reference id="sfdcService"
                interface="org.apache.unomi.sfdc.services.SFDCService"/>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="sfdcCreateOrUpdateLead"/>
         </service-properties>
@@ -32,7 +32,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="sfdcUpdateProfileFromLead"/>
         </service-properties>

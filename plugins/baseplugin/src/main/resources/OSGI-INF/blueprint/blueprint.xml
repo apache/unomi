@@ -183,7 +183,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="updateProperties"/>
         </service-properties>
@@ -193,7 +193,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="modifyConsent"/>
         </service-properties>

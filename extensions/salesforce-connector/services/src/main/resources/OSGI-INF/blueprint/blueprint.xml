@@ -65,6 +65,6 @@
         <property name="persistenceService" ref="persistenceService" />
     </bean>
 
-    <service id="sfdcService" ref="sfdcServiceImpl" auto-export="interfaces"/>
+    <service id="sfdcService" ref="sfdcServiceImpl" interface="org.apache.unomi.sfdc.services.SFDCService"/>
 
 </blueprint>
