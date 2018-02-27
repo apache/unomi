@@ -74,6 +74,10 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
     private ConfigSharingService configSharingService;
     private ClusterService clusterService;
 
+    public static String EVENT_ID_REMOVE = "org.apache.unomi.router.event.remove";
+    public static String EVENT_ID_IMPORT = "org.apache.unomi.router.event.import";
+    public static String EVENT_ID_EXPORT = "org.apache.unomi.router.event.export";
+
     public void setExecHistorySize(String execHistorySize) {
         this.execHistorySize = execHistorySize;
     }
@@ -180,7 +184,7 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
         }
 
         if (fireEvent) {
-            UpdateCamelRouteEvent event = new UpdateCamelRouteEvent("org.apache.unomi.router.event.remove");
+            UpdateCamelRouteEvent event = new UpdateCamelRouteEvent(EVENT_ID_REMOVE);
             event.setRouteId(routeId);
             clusterService.sendEvent(event);
         }
@@ -208,7 +212,7 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
             camelContext.addRoutes(builder);
 
             if (fireEvent) {
-                UpdateCamelRouteEvent event = new UpdateCamelRouteEvent("org.apache.unomi.router.event.import");
+                UpdateCamelRouteEvent event = new UpdateCamelRouteEvent(EVENT_ID_IMPORT);
                 event.setConfiguration(importConfiguration);
                 clusterService.sendEvent(event);
             }
@@ -229,7 +233,7 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
             camelContext.addRoutes(profileExportCollectRouteBuilder);
 
             if (fireEvent) {
-                UpdateCamelRouteEvent event = new UpdateCamelRouteEvent("org.apache.unomi.router.event.export");
+                UpdateCamelRouteEvent event = new UpdateCamelRouteEvent(EVENT_ID_EXPORT);
                 event.setConfiguration(exportConfiguration);
                 clusterService.sendEvent(event);
             }
