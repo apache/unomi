@@ -147,8 +147,7 @@ public class ClusterServiceImpl implements ClusterService {
 
                 configurations.put(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION, karafCellarClusterNodeConfiguration);
                 ClusterConfigurationEvent clusterConfigurationEvent = new ClusterConfigurationEvent(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION);
-                clusterConfigurationEvent.setSourceGroup(group);
-                karafCellarEventProducer.produce(clusterConfigurationEvent);
+                sendEvent(clusterConfigurationEvent);
             }
 
             nodeStatisticsUpdateTimer = new Timer();
@@ -303,8 +302,6 @@ public class ClusterServiceImpl implements ClusterService {
         double systemLoadAverage = operatingSystemMXBean.getSystemLoadAverage();
 
         ClusterSystemStatisticsEvent clusterSystemStatisticsEvent = new ClusterSystemStatisticsEvent("org.apache.unomi.cluster.system.statistics");
-        clusterSystemStatisticsEvent.setSourceGroup(group);
-        clusterSystemStatisticsEvent.setSourceNode(karafCellarClusterManager.getNode());
         Map<String,Serializable> systemStatistics = new TreeMap<>();
         ArrayList<Double> systemLoadAverageArray = new ArrayList<>();
         systemLoadAverageArray.add(systemLoadAverage);
@@ -313,7 +310,7 @@ public class ClusterServiceImpl implements ClusterService {
         systemStatistics.put("uptime", uptime);
         clusterSystemStatisticsEvent.setStatistics(systemStatistics);
         nodeSystemStatistics.put(karafCellarClusterManager.getNode().getId(), systemStatistics);
-        karafCellarEventProducer.produce(clusterSystemStatisticsEvent);
+        sendEvent(clusterSystemStatisticsEvent);
     }
 
 }
