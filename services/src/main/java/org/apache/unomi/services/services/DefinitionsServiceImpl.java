@@ -70,7 +70,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
         // process already started bundles
         for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null) {
+            if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
                 processBundleStartup(bundle.getBundleContext());
             }
         }

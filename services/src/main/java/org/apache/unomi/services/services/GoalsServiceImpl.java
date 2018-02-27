@@ -79,7 +79,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         loadPredefinedGoals(bundleContext);
         loadPredefinedCampaigns(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null) {
+            if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
                 loadPredefinedGoals(bundle.getBundleContext());
                 loadPredefinedCampaigns(bundle.getBundleContext());
             }

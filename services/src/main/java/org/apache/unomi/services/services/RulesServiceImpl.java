@@ -100,7 +100,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
         loadPredefinedRules(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null) {
+            if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
                 loadPredefinedRules(bundle.getBundleContext());
             }
         }

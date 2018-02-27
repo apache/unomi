@@ -118,7 +118,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         loadPredefinedSegments(bundleContext);
         loadPredefinedScorings(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null) {
+            if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
                 loadPredefinedSegments(bundle.getBundleContext());
                 loadPredefinedScorings(bundle.getBundleContext());
             }

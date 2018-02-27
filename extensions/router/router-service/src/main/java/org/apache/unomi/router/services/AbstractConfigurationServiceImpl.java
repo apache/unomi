@@ -53,7 +53,7 @@ public abstract class AbstractConfigurationServiceImpl implements SynchronousBun
 
         processBundleStartup(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null) {
+            if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
                 processBundleStartup(bundle.getBundleContext());
             }
         }
