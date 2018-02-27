@@ -39,6 +39,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ProfileServiceImpl implements ProfileService, SynchronousBundleListener {
 
@@ -50,8 +52,21 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         private Map<String, List<PropertyType>> propertyTypesByTarget = new HashMap<>();
 
         public PropertyTypes(List<PropertyType> allPropertyTypes) {
-            this.allPropertyTypes = allPropertyTypes;
-            this.updateMaps();
+            this.allPropertyTypes = new ArrayList<>(allPropertyTypes);
+            propertyTypesById = new HashMap<>();
+            propertyTypesByTags = new HashMap<>();
+            propertyTypesBySystemTags = new HashMap<>();
+            propertyTypesByTarget = new HashMap<>();
+            for (PropertyType propertyType : allPropertyTypes) {
+                propertyTypesById.put(propertyType.getItemId(), propertyType);
+                for (String propertyTypeTag : propertyType.getMetadata().getTags()) {
+                    updateListMap(propertyTypesByTags, propertyType, propertyTypeTag);
+                }
+                for (String propertyTypeSystemTag : propertyType.getMetadata().getSystemTags()) {
+                    updateListMap(propertyTypesBySystemTags, propertyType, propertyTypeSystemTag);
+                }
+                updateListMap(propertyTypesByTarget, propertyType, propertyType.getTarget());
+            }
         }
 
         public List<PropertyType> getAll() {
@@ -78,25 +93,32 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             return propertyTypesByTarget.get(target);
         }
 
-        private void updateMaps() {
-            Map<String,PropertyType> newPropertyTypesById = new HashMap<>();
-            Map<String,List<PropertyType>> newPropertyTypesByTags = new HashMap<>();
-            Map<String,List<PropertyType>> newPropertyTypesBySystemTags = new HashMap<>();
-            Map<String,List<PropertyType>> newPropertyTypesByTarget = new HashMap<>();
-            for (PropertyType propertyType : allPropertyTypes) {
-                newPropertyTypesById.put(propertyType.getItemId(), propertyType);
-                for (String propertyTypeTag : propertyType.getMetadata().getTags()) {
-                    updateListMap(newPropertyTypesByTags, propertyType, propertyTypeTag);
+        public PropertyTypes with(PropertyType newProperty) {
+            return with(Collections.singletonList(newProperty));
+        }
+
+        public PropertyTypes with(List<PropertyType> newProperties) {
+            Map<String, PropertyType> updatedProperties = new HashMap<>();
+            for (PropertyType property : newProperties) {
+                if (propertyTypesById.containsKey(property.getItemId())) {
+                    updatedProperties.put(property.getItemId(), property);
                 }
-                for (String propertyTypeSystemTag : propertyType.getMetadata().getSystemTags()) {
-                    updateListMap(newPropertyTypesBySystemTags, propertyType, propertyTypeSystemTag);
-                }
-                updateListMap(newPropertyTypesByTarget, propertyType, propertyType.getTarget());
             }
-            propertyTypesById = newPropertyTypesById;
-            propertyTypesByTags = newPropertyTypesByTags;
-            propertyTypesBySystemTags = newPropertyTypesBySystemTags;
-            propertyTypesByTarget = newPropertyTypesByTarget;
+
+            List<PropertyType> newPropertyTypes = Stream.concat(
+                    allPropertyTypes.stream().map(property -> updatedProperties.getOrDefault(property.getItemId(), property)),
+                    newProperties.stream().filter(property -> !propertyTypesById.containsKey(property.getItemId()))
+            ).collect(Collectors.toList());
+
+            return new PropertyTypes(newPropertyTypes);
+        }
+
+        public PropertyTypes without(String propertyId) {
+            List<PropertyType> newPropertyTypes = allPropertyTypes.stream()
+                .filter(property -> property.getItemId().equals(propertyId))
+                .collect(Collectors.toList());
+
+            return new PropertyTypes(newPropertyTypes);
         }
 
         private void updateListMap(Map<String, List<PropertyType>> listMap, PropertyType propertyType, String key) {
@@ -359,17 +381,22 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     @Override
     public boolean setPropertyType(PropertyType property) {
         PropertyType previousProperty = persistenceService.load(property.getItemId(), PropertyType.class);
+        boolean result = false;
         if (previousProperty == null) {
-            return persistenceService.save(property);
+            result = persistenceService.save(property);
+            propertyTypes = propertyTypes.with(property);
         } else if (merge(previousProperty, property)) {
-            return persistenceService.save(previousProperty);
+            result = persistenceService.save(previousProperty);
+            propertyTypes = propertyTypes.with(previousProperty);
         }
-        return false;
+        return result;
     }
 
     @Override
     public boolean deletePropertyType(String propertyId) {
-        return persistenceService.remove(propertyId, PropertyType.class);
+        boolean result = persistenceService.remove(propertyId, PropertyType.class);
+        propertyTypes = propertyTypes.without(propertyId);
+        return result;
     }
 
     @Override
@@ -896,6 +923,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             return;
         }
 
+        List<PropertyType> allPropertyTypes = new ArrayList<>();
         while (predefinedPropertyTypeEntries.hasMoreElements()) {
             URL predefinedPropertyTypeURL = predefinedPropertyTypeEntries.nextElement();
             logger.debug("Found predefined property type at " + predefinedPropertyTypeURL + ", loading... ");
@@ -909,6 +937,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                     propertyType.setTarget(target);
 
                     persistenceService.save(propertyType);
+                    allPropertyTypes.add(propertyType);
                     logger.info("Predefined property type with id {} registered", propertyType.getMetadata().getId());
                 } else {
                     logger.info("The predefined property type with id {} is already registered, this property type will be skipped", propertyType.getMetadata().getId());
@@ -917,6 +946,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 logger.error("Error while loading properties " + predefinedPropertyTypeURL, e);
             }
         }
+        propertyTypes = propertyTypes.with(allPropertyTypes);
     }
 
 

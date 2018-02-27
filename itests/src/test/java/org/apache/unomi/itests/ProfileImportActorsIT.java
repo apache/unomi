@@ -68,9 +68,6 @@ public class ProfileImportActorsIT extends BaseIT {
         profileService.setPropertyType(propertyTypeTwitterId);
         profileService.setPropertyType(propertyTypeActorsGenres);
 
-        //Wait for data to be processed
-        Thread.sleep(10000);
-
         PropertyType propTwitterId = profileService.getPropertyType("twitterId");
         Assert.assertNotNull(propTwitterId);
 
