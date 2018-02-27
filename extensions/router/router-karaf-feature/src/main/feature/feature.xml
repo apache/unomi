@@ -15,22 +15,23 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<features xmlns="http://karaf.apache.org/xmlns/features/v1.2.1" name="unomi-router-karaf-feature">
+<features xmlns="http://karaf.apache.org/xmlns/features/v1.3.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.3.0 http://karaf.apache.org/xmlns/features/v1.3.0" name="unomi-router-karaf-feature">
     <feature name="unomi-router-karaf-feature" version="${project.version}" description="Apache Unomi :: Extensions :: Router :: Apache Karaf Feature">
         <details>Apache Karaf feature for the Apache Unomi Context Server extension</details>
         <feature>unomi-kar</feature>
         <bundle start-level="90">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jsch/0.1.54_1</bundle>
         <bundle start-level="90">mvn:commons-net/commons-net/3.5</bundle>
         <bundle start-level="90">wrap:mvn:org.apache.kafka/kafka-clients/0.10.1.0</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-core/2.19.1</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-core-osgi/2.19.1</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-blueprint/2.19.1</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-jackson/2.19.1</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-http-common/2.19.1</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-ftp/2.19.1</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-stream/2.19.1</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-kafka/2.19.1</bundle>
-        <bundle start-level="90">mvn:org.apache.cxf/cxf-rt-rs-security-cors/3.0.2</bundle>
+        <bundle start-level="90">mvn:org.apache.camel/camel-core/${camel.version}</bundle>
+        <bundle start-level="90">mvn:org.apache.camel/camel-core-osgi/${camel.version}</bundle>
+        <bundle start-level="90">mvn:org.apache.camel/camel-blueprint/${camel.version}</bundle>
+        <bundle start-level="90">mvn:org.apache.camel/camel-jackson/${camel.version}</bundle>
+        <bundle start-level="90">mvn:org.apache.camel/camel-http-common/${camel.version}</bundle>
+        <bundle start-level="90">mvn:org.apache.camel/camel-servlet/${camel.version}</bundle>
+        <bundle start-level="90">mvn:org.apache.camel/camel-ftp/${camel.version}</bundle>
+        <bundle start-level="90">mvn:org.apache.camel/camel-stream/${camel.version}</bundle>
+        <bundle start-level="90">mvn:org.apache.camel/camel-kafka/${camel.version}</bundle>
+        <bundle start-level="90">mvn:org.apache.cxf/cxf-rt-rs-security-cors/${cxf.version}</bundle>
         <bundle start-level="90" start="false">mvn:org.apache.unomi/unomi-router-api/${project.version}</bundle>
         <bundle start-level="90" start="false">mvn:org.apache.unomi/unomi-router-core/${project.version}</bundle>
         <bundle start-level="90" start="false">mvn:org.apache.unomi/unomi-router-service/${project.version}</bundle>

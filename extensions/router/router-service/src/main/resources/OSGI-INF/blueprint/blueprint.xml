@@ -28,7 +28,11 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="importConfigurationService" ref="importConfigurationServiceImpl" auto-export="interfaces">
+    <service id="importConfigurationService" ref="importConfigurationServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.router.api.services.ImportExportConfigurationService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+        </interfaces>
         <service-properties>
             <entry key="configDiscriminator" value="IMPORT"/>
         </service-properties>
@@ -39,7 +43,11 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="exportConfigurationService" ref="exportConfigurationServiceImpl" auto-export="interfaces">
+    <service id="exportConfigurationService" ref="exportConfigurationServiceImpl">
+        <interfaces>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+            <value>org.apache.unomi.router.api.services.ImportExportConfigurationService</value>
+        </interfaces>
         <service-properties>
             <entry key="configDiscriminator" value="EXPORT"/>
         </service-properties>
@@ -50,7 +58,12 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="profileImportService" ref="profileImportServiceImpl" auto-export="interfaces"/>
+    <service id="profileImportService" ref="profileImportServiceImpl">
+        <interfaces>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+            <value>org.apache.unomi.router.api.services.ProfileImportService</value>
+        </interfaces>
+    </service>
 
     <bean id="profileExportServiceImpl" class="org.apache.unomi.router.services.ProfileExportServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
@@ -58,6 +71,11 @@
         <property name="configSharingService" ref="configSharingService" />
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="profileExportService" ref="profileExportServiceImpl" auto-export="interfaces"/>
+    <service id="profileExportService" ref="profileExportServiceImpl">
+        <interfaces>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+            <value>org.apache.unomi.router.api.services.ProfileExportService</value>
+        </interfaces>
+    </service>
 
 </blueprint>

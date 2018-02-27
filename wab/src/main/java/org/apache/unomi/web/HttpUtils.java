@@ -74,8 +74,12 @@ public class HttpUtils {
     public static String dumpRequestCookies(Cookie[] cookies) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("Cookies:\n");
-        for (Cookie cookie : cookies) {
-            stringBuilder.append("  ").append(cookie.getName()).append("=").append(cookie.getValue()).append(" domain=").append(cookie.getDomain()).append(" path=").append(cookie.getPath()).append(" maxAge=").append(cookie.getMaxAge()).append(" httpOnly=").append(cookie.isHttpOnly()).append(" secure=").append(cookie.getSecure()).append(" version=").append(cookie.getVersion()).append(" comment=").append(cookie.getComment()).append("\n");
+        if (cookies == null) {
+            stringBuilder.append("  none");
+        } else {
+            for (Cookie cookie : cookies) {
+                stringBuilder.append("  ").append(cookie.getName()).append("=").append(cookie.getValue()).append(" domain=").append(cookie.getDomain()).append(" path=").append(cookie.getPath()).append(" maxAge=").append(cookie.getMaxAge()).append(" httpOnly=").append(cookie.isHttpOnly()).append(" secure=").append(cookie.getSecure()).append(" version=").append(cookie.getVersion()).append(" comment=").append(cookie.getComment()).append("\n");
+            }
         }
         return stringBuilder.toString();
     }

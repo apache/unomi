@@ -83,6 +83,6 @@
         </property>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="unomiManagementService" ref="unomiManagementServiceImpl" auto-export="interfaces"/>
+    <service id="unomiManagementService" ref="unomiManagementServiceImpl" interface="org.apache.unomi.shell.services.UnomiManagementService" />
 
 </blueprint>

@@ -20,7 +20,6 @@ package org.apache.unomi.api.actions;
 import org.apache.unomi.api.rules.Rule;
 
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -30,7 +29,6 @@ import java.util.Map;
  * An action that can be executed as a consequence of a {@link Rule} being triggered. An action is characterized by its associated {@link
  * ActionType} and parameter values.
  */
-@XmlRootElement
 public class Action implements Serializable {
     private ActionType actionType;
     private String actionTypeId;

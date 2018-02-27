@@ -19,8 +19,8 @@
     <feature name="unomi-salesforce-connector-karaf-kar" version="${project.version}" description="Apache Unomi :: Extensions :: Salesforce connector :: Apache Karaf Feature">
         <details>Apache Karaf feature for the Apache Unomi Context Server extension that integrates with Salesforce</details>
         <configfile finalname="/etc/org.apache.unomi.sfdc.cfg">mvn:org.apache.unomi/unomi-salesforce-connector-services/${project.version}/cfg/sfdccfg</configfile>
-        <bundle start-level="85">mvn:org.apache.httpcomponents/httpcore-osgi/4.4.6</bundle>
-        <bundle start-level="85">mvn:org.apache.httpcomponents/httpclient-osgi/4.5.1</bundle>
+        <bundle start-level="85">mvn:org.apache.httpcomponents/httpcore-osgi/${httpcore-osgi.version}</bundle>
+        <bundle start-level="85">mvn:org.apache.httpcomponents/httpclient-osgi/${httpclient-osgi.version}</bundle>
         <bundle start-level="85">mvn:org.apache.unomi/unomi-salesforce-connector-services/${project.version}</bundle>
         <bundle start-level="85">mvn:org.apache.unomi/unomi-salesforce-connector-rest/${project.version}</bundle>
         <bundle start-level="85">mvn:org.apache.unomi/unomi-salesforce-connector-actions/${project.version}</bundle>

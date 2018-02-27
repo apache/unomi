@@ -61,7 +61,7 @@
         </service-properties>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="setRemoteHostInfo"/>
         </service-properties>

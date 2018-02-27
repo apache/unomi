@@ -17,14 +17,13 @@
 
 package org.apache.unomi.api.conditions;
 
-import org.apache.unomi.api.*;
-import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.MetadataItem;
+import org.apache.unomi.api.Parameter;
 
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlTransient;
-import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * ConditionTypes define new conditions that can be applied to items (for example to decide whether a rule needs to be triggered or if a profile is considered as taking part in a
@@ -32,7 +31,6 @@ import java.util.*;
  * optimized by coding it. They may also be defined as combination of other conditions. A simple condition  could be: “User is male”, while a more generic condition with
  * parameters may test whether a given property has a specific value: “User property x has value y”.
  */
-@XmlRootElement
 public class ConditionType extends MetadataItem  {
     public static final String ITEM_TYPE = "conditionType";
 
