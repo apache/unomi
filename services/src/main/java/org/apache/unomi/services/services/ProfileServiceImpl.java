@@ -44,6 +44,11 @@ import java.util.stream.Stream;
 
 public class ProfileServiceImpl implements ProfileService, SynchronousBundleListener {
 
+    /**
+     * This class is responsible for storing property types and permits optimized access to them.
+     * In order to assure data consistency, thread-safety and performance, this class is immutable and every operation on
+     * property types requires creating a new instance (copy-on-write).
+     */
     private static class PropertyTypes {
         private List<PropertyType> allPropertyTypes;
         private Map<String, PropertyType> propertyTypesById = new HashMap<>();
@@ -97,6 +102,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             return with(Collections.singletonList(newProperty));
         }
 
+        /**
+         * Creates a new instance of this class containing given property types.
+         * If property types with the same ID existed before, they will be replaced by the new ones.
+         * @param newProperties list of property types to change
+         * @return new instance
+         */
         public PropertyTypes with(List<PropertyType> newProperties) {
             Map<String, PropertyType> updatedProperties = new HashMap<>();
             for (PropertyType property : newProperties) {
@@ -113,6 +124,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             return new PropertyTypes(newPropertyTypes);
         }
 
+        /**
+         * Creates a new instance of this class containing all property types except the one with given ID.
+         * @param propertyId ID of the property to delete
+         * @return new instance
+         */
         public PropertyTypes without(String propertyId) {
             List<PropertyType> newPropertyTypes = allPropertyTypes.stream()
                 .filter(property -> property.getItemId().equals(propertyId))
@@ -923,7 +939,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             return;
         }
 
-        List<PropertyType> allPropertyTypes = new ArrayList<>();
+        List<PropertyType> bundlePropertyTypes = new ArrayList<>();
         while (predefinedPropertyTypeEntries.hasMoreElements()) {
             URL predefinedPropertyTypeURL = predefinedPropertyTypeEntries.nextElement();
             logger.debug("Found predefined property type at " + predefinedPropertyTypeURL + ", loading... ");
@@ -937,7 +953,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                     propertyType.setTarget(target);
 
                     persistenceService.save(propertyType);
-                    allPropertyTypes.add(propertyType);
+                    bundlePropertyTypes.add(propertyType);
                     logger.info("Predefined property type with id {} registered", propertyType.getMetadata().getId());
                 } else {
                     logger.info("The predefined property type with id {} is already registered, this property type will be skipped", propertyType.getMetadata().getId());
@@ -946,7 +962,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 logger.error("Error while loading properties " + predefinedPropertyTypeURL, e);
             }
         }
-        propertyTypes = propertyTypes.with(allPropertyTypes);
+        propertyTypes = propertyTypes.with(bundlePropertyTypes);
     }
 
 
