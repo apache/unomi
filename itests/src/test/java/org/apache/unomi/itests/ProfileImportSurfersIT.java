@@ -68,9 +68,6 @@ public class ProfileImportSurfersIT extends BaseIT {
 
         profileService.setPropertyType(propertyType);
 
-        //Wait for data to be processed
-        Thread.sleep(10000);
-
         PropertyType propAlive = profileService.getPropertyType("alive");
 
         Assert.assertNotNull(propAlive);

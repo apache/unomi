@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBundleListener {
 
@@ -43,8 +44,8 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     private PersistenceService persistenceService;
 
-    private Map<String, ConditionType> conditionTypeById = new HashMap<>();
-    private Map<String, ActionType> actionTypeById = new HashMap<>();
+    private Map<String, ConditionType> conditionTypeById = new ConcurrentHashMap<>();
+    private Map<String, ActionType> actionTypeById = new ConcurrentHashMap<>();
     private Map<String, ValueType> valueTypeById = new HashMap<>();
     private Map<String, Set<ValueType>> valueTypeByTag = new HashMap<>();
     private Map<Long, List<PluginType>> pluginTypes = new HashMap<>();
@@ -247,7 +248,9 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         ConditionType type = conditionTypeById.get(id);
         if (type == null || type.getVersion() == null) {
             type = persistenceService.load(id, ConditionType.class);
-            conditionTypeById.put(id, type);
+            if (type != null) {
+                conditionTypeById.put(id, type);
+            }
         }
         if (type != null && type.getParentCondition() != null) {
             ParserHelper.resolveConditionType(this, type.getParentCondition());
@@ -289,7 +292,9 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         ActionType type = actionTypeById.get(id);
         if (type == null || type.getVersion() == null) {
             type = persistenceService.load(id, ActionType.class);
-            actionTypeById.put(id, type);
+            if (type != null) {
+                actionTypeById.put(id, type);
+            }
         }
         return type;
     }

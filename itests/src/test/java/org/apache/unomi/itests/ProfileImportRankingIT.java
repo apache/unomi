@@ -71,9 +71,6 @@ public class ProfileImportRankingIT extends BaseIT {
 
         profileService.setPropertyType(propertyTypeRank);
 
-        //Wait for data to be processed
-        Thread.sleep(10000);
-
         PropertyType propUciId = profileService.getPropertyType("uciId");
         Assert.assertNotNull(propUciId);
 
