@@ -99,6 +99,14 @@
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-itests</artifactId>
+            <version>1.3.0-incubating-SNAPSHOT</version>
+            <classifier>features</classifier>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
