@@ -116,12 +116,12 @@ public abstract class BaseIT {
                 systemProperty("org.apache.unomi.itests.elasticsearch.bootstrap.seccomp").value("false"),
                 systemProperty("unomi.autoStart").value("true"),
                 features(karafPaxWebRepo, "shell"),
-                features(karafStandardRepo, "wrap"),
                 features(karafPaxWebRepo, "war"),
                 features(karafCxfRepo, "cxf"),
                 features(karafCellarRepo, "cellar"),
                 features(contextServerRepo, "unomi-kar"),
                 features(routerRepo, "unomi-router-karaf-feature"),
+                mavenBundle().groupId("org.ops4j.pax.url").artifactId("pax-url-wrap").classifier("uber").versionAsInProject(),
                 // we need to wrap the HttpComponents libraries ourselves since the OSGi bundles provided by the project are incorrect
                 wrappedBundle(mavenBundle("org.apache.httpcomponents",
                         "httpcore").versionAsInProject()),
