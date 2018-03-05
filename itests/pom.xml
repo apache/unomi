@@ -136,6 +136,13 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.ops4j.pax.url</groupId>
+            <artifactId>pax-url-wrap</artifactId>
+            <classifier>uber</classifier>
+            <version>2.5.4</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
