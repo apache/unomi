@@ -115,7 +115,7 @@ public abstract class BaseIT {
                 systemProperty("org.apache.unomi.itests.elasticsearch.http.port").value("9400"),
                 systemProperty("org.apache.unomi.itests.elasticsearch.bootstrap.seccomp").value("false"),
                 systemProperty("unomi.autoStart").value("true"),
-                features(karafPaxWebRepo, "shell"),
+                features(karafStandardRepo, "shell"),
                 features(karafPaxWebRepo, "war"),
                 features(karafCxfRepo, "cxf"),
                 features(karafCellarRepo, "cellar"),
