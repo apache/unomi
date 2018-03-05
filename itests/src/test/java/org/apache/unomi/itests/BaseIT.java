@@ -107,6 +107,7 @@ public abstract class BaseIT {
                 keepRuntimeFolder(),
                 configureConsole().ignoreLocalConsole(),
                 logLevel(LogLevel.INFO),
+                editConfigurationFilePut("etc/org.apache.karaf.features.cfg", "serviceRequirements", "disable"),
 //                editConfigurationFilePut("etc/org.ops4j.pax.web.cfg", "org.osgi.service.http.port", HTTP_PORT),
 //                systemProperty("org.osgi.service.http.port").value(HTTP_PORT),
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
