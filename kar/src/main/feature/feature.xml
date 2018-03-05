@@ -23,6 +23,7 @@
         <feature>cxf</feature>
         <feature>cellar</feature>
         <feature>eventadmin</feature>
+        <feature prerequisite="true">wrap</feature>
         <configfile finalname="/etc/org.apache.unomi.web.cfg">mvn:org.apache.unomi/unomi-wab/${project.version}/cfg/unomicfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.plugins.request.cfg">mvn:org.apache.unomi/unomi-plugins-request/${project.version}/cfg/requestcfg</configfile>
