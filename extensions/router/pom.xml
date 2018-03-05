@@ -29,7 +29,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <camel.version>2.19.1</camel.version>
+        <camel.version>2.20.2</camel.version>
     </properties>
 
     <build>
