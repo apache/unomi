@@ -60,7 +60,12 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="definitionsService" ref="definitionsServiceImpl" interface="org.apache.unomi.api.services.DefinitionsService"/>
+    <service id="definitionsService" ref="definitionsServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.DefinitionsService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+        </interfaces>
+    </service>
 
     <bean id="eventServiceImpl" class="org.apache.unomi.services.services.EventServiceImpl"
         init-method="init" destroy-method="destroy">
@@ -98,7 +103,12 @@
         <property name="rulesService" ref="rulesServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="goalsService" ref="goalsServiceImpl" interface="org.apache.unomi.api.services.GoalsService"/>
+    <service id="goalsService" ref="goalsServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.GoalsService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+        </interfaces>
+    </service>
 
     <bean id="actionExecutorDispatcherImpl"
           class="org.apache.unomi.services.actions.ActionExecutorDispatcher">
@@ -113,7 +123,13 @@
         <property name="actionExecutorDispatcher" ref="actionExecutorDispatcherImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="rulesService" ref="rulesServiceImpl" interface="org.apache.unomi.api.services.RulesService"/>
+    <service id="rulesService" ref="rulesServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.RulesService</value>
+            <value>org.apache.unomi.api.services.EventListenerService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+        </interfaces>
+    </service>
 
     <bean id="segmentServiceImpl" class="org.apache.unomi.services.services.SegmentServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
@@ -125,7 +141,12 @@
         <property name="taskExecutionPeriod" value="86400000"/>
         <property name="segmentUpdateBatchSize" value="${services.segment.update.batchSize}" />
     </bean>
-    <service id="segmentService" ref="segmentServiceImpl" interface="org.apache.unomi.api.services.SegmentService"/>
+    <service id="segmentService" ref="segmentServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.SegmentService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+        </interfaces>
+    </service>
 
     <bean id="userListServiceImpl" class="org.apache.unomi.services.services.UserListServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
@@ -153,7 +174,12 @@
         <property name="purgeSessionsAndEventsTime" value="${services.event.purge.existTime}"/>
         <property name="forceRefreshOnSave" value="${services.profile.forceRefreshOnSave}" />
     </bean>
-    <service id="profileService" ref="profileServiceImpl" interface="org.apache.unomi.api.services.ProfileService"/>
+    <service id="profileService" ref="profileServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.ProfileService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+        </interfaces>
+    </service>
 
     <bean id="queryServiceImpl" class="org.apache.unomi.services.services.QueryServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
