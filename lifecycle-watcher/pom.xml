@@ -20,7 +20,7 @@
     <parent>
         <artifactId>unomi-root</artifactId>
         <groupId>org.apache.unomi</groupId>
-        <version>1.3.0-incubating-unomi_5_karaf4_1-SNAPSHOT</version>
+        <version>1.3.0-incubating-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
