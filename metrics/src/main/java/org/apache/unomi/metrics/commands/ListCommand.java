@@ -18,8 +18,8 @@ package org.apache.unomi.metrics.commands;
 
 import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.commands.Option;
-import org.apache.karaf.shell.table.Row;
-import org.apache.karaf.shell.table.ShellTable;
+import org.apache.karaf.shell.support.table.Row;
+import org.apache.karaf.shell.support.table.ShellTable;
 import org.apache.unomi.common.DataTable;
 import org.apache.unomi.metrics.Metric;
 

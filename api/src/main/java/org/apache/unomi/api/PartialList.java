@@ -17,7 +17,6 @@
 
 package org.apache.unomi.api;
 
-import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -29,7 +28,6 @@ import java.util.List;
  *
  * @param <T> the generic type of contained elements
  */
-@XmlRootElement
 public class PartialList<T> implements Serializable {
 
     private static final long serialVersionUID = 2661946814840468260L;

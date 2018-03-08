@@ -22,14 +22,12 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.Profile;
 
-import javax.xml.bind.annotation.XmlRootElement;
 import java.util.List;
 
 /**
  * A set of conditions associated with a value to assign to {@link Profile}s when matching so that the associated users can be scored along that
  * dimension. Each {@link ScoringElement} is evaluated and matching profiles' scores are incremented with the associated value.
  */
-@XmlRootElement
 public class Scoring extends MetadataItem {
     /**
      * The Scoring ITEM_TYPE.

@@ -25,7 +25,8 @@ import org.ops4j.pax.exam.options.MavenUrlReference;
 
 import java.io.File;
 
-import static org.ops4j.pax.exam.CoreOptions.*;
+import static org.ops4j.pax.exam.CoreOptions.maven;
+import static org.ops4j.pax.exam.CoreOptions.systemProperty;
 import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.*;
 
 /**
@@ -46,7 +47,7 @@ public abstract class BaseIT {
         MavenArtifactUrlReference karafUrl = maven()
                 .groupId("org.apache.karaf")
                 .artifactId("apache-karaf")
-                .version("3.0.8")
+                .version("4.1.5")
                 .type("tar.gz");
 
         MavenUrlReference karafStandardRepo = maven()
@@ -107,6 +108,8 @@ public abstract class BaseIT {
                 keepRuntimeFolder(),
                 configureConsole().ignoreLocalConsole(),
                 logLevel(LogLevel.INFO),
+                editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.rootLogger.level", "INFO"),
+                editConfigurationFilePut("etc/org.apache.karaf.features.cfg", "serviceRequirements", "disable"),
 //                editConfigurationFilePut("etc/org.ops4j.pax.web.cfg", "org.osgi.service.http.port", HTTP_PORT),
 //                systemProperty("org.osgi.service.http.port").value(HTTP_PORT),
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
@@ -115,19 +118,10 @@ public abstract class BaseIT {
                 systemProperty("org.apache.unomi.itests.elasticsearch.http.port").value("9400"),
                 systemProperty("org.apache.unomi.itests.elasticsearch.bootstrap.seccomp").value("false"),
                 systemProperty("unomi.autoStart").value("true"),
-                features(karafPaxWebRepo, "shell"),
-                features(karafPaxWebRepo, "war"),
                 features(karafCxfRepo, "cxf"),
                 features(karafCellarRepo, "cellar"),
                 features(contextServerRepo, "unomi-kar"),
-                features(routerRepo, "unomi-router-karaf-feature"),
-                // we need to wrap the HttpComponents libraries ourselves since the OSGi bundles provided by the project are incorrect
-                wrappedBundle(mavenBundle("org.apache.httpcomponents",
-                        "httpcore").versionAsInProject()),
-                wrappedBundle(mavenBundle("org.apache.httpcomponents",
-                        "httpmime").versionAsInProject()),
-                wrappedBundle(mavenBundle("org.apache.httpcomponents",
-                        "httpclient").versionAsInProject())
+                features(routerRepo, "unomi-router-karaf-feature")
         };
     }
 }

@@ -159,9 +159,11 @@ public class EventsCollectorServlet extends HttpServlet {
             } else {
                 // Session uses anonymous profile, try to find profile from cookie
                 Cookie[] cookies = request.getCookies();
-                for (Cookie cookie : cookies) {
-                    if (profileIdCookieName.equals(cookie.getName())) {
-                        profile = profileService.load(cookie.getValue());
+                if (cookies != null) {
+                    for (Cookie cookie : cookies) {
+                        if (profileIdCookieName.equals(cookie.getName())) {
+                            profile = profileService.load(cookie.getValue());
+                        }
                     }
                 }
                 if (profile == null) {

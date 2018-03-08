@@ -321,7 +321,7 @@ The action executor references the actual implementation of the action as define
     <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
 
     <!-- Action executor -->
-    <service id="incrementTweetNumberAction" auto-export="interfaces">
+    <service id="incrementTweetNumberAction" interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="incrementTweetNumber"/>
         </service-properties>

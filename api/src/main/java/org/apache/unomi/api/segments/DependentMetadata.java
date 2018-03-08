@@ -19,11 +19,9 @@ package org.apache.unomi.api.segments;
 
 import org.apache.unomi.api.Metadata;
 
-import javax.xml.bind.annotation.XmlRootElement;
 import java.io.Serializable;
 import java.util.List;
 
-@XmlRootElement
 public class DependentMetadata implements Serializable {
 
     private List<Metadata> segments;

@@ -35,7 +35,7 @@
         event tracking server.
     </description>
     <url>http://unomi.incubator.apache.org</url>
-    <version>1.3.0-incubating-SNAPSHOT</version>
+    <version>1.3.0-incubating-unomi_5_karaf4_1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <licenses>
@@ -64,11 +64,11 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <cxf.version>3.0.2</cxf.version>
-        <version.jackson.core>2.6.6</version.jackson.core> <!-- version used by CXF -->
-        <version.jackson.jaxb>2.6.6</version.jackson.jaxb> <!-- version used by CXF -->
-        <version.karaf>3.0.8</version.karaf>
-        <version.karaf.cellar>3.0.3</version.karaf.cellar>
+        <cxf.version>3.1.10</cxf.version>
+        <version.jackson.core>2.8.6</version.jackson.core>
+        <version.jackson.jaxb>2.8.6</version.jackson.jaxb>
+        <version.karaf>4.1.5</version.karaf>
+        <version.karaf.cellar>4.1.0</version.karaf.cellar>
         <version.pax.exam>4.11.0</version.pax.exam>
         <elasticsearch.version>5.6.3</elasticsearch.version>
 
@@ -79,6 +79,16 @@
 
         <gatling.version>2.1.2</gatling.version>
         <scala-maven-plugin.version>3.2.0</scala-maven-plugin.version>
+
+        <!-- Librairies for Karaf packaging -->
+        <xerces.version>2.11.0_1</xerces.version>
+        <servicemix.specs.version>2.9.0</servicemix.specs.version>
+        <xalan.bundle.version>2.7.2_3</xalan.bundle.version>
+        <xalan-serializer.bundle.version>2.7.2_1</xalan-serializer.bundle.version>
+        <jna.version>4.5.0</jna.version>
+        <httpclient-osgi.version>4.5.5</httpclient-osgi.version>
+        <httpcore-osgi.version>4.4.9</httpcore-osgi.version>
+
     </properties>
 
     <mailingLists>
@@ -254,6 +264,30 @@
         <repository>
             <id>jahia.3rdparty</id>
             <url>https://devtools.jahia.com/nexus/content/repositories/thirdparty-releases/</url>
+        </repository>
+        <!-- Apache snapshots -->
+        <repository>
+            <id>apache-snapshots</id>
+            <name>Apache Snapshots Repository</name>
+            <url>http://repository.apache.org/content/groups/snapshots-group</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <!-- OPS4J SNAPSHOT repository -->
+        <repository>
+            <id>ops4j.sonatype.snapshots.deploy</id>
+            <name>OPS4J snapshot repository</name>
+            <url>https://oss.sonatype.org/content/repositories/ops4j-snapshots/</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
         </repository>
     </repositories>
 
@@ -624,20 +658,25 @@
 
             <!-- Apache Karaf dependencies -->
             <dependency>
-                <!-- scope is compile so all features (there is only one) are installed into startup.properties and the feature repo itself is not installed -->
                 <groupId>org.apache.karaf.features</groupId>
                 <artifactId>framework</artifactId>
                 <version>${version.karaf}</version>
                 <type>kar</type>
             </dependency>
             <dependency>
-                <!-- scope is runtime so the feature repo is listed in the features service config file, and features may be installed using the karaf-maven-plugin configuration -->
+                <groupId>org.apache.karaf.features</groupId>
+                <artifactId>framework</artifactId>
+                <classifier>features</classifier>
+                <version>${version.karaf}</version>
+                <type>xml</type>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.karaf.features</groupId>
                 <artifactId>standard</artifactId>
                 <classifier>features</classifier>
                 <version>${version.karaf}</version>
                 <type>xml</type>
-                <scope>runtime</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.karaf.features</groupId>
@@ -699,13 +738,18 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient-osgi</artifactId>
-                <version>4.3.6</version>
+                <version>${httpclient-osgi.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient-osgi</artifactId>
+                <version>${httpclient-osgi.version}</version>
                 <type>bundle</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore-osgi</artifactId>
-                <version>4.3.3</version>
+                <version>${httpcore-osgi.version}</version>
             </dependency>
 
             <!-- Dependencies for pax exam karaf container -->
@@ -878,6 +922,7 @@
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-bundle-plugin</artifactId>
                     <version>3.2.0</version>
+                    <extensions>true</extensions>
                     <configuration>
                         <instructions>
                             <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
@@ -905,6 +950,7 @@
                     <groupId>org.apache.karaf.tooling</groupId>
                     <artifactId>karaf-maven-plugin</artifactId>
                     <version>${version.karaf}</version>
+                    <extensions>true</extensions>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -914,7 +960,7 @@
                 <plugin>
                     <groupId>org.apache.servicemix.tooling</groupId>
                     <artifactId>depends-maven-plugin</artifactId>
-                    <version>1.2</version>
+                    <version>1.4.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

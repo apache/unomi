@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
-        <version>1.3.0-incubating-SNAPSHOT</version>
+        <version>1.3.0-incubating-unomi_5_karaf4_1-SNAPSHOT</version>
     </parent>
     <artifactId>unomi-itests</artifactId>
     <name>Apache Unomi :: Integration Tests</name>
@@ -34,6 +34,7 @@
             <classifier>features</classifier>
             <version>${project.version}</version>
             <type>xml</type>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
@@ -41,6 +42,7 @@
             <classifier>features</classifier>
             <version>${project.version}</version>
             <type>xml</type>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
@@ -60,24 +62,28 @@
             <artifactId>standard</artifactId>
             <classifier>features</classifier>
             <type>xml</type>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.karaf.cellar</groupId>
             <artifactId>apache-karaf-cellar</artifactId>
             <classifier>features</classifier>
             <type>xml</type>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.ops4j.pax.web</groupId>
             <artifactId>pax-web-features</artifactId>
             <classifier>features</classifier>
             <type>xml</type>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.cxf.karaf</groupId>
             <artifactId>apache-cxf</artifactId>
             <classifier>features</classifier>
             <type>xml</type>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -118,11 +124,12 @@
         <dependency>
             <groupId>javax.inject</groupId>
             <artifactId>javax.inject</artifactId>
-            <scope>test</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.core</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -136,6 +143,13 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.ops4j.pax.url</groupId>
+            <artifactId>pax-url-wrap</artifactId>
+            <classifier>uber</classifier>
+            <version>2.5.4</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -188,7 +202,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>2.18.1</version>
+                <version>2.20.1</version>
                 <configuration>
                     <includes>
                         <include>**/*AllITs.java</include>

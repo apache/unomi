@@ -66,6 +66,7 @@
     <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl">
         <interfaces>
             <value>org.apache.unomi.persistence.spi.PersistenceService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
         </interfaces>
     </service>
 

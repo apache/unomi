@@ -39,7 +39,6 @@ import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.json.*;
 import java.io.IOException;
 import java.net.URL;
 import java.security.MessageDigest;
@@ -63,38 +62,6 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     public SegmentServiceImpl() {
         logger.info("Initializing segment service...");
-    }
-
-    public static void dumpJSON(JsonValue tree, String key, String depthPrefix) {
-        if (key != null)
-            logger.info(depthPrefix + "Key " + key + ": ");
-        switch (tree.getValueType()) {
-            case OBJECT:
-                logger.info(depthPrefix + "OBJECT");
-                JsonObject object = (JsonObject) tree;
-                for (String name : object.keySet())
-                    dumpJSON(object.get(name), name, depthPrefix + "  ");
-                break;
-            case ARRAY:
-                logger.info(depthPrefix + "ARRAY");
-                JsonArray array = (JsonArray) tree;
-                for (JsonValue val : array)
-                    dumpJSON(val, null, depthPrefix + "  ");
-                break;
-            case STRING:
-                JsonString st = (JsonString) tree;
-                logger.info(depthPrefix + "STRING " + st.getString());
-                break;
-            case NUMBER:
-                JsonNumber num = (JsonNumber) tree;
-                logger.info(depthPrefix + "NUMBER " + num.toString());
-                break;
-            case TRUE:
-            case FALSE:
-            case NULL:
-                logger.info(depthPrefix + tree.getValueType().toString());
-                break;
-        }
     }
 
     public void setBundleContext(BundleContext bundleContext) {

@@ -17,14 +17,12 @@
 
 package org.apache.unomi.api;
 
-import javax.xml.bind.annotation.XmlRootElement;
 import java.io.Serializable;
 
 /**
  * A representation of a condition parameter, to be used in the segment building UI to either select parameters from a
  * choicelist or to enter a specific value.
  */
-@XmlRootElement
 public class Parameter implements Serializable {
 
     private static final long serialVersionUID = 7446061538573517071L;

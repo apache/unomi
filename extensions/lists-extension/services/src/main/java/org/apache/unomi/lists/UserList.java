@@ -19,12 +19,9 @@ package org.apache.unomi.lists;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 
-import javax.xml.bind.annotation.XmlRootElement;
-
 /**
  * @author Christophe Laprun
  */
-@XmlRootElement
 public class UserList extends MetadataItem {
     public static final String ITEM_TYPE = "userList";
     private static final long serialVersionUID = 1L;

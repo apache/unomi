@@ -17,14 +17,12 @@
 
 package org.apache.unomi.api;
 
-import javax.xml.bind.annotation.XmlRootElement;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Basic information about a Unomi server
  */
-@XmlRootElement
 public class ServerInfo {
 
     private String serverIdentifier;

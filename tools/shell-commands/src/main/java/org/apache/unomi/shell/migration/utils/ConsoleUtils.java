@@ -16,9 +16,9 @@
  */
 package org.apache.unomi.shell.migration.utils;
 
-import jline.console.ConsoleReader;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.felix.service.command.CommandSession;
+import org.jline.reader.LineReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,7 +77,7 @@ public class ConsoleUtils {
      * @throws IOException
      */
     public static String promptMessageToUser(CommandSession session, String msg) throws IOException {
-        ConsoleReader reader = (ConsoleReader) session.get(".jline.reader");
+        LineReader reader = (LineReader) session.get(".jline.reader");
         return reader.readLine(msg, null);
     }
 

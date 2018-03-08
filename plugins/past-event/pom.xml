@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-plugins</artifactId>
-        <version>1.3.0-incubating-SNAPSHOT</version>
+        <version>1.3.0-incubating-unomi_5_karaf4_1-SNAPSHOT</version>
     </parent>
 
     <artifactId>unomi-plugins-past-event</artifactId>
@@ -34,13 +34,13 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-elasticsearch-core</artifactId>
-            <version>1.3.0-incubating-SNAPSHOT</version>
+            <version>1.3.0-incubating-unomi_5_karaf4_1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-spi</artifactId>
-            <version>1.3.0-incubating-SNAPSHOT</version>
+            <version>1.3.0-incubating-unomi_5_karaf4_1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

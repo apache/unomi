@@ -38,7 +38,7 @@
         <property name="isMergeFieldsActivate" value="${mailChimpConnector.list.merge-fields.activate}"/>
     </bean>
 
-    <service id="mailChimpService" ref="mailChimpServiceImpl" auto-export="interfaces"/>
+    <service id="mailChimpService" ref="mailChimpServiceImpl" interface="org.apache.unomi.mailchimp.services.MailChimpService" />
 </blueprint>
 
 

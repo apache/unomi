@@ -60,7 +60,12 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="definitionsService" ref="definitionsServiceImpl" auto-export="interfaces"/>
+    <service id="definitionsService" ref="definitionsServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.DefinitionsService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+        </interfaces>
+    </service>
 
     <bean id="eventServiceImpl" class="org.apache.unomi.services.services.EventServiceImpl"
         init-method="init" destroy-method="destroy">
@@ -89,7 +94,7 @@
             <cm:cm-properties persistent-id="org.apache.unomi.thirdparty" update="true" />
         </property>
     </bean>
-    <service id="eventService" ref="eventServiceImpl" auto-export="interfaces"/>
+    <service id="eventService" ref="eventServiceImpl" interface="org.apache.unomi.api.services.EventService"/>
 
     <bean id="goalsServiceImpl" class="org.apache.unomi.services.services.GoalsServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
@@ -98,7 +103,12 @@
         <property name="rulesService" ref="rulesServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="goalsService" ref="goalsServiceImpl" auto-export="interfaces"/>
+    <service id="goalsService" ref="goalsServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.GoalsService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+        </interfaces>
+    </service>
 
     <bean id="actionExecutorDispatcherImpl"
           class="org.apache.unomi.services.actions.ActionExecutorDispatcher">
@@ -113,7 +123,13 @@
         <property name="actionExecutorDispatcher" ref="actionExecutorDispatcherImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="rulesService" ref="rulesServiceImpl" auto-export="interfaces"/>
+    <service id="rulesService" ref="rulesServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.RulesService</value>
+            <value>org.apache.unomi.api.services.EventListenerService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+        </interfaces>
+    </service>
 
     <bean id="segmentServiceImpl" class="org.apache.unomi.services.services.SegmentServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
@@ -125,7 +141,12 @@
         <property name="taskExecutionPeriod" value="86400000"/>
         <property name="segmentUpdateBatchSize" value="${services.segment.update.batchSize}" />
     </bean>
-    <service id="segmentService" ref="segmentServiceImpl" auto-export="interfaces"/>
+    <service id="segmentService" ref="segmentServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.SegmentService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+        </interfaces>
+    </service>
 
     <bean id="userListServiceImpl" class="org.apache.unomi.services.services.UserListServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
@@ -133,7 +154,12 @@
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="userListService" ref="userListServiceImpl" auto-export="interfaces"/>
+    <service id="userListService" ref="userListServiceImpl">
+        <interfaces>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+            <value>org.apache.unomi.api.services.UserListService</value>
+        </interfaces>
+    </service>
 
     <bean id="profileServiceImpl" class="org.apache.unomi.services.services.ProfileServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
@@ -148,14 +174,19 @@
         <property name="purgeSessionsAndEventsTime" value="${services.event.purge.existTime}"/>
         <property name="forceRefreshOnSave" value="${services.profile.forceRefreshOnSave}" />
     </bean>
-    <service id="profileService" ref="profileServiceImpl" auto-export="interfaces"/>
+    <service id="profileService" ref="profileServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.ProfileService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+        </interfaces>
+    </service>
 
     <bean id="queryServiceImpl" class="org.apache.unomi.services.services.QueryServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
     </bean>
-    <service id="queryService" ref="queryServiceImpl" auto-export="interfaces"/>
+    <service id="queryService" ref="queryServiceImpl" interface="org.apache.unomi.api.services.QueryService"/>
 
     <bean id="clusterServiceImpl" class="org.apache.unomi.services.services.ClusterServiceImpl"
           init-method="init" destroy-method="destroy">
@@ -169,14 +200,14 @@
         <property name="osgiConfigurationAdmin" ref="osgiConfigurationAdmin" />
         <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}" />
     </bean>
-    <service id="clusterService" ref="clusterServiceImpl" auto-export="interfaces"/>
+    <service id="clusterService" ref="clusterServiceImpl" interface="org.apache.unomi.api.services.ClusterService"/>
 
 
     <bean id="personalizationServiceImpl" class="org.apache.unomi.services.services.PersonalizationServiceImpl">
         <property name="profileService" ref="profileServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="personalizationService" ref="personalizationServiceImpl" auto-export="interfaces"/>
+    <service id="personalizationService" ref="personalizationServiceImpl" interface="org.apache.unomi.api.services.PersonalizationService" />
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
     <reference-list id="eventListenerServices"
@@ -202,7 +233,7 @@
 
     <!-- Property merge strategy executors -->
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
         <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="defaultPropertyMergeStrategyExecutor"/>
         </service-properties>
@@ -210,7 +241,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
         <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="addPropertyMergeStrategyExecutor"/>
         </service-properties>
@@ -218,7 +249,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
         <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="mostRecentPropertyMergeStrategyExecutor"/>
         </service-properties>
@@ -226,7 +257,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
         <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="oldestPropertyMergeStrategyExecutor"/>
         </service-properties>
@@ -234,7 +265,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
         <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="nonEmptyPropertyMergeStrategyExecutor"/>
         </service-properties>
@@ -242,7 +273,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.PersonalizationStrategy">
         <service-properties>
             <entry key="personalizationStrategyId" value="matching-first"/>
         </service-properties>
@@ -251,7 +282,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.PersonalizationStrategy">
         <service-properties>
             <entry key="personalizationStrategyId" value="random"/>
         </service-properties>
@@ -260,7 +291,7 @@
         </bean>
     </service>
 
-    <service auto-export="interfaces">
+    <service interface="org.apache.unomi.api.PersonalizationStrategy">
         <service-properties>
             <entry key="personalizationStrategyId" value="score-sorted"/>
         </service-properties>
@@ -279,7 +310,11 @@
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
 
-    <service id="configSharingService" ref="configSharingServiceImpl" auto-export="interfaces">
+    <service id="configSharingService" ref="configSharingServiceImpl">
+        <interfaces>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+            <value>org.apache.unomi.api.services.ConfigSharingService</value>
+        </interfaces>
     </service>
 
     <!-- Cluster System Statistics Event Handler -->

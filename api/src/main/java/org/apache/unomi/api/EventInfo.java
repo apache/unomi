@@ -17,12 +17,9 @@
 
 package org.apache.unomi.api;
 
-import javax.xml.bind.annotation.XmlRootElement;
-
 /**
  * Basic event information
  */
-@XmlRootElement
 public class EventInfo {
 
     private String name;

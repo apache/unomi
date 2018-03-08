@@ -23,7 +23,7 @@
     <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
 
     <!-- Action executor -->
-    <service id="trainingNotifAction" auto-export="interfaces">
+    <service id="trainingNotifAction" interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
             <entry key="actionExecutorId" value="training"/>
         </service-properties>
