@@ -47,24 +47,12 @@ public abstract class BaseIT {
         MavenArtifactUrlReference karafUrl = maven()
                 .groupId("org.apache.karaf")
                 .artifactId("apache-karaf")
-                .version("4.1.5")
+                .versionAsInProject()
                 .type("tar.gz");
 
-        MavenUrlReference karafStandardRepo = maven()
-                .groupId("org.apache.karaf.features")
-                .artifactId("standard")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
         MavenUrlReference karafCellarRepo = maven()
                 .groupId("org.apache.karaf.cellar")
                 .artifactId("apache-karaf-cellar")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        MavenUrlReference karafPaxWebRepo = maven()
-                .groupId("org.ops4j.pax.web")
-                .artifactId("pax-web-features")
                 .classifier("features")
                 .type("xml")
                 .versionAsInProject();

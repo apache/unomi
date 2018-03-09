@@ -19,6 +19,7 @@
     <feature name="unomi-router-karaf-feature" version="${project.version}" description="Apache Unomi :: Extensions :: Router :: Apache Karaf Feature">
         <details>Apache Karaf feature for the Apache Unomi Context Server extension</details>
         <feature>unomi-kar</feature>
+        <feature prerequisite="true">wrap</feature>
         <bundle start-level="90">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jsch/0.1.54_1</bundle>
         <bundle start-level="90">mvn:commons-net/commons-net/3.6</bundle>
         <bundle start-level="90">wrap:mvn:org.apache.kafka/kafka-clients/0.10.1.0</bundle>

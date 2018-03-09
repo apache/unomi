@@ -23,6 +23,9 @@
         <feature>cxf</feature>
         <feature>cellar</feature>
         <feature>eventadmin</feature>
+        <feature>shell</feature>
+        <feature>shell-compat</feature>
+        <feature>aries-blueprint</feature>
         <config external="true" name="org.apache.unomi.web">mvn:org.apache.unomi/unomi-wab/${project.version}/cfg/unomicfg</config>
         <config external="true" name="org.apache.unomi.persistence.elasticsearch">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</config>
         <config external="true" name="org.apache.unomi.plugins.request">mvn:org.apache.unomi/unomi-plugins-request/${project.version}/cfg/requestcfg</config>

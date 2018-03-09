@@ -652,6 +652,12 @@
 
             <!-- Apache Karaf dependencies -->
             <dependency>
+                <groupId>org.apache.karaf</groupId>
+                <artifactId>apache-karaf</artifactId>
+                <type>tar.gz</type>
+                <version>${version.karaf}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.karaf.features</groupId>
                 <artifactId>framework</artifactId>
                 <version>${version.karaf}</version>
