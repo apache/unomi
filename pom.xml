@@ -67,25 +67,19 @@
         <cxf.version>3.1.10</cxf.version>
         <version.jackson.core>2.8.6</version.jackson.core>
         <version.jackson.jaxb>2.8.6</version.jackson.jaxb>
-        <version.karaf>4.1.5</version.karaf>
-        <version.karaf.cellar>4.1.0</version.karaf.cellar>
+        <version.karaf>4.2.0.M2</version.karaf>
+        <version.karaf.cellar>4.1.1</version.karaf.cellar>
         <version.pax.exam>4.11.0</version.pax.exam>
         <elasticsearch.version>5.6.3</elasticsearch.version>
 
-        <maven.compiler.source>1.7</maven.compiler.source>
-        <maven.compiler.target>1.7</maven.compiler.target>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
         <scala.version>2.11.4</scala.version>
         <encoding>UTF-8</encoding>
 
         <gatling.version>2.1.2</gatling.version>
         <scala-maven-plugin.version>3.2.0</scala-maven-plugin.version>
 
-        <!-- Librairies for Karaf packaging -->
-        <xerces.version>2.11.0_1</xerces.version>
-        <servicemix.specs.version>2.9.0</servicemix.specs.version>
-        <xalan.bundle.version>2.7.2_3</xalan.bundle.version>
-        <xalan-serializer.bundle.version>2.7.2_1</xalan-serializer.bundle.version>
-        <jna.version>4.5.0</jna.version>
         <httpclient-osgi.version>4.5.5</httpclient-osgi.version>
         <httpcore-osgi.version>4.4.9</httpcore-osgi.version>
 

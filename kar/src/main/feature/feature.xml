@@ -16,22 +16,21 @@
   ~ limitations under the License.
   -->
 
-<features name="unomi-kar" xmlns="http://karaf.apache.org/xmlns/features/v1.3.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.3.0 http://karaf.apache.org/xmlns/features/v1.3.0">
+<features name="unomi-kar" xmlns="http://karaf.apache.org/xmlns/features/v1.5.0">
     <feature description="unomi-kar" version="${project.version}" name="unomi-kar"
              start-level="70">
         <feature>war</feature>
         <feature>cxf</feature>
         <feature>cellar</feature>
         <feature>eventadmin</feature>
-        <feature prerequisite="true">wrap</feature>
-        <configfile finalname="/etc/org.apache.unomi.web.cfg">mvn:org.apache.unomi/unomi-wab/${project.version}/cfg/unomicfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.plugins.request.cfg">mvn:org.apache.unomi/unomi-plugins-request/${project.version}/cfg/requestcfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.services.cfg">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/servicescfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.thirdparty.cfg">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/thirdpartycfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.cluster.cfg">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/clustercfg</configfile>
+        <config external="true" name="org.apache.unomi.web">mvn:org.apache.unomi/unomi-wab/${project.version}/cfg/unomicfg</config>
+        <config external="true" name="org.apache.unomi.persistence.elasticsearch">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</config>
+        <config external="true" name="org.apache.unomi.plugins.request">mvn:org.apache.unomi/unomi-plugins-request/${project.version}/cfg/requestcfg</config>
+        <config external="true" name="org.apache.unomi.services">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/servicescfg</config>
+        <config external="true" name="org.apache.unomi.thirdparty">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/thirdpartycfg</config>
+        <config external="true" name="org.apache.unomi.cluster">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/clustercfg</config>
         <configfile finalname="/etc/hazelcast.xml">mvn:org.apache.unomi/unomi-services/${project.version}/xml/hazelcastconfig</configfile>
-        <configfile finalname="/etc/org.apache.unomi.geonames.cfg">mvn:org.apache.unomi/cxs-geonames-services/${project.version}/cfg/geonamescfg</configfile>
+        <config external="true" name="org.apache.unomi.geonames">mvn:org.apache.unomi/cxs-geonames-services/${project.version}/cfg/geonamescfg</config>
         <bundle start-level="75">mvn:commons-io/commons-io/2.4</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-core/${version.jackson.core}</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-databind/${version.jackson.core}</bundle>

@@ -82,7 +82,7 @@ public class BasicTest {
         MavenArtifactUrlReference karafUrl = maven()
                 .groupId("org.apache.karaf")
                 .artifactId("apache-karaf")
-                .version("4.1.5")
+                .versionAsInProject()
                 .type("tar.gz");
 
         MavenUrlReference karafStandardRepo = maven()

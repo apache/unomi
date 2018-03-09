@@ -15,10 +15,10 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<features xmlns="http://karaf.apache.org/xmlns/features/v1.2.1" name="unomi-salesforce-connector-karaf-feature">
+<features xmlns="http://karaf.apache.org/xmlns/features/v1.5.0" name="unomi-salesforce-connector-karaf-feature">
     <feature name="unomi-salesforce-connector-karaf-kar" version="${project.version}" description="Apache Unomi :: Extensions :: Salesforce connector :: Apache Karaf Feature">
         <details>Apache Karaf feature for the Apache Unomi Context Server extension that integrates with Salesforce</details>
-        <configfile finalname="/etc/org.apache.unomi.sfdc.cfg">mvn:org.apache.unomi/unomi-salesforce-connector-services/${project.version}/cfg/sfdccfg</configfile>
+        <config external="true" name="org.apache.unomi.sfdc">mvn:org.apache.unomi/unomi-salesforce-connector-services/${project.version}/cfg/sfdccfg</config>
         <bundle start-level="85">mvn:org.apache.httpcomponents/httpcore-osgi/${httpcore-osgi.version}</bundle>
         <bundle start-level="85">mvn:org.apache.httpcomponents/httpclient-osgi/${httpclient-osgi.version}</bundle>
         <bundle start-level="85">mvn:org.apache.unomi/unomi-salesforce-connector-services/${project.version}</bundle>

@@ -15,11 +15,11 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<features xmlns="http://karaf.apache.org/xmlns/features/v1.2.1" name="unomi-mailchimp-connector-karaf-feature">
+<features xmlns="http://karaf.apache.org/xmlns/features/v1.5.0" name="unomi-mailchimp-connector-karaf-feature">
     <feature name="unomi-mailchimp-connector-karaf-kar" version="${project.version}"
              description="Apache Unomi :: Extensions :: MailChimp Connector :: Apache Karaf Feature">
         <details>Connect Apache Unomi to MailChimp API</details>
-        <configfile finalname="/etc/org.apache.unomi.mailchimpconnector.cfg">mvn:org.apache.unomi/unomi-mailchimp-connector-services/${project.version}/cfg/mailchimpconnectorcfg</configfile>
+        <config external="true" name="org.apache.unomi.mailchimpconnector">mvn:org.apache.unomi/unomi-mailchimp-connector-services/${project.version}/cfg/mailchimpconnectorcfg</config>
         <bundle start-level="90">mvn:org.apache.unomi/unomi-mailchimp-connector-services/${project.version}</bundle>
         <bundle start-level="90">mvn:org.apache.unomi/unomi-mailchimp-connector-rest/${project.version}</bundle>
         <bundle start-level="90">mvn:org.apache.unomi/unomi-mailchimp-connector-actions/${project.version}</bundle>
