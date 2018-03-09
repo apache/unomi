@@ -62,6 +62,7 @@ public class SFDCServiceImplTest {
         sfdcConfiguration.setSfdcChannel(properties.getProperty("sfdc.channel"));
         sfdcConfiguration.setSfdcFieldMappings(properties.getProperty("sfdc.fields.mappings"));
         sfdcConfiguration.setSfdcFieldMappingsIdentifier(properties.getProperty("sfdc.fields.mappings.identifier"));
+        sfdcConfiguration.setSfdcFieldsConsents(properties.getProperty("sfdc.fields.consents"));
         if (System.getProperty("sfdcProperties") != null) {
             Properties testProperties = new Properties();
             InputStream testPropertiesInputStream = new FileInputStream(System.getProperty("sfdcProperties"));
