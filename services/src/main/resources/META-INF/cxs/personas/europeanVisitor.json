@@ -23,9 +23,7 @@
             "deviceCategory": "Personal computer",
             "operatingSystemFamily": "OS X",
             "userAgentName": "Chrome",
-            "sessionCity": "Lausanne",
-            "remoteHost": "www.epfl.ch",
-            "remoteAddr": "128.178.50.12"
+            "sessionCity": "Lausanne"
         },
         "timeStamp": "2014-09-18T11:40:54Z",
         "lastEventDate": "2014-09-18T11:40:59Z",

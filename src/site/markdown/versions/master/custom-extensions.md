@@ -235,9 +235,7 @@ Here is an example of a persona definition JSON file:
                     "deviceCategory": "Personal computer",
                     "operatingSystemFamily": "OS X",
                     "userAgentName": "Chrome",
-                    "sessionCity": "Mountain View",
-                    "remoteHost": "www.google.com",
-                    "remoteAddr": "66.249.66.1"
+                    "sessionCity": "Mountain View"
                 },
                 "timeStamp": "2014-09-18T11:40:54Z",
                 "lastEventDate": "2014-09-18T11:40:59Z",

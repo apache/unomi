@@ -117,8 +117,6 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             remoteAddr = xff;
         }
 
-        session.setProperty("remoteAddr", remoteAddr);
-        session.setProperty("remoteHost", httpServletRequest.getRemoteHost());
         try {
             if (isAValidIPAddress(remoteAddr)) {
                 ipLookupInDatabase(remoteAddr, session);
