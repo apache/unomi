@@ -72,7 +72,13 @@
                 function contextRequest(successCallback, errorCallback, payload) {
                     var data = JSON.stringify(payload);
                     // if we don't already have a session id, generate one
-                    var sessionId = cxs.sessionId || generateUUID();
+                    var sessionId;
+                    try {
+                        sessionId = cxs.sessionId;
+                    } catch (e) {
+                        sessionId = generateUUID();
+                    }
+
                     var url = 'http://localhost:8181/context.json?sessionId=' + sessionId;
                     var xhr = new XMLHttpRequest();
                     var isGet = data.length < 100;
