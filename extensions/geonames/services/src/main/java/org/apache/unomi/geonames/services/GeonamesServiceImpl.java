@@ -134,7 +134,7 @@ public class GeonamesServiceImpl implements GeonamesService {
                             values[6], values[7], values[8],
                             Arrays.asList(values[9].split(",")),
                             values[10], values[11], values[12], values[13],
-                            StringUtils.isEmpty(values[14]) ? null : Integer.parseInt(values[14]),
+                            StringUtils.isEmpty(values[14]) ? null : Long.parseLong(values[14]),
                             StringUtils.isEmpty(values[15]) ? null : Integer.parseInt(values[15]),
                             values[16], values[17],
                             sdf.parse(values[18]));

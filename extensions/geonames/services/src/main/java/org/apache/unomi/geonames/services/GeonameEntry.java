@@ -42,7 +42,7 @@ public class GeonameEntry extends Item {
     protected String admin2Code;
     protected String admin3Code;
     protected String admin4Code;
-    protected Integer population;
+    protected Long population;
     protected Integer elevation;
     protected String dem;
     protected String timezone;
@@ -51,7 +51,7 @@ public class GeonameEntry extends Item {
     public GeonameEntry() {
     }
 
-    public GeonameEntry(String geonameId, String name, String asciiname, Double lat, Double lon, String featureClass, String featureCode, String countryCode, List<String> cc2, String admin1Code, String admin2Code, String admin3Code, String admin4Code, Integer population, Integer elevation, String dem, String timezone, Date modificationDate) {
+    public GeonameEntry(String geonameId, String name, String asciiname, Double lat, Double lon, String featureClass, String featureCode, String countryCode, List<String> cc2, String admin1Code, String admin2Code, String admin3Code, String admin4Code, Long population, Integer elevation, String dem, String timezone, Date modificationDate) {
         super(geonameId);
         this.name = name;
         this.asciiname = asciiname;
@@ -170,11 +170,11 @@ public class GeonameEntry extends Item {
         this.admin4Code = admin4Code;
     }
 
-    public Integer getPopulation() {
+    public Long getPopulation() {
         return population;
     }
 
-    public void setPopulation(Integer population) {
+    public void setPopulation(Long population) {
         this.population = population;
     }
 
