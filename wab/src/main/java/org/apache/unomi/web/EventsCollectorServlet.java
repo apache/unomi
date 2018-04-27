@@ -108,7 +108,10 @@ public class EventsCollectorServlet extends HttpServlet {
             return;
         }
 
-        String sessionId = request.getParameter("sessionId");
+        String sessionId = events.getSessionId();
+        if (sessionId == null) {
+            sessionId = request.getParameter("sessionId");
+        }
         if (sessionId == null) {
             logger.error("No sessionId found in incoming request, aborting processing. See debug level for more information");
             if (logger.isDebugEnabled()) {

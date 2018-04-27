@@ -24,6 +24,7 @@ import java.util.List;
  */
 public class EventsCollectorRequest {
     private List<Event> events;
+    private String sessionId;
 
     /**
      * Retrieves the events to be processed.
@@ -37,4 +38,23 @@ public class EventsCollectorRequest {
     public void setEvents(List<Event> events) {
         this.events = events;
     }
+
+    /**
+     * Retrieve the sessionId passed along with the request. All events will be processed with this sessionId as a
+     * default
+     * @return the identifier for the session
+     */
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    /**
+     * Sets the sessionId in the request. This is the preferred method of passing along a session identifier with the
+     * request, as passing it along in the URL can lead to potential security vulnerabilities.
+     * @param sessionId an unique identifier for the session
+     */
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
+    }
+
 }

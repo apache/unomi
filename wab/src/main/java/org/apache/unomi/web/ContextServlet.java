@@ -116,7 +116,29 @@ public class ContextServlet extends HttpServlet {
             }
         }
 
-        String sessionId = request.getParameter("sessionId");
+        ContextRequest contextRequest = null;
+        String scope = null;
+        String sessionId = null;
+        String stringPayload = HttpUtils.getPayload(httpServletRequest);
+        if (stringPayload != null) {
+            ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
+            JsonFactory factory = mapper.getFactory();
+            try {
+                contextRequest = mapper.readValue(factory.createParser(stringPayload), ContextRequest.class);
+            } catch (Exception e) {
+                ((HttpServletResponse)response).sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
+                logger.error("Cannot read payload " + stringPayload, e);
+                return;
+            }
+            if (contextRequest.getSource() != null) {
+                scope = contextRequest.getSource().getScope();
+            }
+            sessionId = contextRequest.getSessionId();
+        }
+
+        if (sessionId == null) {
+            sessionId = request.getParameter("sessionId");
+        }
         boolean invalidateSession = request.getParameter("invalidateSession")!=null?new Boolean(request.getParameter("invalidateSession")):false;
         boolean invalidateProfile = request.getParameter("invalidateProfile")!=null?new Boolean(request.getParameter("invalidateProfile")):false;
 
@@ -129,21 +151,6 @@ public class ContextServlet extends HttpServlet {
             return;
         }
 
-        ContextRequest contextRequest = null;
-        String scope = null;
-        String stringPayload = HttpUtils.getPayload(httpServletRequest);
-        if (stringPayload != null) {
-            ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
-            JsonFactory factory = mapper.getFactory();
-            try {
-                contextRequest = mapper.readValue(factory.createParser(stringPayload), ContextRequest.class);
-            } catch (Exception e) {
-                ((HttpServletResponse)response).sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
-                logger.error("Cannot read payload " + stringPayload, e);
-                return;
-            }
-            scope = contextRequest.getSource().getScope();
-        }
 
         int changes = EventService.NO_CHANGE;
 
@@ -239,6 +246,11 @@ public class ContextServlet extends HttpServlet {
 
         ContextResponse data = new ContextResponse();
         data.setProfileId(profile.getItemId());
+        if (session != null) {
+            data.setSessionId(session.getItemId());
+        } else if (sessionId != null) {
+            data.setSessionId(sessionId);
+        }
 
         if (contextRequest != null){
             changes |= handleRequest(contextRequest, profile, session, data, request, response, timestamp);
