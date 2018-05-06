@@ -430,6 +430,7 @@
                             <excludes>
                                 <exclude>**/NOTICE.template</exclude>
                                 <exclude>**/NOTICE-generated</exclude>
+                                <exclude>**/DEPENDENCIES</exclude>
                                 <exclude>**/target/**/*</exclude>
                                 <!-- GIT files -->
                                 <exclude>**/.git/**/*</exclude>

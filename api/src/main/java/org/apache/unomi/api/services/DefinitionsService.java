@@ -178,9 +178,9 @@ public interface DefinitionsService {
      * TODO: remove from API and move to a different class?
      * TODO: purpose and behavior not clear
      *
-     * @param rootCondition
-     * @param tag
-     * @return Condition
+     * @param rootCondition the root condition where to start the extraction by class
+     * @param tag the tag to use to extract the condition
+     * @return Condition the condition that has been found matching the tag, or null if none matched
      */
     @Deprecated
     Condition extractConditionByTag(Condition rootCondition, String tag);
@@ -188,9 +188,9 @@ public interface DefinitionsService {
     /**
      * Retrieves a condition matching the specified system tag identifier from the specified root condition.
      *
-     * @param rootCondition
-     * @param systemTag
-     * @return Condition
+     * @param rootCondition the root condition where to start the extraction by class
+     * @param systemTag the tag to use to extract the condition
+     * @return Condition the condition that has been found matching the tag, or null if none matched
      */
     Condition extractConditionBySystemTag(Condition rootCondition, String systemTag);
 

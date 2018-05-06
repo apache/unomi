@@ -30,7 +30,7 @@ public interface PrivacyService {
     /**
      * Retrieves the server information, including the name and version of the server, the event types
      * if recognizes as well as the capabilities supported by the system.
-     * @return
+     * @return a ServerInfo object with all the server information
      */
     ServerInfo getServerInfo();
 
@@ -135,26 +135,36 @@ public interface PrivacyService {
     Boolean setFilteredEventTypes(String profileId, List<String> eventTypes);
 
     /**
-     * Gets the list of denied
-     * @param profileId
-     * @return
+     * Gets the list of denied properties. These are properties marked with a personal identifier tag.
+     * @param profileId the identified of the profile
+     * @return a list of profile properties identifiers that are marked as personally identifying
      */
     List<String> getDeniedProperties(String profileId);
 
+    /**
+     * Sets the list of denied properties.
+     * @param profileId the profile for which to see the denied properties
+     * @param propertyNames the property names to be denied
+     * @return null all the time, this method is not used and is marked as deprecated
+     * @deprecated don't use this method, instead mark properties with the personal identifier tag which will mark them
+     * as denied by the getDeniedProperties method
+     */
     Boolean setDeniedProperties(String profileId, List<String> propertyNames);
 
     /**
-     * @deprecated
-     * @param profileId
-     * @return
+     * This method doesn't do anything anymore please don't use it
+     * @deprecated do not use
+     * @param profileId the identifier of the profile
+     * @return do not use
      */
     List<String> getDeniedPropertyDistribution(String profileId);
 
     /**
-     * @deprecated
-     * @param profileId
-     * @param propertyNames
-     * @return
+     * This method doesn't do anything anymore please don't use it
+     * @deprecated do not use
+     * @param profileId the identifier of the profile
+     * @param propertyNames do not use
+     * @return do not use
      */
     Boolean setDeniedPropertyDistribution(String profileId, List<String> propertyNames);
 

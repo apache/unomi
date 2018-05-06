@@ -17,8 +17,6 @@
 package org.apache.unomi.metrics.commands;
 
 import org.apache.karaf.shell.commands.Command;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
-import org.apache.unomi.metrics.MetricsService;
 
 @Command(scope = "metrics", name = "activate", description = "This will activate the metrics system.")
 public class ActivateCommand extends MetricsCommandSupport {

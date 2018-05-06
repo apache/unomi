@@ -333,12 +333,14 @@ public interface ProfileService {
     Set<PropertyType> getExistingProperties(String tag, String itemType);
 
     /**
-     * Retrieves the existing property types for the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and with the specified tag.
+     * Retrieves the existing property types for the specified type as defined by the Item subclass public
+     * field {@code ITEM_TYPE} and with the specified tag (system or regular)
      *
      * TODO: move to a different class
      *
      * @param tag      the tag we're interested in
      * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
+     * @param systemTag whether the specified is a system tag or a regular one
      * @return all property types defined for the specified item type and with the specified tag
      */
     Set<PropertyType> getExistingProperties(String tag, String itemType, boolean systemTag);

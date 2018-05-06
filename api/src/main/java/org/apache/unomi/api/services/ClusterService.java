@@ -54,7 +54,7 @@ public interface ClusterService {
      * This function will send an event to the nodes of the cluster
      * The function takes a Serializable to avoid dependency on any clustering framework
      *
-     * @param event this object will be cast to {@link org.apache.karaf.cellar.core.event.Event}
+     * @param event this object will be cast to a org.apache.karaf.cellar.core.event.Event object
      */
     void sendEvent(Serializable event);
 }

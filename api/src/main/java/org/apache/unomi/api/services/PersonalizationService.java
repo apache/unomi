@@ -128,7 +128,10 @@ public interface PersonalizationService {
         }
 
         /**
-         * @deprecated
+         * Sets the filter identifier associated with this content filtering definition.
+         *
+         * @param filterid the filter identifier associated with this content filtering definition
+         * @deprecated this method is deprecated use the setId method instead
          */
         public void setFilterid(String filterid) {
             this.id = filterid;

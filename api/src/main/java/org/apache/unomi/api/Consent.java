@@ -65,6 +65,7 @@ public class Consent implements Serializable {
      * @param consentMap a Map that contains the following key-value pairs : typeIdentifier:String, status:String (must
      *                   be one of GRANTED, DENIED or REVOKED), statusDate:String (ISO8601 date format !), revokeDate:String (ISO8601 date format !)
      * @param dateFormat a DateFormat instance to convert the date string to date objects
+     * @throws ParseException in case one of the dates failed to parse properly
      */
     public Consent(Map<String,Object> consentMap, DateFormat dateFormat) throws ParseException {
         if (consentMap.containsKey("scope")) {
@@ -178,7 +179,7 @@ public class Consent implements Serializable {
     /**
      * Test if the consent is GRANTED right now.
      * @return true if the consent is granted using the current date (internally a new Date() is created and the
-     * @Consent#isConsentGivenAtDate is called.
+     * {@link Consent#isConsentGrantedAtDate} is called.
      */
     @XmlTransient
     public boolean isConsentGrantedNow() {

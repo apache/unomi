@@ -205,6 +205,7 @@ public class Profile extends Item {
 
     /**
      * Returns true if this profile is an anonymous profile.
+     * @return true of the profile has been marked as an anonymous profile, false otherwise.
      */
     @XmlTransient
     public boolean isAnonymousProfile() {
