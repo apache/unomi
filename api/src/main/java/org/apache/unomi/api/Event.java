@@ -113,6 +113,7 @@ public class Event extends Item implements TimestampedItem {
      * @param target     the target of the event if any
      * @param timestamp  the timestamp associated with the event if provided
      * @param properties the properties for this event if any
+     * @param persistent specifies if the event needs to be persisted
      */
     public Event(String eventType, Session session, Profile profile, String scope, Item source, Item target, Map<String, Object> properties, Date timestamp, boolean persistent) {
         this(eventType, session, profile, scope, source, target, timestamp);
