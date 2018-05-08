@@ -61,7 +61,7 @@ public class Event extends Item implements TimestampedItem {
     private Item source;
     private Item target;
 
-    private transient boolean persistent = true;
+    private boolean persistent = true;
 
     private transient Map<String, Object> attributes = new LinkedHashMap<>();
 
@@ -113,9 +113,11 @@ public class Event extends Item implements TimestampedItem {
      * @param target     the target of the event if any
      * @param timestamp  the timestamp associated with the event if provided
      * @param properties the properties for this event if any
+     * @param persistent specifies if the event needs to be persisted
      */
-    public Event(String eventType, Session session, Profile profile, String scope, Item source, Item target, Map<String, Object> properties, Date timestamp) {
+    public Event(String eventType, Session session, Profile profile, String scope, Item source, Item target, Map<String, Object> properties, Date timestamp, boolean persistent) {
         this(eventType, session, profile, scope, source, target, timestamp);
+        this.persistent = persistent;
         if (properties != null) {
             this.properties = properties;
         }
@@ -205,7 +207,6 @@ public class Event extends Item implements TimestampedItem {
      *
      * @return {@code true} if this Event needs to be persisted, {@code false} otherwise
      */
-    @XmlTransient
     public boolean isPersistent() {
         return persistent;
     }

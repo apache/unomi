@@ -16,30 +16,14 @@
  */
 package org.apache.unomi.persistence.elasticsearch;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Item;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
- * This CustomObjectMapper is used to avoid the version parameter to be registered in ES
- * @author dgaillard
+ * This mixin is used in ESCustomObjectMapper to prevent the persistent parameter from being registered in ES
  */
-public class ESCustomObjectMapper extends CustomObjectMapper {
+public abstract class ESEventMixIn {
 
-    private static final long serialVersionUID = -5017620674440085575L;
+    public ESEventMixIn() { }
 
-    public ESCustomObjectMapper() {
-        super();
-        this.addMixIn(Item.class, ESItemMixIn.class);
-        this.addMixIn(Event.class, ESEventMixIn.class);
-    }
-
-    public static ObjectMapper getObjectMapper() {
-        return ESCustomObjectMapper.Holder.INSTANCE;
-    }
-
-    private static class Holder {
-        static final ESCustomObjectMapper INSTANCE = new ESCustomObjectMapper();
-    }
+    @JsonIgnore abstract boolean isPersistent();
 }

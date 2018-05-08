@@ -184,7 +184,8 @@ public class EventsCollectorServlet extends HttpServlet {
 
         for (Event event : events.getEvents()){
             if(event.getEventType() != null){
-                Event eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp);
+                Event eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(),
+                        event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
                 if (sessionProfile.isAnonymousProfile()) {
                     // Do not keep track of profile in event
                     eventToSend.setProfileId(null);
