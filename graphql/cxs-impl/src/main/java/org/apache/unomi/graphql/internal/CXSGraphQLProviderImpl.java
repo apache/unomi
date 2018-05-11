@@ -17,6 +17,11 @@
 package org.apache.unomi.graphql.internal;
 
 import graphql.annotations.processor.GraphQLAnnotations;
+import graphql.annotations.processor.retrievers.GraphQLFieldRetriever;
+import graphql.annotations.processor.retrievers.GraphQLObjectInfoRetriever;
+import graphql.annotations.processor.searchAlgorithms.BreadthFirstSearch;
+import graphql.annotations.processor.searchAlgorithms.ParentalSearch;
+import graphql.annotations.processor.typeBuilders.InputObjectBuilder;
 import graphql.schema.*;
 import graphql.servlet.GraphQLMutationProvider;
 import graphql.servlet.GraphQLQueryProvider;
@@ -31,6 +36,7 @@ import org.osgi.service.component.annotations.Deactivate;
 import java.util.*;
 
 import static graphql.Scalars.*;
+import static graphql.schema.GraphQLArgument.newArgument;
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
 import static graphql.schema.GraphQLObjectType.newObject;
 
@@ -41,6 +47,7 @@ import static graphql.schema.GraphQLObjectType.newObject;
 public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryProvider, GraphQLTypesProvider, GraphQLMutationProvider {
 
     private Map<String,GraphQLOutputType> registeredOutputTypes = new TreeMap<>();
+    private Map<String,GraphQLInputType> registeredInputTypes = new TreeMap<>();
 
     @Activate
     void activate(
@@ -52,8 +59,15 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
         registeredOutputTypes.put(CXSProperties.class.getName(), GraphQLAnnotations.object(CXSProperties.class));
         registeredOutputTypes.put(CXSEventType.class.getName(), GraphQLAnnotations.object(CXSEventType.class));
 
+        GraphQLObjectInfoRetriever graphQLObjectInfoRetriever = new GraphQLObjectInfoRetriever();
+        GraphQLInputObjectType cxsEventTypeInput = new InputObjectBuilder(graphQLObjectInfoRetriever, new ParentalSearch(graphQLObjectInfoRetriever),
+                new BreadthFirstSearch(graphQLObjectInfoRetriever), new GraphQLFieldRetriever()).
+                getInputObjectBuilder(CXSEventTypeInput.class, GraphQLAnnotations.getInstance().getContainer()).build();
+        registeredInputTypes.put(CXSEventTypeInput.class.getName(), cxsEventTypeInput);
+
         registeredOutputTypes.put("CXS_Event", buildCXSEventOutputType());
         registeredOutputTypes.put("CXS_Query", buildCXSQueryOutputType());
+        registeredOutputTypes.put("CXS_Mutation", buildCXSMutationOutputType());
     }
 
     @Deactivate
@@ -88,7 +102,18 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
 
     @Override
     public Collection<GraphQLFieldDefinition> getMutations() {
-        return new ArrayList<>();
+        List<GraphQLFieldDefinition> fieldDefinitions = new ArrayList<GraphQLFieldDefinition>();
+        fieldDefinitions.add(newFieldDefinition()
+                .type(registeredOutputTypes.get("CXS_Mutation"))
+                .name("cxs")
+                .description("Root field for all CXS mutation")
+                .dataFetcher(new DataFetcher() {
+                    public Object get(DataFetchingEnvironment environment) {
+                        Map<String,Object> map = environment.getContext();
+                        return map.keySet();
+                    }
+                }).build());
+        return fieldDefinitions;
     }
 
     private GraphQLOutputType buildCXSQueryOutputType() {
@@ -99,6 +124,22 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
                         .type(new GraphQLList(registeredOutputTypes.get(CXSEventType.class.getName())))
                         .name("getEventTypes")
                         .description("Retrieves the list of all the declared CXS event types in the Apache Unomi server")
+                )
+                .build();
+    }
+
+    private GraphQLOutputType buildCXSMutationOutputType() {
+        return newObject()
+                .name("CXS_Mutation")
+                .description("Root CXS mutation type")
+                .field(newFieldDefinition()
+                        .type(registeredOutputTypes.get(CXSEventType.class.getName()))
+                        .name("createOrUpdateEventType")
+                        .argument(newArgument()
+                                .name("eventType")
+                                .type(registeredInputTypes.get(CXSEventTypeInput.class.getName()))
+                        )
+                        .description("Create or updates a CXS event type in the Apache Unomi server")
                 )
                 .build();
     }
