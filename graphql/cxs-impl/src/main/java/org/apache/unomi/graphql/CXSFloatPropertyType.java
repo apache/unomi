@@ -17,12 +17,14 @@
 package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CXSBooleanPropertyTypeInput")
-public class CXSBooleanPropertyTypeInput extends AbstractPropertyTypeInput {
+public class CXSFloatPropertyType extends CXSPropertyType {
 
     @GraphQLField
-    public boolean defaultValue;
+    public float minValue;
+    @GraphQLField
+    public float maxValue;
+    @GraphQLField
+    public float defaultValue;
 
 }

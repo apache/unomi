@@ -20,8 +20,9 @@ import graphql.annotations.annotationTypes.GraphQLField;
 
 import java.util.List;
 
-public class CXSSetPropertyTypeInput extends AbstractPropertyTypeInput {
+public class CXSSetPropertyTypeInput extends CXSPropertyType {
 
     @GraphQLField
     public List<CXSPropertyTypeInput> properties;
+
 }

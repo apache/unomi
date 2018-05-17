@@ -18,23 +18,9 @@ package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 
-import java.util.List;
-
-public class AbstractPropertyTypeInput {
+public class CXSDatePropertyType extends CXSPropertyType {
 
     @GraphQLField
-    public String id;
-    @GraphQLField
-    public String name;
-    @GraphQLField
-    public int minOccurrences;
-    @GraphQLField
-    public int maxOccurrences;
-    @GraphQLField
-    public List<String> tags;
-    @GraphQLField
-    public List<String> systemTags;
-    @GraphQLField
-    public boolean personalData;
+    public String defaultValue;
 
 }

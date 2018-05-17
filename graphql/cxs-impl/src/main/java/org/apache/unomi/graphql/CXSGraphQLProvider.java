@@ -18,4 +18,6 @@ package org.apache.unomi.graphql;
 
 public interface CXSGraphQLProvider {
 
+    void setCxsProviderManager(CXSProviderManager cxsProviderManager);
+
 }

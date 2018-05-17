@@ -24,31 +24,31 @@ public class CXSPropertyTypeInput {
 
     @GraphQLField
     @GraphQLName("identifier")
-    public CXSIdentifierPropertyTypeInput identifierPropertyTypeInput;
+    public CXSIdentifierPropertyType identifierPropertyTypeInput;
 
     @GraphQLField
     @GraphQLName("string")
-    public CXSStringPropertyTypeInput stringPropertyTypeInput;
+    public CXSStringPropertyType stringPropertyTypeInput;
 
     @GraphQLField
     @GraphQLName("int")
-    public CXSIntPropertyTypeInput integer;
+    public CXSIntPropertyType integer;
 
     @GraphQLField
     @GraphQLName("float")
-    public CXSFloatPropertyTypeInput floatPropertyTypeInput;
+    public CXSFloatPropertyType floatPropertyTypeInput;
 
     @GraphQLField
     @GraphQLName("date")
-    public CXSDatePropertyTypeInput datePropertyTypeInput;
+    public CXSDatePropertyType datePropertyTypeInput;
 
     @GraphQLField
     @GraphQLName("boolean")
-    public CXSBooleanPropertyTypeInput booleanPropertyTypeInput;
+    public CXSBooleanPropertyType booleanPropertyTypeInput;
 
     @GraphQLField
     @GraphQLName("geopoint")
-    public CXSGeoPointPropertyTypeInput geoPointPropertyTypeInput;
+    public CXSGeoPointPropertyType geoPointPropertyTypeInput;
 
     @GraphQLField
     @GraphQLName("set")

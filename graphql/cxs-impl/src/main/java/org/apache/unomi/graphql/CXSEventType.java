@@ -17,10 +17,23 @@
 package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
 
+import java.util.List;
+
+@GraphQLName("CXS_EventType")
 public class CXSEventType {
 
     @GraphQLField
     public String id;
+
+    @GraphQLField
+    public String scope;
+
+    @GraphQLField
+    public String typeName;
+
+    @GraphQLField
+    public List<CXSPropertyType> properties;
 
 }

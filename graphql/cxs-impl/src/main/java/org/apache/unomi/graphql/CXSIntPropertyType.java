@@ -18,11 +18,13 @@ package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 
-public class CXSStringPropertyTypeInput extends AbstractPropertyTypeInput {
+public class CXSIntPropertyType extends CXSPropertyType {
 
     @GraphQLField
-    public String regexp;
+    public int minValue;
     @GraphQLField
-    public String defaultValue;
+    public int maxValue;
+    @GraphQLField
+    public int defaultValue;
 
 }

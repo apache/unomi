@@ -29,9 +29,9 @@ import graphql.servlet.GraphQLTypesProvider;
 import org.apache.unomi.graphql.*;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -40,23 +40,24 @@ import static graphql.schema.GraphQLArgument.newArgument;
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
 import static graphql.schema.GraphQLObjectType.newObject;
 
-@Component(
-        name = "CXSGraphQLProvider",
-        immediate = true
-)
 public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryProvider, GraphQLTypesProvider, GraphQLMutationProvider {
+
+    private static final Logger logger = LoggerFactory.getLogger(CXSGraphQLProviderImpl.class.getName());
 
     private Map<String,GraphQLOutputType> registeredOutputTypes = new TreeMap<>();
     private Map<String,GraphQLInputType> registeredInputTypes = new TreeMap<>();
+    private CXSProviderManager cxsProviderManager;
 
-    @Activate
-    void activate(
-            ComponentContext cc,
-            BundleContext bc,
-            Map<String,Object> config) {
+    private Map<String,CXSEventType> eventTypes = new TreeMap<>();
 
+    public CXSGraphQLProviderImpl() {
+        updateGraphQLTypes();
+    }
+
+    private void updateGraphQLTypes() {
         registeredOutputTypes.put(CXSGeoPoint.class.getName(), GraphQLAnnotations.object(CXSGeoPoint.class));
-        registeredOutputTypes.put(CXSProperties.class.getName(), GraphQLAnnotations.object(CXSProperties.class));
+        registeredOutputTypes.put(CXSSetPropertyType.class.getName(), GraphQLAnnotations.object(CXSSetPropertyType.class));
+        registeredOutputTypes.put("CXS_EventProperties", buildCXSEventPropertiesOutputType());
         registeredOutputTypes.put(CXSEventType.class.getName(), GraphQLAnnotations.object(CXSEventType.class));
 
         GraphQLObjectInfoRetriever graphQLObjectInfoRetriever = new GraphQLObjectInfoRetriever();
@@ -77,6 +78,10 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
             Map<String,Object> config) {
 
         registeredOutputTypes.clear();
+    }
+
+    public void setCxsProviderManager(CXSProviderManager cxsProviderManager) {
+        this.cxsProviderManager = cxsProviderManager;
     }
 
     @Override
@@ -107,10 +112,11 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
                 .type(registeredOutputTypes.get("CXS_Mutation"))
                 .name("cxs")
                 .description("Root field for all CXS mutation")
-                .dataFetcher(new DataFetcher() {
+                .dataFetcher(new DataFetcher<Object>() {
+                    @Override
                     public Object get(DataFetchingEnvironment environment) {
-                        Map<String,Object> map = environment.getContext();
-                        return map.keySet();
+                        Object contextObject = environment.getContext();
+                        return contextObject;
                     }
                 }).build());
         return fieldDefinitions;
@@ -124,6 +130,11 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
                         .type(new GraphQLList(registeredOutputTypes.get(CXSEventType.class.getName())))
                         .name("getEventTypes")
                         .description("Retrieves the list of all the declared CXS event types in the Apache Unomi server")
+                )
+                .field(newFieldDefinition()
+                        .type(new GraphQLList(registeredOutputTypes.get("CXS_Event")))
+                        .name("getEvent")
+                        .description("Retrieves a specific event")
                 )
                 .build();
     }
@@ -140,10 +151,99 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
                                 .type(registeredInputTypes.get(CXSEventTypeInput.class.getName()))
                         )
                         .description("Create or updates a CXS event type in the Apache Unomi server")
+                        .dataFetcher(new DataFetcher<CXSEventType>() {
+                            @Override
+                            public CXSEventType get(DataFetchingEnvironment environment) {
+                                Map<String,Object> arguments = environment.getArguments();
+                                CXSEventType cxsEventType = new CXSEventType();
+                                if (arguments.containsKey("eventType")) {
+                                    Map<String,Object> eventTypeArguments = (Map<String,Object>) arguments.get("eventType");
+                                    if (eventTypeArguments.containsKey("typeName")) {
+                                        cxsEventType.id = (String) eventTypeArguments.get("typeName");
+                                        cxsEventType.typeName = (String) eventTypeArguments.get("typeName");
+                                    }
+                                    cxsEventType.properties = new ArrayList<>();
+                                    if (eventTypeArguments.containsKey("properties")) {
+                                        List<Map<String, Object>> properties = (List<Map<String, Object>>) eventTypeArguments.get("properties");
+                                        for (Map<String, Object> propertyTypeMap : properties) {
+                                            CXSPropertyType cxsPropertyType = getPropertyType(propertyTypeMap);
+                                            if (cxsPropertyType != null) {
+                                                cxsEventType.properties.add(cxsPropertyType);
+                                            }
+                                        }
+                                    }
+                                }
+                                eventTypes.put(cxsEventType.typeName, cxsEventType);
+                                updateGraphQLTypes();
+                                if (cxsProviderManager != null) {
+                                    cxsProviderManager.refreshProviders();
+                                }
+                                return cxsEventType;
+                            }
+                        })
                 )
                 .build();
     }
 
+    private CXSPropertyType getPropertyType(Map<String, Object> propertyTypeMap) {
+        if (propertyTypeMap.size() > 1) {
+            logger.error("Only one property type is allowed for each property !");
+            return null;
+        }
+        CXSPropertyType propertyType = null;
+        if (propertyTypeMap.containsKey("identifier")) {
+            propertyType = getIdentifierPropertyType(propertyTypeMap);
+        } else if (propertyTypeMap.containsKey("string")) {
+            propertyType = getStringPropertyType(propertyTypeMap);
+        } else if (propertyTypeMap.containsKey("set")) {
+            propertyType = getSetPropertyType(propertyTypeMap);
+        }
+        return propertyType;
+    }
+
+    private CXSPropertyType getSetPropertyType(Map<String, Object> propertyTypeMap) {
+        CXSSetPropertyType cxsSetPropertyType = new CXSSetPropertyType();
+        Map<String,Object> setPropertyTypeMap = (Map<String,Object>) propertyTypeMap.get("set");
+        populateCommonProperties(setPropertyTypeMap, cxsSetPropertyType);
+        if (propertyTypeMap.containsKey("properties")) {
+            List<Map<String,Object>> propertyList = (List<Map<String,Object>>) setPropertyTypeMap.get("properties");
+            List<CXSPropertyType> setProperties = new ArrayList<>();
+            for (Map<String,Object> setProperty : propertyList) {
+                CXSPropertyType subPropertyType = getPropertyType(setProperty);
+                if (subPropertyType != null) {
+                    setProperties.add(subPropertyType);
+                }
+            }
+            cxsSetPropertyType.properties = setProperties;
+        }
+        return cxsSetPropertyType;
+    }
+
+    private CXSPropertyType getStringPropertyType(Map<String, Object> propertyTypeMap) {
+        CXSStringPropertyType cxsStringPropertyType = new CXSStringPropertyType();
+        Map<String,Object> stringPropertyTypeMap = (Map<String,Object>) propertyTypeMap.get("string");
+        populateCommonProperties(stringPropertyTypeMap, cxsStringPropertyType);
+        return cxsStringPropertyType;
+    }
+
+    private CXSPropertyType getIdentifierPropertyType(Map<String, Object> propertyTypeMap) {
+        CXSIdentifierPropertyType cxsIdentifierPropertyType = new CXSIdentifierPropertyType();
+        Map<String,Object> identifierPropertyTypeMap = (Map<String,Object>) propertyTypeMap.get("identifier");
+        populateCommonProperties(identifierPropertyTypeMap, cxsIdentifierPropertyType);
+        return cxsIdentifierPropertyType;
+    }
+
+    private void populateCommonProperties(Map<String, Object> propertyTypeMap, CXSPropertyType cxsPropertyType) {
+        if (propertyTypeMap == null || propertyTypeMap.size() == 0) {
+            return;
+        }
+        if (propertyTypeMap.containsKey("id")) {
+            cxsPropertyType.id = (String) propertyTypeMap.get("id");
+        }
+        if (propertyTypeMap.containsKey("name")) {
+            cxsPropertyType.name = (String) propertyTypeMap.get("name");
+        }
+    }
 
     private GraphQLOutputType buildCXSEventOutputType() {
         return newObject()
@@ -214,7 +314,7 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
                         })
                 )
                 .field(newFieldDefinition()
-                        .type(new GraphQLList(registeredOutputTypes.get(CXSProperties.class.getName())))
+                        .type(new GraphQLList(registeredOutputTypes.get("CXS_EventProperties")))
                         .name("properties")
                         .description("Generic properties for the event")
                         .dataFetcher(new DataFetcher() {
@@ -226,4 +326,29 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
                 )
                 .build();
     }
+
+    private GraphQLOutputType buildCXSEventPropertiesOutputType() {
+        GraphQLObjectType.Builder eventPropertiesOutputType = newObject()
+                .name("CXS_EventProperties")
+                .description("All possible properties of an event");
+
+        // we create a dummy field because GraphQL requires at least one
+        eventPropertiesOutputType.field(newFieldDefinition()
+                .type(GraphQLInt)
+                .name("typeCount")
+                .description("Total count of different field types")
+        );
+
+        for (Map.Entry<String,CXSEventType> cxsEventTypeEntry : eventTypes.entrySet()) {
+            CXSEventType cxsEventType = cxsEventTypeEntry.getValue();
+            eventPropertiesOutputType
+                    .field(newFieldDefinition()
+                            .type(registeredOutputTypes.get(CXSSetPropertyType.class.getName()))
+                            .name(cxsEventTypeEntry.getKey())
+                    );
+        }
+
+        return eventPropertiesOutputType.build();
+    }
+
 }

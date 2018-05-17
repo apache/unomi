@@ -18,7 +18,7 @@ package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 
-public class CXSIdentifierPropertyTypeInput extends AbstractPropertyTypeInput {
+public class CXSStringPropertyType extends CXSPropertyType {
 
     @GraphQLField
     public String regexp;

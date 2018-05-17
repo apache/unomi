@@ -17,10 +17,12 @@
 package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
 
-public class CXSDatePropertyTypeInput extends AbstractPropertyTypeInput {
+@GraphQLName("CXSBooleanPropertyType")
+public class CXSBooleanPropertyType extends CXSPropertyType {
 
     @GraphQLField
-    public String defaultValue;
+    public boolean defaultValue;
 
 }

@@ -16,17 +16,25 @@
  */
 package org.apache.unomi.graphql;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
+import graphql.annotations.annotationTypes.GraphQLField;
+
+import java.util.List;
 
 public class CXSPropertyType {
 
-    private String id;
-    private String name;
-    private int minOccurrences = 0;
-    private int maxOccurrences = 1;
-    private Set<String> tags = new LinkedHashSet<>();
-    private Set<String> systemTags = new LinkedHashSet<>();
-    private boolean personalData = false;
+    @GraphQLField
+    public String id;
+    @GraphQLField
+    public String name;
+    @GraphQLField
+    public int minOccurrences;
+    @GraphQLField
+    public int maxOccurrences;
+    @GraphQLField
+    public List<String> tags;
+    @GraphQLField
+    public List<String> systemTags;
+    @GraphQLField
+    public boolean personalData;
 
 }

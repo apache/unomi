@@ -18,8 +18,10 @@ package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 
-public class CXSGeoPointPropertyTypeInput extends AbstractPropertyTypeInput {
+import java.util.List;
+
+public class CXSSetPropertyType extends CXSPropertyType {
 
     @GraphQLField
-    public String defaultValue;
+    public List<CXSPropertyType> properties;
 }
