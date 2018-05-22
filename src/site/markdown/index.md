@@ -21,7 +21,14 @@
 
 ## Apache Unomi in one sentence
 Apache Unomi is __a Java Open Source customer data platform__, a Java server designed to manage customers, 
-leads and visitors’ data and help personalize customers’ experiences. 
+leads and visitors’ data and help personalize customers’ experiences while also offering features to respect visitor
+privacy rules (such as [GDPR](https://en.wikipedia.org/wiki/General_Data_Protection_Regulation))
+
+## *NEW* Privacy (GPDR consent management) upcoming features in version 1.3
+New to release 1.3 (currently in development, nearing completion) are features to manage visitor consents, in order to 
+make it easier to comply with new privacy regulations such as the [GDPR](https://en.wikipedia.org/wiki/General_Data_Protection_Regulation)
+If you are interested in these new features, you must for the moment build the master branch from source. A quick guide
+to these new features is also available [here](versions/master/consent-api.html)
 
 ## For developers 
 * Uses ElasticSearch for data storage, dynamic data structure

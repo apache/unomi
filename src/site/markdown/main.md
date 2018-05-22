@@ -48,6 +48,7 @@ In this section we regroup the documentation by Apache Unomi version.
 - [Cluster setup](versions/master/clustering.html)
 - [Concepts](versions/master/concepts.html)
 - [Custom extensions](versions/master/custom-extensions.html)
+- [Consent API](versions/master/consent-api.html)
 
 # Migration documentation
 
