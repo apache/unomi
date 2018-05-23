@@ -16,6 +16,8 @@
  */
 package org.apache.unomi.graphql.internal;
 
+import graphql.annotations.processor.GraphQLAnnotationsComponent;
+import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.servlet.GraphQLMutationProvider;
 import graphql.servlet.GraphQLQueryProvider;
 import graphql.servlet.GraphQLTypesProvider;
@@ -27,6 +29,7 @@ import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
 
 import java.util.Map;
 
@@ -37,8 +40,15 @@ import java.util.Map;
 public class CXSProviderManagerImpl implements CXSProviderManager {
 
     private CXSGraphQLProvider cxsGraphQLProvider;
+    private GraphQLAnnotationsComponent annotationsComponent;
+    private ProcessingElementsContainer container;
     private ServiceRegistration<?> providerSR;
     private BundleContext bundleContext;
+
+    @Reference
+    public void setAnnotationsComponent(GraphQLAnnotationsComponent annotationsComponent) {
+        this.annotationsComponent = annotationsComponent;
+    }
 
     @Activate
     void activate(
@@ -46,7 +56,7 @@ public class CXSProviderManagerImpl implements CXSProviderManager {
             BundleContext bundleContext,
             Map<String,Object> config) {
         this.bundleContext = bundleContext;
-        this.cxsGraphQLProvider = new CXSGraphQLProviderImpl();
+        this.cxsGraphQLProvider = new CXSGraphQLProviderImpl(annotationsComponent);
         this.cxsGraphQLProvider.setCxsProviderManager(this);
         providerSR = bundleContext.registerService(new String[] {
                 GraphQLQueryProvider.class.getName(),
