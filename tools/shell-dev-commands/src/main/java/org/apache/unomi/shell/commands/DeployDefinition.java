@@ -56,7 +56,7 @@ public class DeployDefinition extends OsgiCommandSupport {
     @Argument(index = 0, name = "bundleId", description = "The bundle identifier where to find the definition", required = true, multiValued = false)
     Long bundleIdentifier;
 
-    @Argument(index = 1, name = "fileName", description = "The name of the file which contains the definition", required = true, multiValued = false)
+    @Argument(index = 1, name = "fileName", description = "The name of the file which contains the definition, without its extension (e.g: firstName)", required = true, multiValued = false)
     String fileName;
 
     protected Object doExecute() throws Exception {
@@ -66,10 +66,10 @@ public class DeployDefinition extends OsgiCommandSupport {
             return null;
         }
 
-        String definitionTypeAnswer = askUserWithAuthorizedAnswer(session,"Which kind of definition do you want to load?" + getDefinitionTypesWithNumber(), Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"));
+        String definitionTypeAnswer = askUserWithAuthorizedAnswer(session,"Which kind of definition do you want to load?" + getDefinitionTypesWithNumber() + "\n", Arrays.asList("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
         String definitionType = definitionTypes.get(new Integer(definitionTypeAnswer));
 
-        String path = "META-INF/cxs/" + definitionType;
+        String path = getDefinitionTypePath(definitionType);
         Enumeration<URL> definitions = bundleToUpdate.findEntries(path, "*.json", true);
         if (definitions == null) {
             System.out.println("Couldn't find definitions in bundle with id: " + bundleIdentifier + " and definition path: " + path);
@@ -104,7 +104,7 @@ public class DeployDefinition extends OsgiCommandSupport {
     private String getDefinitionTypesWithNumber() {
         StringBuilder definitionTypesWithNumber = new StringBuilder();
         for (int i = 0; i < definitionTypes.size(); i++) {
-            definitionTypesWithNumber.append("\n").append(i + 1).append(". ").append(definitionTypes.get(i));
+            definitionTypesWithNumber.append("\n").append(i).append(". ").append(definitionTypes.get(i));
         }
         return definitionTypesWithNumber.toString();
     }
@@ -159,6 +159,44 @@ public class DeployDefinition extends OsgiCommandSupport {
             System.out.println("Error while saving definition " + definitionURL);
             System.out.println(e.getMessage());
         }
+    }
+
+    private String getDefinitionTypePath(String definitionType) {
+        StringBuilder path = new StringBuilder("META-INF/cxs/");
+        switch (definitionType) {
+            case "condition":
+                path.append("conditions");
+                break;
+            case "action":
+                path.append("actions");
+                break;
+            case "goal":
+                path.append("goals");
+                break;
+            case "campaign":
+                path.append("campaigns");
+                break;
+            case "persona":
+                path.append("personas");
+                break;
+            case "persona with session":
+                path.append("personas");
+                break;
+            case "property":
+                path.append("properties");
+                break;
+            case "rule":
+                path.append("rules");
+                break;
+            case "segment":
+                path.append("segments");
+                break;
+            case "scoring":
+                path.append("scoring");
+                break;
+        }
+
+        return path.toString();
     }
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
