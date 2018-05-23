@@ -153,7 +153,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             try {
                 Rule rule = CustomObjectMapper.getObjectMapper().readValue(predefinedSegmentURL, Rule.class);
                 // Register only if rule does not exist yet
-                if (getRule(rule.getMetadata().getId()) == null) {
+                if (getRule(rule.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
                     setRule(rule);
                     logger.info("Predefined rule with id {} registered", rule.getMetadata().getId());
                 } else {

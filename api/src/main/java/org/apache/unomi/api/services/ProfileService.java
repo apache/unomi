@@ -21,6 +21,7 @@ import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 
+import java.net.URL;
 import java.util.*;
 
 /**
@@ -310,6 +311,14 @@ public interface ProfileService {
      * @return {@code true} if the property type was properly created, {@code false} otherwise (for example, if the property type already existed
      */
     boolean setPropertyType(PropertyType property);
+
+    /**
+     * This function will try to set the target on the property type if not set already, based on the file URL
+     *
+     * @param predefinedPropertyTypeURL
+     * @param propertyType
+     */
+    void setPropertyTypeTarget(URL predefinedPropertyTypeURL, PropertyType propertyType);
 
     /**
      * Deletes the property type identified by the specified identifier.

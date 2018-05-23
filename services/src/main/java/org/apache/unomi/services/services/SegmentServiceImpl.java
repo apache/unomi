@@ -137,7 +137,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     segment.getMetadata().setScope("systemscope");
                 }
                 // Register only if segment does not exist yet
-                if (getSegmentDefinition(segment.getMetadata().getId()) == null) {
+                if (getSegmentDefinition(segment.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
                     setSegmentDefinition(segment);
                     logger.info("Predefined segment with id {} registered", segment.getMetadata().getId());
                 } else {
@@ -164,7 +164,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     scoring.getMetadata().setScope("systemscope");
                 }
                 // Register only if scoring plan does not exist yet
-                if (getScoringDefinition(scoring.getMetadata().getId()) == null) {
+                if (getScoringDefinition(scoring.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
                     setScoringDefinition(scoring);
                     logger.info("Predefined scoring with id {} registered", scoring.getMetadata().getId());
                 } else {

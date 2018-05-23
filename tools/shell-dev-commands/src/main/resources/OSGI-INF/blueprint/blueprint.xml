@@ -22,9 +22,9 @@
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
            xmlns:shell="http://karaf.apache.org/xmlns/shell/v1.1.0"
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
-  http://cxf.apache.org/blueprint/jaxrs http://cxf.apache.org/schemas/blueprint/jaxrs.xsd
-  http://cxf.apache.org/blueprint/core http://cxf.apache.org/schemas/blueprint/core.xsd
-  http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
+                               http://cxf.apache.org/blueprint/jaxrs http://cxf.apache.org/schemas/blueprint/jaxrs.xsd
+                               http://cxf.apache.org/blueprint/core http://cxf.apache.org/schemas/blueprint/core.xsd
+                               http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
 
     <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
     <reference id="userListService" interface="org.apache.unomi.api.services.UserListService"/>
@@ -69,6 +69,15 @@
         </shell:command>
         <shell:command>
             <shell:action class="org.apache.unomi.shell.commands.SegmentViewCommand">
+                <shell:property name="segmentService" ref="segmentService" />
+            </shell:action>
+        </shell:command>
+        <shell:command>
+            <shell:action class="org.apache.unomi.shell.commands.DeployDefinition">
+                <shell:property name="definitionsService" ref="definitionsService" />
+                <shell:property name="goalsService" ref="goalsService" />
+                <shell:property name="profileService" ref="profileService" />
+                <shell:property name="rulesService" ref="rulesService" />
                 <shell:property name="segmentService" ref="segmentService" />
             </shell:action>
         </shell:command>

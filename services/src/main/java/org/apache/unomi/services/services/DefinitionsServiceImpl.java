@@ -132,7 +132,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             try {
                 ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(predefinedConditionURL, ConditionType.class);
                 // Register only if condition type does not exist yet
-                if (getConditionType(conditionType.getMetadata().getId()) == null) {
+                if (getConditionType(conditionType.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
                     setConditionType(conditionType);
                     logger.info("Predefined condition type with id {} registered", conditionType.getMetadata().getId());
                 } else {
@@ -157,7 +157,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             try {
                 ActionType actionType = CustomObjectMapper.getObjectMapper().readValue(predefinedActionURL, ActionType.class);
                 // Register only if action type does not exist yet
-                if (getActionType(actionType.getMetadata().getId()) == null) {
+                if (getActionType(actionType.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
                     setActionType(actionType);
                     logger.info("Predefined action type with id {} registered", actionType.getMetadata().getId());
                 } else {

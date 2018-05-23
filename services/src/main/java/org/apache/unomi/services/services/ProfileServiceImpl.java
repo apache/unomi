@@ -896,6 +896,16 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return null;
     }
 
+    public void setPropertyTypeTarget(URL predefinedPropertyTypeURL, PropertyType propertyType) {
+        if (StringUtils.isBlank(propertyType.getTarget())) {
+            String[] splitPath = predefinedPropertyTypeURL.getPath().split("/");
+            String target = splitPath[4];
+            if (StringUtils.isNotBlank(target)) {
+                propertyType.setTarget(target);
+            }
+        }
+    }
+
     private void loadPredefinedPersonas(BundleContext bundleContext) {
         if (bundleContext == null) {
             return;
@@ -914,7 +924,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
                 String itemId = persona.getPersona().getItemId();
                 // Register only if persona does not exist yet
-                if (persistenceService.load(itemId, Persona.class) == null) {
+                if (persistenceService.load(itemId, Persona.class) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
                     persistenceService.save(persona.getPersona());
 
                     List<PersonaSession> sessions = persona.getSessions();
@@ -947,10 +957,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             try {
                 PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeURL, PropertyType.class);
                 // Register only if property type does not exist yet
-                if (getPropertyType(propertyType.getMetadata().getId()) == null) {
-                    String[] splitPath = predefinedPropertyTypeURL.getPath().split("/");
-                    String target = splitPath[4];
-                    propertyType.setTarget(target);
+                if (getPropertyType(propertyType.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
+
+                    setPropertyTypeTarget(predefinedPropertyTypeURL, propertyType);
 
                     persistenceService.save(propertyType);
                     bundlePropertyTypes.add(propertyType);
@@ -964,7 +973,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
         propertyTypes = propertyTypes.with(bundlePropertyTypes);
     }
-
 
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {

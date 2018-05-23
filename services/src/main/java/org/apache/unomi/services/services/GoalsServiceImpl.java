@@ -119,7 +119,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
                     goal.getMetadata().setScope("systemscope");
                 }
                 // Register only if goal does not exist yet
-                if (getGoal(goal.getMetadata().getId()) == null) {
+                if (getGoal(goal.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
                     setGoal(goal);
                     logger.info("Predefined goal with id {} registered", goal.getMetadata().getId());
                 } else {
@@ -264,7 +264,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             try {
                 Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(predefinedCampaignURL, Campaign.class);
                 // Register only if campaign does not exist yet
-                if (getCampaign(campaign.getMetadata().getId()) == null) {
+                if (getCampaign(campaign.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
                     setCampaign(campaign);
                     logger.info("Predefined campaign with id {} registered", campaign.getMetadata().getId());
                 } else {
