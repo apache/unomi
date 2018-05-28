@@ -58,26 +58,227 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
 
     private void updateGraphQLTypes() {
 
+        registeredOutputTypes.put(PageInfo.class.getName(), annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(PageInfo.class, container));
+
         registeredOutputTypes.put(CXSGeoPoint.class.getName(), annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CXSGeoPoint.class, container));
         registeredOutputTypes.put(CXSSetPropertyType.class.getName(),annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CXSSetPropertyType.class, container));
         registeredOutputTypes.put(CXSEventType.class.getName(), annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CXSEventType.class, container));
 
+        registeredInputTypes.put(CXSGeoDistanceInput.class.getName(), annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSGeoDistanceInput.class, container));
+        registeredInputTypes.put(CXSDateFilterInput.class.getName(), annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSDateFilterInput.class, container));
         registeredInputTypes.put(CXSEventTypeInput.class.getName(), annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSEventTypeInput.class, container));
+        registeredInputTypes.put(CXSOrderByInput.class.getName(), annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSOrderByInput.class, container));
         registeredInputTypes.put("CXS_EventInput", buildCXSEventInputType());
+        registeredInputTypes.put(CXSEventOccurrenceFilterInput.class.getName(), annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSEventOccurrenceFilterInput.class, container));
+        registeredInputTypes.put("CXS_EventPropertiesFilterInput", buildCXSEventPropertiesFilterInput());
+        registeredInputTypes.put("CXS_EventFilterInput", buildCXSEventFilterInputType());
 
         registeredOutputTypes.put("CXS_EventProperties", buildCXSEventPropertiesOutputType());
 
-        /*
-        GraphQLObjectInfoRetriever graphQLObjectInfoRetriever = new GraphQLObjectInfoRetriever();
-        GraphQLInputObjectType cxsEventTypeInput = new InputObjectBuilder(graphQLObjectInfoRetriever, new ParentalSearch(graphQLObjectInfoRetriever),
-                new BreadthFirstSearch(graphQLObjectInfoRetriever), new GraphQLFieldRetriever()).
-                getInputObjectBuilder(CXSEventTypeInput.class, GraphQLAnnotations.getInstance().getContainer()).build();
-        registeredInputTypes.put(CXSEventTypeInput.class.getName(), cxsEventTypeInput);
-        */
-
         registeredOutputTypes.put("CXS_Event", buildCXSEventOutputType());
+        registeredOutputTypes.put("CXS_EventEdge", buildCXSEventEdgeOutputType());
+        registeredOutputTypes.put("CXS_EventConnection", buildCXSEventConnectionOutputType());
         registeredOutputTypes.put("CXS_Query", buildCXSQueryOutputType());
         registeredOutputTypes.put("CXS_Mutation", buildCXSMutationOutputType());
+    }
+
+    private GraphQLOutputType buildCXSEventEdgeOutputType() {
+        return newObject()
+                .name("CXS_EventEdge")
+                .description("The Relay edge type for the CXS_Event output type")
+                .field(newFieldDefinition()
+                        .name("node")
+                        .type(registeredOutputTypes.get("CXS_Event"))
+                )
+                .field(newFieldDefinition()
+                        .name("cursor")
+                        .type(GraphQLString)
+                )
+                .build();
+    }
+
+    private GraphQLOutputType buildCXSEventConnectionOutputType() {
+        return newObject()
+                .name("CXS_EventConnection")
+                .description("The Relay connection type for the CXS_Event output type")
+                .field(newFieldDefinition()
+                        .name("edges")
+                        .type(new GraphQLList(registeredOutputTypes.get("CXS_EventEdge")))
+                )
+                .field(newFieldDefinition()
+                        .name("pageInfo")
+                        .type(new GraphQLList(registeredOutputTypes.get(PageInfo.class.getName())))
+                )
+                .build();
+    }
+
+    private GraphQLInputType buildCXSEventPropertiesFilterInput() {
+        GraphQLInputObjectType.Builder cxsEventPropertiesFilterInput = newInputObject()
+                .name("CXS_EventPropertiesFilterInput")
+                .description("Filter conditions for each event types and built-in properties");
+
+        generateEventPropertiesFilters(cxsEventPropertiesFilterInput);
+        generateEventTypesFilters(cxsEventPropertiesFilterInput);
+
+        return cxsEventPropertiesFilterInput.build();
+    }
+
+
+    private void generateEventPropertiesFilters(GraphQLInputObjectType.Builder cxsEventPropertiesFilterInput) {
+        addIdentityFilters("id", cxsEventPropertiesFilterInput);
+        addIdentityFilters("sourceId", cxsEventPropertiesFilterInput);
+        addIdentityFilters("clientId", cxsEventPropertiesFilterInput);
+        addIdentityFilters("profileId", cxsEventPropertiesFilterInput);
+        addDistanceFilters("location", cxsEventPropertiesFilterInput);
+        addDateFilters("timestamp", cxsEventPropertiesFilterInput);
+    }
+
+    private void generateEventTypesFilters(GraphQLInputObjectType.Builder cxsEventPropertiesFilterInput) {
+        for (Map.Entry<String,CXSEventType> eventTypeEntry : eventTypes.entrySet()) {
+            addSetFilters(eventTypeEntry.getKey(), eventTypeEntry.getValue().properties, cxsEventPropertiesFilterInput);
+        }
+    }
+
+    private void addSetFilters(String eventTypeName, List<CXSPropertyType> properties, GraphQLInputObjectType.Builder inputTypeBuilder) {
+        GraphQLInputObjectType.Builder eventTypeFilterInput = newInputObject()
+                .name(eventTypeName + "FilterInput")
+                .description("Auto-generated filter input type for event type " + eventTypeName);
+
+        for (CXSPropertyType cxsPropertyType : properties) {
+            if (cxsPropertyType instanceof CXSIdentifierPropertyType) {
+                addIdentityFilters(cxsPropertyType.name, eventTypeFilterInput);
+            } else if (cxsPropertyType instanceof CXSStringPropertyType) {
+                addStringFilters(cxsPropertyType.name, eventTypeFilterInput);
+            } else if (cxsPropertyType instanceof CXSBooleanPropertyType) {
+                addBooleanFilters(cxsPropertyType.name, eventTypeFilterInput);
+            } else if (cxsPropertyType instanceof CXSIntPropertyType) {
+                addIntegerFilters(cxsPropertyType.name, eventTypeFilterInput);
+            } else if (cxsPropertyType instanceof CXSFloatPropertyType) {
+                addFloatFilters(cxsPropertyType.name, eventTypeFilterInput);
+            } else if (cxsPropertyType instanceof CXSGeoPointPropertyType) {
+                addDistanceFilters(cxsPropertyType.name, eventTypeFilterInput);
+            } else if (cxsPropertyType instanceof CXSDatePropertyType) {
+                addDateFilters(cxsPropertyType.name, eventTypeFilterInput);
+            } else if (cxsPropertyType instanceof CXSSetPropertyType) {
+                addSetFilters(cxsPropertyType.name, ((CXSSetPropertyType) cxsPropertyType).properties, eventTypeFilterInput);
+            }
+        }
+
+        registeredInputTypes.put(eventTypeName + "FilterInput", eventTypeFilterInput.build());
+
+        inputTypeBuilder.field(newInputObjectField()
+                .name(eventTypeName)
+                .type(registeredInputTypes.get(eventTypeName + "FilterInput"))
+        );
+
+    }
+
+    private void addIdentityFilters(String propertyName, GraphQLInputObjectType.Builder inputTypeBuilder) {
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_equals")
+                .type(GraphQLString)
+        );
+    }
+
+    private void addStringFilters(String propertyName, GraphQLInputObjectType.Builder inputTypeBuilder) {
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_equals")
+                .type(GraphQLString)
+        );
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_regexp")
+                .type(GraphQLString)
+        );
+    }
+
+    private void addBooleanFilters(String propertyName, GraphQLInputObjectType.Builder inputTypeBuilder) {
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_equals")
+                .type(GraphQLBoolean)
+        );
+    }
+
+    private void addIntegerFilters(String propertyName, GraphQLInputObjectType.Builder inputTypeBuilder) {
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_equals")
+                .type(GraphQLInt)
+        );
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_gt")
+                .type(GraphQLInt)
+        );
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_gte")
+                .type(GraphQLInt)
+        );
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_lt")
+                .type(GraphQLInt)
+        );
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_lte")
+                .type(GraphQLInt)
+        );
+    }
+
+    private void addFloatFilters(String propertyName, GraphQLInputObjectType.Builder inputTypeBuilder) {
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_equals")
+                .type(GraphQLFloat)
+        );
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_gt")
+                .type(GraphQLFloat)
+        );
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_gte")
+                .type(GraphQLFloat)
+        );
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_lt")
+                .type(GraphQLFloat)
+        );
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_lte")
+                .type(GraphQLFloat)
+        );
+    }
+
+    private void addDistanceFilters(String propertyName, GraphQLInputObjectType.Builder inputTypeBuilder) {
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_distance")
+                .type(registeredInputTypes.get(CXSGeoDistanceInput.class.getName()))
+        );
+    }
+
+    private void addDateFilters(String propertyName, GraphQLInputObjectType.Builder inputTypeBuilder) {
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_between")
+                .type(registeredInputTypes.get(CXSDateFilterInput.class.getName()))
+        );
+    }
+
+    private GraphQLInputType buildCXSEventFilterInputType() {
+        GraphQLInputObjectType.Builder cxsEventFilterInputType = newInputObject()
+                .name("CXS_EventFilterInput")
+                .description("Filter conditions for each event types and built-in properties")
+                .field(newInputObjectField()
+                        .name("and")
+                        .type(new GraphQLList(new GraphQLTypeReference("CXS_EventFilterInput")))
+                )
+                .field(newInputObjectField()
+                        .name("or")
+                        .type(new GraphQLList(new GraphQLTypeReference("CXS_EventFilterInput")))
+                )
+                .field(newInputObjectField()
+                        .name("properties")
+                        .type(registeredInputTypes.get("CXS_EventPropertiesFilterInput"))
+                )
+                .field(newInputObjectField()
+                        .name("eventOccurrence")
+                        .type(registeredInputTypes.get(CXSEventOccurrenceFilterInput.class.getName()))
+                );
+        return cxsEventFilterInputType.build();
     }
 
     private GraphQLInputType buildCXSEventInputType() {
@@ -201,6 +402,74 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
                         .name("getEvent")
                         .description("Retrieves a specific event")
                 )
+                .field(newFieldDefinition()
+                        .type(new GraphQLList(registeredOutputTypes.get("CXS_EventConnection")))
+                        .name("findEvents")
+                        .argument(newArgument()
+                                .name("filter")
+                                .type(registeredInputTypes.get("CXS_EventFilterInput"))
+                        )
+                        .argument(newArgument()
+                                .name("orderBy")
+                                .type(registeredInputTypes.get(CXSOrderByInput.class.getName()))
+                        )
+                        .argument(newArgument()
+                                .name("first")
+                                .type(GraphQLInt)
+                                .description("Number of objects to retrieve starting at the after cursor position")
+                        )
+                        .argument(newArgument()
+                                .name("after")
+                                .type(GraphQLString)
+                                .description("Starting cursor location to retrieve the object from")
+                        )
+                        .argument(newArgument()
+                                .name("last")
+                                .type(GraphQLInt)
+                                .description("Number of objects to retrieve end at the before cursor position")
+                        )
+                        .argument(newArgument()
+                                .name("before")
+                                .type(GraphQLString)
+                                .description("End cursor location to retrieve the object from")
+                        )
+                        .description("Retrieves the events that match the specified filters")
+                )
+                /*
+                .field(newFieldDefinition()
+                        .type(new GraphQLList(registeredOutputTypes.get("CXS_ProfileConnection")))
+                        .name("findProfiles")
+                        .argument(newArgument()
+                                .name("filter")
+                                .type(registeredInputTypes.get("CXS_ProfileFilterInput"))
+                        )
+                        .argument(newArgument()
+                                .name("orderBy")
+                                .type(registeredInputTypes.get(CXSOrderByInput.class.getName()))
+                        )
+                        .argument(newArgument()
+                                .name("first")
+                                .type(GraphQLInt)
+                                .description("Number of objects to retrieve starting at the after cursor position")
+                        )
+                        .argument(newArgument()
+                                .name("after")
+                                .type(GraphQLString)
+                                .description("Starting cursor location to retrieve the object from")
+                        )
+                        .argument(newArgument()
+                                .name("last")
+                                .type(GraphQLInt)
+                                .description("Number of objects to retrieve end at the before cursor position")
+                        )
+                        .argument(newArgument()
+                                .name("before")
+                                .type(GraphQLString)
+                                .description("End cursor location to retrieve the object from")
+                        )
+                        .description("Retrieves the profiles that match the specified profiles")
+                )
+                */
                 .build();
     }
 
