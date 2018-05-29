@@ -73,6 +73,12 @@ An extension is simply a Maven project, with a Maven pom that looks like this:
 An extension may contain many different kinds of Apache Unomi objects, as well as custom OSGi services or anything that
 is needed to build your application.
 
+## Deployment and custom definition
+
+When you deploy a custom bundle with a custom definition (see "Predefined xxx" chapters under) for the first time, the definition will automatically be deployed at your bundle start event **if it does not exist**, after that if you redeploy the same bundle there are two cases:
+1. Your bundle **is a SNAPSHOT** then every time you redeploy it the definition will be redeployed
+2. Your bundle **is NOT a SNAPSHOT** then the definition will not be redeployed, but you can redeploy it manually using the command `unomi:deploy-definition <bundleId> <fileName>`
+
 ## Predefined segments
 
 You may provide pre-defined segments by simply adding a JSON file in the src/main/resources/META-INF/cxs/segments directory of 
