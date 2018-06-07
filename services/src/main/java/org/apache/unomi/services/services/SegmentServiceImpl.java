@@ -18,19 +18,20 @@
 package org.apache.unomi.services.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.*;
-import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -442,9 +443,9 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 if (scoreModifiers != null && scoreModifiers.containsKey(scoringId) && scoreModifiers.get(scoringId) != null) {
                     score += scoreModifiers.get(scoringId);
                 }
-                if (score > 0) {
-                    scores.put(scoringId, score);
-                }
+
+                scores.put(scoringId, score);
+
             }
         }
 
