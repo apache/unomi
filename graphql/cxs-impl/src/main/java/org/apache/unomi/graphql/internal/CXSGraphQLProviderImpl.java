@@ -189,6 +189,14 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
                 .name(propertyName + "_regexp")
                 .type(GraphQLString)
         );
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_startsWith")
+                .type(GraphQLString)
+        );
+        inputTypeBuilder.field(newInputObjectField()
+                .name(propertyName + "_contains")
+                .type(new GraphQLList(GraphQLString))
+        );
     }
 
     private void addBooleanFilters(String propertyName, GraphQLInputObjectType.Builder inputTypeBuilder) {
@@ -272,6 +280,10 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
                 )
                 .field(newInputObjectField()
                         .name("properties")
+                        .type(registeredInputTypes.get("CXS_EventPropertiesFilterInput"))
+                )
+                .field(newInputObjectField()
+                        .name("properties_or")
                         .type(registeredInputTypes.get("CXS_EventPropertiesFilterInput"))
                 )
                 .field(newInputObjectField()
