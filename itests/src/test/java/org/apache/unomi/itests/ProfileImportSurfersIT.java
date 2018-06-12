@@ -93,7 +93,7 @@ public class ProfileImportSurfersIT extends BaseIT {
 
         importConfigSurfers.getProperties().put("mapping", mappingSurfers);
         File importSurfersFile = new File("data/tmp/recurrent_import/");
-        importConfigSurfers.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=2-surfers-test.csv&move=.done");
+        importConfigSurfers.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=2-surfers-test.csv&consumer.delay=10m&move=.done");
         importConfigSurfers.setActive(true);
 
         importConfigurationService.save(importConfigSurfers, true);
@@ -139,7 +139,7 @@ public class ProfileImportSurfersIT extends BaseIT {
         importConfigSurfersOverwrite.setHasDeleteColumn(true);
 
         importConfigSurfersOverwrite.getProperties().put("mapping", mappingSurfers);
-        importConfigSurfersOverwrite.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=3-surfers-overwrite-test.csv&move=.done");
+        importConfigSurfersOverwrite.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=3-surfers-overwrite-test.csv&consumer.delay=10m&move=.done");
         importConfigSurfersOverwrite.setActive(true);
 
         importConfigurationService.save(importConfigSurfersOverwrite, true);
@@ -180,7 +180,7 @@ public class ProfileImportSurfersIT extends BaseIT {
 
         importConfigSurfersDelete.getProperties().put("mapping", mappingSurfers);
 
-        importConfigSurfersDelete.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=4-surfers-delete-test.csv&move=.done");
+        importConfigSurfersDelete.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=4-surfers-delete-test.csv&consumer.delay=10m&move=.done");
         importConfigSurfersDelete.setActive(true);
 
         importConfigurationService.save(importConfigSurfersDelete, true);

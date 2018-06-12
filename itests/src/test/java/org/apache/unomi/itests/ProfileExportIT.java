@@ -99,7 +99,7 @@ public class ProfileExportIT extends BaseIT {
 
         exportConfiguration.getProperties().put("mapping", mapping);
         exportConfiguration.getProperties().put("segment", "exportItSeg");
-        exportConfiguration.getProperties().put("period", "500");
+        exportConfiguration.getProperties().put("period", "10m");
         exportDir = new File("data/tmp/recurrent_export/");
         exportConfiguration.getProperties().put("destination", "file://" + exportDir.getAbsolutePath() + "?fileName=profiles-actors-export.csv");
         exportConfiguration.setActive(true);
