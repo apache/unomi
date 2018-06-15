@@ -442,9 +442,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 if (scoreModifiers != null && scoreModifiers.containsKey(scoringId) && scoreModifiers.get(scoringId) != null) {
                     score += scoreModifiers.get(scoringId);
                 }
-                if (score > 0) {
                     scores.put(scoringId, score);
-                }
             }
         }
 
