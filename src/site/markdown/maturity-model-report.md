@@ -93,7 +93,7 @@ _Committers are bound by an Individual Contributor Agreement (the "Apache iCLA")
 #### LC50
 _The copyright ownership of everything that the project produces is clearly defined and documented._
 
-- [ ] : to be evaluated
+- [ OK ] : All source files have the proper Apache license headers.
 
 ### Releases
 
@@ -110,39 +110,39 @@ _Releases are approved by the project's PMC (see CS10), in order to make them an
 #### RE30
 _Releases are signed and/or distributed along with digests that can be reliably used to validate the downloaded archives._
 
-- [ OK ] : See releases here
+- [ OK ] : See releases [here](http://unomi.apache.org/download.html)
 
 #### RE40
 _Convenience binaries can be distributed alongside source code but they are not Apache Releases -- they are just a convenience provided with no guarantee._
 
-- [ OK ] : See the releases here
+- [ OK ] : See the releases [here](http://unomi.apache.org/download.html)
 
 ### Quality
 
 #### QU10
 _The project is open and honest about the quality of its code. Various levels of quality and maturity for various modules are natural and acceptable as long as they are clearly communicated._ 
 
-- [ ] : to be evaluated
+- [ OK ] : The project has seen two major releases. Integration tests are performed by Jenkins continuously. Overall quality is mostly good.
 
 #### QU20
 _The project puts a very high priority on producing secure software._
 
-- [ ] : to be evaluated
+- [ OK ] : For the moment no security issues have been reported, but if they are they will treated quickly.
 
 #### QU30
 _The project provides a well-documented channel to report security issues, along with a documented way of responding to them._
 
-- [ ] : to be evaluated
+- [ KO ] : We need to document this.
 
 #### QU40
 _The project puts a high priority on backwards compatibility and aims to document any incompatible changes and provide tools and documentation to help users transition to new features._ 
 
-- [ ] : to be evaluated
+- [ OK ] : Migration of the data set is handled with an internal tool. [Migration documentation](http://unomi.apache.org/migrating-elasticsearch.html) has already been produced. 
 
 #### QU50
 _The project strives to respond to documented bug reports in a timely manner._
 
-- [ ] : to be evaluated
+- [ OK ] : Usually we try to answer within 24-48 hours. However full resolution may be more difficult. The objective is to keep the community as active as possible.
 
 ### Community
 
@@ -154,7 +154,7 @@ _The project has a well-known homepage that points to all the information requir
 #### CO20
 _The community welcomes contributions from anyone who acts in good faith and in a respectful manner and adds value to the project._ 
 
-- [ ] : to be evaluated
+- [ OK ] : We have some active contributions coming from people external to the project initiators. We do our best to welcome them and contribute to the project.
 
 #### CO30
 _Contributions include not only source code, but also documentation, constructive bug reports, constructive discussions, marketing and generally anything that adds value to the project._
