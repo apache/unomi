@@ -113,6 +113,13 @@ public class LineSplitProcessor implements Processor {
 
                 if (profileData.length > fieldsMapping.get(fieldMappingKey)) {
                     try {
+                        if (propertyType == null) {
+                            logger.error("No valid property type found for propertyTypeId=" + fieldMappingKey);
+                        } else {
+                            if (propertyType.getValueTypeId() == null) {
+                                logger.error("No value type id found for property type " + propertyType.getItemId());
+                            }
+                        }
                         if (propertyType.getValueTypeId().equals("string") || propertyType.getValueTypeId().equals("email") ||
                                 propertyType.getValueTypeId().equals("date")) {
                             if (BooleanUtils.isTrue(propertyType.isMultivalued())) {
@@ -139,8 +146,8 @@ public class LineSplitProcessor implements Processor {
                         } else if (propertyType.getValueTypeId().equals("integer")) {
                             properties.put(fieldMappingKey, new Integer(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
                         }
-                    } catch (Exception e) {
-                        logger.error("Error converting profileData", e);
+                    } catch (Throwable t) {
+                        logger.error("Error converting profileData", t);
                         if (fieldMappingKey != null && fieldsMapping.get(fieldMappingKey) != null && profileData != null && profileData[fieldsMapping.get(fieldMappingKey)] != null) {
                             throw new BadProfileDataFormatException("Unable to convert '" + profileData[fieldsMapping.get(fieldMappingKey)].trim() + "' to " + propertyType!=null?propertyType.getValueTypeId():"Null propertyType ", new Throwable("DATA_TYPE"));
                         } else {

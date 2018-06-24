@@ -56,6 +56,8 @@ public class ProfileImportRankingIT extends BaseIT {
     @Test
     public void testImportRanking() throws InterruptedException {
 
+        importConfigurationService.getRouterCamelContext().setTracing(true);
+
         /*** Create Missing Properties ***/
         PropertyType propertyTypeUciId = new PropertyType(new Metadata("integration", "uciId", "UCI ID", "UCI ID"));
         propertyTypeUciId.setValueTypeId("string");

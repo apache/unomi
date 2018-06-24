@@ -66,5 +66,9 @@ public interface ImportExportConfigurationService<T> {
      */
     void setRouterCamelContext(IRouterCamelContext routerCamelContext);
 
-
+    /**
+     * Retrieve the configured router camel context
+     * @return the configured instance, or null if not configured
+     */
+    IRouterCamelContext getRouterCamelContext();
 }

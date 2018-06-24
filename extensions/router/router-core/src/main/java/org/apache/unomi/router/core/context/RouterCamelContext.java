@@ -98,6 +98,10 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
         this.clusterService = clusterService;
     }
 
+    public void setTracing(boolean tracing) {
+        camelContext.setTracing(true);
+    }
+
     public void initCamelContext() throws Exception {
         logger.info("Initialize Camel Context...");
 

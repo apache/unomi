@@ -23,6 +23,7 @@ import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
+import org.apache.unomi.router.api.RouterUtils;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.junit.Assert;
 import org.junit.Test;
@@ -70,7 +71,11 @@ public class ProfileImportSurfersIT extends BaseIT {
 
         PropertyType propAlive = profileService.getPropertyType("alive");
 
-        Assert.assertNotNull(propAlive);
+        Assert.assertNotNull("Alive property should not be null", propAlive);
+
+        propAlive = RouterUtils.getPropertyTypeById(profileService.getTargetPropertyTypes("profiles"), "alive");
+
+        Assert.assertNotNull("Lookup of alive property through profiles target has failed !", propAlive);
 
         /*** Surfers Test ***/
         ImportConfiguration importConfigSurfers = new ImportConfiguration();

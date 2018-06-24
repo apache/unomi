@@ -24,4 +24,6 @@ public interface IRouterCamelContext {
     void killExistingRoute(String routeId, boolean fireEvent) throws Exception;
 
     void updateProfileReaderRoute(Object configuration, boolean fireEvent) throws Exception;
+
+    void setTracing(boolean tracing);
 }

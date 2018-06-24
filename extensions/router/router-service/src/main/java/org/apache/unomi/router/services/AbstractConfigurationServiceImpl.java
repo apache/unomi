@@ -48,6 +48,10 @@ public abstract class AbstractConfigurationServiceImpl implements SynchronousBun
         this.routerCamelContext = routerCamelContext;
     }
 
+    public IRouterCamelContext getRouterCamelContext() {
+        return routerCamelContext;
+    }
+
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
 

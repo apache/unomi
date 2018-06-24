@@ -260,8 +260,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 loadPropertyTypesFromPersistence();
             }
         };
-        allPropertyTypesTimer.scheduleAtFixedRate(task, 5000, 5000);
-        logger.info("Scheduled task for property type loading each 5s");
+        allPropertyTypesTimer.scheduleAtFixedRate(task, 10000, 10000);
+        logger.info("Scheduled task for property type loading each 10s");
     }
 
     private void loadPropertyTypesFromPersistence() {
