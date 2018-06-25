@@ -20,7 +20,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>cxs-geonames</artifactId>
-        <version>1.3.0-incubating</version>
+        <version>1.4.0-incubating-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -28,20 +28,20 @@
     <artifactId>cxs-geonames-services</artifactId>
     <name>Apache Unomi :: Extensions :: Geonames Database :: Service</name>
     <description>Service implementation for the Apache Unomi Context Server extension that integrates with the Geonames database</description>
-    <version>1.3.0-incubating</version>
+    <version>1.4.0-incubating-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <dependencies>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
-            <version>1.3.0-incubating</version>
+            <version>1.4.0-incubating-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-spi</artifactId>
-            <version>1.3.0-incubating</version>
+            <version>1.4.0-incubating-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
