@@ -413,6 +413,7 @@ public interface PersistenceService {
     /**
      * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} matching the optional specified condition and
      * aggregated according to the specified {@link BaseAggregate}.
+     * Also return the global count of document matching the {@code ITEM_TYPE}
      *
      * @param filter    the condition the items must match or {@code null} if no filtering is needed
      * @param aggregate an aggregate specifying how matching items must be bundled
@@ -420,6 +421,18 @@ public interface PersistenceService {
      * @return a Map associating aggregation dimension name as key and cardinality for that dimension as value
      */
     Map<String, Long> aggregateQuery(Condition filter, BaseAggregate aggregate, String itemType);
+
+    /**
+     * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} matching the optional specified condition and
+     * aggregated according to the specified {@link BaseAggregate}.
+     * This aggregate won't return the global count and should therefore be much faster than {@link #aggregateQuery(Condition, BaseAggregate, String)}
+     *
+     * @param filter    the condition the items must match or {@code null} if no filtering is needed
+     * @param aggregate an aggregate specifying how matching items must be bundled
+     * @param itemType  the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
+     * @return a Map associating aggregation dimension name as key and cardinality for that dimension as value
+     */
+    Map<String, Long> aggregateQueryOptimized(Condition filter, BaseAggregate aggregate, String itemType);
 
     /**
      * Updates the persistence's engine indices if needed.
