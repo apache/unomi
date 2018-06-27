@@ -491,11 +491,11 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
         if (aggregate != null) {
             list.add(goalStartCondition);
-            all = persistenceService.aggregateQuery(condition, aggregate, Session.ITEM_TYPE);
+            all = persistenceService.aggregateWithOptimizedQuery(condition, aggregate, Session.ITEM_TYPE);
 
             list.remove(goalStartCondition);
             list.add(goalTargetCondition);
-            match = persistenceService.aggregateQuery(condition, aggregate, Session.ITEM_TYPE);
+            match = persistenceService.aggregateWithOptimizedQuery(condition, aggregate, Session.ITEM_TYPE);
         } else {
             list.add(goalStartCondition);
             all = new HashMap<String, Long>();

@@ -768,7 +768,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             l.add(numberOfDaysCondition);
         }
         String propertyKey = (String) parentCondition.getParameter("generatedPropertyKey");
-        Map<String, Long> eventCountByProfile = persistenceService.aggregateQuery(andCondition, new TermsAggregate("profileId"), Event.ITEM_TYPE);
+        Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(andCondition, new TermsAggregate("profileId"), Event.ITEM_TYPE);
         for (Map.Entry<String, Long> entry : eventCountByProfile.entrySet()) {
             String profileId = entry.getKey();
             if (!profileId.startsWith("_")) {

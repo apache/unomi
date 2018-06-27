@@ -195,7 +195,7 @@ public class EventServiceImpl implements EventService {
     }
 
     public Set<String> getEventTypeIds() {
-        Map<String, Long> dynamicEventTypeIds = persistenceService.aggregateQuery(null, new TermsAggregate("eventType"), Event.ITEM_TYPE);
+        Map<String, Long> dynamicEventTypeIds = persistenceService.aggregateWithOptimizedQuery(null, new TermsAggregate("eventType"), Event.ITEM_TYPE);
         Set<String> eventTypeIds = new LinkedHashSet<String>(predefinedEventTypeIds);
         eventTypeIds.addAll(dynamicEventTypeIds.keySet());
         return eventTypeIds;
