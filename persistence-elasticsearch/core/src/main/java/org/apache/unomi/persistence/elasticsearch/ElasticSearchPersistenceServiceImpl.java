@@ -1482,17 +1482,17 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
-    public Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType) {
+    public Map<String, Long> aggregateQuery(Condition filter, BaseAggregate aggregate, String itemType) {
         return aggregateQuery(filter, aggregate, itemType, false);
     }
 
     @Override
-    public Map<String, Long> aggregateQueryOptimized(Condition filter, BaseAggregate aggregate, String itemType) {
+    public Map<String, Long> aggregateWithOptimizedQuery(Condition filter, BaseAggregate aggregate, String itemType) {
         return aggregateQuery(filter, aggregate, itemType, true);
     }
 
-    private Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType, final boolean
-            optimized) {
+    private Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType,
+            final boolean optimizedQuery) {
         return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery") {
 
             @Override
@@ -1572,7 +1572,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 // If the request is optimized then we don't need a global aggregation which is very slow and we can put the query with a
                 // filter on range items in the query block so we don't retrieve all the document before filtering the whole
-                if (optimized) {
+                if (optimizedQuery) {
                     for (AggregationBuilder aggregationBuilder : lastAggregation) {
                         builder.addAggregation(aggregationBuilder);
                     }
@@ -1600,7 +1600,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 SearchResponse response = builder.execute().actionGet();
                 Aggregations aggregations = response.getAggregations();
                 if (aggregations != null) {
-                    if (optimized) {
+                    if (optimizedQuery) {
                         if (response.getHits() != null) {
                             results.put("_filtered", response.getHits().getTotalHits());
                         }

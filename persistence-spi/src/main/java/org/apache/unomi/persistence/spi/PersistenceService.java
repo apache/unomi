@@ -432,7 +432,7 @@ public interface PersistenceService {
      * @param itemType  the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
      * @return a Map associating aggregation dimension name as key and cardinality for that dimension as value
      */
-    Map<String, Long> aggregateQueryOptimized(Condition filter, BaseAggregate aggregate, String itemType);
+    Map<String, Long> aggregateWithOptimizedQuery(Condition filter, BaseAggregate aggregate, String itemType);
 
     /**
      * Updates the persistence's engine indices if needed.

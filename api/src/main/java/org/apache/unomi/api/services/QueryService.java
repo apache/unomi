@@ -65,7 +65,7 @@ public interface QueryService {
      * @return a Map associating a specific value of the property to the cardinality of items with that value
      * @see Item Item for a discussion of {@code ITEM_TYPE}
      */
-    Map<String, Long> getAggregateOptimized(String itemType, String property, AggregateQuery query);
+    Map<String, Long> getAggregateWithOptimizedQuery(String itemType, String property, AggregateQuery query);
 
     /**
      * Retrieves the number of items of the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and matching the specified {@link Condition}.

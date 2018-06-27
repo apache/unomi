@@ -62,7 +62,7 @@ public class QueryServiceImpl implements QueryService {
     }
 
     @Override
-    public Map<String, Long> getAggregateOptimized(String itemType, String property, AggregateQuery query) {
+    public Map<String, Long> getAggregateWithOptimizedQuery(String itemType, String property, AggregateQuery query) {
         return getAggregate(itemType, property, query, true);
     }
 
@@ -82,7 +82,7 @@ public class QueryServiceImpl implements QueryService {
         return persistenceService.queryCount(condition, itemType);
     }
 
-    private Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query, boolean optimized) {
+    private Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query, boolean optimizedQuery) {
         if (query != null) {
             // resolve condition
             if (query.getCondition() != null) {
@@ -115,8 +115,8 @@ public class QueryServiceImpl implements QueryService {
             }
 
             // fall back on terms aggregate
-            if (optimized) {
-                return persistenceService.aggregateQueryOptimized(query.getCondition(), baseAggregate, itemType);
+            if (optimizedQuery) {
+                return persistenceService.aggregateWithOptimizedQuery(query.getCondition(), baseAggregate, itemType);
             } else {
                 return persistenceService.aggregateQuery(query.getCondition(), baseAggregate, itemType);
             }
