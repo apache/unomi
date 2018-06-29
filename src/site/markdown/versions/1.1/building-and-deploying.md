@@ -38,11 +38,11 @@ Simply uncompress the `package/target/unomi-VERSION.tar.gz` (for Linux or Mac OS
  
 You can then start the server simply by using the command on UNIX/Linux/MacOS X : 
 
-    ./bin/karaf start
+    ./bin/karaf
     
 or on Windows shell : 
 
-    bin\karaf.bat start
+    bin\karaf.bat
     
 
 Deploying into an existing Karaf server

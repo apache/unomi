@@ -142,7 +142,6 @@ Being built on top of Apache Karaf, Unomi leverages OSGi to support plugins. A U
 | Rule | rules |
 | Scoring | scorings |
 | Segment | segments |
-| Tag | tags |
 | ValueType | values |
 
 [Blueprint](http://aries.apache.org/modules/blueprint.html) is used to declare what the plugin provides and inject any required dependency. The Blueprint file is located, as usual, at `OSGI-INF/blueprint/blueprint.xml` in the bundle JAR file.
@@ -176,7 +175,7 @@ A persona is a "virtual" profile used to represent categories of profiles, and m
 A strategy to resolve how to merge properties when merging profile together.
 
 ### PropertyType
-Definition for a profile or session property, specifying how possible values are constrained, if the value is multi-valued (a vector of values as opposed to a scalar value). `PropertyType`s can also be categorized using tags or file system structure, using sub-directories to organize definition files.
+Definition for a profile or session property, specifying how possible values are constrained, if the value is multi-valued (a vector of values as opposed to a scalar value). `PropertyType`s can also be categorized using systemTags or file system structure, using sub-directories to organize definition files.
 
 ### Rule
 `Rule`s are conditional sets of actions to be executed in response to incoming events. Triggering of rules is guarded by a condition: the rule is only triggered if the associated condition is satisfied. That condition can test the event itself, but also the profile or the session.  Once a rule triggers, a list of actions can be performed as consequences. Also, when rules trigger, a specific event is raised so that other parts of Unomi can react accordingly.

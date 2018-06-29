@@ -306,7 +306,7 @@ Let's now look at our custom [`incrementTweetNumberAction`](https://github.com/a
 }
 ```
 
-We specify the identifier for the action type, a list of tags if needed: here we say that our action is a consequence of events using the `event` tag. Our actions does not require any parameters so we don't define any.
+We specify the identifier for the action type, a list of systemTags if needed: here we say that our action is a consequence of events using the `event` tag. Our actions does not require any parameters so we don't define any.
 
 Finally, we provide a mysterious `actionExecutor` identifier: `incrementTweetNumber`.
 
