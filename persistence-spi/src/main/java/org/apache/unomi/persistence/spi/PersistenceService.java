@@ -421,6 +421,7 @@ public interface PersistenceService {
      * @return a Map associating aggregation dimension name as key and cardinality for that dimension as value
      * @deprecated As of 1.3.0-incubating, please use {@link #aggregateWithOptimizedQuery(Condition, BaseAggregate, String)} instead
      */
+    @Deprecated
     Map<String, Long> aggregateQuery(Condition filter, BaseAggregate aggregate, String itemType);
 
     /**

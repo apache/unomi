@@ -1481,7 +1481,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.catchingExecuteInClassLoader(true);
     }
 
-    @Deprecated // As of version 1.3.0-incubating
+    /**
+     * @deprecated As of version 1.3.0-incubating, use {@link #aggregateWithOptimizedQuery(Condition, BaseAggregate, String)} instead
+     */
+    @Deprecated
     @Override
     public Map<String, Long> aggregateQuery(Condition filter, BaseAggregate aggregate, String itemType) {
         return aggregateQuery(filter, aggregate, itemType, false);

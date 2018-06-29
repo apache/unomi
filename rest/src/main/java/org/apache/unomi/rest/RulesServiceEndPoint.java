@@ -165,6 +165,7 @@ public class RulesServiceEndPoint {
      *
      * @deprecated As of version 1.1.0-incubating, not needed anymore
      */
+    @Deprecated
     @GET
     @Path("/resetQueries")
     public void resetQueries() {

@@ -149,23 +149,26 @@ public interface PrivacyService {
      * @deprecated As of version 1.3.0-incubating, do not use this method, instead mark properties with the personal identifier tag which
      * will mark them as denied by the getDeniedProperties method
      */
+    @Deprecated
     Boolean setDeniedProperties(String profileId, List<String> propertyNames);
 
     /**
      * This method doesn't do anything anymore please don't use it
-     * @deprecated As of version 1.3.0-incubating, do not use this method
      * @param profileId the identifier of the profile
      * @return do not use
+     * @deprecated As of version 1.3.0-incubating, do not use this method
      */
+    @Deprecated
     List<String> getDeniedPropertyDistribution(String profileId);
 
     /**
      * This method doesn't do anything anymore please don't use it
-     * @deprecated As of version 1.3.0-incubating, do not use this method
      * @param profileId the identifier of the profile
      * @param propertyNames do not use
      * @return do not use
+     * @deprecated As of version 1.3.0-incubating, do not use this method
      */
+    @Deprecated
     Boolean setDeniedPropertyDistribution(String profileId, List<String> propertyNames);
 
     /**

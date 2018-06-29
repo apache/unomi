@@ -133,6 +133,7 @@ public interface PersonalizationService {
          * @param filterid the filter identifier associated with this content filtering definition
          * @deprecated As of version 1.3.0-incubating, please use {@link #setId(String)} instead
          */
+        @Deprecated
         public void setFilterid(String filterid) {
             this.id = filterid;
         }

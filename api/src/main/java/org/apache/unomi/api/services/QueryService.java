@@ -53,6 +53,7 @@ public interface QueryService {
      * @see Item Item for a discussion of {@code ITEM_TYPE}
      * @deprecated As of 1.3.0-incubating, please use {@link #getAggregateWithOptimizedQuery(String, String, AggregateQuery)} instead
      */
+    @Deprecated
     Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query);
 
     /**

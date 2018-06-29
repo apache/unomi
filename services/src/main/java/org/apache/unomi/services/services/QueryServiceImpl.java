@@ -56,7 +56,10 @@ public class QueryServiceImpl implements QueryService {
         return persistenceService.aggregateWithOptimizedQuery(null, new TermsAggregate(property), itemType);
     }
 
-    @Deprecated // As of version 1.3.0-incubating
+    /**
+     * @deprecated As of version 1.3.0-incubating, use {@link #getAggregateWithOptimizedQuery(String, String, AggregateQuery)} instead
+     */
+    @Deprecated
     @Override
     public Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query) {
         return getAggregate(itemType, property, query, false);
