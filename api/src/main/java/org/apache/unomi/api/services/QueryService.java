@@ -51,6 +51,7 @@ public interface QueryService {
      * @param query    the {@link AggregateQuery} specifying the aggregation that should be perfomed
      * @return a Map associating a specific value of the property to the cardinality of items with that value
      * @see Item Item for a discussion of {@code ITEM_TYPE}
+     * @deprecated As of 1.3.0-incubating, please use {@link #getAggregateWithOptimizedQuery(String, String, AggregateQuery)} instead
      */
     Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query);
 

@@ -47,7 +47,7 @@ public class Parameter implements Serializable {
         return multivalued;
     }
 
-    @Deprecated
+    @Deprecated // As of version 1.1.0-incubating
     public void setChoiceListInitializerFilter(String choiceListInitializerFilter) {
         // Avoid errors when deploying old definitions
     }

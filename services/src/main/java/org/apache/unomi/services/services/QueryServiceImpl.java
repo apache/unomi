@@ -53,9 +53,10 @@ public class QueryServiceImpl implements QueryService {
 
     @Override
     public Map<String, Long> getAggregate(String itemType, String property) {
-        return persistenceService.aggregateQuery(null, new TermsAggregate(property), itemType);
+        return persistenceService.aggregateWithOptimizedQuery(null, new TermsAggregate(property), itemType);
     }
 
+    @Deprecated // As of version 1.3.0-incubating
     @Override
     public Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query) {
         return getAggregate(itemType, property, query, false);

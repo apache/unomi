@@ -181,6 +181,7 @@ public interface DefinitionsService {
      * @param rootCondition the root condition where to start the extraction by class
      * @param tag the tag to use to extract the condition
      * @return Condition the condition that has been found matching the tag, or null if none matched
+     * @deprecated As of 1.2.0-incubating, please use {@link #extractConditionBySystemTag(Condition, String)} instead
      */
     @Deprecated
     Condition extractConditionByTag(Condition rootCondition, String tag);

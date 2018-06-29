@@ -379,7 +379,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         }
     }
 
-    @Deprecated
+    @Deprecated // As of version 1.2.0-incubating
     public Condition extractConditionByTag(Condition rootCondition, String tag) {
         if (rootCondition.containsParameter("subConditions")) {
             @SuppressWarnings("unchecked")

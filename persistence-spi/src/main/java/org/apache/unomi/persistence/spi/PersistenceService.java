@@ -419,6 +419,7 @@ public interface PersistenceService {
      * @param aggregate an aggregate specifying how matching items must be bundled
      * @param itemType  the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
      * @return a Map associating aggregation dimension name as key and cardinality for that dimension as value
+     * @deprecated As of 1.3.0-incubating, please use {@link #aggregateWithOptimizedQuery(Condition, BaseAggregate, String)} instead
      */
     Map<String, Long> aggregateQuery(Condition filter, BaseAggregate aggregate, String itemType);
 

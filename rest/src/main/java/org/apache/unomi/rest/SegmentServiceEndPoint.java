@@ -181,7 +181,7 @@ public class SegmentServiceEndPoint {
     /**
      * TODO: remove
      *
-     * @deprecated not needed anymore
+     * @deprecated As of version 1.1.0-incubating, not needed anymore
      */
     @GET
     @Path("/resetQueries")

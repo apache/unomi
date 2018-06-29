@@ -1481,6 +1481,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.catchingExecuteInClassLoader(true);
     }
 
+    @Deprecated // As of version 1.3.0-incubating
     @Override
     public Map<String, Long> aggregateQuery(Condition filter, BaseAggregate aggregate, String itemType) {
         return aggregateQuery(filter, aggregate, itemType, false);
