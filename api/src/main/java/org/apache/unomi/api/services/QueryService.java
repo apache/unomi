@@ -44,6 +44,22 @@ public interface QueryService {
      *
      * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and aggregated by possible values of the specified
      * property or, if the specified query is not {@code null}, perform that aggregate query.
+     * Also return the global count of document matching the {@code ITEM_TYPE}
+     *
+     * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
+     * @param property the property we're aggregating on, i.e. for each possible value of this property, we are counting how many items of the specified type have that value
+     * @param query    the {@link AggregateQuery} specifying the aggregation that should be perfomed
+     * @return a Map associating a specific value of the property to the cardinality of items with that value
+     * @see Item Item for a discussion of {@code ITEM_TYPE}
+     * @deprecated As of 1.3.0-incubating, please use {@link #getAggregateWithOptimizedQuery(String, String, AggregateQuery)} instead
+     */
+    @Deprecated
+    Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query);
+
+    /**
+     * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and aggregated by possible values of the specified
+     * property or, if the specified query is not {@code null}, perform that aggregate query.
+     * This aggregate won't return the global count and should therefore be much faster than {@link #getAggregate(String, String, AggregateQuery)}
      *
      * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
      * @param property the property we're aggregating on, i.e. for each possible value of this property, we are counting how many items of the specified type have that value
@@ -51,7 +67,7 @@ public interface QueryService {
      * @return a Map associating a specific value of the property to the cardinality of items with that value
      * @see Item Item for a discussion of {@code ITEM_TYPE}
      */
-    Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query);
+    Map<String, Long> getAggregateWithOptimizedQuery(String itemType, String property, AggregateQuery query);
 
     /**
      * Retrieves the number of items of the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and matching the specified {@link Condition}.

@@ -1481,8 +1481,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.catchingExecuteInClassLoader(true);
     }
 
+    /**
+     * @deprecated As of version 1.3.0-incubating, use {@link #aggregateWithOptimizedQuery(Condition, BaseAggregate, String)} instead
+     */
+    @Deprecated
     @Override
-    public Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType) {
+    public Map<String, Long> aggregateQuery(Condition filter, BaseAggregate aggregate, String itemType) {
+        return aggregateQuery(filter, aggregate, itemType, false);
+    }
+
+    @Override
+    public Map<String, Long> aggregateWithOptimizedQuery(Condition filter, BaseAggregate aggregate, String itemType) {
+        return aggregateQuery(filter, aggregate, itemType, true);
+    }
+
+    private Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType,
+            final boolean optimizedQuery) {
         return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery") {
 
             @Override
@@ -1560,34 +1574,50 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                 }
 
-                if (filter != null) {
-                    AggregationBuilder filterAggregation = AggregationBuilders.filter("filter", conditionESQueryBuilderDispatcher.buildFilter(filter));
+                // If the request is optimized then we don't need a global aggregation which is very slow and we can put the query with a
+                // filter on range items in the query block so we don't retrieve all the document before filtering the whole
+                if (optimizedQuery) {
                     for (AggregationBuilder aggregationBuilder : lastAggregation) {
-                        filterAggregation.subAggregation(aggregationBuilder);
+                        builder.addAggregation(aggregationBuilder);
                     }
-                    lastAggregation = Collections.singletonList(filterAggregation);
+
+                    if (filter != null) {
+                        builder.setQuery(conditionESQueryBuilderDispatcher.buildFilter(filter));
+                    }
+                } else {
+                    if (filter != null) {
+                        AggregationBuilder filterAggregation = AggregationBuilders.filter("filter", conditionESQueryBuilderDispatcher.buildFilter(filter));
+                        for (AggregationBuilder aggregationBuilder : lastAggregation) {
+                            filterAggregation.subAggregation(aggregationBuilder);
+                        }
+                        lastAggregation = Collections.singletonList(filterAggregation);
+                    }
+
+                    AggregationBuilder globalAggregation = AggregationBuilders.global("global");
+                    for (AggregationBuilder aggregationBuilder : lastAggregation) {
+                        globalAggregation.subAggregation(aggregationBuilder);
+                    }
+
+                    builder.addAggregation(globalAggregation);
                 }
-
-
-                AggregationBuilder globalAggregation = AggregationBuilders.global("global");
-                for (AggregationBuilder aggregationBuilder : lastAggregation) {
-                    globalAggregation.subAggregation(aggregationBuilder);
-                }
-
-                builder.addAggregation(globalAggregation);
 
                 SearchResponse response = builder.execute().actionGet();
-
                 Aggregations aggregations = response.getAggregations();
                 if (aggregations != null) {
-                    Global globalAgg = aggregations.get("global");
-                    results.put("_all", globalAgg.getDocCount());
-                    aggregations = globalAgg.getAggregations();
+                    if (optimizedQuery) {
+                        if (response.getHits() != null) {
+                            results.put("_filtered", response.getHits().getTotalHits());
+                        }
+                    } else {
+                        Global globalAgg = aggregations.get("global");
+                        results.put("_all", globalAgg.getDocCount());
+                        aggregations = globalAgg.getAggregations();
 
-                    if (aggregations.get("filter") != null) {
-                        Filter filterAgg = aggregations.get("filter");
-                        results.put("_filtered", filterAgg.getDocCount());
-                        aggregations = filterAgg.getAggregations();
+                        if (aggregations.get("filter") != null) {
+                            Filter filterAgg = aggregations.get("filter");
+                            results.put("_filtered", filterAgg.getDocCount());
+                            aggregations = filterAgg.getAggregations();
+                        }
                     }
                     if (aggregations.get("buckets") != null) {
                         MultiBucketsAggregation terms = aggregations.get("buckets");

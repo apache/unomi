@@ -86,11 +86,11 @@ Simply uncompress the package/target/unomi-VERSION.tar.gz (for Linux or Mac OS X
  
 You can then start the server simply by using the command on UNIX/Linux/MacOS X : 
 
-    ./bin/karaf start    
+    ./bin/karaf    
     
 or on Windows shell : 
 
-    bin\karaf.bat start
+    bin\karaf.bat
     
 You will then need to launch (only on the first Karaf start) the Apache Unomi packages using the following Apache Karaf 
 shell command:

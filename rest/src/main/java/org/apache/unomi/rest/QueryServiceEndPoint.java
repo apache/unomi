@@ -82,17 +82,25 @@ public class QueryServiceEndPoint {
      *
      * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and aggregated by possible values of the specified
      * property or, if the specified query is not {@code null}, perform that aggregate query.
+     * Also return the global count of document matching the {@code ITEM_TYPE} if you don't use {@code optimizedQuery} or set it to false,
+     * otherwise if {@code optimizedQuery} is set to true then it won't return the global count but the query will be executed much faster.
      *
      * @param type           the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
      * @param property       the property we're aggregating on, i.e. for each possible value of this property, we are counting how many items of the specified type have that value
-     * @param aggregateQuery the {@link AggregateQuery} specifying the aggregation that should be perfomed
+     * @param aggregateQuery the {@link AggregateQuery} specifying the aggregation that should be performed
+     * @param optimizedQuery the {@code optimizedQuery} specifying if we should optimized the aggregate query or not
      * @return a Map associating a specific value of the property to the cardinality of items with that value
      * @see Item Item for a discussion of {@code ITEM_TYPE}
      */
     @POST
     @Path("/{type}/{property}")
-    public Map<String, Long> getAggregate(@PathParam("type") String type, @PathParam("property") String property, AggregateQuery aggregateQuery) {
-        return queryService.getAggregate(type, property, aggregateQuery);
+    public Map<String, Long> getAggregate(@PathParam("type") String type, @PathParam("property") String property,
+            @QueryParam("optimizedQuery") boolean optimizedQuery, AggregateQuery aggregateQuery) {
+        if (optimizedQuery) {
+            return queryService.getAggregateWithOptimizedQuery(type, property, aggregateQuery);
+        } else {
+            return queryService.getAggregate(type, property, aggregateQuery);
+        }
     }
 
     /**

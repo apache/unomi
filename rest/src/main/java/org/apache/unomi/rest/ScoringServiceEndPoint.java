@@ -131,7 +131,7 @@ public class ScoringServiceEndPoint {
      * @param validate  whether or not to perform validation
      * @return a list of impacted items metadata if any or an empty list if none were found or validation was skipped
      */
-   @DELETE
+    @DELETE
     @Path("/{scoringID}")
     public DependentMetadata removeScoringDefinition(@PathParam("scoringID") String scoringId, @QueryParam("validate") boolean validate) {
         return segmentService.removeScoringDefinition(scoringId, validate);
@@ -153,8 +153,9 @@ public class ScoringServiceEndPoint {
     /**
      * TODO: remove
      *
-     * @deprecated not needed anymore
+     * @deprecated As of version 1.1.0-incubating, not needed anymore
      */
+    @Deprecated
     @GET
     @Path("/resetQueries")
     public void resetQueries() {

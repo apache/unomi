@@ -26,6 +26,7 @@ import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.persistence.spi.aggregate.BaseAggregate;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -379,6 +380,9 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         }
     }
 
+    /**
+     * @deprecated As of version 1.2.0-incubating, use {@link #extractConditionBySystemTag(Condition, String)} instead
+     */
     @Deprecated
     public Condition extractConditionByTag(Condition rootCondition, String tag) {
         if (rootCondition.containsParameter("subConditions")) {

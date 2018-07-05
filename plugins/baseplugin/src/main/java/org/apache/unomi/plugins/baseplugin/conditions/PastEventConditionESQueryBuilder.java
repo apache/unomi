@@ -75,7 +75,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
         Integer minimumEventCount = condition.getParameter("minimumEventCount") == null ? 0 : (Integer) condition.getParameter("minimumEventCount");
         Integer maximumEventCount = condition.getParameter("maximumEventCount") == null  ? Integer.MAX_VALUE : (Integer) condition.getParameter("maximumEventCount");
 
-        Map<String, Long> eventCountByProfile = persistenceService.aggregateQuery(andCondition, new TermsAggregate("profileId"), Event.ITEM_TYPE);
+        Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(andCondition, new TermsAggregate("profileId"), Event.ITEM_TYPE);
         if (eventCountByProfile != null) {
             for (Map.Entry<String, Long> entry : eventCountByProfile.entrySet()) {
                 if (!entry.getKey().startsWith("_")) {

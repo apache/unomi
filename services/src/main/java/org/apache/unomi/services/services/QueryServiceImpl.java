@@ -53,42 +53,21 @@ public class QueryServiceImpl implements QueryService {
 
     @Override
     public Map<String, Long> getAggregate(String itemType, String property) {
-        return persistenceService.aggregateQuery(null, new TermsAggregate(property), itemType);
+        return persistenceService.aggregateWithOptimizedQuery(null, new TermsAggregate(property), itemType);
+    }
+
+    /**
+     * @deprecated As of version 1.3.0-incubating, use {@link #getAggregateWithOptimizedQuery(String, String, AggregateQuery)} instead
+     */
+    @Deprecated
+    @Override
+    public Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query) {
+        return getAggregate(itemType, property, query, false);
     }
 
     @Override
-    public Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query) {
-        if (query != null) {
-            // resolve condition
-            if (query.getCondition() != null) {
-                ParserHelper.resolveConditionType(definitionsService, query.getCondition());
-            }
-
-            // resolve aggregate
-            if (query.getAggregate() != null) {
-                String aggregateType = query.getAggregate().getType();
-                if (aggregateType != null) {
-                    // try to guess the aggregate type
-                    if (aggregateType.equals("date")) {
-                        String interval = (String) query.getAggregate().getParameters().get("interval");
-                        String format = (String) query.getAggregate().getParameters().get("format");
-                        return persistenceService.aggregateQuery(query.getCondition(), new DateAggregate(property, interval, format), itemType);
-                    } else if (aggregateType.equals("dateRange") && query.getAggregate().getDateRanges() != null && query.getAggregate().getDateRanges().size() > 0) {
-                        String format = (String) query.getAggregate().getParameters().get("format");
-                        return persistenceService.aggregateQuery(query.getCondition(), new DateRangeAggregate(query.getAggregate().getProperty(), format, query.getAggregate().getDateRanges()), itemType);
-                    } else if (aggregateType.equals("numericRange") && query.getAggregate().getNumericRanges() != null && query.getAggregate().getNumericRanges().size() > 0) {
-                        return persistenceService.aggregateQuery(query.getCondition(), new NumericRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().getNumericRanges()), itemType);
-                    } else if (aggregateType.equals("ipRange") && query.getAggregate().ipRanges() != null && query.getAggregate().ipRanges().size() > 0) {
-                        return persistenceService.aggregateQuery(query.getCondition(), new IpRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().ipRanges()), itemType);
-                    }
-                }
-            }
-
-            // fall back on terms aggregate
-            return persistenceService.aggregateQuery(query.getCondition(), new TermsAggregate(property), itemType);
-        }
-
-        return getAggregate(itemType, property);
+    public Map<String, Long> getAggregateWithOptimizedQuery(String itemType, String property, AggregateQuery query) {
+        return getAggregate(itemType, property, query, true);
     }
 
     @Override
@@ -107,5 +86,47 @@ public class QueryServiceImpl implements QueryService {
         return persistenceService.queryCount(condition, itemType);
     }
 
+    private Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query, boolean optimizedQuery) {
+        if (query != null) {
+            // resolve condition
+            if (query.getCondition() != null) {
+                ParserHelper.resolveConditionType(definitionsService, query.getCondition());
+            }
+
+            // resolve aggregate
+            BaseAggregate baseAggregate = null;
+            if (query.getAggregate() != null) {
+                String aggregateType = query.getAggregate().getType();
+                if (aggregateType != null) {
+                    // try to guess the aggregate type
+                    if (aggregateType.equals("date")) {
+                        String interval = (String) query.getAggregate().getParameters().get("interval");
+                        String format = (String) query.getAggregate().getParameters().get("format");
+                        baseAggregate = new DateAggregate(property, interval, format);
+                    } else if (aggregateType.equals("dateRange") && query.getAggregate().getDateRanges() != null && query.getAggregate().getDateRanges().size() > 0) {
+                        String format = (String) query.getAggregate().getParameters().get("format");
+                        baseAggregate = new DateRangeAggregate(query.getAggregate().getProperty(), format, query.getAggregate().getDateRanges());
+                    } else if (aggregateType.equals("numericRange") && query.getAggregate().getNumericRanges() != null && query.getAggregate().getNumericRanges().size() > 0) {
+                        baseAggregate = new NumericRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().getNumericRanges());
+                    } else if (aggregateType.equals("ipRange") && query.getAggregate().ipRanges() != null && query.getAggregate().ipRanges().size() > 0) {
+                        baseAggregate = new IpRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().ipRanges());
+                    }
+                }
+            }
+
+            if (baseAggregate == null) {
+                baseAggregate = new TermsAggregate(property);
+            }
+
+            // fall back on terms aggregate
+            if (optimizedQuery) {
+                return persistenceService.aggregateWithOptimizedQuery(query.getCondition(), baseAggregate, itemType);
+            } else {
+                return persistenceService.aggregateQuery(query.getCondition(), baseAggregate, itemType);
+            }
+        }
+
+        return getAggregate(itemType, property);
+    }
 
 }

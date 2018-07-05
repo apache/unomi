@@ -68,7 +68,7 @@ public class PrivacyServiceImpl implements PrivacyService {
         serverInfo.setServerVersion(bundleContext.getBundle().getVersion().toString());
 
         // let's retrieve all the event types the server has seen.
-        Map<String, Long> eventTypeCounts = persistenceService.aggregateQuery(null, new TermsAggregate("eventType"), Event.ITEM_TYPE);
+        Map<String, Long> eventTypeCounts = persistenceService.aggregateWithOptimizedQuery(null, new TermsAggregate("eventType"), Event.ITEM_TYPE);
         List<EventInfo> eventTypes = new ArrayList<EventInfo>();
         for (Map.Entry<String, Long> eventTypeEntry : eventTypeCounts.entrySet()) {
             EventInfo eventInfo = new EventInfo();
