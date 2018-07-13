@@ -17,49 +17,18 @@
 package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
 
-public class CXSEvent {
+import java.util.List;
 
-    private String id;
-    private String eventType;
-    private long timeStamp;
-    private String subject;
-    private String object;
-    private CXSEventProperties properties = new CXSEventProperties();
-    private CXSGeoPoint location;
+public class CXSProfilePropertiesFilter {
 
     @GraphQLField
-    public String getId() {
-        return id;
-    }
+    @GraphQLName("and")
+    public List<CXSProfilePropertiesFilter> andFilters;
 
     @GraphQLField
-    public String getEventType() {
-        return eventType;
-    }
+    @GraphQLName("or")
+    public List<CXSProfilePropertiesFilter> orFilters;
 
-    @GraphQLField
-    public long getTimeStamp() {
-        return timeStamp;
-    }
-
-    @GraphQLField
-    public String getSubject() {
-        return subject;
-    }
-
-    @GraphQLField
-    public String getObject() {
-        return object;
-    }
-
-    @GraphQLField
-    public CXSEventProperties getProperties() {
-        return properties;
-    }
-
-    @GraphQLField
-    public CXSGeoPoint getLocation() {
-        return location;
-    }
 }

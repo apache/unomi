@@ -27,7 +27,7 @@
 
     <artifactId>unomi-graphql</artifactId>
     <name>Apache Unomi :: GraphQL API</name>
-    <description>Apache Unomi Context GraphQL API</description>
+    <description>Apache Unomi Context GraphQL API Root Project</description>
     <packaging>pom</packaging>
 
     <properties>

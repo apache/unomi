@@ -17,49 +17,36 @@
 package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.schema.DataFetchingEnvironment;
 
-public class CXSEvent {
+import java.util.ArrayList;
+import java.util.List;
 
-    private String id;
-    private String eventType;
-    private long timeStamp;
-    private String subject;
-    private String object;
-    private CXSEventProperties properties = new CXSEventProperties();
-    private CXSGeoPoint location;
+@GraphQLName("CXS_Query")
+public class CXSQuery {
 
     @GraphQLField
-    public String getId() {
-        return id;
+    public List<CXSEventType> getEventTypes() {
+        return new ArrayList<>();
     }
 
     @GraphQLField
-    public String getEventType() {
-        return eventType;
+    public CXSEvent getEvent(@GraphQLName("id") String id) {
+        return new CXSEvent();
     }
 
     @GraphQLField
-    public long getTimeStamp() {
-        return timeStamp;
+    public CXSEventConnection findEvents(@GraphQLName("filter") CXSEventFilterInput filter,
+                                         @GraphQLName("orderBy") CXSOrderByInput orderBy,
+                                         DataFetchingEnvironment env) {
+        env.getArgument("first");
+        env.getArgument("after");
+        return new CXSEventConnection();
     }
 
     @GraphQLField
-    public String getSubject() {
-        return subject;
-    }
-
-    @GraphQLField
-    public String getObject() {
-        return object;
-    }
-
-    @GraphQLField
-    public CXSEventProperties getProperties() {
-        return properties;
-    }
-
-    @GraphQLField
-    public CXSGeoPoint getLocation() {
-        return location;
+    public CXSSegment getSegment(@GraphQLName("segmentId") String segmentId) {
+        return new CXSSegment();
     }
 }

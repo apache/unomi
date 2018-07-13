@@ -18,48 +18,16 @@ package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 
-public class CXSEvent {
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-    private String id;
-    private String eventType;
-    private long timeStamp;
-    private String subject;
-    private String object;
-    private CXSEventProperties properties = new CXSEventProperties();
-    private CXSGeoPoint location;
-
+public class CXSEventProperties {
     @GraphQLField
-    public String getId() {
-        return id;
-    }
+    public int nbProperties;
 
-    @GraphQLField
-    public String getEventType() {
-        return eventType;
-    }
+    Map<Object,Object> properties = new LinkedHashMap<>();
 
-    @GraphQLField
-    public long getTimeStamp() {
-        return timeStamp;
-    }
-
-    @GraphQLField
-    public String getSubject() {
-        return subject;
-    }
-
-    @GraphQLField
-    public String getObject() {
-        return object;
-    }
-
-    @GraphQLField
-    public CXSEventProperties getProperties() {
+    public Map<Object, Object> getProperties() {
         return properties;
-    }
-
-    @GraphQLField
-    public CXSGeoPoint getLocation() {
-        return location;
     }
 }

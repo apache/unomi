@@ -27,6 +27,8 @@
     <packaging>feature</packaging>
 
     <artifactId>cxs-graphql-feature</artifactId>
+    <name>Apache Unomi :: GraphQL API :: Karaf Feature</name>
+    <description>Apache Unomi Context GraphQL API Karaf Feature</description>
 
     <dependencies>
 

@@ -26,6 +26,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>cxs-graphql-api-impl</artifactId>
+    <name>Apache Unomi :: GraphQL API :: CXS Implementation</name>
+    <description>Apache Unomi Context GraphQL API CXS Implementation</description>
     <packaging>bundle</packaging>
 
     <dependencies>

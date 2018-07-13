@@ -18,48 +18,11 @@ package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 
-public class CXSEvent {
-
-    private String id;
-    private String eventType;
-    private long timeStamp;
-    private String subject;
-    private String object;
-    private CXSEventProperties properties = new CXSEventProperties();
-    private CXSGeoPoint location;
+public class CXSEventEdge {
 
     @GraphQLField
-    public String getId() {
-        return id;
-    }
-
+    public CXSEvent node;
     @GraphQLField
-    public String getEventType() {
-        return eventType;
-    }
+    public String cursor;
 
-    @GraphQLField
-    public long getTimeStamp() {
-        return timeStamp;
-    }
-
-    @GraphQLField
-    public String getSubject() {
-        return subject;
-    }
-
-    @GraphQLField
-    public String getObject() {
-        return object;
-    }
-
-    @GraphQLField
-    public CXSEventProperties getProperties() {
-        return properties;
-    }
-
-    @GraphQLField
-    public CXSGeoPoint getLocation() {
-        return location;
-    }
 }

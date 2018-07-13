@@ -32,7 +32,7 @@ public class CXSPropertyTypeInput {
 
     @GraphQLField
     @GraphQLName("int")
-    public CXSIntPropertyType integer;
+    public CXSIntPropertyType integerPropertyTypeInput;
 
     @GraphQLField
     @GraphQLName("float")

@@ -16,13 +16,5 @@
  */
 package org.apache.unomi.graphql;
 
-import java.util.Map;
-
-public interface CXSGraphQLProvider {
-
-    Map<String,CXSEventType> getEventTypes();
-    CXSProviderManager getCxsProviderManager();
-    void updateGraphQLTypes();
-    void setCxsProviderManager(CXSProviderManager cxsProviderManager);
-
+public class CXSEventPropertiesFilter {
 }

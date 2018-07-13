@@ -14,15 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.builders;
 
-import java.util.Map;
+public interface CXSBuilder {
 
-public interface CXSGraphQLProvider {
-
-    Map<String,CXSEventType> getEventTypes();
-    CXSProviderManager getCxsProviderManager();
-    void updateGraphQLTypes();
-    void setCxsProviderManager(CXSProviderManager cxsProviderManager);
+    void updateTypes();
 
 }

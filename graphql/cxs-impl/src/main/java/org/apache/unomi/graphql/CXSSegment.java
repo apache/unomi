@@ -17,49 +17,16 @@
 package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
 
-public class CXSEvent {
-
-    private String id;
-    private String eventType;
-    private long timeStamp;
-    private String subject;
-    private String object;
-    private CXSEventProperties properties = new CXSEventProperties();
-    private CXSGeoPoint location;
-
+@GraphQLName("CXS_Segment")
+public class CXSSegment {
     @GraphQLField
-    public String getId() {
-        return id;
-    }
-
+    public String id;
     @GraphQLField
-    public String getEventType() {
-        return eventType;
-    }
-
+    public CXSView view;
     @GraphQLField
-    public long getTimeStamp() {
-        return timeStamp;
-    }
-
+    public String name;
     @GraphQLField
-    public String getSubject() {
-        return subject;
-    }
-
-    @GraphQLField
-    public String getObject() {
-        return object;
-    }
-
-    @GraphQLField
-    public CXSEventProperties getProperties() {
-        return properties;
-    }
-
-    @GraphQLField
-    public CXSGeoPoint getLocation() {
-        return location;
-    }
+    public CXSSegmentCondition condition;
 }
