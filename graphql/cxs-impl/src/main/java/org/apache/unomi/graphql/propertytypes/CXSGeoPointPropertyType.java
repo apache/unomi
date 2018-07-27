@@ -21,6 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 
 import java.util.List;
 
+@GraphQLName("CXS_GeoPointPropertyType")
 public class CXSGeoPointPropertyType extends CXSPropertyType {
 
     private String defaultValue;

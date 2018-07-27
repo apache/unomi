@@ -17,10 +17,12 @@
 package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+@GraphQLName("CXS_EventProperties")
 public class CXSEventProperties {
     @GraphQLField
     public int nbProperties;

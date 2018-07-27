@@ -21,6 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 
 import java.util.List;
 
+@GraphQLName("CXS_SetPropertyType")
 public class CXSSetPropertyType extends CXSPropertyType {
 
     private List<CXSPropertyType> properties;

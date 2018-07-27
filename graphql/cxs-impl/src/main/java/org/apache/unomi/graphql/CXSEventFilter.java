@@ -17,9 +17,11 @@
 package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
 
 import java.util.List;
 
+@GraphQLName("CXS_EventFilter")
 public class CXSEventFilter {
 
     @GraphQLField

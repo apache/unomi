@@ -22,6 +22,7 @@ import org.apache.unomi.graphql.propertytypes.CXSPropertyType;
 
 import java.util.List;
 
+@GraphQLName("CXS_SetPropertyTypeInput")
 public class CXSSetPropertyTypeInput extends CXSPropertyType {
 
     private List<CXSPropertyTypeInput> properties;

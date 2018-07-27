@@ -20,7 +20,7 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import org.apache.unomi.graphql.propertytypes.*;
 
-@GraphQLName("CXSPropertyTypeInput")
+@GraphQLName("CXS_PropertyTypeInput")
 public class CXSPropertyTypeInput {
 
     public CXSPropertyTypeInput(

@@ -16,6 +16,9 @@
  */
 package org.apache.unomi.graphql;
 
+import graphql.annotations.annotationTypes.GraphQLName;
+
+@GraphQLName("CXS_GeoDistanceUnit")
 public enum CXSGeoDistanceUnit {
     METERS,
     KILOMETERS,

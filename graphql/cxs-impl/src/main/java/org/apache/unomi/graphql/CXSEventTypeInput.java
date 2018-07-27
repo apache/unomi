@@ -22,6 +22,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import java.util.ArrayList;
 import java.util.List;
 
+@GraphQLName("CXS_EventTypeInput")
 public class CXSEventTypeInput {
 
     private String id;

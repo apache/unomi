@@ -16,5 +16,8 @@
  */
 package org.apache.unomi.graphql;
 
+import graphql.annotations.annotationTypes.GraphQLName;
+
+@GraphQLName("CXS_EventPropertiesFilter")
 public class CXSEventPropertiesFilter {
 }

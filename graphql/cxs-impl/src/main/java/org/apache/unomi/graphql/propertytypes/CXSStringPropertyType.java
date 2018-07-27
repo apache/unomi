@@ -21,6 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 
 import java.util.List;
 
+@GraphQLName("CXS_StringPropertyType")
 public class CXSStringPropertyType extends CXSPropertyType {
 
     private String regexp;

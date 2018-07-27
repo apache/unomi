@@ -19,7 +19,10 @@ package org.apache.unomi.graphql.builders;
 import graphql.annotations.processor.GraphQLAnnotationsComponent;
 import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.schema.*;
-import org.apache.unomi.graphql.*;
+import org.apache.unomi.graphql.CXSEvent;
+import org.apache.unomi.graphql.CXSEventOccurrenceFilterInput;
+import org.apache.unomi.graphql.CXSEventType;
+import org.apache.unomi.graphql.PageInfo;
 import org.apache.unomi.graphql.propertytypes.*;
 
 import java.util.ArrayList;
@@ -52,16 +55,13 @@ public class CXSEventBuilders implements CXSBuilder {
     public void updateTypes() {
         Map<String,GraphQLType> typeRegistry = container.getTypeRegistry();
         typeRegistry.put("CXS_EventInput", buildCXSEventInputType());
-        typeRegistry.put(CXSEventOccurrenceFilterInput.class.getName(), annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSEventOccurrenceFilterInput.class, container));
+        typeRegistry.put("CXS_EventOccurrenceFilterInput", annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSEventOccurrenceFilterInput.class, container));
         typeRegistry.put("CXS_EventPropertiesFilterInput", buildCXSEventPropertiesFilterInput());
         typeRegistry.put("CXS_EventFilterInput", buildCXSEventFilterInputType());
-
         typeRegistry.put("CXS_EventProperties", buildCXSEventPropertiesOutputType());
-
         typeRegistry.put("CXS_Event", buildCXSEventOutputType());
         typeRegistry.put("CXS_EventEdge", buildCXSEventEdgeOutputType());
         typeRegistry.put("CXS_EventConnection", buildCXSEventConnectionOutputType());
-
     }
 
     private GraphQLOutputType buildCXSEventEdgeOutputType() {
@@ -237,14 +237,14 @@ public class CXSEventBuilders implements CXSBuilder {
     private void addDistanceFilters(String propertyName, GraphQLInputObjectType.Builder inputTypeBuilder) {
         inputTypeBuilder.field(newInputObjectField()
                 .name(propertyName + "_distance")
-                .type((GraphQLInputType) typeRegistry.get(CXSGeoDistanceInput.class.getName()))
+                .type((GraphQLInputType) typeRegistry.get("CXS_GeoDistanceInput"))
         );
     }
 
     private void addDateFilters(String propertyName, GraphQLInputObjectType.Builder inputTypeBuilder) {
         inputTypeBuilder.field(newInputObjectField()
                 .name(propertyName + "_between")
-                .type((GraphQLInputType) typeRegistry.get(CXSDateFilterInput.class.getName()))
+                .type((GraphQLInputType) typeRegistry.get("CXS_DateFilterInput"))
         );
     }
 
@@ -270,7 +270,7 @@ public class CXSEventBuilders implements CXSBuilder {
                 )
                 .field(newInputObjectField()
                         .name("eventOccurrence")
-                        .type((GraphQLInputType) typeRegistry.get(CXSEventOccurrenceFilterInput.class.getName()))
+                        .type((GraphQLInputType) typeRegistry.get("CXS_EventOccurrenceFilterInput"))
                 );
         return cxsEventFilterInputType.build();
     }
@@ -317,7 +317,7 @@ public class CXSEventBuilders implements CXSBuilder {
             } else if (cxsEventPropertyType instanceof CXSDatePropertyType) {
                 eventPropertyInputType = GraphQLString;
             } else if (cxsEventPropertyType instanceof CXSGeoPointPropertyType) {
-                eventPropertyInputType = (GraphQLInputType) typeRegistry.get(CXSGeoPoint.class.getName());
+                eventPropertyInputType = (GraphQLInputType) typeRegistry.get("CXS_GeoPoint");
             } else if (cxsEventPropertyType instanceof CXSSetPropertyType) {
                 eventPropertyInputType = buildCXSEventTypeInputProperty(cxsEventPropertyType.getName(), ((CXSSetPropertyType)cxsEventPropertyType).getProperties());
             }
@@ -389,7 +389,7 @@ public class CXSEventBuilders implements CXSBuilder {
                         })
                 )
                 .field(newFieldDefinition()
-                        .type((GraphQLOutputType) typeRegistry.get(CXSGeoPoint.class.getName()))
+                        .type((GraphQLOutputType) typeRegistry.get("CXS_GeoPoint"))
                         .name("location")
                         .description("The geo-point location where the event was fired.")
                         .dataFetcher(new DataFetcher() {
@@ -458,7 +458,7 @@ public class CXSEventBuilders implements CXSBuilder {
             } else if (cxsEventPropertyType instanceof CXSDatePropertyType) {
                 eventPropertyOutputType = GraphQLString;
             } else if (cxsEventPropertyType instanceof CXSGeoPointPropertyType) {
-                eventPropertyOutputType = (GraphQLOutputType) typeRegistry.get(CXSGeoPoint.class.getName());
+                eventPropertyOutputType = (GraphQLOutputType) typeRegistry.get("CXS_GeoPoint");
             } else if (cxsEventPropertyType instanceof CXSSetPropertyType) {
                 eventPropertyOutputType = buildEventOutputType(cxsEventPropertyType.getName(), ((CXSSetPropertyType)cxsEventPropertyType).getProperties());
             }

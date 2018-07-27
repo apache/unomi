@@ -71,19 +71,17 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
 
         typeRegistry.put(PageInfo.class.getName(), annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(PageInfo.class, container));
 
-        typeRegistry.put(CXSGeoPoint.class.getName(), annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CXSGeoPoint.class, container));
-        typeRegistry.put(CXSSetPropertyType.class.getName(),annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CXSSetPropertyType.class, container));
-        typeRegistry.put(CXSEventType.class.getName(), annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CXSEventType.class, container));
+        typeRegistry.put("CXS_GeoPoint", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CXSGeoPoint.class, container));
+        typeRegistry.put("CXS_SetPropertyType",annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CXSSetPropertyType.class, container));
+        typeRegistry.put("CXS_EventType", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CXSEventType.class, container));
 
-        typeRegistry.put(CXSGeoDistanceInput.class.getName(), annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSGeoDistanceInput.class, container));
-        typeRegistry.put(CXSDateFilterInput.class.getName(), annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSDateFilterInput.class, container));
-        typeRegistry.put(CXSEventTypeInput.class.getName(), annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSEventTypeInput.class, container));
-        typeRegistry.put(CXSOrderByInput.class.getName(), annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSOrderByInput.class, container));
+        typeRegistry.put("CXS_GeoDistanceInput", annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSGeoDistanceInput.class, container));
+        typeRegistry.put("CXS_DateFilterInput", annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSDateFilterInput.class, container));
+        typeRegistry.put("CXS_EventTypeInput", annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSEventTypeInput.class, container));
+        typeRegistry.put("CXS_OrderByInput", annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSOrderByInput.class, container));
 
         typeRegistry.put("CXS_Query", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CXSQuery.class, container));
         typeRegistry.put("CXS_Mutation", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CXSMutation.class, container));
-        // typeRegistry.put("CXS_Query", buildCXSQueryOutputType());
-        // typeRegistry.put("CXS_Mutation", buildCXSMutationOutputType());
 
         cxsEventBuilders.updateTypes();
 
@@ -151,7 +149,7 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
                 .name("CXS_Query")
                 .description("Root CXS query type")
                 .field(newFieldDefinition()
-                        .type(new GraphQLList(getOutputTypeFromRegistry(CXSEventType.class.getName())))
+                        .type(new GraphQLList(getOutputTypeFromRegistry("CXS_EventType")))
                         .name("getEventTypes")
                         .description("Retrieves the list of all the declared CXS event types in the Apache Unomi server")
                 )
@@ -169,7 +167,7 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
                         )
                         .argument(newArgument()
                                 .name("orderBy")
-                                .type(getInputTypeFromRegistry(CXSOrderByInput.class.getName()))
+                                .type(getInputTypeFromRegistry("CXS_OrderByInput"))
                         )
                         .argument(newArgument()
                                 .name("first")

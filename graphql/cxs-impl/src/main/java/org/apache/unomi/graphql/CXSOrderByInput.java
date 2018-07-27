@@ -17,7 +17,9 @@
 package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
 
+@GraphQLName("CXS_OrderByInput")
 public class CXSOrderByInput {
 
     @GraphQLField

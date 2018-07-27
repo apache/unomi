@@ -21,7 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 
 import java.util.List;
 
-@GraphQLName("CXSBooleanPropertyType")
+@GraphQLName("CXS_BooleanPropertyType")
 public class CXSBooleanPropertyType extends CXSPropertyType {
 
     private Boolean defaultValue;

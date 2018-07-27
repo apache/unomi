@@ -21,6 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 
 import java.util.List;
 
+@GraphQLName("CXS_DatePropertyType")
 public class CXSDatePropertyType extends CXSPropertyType {
 
     private String defaultValue;

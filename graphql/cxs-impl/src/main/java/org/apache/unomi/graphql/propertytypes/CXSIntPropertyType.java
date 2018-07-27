@@ -21,6 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 
 import java.util.List;
 
+@GraphQLName("CXS_IntPropertyType")
 public class CXSIntPropertyType extends CXSPropertyType {
 
     private Integer minValue;

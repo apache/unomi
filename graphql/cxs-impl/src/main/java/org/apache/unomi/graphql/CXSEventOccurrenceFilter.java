@@ -17,7 +17,9 @@
 package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
 
+@GraphQLName("CXS_EventOccurrenceFilter")
 public class CXSEventOccurrenceFilter {
     @GraphQLField
     public String eventType;
