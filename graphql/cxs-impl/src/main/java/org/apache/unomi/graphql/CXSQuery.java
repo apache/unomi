@@ -26,6 +26,12 @@ import java.util.List;
 @GraphQLName("CXS_Query")
 public class CXSQuery {
 
+    CXSGraphQLProvider cxsGraphQLProvider;
+
+    public CXSQuery(CXSGraphQLProvider cxsGraphQLProvider) {
+        this.cxsGraphQLProvider = cxsGraphQLProvider;
+    }
+
     @GraphQLField
     public List<CXSEventType> getEventTypes() {
         return new ArrayList<>();

@@ -19,10 +19,7 @@ package org.apache.unomi.graphql.builders;
 import graphql.annotations.processor.GraphQLAnnotationsComponent;
 import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.schema.*;
-import org.apache.unomi.graphql.CXSEvent;
-import org.apache.unomi.graphql.CXSEventOccurrenceFilterInput;
-import org.apache.unomi.graphql.CXSEventType;
-import org.apache.unomi.graphql.PageInfo;
+import org.apache.unomi.graphql.*;
 import org.apache.unomi.graphql.propertytypes.*;
 
 import java.util.ArrayList;
@@ -276,13 +273,8 @@ public class CXSEventBuilders implements CXSBuilder {
     }
 
     private GraphQLInputType buildCXSEventInputType() {
-        GraphQLInputObjectType.Builder cxsEventInputType = newInputObject()
-                .name("CXS_EventInput")
-                .description("The event input object to send events to the Context Server")
-                .field(newInputObjectField()
-                        .name("id")
-                        .type(GraphQLID)
-                );
+        GraphQLInputObjectType.Builder cxsEventInputType = CXSBuildersUtils.getInputBuilderFromAnnotatedClass(annotationsComponent, container, "CXS_EventInput", CXSEventInput.class)
+                .description("The event input object to send events to the Context Server");
 
         for (Map.Entry<String,CXSEventType> cxsEventTypeEntry : eventTypes.entrySet()) {
             CXSEventType cxsEventType = cxsEventTypeEntry.getValue();
@@ -414,16 +406,8 @@ public class CXSEventBuilders implements CXSBuilder {
     }
 
     private GraphQLOutputType buildCXSEventPropertiesOutputType() {
-        GraphQLObjectType.Builder eventPropertiesOutputType = newObject()
-                .name("CXS_EventProperties")
+        GraphQLObjectType.Builder eventPropertiesOutputType = CXSBuildersUtils.getOutputBuilderFromAnnotatedClass(annotationsComponent, container, "CXS_EventProperties", CXSEventProperties.class)
                 .description("All possible properties of an event");
-
-        // we create a dummy field because GraphQL requires at least one
-        eventPropertiesOutputType.field(newFieldDefinition()
-                .type(GraphQLInt)
-                .name("typeCount")
-                .description("Total count of different field types")
-        );
 
         for (Map.Entry<String,CXSEventType> cxsEventTypeEntry : eventTypes.entrySet()) {
             CXSEventType cxsEventType = cxsEventTypeEntry.getValue();

@@ -66,9 +66,7 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
     }
 
     public void updateGraphQLTypes() {
-
-        Map<String,GraphQLType> typeRegistry = container.getTypeRegistry();
-
+        typeRegistry.clear();
         typeRegistry.put(PageInfo.class.getName(), annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(PageInfo.class, container));
 
         typeRegistry.put("CXS_GeoPoint", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CXSGeoPoint.class, container));
@@ -80,18 +78,13 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
         typeRegistry.put("CXS_EventTypeInput", annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSEventTypeInput.class, container));
         typeRegistry.put("CXS_OrderByInput", annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSOrderByInput.class, container));
 
+        cxsEventBuilders.updateTypes();
+
         typeRegistry.put("CXS_Query", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CXSQuery.class, container));
         typeRegistry.put("CXS_Mutation", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CXSMutation.class, container));
 
-        cxsEventBuilders.updateTypes();
-
     }
 
-    private GraphQLObjectType.Builder getBuilderFromAnnotatedClass(Class annotatedClass) {
-        return GraphQLObjectType.newObject()
-                .name(annotatedClass.getName())
-                .fields(((GraphQLObjectType) annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(annotatedClass, container)).getFieldDefinitions());
-    }
 
     private GraphQLOutputType getOutputTypeFromRegistry(String typeName) {
         return (GraphQLOutputType) typeRegistry.get(typeName);
@@ -108,17 +101,16 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
     @Override
     public Collection<GraphQLFieldDefinition> getQueries() {
         List<GraphQLFieldDefinition> fieldDefinitions = new ArrayList<GraphQLFieldDefinition>();
+        final CXSGraphQLProvider cxsGraphQLProvider = this;
         fieldDefinitions.add(newFieldDefinition()
                 .type(getOutputTypeFromRegistry("CXS_Query"))
                 .name("cxs")
                 .description("Root field for all CXS queries")
-                /*
-                .dataFetcher(new DataFetcher() {
-                    public Object get(DataFetchingEnvironment environment) {
-                        Map<String,Object> map = environment.getContext();
-                        return map.keySet();
+                .dataFetcher(new DataFetcher<CXSGraphQLProvider>() {
+                    public CXSGraphQLProvider get(DataFetchingEnvironment environment) {
+                        return cxsGraphQLProvider;
                     }
-                })*/.build());
+                }).build());
         return fieldDefinitions;
     }
 
