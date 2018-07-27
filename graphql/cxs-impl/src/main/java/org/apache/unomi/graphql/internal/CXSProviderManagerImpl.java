@@ -17,7 +17,6 @@
 package org.apache.unomi.graphql.internal;
 
 import graphql.annotations.processor.GraphQLAnnotationsComponent;
-import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.servlet.GraphQLMutationProvider;
 import graphql.servlet.GraphQLQueryProvider;
 import graphql.servlet.GraphQLTypesProvider;
@@ -41,7 +40,6 @@ public class CXSProviderManagerImpl implements CXSProviderManager {
 
     private CXSGraphQLProvider cxsGraphQLProvider;
     private GraphQLAnnotationsComponent annotationsComponent;
-    private ProcessingElementsContainer container;
     private ServiceRegistration<?> providerSR;
     private BundleContext bundleContext;
 

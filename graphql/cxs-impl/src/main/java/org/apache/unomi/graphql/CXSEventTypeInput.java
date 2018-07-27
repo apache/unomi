@@ -17,20 +17,45 @@
 package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CXSEventTypeInput {
 
-    @GraphQLField
-    public String id;
+    private String id;
+    private String scope;
+    private String typeName;
+    private List<CXSPropertyTypeInput> properties = new ArrayList<>();
+
+    public CXSEventTypeInput(@GraphQLName("id") String id,
+                             @GraphQLName("scope") String scope,
+                             @GraphQLName("typeName") String typeName,
+                             @GraphQLName("properties") List<CXSPropertyTypeInput> properties) {
+        this.id = id;
+        this.scope = scope;
+        this.typeName = typeName;
+        this.properties = properties;
+    }
 
     @GraphQLField
-    public String scope;
+    public String getId() {
+        return id;
+    }
 
     @GraphQLField
-    public String typeName;
+    public String getScope() {
+        return scope;
+    }
 
     @GraphQLField
-    public List<CXSPropertyTypeInput> properties;
+    public String getTypeName() {
+        return typeName;
+    }
+
+    @GraphQLField
+    public List<CXSPropertyTypeInput> getProperties() {
+        return properties;
+    }
 }

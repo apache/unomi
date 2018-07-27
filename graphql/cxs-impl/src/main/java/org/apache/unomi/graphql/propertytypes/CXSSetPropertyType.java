@@ -14,46 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.propertytypes;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
-import org.apache.unomi.graphql.propertytypes.CXSPropertyType;
 
-import java.util.ArrayList;
 import java.util.List;
 
-@GraphQLName("CXS_EventType")
-public class CXSEventType {
+public class CXSSetPropertyType extends CXSPropertyType {
 
-    private String id;
-    private String scope;
-    private String typeName;
-    private List<CXSPropertyType> properties = new ArrayList<>();
+    private List<CXSPropertyType> properties;
 
-    public CXSEventType(@GraphQLName("id") String id,
-                        @GraphQLName("scope") String scope,
-                        @GraphQLName("typeName") String typeName,
-                        @GraphQLName("properties") List<CXSPropertyType> properties) {
-        this.id = id;
-        this.scope = scope;
-        this.typeName = typeName;
+    public CXSSetPropertyType(@GraphQLName("id") String id,
+                              @GraphQLName("name") String name,
+                              @GraphQLName("minOccurrences") Integer minOccurrences,
+                              @GraphQLName("maxOccurrences") Integer maxOccurrences,
+                              @GraphQLName("tags") List<String> tags,
+                              @GraphQLName("systemTags") List<String> systemTags,
+                              @GraphQLName("personalData") Boolean personalData,
+                              @GraphQLName("properties") List<CXSPropertyType> properties) {
+        super(id, name, minOccurrences, maxOccurrences, tags, systemTags, personalData);
         this.properties = properties;
-    }
-
-    @GraphQLField
-    public String getId() {
-        return id;
-    }
-
-    @GraphQLField
-    public String getScope() {
-        return scope;
-    }
-
-    @GraphQLField
-    public String getTypeName() {
-        return typeName;
     }
 
     @GraphQLField

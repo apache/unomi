@@ -24,6 +24,7 @@ import graphql.servlet.GraphQLQueryProvider;
 import graphql.servlet.GraphQLTypesProvider;
 import org.apache.unomi.graphql.*;
 import org.apache.unomi.graphql.builders.CXSEventBuilders;
+import org.apache.unomi.graphql.propertytypes.CXSSetPropertyType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -113,12 +114,13 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
                 .type(getOutputTypeFromRegistry("CXS_Query"))
                 .name("cxs")
                 .description("Root field for all CXS queries")
+                /*
                 .dataFetcher(new DataFetcher() {
                     public Object get(DataFetchingEnvironment environment) {
                         Map<String,Object> map = environment.getContext();
                         return map.keySet();
                     }
-                }).build());
+                })*/.build());
         return fieldDefinitions;
     }
 
@@ -130,15 +132,15 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
     @Override
     public Collection<GraphQLFieldDefinition> getMutations() {
         List<GraphQLFieldDefinition> fieldDefinitions = new ArrayList<GraphQLFieldDefinition>();
+        final CXSGraphQLProvider cxsGraphQLProvider = this;
         fieldDefinitions.add(newFieldDefinition()
                 .type(getOutputTypeFromRegistry("CXS_Mutation"))
                 .name("cxs")
                 .description("Root field for all CXS mutations")
-                .dataFetcher(new DataFetcher<Object>() {
+                .dataFetcher(new DataFetcher<CXSGraphQLProvider>() {
                     @Override
-                    public Object get(DataFetchingEnvironment environment) {
-                        Object contextObject = environment.getContext();
-                        return contextObject;
+                    public CXSGraphQLProvider get(DataFetchingEnvironment environment) {
+                        return cxsGraphQLProvider;
                     }
                 }).build());
         return fieldDefinitions;
@@ -237,120 +239,5 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
                 */
                 .build();
     }
-
-    private GraphQLOutputType buildCXSMutationOutputType() {
-        return newObject()
-                .name("CXS_Mutation")
-                .description("Root CXS mutation type")
-                .field(newFieldDefinition()
-                        .type(getOutputTypeFromRegistry(CXSEventType.class.getName()))
-                        .name("createOrUpdateEventType")
-                        .argument(newArgument()
-                                .name("eventType")
-                                .type(getInputTypeFromRegistry(CXSEventTypeInput.class.getName()))
-                        )
-                        .description("Create or updates a CXS event type in the Apache Unomi server")
-                        .dataFetcher(new DataFetcher<CXSEventType>() {
-                            @Override
-                            public CXSEventType get(DataFetchingEnvironment environment) {
-                                Map<String,Object> arguments = environment.getArguments();
-                                CXSEventType cxsEventType = new CXSEventType();
-                                if (arguments.containsKey("eventType")) {
-                                    Map<String,Object> eventTypeArguments = (Map<String,Object>) arguments.get("eventType");
-                                    if (eventTypeArguments.containsKey("typeName")) {
-                                        cxsEventType.id = (String) eventTypeArguments.get("typeName");
-                                        cxsEventType.typeName = (String) eventTypeArguments.get("typeName");
-                                    }
-                                    cxsEventType.properties = new ArrayList<>();
-                                    if (eventTypeArguments.containsKey("properties")) {
-                                        List<Map<String, Object>> properties = (List<Map<String, Object>>) eventTypeArguments.get("properties");
-                                        for (Map<String, Object> propertyTypeMap : properties) {
-                                            CXSPropertyType cxsPropertyType = getPropertyType(propertyTypeMap);
-                                            if (cxsPropertyType != null) {
-                                                cxsEventType.properties.add(cxsPropertyType);
-                                            }
-                                        }
-                                    }
-                                }
-                                eventTypes.put(cxsEventType.typeName, cxsEventType);
-                                updateGraphQLTypes();
-                                if (cxsProviderManager != null) {
-                                    cxsProviderManager.refreshProviders();
-                                }
-                                return cxsEventType;
-                            }
-                        })
-                )
-                .field(newFieldDefinition()
-                        .name("processEvents")
-                        .description("Processes events sent to the Context Server")
-                        .argument(newArgument()
-                                .name("events")
-                                .type(new GraphQLList(getInputTypeFromRegistry("CXS_EventInput"))))
-                        .type(GraphQLInt)
-                )
-                .build();
-    }
-
-    private CXSPropertyType getPropertyType(Map<String, Object> propertyTypeMap) {
-        if (propertyTypeMap.size() > 1) {
-            logger.error("Only one property type is allowed for each property !");
-            return null;
-        }
-        CXSPropertyType propertyType = null;
-        if (propertyTypeMap.containsKey("identifier")) {
-            propertyType = getIdentifierPropertyType(propertyTypeMap);
-        } else if (propertyTypeMap.containsKey("string")) {
-            propertyType = getStringPropertyType(propertyTypeMap);
-        } else if (propertyTypeMap.containsKey("set")) {
-            propertyType = getSetPropertyType(propertyTypeMap);
-        }
-        return propertyType;
-    }
-
-    private CXSPropertyType getSetPropertyType(Map<String, Object> propertyTypeMap) {
-        CXSSetPropertyType cxsSetPropertyType = new CXSSetPropertyType();
-        Map<String,Object> setPropertyTypeMap = (Map<String,Object>) propertyTypeMap.get("set");
-        populateCommonProperties(setPropertyTypeMap, cxsSetPropertyType);
-        if (setPropertyTypeMap.containsKey("properties")) {
-            List<Map<String,Object>> propertyList = (List<Map<String,Object>>) setPropertyTypeMap.get("properties");
-            List<CXSPropertyType> setProperties = new ArrayList<>();
-            for (Map<String,Object> setProperty : propertyList) {
-                CXSPropertyType subPropertyType = getPropertyType(setProperty);
-                if (subPropertyType != null) {
-                    setProperties.add(subPropertyType);
-                }
-            }
-            cxsSetPropertyType.properties = setProperties;
-        }
-        return cxsSetPropertyType;
-    }
-
-    private CXSPropertyType getStringPropertyType(Map<String, Object> propertyTypeMap) {
-        CXSStringPropertyType cxsStringPropertyType = new CXSStringPropertyType();
-        Map<String,Object> stringPropertyTypeMap = (Map<String,Object>) propertyTypeMap.get("string");
-        populateCommonProperties(stringPropertyTypeMap, cxsStringPropertyType);
-        return cxsStringPropertyType;
-    }
-
-    private CXSPropertyType getIdentifierPropertyType(Map<String, Object> propertyTypeMap) {
-        CXSIdentifierPropertyType cxsIdentifierPropertyType = new CXSIdentifierPropertyType();
-        Map<String,Object> identifierPropertyTypeMap = (Map<String,Object>) propertyTypeMap.get("identifier");
-        populateCommonProperties(identifierPropertyTypeMap, cxsIdentifierPropertyType);
-        return cxsIdentifierPropertyType;
-    }
-
-    private void populateCommonProperties(Map<String, Object> propertyTypeMap, CXSPropertyType cxsPropertyType) {
-        if (propertyTypeMap == null || propertyTypeMap.size() == 0) {
-            return;
-        }
-        if (propertyTypeMap.containsKey("id")) {
-            cxsPropertyType.id = (String) propertyTypeMap.get("id");
-        }
-        if (propertyTypeMap.containsKey("name")) {
-            cxsPropertyType.name = (String) propertyTypeMap.get("name");
-        }
-    }
-
 
 }

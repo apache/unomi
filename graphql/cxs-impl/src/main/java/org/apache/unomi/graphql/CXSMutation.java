@@ -19,6 +19,10 @@ package org.apache.unomi.graphql;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.propertytypes.CXSIdentifierPropertyType;
+import org.apache.unomi.graphql.propertytypes.CXSPropertyType;
+import org.apache.unomi.graphql.propertytypes.CXSSetPropertyType;
+import org.apache.unomi.graphql.propertytypes.CXSStringPropertyType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,19 +30,21 @@ import java.util.List;
 @GraphQLName("CXS_Mutation")
 public class CXSMutation {
 
+    CXSGraphQLProvider cxsGraphQLProvider;
+
+    public CXSMutation(CXSGraphQLProvider cxsGraphQLProvider) {
+        this.cxsGraphQLProvider = cxsGraphQLProvider;
+    }
+
     @GraphQLField
     public CXSEventType createOrUpdateEventType(DataFetchingEnvironment env, @GraphQLName("eventType") CXSEventTypeInput cxsEventTypeInput) {
 
-        CXSGraphQLProvider cxsGraphQLProvider = null;
-        CXSEventType cxsEventType = new CXSEventType();
-        cxsEventType.id = cxsEventTypeInput.id;
-        cxsEventType.typeName = cxsEventTypeInput.scope;
-        cxsEventType.properties = new ArrayList<>();
-        for (CXSPropertyTypeInput propertyTypeInput : cxsEventTypeInput.properties) {
+        CXSEventType cxsEventType = new CXSEventType(cxsEventTypeInput.getId(), cxsEventTypeInput.getScope(), cxsEventTypeInput.getTypeName(), new ArrayList<>());
+        for (CXSPropertyTypeInput propertyTypeInput : cxsEventTypeInput.getProperties()) {
             CXSPropertyType propertyType = getPropertyType(propertyTypeInput);
-            cxsEventType.properties.add(propertyType);
+            cxsEventType.getProperties().add(propertyType);
         }
-        cxsGraphQLProvider.getEventTypes().put(cxsEventType.typeName, cxsEventType);
+        cxsGraphQLProvider.getEventTypes().put(cxsEventType.getTypeName(), cxsEventType);
         cxsGraphQLProvider.updateGraphQLTypes();
         if (cxsGraphQLProvider.getCxsProviderManager() != null) {
             cxsGraphQLProvider.getCxsProviderManager().refreshProviders();
@@ -65,49 +71,53 @@ public class CXSMutation {
     }
 
     private CXSPropertyType getSetPropertyType(CXSSetPropertyTypeInput cxsSetPropertyTypeInput) {
-        CXSSetPropertyType cxsSetPropertyType = new CXSSetPropertyType();
-
-        populateCommonProperties(cxsSetPropertyTypeInput, cxsSetPropertyType);
-        if (cxsSetPropertyTypeInput.properties != null) {
-            List<CXSPropertyType> setProperties = new ArrayList<>();
-            for (CXSPropertyTypeInput setProperty : cxsSetPropertyTypeInput.properties) {
+        List<CXSPropertyType> setProperties = null;
+        if (cxsSetPropertyTypeInput.getProperties() != null) {
+            setProperties = new ArrayList<>();
+            for (CXSPropertyTypeInput setProperty : cxsSetPropertyTypeInput.getProperties()) {
                 CXSPropertyType subPropertyType = getPropertyType(setProperty);
                 if (subPropertyType != null) {
                     setProperties.add(subPropertyType);
                 }
             }
-            cxsSetPropertyType.properties = setProperties;
         }
-        return cxsSetPropertyType;
+        return new CXSSetPropertyType(
+                cxsSetPropertyTypeInput.getId(),
+                cxsSetPropertyTypeInput.getName(),
+                cxsSetPropertyTypeInput.getMinOccurrences(),
+                cxsSetPropertyTypeInput.getMaxOccurrences(),
+                cxsSetPropertyTypeInput.getTags(),
+                cxsSetPropertyTypeInput.getSystemTags(),
+                cxsSetPropertyTypeInput.isPersonalData(),
+                setProperties);
     }
 
     private CXSPropertyType getStringPropertyType(CXSStringPropertyType stringPropertyType) {
-        CXSStringPropertyType cxsStringPropertyType = new CXSStringPropertyType();
-        populateCommonProperties(stringPropertyType, cxsStringPropertyType);
-        cxsStringPropertyType.defaultValue = stringPropertyType.defaultValue;
-        cxsStringPropertyType.regexp = stringPropertyType.regexp;
-        return cxsStringPropertyType;
+        return new CXSStringPropertyType(
+                stringPropertyType.getId(),
+                stringPropertyType.getName(),
+                stringPropertyType.getMinOccurrences(),
+                stringPropertyType.getMaxOccurrences(),
+                stringPropertyType.getTags(),
+                stringPropertyType.getSystemTags(),
+                stringPropertyType.isPersonalData(),
+                stringPropertyType.getRegexp(),
+                stringPropertyType.getDefaultValue()
+                );
     }
 
     private CXSPropertyType getIdentifierPropertyType(CXSIdentifierPropertyType identifierPropertyType) {
-        CXSIdentifierPropertyType cxsIdentifierPropertyType = new CXSIdentifierPropertyType();
-        populateCommonProperties(identifierPropertyType, cxsIdentifierPropertyType);
-        cxsIdentifierPropertyType.defaultValue = identifierPropertyType.defaultValue;
-        cxsIdentifierPropertyType.regexp = identifierPropertyType.regexp;
-        return cxsIdentifierPropertyType;
-    }
-
-    private void populateCommonProperties(CXSPropertyType source, CXSPropertyType destination) {
-        if (source == null) {
-            return;
-        }
-        destination.id = source.id;
-        destination.name = source.name;
-        destination.personalData = source.personalData;
-        destination.systemTags = source.systemTags;
-        destination.tags = source.tags;
-        destination.minOccurrences = source.minOccurrences;
-        destination.maxOccurrences = source.maxOccurrences;
+        return new CXSIdentifierPropertyType(
+                identifierPropertyType.getId(),
+                identifierPropertyType.getName(),
+                identifierPropertyType.getMinOccurrences(),
+                identifierPropertyType.getMaxOccurrences(),
+                identifierPropertyType.getTags(),
+                identifierPropertyType.getSystemTags(),
+                identifierPropertyType.isPersonalData(),
+                identifierPropertyType.getRegexp(),
+                identifierPropertyType.getDefaultValue()
+        );
     }
 
 }

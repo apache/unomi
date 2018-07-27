@@ -20,6 +20,7 @@ import graphql.annotations.processor.GraphQLAnnotationsComponent;
 import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.schema.*;
 import org.apache.unomi.graphql.*;
+import org.apache.unomi.graphql.propertytypes.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -116,7 +117,7 @@ public class CXSEventBuilders implements CXSBuilder {
 
     private void generateEventTypesFilters(GraphQLInputObjectType.Builder cxsEventPropertiesFilterInput) {
         for (Map.Entry<String,CXSEventType> eventTypeEntry : eventTypes.entrySet()) {
-            addSetFilters(eventTypeEntry.getKey(), eventTypeEntry.getValue().properties, cxsEventPropertiesFilterInput);
+            addSetFilters(eventTypeEntry.getKey(), eventTypeEntry.getValue().getProperties(), cxsEventPropertiesFilterInput);
         }
     }
 
@@ -127,21 +128,21 @@ public class CXSEventBuilders implements CXSBuilder {
 
         for (CXSPropertyType cxsPropertyType : properties) {
             if (cxsPropertyType instanceof CXSIdentifierPropertyType) {
-                addIdentityFilters(cxsPropertyType.name, eventTypeFilterInput);
+                addIdentityFilters(cxsPropertyType.getName(), eventTypeFilterInput);
             } else if (cxsPropertyType instanceof CXSStringPropertyType) {
-                addStringFilters(cxsPropertyType.name, eventTypeFilterInput);
+                addStringFilters(cxsPropertyType.getName(), eventTypeFilterInput);
             } else if (cxsPropertyType instanceof CXSBooleanPropertyType) {
-                addBooleanFilters(cxsPropertyType.name, eventTypeFilterInput);
+                addBooleanFilters(cxsPropertyType.getName(), eventTypeFilterInput);
             } else if (cxsPropertyType instanceof CXSIntPropertyType) {
-                addIntegerFilters(cxsPropertyType.name, eventTypeFilterInput);
+                addIntegerFilters(cxsPropertyType.getName(), eventTypeFilterInput);
             } else if (cxsPropertyType instanceof CXSFloatPropertyType) {
-                addFloatFilters(cxsPropertyType.name, eventTypeFilterInput);
+                addFloatFilters(cxsPropertyType.getName(), eventTypeFilterInput);
             } else if (cxsPropertyType instanceof CXSGeoPointPropertyType) {
-                addDistanceFilters(cxsPropertyType.name, eventTypeFilterInput);
+                addDistanceFilters(cxsPropertyType.getName(), eventTypeFilterInput);
             } else if (cxsPropertyType instanceof CXSDatePropertyType) {
-                addDateFilters(cxsPropertyType.name, eventTypeFilterInput);
+                addDateFilters(cxsPropertyType.getName(), eventTypeFilterInput);
             } else if (cxsPropertyType instanceof CXSSetPropertyType) {
-                addSetFilters(cxsPropertyType.name, ((CXSSetPropertyType) cxsPropertyType).properties, eventTypeFilterInput);
+                addSetFilters(cxsPropertyType.getName(), ((CXSSetPropertyType) cxsPropertyType).getProperties(), eventTypeFilterInput);
             }
         }
 
@@ -287,7 +288,7 @@ public class CXSEventBuilders implements CXSBuilder {
             CXSEventType cxsEventType = cxsEventTypeEntry.getValue();
             cxsEventInputType.field(newInputObjectField()
                     .name(cxsEventTypeEntry.getKey())
-                    .type(buildCXSEventTypeInputProperty(cxsEventType.typeName, cxsEventType.properties))
+                    .type(buildCXSEventTypeInputProperty(cxsEventType.getTypeName(), cxsEventType.getProperties()))
             );
         }
 
@@ -318,12 +319,12 @@ public class CXSEventBuilders implements CXSBuilder {
             } else if (cxsEventPropertyType instanceof CXSGeoPointPropertyType) {
                 eventPropertyInputType = (GraphQLInputType) typeRegistry.get(CXSGeoPoint.class.getName());
             } else if (cxsEventPropertyType instanceof CXSSetPropertyType) {
-                eventPropertyInputType = buildCXSEventTypeInputProperty(cxsEventPropertyType.name, ((CXSSetPropertyType)cxsEventPropertyType).properties);
+                eventPropertyInputType = buildCXSEventTypeInputProperty(cxsEventPropertyType.getName(), ((CXSSetPropertyType)cxsEventPropertyType).getProperties());
             }
             eventInputType
                     .field(newInputObjectField()
                             .type(eventPropertyInputType)
-                            .name(cxsEventPropertyType.name)
+                            .name(cxsEventPropertyType.getName())
                     );
         }
 
@@ -428,7 +429,7 @@ public class CXSEventBuilders implements CXSBuilder {
             CXSEventType cxsEventType = cxsEventTypeEntry.getValue();
             eventPropertiesOutputType
                     .field(newFieldDefinition()
-                            .type(buildEventOutputType(cxsEventType.typeName, cxsEventType.properties))
+                            .type(buildEventOutputType(cxsEventType.getTypeName(), cxsEventType.getProperties()))
                             .name(cxsEventTypeEntry.getKey())
                     );
         }
@@ -459,12 +460,12 @@ public class CXSEventBuilders implements CXSBuilder {
             } else if (cxsEventPropertyType instanceof CXSGeoPointPropertyType) {
                 eventPropertyOutputType = (GraphQLOutputType) typeRegistry.get(CXSGeoPoint.class.getName());
             } else if (cxsEventPropertyType instanceof CXSSetPropertyType) {
-                eventPropertyOutputType = buildEventOutputType(cxsEventPropertyType.name, ((CXSSetPropertyType)cxsEventPropertyType).properties);
+                eventPropertyOutputType = buildEventOutputType(cxsEventPropertyType.getName(), ((CXSSetPropertyType)cxsEventPropertyType).getProperties());
             }
             eventOutputType
                     .field(newFieldDefinition()
                             .type(eventPropertyOutputType)
-                            .name(cxsEventPropertyType.name)
+                            .name(cxsEventPropertyType.getName())
                     );
         }
 

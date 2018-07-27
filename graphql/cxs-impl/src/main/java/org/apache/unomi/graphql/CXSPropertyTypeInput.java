@@ -18,9 +18,29 @@ package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import org.apache.unomi.graphql.propertytypes.*;
 
 @GraphQLName("CXSPropertyTypeInput")
 public class CXSPropertyTypeInput {
+
+    public CXSPropertyTypeInput(
+            @GraphQLName("identifier") CXSIdentifierPropertyType identifierPropertyTypeInput,
+            @GraphQLName("string") CXSStringPropertyType stringPropertyTypeInput,
+            @GraphQLName("int") CXSIntPropertyType integerPropertyTypeInput,
+            @GraphQLName("float") CXSFloatPropertyType floatPropertyTypeInput,
+            @GraphQLName("date") CXSDatePropertyType datePropertyTypeInput,
+            @GraphQLName("boolean") CXSBooleanPropertyType booleanPropertyTypeInput,
+            @GraphQLName("geopoint") CXSGeoPointPropertyType geoPointPropertyTypeInput,
+            @GraphQLName("set") CXSSetPropertyTypeInput setPropertyTypeInput) {
+        this.identifierPropertyTypeInput = identifierPropertyTypeInput;
+        this.stringPropertyTypeInput = stringPropertyTypeInput;
+        this.integerPropertyTypeInput = integerPropertyTypeInput;
+        this.floatPropertyTypeInput = floatPropertyTypeInput;
+        this.datePropertyTypeInput = datePropertyTypeInput;
+        this.booleanPropertyTypeInput = booleanPropertyTypeInput;
+        this.geoPointPropertyTypeInput = geoPointPropertyTypeInput;
+        this.setPropertyTypeInput = setPropertyTypeInput;
+    }
 
     @GraphQLField
     @GraphQLName("identifier")

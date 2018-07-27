@@ -14,32 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.propertytypes;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
-import org.apache.unomi.graphql.propertytypes.CXSPropertyType;
 
 import java.util.List;
 
-public class CXSSetPropertyTypeInput extends CXSPropertyType {
+public class CXSDatePropertyType extends CXSPropertyType {
 
-    private List<CXSPropertyTypeInput> properties;
+    private String defaultValue;
 
-    public CXSSetPropertyTypeInput(@GraphQLName("id") String id,
-                                   @GraphQLName("name") String name,
-                                   @GraphQLName("minOccurrences") Integer minOccurrences,
-                                   @GraphQLName("maxOccurrences") Integer maxOccurrences,
-                                   @GraphQLName("tags") List<String> tags,
-                                   @GraphQLName("systemTags") List<String> systemTags,
-                                   @GraphQLName("personalData") Boolean personalData,
-                                   @GraphQLName("properties") List<CXSPropertyTypeInput> properties) {
+    public CXSDatePropertyType(@GraphQLName("id") String id,
+                               @GraphQLName("name") String name,
+                               @GraphQLName("minOccurrences") Integer minOccurrences,
+                               @GraphQLName("maxOccurrences") Integer maxOccurrences,
+                               @GraphQLName("tags") List<String> tags,
+                               @GraphQLName("systemTags") List<String> systemTags,
+                               @GraphQLName("personalData") Boolean personalData,
+                               @GraphQLName("defaultValue") String defaultValue) {
         super(id, name, minOccurrences, maxOccurrences, tags, systemTags, personalData);
-        this.properties = properties;
+        this.defaultValue = defaultValue;
     }
 
     @GraphQLField
-    public List<CXSPropertyTypeInput> getProperties() {
-        return properties;
+    public String getDefaultValue() {
+        return defaultValue;
     }
 }
