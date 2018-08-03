@@ -326,7 +326,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 if (StringUtils.isNotBlank(transportClientClassName) && StringUtils.isNotBlank(transportClientJarDirectory)) {
                     logger.info("Connecting to ElasticSearch persistence backend using transport class " + transportClientClassName +
-                            " with JAR directory "+transportClientJarDirectory +
+                            " with JAR directory " + transportClientJarDirectory +
                             " using cluster name " + clusterName + " and index name " + indexName + "...");
                     client = newTransportClient(transportSettings, transportClientClassName, transportClientJarDirectory, transportClientProperties);
                 } else {
@@ -687,7 +687,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean save(final Item item, final boolean useBatching) {
-        Boolean result =  new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveItem") {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveItem") {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String source = ESCustomObjectMapper.getObjectMapper().writeValueAsString(item);
@@ -1118,7 +1118,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                     }
                 } catch (Throwable t) {
-                    throw new Exception("Cannot get mapping for itemType="+ itemType, t);
+                    throw new Exception("Cannot get mapping for itemType=" + itemType, t);
                 }
                 return propertyMap;
             }
@@ -1495,8 +1495,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return aggregateQuery(filter, aggregate, itemType, true);
     }
 
-    private Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType,
-            final boolean optimizedQuery) {
+    private Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType, final boolean optimizedQuery) {
         return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery") {
 
             @Override
@@ -1603,12 +1602,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 SearchResponse response = builder.execute().actionGet();
                 Aggregations aggregations = response.getAggregations();
-                if (aggregations != null) {
-                    if (optimizedQuery) {
-                        if (response.getHits() != null) {
-                            results.put("_filtered", response.getHits().getTotalHits());
-                        }
-                    } else {
+
+                if (optimizedQuery) {
+                    if (response.getHits() != null) {
+                        results.put("_filtered", response.getHits().getTotalHits());
+                    }
+                } else {
+                    if (aggregations != null) {
                         Global globalAgg = aggregations.get("global");
                         results.put("_all", globalAgg.getDocCount());
                         aggregations = globalAgg.getAggregations();
@@ -1619,6 +1619,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             aggregations = filterAgg.getAggregations();
                         }
                     }
+                }
+
+                if (aggregations != null) {
                     if (aggregations.get("buckets") != null) {
                         MultiBucketsAggregation terms = aggregations.get("buckets");
                         for (MultiBucketsAggregation.Bucket bucket : terms.getBuckets()) {
@@ -1915,7 +1918,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if (!isCacheActiveForClass(className)) {
             return null;
         }
-        Map<String,T> itemCache = hazelcastInstance.getMap(className);
+        Map<String, T> itemCache = hazelcastInstance.getMap(className);
         return itemCache.get(itemId);
     }
 
@@ -1924,7 +1927,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if (!isCacheActiveForClass(className)) {
             return null;
         }
-        Map<String,T> itemCache = hazelcastInstance.getMap(className);
+        Map<String, T> itemCache = hazelcastInstance.getMap(className);
         return itemCache.put(itemId, item);
     }
 
@@ -1933,7 +1936,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if (!isCacheActiveForClass(className)) {
             return null;
         }
-        Map<String,T> itemCache = hazelcastInstance.getMap(className);
+        Map<String, T> itemCache = hazelcastInstance.getMap(className);
         return itemCache.remove(itemId);
     }
 
