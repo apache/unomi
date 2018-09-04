@@ -106,8 +106,17 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         }
 
         String remoteAddr = httpServletRequest.getRemoteAddr();
+        if (logger.isDebugEnabled()) {
+            logger.debug("Remote address is " + remoteAddr);
+        }
         String remoteAddrParameter = httpServletRequest.getParameter("remoteAddr");
+        if (logger.isDebugEnabled()) {
+            logger.debug("Remote address param is " + remoteAddr);
+        }
         String xff = httpServletRequest.getHeader("X-Forwarded-For");
+        if (logger.isDebugEnabled()) {
+            logger.debug("X-Forwarded-For is " + xff);
+        }
         if (remoteAddrParameter != null && remoteAddrParameter.length() > 0) {
             remoteAddr = remoteAddrParameter;
         } else if (xff != null && !xff.equals("")) {
@@ -115,6 +124,9 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
                 xff = xff.substring(0, xff.indexOf(','));
             }
             remoteAddr = xff;
+        }
+        if (logger.isDebugEnabled()) {
+            logger.debug("Remote address used to localized is " + remoteAddr);
         }
 
         try {
