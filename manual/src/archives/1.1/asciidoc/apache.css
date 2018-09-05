@@ -1,5 +1,5 @@
 
-@import "https://fonts.googleapis.com/css?family=Open+Sans:400,700%7cDroid+Serif:400,700";
+@import "https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700%7cDroid+Serif:400,700";
 
 article,
 aside,
@@ -384,7 +384,7 @@ h3,
 h4,
 h5,
 h6 {
-    font-family: "Open Sans", "DejaVu Sans", sans-serif;
+    font-family: "Source Sans Pro", "DejaVu Sans", sans-serif;
     font-weight: bold;
     /*font-style: bold;*/
     color: #303284;
@@ -1233,7 +1233,7 @@ table.tableblock #preamble>.sectionbody>[class="paragraph"]:first-of-type p {
 
 .admonitionblock>table td.icon .title {
     font-weight: bold;
-    font-family: "Open Sans", "DejaVu Sans", sans-serif;
+    font-family: "Source Sans Pro", "DejaVu Sans", sans-serif;
     text-transform: uppercase
 }
 
@@ -1507,7 +1507,7 @@ table.pyhltable .linenodiv {
 }
 
 .verseblock pre {
-    font-family: "Open Sans", "DejaVu Sans", sans;
+    font-family: "Source Sans Pro", "DejaVu Sans", sans;
     font-size: 1.15rem;
     color: rgba(0, 0, 0, .85);
     font-weight: 300;
@@ -2183,7 +2183,7 @@ a span.icon>.fa {
     width: 1.67em;
     height: 1.67em;
     line-height: 1.67em;
-    font-family: "Open Sans", "DejaVu Sans", sans-serif;
+    font-family: "Source Sans Pro", "DejaVu Sans", sans-serif;
     font-style: normal;
     font-weight: bold
 }
