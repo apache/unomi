@@ -59,7 +59,11 @@ Step-by-step guide
 
         git checkout pr/<pull request number>
 
-5. Merge the PR into the desired branch
+5. Compile and check the code, at the minimum using:
+
+        mvn clean install -P rat
+
+6. Merge the PR into the desired branch
 
    First checkout the desired branch and make sure it is up to date, for example:
 
@@ -72,7 +76,7 @@ Step-by-step guide
 
         git merge -m "This closes pull request number #<pull request number>" pr/<pull request number>
 
-6. Push the code
+7. Push the code
 
   Push the code to Apache Git.
 
