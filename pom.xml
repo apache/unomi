@@ -905,6 +905,7 @@
         <module>kar</module>
         <module>samples</module>
         <module>package</module>
+        <module>manual</module>
     </modules>
 
     <dependencies>
