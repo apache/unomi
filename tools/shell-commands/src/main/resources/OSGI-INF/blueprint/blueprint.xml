@@ -79,6 +79,7 @@
                 <value>org.apache.unomi.router-service</value>
                 <value>org.apache.unomi.router-rest</value>
                 <value>org.apache.unomi.shell-dev-commands</value>
+                <value>org.apache.unomi.web-tracker-core</value>
             </list>
         </property>
         <property name="bundleContext" ref="blueprintBundleContext"/>

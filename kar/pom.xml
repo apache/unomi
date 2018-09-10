@@ -144,6 +144,11 @@
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-web-tracker-core</artifactId>
+            <version>1.4.0-incubating-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 
     <build>
