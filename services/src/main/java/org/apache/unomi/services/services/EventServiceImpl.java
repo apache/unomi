@@ -40,6 +40,7 @@ import java.util.*;
 
 public class EventServiceImpl implements EventService {
     private static final Logger logger = LoggerFactory.getLogger(EventServiceImpl.class.getName());
+    private static final int MAX_RECURSION_DEPTH = 10;
 
     private List<EventListenerService> eventListeners = new ArrayList<EventListenerService>();
 
@@ -139,6 +140,15 @@ public class EventServiceImpl implements EventService {
     }
 
     public int send(Event event) {
+        return send(event, 0);
+    }
+
+    private int send(Event event, int depth) {
+        if (depth > MAX_RECURSION_DEPTH) {
+            logger.warn("Max recursion depth reached");
+            return NO_CHANGE;
+        }
+
         if (event.isPersistent()) {
             persistenceService.save(event);
         }
@@ -165,7 +175,7 @@ public class EventServiceImpl implements EventService {
                 Event profileUpdated = new Event("profileUpdated", session, event.getProfile(), event.getScope(), event.getSource(), event.getProfile(), event.getTimeStamp());
                 profileUpdated.setPersistent(false);
                 profileUpdated.getAttributes().putAll(event.getAttributes());
-                changes |= send(profileUpdated);
+                changes |= send(profileUpdated, depth + 1);
                 if (session != null && session.getProfileId() != null) {
                     changes |= SESSION_UPDATED;
                     session.setProfile(event.getProfile());
