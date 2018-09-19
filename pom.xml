@@ -461,6 +461,7 @@
                                 <exclude>**/*.css</exclude>
                                 <exclude>**/*.ssp</exclude>
                                 <exclude>**/*.conf</exclude>
+                                <exclude>**/*.min.js</exclude>
                                 <!-- test manifests -->
                                 <exclude>**/*.mf</exclude>
                                 <!-- test json files -->
@@ -477,6 +478,9 @@
                                 <exclude>**/src/main/webapp/robots.txt</exclude>
                                 <!-- ignore generated log files -->
                                 <exclude>**/*.log</exclude>
+                                <!-- exclude node_modules directories and JS package manager files -->
+                                <exclude>**/node_modules/**/*</exclude>
+                                <exclude>**/yarn.lock</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

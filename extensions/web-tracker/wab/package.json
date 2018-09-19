@@ -1,0 +1,25 @@
+{
+  "name": "analytics.js-integration-apache-unomi",
+  "version": "1.0.0",
+  "description": "The Apache Unomi analytics.js integration.",
+  "main": "src/main/javascript/index.js",
+  "license": "APACHE",
+  "scripts": {
+    "build": "yarn clean && browserify src/main/javascript/index.js -s unomiTracker > src/main/webapp/javascript/unomi-tracker.js",
+    "minify": "yarn clean && yarn build && uglifyjs src/main/webapp/javascript/unomi-tracker.js -o src/main/webapp/javascript/unomi-tracker.min.js",
+    "clean": "rm -rf *.log src/main/webapp/javascript/unomi-tracker.js src/main/webapp/javascript/unomi-tracker.min.js",
+    "clean:all": "yarn clean && rm -rf node_modules"
+  },
+  "dependencies": {
+    "@segment/analytics.js-core": "^3.7.2",
+    "@segment/analytics.js-integration": "^2.1.1"
+  },
+  "devDependencies": {
+    "@segment/eslint-config": "^3.1.1",
+    "browserify": "^13.0.1",
+    "eslint": "^2.9.0",
+    "eslint-plugin-mocha": "^2.2.0",
+    "eslint-plugin-require-path-exists": "^1.1.5",
+    "uglify-js": "^2.6.4"
+  }
+}

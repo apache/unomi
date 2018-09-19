@@ -23,6 +23,6 @@
         <!--.version}/cfg/weatherupdatecfg</configfile>-->
         <bundle start-level="85">mvn:org.apache.httpcomponents/httpcore-osgi/${httpcore-osgi.version}</bundle>
         <bundle start-level="85">mvn:org.apache.httpcomponents/httpclient-osgi/${httpclient-osgi.version}</bundle>
-        <bundle start-level="85">mvn:org.apache.unomi/unomi-web-tracker-core/${project.version}</bundle>
+        <bundle start-level="85">mvn:org.apache.unomi/unomi-web-tracker-wab/${project.version}</bundle>
     </feature>
 </features>

@@ -146,7 +146,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-web-tracker-core</artifactId>
+            <artifactId>unomi-web-tracker-wab</artifactId>
             <version>1.4.0-incubating-SNAPSHOT</version>
         </dependency>
     </dependencies>

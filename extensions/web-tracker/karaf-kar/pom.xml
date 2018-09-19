@@ -47,7 +47,7 @@
 
         <dependency>
             <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-web-tracker-core</artifactId>
+            <artifactId>unomi-web-tracker-wab</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

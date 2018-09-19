@@ -24,8 +24,8 @@
         <version>1.4.0-incubating-SNAPSHOT</version>
     </parent>
 
-    <artifactId>unomi-web-tracker-core</artifactId>
-    <name>Apache Unomi :: Extension :: Web Tracker :: Core</name>
+    <artifactId>unomi-web-tracker-wab</artifactId>
+    <name>Apache Unomi :: Extension :: Web Tracker :: Wab</name>
     <description>This is a simple Apache Unomi plugin.</description>
     <packaging>bundle</packaging>
 
@@ -61,10 +61,12 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
+                        <_wab>src/main/webapp</_wab>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Import-Package>
                             *
                         </Import-Package>
+                        <Web-ContextPath>/tracker</Web-ContextPath>
                     </instructions>
                 </configuration>
             </plugin>

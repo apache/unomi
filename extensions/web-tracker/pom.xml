@@ -30,7 +30,7 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>core</module>
+        <module>wab</module>
         <module>karaf-kar</module>
     </modules>
 </project>
