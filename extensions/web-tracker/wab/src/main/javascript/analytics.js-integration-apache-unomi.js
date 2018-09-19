@@ -19,11 +19,13 @@
 var integration = require('@segment/analytics.js-integration');
 
 var Unomi = module.exports = integration('Apache Unomi')
+    .assumesPageview()
     .readyOnLoad()
     .global('cxs')
     .option('scope', 'systemscope')
     .option('url', 'http://localhost:8181')
     .option('timeoutInMilliseconds', 1500)
+    .option('sessionCookieName', 'unomiSessionId')
     .option('sessionId');
 
 /**
@@ -31,7 +33,7 @@ var Unomi = module.exports = integration('Apache Unomi')
  *
  * @api public
  */
-Unomi.prototype.initialize = function() {
+Unomi.prototype.initialize = function(page) {
     var self = this;
     this.analytics.on('invoke', function(msg) {
         var action = msg.action();
@@ -42,23 +44,43 @@ Unomi.prototype.initialize = function() {
 
     // Standard to check if cookies are enabled in this browser
     if (!navigator.cookieEnabled) {
-        _executeFallback();
+        this.executeFallback();
         return;
     }
 
     // digitalData come from a standard so we can keep the logic around it which can allow complex website to load more complex data
     if (!window.digitalData) {
-        window.digitalData = {};
+        window.digitalData = {
+            scope: this.options.scope
+        };
+    }
+
+    if (page) {
+        var props = page.json().properties;
+        var unomiPage = window.digitalData.page;
+        if (!unomiPage) {
+            unomiPage = window.digitalData.page = { pageInfo:{} }
+        }
+        this.fillPageData(unomiPage, props);
+        if (!window.digitalData.events) {
+            window.digitalData.events = []
+        }
+        window.digitalData.events.push(this.buildEvent('view', this.buildPage(unomiPage), this.buildSource(this.options.scope, 'site')))
     }
 
     if (!this.options.sessionId) {
-        this.options.sessionId = '';// get sessionId from cookie, there are some method to deal with cookie in the core/integration of
-        // analytics js
+        var cookie = require('component-cookie');
+
+        this.sessionId = cookie(this.options.sessionCookieName);
         // so we should not need to implement our own
-        if (!this.options.sessionId || this.options.sessionId === '') {
-            this.options.sessionId = _generateGuid();
+        if (!this.sessionId || this.sessionId === '') {
+            this.sessionId = this.generateGuid();
+            cookie(this.options.sessionCookieName, this.sessionId);
         }
+    } else {
+        this.sessionId = this.options.sessionId;
     }
+
 
     this.loadContext();
 };
@@ -82,16 +104,24 @@ Unomi.prototype.loaded = function() {
 Unomi.prototype.onpage = function(page) {
     console.log('onpage');
     console.log(page);
-    console.log(page.json());
-    console.log(this.options);
-    console.log(window.cxs);
 
-    var properties = page.json().properties;
-    properties.pageInfo = {};
-    properties.pageInfo.tags = ['toto', 'tata', 'titi'];
+    var unomiPage = {};
+    this.fillPageData(unomiPage, props);
+    console.log(unomiPage);
 
-    this.collectEvent(this.buildEvent('view', this.buildTarget(page.json().properties.path, 'page', properties), this.buildSource(this.options.scope, 'site')));
+    this.collectEvent(this.buildEvent('view', this.buildPage(unomiPage), this.buildSource(this.options.scope, 'site')));
 };
+
+Unomi.prototype.fillPageData = function(unomiPage, props) {
+    unomiPage.attributes = [];
+    unomiPage.consentTypes = [];
+    unomiPage.pageInfo.pageName = props.title;
+    unomiPage.pageInfo.pageID = props.path;
+    unomiPage.pageInfo.pagePath = props.path;
+    unomiPage.pageInfo.destinationURL = props.url;
+    unomiPage.pageInfo.referringURL = props.referrer;
+}
+
 
 /**
  * Identify.
@@ -130,7 +160,7 @@ Unomi.prototype.ontrack = function(track) {
 Unomi.prototype.loadContext = function (skipEvents, invalidate) {
     var jsonData = {
         requiredProfileProperties: ['j:nodename'],
-        source: this.buildSourcePage()
+        source: this.buildPage(window.digitalData.page)
     };
     if (!skipEvents) {
         jsonData.events = window.digitalData.events
@@ -141,13 +171,37 @@ Unomi.prototype.loadContext = function (skipEvents, invalidate) {
         })
     }
 
-    jsonData.sessionId = this.options.sessionId;
+    jsonData.sessionId = this.sessionId;
 
     var contextUrl = this.options.url + '/context.json';
     if (invalidate) {
         contextUrl += '?invalidateSession=true&invalidateProfile=true';
     }
-    _ajax({
+
+    var self = this;
+
+    var onSuccess = function (xhr) {
+
+        window.cxs = JSON.parse(xhr.responseText);
+
+        self.ready();
+
+        if (window.digitalData.loadCallbacks && window.digitalData.loadCallbacks.length > 0) {
+            console.info('[UNOMI] Found context server load callbacks, calling now...');
+            if (window.digitalData.loadCallbacks) {
+                for (var i = 0; i < window.digitalData.loadCallbacks.length; i++) {
+                    window.digitalData.loadCallbacks[i](digitalData);
+                }
+            }
+            if (window.digitalData.personalizationCallback) {
+                for (var i = 0; i < window.digitalData.personalizationCallback.length; i++) {
+                    window.digitalData.personalizationCallback[i].callback(cxs.personalizations[window.digitalData.personalizationCallback[i].personalization.id]);
+                }
+            }
+        }
+    };
+
+    this.ajax({
         url: contextUrl,
         type: 'POST',
         async: true,
@@ -155,8 +209,8 @@ Unomi.prototype.loadContext = function (skipEvents, invalidate) {
         jsonData: jsonData,
         dataType: 'application/json',
         invalidate: invalidate,
-        success: _onSuccess,
-        error: _executeFallback
+        success: onSuccess,
+        error: this.executeFallback
     });
 
     console.info('[UNOMI] context loading...');
@@ -211,8 +265,8 @@ Unomi.prototype.buildTargetPage = function () {
  *
  * @returns {*|{scope, itemId: *, itemType: *}}
  */
-Unomi.prototype.buildSourcePage = function () {
-    return this.buildSource(window.digitalData.page.pageInfo.pageID, 'page', window.digitalData.page);
+Unomi.prototype.buildPage = function (page) {
+    return this.buildSource(page.pageInfo.pageID, 'page', page);
 };
 
 /**
@@ -224,7 +278,7 @@ Unomi.prototype.buildSourcePage = function () {
  * @returns {{scope, itemId: *, itemType: *}}
  */
 Unomi.prototype.buildTarget = function (targetId, targetType, targetProperties) {
-    return _buildObject(targetId, targetType, targetProperties);
+    return this.buildObject(targetId, targetType, targetProperties);
 };
 
 /**
@@ -236,7 +290,7 @@ Unomi.prototype.buildTarget = function (targetId, targetType, targetProperties) 
  * @returns {{scope, itemId: *, itemType: *}}
  */
 Unomi.prototype.buildSource = function (sourceId, sourceType, sourceProperties) {
-    return _buildObject(sourceId, sourceType, sourceProperties);
+    return this.buildObject(sourceId, sourceType, sourceProperties);
 };
 
 
@@ -258,10 +312,10 @@ Unomi.prototype.collectEvent = function (event, successCallback, errorCallback) 
  * @param {function} errorCallback will be executed in case of error
  */
 Unomi.prototype.collectEvents = function (events, successCallback, errorCallback) {
-    events.sessionId = this.options.sessionId;
+    events.sessionId = this.sessionId;
 
     var data = JSON.stringify(events);
-    _ajax({
+    this.ajax({
         url: this.options.url + '/eventcollector',
         type: 'POST',
         async: true,
@@ -321,7 +375,7 @@ Unomi.prototype.registerCallback = function (onLoadCallback) {
  *
  * @returns {string}
  */
-var _generateGuid = function () {
+Unomi.prototype.generateGuid = function () {
     function s4() {
         return Math.floor((1 + Math.random()) * 0x10000)
             .toString(16)
@@ -332,7 +386,7 @@ var _generateGuid = function () {
         s4() + '-' + s4() + s4() + s4();
 };
 
-var _buildObject = function (itemId, itemType, properties) {
+Unomi.prototype.buildObject = function (itemId, itemType, properties) {
     var object = {
         scope: window.digitalData.scope,
         itemId: itemId,
@@ -351,7 +405,7 @@ var _buildObject = function (itemId, itemType, properties) {
  *
  * @param {object} ajaxOptions
  */
-var _ajax = function (ajaxOptions) {
+Unomi.prototype.ajax = function (ajaxOptions) {
     var xhr = new XMLHttpRequest();
     if ('withCredentials' in xhr) {
         xhr.open(ajaxOptions.type, ajaxOptions.url, ajaxOptions.async);
@@ -415,25 +469,7 @@ var _ajax = function (ajaxOptions) {
     }
 };
 
-var _onSuccess = function (xhr) {
-    window.cxs = JSON.parse(xhr.responseText);
-
-    if (window.digitalData.loadCallbacks && window.digitalData.loadCallbacks.length > 0) {
-        console.info('[UNOMI] Found context server load callbacks, calling now...');
-        if (window.digitalData.loadCallbacks) {
-            for (var i = 0; i < window.digitalData.loadCallbacks.length; i++) {
-                window.digitalData.loadCallbacks[i](digitalData);
-            }
-        }
-        if (window.digitalData.personalizationCallback) {
-            for (var i = 0; i < window.digitalData.personalizationCallback.length; i++) {
-                window.digitalData.personalizationCallback[i].callback(cxs.personalizations[window.digitalData.personalizationCallback[i].personalization.id]);
-            }
-        }
-    }
-};
-
-var _executeFallback = function () {
+Unomi.prototype.executeFallback = function () {
     console.warn('[UNOMI] execute fallback');
     window.cxs = {};
     for (var index in window.digitalData.loadCallbacks) {

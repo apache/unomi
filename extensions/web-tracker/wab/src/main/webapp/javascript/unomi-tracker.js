@@ -1,4 +1,269 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.unomiTracker = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+// shim for using process in browser
+var process = module.exports = {};
+
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
+
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+function defaultSetTimout() {
+    throw new Error('setTimeout has not been defined');
+}
+function defaultClearTimeout () {
+    throw new Error('clearTimeout has not been defined');
+}
+(function () {
+    try {
+        if (typeof setTimeout === 'function') {
+            cachedSetTimeout = setTimeout;
+        } else {
+            cachedSetTimeout = defaultSetTimout;
+        }
+    } catch (e) {
+        cachedSetTimeout = defaultSetTimout;
+    }
+    try {
+        if (typeof clearTimeout === 'function') {
+            cachedClearTimeout = clearTimeout;
+        } else {
+            cachedClearTimeout = defaultClearTimeout;
+        }
+    } catch (e) {
+        cachedClearTimeout = defaultClearTimeout;
+    }
+} ())
+function runTimeout(fun) {
+    if (cachedSetTimeout === setTimeout) {
+        //normal enviroments in sane situations
+        return setTimeout(fun, 0);
+    }
+    // if setTimeout wasn't available but was latter defined
+    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+        cachedSetTimeout = setTimeout;
+        return setTimeout(fun, 0);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedSetTimeout(fun, 0);
+    } catch(e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+            return cachedSetTimeout.call(null, fun, 0);
+        } catch(e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            return cachedSetTimeout.call(this, fun, 0);
+        }
+    }
+
+
+}
+function runClearTimeout(marker) {
+    if (cachedClearTimeout === clearTimeout) {
+        //normal enviroments in sane situations
+        return clearTimeout(marker);
+    }
+    // if clearTimeout wasn't available but was latter defined
+    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+        cachedClearTimeout = clearTimeout;
+        return clearTimeout(marker);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedClearTimeout(marker);
+    } catch (e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+            return cachedClearTimeout.call(null, marker);
+        } catch (e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+            return cachedClearTimeout.call(this, marker);
+        }
+    }
+
+
+
+}
+var queue = [];
+var draining = false;
+var currentQueue;
+var queueIndex = -1;
+
+function cleanUpNextTick() {
+    if (!draining || !currentQueue) {
+        return;
+    }
+    draining = false;
+    if (currentQueue.length) {
+        queue = currentQueue.concat(queue);
+    } else {
+        queueIndex = -1;
+    }
+    if (queue.length) {
+        drainQueue();
+    }
+}
+
+function drainQueue() {
+    if (draining) {
+        return;
+    }
+    var timeout = runTimeout(cleanUpNextTick);
+    draining = true;
+
+    var len = queue.length;
+    while(len) {
+        currentQueue = queue;
+        queue = [];
+        while (++queueIndex < len) {
+            if (currentQueue) {
+                currentQueue[queueIndex].run();
+            }
+        }
+        queueIndex = -1;
+        len = queue.length;
+    }
+    currentQueue = null;
+    draining = false;
+    runClearTimeout(timeout);
+}
+
+process.nextTick = function (fun) {
+    var args = new Array(arguments.length - 1);
+    if (arguments.length > 1) {
+        for (var i = 1; i < arguments.length; i++) {
+            args[i - 1] = arguments[i];
+        }
+    }
+    queue.push(new Item(fun, args));
+    if (queue.length === 1 && !draining) {
+        runTimeout(drainQueue);
+    }
+};
+
+// v8 likes predictible objects
+function Item(fun, array) {
+    this.fun = fun;
+    this.array = array;
+}
+Item.prototype.run = function () {
+    this.fun.apply(null, this.array);
+};
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+process.version = ''; // empty string to avoid regexp issues
+process.versions = {};
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+process.prependListener = noop;
+process.prependOnceListener = noop;
+
+process.listeners = function (name) { return [] }
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+};
+
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+process.umask = function() { return 0; };
+
+},{}],2:[function(require,module,exports){
+(function (setImmediate,clearImmediate){
+var nextTick = require('process/browser.js').nextTick;
+var apply = Function.prototype.apply;
+var slice = Array.prototype.slice;
+var immediateIds = {};
+var nextImmediateId = 0;
+
+// DOM APIs, for completeness
+
+exports.setTimeout = function() {
+  return new Timeout(apply.call(setTimeout, window, arguments), clearTimeout);
+};
+exports.setInterval = function() {
+  return new Timeout(apply.call(setInterval, window, arguments), clearInterval);
+};
+exports.clearTimeout =
+exports.clearInterval = function(timeout) { timeout.close(); };
+
+function Timeout(id, clearFn) {
+  this._id = id;
+  this._clearFn = clearFn;
+}
+Timeout.prototype.unref = Timeout.prototype.ref = function() {};
+Timeout.prototype.close = function() {
+  this._clearFn.call(window, this._id);
+};
+
+// Does not start the time, just sets up the members needed.
+exports.enroll = function(item, msecs) {
+  clearTimeout(item._idleTimeoutId);
+  item._idleTimeout = msecs;
+};
+
+exports.unenroll = function(item) {
+  clearTimeout(item._idleTimeoutId);
+  item._idleTimeout = -1;
+};
+
+exports._unrefActive = exports.active = function(item) {
+  clearTimeout(item._idleTimeoutId);
+
+  var msecs = item._idleTimeout;
+  if (msecs >= 0) {
+    item._idleTimeoutId = setTimeout(function onTimeout() {
+      if (item._onTimeout)
+        item._onTimeout();
+    }, msecs);
+  }
+};
+
+// That's not how node.js implements it but the exposed api is the same.
+exports.setImmediate = typeof setImmediate === "function" ? setImmediate : function(fn) {
+  var id = nextImmediateId++;
+  var args = arguments.length < 2 ? false : slice.call(arguments, 1);
+
+  immediateIds[id] = true;
+
+  nextTick(function onNextTick() {
+    if (immediateIds[id]) {
+      // fn.call() is faster so we optimize for the common use-case
+      // @see http://jsperf.com/call-apply-segu
+      if (args) {
+        fn.apply(null, args);
+      } else {
+        fn.call(null);
+      }
+      // Prevent ids from leaking
+      exports.clearImmediate(id);
+    }
+  });
+
+  return id;
+};
+
+exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate : function(id) {
+  delete immediateIds[id];
+};
+}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
+},{"process/browser.js":1,"timers":2}],3:[function(require,module,exports){
 'use strict';
 
 /*
@@ -73,7 +338,7 @@ var after = function after(n, fn) {
 
 module.exports = after;
 
-},{"@ndhoule/arity":2}],2:[function(require,module,exports){
+},{"@ndhoule/arity":4}],4:[function(require,module,exports){
 'use strict';
 
 var objToString = Object.prototype.toString;
@@ -231,7 +496,7 @@ var arity = function arity(n, func) {
 
 module.exports = arity;
 
-},{}],3:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 'use strict';
 
 /*
@@ -290,7 +555,7 @@ var clone = function clone(obj) {
 
 module.exports = clone;
 
-},{"component-type":56}],4:[function(require,module,exports){
+},{"component-type":58}],6:[function(require,module,exports){
 'use strict';
 
 /*
@@ -442,7 +707,7 @@ var defaults = function(target /*, ...sources */) {
 module.exports = defaults;
 module.exports.deep = defaultsDeep;
 
-},{"@ndhoule/drop":5,"@ndhoule/rest":14}],5:[function(require,module,exports){
+},{"@ndhoule/drop":7,"@ndhoule/rest":16}],7:[function(require,module,exports){
 'use strict';
 
 var max = Math.max;
@@ -489,7 +754,7 @@ var drop = function drop(count, collection) {
 
 module.exports = drop;
 
-},{}],6:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 'use strict';
 
 /*
@@ -620,7 +885,7 @@ var each = function each(iterator, collection) {
 
 module.exports = each;
 
-},{"@ndhoule/keys":11}],7:[function(require,module,exports){
+},{"@ndhoule/keys":13}],9:[function(require,module,exports){
 'use strict';
 
 /*
@@ -670,7 +935,7 @@ var every = function every(predicate, collection) {
 
 module.exports = every;
 
-},{"@ndhoule/each":6}],8:[function(require,module,exports){
+},{"@ndhoule/each":8}],10:[function(require,module,exports){
 'use strict';
 
 var has = Object.prototype.hasOwnProperty;
@@ -715,7 +980,7 @@ var extend = function extend(dest /*, sources */) {
 
 module.exports = extend;
 
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 'use strict';
 
 /*
@@ -771,7 +1036,7 @@ var foldl = function foldl(iterator, accumulator, collection) {
 
 module.exports = foldl;
 
-},{"@ndhoule/each":6}],10:[function(require,module,exports){
+},{"@ndhoule/each":8}],12:[function(require,module,exports){
 'use strict';
 
 /*
@@ -855,7 +1120,7 @@ var includes = function includes(searchElement, collection) {
 
 module.exports = includes;
 
-},{"@ndhoule/each":6}],11:[function(require,module,exports){
+},{"@ndhoule/each":8}],13:[function(require,module,exports){
 'use strict';
 
 var hop = Object.prototype.hasOwnProperty;
@@ -1022,7 +1287,7 @@ var keys = function keys(source) {
 
 module.exports = keys;
 
-},{}],12:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 'use strict';
 
 /*
@@ -1067,7 +1332,7 @@ var map = function map(iterator, collection) {
 
 module.exports = map;
 
-},{"@ndhoule/each":6}],13:[function(require,module,exports){
+},{"@ndhoule/each":8}],15:[function(require,module,exports){
 'use strict';
 
 var objToString = Object.prototype.toString;
@@ -1139,7 +1404,7 @@ var pick = function pick(props, object) {
 
 module.exports = pick;
 
-},{}],14:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict';
 
 var max = Math.max;
@@ -1179,7 +1444,7 @@ var rest = function rest(collection) {
 
 module.exports = rest;
 
-},{}],15:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -2040,7 +2305,7 @@ module.exports.store = store;
 module.exports.metrics = metrics;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./cookie":16,"./group":18,"./memory":20,"./metrics":21,"./normalize":22,"./pageDefaults":23,"./store":24,"./user":25,"@ndhoule/after":1,"@ndhoule/clone":3,"@ndhoule/defaults":4,"@ndhoule/each":6,"@ndhoule/foldl":9,"@ndhoule/keys":11,"@ndhoule/pick":13,"@segment/is-meta":34,"@segment/prevent-default":38,"bind-all":43,"component-emitter":51,"component-event":52,"component-querystring":54,"component-type":56,"debug":26,"extend":61,"is":65,"next-tick":74,"segmentio-facade":84}],16:[function(require,module,exports){
+},{"./cookie":18,"./group":20,"./memory":22,"./metrics":23,"./normalize":24,"./pageDefaults":25,"./store":26,"./user":27,"@ndhoule/after":3,"@ndhoule/clone":5,"@ndhoule/defaults":6,"@ndhoule/each":8,"@ndhoule/foldl":11,"@ndhoule/keys":13,"@ndhoule/pick":15,"@segment/is-meta":36,"@segment/prevent-default":40,"bind-all":45,"component-emitter":53,"component-event":54,"component-querystring":56,"component-type":58,"debug":28,"extend":63,"is":67,"next-tick":76,"segmentio-facade":85}],18:[function(require,module,exports){
 'use strict';
 
 /**
@@ -2168,7 +2433,7 @@ module.exports = bindAll(new Cookie());
 
 module.exports.Cookie = Cookie;
 
-},{"@ndhoule/clone":3,"@ndhoule/defaults":4,"@segment/top-domain":41,"bind-all":43,"component-cookie":45,"debug":26,"json3":66}],17:[function(require,module,exports){
+},{"@ndhoule/clone":5,"@ndhoule/defaults":6,"@segment/top-domain":43,"bind-all":45,"component-cookie":47,"debug":28,"json3":68}],19:[function(require,module,exports){
 'use strict';
 
 /*
@@ -2406,7 +2671,7 @@ Entity.prototype.load = function() {
   this.traits(store.get(this._options.localStorage.key));
 };
 
-},{"./cookie":16,"./memory":20,"./store":24,"@ndhoule/clone":3,"@ndhoule/defaults":4,"@ndhoule/extend":8,"@segment/isodate-traverse":35,"debug":26}],18:[function(require,module,exports){
+},{"./cookie":18,"./memory":22,"./store":26,"@ndhoule/clone":5,"@ndhoule/defaults":6,"@ndhoule/extend":10,"@segment/isodate-traverse":37,"debug":28}],20:[function(require,module,exports){
 'use strict';
 
 /*
@@ -2462,7 +2727,7 @@ module.exports = bindAll(new Group());
 
 module.exports.Group = Group;
 
-},{"./entity":17,"bind-all":43,"debug":26,"inherits":63}],19:[function(require,module,exports){
+},{"./entity":19,"bind-all":45,"debug":28,"inherits":65}],21:[function(require,module,exports){
 'use strict';
 
 /**
@@ -2489,7 +2754,7 @@ analytics.VERSION = require('../package.json').version;
 
 module.exports = analytics;
 
-},{"../package.json":27,"./analytics":15}],20:[function(require,module,exports){
+},{"../package.json":29,"./analytics":17}],22:[function(require,module,exports){
 'use strict';
 
 /*
@@ -2555,7 +2820,7 @@ Memory.prototype.remove = function(key) {
   return true;
 };
 
-},{"@ndhoule/clone":3,"bind-all":43}],21:[function(require,module,exports){
+},{"@ndhoule/clone":5,"bind-all":45}],23:[function(require,module,exports){
 'use strict';
 
 var bindAll = require('bind-all');
@@ -2652,7 +2917,7 @@ module.exports = bindAll(new Metrics());
 
 module.exports.Metrics = Metrics;
 
-},{"@segment/send-json":39,"bind-all":43,"debug":26}],22:[function(require,module,exports){
+},{"@segment/send-json":41,"bind-all":45,"debug":28}],24:[function(require,module,exports){
 'use strict';
 
 /**
@@ -2747,7 +3012,7 @@ function normalize(msg, list) {
   }
 }
 
-},{"@ndhoule/defaults":4,"@ndhoule/each":6,"@ndhoule/includes":10,"@ndhoule/map":12,"component-type":56,"debug":26}],23:[function(require,module,exports){
+},{"@ndhoule/defaults":6,"@ndhoule/each":8,"@ndhoule/includes":12,"@ndhoule/map":14,"component-type":58,"debug":28}],25:[function(require,module,exports){
 'use strict';
 
 /*
@@ -2811,7 +3076,7 @@ function canonicalUrl(search) {
 
 module.exports = pageDefaults;
 
-},{"@ndhoule/includes":10,"@segment/canonical":32,"component-url":57}],24:[function(require,module,exports){
+},{"@ndhoule/includes":12,"@segment/canonical":34,"component-url":59}],26:[function(require,module,exports){
 'use strict';
 
 /*
@@ -2896,7 +3161,7 @@ module.exports = bindAll(new Store());
 
 module.exports.Store = Store;
 
-},{"@ndhoule/defaults":4,"@segment/store":40,"bind-all":43}],25:[function(require,module,exports){
+},{"@ndhoule/defaults":6,"@segment/store":42,"bind-all":45}],27:[function(require,module,exports){
 'use strict';
 
 /*
@@ -3069,7 +3334,7 @@ module.exports = bindAll(new User());
 
 module.exports.User = User;
 
-},{"./cookie":16,"./entity":17,"bind-all":43,"component-cookie":45,"debug":26,"inherits":63,"uuid":98}],26:[function(require,module,exports){
+},{"./cookie":18,"./entity":19,"bind-all":45,"component-cookie":47,"debug":28,"inherits":65,"uuid":98}],28:[function(require,module,exports){
 
 /**
  * Expose `debug()` as the module.
@@ -3208,7 +3473,7 @@ try {
   if (window.localStorage) debug.enable(localStorage.debug);
 } catch(e){}
 
-},{}],27:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 module.exports={
   "name": "@segment/analytics.js-core",
   "author": "Segment <friends@segment.com>",
@@ -3320,7 +3585,7 @@ module.exports={
   }
 }
 
-},{}],28:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 'use strict';
 
 /**
@@ -3385,7 +3650,7 @@ function createIntegration(name) {
 
 module.exports = createIntegration;
 
-},{"./protos":29,"./statics":30,"@ndhoule/clone":3,"@ndhoule/defaults":4,"@ndhoule/extend":8,"component-bind":44,"debug":58,"slug-component":90}],29:[function(require,module,exports){
+},{"./protos":31,"./statics":32,"@ndhoule/clone":5,"@ndhoule/defaults":6,"@ndhoule/extend":10,"component-bind":46,"debug":60,"slug-component":91}],31:[function(require,module,exports){
 'use strict';
 
 /**
@@ -3861,7 +4126,7 @@ function render(template, locals) {
   }, {}, template.attrs);
 }
 
-},{"@ndhoule/after":1,"@ndhoule/each":6,"@ndhoule/every":7,"@ndhoule/foldl":9,"@segment/fmt":33,"@segment/load-script":37,"analytics-events":42,"component-emitter":51,"is":65,"load-iframe":68,"next-tick":74,"to-no-case":93}],30:[function(require,module,exports){
+},{"@ndhoule/after":3,"@ndhoule/each":8,"@ndhoule/every":9,"@ndhoule/foldl":11,"@segment/fmt":35,"@segment/load-script":39,"analytics-events":44,"component-emitter":53,"is":67,"load-iframe":70,"next-tick":76,"to-no-case":93}],32:[function(require,module,exports){
 'use strict';
 
 /**
@@ -4026,7 +4291,7 @@ function objectify(str) {
   };
 }
 
-},{"@ndhoule/each":6,"@ndhoule/includes":10,"component-emitter":51,"domify":60}],31:[function(require,module,exports){
+},{"@ndhoule/each":8,"@ndhoule/includes":12,"component-emitter":53,"domify":62}],33:[function(require,module,exports){
 var utf8Encode = require('utf8-encode');
 var keyStr = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
 
@@ -4063,7 +4328,7 @@ function encode(input) {
 
     return output;
 }
-},{"utf8-encode":96}],32:[function(require,module,exports){
+},{"utf8-encode":96}],34:[function(require,module,exports){
 'use strict';
 
 /**
@@ -4087,7 +4352,7 @@ function canonical() {
 
 module.exports = canonical;
 
-},{}],33:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -4122,7 +4387,7 @@ fmt.d = parseInt;
 module.exports = fmt;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],34:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 'use strict';
 
 function isMeta(e) {
@@ -4150,7 +4415,7 @@ function isMeta(e) {
 
 module.exports = isMeta;
 
-},{}],35:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 'use strict';
 
 var type = require('component-type');
@@ -4227,7 +4492,7 @@ function array(arr, strict) {
   return arr;
 }
 
-},{"@segment/isodate":36,"component-each":49,"component-type":56}],36:[function(require,module,exports){
+},{"@segment/isodate":38,"component-each":51,"component-type":58}],38:[function(require,module,exports){
 'use strict';
 
 /**
@@ -4308,7 +4573,7 @@ exports.is = function(string, strict) {
   return matcher.test(string);
 };
 
-},{}],37:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 'use strict';
 
 /*
@@ -4380,7 +4645,7 @@ function loadScript(options, cb) {
 
 module.exports = loadScript;
 
-},{"component-type":56,"next-tick":74,"script-onload":77}],38:[function(require,module,exports){
+},{"component-type":58,"next-tick":76,"script-onload":78}],40:[function(require,module,exports){
 'use strict';
 
 /**
@@ -4405,7 +4670,7 @@ function preventDefault(e) {
 
 module.exports = preventDefault;
 
-},{}],39:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 'use strict';
 
 /*
@@ -4523,7 +4788,7 @@ function encode(obj) {
   return encodeURIComponent(str);
 }
 
-},{"@segment/base64-encode":31,"has-cors":62,"json3":66,"jsonp":67}],40:[function(require,module,exports){
+},{"@segment/base64-encode":33,"has-cors":64,"json3":68,"jsonp":69}],42:[function(require,module,exports){
 (function (global){
 "use strict"
 
@@ -4696,7 +4961,7 @@ module.exports = (function() {
 }())
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"json3":66}],41:[function(require,module,exports){
+},{"json3":68}],43:[function(require,module,exports){
 'use strict';
 
 /**
@@ -4796,7 +5061,7 @@ domain.cookie = cookie;
 
 exports = module.exports = domain;
 
-},{"component-cookie":45,"component-url":57}],42:[function(require,module,exports){
+},{"component-cookie":47,"component-url":59}],44:[function(require,module,exports){
 
 module.exports = {
   // Promotions
@@ -4863,7 +5128,7 @@ module.exports = {
   pushNotificationBounced: /^[ _]?push[ _]?notification[ _]?bounced[ _]?$/i
 };
 
-},{}],43:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 'use strict';
 
 var bind = require('component-bind');
@@ -4881,7 +5146,7 @@ function bindAll(obj) {
 
 module.exports = bindAll;
 
-},{"component-bind":44}],44:[function(require,module,exports){
+},{"component-bind":46}],46:[function(require,module,exports){
 /**
  * Slice reference.
  */
@@ -4906,7 +5171,7 @@ module.exports = function(obj, fn){
   }
 };
 
-},{}],45:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -5039,7 +5304,7 @@ function decode(value) {
   }
 }
 
-},{"debug":46}],46:[function(require,module,exports){
+},{"debug":48}],48:[function(require,module,exports){
 (function (process){
 /* eslint-env browser */
 
@@ -5307,7 +5572,7 @@ formatters.j = function (v) {
 };
 
 }).call(this,require('_process'))
-},{"./common":47,"_process":76}],47:[function(require,module,exports){
+},{"./common":49,"_process":1}],49:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -5554,7 +5819,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":48}],48:[function(require,module,exports){
+},{"ms":50}],50:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -5718,7 +5983,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],49:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -5809,7 +6074,7 @@ function array(obj, fn, ctx) {
   }
 }
 
-},{"component-type":50,"to-function":92,"type":50}],50:[function(require,module,exports){
+},{"component-type":52,"to-function":92,"type":52}],52:[function(require,module,exports){
 
 /**
  * toString ref.
@@ -5843,7 +6108,7 @@ module.exports = function(val){
   return typeof val;
 };
 
-},{}],51:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -6008,7 +6273,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],52:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 var bind = window.addEventListener ? 'addEventListener' : 'attachEvent',
     unbind = window.removeEventListener ? 'removeEventListener' : 'detachEvent',
     prefix = bind !== 'addEventListener' ? 'on' : '';
@@ -6044,7 +6309,7 @@ exports.unbind = function(el, type, fn, capture){
   el[unbind](prefix + type, fn, capture || false);
   return fn;
 };
-},{}],53:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 /**
  * Global Names
  */
@@ -6131,7 +6396,7 @@ function prefixed(str) {
   };
 }
 
-},{}],54:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -6238,7 +6503,7 @@ exports.stringify = function(obj){
   return pairs.join('&');
 };
 
-},{"trim":94,"type":55}],55:[function(require,module,exports){
+},{"trim":94,"type":57}],57:[function(require,module,exports){
 /**
  * toString ref.
  */
@@ -6274,7 +6539,7 @@ module.exports = function(val){
   return typeof val;
 };
 
-},{}],56:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 /**
  * toString ref.
  */
@@ -6322,7 +6587,7 @@ function isBuffer(obj) {
     ))
 }
 
-},{}],57:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 
 /**
  * Parse the given `url`.
@@ -6406,7 +6671,7 @@ function port (protocol){
   }
 }
 
-},{}],58:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 (function (process){
 /**
  * This is the web browser implementation of `debug()`.
@@ -6595,7 +6860,7 @@ function localstorage() {
 }
 
 }).call(this,require('_process'))
-},{"./debug":59,"_process":76}],59:[function(require,module,exports){
+},{"./debug":61,"_process":1}],61:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -6799,7 +7064,7 @@ function coerce(val) {
   return val;
 }
 
-},{"ms":69}],60:[function(require,module,exports){
+},{"ms":71}],62:[function(require,module,exports){
 
 /**
  * Expose `parse`.
@@ -6913,7 +7178,7 @@ function parse(html, doc) {
   return fragment;
 }
 
-},{}],61:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 'use strict';
 
 var hasOwn = Object.prototype.hasOwnProperty;
@@ -7001,7 +7266,7 @@ module.exports = function extend() {
 	return target;
 };
 
-},{}],62:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 
 /**
  * Module exports.
@@ -7020,7 +7285,7 @@ try {
   module.exports = false;
 }
 
-},{}],63:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -7045,12 +7310,12 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],64:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 
 module.exports = function isEmail (string) {
     return (/.+\@.+\..+/).test(string);
 };
-},{}],65:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 /* globals window, HTMLElement */
 
 'use strict';
@@ -7852,7 +8117,7 @@ is.symbol = function (value) {
 
 module.exports = is;
 
-},{}],66:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 (function (global){
 /*! JSON v3.3.2 | http://bestiejs.github.io/json3 | Copyright 2012-2014, Kit Cambridge | http://kit.mit-license.org */
 ;(function () {
@@ -8758,7 +9023,7 @@ module.exports = is;
 }).call(this);
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],67:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 /**
  * Module dependencies
  */
@@ -8857,7 +9122,7 @@ function jsonp(url, opts, fn){
   return cancel;
 }
 
-},{"debug":58}],68:[function(require,module,exports){
+},{"debug":60}],70:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -8919,7 +9184,7 @@ module.exports = function loadIframe(options, fn){
   return iframe;
 };
 
-},{"is":65,"next-tick":74,"script-onload":77}],69:[function(require,module,exports){
+},{"is":67,"next-tick":76,"script-onload":78}],71:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -9073,7 +9338,7 @@ function plural(ms, n, name) {
   return Math.ceil(ms / n) + ' ' + name + 's';
 }
 
-},{}],70:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 'use strict';
 
 var is = require('is');
@@ -9118,7 +9383,7 @@ function toMs(num) {
   return num;
 }
 
-},{"./milliseconds":71,"./seconds":72,"@segment/isodate":73,"is":65}],71:[function(require,module,exports){
+},{"./milliseconds":73,"./seconds":74,"@segment/isodate":75,"is":67}],73:[function(require,module,exports){
 'use strict';
 
 /**
@@ -9150,7 +9415,7 @@ exports.parse = function(millis) {
   return new Date(millis);
 };
 
-},{}],72:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 'use strict';
 
 /**
@@ -9182,7 +9447,7 @@ exports.parse = function(seconds) {
   return new Date(millis);
 };
 
-},{}],73:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 'use strict';
 
 /**
@@ -9260,7 +9525,7 @@ exports.is = function(string, strict) {
   return matcher.test(string);
 };
 
-},{}],74:[function(require,module,exports){
+},{}],76:[function(require,module,exports){
 (function (process,setImmediate){
 'use strict';
 
@@ -9328,7 +9593,7 @@ module.exports = (function () {
 }());
 
 }).call(this,require('_process'),require("timers").setImmediate)
-},{"_process":76,"timers":91}],75:[function(require,module,exports){
+},{"_process":1,"timers":2}],77:[function(require,module,exports){
 
 var identity = function(_){ return _; };
 
@@ -9482,193 +9747,7 @@ function isFunction(val) {
   return typeof val === 'function';
 }
 
-},{}],76:[function(require,module,exports){
-// shim for using process in browser
-var process = module.exports = {};
-
-// cached from whatever global is present so that test runners that stub it
-// don't break things.  But we need to wrap it in a try catch in case it is
-// wrapped in strict mode code which doesn't define any globals.  It's inside a
-// function because try/catches deoptimize in certain engines.
-
-var cachedSetTimeout;
-var cachedClearTimeout;
-
-function defaultSetTimout() {
-    throw new Error('setTimeout has not been defined');
-}
-function defaultClearTimeout () {
-    throw new Error('clearTimeout has not been defined');
-}
-(function () {
-    try {
-        if (typeof setTimeout === 'function') {
-            cachedSetTimeout = setTimeout;
-        } else {
-            cachedSetTimeout = defaultSetTimout;
-        }
-    } catch (e) {
-        cachedSetTimeout = defaultSetTimout;
-    }
-    try {
-        if (typeof clearTimeout === 'function') {
-            cachedClearTimeout = clearTimeout;
-        } else {
-            cachedClearTimeout = defaultClearTimeout;
-        }
-    } catch (e) {
-        cachedClearTimeout = defaultClearTimeout;
-    }
-} ())
-function runTimeout(fun) {
-    if (cachedSetTimeout === setTimeout) {
-        //normal enviroments in sane situations
-        return setTimeout(fun, 0);
-    }
-    // if setTimeout wasn't available but was latter defined
-    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
-        cachedSetTimeout = setTimeout;
-        return setTimeout(fun, 0);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedSetTimeout(fun, 0);
-    } catch(e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
-            return cachedSetTimeout.call(null, fun, 0);
-        } catch(e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
-            return cachedSetTimeout.call(this, fun, 0);
-        }
-    }
-
-
-}
-function runClearTimeout(marker) {
-    if (cachedClearTimeout === clearTimeout) {
-        //normal enviroments in sane situations
-        return clearTimeout(marker);
-    }
-    // if clearTimeout wasn't available but was latter defined
-    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
-        cachedClearTimeout = clearTimeout;
-        return clearTimeout(marker);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedClearTimeout(marker);
-    } catch (e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
-            return cachedClearTimeout.call(null, marker);
-        } catch (e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
-            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
-            return cachedClearTimeout.call(this, marker);
-        }
-    }
-
-
-
-}
-var queue = [];
-var draining = false;
-var currentQueue;
-var queueIndex = -1;
-
-function cleanUpNextTick() {
-    if (!draining || !currentQueue) {
-        return;
-    }
-    draining = false;
-    if (currentQueue.length) {
-        queue = currentQueue.concat(queue);
-    } else {
-        queueIndex = -1;
-    }
-    if (queue.length) {
-        drainQueue();
-    }
-}
-
-function drainQueue() {
-    if (draining) {
-        return;
-    }
-    var timeout = runTimeout(cleanUpNextTick);
-    draining = true;
-
-    var len = queue.length;
-    while(len) {
-        currentQueue = queue;
-        queue = [];
-        while (++queueIndex < len) {
-            if (currentQueue) {
-                currentQueue[queueIndex].run();
-            }
-        }
-        queueIndex = -1;
-        len = queue.length;
-    }
-    currentQueue = null;
-    draining = false;
-    runClearTimeout(timeout);
-}
-
-process.nextTick = function (fun) {
-    var args = new Array(arguments.length - 1);
-    if (arguments.length > 1) {
-        for (var i = 1; i < arguments.length; i++) {
-            args[i - 1] = arguments[i];
-        }
-    }
-    queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
-        runTimeout(drainQueue);
-    }
-};
-
-// v8 likes predictible objects
-function Item(fun, array) {
-    this.fun = fun;
-    this.array = array;
-}
-Item.prototype.run = function () {
-    this.fun.apply(null, this.array);
-};
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-process.versions = {};
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-process.prependListener = noop;
-process.prependOnceListener = noop;
-
-process.listeners = function (name) { return [] }
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-};
-
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-process.umask = function() { return 0; };
-
-},{}],77:[function(require,module,exports){
+},{}],78:[function(require,module,exports){
 
 // https://github.com/thirdpartyjs/thirdpartyjs-code/blob/master/examples/templates/02/loading-files/index.html
 
@@ -9723,7 +9802,7 @@ function attach(el, fn){
   });
 }
 
-},{}],78:[function(require,module,exports){
+},{}],79:[function(require,module,exports){
 'use strict';
 
 var get = require('obj-case');
@@ -9759,7 +9838,7 @@ module.exports = function(proto) {
   }
 };
 
-},{"obj-case":75}],79:[function(require,module,exports){
+},{"obj-case":77}],80:[function(require,module,exports){
 'use strict';
 
 var inherit = require('./utils').inherit;
@@ -9840,7 +9919,7 @@ Alias.prototype.to = Alias.prototype.userId;
 
 module.exports = Alias;
 
-},{"./facade":81,"./utils":89}],80:[function(require,module,exports){
+},{"./facade":82,"./utils":90}],81:[function(require,module,exports){
 'use strict';
 
 var inherit = require('./utils').inherit;
@@ -9874,7 +9953,7 @@ Delete.prototype.type = function() {
 
 module.exports = Delete;
 
-},{"./facade":81,"./utils":89}],81:[function(require,module,exports){
+},{"./facade":82,"./utils":90}],82:[function(require,module,exports){
 'use strict';
 
 var address = require('./address');
@@ -10420,7 +10499,7 @@ function transform(obj) {
 
 module.exports = Facade;
 
-},{"./address":78,"./is-enabled":85,"./utils":89,"@segment/isodate-traverse":35,"new-date":70,"obj-case":75}],82:[function(require,module,exports){
+},{"./address":79,"./is-enabled":86,"./utils":90,"@segment/isodate-traverse":37,"new-date":72,"obj-case":77}],83:[function(require,module,exports){
 'use strict';
 
 var inherit = require('./utils').inherit;
@@ -10587,7 +10666,7 @@ Group.prototype.properties = function() {
 
 module.exports = Group;
 
-},{"./facade":81,"./utils":89,"is-email":64,"new-date":70}],83:[function(require,module,exports){
+},{"./facade":82,"./utils":90,"is-email":66,"new-date":72}],84:[function(require,module,exports){
 'use strict';
 
 var Facade = require('./facade');
@@ -10967,7 +11046,7 @@ Identify.prototype.birthday = Facade.proxy('traits.birthday');
 
 module.exports = Identify;
 
-},{"./facade":81,"./utils":89,"is-email":64,"new-date":70,"obj-case":75,"trim":94}],84:[function(require,module,exports){
+},{"./facade":82,"./utils":90,"is-email":66,"new-date":72,"obj-case":77,"trim":94}],85:[function(require,module,exports){
 'use strict';
 
 var Facade = require('./facade');
@@ -10982,7 +11061,7 @@ Facade.Delete = require('./delete');
 
 module.exports = Facade;
 
-},{"./alias":79,"./delete":80,"./facade":81,"./group":82,"./identify":83,"./page":86,"./screen":87,"./track":88}],85:[function(require,module,exports){
+},{"./alias":80,"./delete":81,"./facade":82,"./group":83,"./identify":84,"./page":87,"./screen":88,"./track":89}],86:[function(require,module,exports){
 'use strict';
 
 // A few integrations are disabled by default. They must be explicitly enabled
@@ -11002,7 +11081,7 @@ module.exports = function(integration) {
   return !disabled[integration];
 };
 
-},{}],86:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 'use strict';
 
 var inherit = require('./utils').inherit;
@@ -11218,7 +11297,7 @@ Page.prototype.track = function(name) {
 
 module.exports = Page;
 
-},{"./facade":81,"./track":88,"./utils":89,"is-email":64}],87:[function(require,module,exports){
+},{"./facade":82,"./track":89,"./utils":90,"is-email":66}],88:[function(require,module,exports){
 'use strict';
 
 var inherit = require('./utils').inherit;
@@ -11290,7 +11369,7 @@ Screen.prototype.track = function(name) {
 
 module.exports = Screen;
 
-},{"./page":86,"./track":88,"./utils":89}],88:[function(require,module,exports){
+},{"./page":87,"./track":89,"./utils":90}],89:[function(require,module,exports){
 'use strict';
 
 var inherit = require('./utils').inherit;
@@ -11879,14 +11958,14 @@ function currency(val) {
 
 module.exports = Track;
 
-},{"./facade":81,"./identify":83,"./utils":89,"is-email":64,"obj-case":75}],89:[function(require,module,exports){
+},{"./facade":82,"./identify":84,"./utils":90,"is-email":66,"obj-case":77}],90:[function(require,module,exports){
 'use strict';
 
 exports.inherit = require('inherits');
 exports.clone = require('@ndhoule/clone');
 exports.type = require('type-component');
 
-},{"@ndhoule/clone":3,"inherits":63,"type-component":95}],90:[function(require,module,exports){
+},{"@ndhoule/clone":5,"inherits":65,"type-component":95}],91:[function(require,module,exports){
 
 /**
  * Generate a slug from the given `str`.
@@ -11911,86 +11990,7 @@ module.exports = function (str, options) {
     .replace(/ +/g, options.separator || '-')
 };
 
-},{}],91:[function(require,module,exports){
-(function (setImmediate,clearImmediate){
-var nextTick = require('process/browser.js').nextTick;
-var apply = Function.prototype.apply;
-var slice = Array.prototype.slice;
-var immediateIds = {};
-var nextImmediateId = 0;
-
-// DOM APIs, for completeness
-
-exports.setTimeout = function() {
-  return new Timeout(apply.call(setTimeout, window, arguments), clearTimeout);
-};
-exports.setInterval = function() {
-  return new Timeout(apply.call(setInterval, window, arguments), clearInterval);
-};
-exports.clearTimeout =
-exports.clearInterval = function(timeout) { timeout.close(); };
-
-function Timeout(id, clearFn) {
-  this._id = id;
-  this._clearFn = clearFn;
-}
-Timeout.prototype.unref = Timeout.prototype.ref = function() {};
-Timeout.prototype.close = function() {
-  this._clearFn.call(window, this._id);
-};
-
-// Does not start the time, just sets up the members needed.
-exports.enroll = function(item, msecs) {
-  clearTimeout(item._idleTimeoutId);
-  item._idleTimeout = msecs;
-};
-
-exports.unenroll = function(item) {
-  clearTimeout(item._idleTimeoutId);
-  item._idleTimeout = -1;
-};
-
-exports._unrefActive = exports.active = function(item) {
-  clearTimeout(item._idleTimeoutId);
-
-  var msecs = item._idleTimeout;
-  if (msecs >= 0) {
-    item._idleTimeoutId = setTimeout(function onTimeout() {
-      if (item._onTimeout)
-        item._onTimeout();
-    }, msecs);
-  }
-};
-
-// That's not how node.js implements it but the exposed api is the same.
-exports.setImmediate = typeof setImmediate === "function" ? setImmediate : function(fn) {
-  var id = nextImmediateId++;
-  var args = arguments.length < 2 ? false : slice.call(arguments, 1);
-
-  immediateIds[id] = true;
-
-  nextTick(function onNextTick() {
-    if (immediateIds[id]) {
-      // fn.call() is faster so we optimize for the common use-case
-      // @see http://jsperf.com/call-apply-segu
-      if (args) {
-        fn.apply(null, args);
-      } else {
-        fn.call(null);
-      }
-      // Prevent ids from leaking
-      exports.clearImmediate(id);
-    }
-  });
-
-  return id;
-};
-
-exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate : function(id) {
-  delete immediateIds[id];
-};
-}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":76,"timers":91}],92:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 
 /**
  * Module Dependencies
@@ -12144,7 +12144,7 @@ function stripNested (prop, str, val) {
   });
 }
 
-},{"component-props":53,"props":53}],93:[function(require,module,exports){
+},{"component-props":55,"props":55}],93:[function(require,module,exports){
 
 /**
  * Expose `toNoCase`.
@@ -12562,11 +12562,13 @@ module.exports={
 var integration = require('@segment/analytics.js-integration');
 
 var Unomi = module.exports = integration('Apache Unomi')
+    .assumesPageview()
     .readyOnLoad()
     .global('cxs')
     .option('scope', 'systemscope')
     .option('url', 'http://localhost:8181')
     .option('timeoutInMilliseconds', 1500)
+    .option('sessionCookieName', 'unomiSessionId')
     .option('sessionId');
 
 /**
@@ -12574,7 +12576,7 @@ var Unomi = module.exports = integration('Apache Unomi')
  *
  * @api public
  */
-Unomi.prototype.initialize = function() {
+Unomi.prototype.initialize = function(page) {
     var self = this;
     this.analytics.on('invoke', function(msg) {
         var action = msg.action();
@@ -12585,23 +12587,43 @@ Unomi.prototype.initialize = function() {
 
     // Standard to check if cookies are enabled in this browser
     if (!navigator.cookieEnabled) {
-        _executeFallback();
+        this.executeFallback();
         return;
     }
 
     // digitalData come from a standard so we can keep the logic around it which can allow complex website to load more complex data
     if (!window.digitalData) {
-        window.digitalData = {};
+        window.digitalData = {
+            scope: this.options.scope
+        };
+    }
+
+    if (page) {
+        var props = page.json().properties;
+        var unomiPage = window.digitalData.page;
+        if (!unomiPage) {
+            unomiPage = window.digitalData.page = { pageInfo:{} }
+        }
+        this.fillPageData(unomiPage, props);
+        if (!window.digitalData.events) {
+            window.digitalData.events = []
+        }
+        window.digitalData.events.push(this.buildEvent('view', this.buildPage(unomiPage), this.buildSource(this.options.scope, 'site')))
     }
 
     if (!this.options.sessionId) {
-        this.options.sessionId = '';// get sessionId from cookie, there are some method to deal with cookie in the core/integration of
-        // analytics js
+        var cookie = require('component-cookie');
+
+        this.sessionId = cookie(this.options.sessionCookieName);
         // so we should not need to implement our own
-        if (!this.options.sessionId || this.options.sessionId === '') {
-            this.options.sessionId = _generateGuid();
+        if (!this.sessionId || this.sessionId === '') {
+            this.sessionId = this.generateGuid();
+            cookie(this.options.sessionCookieName, this.sessionId);
         }
+    } else {
+        this.sessionId = this.options.sessionId;
     }
+
 
     this.loadContext();
 };
@@ -12625,16 +12647,24 @@ Unomi.prototype.loaded = function() {
 Unomi.prototype.onpage = function(page) {
     console.log('onpage');
     console.log(page);
-    console.log(page.json());
-    console.log(this.options);
-    console.log(window.cxs);
 
-    var properties = page.json().properties;
-    properties.pageInfo = {};
-    properties.pageInfo.tags = ['toto', 'tata', 'titi'];
+    var unomiPage = {};
+    this.fillPageData(unomiPage, props);
+    console.log(unomiPage);
 
-    this.collectEvent(this.buildEvent('view', this.buildTarget(page.json().properties.path, 'page', properties), this.buildSource(this.options.scope, 'site')));
+    this.collectEvent(this.buildEvent('view', this.buildPage(unomiPage), this.buildSource(this.options.scope, 'site')));
 };
+
+Unomi.prototype.fillPageData = function(unomiPage, props) {
+    unomiPage.attributes = [];
+    unomiPage.consentTypes = [];
+    unomiPage.pageInfo.pageName = props.title;
+    unomiPage.pageInfo.pageID = props.path;
+    unomiPage.pageInfo.pagePath = props.path;
+    unomiPage.pageInfo.destinationURL = props.url;
+    unomiPage.pageInfo.referringURL = props.referrer;
+}
+
 
 /**
  * Identify.
@@ -12673,7 +12703,7 @@ Unomi.prototype.ontrack = function(track) {
 Unomi.prototype.loadContext = function (skipEvents, invalidate) {
     var jsonData = {
         requiredProfileProperties: ['j:nodename'],
-        source: this.buildSourcePage()
+        source: this.buildPage(window.digitalData.page)
     };
     if (!skipEvents) {
         jsonData.events = window.digitalData.events
@@ -12684,13 +12714,37 @@ Unomi.prototype.loadContext = function (skipEvents, invalidate) {
         })
     }
 
-    jsonData.sessionId = this.options.sessionId;
+    jsonData.sessionId = this.sessionId;
 
     var contextUrl = this.options.url + '/context.json';
     if (invalidate) {
         contextUrl += '?invalidateSession=true&invalidateProfile=true';
     }
-    _ajax({
+
+    var self = this;
+
+    var onSuccess = function (xhr) {
+
+        window.cxs = JSON.parse(xhr.responseText);
+
+        self.ready();
+
+        if (window.digitalData.loadCallbacks && window.digitalData.loadCallbacks.length > 0) {
+            console.info('[UNOMI] Found context server load callbacks, calling now...');
+            if (window.digitalData.loadCallbacks) {
+                for (var i = 0; i < window.digitalData.loadCallbacks.length; i++) {
+                    window.digitalData.loadCallbacks[i](digitalData);
+                }
+            }
+            if (window.digitalData.personalizationCallback) {
+                for (var i = 0; i < window.digitalData.personalizationCallback.length; i++) {
+                    window.digitalData.personalizationCallback[i].callback(cxs.personalizations[window.digitalData.personalizationCallback[i].personalization.id]);
+                }
+            }
+        }
+    };
+
+    this.ajax({
         url: contextUrl,
         type: 'POST',
         async: true,
@@ -12698,8 +12752,8 @@ Unomi.prototype.loadContext = function (skipEvents, invalidate) {
         jsonData: jsonData,
         dataType: 'application/json',
         invalidate: invalidate,
-        success: _onSuccess,
-        error: _executeFallback
+        success: onSuccess,
+        error: this.executeFallback
     });
 
     console.info('[UNOMI] context loading...');
@@ -12754,8 +12808,8 @@ Unomi.prototype.buildTargetPage = function () {
  *
  * @returns {*|{scope, itemId: *, itemType: *}}
  */
-Unomi.prototype.buildSourcePage = function () {
-    return this.buildSource(window.digitalData.page.pageInfo.pageID, 'page', window.digitalData.page);
+Unomi.prototype.buildPage = function (page) {
+    return this.buildSource(page.pageInfo.pageID, 'page', page);
 };
 
 /**
@@ -12767,7 +12821,7 @@ Unomi.prototype.buildSourcePage = function () {
  * @returns {{scope, itemId: *, itemType: *}}
  */
 Unomi.prototype.buildTarget = function (targetId, targetType, targetProperties) {
-    return _buildObject(targetId, targetType, targetProperties);
+    return this.buildObject(targetId, targetType, targetProperties);
 };
 
 /**
@@ -12779,7 +12833,7 @@ Unomi.prototype.buildTarget = function (targetId, targetType, targetProperties) 
  * @returns {{scope, itemId: *, itemType: *}}
  */
 Unomi.prototype.buildSource = function (sourceId, sourceType, sourceProperties) {
-    return _buildObject(sourceId, sourceType, sourceProperties);
+    return this.buildObject(sourceId, sourceType, sourceProperties);
 };
 
 
@@ -12801,10 +12855,10 @@ Unomi.prototype.collectEvent = function (event, successCallback, errorCallback) 
  * @param {function} errorCallback will be executed in case of error
  */
 Unomi.prototype.collectEvents = function (events, successCallback, errorCallback) {
-    events.sessionId = this.options.sessionId;
+    events.sessionId = this.sessionId;
 
     var data = JSON.stringify(events);
-    _ajax({
+    this.ajax({
         url: this.options.url + '/eventcollector',
         type: 'POST',
         async: true,
@@ -12864,7 +12918,7 @@ Unomi.prototype.registerCallback = function (onLoadCallback) {
  *
  * @returns {string}
  */
-var _generateGuid = function () {
+Unomi.prototype.generateGuid = function () {
     function s4() {
         return Math.floor((1 + Math.random()) * 0x10000)
             .toString(16)
@@ -12875,7 +12929,7 @@ var _generateGuid = function () {
         s4() + '-' + s4() + s4() + s4();
 };
 
-var _buildObject = function (itemId, itemType, properties) {
+Unomi.prototype.buildObject = function (itemId, itemType, properties) {
     var object = {
         scope: window.digitalData.scope,
         itemId: itemId,
@@ -12894,7 +12948,7 @@ var _buildObject = function (itemId, itemType, properties) {
  *
  * @param {object} ajaxOptions
  */
-var _ajax = function (ajaxOptions) {
+Unomi.prototype.ajax = function (ajaxOptions) {
     var xhr = new XMLHttpRequest();
     if ('withCredentials' in xhr) {
         xhr.open(ajaxOptions.type, ajaxOptions.url, ajaxOptions.async);
@@ -12958,25 +13012,7 @@ var _ajax = function (ajaxOptions) {
     }
 };
 
-var _onSuccess = function (xhr) {
-    window.cxs = JSON.parse(xhr.responseText);
-
-    if (window.digitalData.loadCallbacks && window.digitalData.loadCallbacks.length > 0) {
-        console.info('[UNOMI] Found context server load callbacks, calling now...');
-        if (window.digitalData.loadCallbacks) {
-            for (var i = 0; i < window.digitalData.loadCallbacks.length; i++) {
-                window.digitalData.loadCallbacks[i](digitalData);
-            }
-        }
-        if (window.digitalData.personalizationCallback) {
-            for (var i = 0; i < window.digitalData.personalizationCallback.length; i++) {
-                window.digitalData.personalizationCallback[i].callback(cxs.personalizations[window.digitalData.personalizationCallback[i].personalization.id]);
-            }
-        }
-    }
-};
-
-var _executeFallback = function () {
+Unomi.prototype.executeFallback = function () {
     console.warn('[UNOMI] execute fallback');
     window.cxs = {};
     for (var index in window.digitalData.loadCallbacks) {
@@ -12989,7 +13025,7 @@ var _executeFallback = function () {
     }
 };
 
-},{"@segment/analytics.js-integration":28}],101:[function(require,module,exports){
+},{"@segment/analytics.js-integration":30,"component-cookie":47}],101:[function(require,module,exports){
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -13041,7 +13077,7 @@ for (var integration in Integrations) {
     analytics.use(Integrations[integration]);
 }
 
-},{"../../../package.json":99,"./integrations":102,"@segment/analytics.js-core":19}],102:[function(require,module,exports){
+},{"../../../package.json":99,"./integrations":102,"@segment/analytics.js-core":21}],102:[function(require,module,exports){
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
