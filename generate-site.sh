@@ -23,12 +23,13 @@ cd manual
 mvn -Phtml
 mvn -Ppdf
 cd ..
+echo Generating Javadoc...
+mvn javadoc:aggregate -P integration-tests
 cd rest
-mvn javadoc:aggregate
 mvn package
 cd ..
 mkdir target/staging/unomi-api
-cp -R rest/target/site/apidocs target/staging/unomi-api
 mkdir target/staging/manual
+cp -R target/site/apidocs target/staging/unomi-api
 cp -R manual/target/generated-html/latest target/staging/manual
 echo Documentation generation completed!
