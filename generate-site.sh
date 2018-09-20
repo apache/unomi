@@ -17,8 +17,18 @@
 #    limitations under the License.
 #
 ################################################################################
-echo Generating site...
-mvn site site:stage -P !integration-tests,!performance-tests
+echo Generating documentation...
+mvn clean
+cd manual
+mvn -Phtml
+mvn -Ppdf
+cd ..
 cd rest
+mvn javadoc:aggregate
 mvn package
-cd -
+cd ..
+mkdir target/staging/unomi-api
+cp -R rest/target/site/apidocs target/staging/unomi-api
+mkdir target/staging/manual
+cp -R manual/target/generated-html/latest target/staging/manual
+echo Documentation generation completed!
