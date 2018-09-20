@@ -22,11 +22,22 @@ if [ $# -ne 2 ]
     echo "Illegal number of arguments supplied. Syntax should be generate-site-and-upload.sh SVNusername SVNpassword"
     exit 1
 fi
-echo Generating site...
-mvn clean install site site:stage -P !integration-tests,!performance-tests
+echo Generating documentation...
+mvn clean
+cd manual
+mvn -Phtml
+mvn -Ppdf
+cd ..
 cd rest
+mvn javadoc:aggregate
 mvn package
-cd -
-echo Committing site to Apache SVN...
-mvn scm-publish:publish-scm -Dusername=$1 -Dpassword=$2
-echo Site generation and upload completed.
+cd ..
+mkdir target/staging/unomi-api
+cp -R rest/target/site/apidocs target/staging/unomi-api
+mkdir target/staging/manual
+cp -R manual/target/generated-html/latest target/staging/manual
+echo Committing documentation to Apache SVN...
+mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/incubator/unomi/website/manual -Dscmpublish.content=target/staging/manual -Dusername=$1 -Dpassword=$2
+mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/incubator/unomi/website/unomi-api -Dscmpublish.content=target/staging/unomi-api -Dusername=$1 -Dpassword=$2
+mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/incubator/unomi/website/rest-api-doc -Dscmpublish.content=target/staging/rest-api-doc -Dusername=$1 -Dpassword=$2
+echo Documentation generation and upload completed.

@@ -61,7 +61,7 @@
                         </executions>
                         <configuration>
                             <sourceDirectory>src/main/asciidoc</sourceDirectory>
-                            <outputDirectory>target/generated-html/${project.version}</outputDirectory>
+                            <outputDirectory>target/generated-html/latest</outputDirectory>
                             <preserveDirectories>true</preserveDirectories>
                             <headerFooter>true</headerFooter>
                             <imagesDir>src/main/asciidoc/images</imagesDir>
@@ -89,7 +89,7 @@
                         </dependencies>
                         <configuration>
                             <sourceDirectory>src/main/asciidoc</sourceDirectory>
-                            <outputDirectory>target/generated-pdf/${project.version}</outputDirectory>
+                            <outputDirectory>target/generated-pdf/latest</outputDirectory>
                             <preserveDirectories>true</preserveDirectories>
                             <headerFooter>true</headerFooter>
                             <backend>pdf</backend>
