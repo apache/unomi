@@ -11844,8 +11844,8 @@ module.exports={
   "scripts": {
     "build": "yarn browserify && yarn minify",
     "browserify": "browserify src/index.js  -s unomiTracker  > dist/unomi-tracker.js",
-    "minify": "uglifyjs -c -m -o dist/unomi-tracker.min.js -- dist/unomi-tracker.js ",
-    "snippet:minify": "uglifyjs -c -m -o dist/unomi-tracker.min.js -- dist/unomi-tracker.js ",
+    "minify": "uglifyjs -c -m -o dist/unomi-tracker.min.js -- dist/unomi-tracker.js",
+    "snippet:minify": "uglifyjs -c -m -o snippet.min.js -- snippet.js",
     "clean": "rimraf *.log dist/unomi-tracker.js dist/unomi-tracker.min.js",
     "clean:all": "yarn clean && rimraf node_modules"
   },

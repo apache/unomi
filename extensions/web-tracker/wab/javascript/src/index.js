@@ -39,7 +39,7 @@ analytics.require = require;
  * Expose `VERSION`.
  */
 
-exports.VERSION = require('../../../package.json').version;
+exports.VERSION = require('../package.json').version;
 
 /**
  * Add integrations.
