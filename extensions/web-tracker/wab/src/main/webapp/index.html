@@ -28,8 +28,7 @@
         window.unomiTracker || (window.unomiTracker = {});
         window.unomiTracker_queue || (window.unomiTracker_queue = []);
         (function() {
-            var methods = ['trackSubmit', 'trackClick', 'trackLink', 'trackForm', 'initialize', 'pageview', 'identify', 'reset', 'group',
-                'track', 'ready', 'alias', 'debug', 'page', 'once', 'off', 'on'];
+            var methods = ['trackSubmit', 'trackClick', 'trackLink', 'trackForm', 'initialize', 'pageview', 'identify', 'reset', 'group', 'track', 'ready', 'alias', 'debug', 'page', 'once', 'off', 'on'];
 
             var factory = function(method) {
                 return function () {
@@ -50,7 +49,6 @@
         // Define a method to load Analytics.js from our CDN,
         // and that will be sure to only ever load it once.
         unomiTracker.load = function(callback, option) {
-            console.log('load');
             // Create an async script element based on your key.
             var script = document.createElement('script');
             script.type = 'text/javascript';

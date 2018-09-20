@@ -105,8 +105,8 @@ Unomi.prototype.onpage = function(page) {
     console.log('onpage');
     console.log(page);
 
-    var unomiPage = {};
-    this.fillPageData(unomiPage, props);
+    var unomiPage = { pageInfo:{} };
+    this.fillPageData(unomiPage, page.json().properties);
     console.log(unomiPage);
 
     this.collectEvent(this.buildEvent('view', this.buildPage(unomiPage), this.buildSource(this.options.scope, 'site')));
