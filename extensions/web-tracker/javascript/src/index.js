@@ -30,12 +30,6 @@ var Integrations = require('./integrations');
 module.exports = exports = analytics;
 
 /**
- * Expose require.
- */
-
-analytics.require = require;
-
-/**
  * Expose `VERSION`.
  */
 

@@ -2497,7 +2497,7 @@ var analytics = new Analytics();
 
 // Expose `require`.
 // TODO(ndhoule): Look into deprecating, we no longer need to expose it in tests
-analytics.require = require;
+//analytics.require = require;
 
 // Expose package version.
 analytics.VERSION = require('../package.json').version;
@@ -11867,8 +11867,9 @@ module.exports={
   "author": "Apache Software Foundation",
   "license": "Apache-2.0",
   "scripts": {
-    "build": "yarn browserify && yarn minify",
+    "build": "yarn browserify && yarn replace && yarn minify",
     "browserify": "browserify src/index.js -p [ browserify-header --file src/license.js ] -s unomiTracker  > dist/unomi-tracker.js",
+    "replace": "replace-in-file 'analytics.require = require' '//analytics.require = require' dist/unomi-tracker.js",
     "minify": "uglifyjs -c -m --comments '/@license/' -o dist/unomi-tracker.min.js -- dist/unomi-tracker.js",
     "snippet:minify": "uglifyjs -c -m -o snippet.min.js -- snippet.js",
     "clean": "rimraf *.log dist/unomi-tracker.js dist/unomi-tracker.min.js",
@@ -11877,7 +11878,8 @@ module.exports={
   "dependencies": {
     "@segment/analytics.js-core": "^3.7.2",
     "@segment/analytics.js-integration": "^2.1.1",
-    "browserify-header": "^0.9.4"
+    "browserify-header": "^0.9.4",
+    "replace-in-file": "^3.4.2"
   },
   "devDependencies": {
     "@segment/eslint-config": "^3.1.1",
@@ -12408,12 +12410,6 @@ var Integrations = require('./integrations');
  */
 
 module.exports = exports = analytics;
-
-/**
- * Expose require.
- */
-
-analytics.require = require;
 
 /**
  * Expose `VERSION`.
