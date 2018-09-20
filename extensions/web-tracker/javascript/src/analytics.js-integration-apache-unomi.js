@@ -115,11 +115,11 @@ Unomi.prototype.onpage = function(page) {
 Unomi.prototype.fillPageData = function(unomiPage, props) {
     unomiPage.attributes = [];
     unomiPage.consentTypes = [];
-    unomiPage.pageInfo.pageName = props.title;
-    unomiPage.pageInfo.pageID = props.path;
-    unomiPage.pageInfo.pagePath = props.path;
-    unomiPage.pageInfo.destinationURL = props.url;
-    unomiPage.pageInfo.referringURL = props.referrer;
+    unomiPage.pageInfo.pageName = unomiPage.pageInfo.pageName || props.title;
+    unomiPage.pageInfo.pageID = unomiPage.pageInfo.pageID || props.path;
+    unomiPage.pageInfo.pagePath = unomiPage.pageInfo.pagePath || props.path;
+    unomiPage.pageInfo.destinationURL = unomiPage.pageInfo.destinationURL || props.url;
+    unomiPage.pageInfo.referringURL = unomiPage.pageInfo.referringURL || props.referrer;
 }
 
 

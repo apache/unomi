@@ -1,3 +1,22 @@
+/*!
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @license Apache-2.0
+ */
+
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.unomiTracker = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 'use strict';
 
@@ -11836,22 +11855,29 @@ module.exports = uuid;
 
 },{"./rng":94}],96:[function(require,module,exports){
 module.exports={
-  "name": "analytics.js-integration-apache-unomi",
+  "name": "unomi-analytics",
   "version": "1.0.0",
   "description": "The Apache Unomi analytics.js integration.",
   "main": "src/index.js",
+  "keywords": [
+    "unomi",
+    "analytics.js",
+    "apache"
+  ],
+  "author": "Apache Software Foundation",
   "license": "Apache-2.0",
   "scripts": {
     "build": "yarn browserify && yarn minify",
-    "browserify": "browserify src/index.js  -s unomiTracker  > dist/unomi-tracker.js",
-    "minify": "uglifyjs -c -m -o dist/unomi-tracker.min.js -- dist/unomi-tracker.js ",
-    "snippet:minify": "uglifyjs -c -m -o dist/unomi-tracker.min.js -- dist/unomi-tracker.js ",
+    "browserify": "browserify src/index.js -p [ browserify-header --file src/license.js ] -s unomiTracker  > dist/unomi-tracker.js",
+    "minify": "uglifyjs -c -m --comments '/@license/' -o dist/unomi-tracker.min.js -- dist/unomi-tracker.js",
+    "snippet:minify": "uglifyjs -c -m -o snippet.min.js -- snippet.js",
     "clean": "rimraf *.log dist/unomi-tracker.js dist/unomi-tracker.min.js",
     "clean:all": "yarn clean && rimraf node_modules"
   },
   "dependencies": {
     "@segment/analytics.js-core": "^3.7.2",
-    "@segment/analytics.js-integration": "^2.1.1"
+    "@segment/analytics.js-integration": "^2.1.1",
+    "browserify-header": "^0.9.4"
   },
   "devDependencies": {
     "@segment/eslint-config": "^3.1.1",
@@ -11984,11 +12010,11 @@ Unomi.prototype.onpage = function(page) {
 Unomi.prototype.fillPageData = function(unomiPage, props) {
     unomiPage.attributes = [];
     unomiPage.consentTypes = [];
-    unomiPage.pageInfo.pageName = props.title;
-    unomiPage.pageInfo.pageID = props.path;
-    unomiPage.pageInfo.pagePath = props.path;
-    unomiPage.pageInfo.destinationURL = props.url;
-    unomiPage.pageInfo.referringURL = props.referrer;
+    unomiPage.pageInfo.pageName = unomiPage.pageInfo.pageName || props.title;
+    unomiPage.pageInfo.pageID = unomiPage.pageInfo.pageID || props.path;
+    unomiPage.pageInfo.pagePath = unomiPage.pageInfo.pagePath || props.path;
+    unomiPage.pageInfo.destinationURL = unomiPage.pageInfo.destinationURL || props.url;
+    unomiPage.pageInfo.referringURL = unomiPage.pageInfo.referringURL || props.referrer;
 }
 
 

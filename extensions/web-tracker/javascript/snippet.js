@@ -43,7 +43,7 @@ window.unomiTracker || (window.unomiTracker = {});
         script.type = 'text/javascript';
         script.async = true;
         // TODO we might want to add a check on the url to see if it ends with / or not
-        script.src = option.url + '/tracker/javascript/unomi-tracker.js';
+        script.src = option.url + '/tracker/javascript/unomi-tracker.min.js';
 
         if (script.addEventListener) {
             script.addEventListener('load', function (e) {

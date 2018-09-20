@@ -509,6 +509,12 @@ browserify-des@^1.0.0:
     inherits "^2.0.1"
     safe-buffer "^5.1.2"
 
+browserify-header@^0.9.4:
+  version "0.9.4"
+  resolved "https://registry.yarnpkg.com/browserify-header/-/browserify-header-0.9.4.tgz#7de7b044c3f8f8b7e6b646b5e1e8d83bc9090c15"
+  dependencies:
+    through2 "2.0.3"
+
 browserify-rsa@^4.0.0:
   version "4.0.1"
   resolved "http://registry.npmjs.org/browserify-rsa/-/browserify-rsa-4.0.1.tgz#21e0abfaf6f2029cf2fafb133567a701d4135524"
@@ -2897,7 +2903,7 @@ text-table@~0.2.0:
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/text-table/-/text-table-0.2.0.tgz#7f5ee823ae805207c00af2df4a84ec3fcfa570b4"
 
-through2@^2.0.0:
+through2@2.0.3, through2@^2.0.0:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/through2/-/through2-2.0.3.tgz#0004569b37c7c74ba39c43f3ced78d1ad94140be"
   dependencies:

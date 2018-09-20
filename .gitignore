@@ -3,7 +3,7 @@
 target
 .classpath
 .project
-
+node_modules
 /src/main/webapp/META-INF/MANIFEST.MF
 /**/.idea
 *.iml
