@@ -11856,7 +11856,7 @@ module.exports = uuid;
 },{"./rng":94}],96:[function(require,module,exports){
 module.exports={
   "name": "unomi-analytics",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "The Apache Unomi analytics.js integration.",
   "main": "src/index.js",
   "keywords": [
@@ -11877,16 +11877,16 @@ module.exports={
   },
   "dependencies": {
     "@segment/analytics.js-core": "^3.7.2",
-    "@segment/analytics.js-integration": "^2.1.1",
-    "browserify-header": "^0.9.4",
-    "replace-in-file": "^3.4.2"
+    "@segment/analytics.js-integration": "^2.1.1"
   },
   "devDependencies": {
     "@segment/eslint-config": "^3.1.1",
     "browserify": "^13.0.1",
+    "browserify-header": "^0.9.4",
     "eslint": "^2.9.0",
     "eslint-plugin-mocha": "^2.2.0",
     "eslint-plugin-require-path-exists": "^1.1.5",
+    "replace-in-file": "^3.4.2",
     "rimraf": "^2.6.2",
     "uglify-js": "^2.6.4",
     "watchify": "^3.11.0",
