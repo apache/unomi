@@ -77,7 +77,8 @@ public class ProfileImportSurfersIT extends BaseIT {
 
         /*** Surfers Test ***/
         ImportConfiguration importConfigSurfers = new ImportConfiguration();
-        importConfigSurfers.setItemId("2-surfers-test");
+        String itemId1 = "2-surfers-test";
+        importConfigSurfers.setItemId(itemId1);
         importConfigSurfers.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
         importConfigSurfers.setMergingProperty("linkedInId");
         importConfigSurfers.setOverwriteExistingProfiles(true);
@@ -85,14 +86,14 @@ public class ProfileImportSurfersIT extends BaseIT {
         importConfigSurfers.setHasHeader(true);
         importConfigSurfers.setHasDeleteColumn(true);
 
-        Map mappingSurfers = new HashMap();
+        Map<String, Integer> mappingSurfers = new HashMap<>();
         mappingSurfers.put("linkedInId", 0);
         mappingSurfers.put("lastName", 1);
         mappingSurfers.put("email", 2);
         mappingSurfers.put("facebookId", 3);
         mappingSurfers.put("gender", 4);
         mappingSurfers.put("alive", 5);
-
+        mappingSurfers.put("city", 6);
 
         importConfigSurfers.getProperties().put("mapping", mappingSurfers);
         File importSurfersFile = new File("data/tmp/recurrent_import/");
@@ -104,10 +105,14 @@ public class ProfileImportSurfersIT extends BaseIT {
         logger.info("ProfileImportSurfersIT setup successfully.");
 
         //Wait for data to be processed
-        Thread.sleep(10000);
+        PartialList<Profile> profiles = null;
+        while (profiles == null || profiles.getTotalSize() != 34) {
+            Thread.sleep(1000);
+            profiles = profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null);
+        }
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(2, importConfigurations.size());
+        Assert.assertEquals(1, importConfigurations.size());
 
         //Profile not to delete
         PartialList<Profile> jordyProfile = profileService.findProfilesByPropertyValue("properties.email", "jordy@smith.com", 0, 10, null);
@@ -124,16 +129,15 @@ public class ProfileImportSurfersIT extends BaseIT {
         Assert.assertEquals(0, paulineProfile.getList().size());
 
         //Check import config status
-        ImportConfiguration importConfiguration = importConfigurationService.load("2-surfers-test");
+        ImportConfiguration importConfiguration = importConfigurationService.load(itemId1);
         Assert.assertEquals(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS, importConfiguration.getStatus());
         Assert.assertEquals(1, importConfiguration.getExecutions().size());
-
-        //Wait for data to be processed
-        Thread.sleep(10000);
+        importConfigurationService.delete(itemId1);
 
         /*** Surfers Test OVERWRITE ***/
         ImportConfiguration importConfigSurfersOverwrite = new ImportConfiguration();
-        importConfigSurfersOverwrite.setItemId("3-surfers-overwrite-test");
+        String itemId2 = "3-surfers-overwrite-test";
+        importConfigSurfersOverwrite.setItemId(itemId2);
         importConfigSurfersOverwrite.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
         importConfigSurfersOverwrite.setMergingProperty("linkedInId");
         importConfigSurfersOverwrite.setOverwriteExistingProfiles(true);
@@ -150,11 +154,14 @@ public class ProfileImportSurfersIT extends BaseIT {
         logger.info("ProfileImportSurfersOverwriteIT setup successfully.");
 
         //Wait for data to be processed
-        Thread.sleep(10000);
-
+        profiles = null;
+        while (profiles == null || profiles.getTotalSize() != 36) {
+            Thread.sleep(1000);
+            profiles = profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null);
+        }
 
         importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(3, importConfigurations.size());
+        Assert.assertEquals(1, importConfigurations.size());
 
         //Profile not to delete
         PartialList<Profile> aliveProfiles = profileService.findProfilesByPropertyValue("properties.alive", "true", 0, 50, null);
@@ -166,14 +173,13 @@ public class ProfileImportSurfersIT extends BaseIT {
         //Profile to delete = false, was to delete
         PartialList<Profile> paulineProfileOverwrite = profileService.findProfilesByPropertyValue("properties.lastName", "Pauline Ado", 0, 10, null);
         Assert.assertEquals(1, paulineProfileOverwrite.getList().size());
-
-        //Wait for data to be processed
-        Thread.sleep(10000);
+        importConfigurationService.delete(itemId2);
 
         /*** Surfers Delete Test ***/
 
         ImportConfiguration importConfigSurfersDelete = new ImportConfiguration();
-        importConfigSurfersDelete.setItemId("4-surfers-delete-test");
+        String itemId3 = "4-surfers-delete-test";
+        importConfigSurfersDelete.setItemId(itemId3);
         importConfigSurfersDelete.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
         importConfigSurfersDelete.setMergingProperty("linkedInId");
         importConfigSurfersDelete.setOverwriteExistingProfiles(true);
@@ -191,15 +197,18 @@ public class ProfileImportSurfersIT extends BaseIT {
         logger.info("ProfileImportSurfersDeleteIT setup successfully.");
 
         //Wait for data to be processed
-        Thread.sleep(10000);
+        profiles = null;
+        while (profiles == null || profiles.getTotalSize() != 0) {
+            Thread.sleep(1000);
+            profiles = profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null);
+        }
 
         importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(4, importConfigurations.size());
+        Assert.assertEquals(1, importConfigurations.size());
 
         PartialList<Profile> jordyProfileDelete = profileService.findProfilesByPropertyValue("properties.email", "jordy@smith.com", 0, 10, null);
         Assert.assertEquals(0, jordyProfileDelete.getList().size());
 
-
+        importConfigurationService.delete(itemId3);
     }
-
 }

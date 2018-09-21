@@ -29,6 +29,7 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
+import org.ops4j.pax.exam.util.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,15 +46,14 @@ import java.util.Map;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class PropertiesUpdateActionIT extends BaseIT {
-
     private final static Logger LOGGER = LoggerFactory.getLogger(PropertiesUpdateActionIT.class);
+
     private final static String PROFILE_TARGET_TEST_ID = "profile-target-event";
     private final static String PROFILE_TEST_ID = "profile-to-update-by-event";
 
-    @Inject
+    @Inject @Filter(timeout = 60000)
     protected ProfileService profileService;
-
-    @Inject
+    @Inject @Filter(timeout = 60000)
     protected EventService eventService;
 
     @Before

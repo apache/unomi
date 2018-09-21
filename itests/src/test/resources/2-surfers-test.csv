@@ -1,37 +1,37 @@
-Linkedin ID;Last Name;Email;Facebook ID;Gender;Alive;To Delete
-1;Jordy Smith;jordy@smith.com;999;male;TRUE;FALSE
-2;Gabriel Medina;gabriel@medina.com;998;male;TRUE;FALSE
-3;Kolohe Andino;kolohe@andino.com;997;male;TRUE;FALSE
-4;Matt Wilkinson;Matt@Wilkinson.com;996;male;TRUE;FALSE
-5;Michel Bourez;Michel@Bourez.com;995;male;TRUE;FALSE
-6;Kelly Slater;kelly@slater.com;994;male;TRUE;FALSE
-7;Julian Wilson;julian@wilson.com;993;male;TRUE;FALSE
-8;Joel Parkinson;joel@parkinson.com;992;male;TRUE;FALSE
-9;Filipe Toledo;filipe@toledo.com;991;male;TRUE;FALSE
-10;Adriano De Souza;adriano@souza.com;990;male;TRUE;FALSE
-11;Sebastian Zietz;sebastian@zietz.com;989;male;TRUE;TRUE
-12;Josh Kerr;johsh@kerr.com;988;male;TRUE;FALSE
-13;Adrian Buchan;adrian@buchan.com;987;male;TRUE;FALSE
-14;Italo Ferreira;italo@ferreiro.com;986;male;TRUE;FALSE
-15;Mick Fanning;mick@fanning.com;985;male;TRUE;FALSE
-16;Miguel Pupo;miguel@pupo.com;984;male;TRUE;FALSE
-17;Nat Young;nat@young.com;983;male;TRUE;FALSE
-18;Keanu Asing;;982;male;TRUE;FALSE
-19;Tyler Wright;;981;male;TRUE;FALSE
-20;Courtney Conlogue;;980;female;TRUE;FALSE
-21;Carissa Moore;;979;female;TRUE;FALSE
-22;Tatiana Weston-Webb;;978;female;TRUE;FALSE
-23;Johanne Defay;;977;female;TRUE;FALSE
-24;Stephanie Gilmore;;976;female;TRUE;FALSE
-25;Malia Manuel;;975;female;TRUE;FALSE
-26;Sally Fitzgibbons;;974;female;TRUE;FALSE
-27;Sage Erickson;;973;female;TRUE;FALSE
-28;Laura Enever;;972;female;TRUE;FALSE
-29;Nikki Van Dijk;;971;female;TRUE;FALSE
-30;Bianca Buitendag;;970;female;TRUE;FALSE
-31;Coco Ho;;969;female;TRUE;FALSE
-32;Alessa Quizon;;968;female;TRUE;FALSE
-33;Lakey Peterson;;967;female;TRUE;FALSE
-34;Bronte Macaulay;;966;female;TRUE;FALSE
-35;Pauline Ado;;965;female;TRUE;TRUE
-36;Silvana Lima;;964;female;TRUE;FALSE
+Linkedin ID;Last Name;Email;Facebook ID;Gender;Alive;City;To Delete
+1;Jordy Smith;jordy@smith.com;999;male;TRUE;surfersCity;FALSE
+2;Gabriel Medina;gabriel@medina.com;998;male;TRUE;surfersCity;FALSE
+3;Kolohe Andino;kolohe@andino.com;997;male;TRUE;surfersCity;FALSE
+4;Matt Wilkinson;Matt@Wilkinson.com;996;male;TRUE;surfersCity;FALSE
+5;Michel Bourez;Michel@Bourez.com;995;male;TRUE;surfersCity;FALSE
+6;Kelly Slater;kelly@slater.com;994;male;TRUE;surfersCity;FALSE
+7;Julian Wilson;julian@wilson.com;993;male;TRUE;surfersCity;FALSE
+8;Joel Parkinson;joel@parkinson.com;992;male;TRUE;surfersCity;FALSE
+9;Filipe Toledo;filipe@toledo.com;991;male;TRUE;surfersCity;FALSE
+10;Adriano De Souza;adriano@souza.com;990;male;TRUE;surfersCity;FALSE
+11;Sebastian Zietz;sebastian@zietz.com;989;male;TRUE;surfersCity;TRUE
+12;Josh Kerr;johsh@kerr.com;988;male;TRUE;surfersCity;FALSE
+13;Adrian Buchan;adrian@buchan.com;987;male;TRUE;surfersCity;FALSE
+14;Italo Ferreira;italo@ferreiro.com;986;male;TRUE;surfersCity;FALSE
+15;Mick Fanning;mick@fanning.com;985;male;TRUE;surfersCity;FALSE
+16;Miguel Pupo;miguel@pupo.com;984;male;TRUE;surfersCity;FALSE
+17;Nat Young;nat@young.com;983;male;TRUE;surfersCity;FALSE
+18;Keanu Asing;;982;male;TRUE;surfersCity;FALSE
+19;Tyler Wright;;981;male;TRUE;surfersCity;FALSE
+20;Courtney Conlogue;;980;female;TRUE;surfersCity;FALSE
+21;Carissa Moore;;979;female;TRUE;surfersCity;FALSE
+22;Tatiana Weston-Webb;;978;female;TRUE;surfersCity;FALSE
+23;Johanne Defay;;977;female;TRUE;surfersCity;FALSE
+24;Stephanie Gilmore;;976;female;TRUE;surfersCity;FALSE
+25;Malia Manuel;;975;female;TRUE;surfersCity;FALSE
+26;Sally Fitzgibbons;;974;female;TRUE;surfersCity;FALSE
+27;Sage Erickson;;973;female;TRUE;surfersCity;FALSE
+28;Laura Enever;;972;female;TRUE;surfersCity;FALSE
+29;Nikki Van Dijk;;971;female;TRUE;surfersCity;FALSE
+30;Bianca Buitendag;;970;female;TRUE;surfersCity;FALSE
+31;Coco Ho;;969;female;TRUE;surfersCity;FALSE
+32;Alessa Quizon;;968;female;TRUE;surfersCity;FALSE
+33;Lakey Peterson;;967;female;TRUE;surfersCity;FALSE
+34;Bronte Macaulay;;966;female;TRUE;surfersCity;FALSE
+35;Pauline Ado;;965;female;TRUE;surfersCity;TRUE
+36;Silvana Lima;;964;female;TRUE;surfersCity;FALSE

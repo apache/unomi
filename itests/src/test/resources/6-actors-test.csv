@@ -1,7 +1,7 @@
-Twitter Id;Last name;email;Movie genres
-1;Sigourney Weaver;sig@ali.en;"[Horror;Action]"
-2;Kevin Hart;kev@har.t;"[Comedy;Action]"
-3;Vincent Van GOGH;vinz@vgo.gh;[]
-4;"Jeanne; D'arc";jean@darc.com;[]
-5;Jessica Alba;jess@alba.alba;[Romance]
-6;The Rock;the.rock@gmail.com;"[Adventure;Action;Romance;Comedy]"
+Twitter Id;Last name;email;Movie genres;City
+1;Sigourney Weaver;sig@ali.en;"[Horror;Action]";hollywood
+2;Kevin Hart;kev@har.t;"[Comedy;Action]";hollywood
+3;Vincent Van GOGH;vinz@vgo.gh;[];hollywood
+4;"Jeanne; D'arc";jean@darc.com;[];hollywood
+5;Jessica Alba;jess@alba.alba;[Romance];hollywood
+6;The Rock;the.rock@gmail.com;"[Adventure;Action;Romance;Comedy]";hollywood

@@ -87,26 +87,19 @@ public class ProfileImportBasicIT extends BaseIT {
         File basicFile = new File("data/tmp/1-basic-test.csv");
         Files.copy(basicFile.toPath(), new File("data/tmp/unomi_oneshot_import_configs/1-basic-test.csv").toPath(), StandardCopyOption.REPLACE_EXISTING);
 
-        // Wait for the csv to be processed
-        boolean isDone = false;
-        while (!isDone) {
-            importConfiguration = importConfigurationService.load(itemId);
-            if (importConfiguration != null && importConfiguration.getStatus() != null) {
-                isDone = importConfiguration.getStatus().equals(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS);
-            }
+        //Wait for the csv to be processed
+        PartialList<Profile> profiles = null;
+        while (profiles == null || profiles.getTotalSize() != 3) {
             Thread.sleep(1000);
+            profiles = profileService.findProfilesByPropertyValue("properties.city", "oneShotImportCity", 0, 10, null);
         }
-        // Check import config status
-        Assert.assertEquals(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS, importConfiguration.getStatus());
-        Assert.assertEquals(1, importConfiguration.getExecutions().size());
-
-        // Check saved profiles
-        PartialList<Profile> profiles = profileService.findProfilesByPropertyValue("properties.city", "oneShotImportCity", 0, 10, null);
         Assert.assertEquals(3, profiles.getList().size());
 
         checkProfiles(1);
         checkProfiles(2);
         checkProfiles(3);
+
+        importConfigurationService.delete(itemId);
     }
 
     private void checkProfiles(int profileNumber) {

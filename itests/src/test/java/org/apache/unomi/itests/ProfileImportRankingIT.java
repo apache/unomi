@@ -79,8 +79,9 @@ public class ProfileImportRankingIT extends BaseIT {
 
 
         /*** Surfers Test ***/
+        String itemId = "5-ranking-test";
         ImportConfiguration importConfigRanking = new ImportConfiguration();
-        importConfigRanking.setItemId("5-ranking-test");
+        importConfigRanking.setItemId(itemId);
         importConfigRanking.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
         importConfigRanking.setMergingProperty("rank");
         importConfigRanking.setOverwriteExistingProfiles(true);
@@ -88,12 +89,13 @@ public class ProfileImportRankingIT extends BaseIT {
         importConfigRanking.setHasHeader(true);
         importConfigRanking.setHasDeleteColumn(false);
 
-        Map mappingRanking = new HashMap();
+        Map<String, Integer> mappingRanking = new HashMap<>();
         mappingRanking.put("rank", 0);
         mappingRanking.put("uciId", 1);
         mappingRanking.put("lastName", 2);
         mappingRanking.put("nationality", 3);
         mappingRanking.put("age", 4);
+        mappingRanking.put("city", 5);
 
         importConfigRanking.getProperties().put("mapping", mappingRanking);
         File importSurfersFile = new File("data/tmp/recurrent_import/");
@@ -104,20 +106,24 @@ public class ProfileImportRankingIT extends BaseIT {
 
 
         //Wait for data to be processed
-        Thread.sleep(10000);
+        PartialList<Profile> profiles = null;
+        while (profiles == null || profiles.getTotalSize() != 25) {
+            Thread.sleep(1000);
+            profiles = profileService.findProfilesByPropertyValue("properties.city", "rankingCity", 0, 50, null);
+        }
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(5, importConfigurations.size());
+        Assert.assertEquals(1, importConfigurations.size());
 
-        PartialList<Profile> gregProfile = profileService.findProfilesByPropertyValue("properties.uciId", "10004451371", 0, 10, null);
-        Assert.assertEquals(1, gregProfile.getList().size());
-        Assert.assertNotNull(gregProfile.get(0));
-        Assert.assertEquals(1, gregProfile.get(0).getProperty("rank"));
-        Assert.assertEquals("VAN AVERMAET Greg", gregProfile.get(0).getProperty("lastName"));
-        Assert.assertEquals("BELGIUM", gregProfile.get(0).getProperty("nationality"));
-        Assert.assertEquals(32, gregProfile.get(0).getProperty("age"));
+        PartialList<Profile> gregProfileList = profileService.findProfilesByPropertyValue("properties.uciId", "10004451371", 0, 10, null);
+        Assert.assertEquals(1, gregProfileList.getList().size());
+        Profile gregProfile = gregProfileList.get(0);
+        Assert.assertNotNull(gregProfile);
+        Assert.assertEquals(1, gregProfile.getProperty("rank"));
+        Assert.assertEquals("VAN AVERMAET Greg", gregProfile.getProperty("lastName"));
+        Assert.assertEquals("BELGIUM", gregProfile.getProperty("nationality"));
+        Assert.assertEquals(32, gregProfile.getProperty("age"));
 
-
+        importConfigurationService.delete(itemId);
     }
-
 }

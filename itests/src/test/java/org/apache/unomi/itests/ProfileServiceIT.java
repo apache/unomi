@@ -23,6 +23,7 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
+import org.ops4j.pax.exam.util.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,10 +35,11 @@ import javax.inject.Inject;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileServiceIT extends BaseIT {
-
     private final static Logger LOGGER = LoggerFactory.getLogger(ProfileServiceIT.class);
+
     private final static String TEST_PROFILE_ID = "test-profile-id";
-    @Inject
+
+    @Inject @Filter(timeout = 60000)
     protected ProfileService profileService;
 
     @Test

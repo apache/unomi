@@ -25,6 +25,7 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
+import org.ops4j.pax.exam.util.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +36,8 @@ import java.util.List;
 @ExamReactorStrategy(PerSuite.class)
 public class SegmentIT extends BaseIT {
     private final static Logger LOGGER = LoggerFactory.getLogger(SegmentIT.class);
-    @Inject
+
+    @Inject @Filter(timeout = 60000)
     protected SegmentService segmentService;
 
     @Test

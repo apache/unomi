@@ -45,10 +45,11 @@ import static org.junit.Assert.*;
 public class ConditionEvaluatorIT extends BaseIT {
 
     protected ConditionBuilder builder;
-    @Inject @Filter(timeout = 60000)
-    protected PersistenceService persistenceService;
     protected Item item;
     protected Date lastVisit;
+
+    @Inject @Filter(timeout = 60000)
+    protected PersistenceService persistenceService;
     @Inject @Filter(timeout = 60000)
     private DefinitionsService definitionsService;
 

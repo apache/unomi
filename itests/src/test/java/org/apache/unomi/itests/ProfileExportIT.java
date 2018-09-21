@@ -16,11 +16,9 @@
  */
 package org.apache.unomi.itests;
 
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
@@ -36,9 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.io.File;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by amidani on 14/08/2017.
@@ -46,75 +42,84 @@ import java.util.Map;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileExportIT extends BaseIT {
-
-    @Inject
-    @Filter("(configDiscriminator=EXPORT)")
-    protected ImportExportConfigurationService<ExportConfiguration> exportConfigurationService;
-
-    @Inject
-    protected SegmentService segmentService;
-
-    @Inject
-    protected DefinitionsService definitionsService;
-
     private Logger logger = LoggerFactory.getLogger(ProfileExportIT.class);
 
-    File exportDir;
+    @Inject @Filter(value="(configDiscriminator=EXPORT)", timeout = 60000)
+    protected ImportExportConfigurationService<ExportConfiguration> exportConfigurationService;
+    @Inject @Filter(timeout = 60000)
+    protected ProfileService profileService;
 
     @Test
     public void testExport() throws InterruptedException {
+        Date timestamp = new Date();
 
-        Condition condition = new Condition();
-        condition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
-        condition.setParameter("propertyName", "properties.twitterId");
-        condition.setParameter("propertyValue", "3");
-        condition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
+        Set<String> segments = new TreeSet<>();
+        segments.add("exportItSeg");
 
-        Segment segment = new Segment(new Metadata("integration", "exportItSeg", "Export IT Segment", "Export IT Segment"));
-        segment.setItemId("exportItSeg");
-        segment.setCondition(condition);
-        segment.setScope("integration");
+        Profile profile1 = new Profile(UUID.randomUUID().toString());
+        profile1.setProperty("firstVisit", timestamp);
+        profile1.setProperty("firstName", "Pablo");
+        profile1.setProperty("lastName", "Esco");
+        profile1.setProperty("city", "exportCity");
+        profile1.setSegments(segments);
+        profileService.save(profile1);
 
-        segmentService.setSegmentDefinition(segment);
+        Profile profile2 = new Profile(UUID.randomUUID().toString());
+        profile2.setProperty("firstVisit", timestamp);
+        profile2.setProperty("firstName", "Amado");
+        profile2.setProperty("lastName", "Carri");
+        profile2.setProperty("city", "exportCity");
+        profile2.setSegments(segments);
+        profileService.save(profile2);
 
-        Thread.sleep(10000);
+        Profile profile3 = new Profile(UUID.randomUUID().toString());
+        profile3.setProperty("firstVisit", timestamp);
+        profile3.setProperty("firstName", "Joaquin");
+        profile3.setProperty("lastName", "Guz");
+        profile3.setProperty("city", "exportCity");
+        profile3.setSegments(segments);
+        profileService.save(profile3);
 
-        segment = segmentService.getSegmentDefinition("exportItSeg");
-
-        Assert.assertNotNull(segment);
-        Assert.assertEquals("Export IT Segment", segment.getMetadata().getName());
+        PartialList<Profile> profiles = null;
+        while (profiles == null || profiles.getTotalSize() != 3) {
+            Thread.sleep(1000);
+            profiles = profileService.findProfilesByPropertyValue("segments", "exportItSeg", 0, 10, null);
+        }
 
         /*** Export Test ***/
+        String itemId = "export-test";
         ExportConfiguration exportConfiguration = new ExportConfiguration();
-        exportConfiguration.setItemId("export-test");
+        exportConfiguration.setItemId(itemId);
         exportConfiguration.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
         exportConfiguration.setColumnSeparator(";");
         exportConfiguration.setMultiValueDelimiter("()");
         exportConfiguration.setMultiValueSeparator(";");
 
-        Map mapping = new HashMap();
-        mapping.put("0", "lastName");
-        mapping.put("1", "email");
-        mapping.put("2", "movieGenres");
+        Map<String, String> mapping = new HashMap<>();
+        mapping.put("0", "firstName");
+        mapping.put("1", "lastName");
+        mapping.put("2", "city");
 
         exportConfiguration.getProperties().put("mapping", mapping);
         exportConfiguration.getProperties().put("segment", "exportItSeg");
-        exportConfiguration.getProperties().put("period", "10m");
-        exportDir = new File("data/tmp/recurrent_export/");
-        exportConfiguration.getProperties().put("destination", "file://" + exportDir.getAbsolutePath() + "?fileName=profiles-actors-export.csv");
+        exportConfiguration.getProperties().put("period", "1m");
+        File exportDir = new File("data/tmp/");
+        exportConfiguration.getProperties().put("destination", "file://" + exportDir.getAbsolutePath() + "?fileName=profiles-export.csv");
         exportConfiguration.setActive(true);
 
         exportConfigurationService.save(exportConfiguration, true);
 
-
-        Thread.sleep(10000);
+        File exportResult = new File("data/tmp/profiles-export.csv");
+        while (!exportResult.exists()) {
+            Thread.sleep(1000);
+            exportResult = new File("data/tmp/profiles-export.csv");
+        }
+        logger.info("PATH : {}", exportResult.getAbsolutePath());
+        Assert.assertTrue(exportResult.exists());
 
         List<ExportConfiguration> exportConfigurations = exportConfigurationService.getAll();
         Assert.assertEquals(1, exportConfigurations.size());
 
-        File exportResult = new File(exportDir+"/profiles-actors-export.csv");
-        logger.info("PATH : {}", exportResult.getAbsolutePath());
-        Assert.assertTrue(exportResult.exists());
+        exportConfigurationService.delete(itemId);
     }
-
 }

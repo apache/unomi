@@ -74,8 +74,9 @@ public class ProfileImportActorsIT extends BaseIT {
 
 
         /*** Actors Test ***/
+        String itemId = "6-actors-test";
         ImportConfiguration importConfigActors = new ImportConfiguration();
-        importConfigActors.setItemId("6-actors-test");
+        importConfigActors.setItemId(itemId);
         importConfigActors.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
         importConfigActors.setMergingProperty("twitterId");
         importConfigActors.setOverwriteExistingProfiles(true);
@@ -85,11 +86,12 @@ public class ProfileImportActorsIT extends BaseIT {
         importConfigActors.setHasHeader(true);
         importConfigActors.setHasDeleteColumn(false);
 
-        Map mappingActors = new HashMap();
+        Map<String, Integer> mappingActors = new HashMap<>();
         mappingActors.put("twitterId", 0);
         mappingActors.put("lastName", 1);
         mappingActors.put("email", 2);
         mappingActors.put("movieGenres", 3);
+        mappingActors.put("city", 4);
 
         importConfigActors.getProperties().put("mapping", mappingActors);
         File importSurfersFile = new File("data/tmp/recurrent_import/");
@@ -99,10 +101,14 @@ public class ProfileImportActorsIT extends BaseIT {
         importConfigurationService.save(importConfigActors, true);
 
         //Wait for data to be processed
-        Thread.sleep(10000);
+        PartialList<Profile> profiles = null;
+        while (profiles == null || profiles.getTotalSize() != 6) {
+            Thread.sleep(1000);
+            profiles = profileService.findProfilesByPropertyValue("properties.city", "hollywood", 0, 10, null);
+        }
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(6, importConfigurations.size());
+        Assert.assertEquals(1, importConfigurations.size());
 
         PartialList<Profile> jeanneProfile = profileService.findProfilesByPropertyValue("properties.twitterId", "4", 0, 10, null);
         Assert.assertEquals(1, jeanneProfile.getList().size());
@@ -118,6 +124,6 @@ public class ProfileImportActorsIT extends BaseIT {
         Assert.assertEquals("the.rock@gmail.com", rockProfile.get(0).getProperty("email"));
         Assert.assertEquals(Arrays.asList("Adventure", "Action", "Romance", "Comedy"), rockProfile.get(0).getProperty("movieGenres"));
 
+        importConfigurationService.delete(itemId);
     }
-
 }

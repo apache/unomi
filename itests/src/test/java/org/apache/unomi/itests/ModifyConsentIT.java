@@ -30,6 +30,7 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
+import org.ops4j.pax.exam.util.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,15 +44,13 @@ import java.util.Date;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class ModifyConsentIT extends BaseIT {
-
     private final static Logger LOGGER = LoggerFactory.getLogger(ModifyConsentIT.class);
 
     private final static String PROFILE_TEST_ID = "profile-consent";
 
-    @Inject
+    @Inject @Filter(timeout = 60000)
     protected ProfileService profileService;
-
-    @Inject
+    @Inject @Filter(timeout = 60000)
     protected EventService eventService;
 
     @Before

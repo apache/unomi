@@ -38,11 +38,8 @@ import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.*;
 public abstract class BaseIT {
     
     protected static final String HTTP_PORT = "8181";
-    
     protected static final String URL = "http://localhost:" + HTTP_PORT;
-
     protected static final String KARAF_DIR = "target/exam";
-
     protected static final String UNOMI_KEY = "670c26d1cc413346c3b2fd9ce65dab41";
 
     @Configuration
