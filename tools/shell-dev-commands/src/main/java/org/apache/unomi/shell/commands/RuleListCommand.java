@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
 
-@Command(scope = "rule", name = "list", description = "This will list all the rules deployed in the Apache Unomi Context Server")
+@Command(scope = "unomi", name = "rule-list", description = "This will list all the rules deployed in the Apache Unomi Context Server")
 public class RuleListCommand extends ListCommandSupport {
 
     private RulesService rulesService;

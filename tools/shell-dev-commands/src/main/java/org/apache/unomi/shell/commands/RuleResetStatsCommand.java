@@ -20,7 +20,7 @@ import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.console.OsgiCommandSupport;
 import org.apache.unomi.api.services.RulesService;
 
-@Command(scope = "rule", name = "reset-stats", description = "This command will reset the rule statistics")
+@Command(scope = "unomi", name = "rule-reset-stats", description = "This command will reset the rule statistics")
 public class RuleResetStatsCommand extends OsgiCommandSupport {
 
     private RulesService rulesService;

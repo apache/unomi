@@ -19,32 +19,30 @@ package org.apache.unomi.shell.commands;
 import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.console.OsgiCommandSupport;
-import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.Session;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
-@Command(scope = "unomi", name = "segment-view", description = "This will allows to view a segment in the Apache Unomi Context Server")
-public class SegmentViewCommand extends OsgiCommandSupport {
+@Command(scope = "unomi", name = "session-view", description = "This command will dump a session as a JSON string")
+public class SessionViewCommand extends OsgiCommandSupport {
+    private ProfileService profileService;
 
-    private SegmentService segmentService;
-
-    @Argument(index = 0, name = "segmentId", description = "The identifier for the segment", required = true, multiValued = false)
-    String segmentIdentifier;
-
-
-    public void setSegmentService(SegmentService segmentService) {
-        this.segmentService = segmentService;
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
     }
+
+    @Argument(index = 0, name = "session", description = "The identifier for the session", required = true, multiValued = false)
+    String sessionIdentifier;
 
     @Override
     protected Object doExecute() throws Exception {
-        Segment segment = segmentService.getSegmentDefinition(segmentIdentifier);
-        if (segment == null) {
-            System.out.println("Couldn't find an action with id=" + segmentIdentifier);
+        Session session = profileService.loadSession(sessionIdentifier, null);
+        if (session == null) {
+            System.out.println("Couldn't find a session with id=" + sessionIdentifier);
             return null;
         }
-        String jsonRule = CustomObjectMapper.getObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(segment);
-        System.out.println(jsonRule);
+        String jsonSession = CustomObjectMapper.getObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(session);
+        System.out.println(jsonSession);
         return null;
     }
 }

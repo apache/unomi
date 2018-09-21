@@ -16,49 +16,60 @@
  */
 package org.apache.unomi.shell.commands;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.karaf.shell.commands.Command;
-import org.apache.unomi.api.actions.ActionType;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.Session;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.common.DataTable;
 
 import java.util.ArrayList;
-import java.util.Collection;
 
-@Command(scope = "unomi", name = "action-list", description = "This will list all the actions deployed in the Apache Unomi Context Server")
-public class ActionListCommand extends ListCommandSupport {
-
+@Command(scope = "unomi", name = "session-list", description = "This commands lists the latest sessions updated in the Apache Unomi Context Server")
+public class SessionListCommand extends ListCommandSupport {
+    private ProfileService profileService;
     private DefinitionsService definitionsService;
+
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
+    }
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
     }
 
-    @Override
+    @java.lang.Override
     protected String[] getHeaders() {
         return new String[] {
-                "Id",
-                "Name",
-                "System tags"
+                "ID",
+                "Scope",
+                "Last event",
+                "Duration",
+                "Profile",
+                "Timestamp"
         };
     }
 
-    @Override
+    @java.lang.Override
     protected DataTable buildDataTable() {
-        Collection<ActionType> allActions = definitionsService.getAllActionTypes();
-
+        Query query = new Query();
+        query.setSortby("lastEventDate:desc");
+        Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
+        query.setCondition(matchAllCondition);
+        PartialList<Session> lastModifiedProfiles = profileService.searchSessions(query);
         DataTable dataTable = new DataTable();
-
-        for (ActionType actionType : allActions) {
+        for (Session session : lastModifiedProfiles.getList()) {
             ArrayList<Comparable> rowData = new ArrayList<>();
-            rowData.add(actionType.getItemId());
-            rowData.add(actionType.getMetadata().getName());
-            rowData.add(StringUtils.join(actionType.getMetadata().getSystemTags(), ","));
+            rowData.add(session.getItemId());
+            rowData.add(session.getScope());
+            rowData.add(session.getLastEventDate());
+            rowData.add(session.getDuration());
+            rowData.add(session.getProfileId());
+            rowData.add(session.getTimeStamp());
             dataTable.addRow(rowData.toArray(new Comparable[rowData.size()]));
         }
-
-        dataTable.sort(new DataTable.SortCriteria(1, DataTable.SortOrder.ASCENDING));
         return dataTable;
     }
-
 }

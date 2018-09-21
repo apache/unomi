@@ -25,7 +25,7 @@ import org.apache.unomi.common.DataTable;
 
 import java.util.ArrayList;
 
-@Command(scope = "segment", name = "list", description = "This will list all the segments present in the Apache Unomi Context Server")
+@Command(scope = "unomi", name = "segment-list", description = "This will list all the segments present in the Apache Unomi Context Server")
 public class SegmentListCommand extends ListCommandSupport {
 
     private SegmentService segmentService;

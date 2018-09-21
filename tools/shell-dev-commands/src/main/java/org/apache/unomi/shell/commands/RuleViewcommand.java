@@ -23,7 +23,7 @@ import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
-@Command(scope = "rule", name = "view", description = "This will allows to view a rule in the Apache Unomi Context Server")
+@Command(scope = "unomi", name = "rule-view", description = "This will allows to view a rule in the Apache Unomi Context Server")
 public class RuleViewcommand extends OsgiCommandSupport {
 
     private RulesService rulesService;

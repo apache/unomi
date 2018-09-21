@@ -19,32 +19,31 @@ package org.apache.unomi.shell.commands;
 import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.console.OsgiCommandSupport;
-import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
-@Command(scope = "unomi", name = "segment-view", description = "This will allows to view a segment in the Apache Unomi Context Server")
-public class SegmentViewCommand extends OsgiCommandSupport {
+@Command(scope = "unomi", name = "profile-view", description = "This command will dump a profile as a JSON string")
+public class ProfileViewCommand extends OsgiCommandSupport {
 
-    private SegmentService segmentService;
+    private ProfileService profileService;
 
-    @Argument(index = 0, name = "segmentId", description = "The identifier for the segment", required = true, multiValued = false)
-    String segmentIdentifier;
-
-
-    public void setSegmentService(SegmentService segmentService) {
-        this.segmentService = segmentService;
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
     }
+
+    @Argument(index = 0, name = "profile", description = "The identifier for the profile", required = true, multiValued = false)
+    String profileIdentifier;
 
     @Override
     protected Object doExecute() throws Exception {
-        Segment segment = segmentService.getSegmentDefinition(segmentIdentifier);
-        if (segment == null) {
-            System.out.println("Couldn't find an action with id=" + segmentIdentifier);
+        Profile profile = profileService.load(profileIdentifier);
+        if (profile == null) {
+            System.out.println("Couldn't find a profile with id=" + profileIdentifier);
             return null;
         }
-        String jsonRule = CustomObjectMapper.getObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(segment);
-        System.out.println(jsonRule);
+        String jsonProfile = CustomObjectMapper.getObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(profile);
+        System.out.println(jsonProfile);
         return null;
     }
 }
