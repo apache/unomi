@@ -1,0 +1,34 @@
+{
+  "metadata": {
+    "id": "testLogin",
+    "name": "Test Login",
+    "description": "Copy event properties to profile properties on login"
+  },
+  "condition": {
+    "parameterValues": {
+      "subConditions": [
+        {
+          "parameterValues": {
+          },
+          "type": "loginEventCondition"
+        }
+      ],
+      "operator": "and"
+    },
+    "type": "booleanCondition"
+  },
+  "actions": [
+    {
+      "parameterValues": {
+        "mergeProfilePropertyValue": "eventProperty::target.properties(email)",
+        "mergeProfilePropertyName": "mergeIdentifier"
+      },
+      "type": "mergeProfilesOnPropertyAction"
+    },
+    {
+      "parameterValues": {
+      },
+      "type": "allEventToProfilePropertiesAction"
+    }
+  ]
+}

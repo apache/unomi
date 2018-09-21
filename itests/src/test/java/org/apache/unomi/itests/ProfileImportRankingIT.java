@@ -46,11 +46,9 @@ import java.util.Map;
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileImportRankingIT extends BaseIT {
 
-    @Inject
-    @Filter("(configDiscriminator=IMPORT)")
+    @Inject @Filter(value="(configDiscriminator=IMPORT)", timeout = 60000)
     protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
-
-    @Inject
+    @Inject @Filter(timeout = 60000)
     protected ProfileService profileService;
 
     @Test

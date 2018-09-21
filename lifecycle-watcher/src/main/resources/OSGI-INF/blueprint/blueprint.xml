@@ -36,4 +36,10 @@
         <property name="requiredStartedBundleCount" value="${lifecycle.requiredStartedBundleCount}" />
     </bean>
 
+    <service id="bundleWatcherService" ref="bundleWatcher">
+        <interfaces>
+            <value>org.apache.unomi.lifecycle.BundleWatcher</value>
+        </interfaces>
+    </service>
+
 </blueprint>

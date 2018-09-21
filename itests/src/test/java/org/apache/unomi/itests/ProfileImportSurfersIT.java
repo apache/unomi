@@ -49,14 +49,12 @@ import java.util.Map;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileImportSurfersIT extends BaseIT {
-
-    @Inject
-    @Filter("(configDiscriminator=IMPORT)")
-    protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
-
-    @Inject
-    protected ProfileService profileService;
     private Logger logger = LoggerFactory.getLogger(ProfileImportSurfersIT.class);
+
+    @Inject @Filter(value="(configDiscriminator=IMPORT)", timeout = 60000)
+    protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
+    @Inject @Filter(timeout = 60000)
+    protected ProfileService profileService;
 
     @Test
     public void testImportSurfers() throws IOException, InterruptedException {

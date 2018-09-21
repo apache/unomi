@@ -33,10 +33,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,21 +47,19 @@ import java.util.Map;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileImportBasicIT extends BaseIT {
-
     private Logger logger = LoggerFactory.getLogger(ProfileImportBasicIT.class);
     
-    @Inject
-    @Filter("(configDiscriminator=IMPORT)")
+    @Inject @Filter(value="(configDiscriminator=IMPORT)", timeout = 60000)
     protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
-    @Inject
+    @Inject @Filter(timeout = 60000)
     protected ProfileService profileService;
 
     @Test
     public void testImportBasic() throws IOException, InterruptedException {
-
         /*** Basic Test ***/
         ImportConfiguration importConfiguration = new ImportConfiguration();
-        importConfiguration.setItemId("1-basic-test");
+        String itemId = "1-basic-test";
+        importConfiguration.setItemId(itemId);
         importConfiguration.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_ONESHOT);
         importConfiguration.setMergingProperty("email");
         importConfiguration.setOverwriteExistingProfiles(true);
@@ -70,49 +68,52 @@ public class ProfileImportBasicIT extends BaseIT {
         mapping.put("email", 0);
         mapping.put("firstName", 1);
         mapping.put("lastName", 2);
+        mapping.put("city", 3);
 
         importConfiguration.getProperties().put("mapping", mapping);
         importConfiguration.setActive(true);
 
-        logger.info("Save import config oneshot with ID : {}.", importConfiguration.getItemId());
-
+        logger.info("Save import config oneshot with ID : {}.", itemId);
         importConfigurationService.save(importConfiguration, false);
 
-        //Wait for the csv to be processed
+        // Wait for the config to be processed
         Thread.sleep(5000);
 
-        logger.info("Check import config oneshot with ID : {}.", importConfiguration.getItemId());
-
+        logger.info("Check import config oneshot with ID : {}.", itemId);
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(1, importConfigurations.size());
 
-        String content = "basic1@test.com,Basic1,User1\n" +
-                "basic2@test.com,Basic2,User2\n" +
-                "basic3@test.com,Basic3,User3";
-        File basicFile = new File("data/tmp/unomi_oneshot_import_configs/1-basic-test.csv");
-        basicFile.getParentFile().mkdirs();
-        BufferedWriter out = new BufferedWriter(new FileWriter(basicFile));
-        out.write(content);
-        out.close();
+        // Move the file to the import folder so the import can start
+        File basicFile = new File("data/tmp/1-basic-test.csv");
+        Files.copy(basicFile.toPath(), new File("data/tmp/unomi_oneshot_import_configs/1-basic-test.csv").toPath(), StandardCopyOption.REPLACE_EXISTING);
 
-        logger.info("Write the file {}.", "data/tmp/unomi_oneshot_import_configs/1-basic-test.csv");
-
-        //Wait for the csv to be processed
-        Thread.sleep(75000);
-
-        //Check saved profiles
-        PartialList<Profile> profiles = profileService.findProfilesByPropertyValue("properties.email", "basic1@test.com", 0, 10, null);
-        Assert.assertEquals(3, profileService.getAllProfilesCount());
-        Assert.assertEquals(1, profiles.getList().size());
-        Assert.assertNotNull(profiles.get(0));
-        Assert.assertEquals("Basic1", profiles.get(0).getProperty("firstName"));
-        Assert.assertEquals("User1", profiles.get(0).getProperty("lastName"));
-
-        //Check import config status
-        importConfiguration = importConfigurationService.load("1-basic-test");
+        // Wait for the csv to be processed
+        boolean isDone = false;
+        while (!isDone) {
+            importConfiguration = importConfigurationService.load(itemId);
+            if (importConfiguration != null && importConfiguration.getStatus() != null) {
+                isDone = importConfiguration.getStatus().equals(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS);
+            }
+            Thread.sleep(1000);
+        }
+        // Check import config status
         Assert.assertEquals(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS, importConfiguration.getStatus());
         Assert.assertEquals(1, importConfiguration.getExecutions().size());
 
+        // Check saved profiles
+        PartialList<Profile> profiles = profileService.findProfilesByPropertyValue("properties.city", "oneShotImportCity", 0, 10, null);
+        Assert.assertEquals(3, profiles.getList().size());
+
+        checkProfiles(1);
+        checkProfiles(2);
+        checkProfiles(3);
     }
 
+    private void checkProfiles(int profileNumber) {
+        String propertyValue = "basic" + profileNumber + "@test.com";
+        PartialList<Profile> profiles = profileService.findProfilesByPropertyValue("properties.email", propertyValue, 0, 10, null);
+        Assert.assertNotNull(profiles.get(0));
+        Assert.assertEquals("Basic" + profileNumber, profiles.get(0).getProperty("firstName"));
+        Assert.assertEquals("User" + profileNumber, profiles.get(0).getProperty("lastName"));
+    }
 }

@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "id": "loginEventCondition",
+    "name": "loginEventCondition",
+    "description": "",
+    "systemTags": [
+      "profileTags",
+      "event",
+      "condition",
+      "eventCondition"
+    ],
+    "readOnly": true
+  },
+  "parentCondition": {
+    "type": "eventTypeCondition",
+    "parameterValues": {
+      "eventTypeId": "login"
+    }
+  },
+
+  "parameters": [
+  ]
+}

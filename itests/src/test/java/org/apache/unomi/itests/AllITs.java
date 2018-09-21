@@ -28,7 +28,7 @@ import org.junit.runners.Suite.SuiteClasses;
  */
 @RunWith(Suite.class)
 @SuiteClasses({
-        //BasicIT.class,
+        BasicIT.class,
         ConditionEvaluatorIT.class,
         ConditionESQueryBuilderIT.class,
         SegmentIT.class,

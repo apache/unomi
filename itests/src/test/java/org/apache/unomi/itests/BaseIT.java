@@ -18,6 +18,7 @@
 package org.apache.unomi.itests;
 
 import org.ops4j.pax.exam.Configuration;
+import org.ops4j.pax.exam.CoreOptions;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.karaf.options.LogLevelOption.LogLevel;
 import org.ops4j.pax.exam.options.MavenArtifactUrlReference;
@@ -42,8 +43,10 @@ public abstract class BaseIT {
 
     protected static final String KARAF_DIR = "target/exam";
 
+    protected static final String UNOMI_KEY = "670c26d1cc413346c3b2fd9ce65dab41";
+
     @Configuration
-    public Option[] config() {
+    public Option[] config() throws InterruptedException {
         MavenArtifactUrlReference karafUrl = maven()
                 .groupId("org.apache.karaf")
                 .artifactId("apache-karaf")
@@ -86,15 +89,17 @@ public abstract class BaseIT {
                 .classifier("features")
                 .type("xml")
                 .versionAsInProject();
-        
+
         return new Option[]{
-                debugConfiguration("5005", false),
+                debugConfiguration("5006", false),
                 karafDistributionConfiguration()
                         .frameworkUrl(karafUrl)
                         .unpackDirectory(new File(KARAF_DIR))
                         .useDeployFolder(true),
                 replaceConfigurationFile("etc/org.apache.unomi.router.cfg", new File(
                         "src/test/resources/org.apache.unomi.router.cfg")),
+                replaceConfigurationFile("data/tmp/1-basic-test.csv", new File(
+                        "src/test/resources/1-basic-test.csv")),
                 replaceConfigurationFile("data/tmp/recurrent_import/2-surfers-test.csv", new File(
                         "src/test/resources/2-surfers-test.csv")),
                 replaceConfigurationFile("data/tmp/recurrent_import/3-surfers-overwrite-test.csv", new File(
@@ -105,6 +110,10 @@ public abstract class BaseIT {
                         "src/test/resources/5-ranking-test.csv")),
                 replaceConfigurationFile("data/tmp/recurrent_import/6-actors-test.csv", new File(
                         "src/test/resources/6-actors-test.csv")),
+                replaceConfigurationFile("data/tmp/testLogin.json", new File(
+                        "src/test/resources/testLogin.json")),
+                replaceConfigurationFile("data/tmp/testLoginEventCondition.json", new File(
+                        "src/test/resources/testLoginEventCondition.json")),
                 keepRuntimeFolder(),
                 configureConsole().ignoreLocalConsole(),
                 logLevel(LogLevel.INFO),
@@ -121,7 +130,9 @@ public abstract class BaseIT {
                 features(karafCxfRepo, "cxf"),
                 features(karafCellarRepo, "cellar"),
                 features(contextServerRepo, "unomi-kar"),
-                features(routerRepo, "unomi-router-karaf-feature")
+                features(routerRepo, "unomi-router-karaf-feature"),
+                CoreOptions.bundleStartLevel(100),
+                CoreOptions.frameworkStartLevel(100)
         };
     }
 }

@@ -66,7 +66,7 @@ public class ModifyConsentIT extends BaseIT {
     public void testConsentGrant() throws InterruptedException {
         Profile profile = profileService.load(PROFILE_TEST_ID);
         Assert.assertNotNull(profile);
-        Assert.assertTrue(profile.getConsents().size() == 0);
+        Assert.assertEquals(0, profile.getConsents().size());
 
         Event modifyConsentEvent = new Event("modifyConsent", null, profile, null, null, profile, new Date());
         modifyConsentEvent.setPersistent(false);
@@ -92,7 +92,7 @@ public class ModifyConsentIT extends BaseIT {
 
         profile = profileService.load(PROFILE_TEST_ID);
 
-        Assert.assertTrue(profile.getConsents().size() == 2);
+        Assert.assertEquals(2, profile.getConsents().size());
 
     }
 }

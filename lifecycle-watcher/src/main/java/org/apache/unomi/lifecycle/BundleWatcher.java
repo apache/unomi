@@ -176,7 +176,7 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
         }
     }
 
-    private boolean isStartupComplete() {
+    public boolean isStartupComplete() {
         if (unomiStartedBundleCount < requiredStartedBundleCount) {
             return false;
         }
