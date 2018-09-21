@@ -39,69 +39,19 @@ import java.util.List;
 import java.util.UUID;
 
 public class MergeProfilesOnPropertyAction implements ActionExecutor {
-
     private static final Logger logger = LoggerFactory.getLogger(MergeProfilesOnPropertyAction.class.getName());
 
-    private String profileIdCookieName = "context-profile-id";
-    private String profileIdCookieDomain;
-    private int profileIdCookieMaxAgeInSeconds;
-
     private ProfileService profileService;
-
     private PersistenceService persistenceService;
-
     private EventService eventService;
-
     private DefinitionsService definitionsService;
-
     private PrivacyService privacyService;
-
     private ConfigSharingService configSharingService;
 
-    public void setProfileIdCookieName(String profileIdCookieName) {
-        this.profileIdCookieName = profileIdCookieName;
-    }
-
-    public void setProfileService(ProfileService profileService) {
-        this.profileService = profileService;
-    }
-
-    public PersistenceService getPersistenceService() {
-        return persistenceService;
-    }
-
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
-    }
-
-    public EventService getEventService() {
-        return eventService;
-    }
-
-    public void setEventService(EventService eventService) {
-        this.eventService = eventService;
-    }
-
-    public DefinitionsService getDefinitionsService() {
-        return definitionsService;
-    }
-
-    public void setPrivacyService(PrivacyService privacyService) {
-        this.privacyService = privacyService;
-    }
-
-    public void setDefinitionsService(DefinitionsService definitionsService) {
-        this.definitionsService = definitionsService;
-    }
-
-    public void setConfigSharingService(ConfigSharingService configSharingService) {
-        this.configSharingService = configSharingService;
-    }
-
     public int execute(Action action, Event event) {
-        profileIdCookieName = (String) configSharingService.getProperty("profileIdCookieName");
-        profileIdCookieDomain = (String) configSharingService.getProperty("profileIdCookieDomain");
-        profileIdCookieMaxAgeInSeconds = (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds");
+        String profileIdCookieName = (String) configSharingService.getProperty("profileIdCookieName");
+        String profileIdCookieDomain = (String) configSharingService.getProperty("profileIdCookieDomain");
+        Integer profileIdCookieMaxAgeInSeconds = (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds");
 
         Profile profile = event.getProfile();
         if (profile instanceof Persona || profile.isAnonymousProfile()) {
@@ -141,7 +91,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         final List<Profile> profiles = persistenceService.query(c, "properties.firstVisit", Profile.class);
 
         // Check if the user switched to another profile
-        if (!StringUtils.isEmpty(mergeProfilePreviousPropertyValue) && !mergeProfilePreviousPropertyValue.equals(mergeProfilePropertyValue)) {
+        if (StringUtils.isNotEmpty(mergeProfilePreviousPropertyValue) && !mergeProfilePreviousPropertyValue.equals(mergeProfilePropertyValue)) {
             if (profiles.size() > 0) {
                 // Take existing profile
                 profile = profiles.get(0);
@@ -189,10 +139,12 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             // Profile has changed
             if (!masterProfile.getItemId().equals(profileId)) {
                 HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
-                // we still send back the current profile cookie. It will be changed on the next request to the ContextServlet. The current profile will be deleted only then because we cannot delete it right now (too soon)
-                sendProfileCookie(currentSession.getProfile(), httpServletResponse, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
-                final String masterProfileId = masterProfile.getItemId();
+                // we still send back the current profile cookie. It will be changed on the next request to the ContextServlet.
+                // The current profile will be deleted only then because we cannot delete it right now (too soon)
+                sendProfileCookie(currentSession.getProfile(), httpServletResponse,
+                        profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
 
+                final String masterProfileId = masterProfile.getItemId();
                 // At the end of the merge, we must set the merged profile as profile event to process other Actions
                 event.setProfileId(masterProfileId);
                 event.setProfile(masterProfile);
@@ -201,6 +153,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                 if (privacyService.isRequireAnonymousBrowsing(profile)) {
                     privacyService.setRequireAnonymousBrowsing(masterProfileId, true, event.getScope());
                 }
+
                 final Boolean anonymousBrowsing = privacyService.isRequireAnonymousBrowsing(masterProfileId);
                 if (anonymousBrowsing) {
                     currentSession.setProfile(privacyService.getAnonymousProfile(masterProfile));
@@ -260,6 +213,30 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                 httpServletResponse.addCookie(profileIdCookie);
             }
         }
+    }
+
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
+    }
+
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
+
+    public void setEventService(EventService eventService) {
+        this.eventService = eventService;
+    }
+
+    public void setPrivacyService(PrivacyService privacyService) {
+        this.privacyService = privacyService;
+    }
+
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
+    }
+
+    public void setConfigSharingService(ConfigSharingService configSharingService) {
+        this.configSharingService = configSharingService;
     }
 
 }

@@ -32,6 +32,12 @@ import java.util.Map;
 
 public class HttpUtils {
 
+    /**
+     * Setup CORS headers as soon as possible so that errors are not misconstrued on the client for CORS errors
+     * @param httpServletRequest
+     * @param response
+     * @throws IOException
+     */
     public static void setupCORSHeaders(HttpServletRequest httpServletRequest, ServletResponse response) throws IOException {
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;

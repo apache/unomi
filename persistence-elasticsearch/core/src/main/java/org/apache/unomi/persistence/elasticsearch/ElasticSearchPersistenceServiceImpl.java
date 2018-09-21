@@ -692,11 +692,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String source = ESCustomObjectMapper.getObjectMapper().writeValueAsString(item);
                     String itemType = item.getItemType();
-                    putInCache(item.getItemId(), item);
+                    String itemId = item.getItemId();
+                    putInCache(itemId, item);
                     String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
                             (itemsMonthlyIndexed.contains(itemType) ? getMonthlyIndexName(((TimestampedItem) item).getTimeStamp()) : indexName);
-                    IndexRequestBuilder indexBuilder = client.prepareIndex(index, itemType, item.getItemId())
-                            .setSource(source);
+                    IndexRequestBuilder indexBuilder = client.prepareIndex(index, itemType, itemId)
+                            .setSource(source, XContentType.JSON);
                     if (routingByType.containsKey(itemType)) {
                         indexBuilder = indexBuilder.setRouting(routingByType.get(itemType));
                     }
@@ -708,6 +709,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             bulkProcessor.add(indexBuilder.request());
                         }
                     } catch (IndexNotFoundException e) {
+                        logger.error("Could not find index {}, could not register item type {} with id {} ",
+                                index, itemType, itemId, e);
+                        return false;
                     }
                     return true;
                 } catch (IOException e) {
@@ -1172,7 +1176,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     logger.info("Saving query : " + queryName);
                     client.prepareIndex(indexName, ".percolator", queryName)
-                            .setSource(query)
+                            .setSource(query, XContentType.JSON)
                             .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
                             .execute().actionGet();
                     return true;

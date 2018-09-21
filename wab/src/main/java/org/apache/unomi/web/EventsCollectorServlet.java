@@ -30,20 +30,19 @@ import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
-import java.util.List;
 import java.util.UUID;
 
 public class EventsCollectorServlet extends HttpServlet {
+    private static final long serialVersionUID = 2008054804885122957L;
     private static final Logger logger = LoggerFactory.getLogger(EventsCollectorServlet.class.getName());
 
-    private static final long serialVersionUID = 2008054804885122957L;
+    private String profileIdCookieName = "context-profile-id";
 
     private EventService eventService;
     private ProfileService profileService;
@@ -63,13 +62,11 @@ public class EventsCollectorServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-
         doEvent(req, resp);
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-
         doEvent(req, resp);
     }
 
@@ -89,30 +86,34 @@ public class EventsCollectorServlet extends HttpServlet {
         HttpUtils.setupCORSHeaders(request, response);
 
         String payload = HttpUtils.getPayload(request);
-        if (payload == null){
+        if (payload == null) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
             logger.error("No event payload found for request, aborting !");
             return;
         }
 
         ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
         JsonFactory factory = mapper.getFactory();
-        EventsCollectorRequest events = null;
+        EventsCollectorRequest eventsCollectorRequest;
         try {
-            events = mapper.readValue(factory.createParser(payload), EventsCollectorRequest.class);
+            eventsCollectorRequest = mapper.readValue(factory.createParser(payload), EventsCollectorRequest.class);
         } catch (Exception e) {
-            logger.error("Cannot read payload " + payload,e);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
+            logger.error("Cannot read payload " + payload, e);
             return;
         }
-        if (events == null || events.getEvents() == null) {
+        if (eventsCollectorRequest == null || eventsCollectorRequest.getEvents() == null) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
             logger.error("No events found in payload");
             return;
         }
 
-        String sessionId = events.getSessionId();
+        String sessionId = eventsCollectorRequest.getSessionId();
         if (sessionId == null) {
             sessionId = request.getParameter("sessionId");
         }
         if (sessionId == null) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
             logger.error("No sessionId found in incoming request, aborting processing. See debug level for more information");
             if (logger.isDebugEnabled()) {
                 logger.debug("Request dump:" + HttpUtils.dumpRequestInfo(request));
@@ -121,12 +122,11 @@ public class EventsCollectorServlet extends HttpServlet {
         }
 
         Session session = profileService.loadSession(sessionId, timestamp);
-        Profile sessionProfile;
         Profile profile = null;
         if (session == null) {
             String scope = "systemscope";
             // Get the first available scope that is not equal to systemscope to create the session otherwise systemscope will be used
-            for (Event event : events.getEvents()) {
+            for (Event event : eventsCollectorRequest.getEvents()) {
                 if (StringUtils.isNotBlank(event.getEventType())) {
                     if (StringUtils.isNotBlank(event.getScope()) && !event.getScope().equals("systemscope")) {
                         scope = event.getScope();
@@ -147,70 +147,35 @@ public class EventsCollectorServlet extends HttpServlet {
             if (logger.isDebugEnabled()) {
                 logger.debug("No session found for sessionId={}, creating new session!", sessionId);
             }
-            sessionProfile = session.getProfile();
         } else {
-            String profileIdCookieName = "context-profile-id";
-
-            sessionProfile = session.getProfile();
+            Profile sessionProfile = session.getProfile();
             if (sessionProfile.getItemId() != null) {
                 // Reload up-to-date profile
                 profile = profileService.load(sessionProfile.getItemId());
                 if (profile == null || profile instanceof Persona) {
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
                     logger.error("No valid profile found or persona found for profileId={}, aborting request !", session.getProfileId());
                     return;
                 }
             } else {
                 // Session uses anonymous profile, try to find profile from cookie
-                Cookie[] cookies = request.getCookies();
-                if (cookies != null) {
-                    for (Cookie cookie : cookies) {
-                        if (profileIdCookieName.equals(cookie.getName())) {
-                            profile = profileService.load(cookie.getValue());
-                        }
-                    }
+                String cookieProfileId = ServletCommon.getProfileIdCookieValue(request, profileIdCookieName);
+                if (StringUtils.isNotBlank(cookieProfileId)) {
+                    profile = profileService.load(cookieProfileId);
                 }
+
                 if (profile == null) {
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
                     logger.error("No valid profile found or persona found for profileId={}, aborting request !", session.getProfileId());
                     return;
                 }
             }
         }
 
-        String thirdPartyId = eventService.authenticateThirdPartyServer(((HttpServletRequest)request).getHeader("X-Unomi-Peer"), request.getRemoteAddr());
-
-        int changes = 0;
-
-        List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile);
-
-        for (Event event : events.getEvents()){
-            if(event.getEventType() != null){
-                Event eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(),
-                        event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
-                if (sessionProfile.isAnonymousProfile()) {
-                    // Do not keep track of profile in event
-                    eventToSend.setProfileId(null);
-                }
-
-                if (!eventService.isEventAllowed(event, thirdPartyId)) {
-                    logger.warn("Event is not allowed : {}", event.getEventType());
-                    continue;
-                }
-                if (filteredEventTypes != null && filteredEventTypes.contains(event.getEventType())) {
-                    logger.debug("Profile is filtering event type {}", event.getEventType());
-                    continue;
-                }
-
-                eventToSend.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
-                eventToSend.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                logger.debug("Received event " + event.getEventType() + " for profile=" + sessionProfile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
-                int eventChanged = eventService.send(eventToSend);
-                //if the event execution changes the profile
-                if ((eventChanged & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
-                    profile = eventToSend.getProfile();
-                }
-                changes |= eventChanged;
-            }
-        }
+        Changes changesObject = ServletCommon.handleEvents(eventsCollectorRequest.getEvents(), session, profile, request, response,
+                timestamp, privacyService, eventService);
+        int changes = changesObject.getChangeType();
+        profile = changesObject.getProfile();
 
         if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
             profileService.save(profile);
@@ -235,5 +200,9 @@ public class EventsCollectorServlet extends HttpServlet {
 
     public void setPrivacyService(PrivacyService privacyService) {
         this.privacyService = privacyService;
+    }
+
+    public void setProfileIdCookieName(String profileIdCookieName) {
+        this.profileIdCookieName = profileIdCookieName;
     }
 }

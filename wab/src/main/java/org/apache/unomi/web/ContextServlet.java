@@ -20,8 +20,8 @@ package org.apache.unomi.web;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.*;
-import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.slf4j.Logger;
@@ -31,7 +31,6 @@ import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -44,22 +43,23 @@ import java.util.*;
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
  */
 public class ContextServlet extends HttpServlet {
-    public static final String BASE_SCRIPT_LOCATION = "/javascript/base.js";
-    public static final String IMPERSONATE_BASE_SCRIPT_LOCATION = "/javascript/impersonateBase.js";
-    public static final String PROFILE_OVERRIDE_MARKER = "---IGNORE---";
-    private static final Logger logger = LoggerFactory.getLogger(ContextServlet.class.getName());
     private static final long serialVersionUID = 2928875830103325238L;
+    private static final Logger logger = LoggerFactory.getLogger(ContextServlet.class.getName());
+
+    private static final String BASE_SCRIPT_LOCATION = "/javascript/base.js";
+    private static final String IMPERSONATE_BASE_SCRIPT_LOCATION = "/javascript/impersonateBase.js";
+    private static final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365; // 1 year
+
+    private String profileIdCookieName = "context-profile-id";
+    private String profileIdCookieDomain;
+    private int profileIdCookieMaxAgeInSeconds = MAX_COOKIE_AGE_IN_SECONDS;
+
     private ProfileService profileService;
     private EventService eventService;
     private RulesService rulesService;
     private PrivacyService privacyService;
     private PersonalizationService personalizationService;
     private ConfigSharingService configSharingService;
-
-    private String profileIdCookieName = "context-profile-id";
-    private String profileIdCookieDomain;
-    private static final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365; // 1 year
-    private int profileIdCookieMaxAgeInSeconds = MAX_COOKIE_AGE_IN_SECONDS;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -71,39 +71,30 @@ public class ContextServlet extends HttpServlet {
     }
 
     @Override
-    public void service(ServletRequest request, ServletResponse response) throws ServletException, IOException {
+    public void service(ServletRequest request, ServletResponse response) throws IOException {
         final Date timestamp = new Date();
         if (request.getParameter("timestamp") != null) {
             timestamp.setTime(Long.parseLong(request.getParameter("timestamp")));
         }
 
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
-        String httpMethod = httpServletRequest.getMethod();
 
         // set up CORS headers as soon as possible so that errors are not misconstrued on the client for CORS errors
         HttpUtils.setupCORSHeaders(httpServletRequest, response);
 
+        // Handle OPTIONS request
+        String httpMethod = httpServletRequest.getMethod();
         if ("options".equals(httpMethod.toLowerCase())) {
             response.flushBuffer();
-            logger.debug("OPTIONS request received. No context will be returned.");
+            if (logger.isDebugEnabled()) {
+                logger.debug("OPTIONS request received. No context will be returned.");
+            }
             return;
         }
 
+        // Handle persona
         Profile profile = null;
-        Profile sessionProfile = null;
-
-        String cookieProfileId = null;
-        Cookie[] cookies = httpServletRequest.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if (profileIdCookieName.equals(cookie.getName())) {
-                    cookieProfileId = cookie.getValue();
-                }
-            }
-        }
-
         Session session = null;
-
         String personaId = request.getParameter("personaId");
         if (personaId != null) {
             PersonaWithSessions personaWithSessions = profileService.loadPersonaWithSessions(personaId);
@@ -116,6 +107,7 @@ public class ContextServlet extends HttpServlet {
             }
         }
 
+        // Extract payload
         ContextRequest contextRequest = null;
         String scope = null;
         String sessionId = null;
@@ -139,25 +131,26 @@ public class ContextServlet extends HttpServlet {
         if (sessionId == null) {
             sessionId = request.getParameter("sessionId");
         }
-        boolean invalidateSession = request.getParameter("invalidateSession")!=null?new Boolean(request.getParameter("invalidateSession")):false;
-        boolean invalidateProfile = request.getParameter("invalidateProfile")!=null?new Boolean(request.getParameter("invalidateProfile")):false;
+
+        // Get profile id from the cookie
+        String cookieProfileId = ServletCommon.getProfileIdCookieValue(httpServletRequest, profileIdCookieName);
 
         if (cookieProfileId == null && sessionId == null && personaId == null) {
             ((HttpServletResponse)response).sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
             logger.error("Couldn't find cookieProfileId, sessionId or personaId in incoming request! Stopped processing request. See debug level for more information");
             if (logger.isDebugEnabled()) {
-                logger.debug("Request dump:" + HttpUtils.dumpRequestInfo(httpServletRequest));
+                logger.debug("Request dump: {}", HttpUtils.dumpRequestInfo(httpServletRequest));
             }
             return;
         }
 
-
         int changes = EventService.NO_CHANGE;
-
         if (profile == null) {
+            // Not a persona, resolve profile now
             boolean profileCreated = false;
 
-            // Not a persona, resolve profile now
+            boolean invalidateProfile = request.getParameter("invalidateProfile") != null ?
+                    new Boolean(request.getParameter("invalidateProfile")) : false;
             if (cookieProfileId == null || invalidateProfile) {
                 // no profileId cookie was found or the profile has to be invalidated, we generate a new one and create the profile in the profile service
                 profile = createNewProfile(null, response, timestamp);
@@ -170,41 +163,48 @@ public class ContextServlet extends HttpServlet {
                     profile = createNewProfile(null, response, timestamp);
                     profileCreated = true;
                 } else {
-                    profile = checkMergedProfile(response, profile, session);
+                    Changes changesObject = checkMergedProfile(response, profile, session);
+                    changes |= changesObject.getChangeType();
+                    profile = changesObject.getProfile();
                 }
             }
 
-            if (sessionId != null && sessionId.trim().length() > 0) {
+            Profile sessionProfile;
+            boolean invalidateSession = request.getParameter("invalidateSession") != null ?
+                    new Boolean(request.getParameter("invalidateSession")) : false;
+            if (StringUtils.isNotBlank(sessionId) && !invalidateSession) {
                 session = profileService.loadSession(sessionId, timestamp);
                 if (session != null) {
                     sessionProfile = session.getProfile();
-                    boolean anonymousProfile = sessionProfile.isAnonymousProfile();
 
-                    if (!profile.isAnonymousProfile() && !anonymousProfile && !profile.getItemId().equals(sessionProfile.getItemId())) {
-                        // Session user has been switched, profile id in cookie is not uptodate
-                        profile = sessionProfile;
+                    boolean anonymousSessionProfile = sessionProfile.isAnonymousProfile();
+                    if (!profile.isAnonymousProfile() && !anonymousSessionProfile && !profile.getItemId().equals(sessionProfile.getItemId())) {
+                        // Session user has been switched, profile id in cookie is not up to date
+                        // We must reload the profile with the session ID as some properties could be missing from the session profile
+                        // #personalIdentifier
+                        profile = profileService.load(sessionProfile.getItemId());
                         HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
                     }
 
+                    // Handle anonymous situation
                     Boolean requireAnonymousBrowsing = privacyService.isRequireAnonymousBrowsing(profile);
-
-                    if (requireAnonymousBrowsing && anonymousProfile) {
+                    if (requireAnonymousBrowsing && anonymousSessionProfile) {
                         // User wants to browse anonymously, anonymous profile is already set.
-                    } else if (requireAnonymousBrowsing && !anonymousProfile) {
+                    } else if (requireAnonymousBrowsing && !anonymousSessionProfile) {
                         // User wants to browse anonymously, update the sessionProfile to anonymous profile
                         sessionProfile = privacyService.getAnonymousProfile(profile);
                         session.setProfile(sessionProfile);
-                        changes = EventService.SESSION_UPDATED;
-                    } else if (!requireAnonymousBrowsing && anonymousProfile) {
+                        changes |= EventService.SESSION_UPDATED;
+                    } else if (!requireAnonymousBrowsing && anonymousSessionProfile) {
                         // User does not want to browse anonymously anymore, update the sessionProfile to real profile
                         sessionProfile = profile;
                         session.setProfile(sessionProfile);
-                        changes = EventService.SESSION_UPDATED;
-                    } else if (!requireAnonymousBrowsing && !anonymousProfile) {
+                        changes |= EventService.SESSION_UPDATED;
+                    } else if (!requireAnonymousBrowsing && !anonymousSessionProfile) {
                         // User does not want to browse anonymously, use the real profile. Check that session contains the current profile.
                         sessionProfile = profile;
                         if (!session.getProfileId().equals(sessionProfile.getItemId())) {
-                            changes = EventService.SESSION_UPDATED;
+                            changes |= EventService.SESSION_UPDATED;
                         }
                         session.setProfile(sessionProfile);
                     }
@@ -215,7 +215,7 @@ public class ContextServlet extends HttpServlet {
                 sessionProfile = privacyService.isRequireAnonymousBrowsing(profile) ? privacyService.getAnonymousProfile(profile) : profile;
                 session = new Session(sessionId, sessionProfile, timestamp, scope);
 
-                if (sessionId != null && sessionId.trim().length() > 0) {
+                if (StringUtils.isNotBlank(sessionId)) {
                     // Only save session and send event if a session id was provided, otherwise keep transient session
                     changes |= EventService.SESSION_UPDATED;
                     Event event = new Event("sessionCreated", session, profile, scope, null, session, timestamp);
@@ -225,7 +225,10 @@ public class ContextServlet extends HttpServlet {
                     }
                     event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                    logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Received event {} for profile={} session={} target={} timestamp={}",
+                                event.getEventType(), profile.getItemId(), session.getItemId(), event.getTarget(), timestamp);
+                    }
                     changes |= eventService.send(event);
                 }
             }
@@ -238,35 +241,40 @@ public class ContextServlet extends HttpServlet {
                 profileUpdated.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                 profileUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
 
-                logger.debug("Received event {} for profile={} {} target={} timestamp={}", profileUpdated.getEventType(), profile.getItemId(),
-                        session != null ? " session=" + session.getItemId() : "", profileUpdated.getTarget(), timestamp);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Received event {} for profile={} {} target={} timestamp={}", profileUpdated.getEventType(), profile.getItemId(),
+                            " session=" + session.getItemId(), profileUpdated.getTarget(), timestamp);
+                }
                 changes |= eventService.send(profileUpdated);
             }
         }
 
-        ContextResponse data = new ContextResponse();
-        data.setProfileId(profile.getItemId());
+        ContextResponse contextResponse = new ContextResponse();
+        contextResponse.setProfileId(profile.getItemId());
         if (session != null) {
-            data.setSessionId(session.getItemId());
+            contextResponse.setSessionId(session.getItemId());
         } else if (sessionId != null) {
-            data.setSessionId(sessionId);
+            contextResponse.setSessionId(sessionId);
         }
 
-        if (contextRequest != null){
-            changes |= handleRequest(contextRequest, profile, session, data, request, response, timestamp);
+        if (contextRequest != null) {
+            Changes changesObject = handleRequest(contextRequest, session, profile, contextResponse, request, response, timestamp);
+            changes |= changesObject.getChangeType();
+            profile = changesObject.getProfile();
         }
 
         if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
             profileService.save(profile);
+            contextResponse.setProfileId(profile.getItemId());
         }
         if ((changes & EventService.SESSION_UPDATED) == EventService.SESSION_UPDATED && session != null) {
             profileService.saveSession(session);
+            contextResponse.setSessionId(session.getItemId());
         }
-
 
         String extension = httpServletRequest.getRequestURI().substring(httpServletRequest.getRequestURI().lastIndexOf(".") + 1);
         boolean noScript = "json".equals(extension);
-        String contextAsJSONString = CustomObjectMapper.getObjectMapper().writeValueAsString(data);
+        String contextAsJSONString = CustomObjectMapper.getObjectMapper().writeValueAsString(contextResponse);
         Writer responseWriter;
         response.setCharacterEncoding("UTF-8");
         if (noScript) {
@@ -288,108 +296,85 @@ public class ContextServlet extends HttpServlet {
         responseWriter.flush();
     }
 
-    private Profile checkMergedProfile(ServletResponse response, Profile profile, Session session) {
+    private Changes checkMergedProfile(ServletResponse response, Profile profile, Session session) {
+        int changes = EventService.NO_CHANGE;
         if (profile.getMergedWith() != null && !privacyService.isRequireAnonymousBrowsing(profile) && !profile.isAnonymousProfile()) {
-            String profileId = profile.getMergedWith();
-            Profile profileToDelete = profile;
-            profile = profileService.load(profileId);
-            if (profile != null) {
-                logger.debug("Session profile was merged with profile " + profileId + ", replacing profile in session");
+            Profile currentProfile = profile;
+            String masterProfileId = profile.getMergedWith();
+            Profile masterProfile = profileService.load(masterProfileId);
+            if (masterProfile != null) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Current profile was merged with profile {}, replacing profile in session", masterProfileId);
+                }
+                profile = masterProfile;
                 if (session != null) {
                     session.setProfile(profile);
-                    profileService.saveSession(session);
+                    changes = EventService.SESSION_UPDATED;
                 }
                 HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
             } else {
-                logger.warn("Couldn't find merged profile" + profileId + ", falling back to profile " + profileToDelete.getItemId());
-                profile = profileToDelete;
+                logger.warn("Couldn't find merged profile {}, falling back to profile {}", masterProfileId, currentProfile.getItemId());
+                profile = currentProfile;
                 profile.setMergedWith(null);
-                profileService.save(profile);
+                changes = EventService.PROFILE_UPDATED;
             }
         }
 
-        return profile;
+        return new Changes(changes, profile);
     }
 
-    private int handleRequest(ContextRequest contextRequest, Profile profile, Session session, ContextResponse data, ServletRequest request, ServletResponse response, Date timestamp)
-            throws IOException {
-        List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile);
+    private Changes handleRequest(ContextRequest contextRequest, Session session, Profile profile, ContextResponse data,
+                                ServletRequest request, ServletResponse response, Date timestamp) {
+        Changes changes = ServletCommon.handleEvents(contextRequest.getEvents(), session, profile, request, response, timestamp,
+                privacyService, eventService);
 
-        String thirdPartyId = eventService.authenticateThirdPartyServer(((HttpServletRequest)request).getHeader("X-Unomi-Peer"), request.getRemoteAddr());
-
-        int changes = EventService.NO_CHANGE;
-        // execute provided events if any
-        if(contextRequest.getEvents() != null && !(profile instanceof Persona)) {
-            for (Event event : contextRequest.getEvents()){
-                if(event.getEventType() != null) {
-                    Profile sessionProfile = session.getProfile();
-                    Event eventToSend = new Event(event.getEventType(), session, sessionProfile, contextRequest.getSource().getScope(),
-                            event.getSource(), event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
-                    if (!eventService.isEventAllowed(event, thirdPartyId)) {
-                        logger.debug("Event is not allowed : {}", event.getEventType());
-                        continue;
-                    }
-                    if (filteredEventTypes != null && filteredEventTypes.contains(event.getEventType())) {
-                        logger.debug("Profile is filtering event type {}", event.getEventType());
-                        continue;
-                    }
-                    if (sessionProfile.isAnonymousProfile()) {
-                        // Do not keep track of profile in event
-                        event.setProfileId(null);
-                    }
-
-                    event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
-                    event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                    logger.debug("Received event " + event.getEventType() + " for profile=" + session.getProfileId() + " session=" + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
-                    changes |= eventService.send(eventToSend);
-                }
-            }
-        }
+        profile = changes.getProfile();
 
         if (contextRequest.isRequireSegments()) {
             data.setProfileSegments(profile.getSegments());
         }
 
         if (contextRequest.getRequiredProfileProperties() != null) {
-            Map<String, Object> profileProperties = new HashMap<String, Object>(profile.getProperties());
+            Map<String, Object> profileProperties = new HashMap<>(profile.getProperties());
             if (!contextRequest.getRequiredProfileProperties().contains("*")) {
                 profileProperties.keySet().retainAll(contextRequest.getRequiredProfileProperties());
             }
             data.setProfileProperties(profileProperties);
         }
-        if (session != null) {
-            data.setSessionId(session.getItemId());
-            if (contextRequest.getRequiredSessionProperties() != null) {
-                Map<String, Object> sessionProperties = new HashMap<String, Object>(session.getProperties());
-                if (!contextRequest.getRequiredSessionProperties().contains("*")) {
-                    sessionProperties.keySet().retainAll(contextRequest.getRequiredSessionProperties());
-                }
-                data.setSessionProperties(sessionProperties);
+
+        data.setSessionId(session.getItemId());
+        if (contextRequest.getRequiredSessionProperties() != null) {
+            Map<String, Object> sessionProperties = new HashMap<>(session.getProperties());
+            if (!contextRequest.getRequiredSessionProperties().contains("*")) {
+                sessionProperties.keySet().retainAll(contextRequest.getRequiredSessionProperties());
             }
+            data.setSessionProperties(sessionProperties);
         }
 
         processOverrides(contextRequest, profile, session);
 
         List<PersonalizationService.PersonalizedContent> filterNodes = contextRequest.getFilters();
         if (filterNodes != null) {
-            data.setFilteringResults(new HashMap<String, Boolean>());
+            data.setFilteringResults(new HashMap<>());
             for (PersonalizationService.PersonalizedContent personalizedContent : filterNodes) {
-                data.getFilteringResults().put(personalizedContent.getId(), personalizationService.filter(profile, session, personalizedContent));
+                data.getFilteringResults().put(personalizedContent.getId(), personalizationService.filter(profile,
+                        session, personalizedContent));
             }
         }
 
         List<PersonalizationService.PersonalizationRequest> personalizations = contextRequest.getPersonalizations();
         if (personalizations != null) {
-            data.setPersonalizations(new HashMap<String, List<String>>());
+            data.setPersonalizations(new HashMap<>());
             for (PersonalizationService.PersonalizationRequest personalization : personalizations) {
-                data.getPersonalizations().put(personalization.getId(), personalizationService.personalizeList(profile, session, personalization));
+                data.getPersonalizations().put(personalization.getId(), personalizationService.personalizeList(profile,
+                        session, personalization));
             }
         }
 
-        if(!(profile instanceof Persona)) {
+        if (!(profile instanceof Persona)) {
             data.setTrackedConditions(rulesService.getTrackedConditions(contextRequest.getSource()));
         } else {
-            data.setTrackedConditions(Collections.<Condition>emptySet());
+            data.setTrackedConditions(Collections.emptySet());
         }
 
         data.setAnonymousBrowsing(privacyService.isRequireAnonymousBrowsing(profile));
@@ -410,16 +395,16 @@ public class ContextServlet extends HttpServlet {
     private void processOverrides(ContextRequest contextRequest, Profile profile, Session session) {
         if (profile instanceof Persona) {
             if (contextRequest.getProfileOverrides() != null) {
-                if(contextRequest.getProfileOverrides().getScores()!=null){
+                if (contextRequest.getProfileOverrides().getScores()!=null) {
                     profile.setScores(contextRequest.getProfileOverrides().getScores());
                 }
-                if(contextRequest.getProfileOverrides().getSegments()!=null){
+                if (contextRequest.getProfileOverrides().getSegments()!=null) {
                     profile.setSegments(contextRequest.getProfileOverrides().getSegments());
                 }
-                if(contextRequest.getProfileOverrides().getProperties()!=null){
+                if (contextRequest.getProfileOverrides().getProperties()!=null) {
                     profile.setProperties(contextRequest.getProfileOverrides().getProperties());
                 }
-                if(contextRequest.getSessionPropertiesOverrides()!=null){
+                if (contextRequest.getSessionPropertiesOverrides()!=null) {
                     session.setProperties(contextRequest.getSessionPropertiesOverrides());
                 }
             }
