@@ -30,14 +30,40 @@
             scope: 'realEstateManager',
             url: 'http://localhost:8181'
         };
-        // Copy snippet from snippet.min.js :
-        window.unomiTracker||(window.unomiTracker={}),function(){for(var e=[],r=["trackSubmit","trackClick","trackLink","trackForm","initialize","pageview","identify","reset","group","track","ready","alias","debug","page","once","off","on"],n=0;n<r.length;n++){var t=r[n];window.unomiTracker[t]=function(r){return function(){var n=Array.prototype.slice.call(arguments);return n.unshift(r),e.push(n),window.unomiTracker}}(t)}unomiTracker.load=function(e,r){var n=document.createElement("script");n.type="text/javascript",n.async=!0,n.src=r.url+"/tracker/javascript/unomi-tracker.min.js",n.addEventListener?n.addEventListener("load",function(r){"function"==typeof e&&e(r)},!1):n.onreadystatechange=function(){"complete"!=this.readyState&&"loaded"!=this.readyState||e(window.event)};var t=document.getElementsByTagName("script")[0];t.parentNode.insertBefore(n,t)},unomiTracker.load(function(r){for(unomiTracker.initialize({"Apache Unomi":r});e.length>0;){var n=e.shift(),t=n.shift();unomiTracker[t]&&unomiTracker[t].apply(unomiTracker,n)}},unomiOption),unomiTracker.page()}();
-
-    </script>
-
-
+        window.unomiTracker||(window.unomiTracker={}),function(){for(var e=[],r=["trackSubmit","trackClick","trackLink","trackForm","initialize","pageview","identify","reset","group","track","ready","alias","debug","page","once","off","on","personalize"],n=0;n<r.length;n++){var t=r[n];window.unomiTracker[t]=function(r){return function(){var n=Array.prototype.slice.call(arguments);return n.unshift(r),e.push(n),window.unomiTracker}}(t)}unomiTracker.load=function(e,r){var n=document.createElement("script");n.type="text/javascript",n.async=!0,n.src=r.url+"/tracker/unomi-tracker.min.js",n.addEventListener?n.addEventListener("load",function(r){"function"==typeof e&&e(r)},!1):n.onreadystatechange=function(){"complete"!=this.readyState&&"loaded"!=this.readyState||e(window.event)};var t=document.getElementsByTagName("script")[0];t.parentNode.insertBefore(n,t)},unomiTracker.load(function(r){for(unomiTracker.initialize({"Apache Unomi":r});e.length>0;){var n=e.shift(),t=n.shift();unomiTracker[t]&&unomiTracker[t].apply(unomiTracker,n)}},unomiOption),unomiTracker.page()}();    </script>
 </head>
 <body class="composite">
 Test unomi
+
+<div id="var1" style="display: none">
+    You have been there for more than 5s
+</div>
+
+<div id="var2" style="display: none">
+    Welcome
+</div>
+
+<script type="text/javascript">
+    unomiTracker.personalize({
+        "id": "testPersonalization",
+        "strategy": "matching-first",
+        "strategyOptions": {"fallback": "var2"},
+        "contents": [{
+            "id": "var1",
+            "filters": [{
+                "condition": {
+                    "parameterValues": {"minimumDuration": 5, "maximumDuration": 360000},
+                    "type": "sessionDurationCondition"
+                }
+            }]
+        },  {
+            "id": "var2"
+        }]
+    }, function(res) {
+        console.log(res);
+        document.getElementById(res[0]).style.display = 'block';
+    });
+</script>
+
 </body>
 </html>

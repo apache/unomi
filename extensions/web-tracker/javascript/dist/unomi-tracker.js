@@ -11856,9 +11856,9 @@ module.exports = uuid;
 },{"./rng":94}],96:[function(require,module,exports){
 module.exports={
   "name": "unomi-analytics",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "The Apache Unomi analytics.js integration.",
-  "main": "src/index.js",
+  "main": "dist/unomi-tracker.js",
   "keywords": [
     "unomi",
     "analytics.js",
@@ -11868,7 +11868,7 @@ module.exports={
   "license": "Apache-2.0",
   "scripts": {
     "build": "yarn browserify && yarn replace && yarn minify",
-    "browserify": "browserify src/index.js -p [ browserify-header --file src/license.js ] -s unomiTracker  > dist/unomi-tracker.js",
+    "browserify": "browserify src/index.js -p [ browserify-header --file src/license.js ] -s unomiTracker -o dist/unomi-tracker.js",
     "replace": "replace-in-file 'analytics.require = require' '//analytics.require = require' dist/unomi-tracker.js",
     "minify": "uglifyjs -c -m --comments '/@license/' -o dist/unomi-tracker.min.js -- dist/unomi-tracker.js",
     "snippet:minify": "uglifyjs -c -m -o snippet.min.js -- snippet.js",
@@ -11889,7 +11889,6 @@ module.exports={
     "replace-in-file": "^3.4.2",
     "rimraf": "^2.6.2",
     "uglify-js": "^2.6.4",
-    "watchify": "^3.11.0",
     "yarn": "^1.9.4"
   }
 }
@@ -11939,6 +11938,10 @@ Unomi.prototype.initialize = function(page) {
         if (self[listener]) self[listener](msg);
     });
 
+    this.analytics.personalize = function(personalization, callback) {
+        this.emit('invoke', {action:function() {return "personalize"}, personalization:personalization, callback:callback});
+    };
+
     // Standard to check if cookies are enabled in this browser
     if (!navigator.cookieEnabled) {
         this.executeFallback();
@@ -11946,11 +11949,9 @@ Unomi.prototype.initialize = function(page) {
     }
 
     // digitalData come from a standard so we can keep the logic around it which can allow complex website to load more complex data
-    if (!window.digitalData) {
-        window.digitalData = {
-            scope: this.options.scope
-        };
-    }
+    window.digitalData = window.digitalData || {
+        scope: this.options.scope
+    };
 
     if (page) {
         var props = page.json().properties;
@@ -11959,9 +11960,7 @@ Unomi.prototype.initialize = function(page) {
             unomiPage = window.digitalData.page = { pageInfo:{} }
         }
         this.fillPageData(unomiPage, props);
-        if (!window.digitalData.events) {
-            window.digitalData.events = []
-        }
+        window.digitalData.events = window.digitalData.events || [];
         window.digitalData.events.push(this.buildEvent('view', this.buildPage(unomiPage), this.buildSource(this.options.scope, 'site')))
     }
 
@@ -11978,8 +11977,7 @@ Unomi.prototype.initialize = function(page) {
         this.sessionId = this.options.sessionId;
     }
 
-
-    this.loadContext();
+    setTimeout(this.loadContext.bind(this), 0);
 };
 
 /**
@@ -12083,17 +12081,16 @@ Unomi.prototype.loadContext = function (skipEvents, invalidate) {
 
         self.ready();
 
-        if (window.digitalData.loadCallbacks && window.digitalData.loadCallbacks.length > 0) {
+        if (window.digitalData.loadCallbacks) {
             console.info('[UNOMI] Found context server load callbacks, calling now...');
-            if (window.digitalData.loadCallbacks) {
-                for (var i = 0; i < window.digitalData.loadCallbacks.length; i++) {
-                    window.digitalData.loadCallbacks[i](digitalData);
-                }
+            for (var i = 0; i < window.digitalData.loadCallbacks.length; i++) {
+                window.digitalData.loadCallbacks[i](digitalData);
             }
-            if (window.digitalData.personalizationCallback) {
-                for (var i = 0; i < window.digitalData.personalizationCallback.length; i++) {
-                    window.digitalData.personalizationCallback[i].callback(cxs.personalizations[window.digitalData.personalizationCallback[i].personalization.id]);
-                }
+        }
+        if (window.digitalData.personalizationCallback) {
+            console.info('[UNOMI] Found context server personalization, calling now...');
+            for (var i = 0; i < window.digitalData.personalizationCallback.length; i++) {
+                window.digitalData.personalizationCallback[i].callback(cxs.personalizations[window.digitalData.personalizationCallback[i].personalization.id]);
             }
         }
     };
@@ -12112,6 +12109,17 @@ Unomi.prototype.loadContext = function (skipEvents, invalidate) {
 
     console.info('[UNOMI] context loading...');
 };
+
+Unomi.prototype.onpersonalize = function (msg) {
+    if (window.cxs) {
+        console.error('[WEM] already loaded, too late...');
+    }
+    window.digitalData = window.digitalData || {
+        scope: this.options.scope
+    };
+    window.digitalData.personalizationCallback = window.digitalData.personalizationCallback || [];
+    window.digitalData.personalizationCallback.push({personalization: msg.personalization, callback: msg.callback});
+},
 
 /**
  * This function return the basic structure for an event, it must be adapted to your need

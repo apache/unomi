@@ -42,6 +42,10 @@ Unomi.prototype.initialize = function(page) {
         if (self[listener]) self[listener](msg);
     });
 
+    this.analytics.personalize = function(personalization, callback) {
+        this.emit('invoke', {action:function() {return "personalize"}, personalization:personalization, callback:callback});
+    };
+
     // Standard to check if cookies are enabled in this browser
     if (!navigator.cookieEnabled) {
         this.executeFallback();
@@ -49,11 +53,9 @@ Unomi.prototype.initialize = function(page) {
     }
 
     // digitalData come from a standard so we can keep the logic around it which can allow complex website to load more complex data
-    if (!window.digitalData) {
-        window.digitalData = {
-            scope: this.options.scope
-        };
-    }
+    window.digitalData = window.digitalData || {
+        scope: this.options.scope
+    };
 
     if (page) {
         var props = page.json().properties;
@@ -62,9 +64,7 @@ Unomi.prototype.initialize = function(page) {
             unomiPage = window.digitalData.page = { pageInfo:{} }
         }
         this.fillPageData(unomiPage, props);
-        if (!window.digitalData.events) {
-            window.digitalData.events = []
-        }
+        window.digitalData.events = window.digitalData.events || [];
         window.digitalData.events.push(this.buildEvent('view', this.buildPage(unomiPage), this.buildSource(this.options.scope, 'site')))
     }
 
@@ -81,8 +81,7 @@ Unomi.prototype.initialize = function(page) {
         this.sessionId = this.options.sessionId;
     }
 
-
-    this.loadContext();
+    setTimeout(this.loadContext.bind(this), 0);
 };
 
 /**
@@ -186,17 +185,16 @@ Unomi.prototype.loadContext = function (skipEvents, invalidate) {
 
         self.ready();
 
-        if (window.digitalData.loadCallbacks && window.digitalData.loadCallbacks.length > 0) {
+        if (window.digitalData.loadCallbacks) {
             console.info('[UNOMI] Found context server load callbacks, calling now...');
-            if (window.digitalData.loadCallbacks) {
-                for (var i = 0; i < window.digitalData.loadCallbacks.length; i++) {
-                    window.digitalData.loadCallbacks[i](digitalData);
-                }
+            for (var i = 0; i < window.digitalData.loadCallbacks.length; i++) {
+                window.digitalData.loadCallbacks[i](digitalData);
             }
-            if (window.digitalData.personalizationCallback) {
-                for (var i = 0; i < window.digitalData.personalizationCallback.length; i++) {
-                    window.digitalData.personalizationCallback[i].callback(cxs.personalizations[window.digitalData.personalizationCallback[i].personalization.id]);
-                }
+        }
+        if (window.digitalData.personalizationCallback) {
+            console.info('[UNOMI] Found context server personalization, calling now...');
+            for (var i = 0; i < window.digitalData.personalizationCallback.length; i++) {
+                window.digitalData.personalizationCallback[i].callback(cxs.personalizations[window.digitalData.personalizationCallback[i].personalization.id]);
             }
         }
     };
@@ -215,6 +213,17 @@ Unomi.prototype.loadContext = function (skipEvents, invalidate) {
 
     console.info('[UNOMI] context loading...');
 };
+
+Unomi.prototype.onpersonalize = function (msg) {
+    if (window.cxs) {
+        console.error('[WEM] already loaded, too late...');
+    }
+    window.digitalData = window.digitalData || {
+        scope: this.options.scope
+    };
+    window.digitalData.personalizationCallback = window.digitalData.personalizationCallback || [];
+    window.digitalData.personalizationCallback.push({personalization: msg.personalization, callback: msg.callback});
+},
 
 /**
  * This function return the basic structure for an event, it must be adapted to your need
