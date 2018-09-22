@@ -66,7 +66,6 @@ public class EventTailCommand extends OsgiCommandSupport  {
             synchronized (this) {
                 wait();
             }
-            out.println("Stopping tail as log.core bundle was stopped.");
         } catch (InterruptedException e) {
             // Ignore as it will happen if the user breaks the tail using Ctrl-C
         } finally {
