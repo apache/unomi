@@ -28,10 +28,6 @@ image::incubator-logo.png[pdfwidth=35%,align=center]
 
 include::concepts.adoc[]
 
-== Extending Unomi via plugins
-
-include::extending-plugins.adoc[]
-
 == Quick start
 
 include::building-and-deploying.adoc[]
@@ -40,7 +36,11 @@ include::getting-started.adoc[]
 
 include::configuration.adoc[]
 
-== Sample
+== Extending Unomi via plugins
+
+include::extending-plugins.adoc[]
+
+== Samples
 
 include::samples/samples.adoc[]
 
