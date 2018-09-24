@@ -35,38 +35,9 @@ window.unomiTracker || (window.unomiTracker = {});
         window.unomiTracker[method] = factory(method);
     }
 
-    // Define a method to load Analytics.js from our CDN,
-    // and that will be sure to only ever load it once.
-    unomiTracker.load = function (callback, option) {
-        // Create an async script element based on your key.
-        var script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.async = true;
-        // TODO we might want to add a check on the url to see if it ends with / or not
-        script.src = option.url + '/tracker/unomi-tracker.min.js';
-
-        if (script.addEventListener) {
-            script.addEventListener('load', function (e) {
-                if (typeof callback === 'function') {
-                    callback(e);
-                }
-            }, false);
-        } else {
-            script.onreadystatechange = function () {
-                if (this.readyState == 'complete' || this.readyState == 'loaded') {
-                    callback(window.event);
-                }
-            };
-        }
-
-        // Insert our script next to the first script element.
-        var first = document.getElementsByTagName('script')[0];
-        first.parentNode.insertBefore(script, first);
-    };
-
-    unomiTracker.load(function (option) {
+    function callback(e) {
         unomiTracker.initialize({
-            'Apache Unomi': option
+            'Apache Unomi': unomiOption
         });
 
         // Loop through the interim analytics queue and reapply the calls to their
@@ -78,7 +49,38 @@ window.unomiTracker || (window.unomiTracker = {});
                 unomiTracker[method].apply(unomiTracker, item);
             }
         }
-    }, unomiOption);
+    }
+
+    // Define a method to load Analytics.js from our CDN,
+    // and that will be sure to only ever load it once.
+    unomiTracker.load = function() {
+        // Create an async script element based on your key.
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.async = true;
+        // TODO we might want to add a check on the url to see if it ends with / or not
+        script.src = unomiOption.url + '/tracker/unomi-tracker.min.js';
+
+        if (script.addEventListener) {
+            script.addEventListener('load', function (e) {
+                if (typeof callback === 'function') {
+                    callback(e);
+                }
+            }, false);
+        } else {
+            script.onreadystatechange = function () {
+                if (this.readyState === 'complete' || this.readyState === 'loaded') {
+                    callback(window.event);
+                }
+            };
+        }
+
+        // Insert our script next to the first script element.
+        var first = document.getElementsByTagName('script')[0];
+        first.parentNode.insertBefore(script, first);
+    };
+
+    document.addEventListener('DOMContentLoaded', unomiTracker.load);
 
     unomiTracker.page();
 })();

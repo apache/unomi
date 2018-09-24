@@ -101,12 +101,8 @@ Unomi.prototype.loaded = function() {
  * @param {Page} page
  */
 Unomi.prototype.onpage = function(page) {
-    console.log('onpage');
-    console.log(page);
-
     var unomiPage = { pageInfo:{} };
     this.fillPageData(unomiPage, page.json().properties);
-    console.log(unomiPage);
 
     this.collectEvent(this.buildEvent('view', this.buildPage(unomiPage), this.buildSource(this.options.scope, 'site')));
 };
@@ -157,6 +153,7 @@ Unomi.prototype.ontrack = function(track) {
  * @param {boolean} [invalidate=false] Should we invalidate the current context
  */
 Unomi.prototype.loadContext = function (skipEvents, invalidate) {
+    this.contextLoaded = true;
     var jsonData = {
         requiredProfileProperties: ['j:nodename'],
         source: this.buildPage(window.digitalData.page)
@@ -211,12 +208,13 @@ Unomi.prototype.loadContext = function (skipEvents, invalidate) {
         error: this.executeFallback
     });
 
-    console.info('[UNOMI] context loading...');
+    console.info('[UNOMI] Context loading...');
 };
 
 Unomi.prototype.onpersonalize = function (msg) {
-    if (window.cxs) {
-        console.error('[WEM] already loaded, too late...');
+    if (this.contextLoaded) {
+        console.error('[UNOMI] Already loaded, too late...');
+        return;
     }
     window.digitalData = window.digitalData || {
         scope: this.options.scope
