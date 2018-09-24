@@ -19,7 +19,8 @@
 Apache Unomi Web Tracker
 =================================
 
-This extension is providing the web tracker to start collecting visitors data on your website
+This extension is providing the web tracker to start collecting visitors data on your website. 
+The tracker is implemented as an integration of [analytics.js](https://github.com/segmentio/analytics.js) for Unomi.
 
 ## Getting started
 
@@ -38,3 +39,5 @@ In your page include unomiOptions and include code snippet from `snippet.min.js`
 ```
 
 `window.unomiTracker` can be used to send additional events when needed.
+
+Check analytics.js API [here](https://segment.com/docs/sources/website/analytics.js/). All methods can be used on `unomiTracker` object, although not all event types are supported by Unomi intergation.
