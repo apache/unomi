@@ -46,8 +46,6 @@ public class ContextServlet extends HttpServlet {
     private static final long serialVersionUID = 2928875830103325238L;
     private static final Logger logger = LoggerFactory.getLogger(ContextServlet.class.getName());
 
-    private static final String BASE_SCRIPT_LOCATION = "/javascript/base.js";
-    private static final String IMPERSONATE_BASE_SCRIPT_LOCATION = "/javascript/impersonateBase.js";
     private static final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365; // 1 year
 
     private String profileIdCookieName = "context-profile-id";
@@ -287,10 +285,6 @@ public class ContextServlet extends HttpServlet {
                     .append("var cxs = ")
                     .append(contextAsJSONString)
                     .append(";\n");
-
-            // now we copy the base script source code
-            InputStream baseScriptStream = getServletContext().getResourceAsStream(profile instanceof Persona ? IMPERSONATE_BASE_SCRIPT_LOCATION : BASE_SCRIPT_LOCATION);
-            IOUtils.copy(baseScriptStream, responseWriter);
         }
 
         responseWriter.flush();
