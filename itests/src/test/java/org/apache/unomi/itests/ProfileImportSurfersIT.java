@@ -105,11 +105,7 @@ public class ProfileImportSurfersIT extends BaseIT {
         logger.info("ProfileImportSurfersIT setup successfully.");
 
         //Wait for data to be processed
-        PartialList<Profile> profiles = null;
-        while (profiles == null || profiles.getTotalSize() != 34) {
-            Thread.sleep(1000);
-            profiles = profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null);
-        }
+        keepTrying(()->profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null), (p)->p.getTotalSize() == 34, 1000, 20);
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(1, importConfigurations.size());
@@ -154,11 +150,7 @@ public class ProfileImportSurfersIT extends BaseIT {
         logger.info("ProfileImportSurfersOverwriteIT setup successfully.");
 
         //Wait for data to be processed
-        profiles = null;
-        while (profiles == null || profiles.getTotalSize() != 36) {
-            Thread.sleep(1000);
-            profiles = profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null);
-        }
+        keepTrying(()->profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null), (p)->p.getTotalSize() == 36, 1000, 20);
 
         importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(1, importConfigurations.size());
@@ -197,11 +189,7 @@ public class ProfileImportSurfersIT extends BaseIT {
         logger.info("ProfileImportSurfersDeleteIT setup successfully.");
 
         //Wait for data to be processed
-        profiles = null;
-        while (profiles == null || profiles.getTotalSize() != 0) {
-            Thread.sleep(1000);
-            profiles = profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null);
-        }
+        keepTrying(()->profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null), (p)->p.getTotalSize() == 0, 1000, 20);
 
         importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(1, importConfigurations.size());

@@ -88,11 +88,7 @@ public class ProfileImportBasicIT extends BaseIT {
         Files.copy(basicFile.toPath(), new File("data/tmp/unomi_oneshot_import_configs/1-basic-test.csv").toPath(), StandardCopyOption.REPLACE_EXISTING);
 
         //Wait for the csv to be processed
-        PartialList<Profile> profiles = null;
-        while (profiles == null || profiles.getTotalSize() != 3) {
-            Thread.sleep(1000);
-            profiles = profileService.findProfilesByPropertyValue("properties.city", "oneShotImportCity", 0, 10, null);
-        }
+        PartialList<Profile> profiles = keepTrying(()->profileService.findProfilesByPropertyValue("properties.city", "oneShotImportCity", 0, 10, null), (p)->p.getTotalSize() == 3, 1000, 100);
         Assert.assertEquals(3, profiles.getList().size());
 
         checkProfiles(1);

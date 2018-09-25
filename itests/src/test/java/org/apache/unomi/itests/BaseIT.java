@@ -17,6 +17,7 @@
 
 package org.apache.unomi.itests;
 
+import org.junit.Assert;
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.CoreOptions;
 import org.ops4j.pax.exam.Option;
@@ -25,6 +26,9 @@ import org.ops4j.pax.exam.options.MavenArtifactUrlReference;
 import org.ops4j.pax.exam.options.MavenUrlReference;
 
 import java.io.File;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static org.ops4j.pax.exam.CoreOptions.maven;
 import static org.ops4j.pax.exam.CoreOptions.systemProperty;
@@ -131,5 +135,18 @@ public abstract class BaseIT {
                 CoreOptions.bundleStartLevel(100),
                 CoreOptions.frameworkStartLevel(100)
         };
+    }
+
+    protected <T> T keepTrying(Supplier<T> call, Predicate<T> predicate, int timeout, int retries) throws InterruptedException {
+        int count = 0;
+        T value = null;
+        while (value == null || !predicate.test(value)) {
+            if (count++ > retries) {
+                Assert.fail();
+            }
+            Thread.sleep(timeout);
+            value = call.get();
+        }
+        return value;
     }
 }

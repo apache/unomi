@@ -101,11 +101,7 @@ public class ProfileImportActorsIT extends BaseIT {
         importConfigurationService.save(importConfigActors, true);
 
         //Wait for data to be processed
-        PartialList<Profile> profiles = null;
-        while (profiles == null || profiles.getTotalSize() != 6) {
-            Thread.sleep(1000);
-            profiles = profileService.findProfilesByPropertyValue("properties.city", "hollywood", 0, 10, null);
-        }
+        keepTrying(()-> profileService.findProfilesByPropertyValue("properties.city", "hollywood", 0, 10, null), (p)->p.getTotalSize() == 6, 1000, 100);
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(1, importConfigurations.size());

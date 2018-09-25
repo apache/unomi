@@ -80,11 +80,7 @@ public class ProfileExportIT extends BaseIT {
         profile3.setSegments(segments);
         profileService.save(profile3);
 
-        PartialList<Profile> profiles = null;
-        while (profiles == null || profiles.getTotalSize() != 3) {
-            Thread.sleep(1000);
-            profiles = profileService.findProfilesByPropertyValue("segments", "exportItSeg", 0, 10, null);
-        }
+        keepTrying(()->  profileService.findProfilesByPropertyValue("segments", "exportItSeg", 0, 10, null), (p)->p.getTotalSize() == 3, 1000, 20);
 
         /*** Export Test ***/
         String itemId = "export-test";
@@ -109,11 +105,9 @@ public class ProfileExportIT extends BaseIT {
 
         exportConfigurationService.save(exportConfiguration, true);
 
-        File exportResult = new File("data/tmp/profiles-export.csv");
-        while (!exportResult.exists()) {
-            Thread.sleep(1000);
-            exportResult = new File("data/tmp/profiles-export.csv");
-        }
+        final File exportResult = new File("data/tmp/profiles-export.csv");
+        keepTrying(()-> exportResult, File::exists, 1000, 20);
+
         logger.info("PATH : {}", exportResult.getAbsolutePath());
         Assert.assertTrue(exportResult.exists());
 
