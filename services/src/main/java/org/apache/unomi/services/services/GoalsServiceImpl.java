@@ -30,6 +30,7 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.GoalsService;
+import org.apache.unomi.api.services.PatchService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -57,6 +58,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     private RulesService rulesService;
 
+    private PatchService patchService;
+
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
@@ -71,6 +74,10 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
+    }
+
+    public void setPatchService(PatchService patchService) {
+        this.patchService = patchService;
     }
 
     public void postConstruct() {
@@ -109,24 +116,30 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         if (predefinedRuleEntries == null) {
             return;
         }
+
+        // First apply patches on existing items
+        patchService.patch(bundleContext.getBundle().findEntries("META-INF/cxs/goals", "*-patch.json", true), Goal.class);
+
         while (predefinedRuleEntries.hasMoreElements()) {
             URL predefinedGoalURL = predefinedRuleEntries.nextElement();
-            logger.debug("Found predefined goals at " + predefinedGoalURL + ", loading... ");
+            if (!predefinedGoalURL.getFile().endsWith("-patch.json")) {
+                logger.debug("Found predefined goals at " + predefinedGoalURL + ", loading... ");
 
-            try {
-                Goal goal = CustomObjectMapper.getObjectMapper().readValue(predefinedGoalURL, Goal.class);
-                if (goal.getMetadata().getScope() == null) {
-                    goal.getMetadata().setScope("systemscope");
+                try {
+                    Goal goal = CustomObjectMapper.getObjectMapper().readValue(predefinedGoalURL, Goal.class);
+                    if (goal.getMetadata().getScope() == null) {
+                        goal.getMetadata().setScope("systemscope");
+                    }
+                    // Register only if goal does not exist yet
+                    if (getGoal(goal.getMetadata().getId()) == null) {
+                        setGoal(goal);
+                        logger.info("Predefined goal with id {} registered", goal.getMetadata().getId());
+                    } else {
+                        logger.info("The predefined goal with id {} is already registered, this goal will be skipped", goal.getMetadata().getId());
+                    }
+                } catch (IOException e) {
+                    logger.error("Error while loading segment definition " + predefinedGoalURL, e);
                 }
-                // Register only if goal does not exist yet
-                if (getGoal(goal.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
-                    setGoal(goal);
-                    logger.info("Predefined goal with id {} registered", goal.getMetadata().getId());
-                } else {
-                    logger.info("The predefined goal with id {} is already registered, this goal will be skipped", goal.getMetadata().getId());
-                }
-            } catch (IOException e) {
-                logger.error("Error while loading segment definition " + predefinedGoalURL, e);
             }
         }
     }
@@ -257,21 +270,27 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         if (predefinedRuleEntries == null) {
             return;
         }
+
+        // First apply patches on existing items
+        patchService.patch(bundleContext.getBundle().findEntries("META-INF/cxs/campaigns", "*-patch.json", true), Campaign.class);
+
         while (predefinedRuleEntries.hasMoreElements()) {
             URL predefinedCampaignURL = predefinedRuleEntries.nextElement();
-            logger.debug("Found predefined campaigns at " + predefinedCampaignURL + ", loading... ");
+            if (!predefinedCampaignURL.getFile().endsWith("-patch.json")) {
+                logger.debug("Found predefined campaigns at " + predefinedCampaignURL + ", loading... ");
 
-            try {
-                Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(predefinedCampaignURL, Campaign.class);
-                // Register only if campaign does not exist yet
-                if (getCampaign(campaign.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
-                    setCampaign(campaign);
-                    logger.info("Predefined campaign with id {} registered", campaign.getMetadata().getId());
-                } else {
-                    logger.info("The predefined campaign with id {} is already registered, this campaign will be skipped", campaign.getMetadata().getId());
+                try {
+                    Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(predefinedCampaignURL, Campaign.class);
+                    // Register only if campaign does not exist yet
+                    if (getCampaign(campaign.getMetadata().getId()) == null) {
+                        setCampaign(campaign);
+                        logger.info("Predefined campaign with id {} registered", campaign.getMetadata().getId());
+                    } else {
+                        logger.info("The predefined campaign with id {} is already registered, this campaign will be skipped", campaign.getMetadata().getId());
+                    }
+                } catch (IOException e) {
+                    logger.error("Error while loading segment definition " + predefinedCampaignURL, e);
                 }
-            } catch (IOException e) {
-                logger.error("Error while loading segment definition " + predefinedCampaignURL, e);
             }
         }
     }

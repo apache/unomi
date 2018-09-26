@@ -17,20 +17,14 @@
 
 package org.apache.unomi.services.services;
 
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Item;
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.EventListenerService;
-import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.services.actions.ActionExecutorDispatcher;
@@ -54,6 +48,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     private DefinitionsService definitionsService;
 
     private EventService eventService;
+
+    private PatchService patchService;
 
     private ActionExecutorDispatcher actionExecutorDispatcher;
     private List<Rule> allRules;
@@ -81,6 +77,10 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public void setActionExecutorDispatcher(ActionExecutorDispatcher actionExecutorDispatcher) {
         this.actionExecutorDispatcher = actionExecutorDispatcher;
+    }
+
+    public void setPatchService(PatchService patchService) {
+        this.patchService = patchService;
     }
 
     public void bindExecutor(ServiceReference<ActionExecutor> actionExecutorServiceReference) {
@@ -146,23 +146,27 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             return;
         }
 
+        // First apply patches on existing items
+        patchService.patch(bundleContext.getBundle().findEntries("META-INF/cxs/rules", "*-patch.json", true), Rule.class);
+
         while (predefinedRuleEntries.hasMoreElements()) {
-            URL predefinedSegmentURL = predefinedRuleEntries.nextElement();
-            logger.debug("Found predefined rule at " + predefinedSegmentURL + ", loading... ");
+            URL predefinedRuleURL = predefinedRuleEntries.nextElement();
+            if (!predefinedRuleURL.getFile().endsWith("-patch.json")) {
+                logger.debug("Found predefined rule at " + predefinedRuleURL + ", loading... ");
 
-            try {
-                Rule rule = CustomObjectMapper.getObjectMapper().readValue(predefinedSegmentURL, Rule.class);
-                // Register only if rule does not exist yet
-                if (getRule(rule.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
-                    setRule(rule);
-                    logger.info("Predefined rule with id {} registered", rule.getMetadata().getId());
-                } else {
-                    logger.info("The predefined rule with id {} is already registered, this rule will be skipped", rule.getMetadata().getId());
+                try {
+                    Rule rule = CustomObjectMapper.getObjectMapper().readValue(predefinedRuleURL, Rule.class);
+                    // Register only if rule does not exist yet
+                    if (getRule(rule.getMetadata().getId()) == null) {
+                        setRule(rule);
+                        logger.info("Predefined rule with id {} registered", rule.getMetadata().getId());
+                    } else {
+                        logger.info("The predefined rule with id {} is already registered, this rule will be skipped", rule.getMetadata().getId());
+                    }
+                } catch (IOException e) {
+                    logger.error("Error while loading rule definition " + predefinedRuleURL, e);
                 }
-            } catch (IOException e) {
-                logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
             }
-
         }
     }
 

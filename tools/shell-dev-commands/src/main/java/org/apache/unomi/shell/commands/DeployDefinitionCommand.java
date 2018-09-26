@@ -21,11 +21,10 @@ import org.apache.felix.service.command.CommandSession;
 import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.console.OsgiCommandSupport;
-import org.apache.unomi.api.Persona;
-import org.apache.unomi.api.PersonaWithSessions;
-import org.apache.unomi.api.PropertyType;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.campaigns.Campaign;
+import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.goals.Goal;
 import org.apache.unomi.api.rules.Rule;
@@ -38,36 +37,67 @@ import org.osgi.framework.Bundle;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Command(scope = "unomi", name = "deploy-definition", description = "This will deploy a specific definition")
-public class DeployDefinition extends OsgiCommandSupport {
+public class DeployDefinitionCommand extends OsgiCommandSupport {
 
     private DefinitionsService definitionsService;
     private GoalsService goalsService;
     private ProfileService profileService;
     private RulesService rulesService;
     private SegmentService segmentService;
+    private PatchService patchService;
 
-    private List<String> definitionTypes = Arrays.asList("condition", "action", "goal", "campaign", "persona", "persona with sessions", "property", "rule", "segment", "scoring");
+    private final static List<String> definitionTypes = Arrays.asList("condition", "action", "goal", "campaign", "persona", "property", "rule", "segment", "scoring");
 
-    @Argument(index = 0, name = "bundleId", description = "The bundle identifier where to find the definition", required = true, multiValued = false)
+
+    @Argument(index = 0, name = "bundleId", description = "The bundle identifier where to find the definition", multiValued = false)
     Long bundleIdentifier;
 
-    @Argument(index = 1, name = "fileName", description = "The name of the file which contains the definition, without its extension (e.g: firstName)", required = true, multiValued = false)
+    @Argument(index = 1, name = "type", description = "The kind of definitions you want to load (e.g.: condition, action, ..)", required = false, multiValued = false)
+    String definitionType;
+
+    @Argument(index = 2, name = "fileName", description = "The name of the file which contains the definition, without its extension (e.g: firstName)", required = false, multiValued = false)
     String fileName;
 
     protected Object doExecute() throws Exception {
-        Bundle bundleToUpdate = bundleContext.getBundle(bundleIdentifier);
+        Bundle bundleToUpdate;
+        if (bundleIdentifier == null) {
+            List<Bundle> bundles = new ArrayList<>();
+            for (Bundle bundle : bundleContext.getBundles()) {
+                if (bundle.findEntries("META-INF/cxs/", "*.json", true) != null) {
+                    bundles.add(bundle);
+                }
+            }
+
+            String bundleAnswer = askUserWithAuthorizedAnswer(session, "Which bundle ?" + getValuesWithNumber(bundles.stream().map(Bundle::getSymbolicName).collect(Collectors.toList())) + "\n",
+                    IntStream.range(1,bundles.size()+1).mapToObj(Integer::toString).collect(Collectors.toList()));
+            bundleToUpdate = bundles.get(new Integer(bundleAnswer)-1);
+            bundleIdentifier = bundleToUpdate.getBundleId();
+        } else {
+            bundleToUpdate = bundleContext.getBundle(bundleIdentifier);
+        }
+
         if (bundleToUpdate == null) {
             System.out.println("Couldn't find a bundle with id: " + bundleIdentifier);
             return null;
         }
 
-        String definitionTypeAnswer = askUserWithAuthorizedAnswer(session,"Which kind of definition do you want to load?" + getDefinitionTypesWithNumber() + "\n", Arrays.asList("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
-        String definitionType = definitionTypes.get(new Integer(definitionTypeAnswer));
+
+        if (definitionType == null) {
+            List<String> values = definitionTypes.stream().filter((t) -> bundleToUpdate.findEntries(getDefinitionTypePath(t), "*.json", true) != null).collect(Collectors.toList());
+            String definitionTypeAnswer = askUserWithAuthorizedAnswer(session, "Which kind of definition do you want to load?" + getValuesWithNumber(values) + "\n",
+                    IntStream.range(1,values.size()+1).mapToObj(Integer::toString).collect(Collectors.toList()));
+            definitionType = values.get(new Integer(definitionTypeAnswer)-1);
+        }
+
+        if (!definitionTypes.contains(definitionType)) {
+            System.out.println("Invalid type '" + definitionType + "' , allowed values : " +definitionTypes);
+            return null;
+        }
 
         String path = getDefinitionTypePath(definitionType);
         Enumeration<URL> definitions = bundleToUpdate.findEntries(path, "*.json", true);
@@ -76,12 +106,43 @@ public class DeployDefinition extends OsgiCommandSupport {
             return null;
         }
 
+        List<URL> values = new ArrayList<>();
         while (definitions.hasMoreElements()) {
-            URL definitionURL = definitions.nextElement();
-            if (definitionURL.toString().contains(fileName)) {
-                System.out.println("Found definition at " + definitionURL + ", loading... ");
+            values.add(definitions.nextElement());
+        }
+        if (fileName == null) {
+            List<String> stringList = values.stream().map(u -> StringUtils.substringAfterLast(u.getFile(), "/")).collect(Collectors.toList());
+            Collections.sort(stringList);
+            stringList.add(0, "* (All)");
+            String fileNameAnswer = askUserWithAuthorizedAnswer(session, "Which file do you want to load ?" + getValuesWithNumber(stringList) + "\n",
+                    IntStream.range(1,stringList.size()+1).mapToObj(Integer::toString).collect(Collectors.toList()));
+            fileName = stringList.get(new Integer(fileNameAnswer)-1);
+        }
+        if (fileName.startsWith("*")) {
+            for (URL url : values) {
+                if (!url.getFile().endsWith("-patch.json")) {
+                    updateDefinition(definitionType, url);
+                }
+            }
+        } else {
+            if (!fileName.contains("/")) {
+                fileName = "/" + fileName;
+            }
+            if (!fileName.endsWith(".json")) {
+                fileName += ".json";
+            }
 
-                updateDefinition(definitionType, definitionURL);
+            Optional<URL> optionalURL = values.stream().filter(u -> u.getFile().endsWith(fileName)).findFirst();
+            if (optionalURL.isPresent()) {
+                URL url = optionalURL.get();
+                if (!url.getFile().endsWith("-patch.json")) {
+                    updateDefinition(definitionType, url);
+                } else {
+                    deployPatch(definitionType, url);
+                }
+            } else {
+                System.out.println("Couldn't find file " + fileName);
+                return null;
             }
         }
 
@@ -101,16 +162,17 @@ public class DeployDefinition extends OsgiCommandSupport {
         return reader.readLine(msg, null);
     }
 
-    private String getDefinitionTypesWithNumber() {
+    private String getValuesWithNumber(List<String> values) {
         StringBuilder definitionTypesWithNumber = new StringBuilder();
-        for (int i = 0; i < definitionTypes.size(); i++) {
-            definitionTypesWithNumber.append("\n").append(i).append(". ").append(definitionTypes.get(i));
+        for (int i = 0; i < values.size(); i++) {
+            definitionTypesWithNumber.append("\n").append(i+1).append(". ").append(values.get(i));
         }
         return definitionTypesWithNumber.toString();
     }
 
     private void updateDefinition(String definitionType, URL definitionURL) {
         try {
+                    
             switch (definitionType) {
                 case "condition":
                     ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(definitionURL, ConditionType.class);
@@ -129,12 +191,8 @@ public class DeployDefinition extends OsgiCommandSupport {
                     goalsService.setCampaign(campaign);
                     break;
                 case "persona":
-                    Persona persona = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Persona.class);
-                    profileService.savePersona(persona);
-                    break;
-                case "persona with session":
-                    PersonaWithSessions personaWithSessions = CustomObjectMapper.getObjectMapper().readValue(definitionURL, PersonaWithSessions.class);
-                    profileService.savePersonaWithSessions(personaWithSessions);
+                    PersonaWithSessions persona = CustomObjectMapper.getObjectMapper().readValue(definitionURL, PersonaWithSessions.class);
+                    profileService.savePersonaWithSessions(persona);
                     break;
                 case "property":
                     PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(definitionURL, PropertyType.class);
@@ -154,12 +212,29 @@ public class DeployDefinition extends OsgiCommandSupport {
                     segmentService.setScoringDefinition(scoring);
                     break;
             }
-            System.out.println("Predefined definition registered");
+            System.out.println("Predefined definition registered : "+definitionURL.getFile());
         } catch (IOException e) {
             System.out.println("Error while saving definition " + definitionURL);
             System.out.println(e.getMessage());
         }
     }
+
+    private void deployPatch(String definitionType, URL patchURL) {
+        try {
+            Patch patch = CustomObjectMapper.getObjectMapper().readValue(patchURL, Patch.class);
+            Class<? extends Item> type = Patch.PATCHABLE_TYPES.get(definitionType);
+            if (type != null) {
+                patchService.patch(patch, type);
+            }
+
+            System.out.println("Definition patched : "+ patch.getItemId() + " by : " + patchURL.getFile());
+        } catch (IOException e) {
+            System.out.println("Error while saving definition " + patchURL);
+            System.out.println(e.getMessage());
+        }
+    }
+
+
 
     private String getDefinitionTypePath(String definitionType) {
         StringBuilder path = new StringBuilder("META-INF/cxs/");
@@ -177,9 +252,6 @@ public class DeployDefinition extends OsgiCommandSupport {
                 path.append("campaigns");
                 break;
             case "persona":
-                path.append("personas");
-                break;
-            case "persona with session":
                 path.append("personas");
                 break;
             case "property":
@@ -217,5 +289,9 @@ public class DeployDefinition extends OsgiCommandSupport {
 
     public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
+    }
+
+    public void setPatchService(PatchService patchService) {
+        this.patchService = patchService;
     }
 }

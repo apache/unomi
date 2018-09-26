@@ -25,10 +25,7 @@ import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.*;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.RulesService;
-import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
@@ -54,6 +51,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     private RulesService rulesService;
 
+    private PatchService patchService;
+
     private long taskExecutionPeriod = 24L * 60L * 60L * 1000L;
     private List<Segment> allSegments;
     private List<Scoring> allScoring;
@@ -74,6 +73,10 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
+    }
+
+    public void setPatchService(PatchService patchService) {
+        this.patchService = patchService;
     }
 
     public void setSegmentUpdateBatchSize(int segmentUpdateBatchSize) {
@@ -127,24 +130,30 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         if (predefinedSegmentEntries == null) {
             return;
         }
+
+        // First apply patches on existing items
+        patchService.patch(bundleContext.getBundle().findEntries("META-INF/cxs/segments", "*-patch.json", true), Segment.class);
+
         while (predefinedSegmentEntries.hasMoreElements()) {
             URL predefinedSegmentURL = predefinedSegmentEntries.nextElement();
-            logger.debug("Found predefined segment at " + predefinedSegmentURL + ", loading... ");
+            if (!predefinedSegmentURL.getFile().endsWith("-patch.json")) {
+                logger.debug("Found predefined segment at " + predefinedSegmentURL + ", loading... ");
 
-            try {
-                Segment segment = CustomObjectMapper.getObjectMapper().readValue(predefinedSegmentURL, Segment.class);
-                if (segment.getMetadata().getScope() == null) {
-                    segment.getMetadata().setScope("systemscope");
+                try {
+                    Segment segment = CustomObjectMapper.getObjectMapper().readValue(predefinedSegmentURL, Segment.class);
+                    if (segment.getMetadata().getScope() == null) {
+                        segment.getMetadata().setScope("systemscope");
+                    }
+                    // Register only if segment does not exist yet
+                    if (getSegmentDefinition(segment.getMetadata().getId()) == null) {
+                        setSegmentDefinition(segment);
+                        logger.info("Predefined segment with id {} registered", segment.getMetadata().getId());
+                    } else {
+                        logger.info("The predefined segment with id {} is already registered, this segment will be skipped", segment.getMetadata().getId());
+                    }
+                } catch (IOException e) {
+                    logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
                 }
-                // Register only if segment does not exist yet
-                if (getSegmentDefinition(segment.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
-                    setSegmentDefinition(segment);
-                    logger.info("Predefined segment with id {} registered", segment.getMetadata().getId());
-                } else {
-                    logger.info("The predefined segment with id {} is already registered, this segment will be skipped", segment.getMetadata().getId());
-                }
-            } catch (IOException e) {
-                logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
             }
         }
     }
@@ -154,24 +163,30 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         if (predefinedScoringEntries == null) {
             return;
         }
+
+        // First apply patches on existing items
+        patchService.patch(bundleContext.getBundle().findEntries("META-INF/cxs/scoring", "*-patch.json", true), Scoring.class);
+
         while (predefinedScoringEntries.hasMoreElements()) {
             URL predefinedScoringURL = predefinedScoringEntries.nextElement();
-            logger.debug("Found predefined scoring at " + predefinedScoringURL + ", loading... ");
+            if (!predefinedScoringURL.getFile().endsWith("-patch.json")) {
+                logger.debug("Found predefined scoring at " + predefinedScoringURL + ", loading... ");
 
-            try {
-                Scoring scoring = CustomObjectMapper.getObjectMapper().readValue(predefinedScoringURL, Scoring.class);
-                if (scoring.getMetadata().getScope() == null) {
-                    scoring.getMetadata().setScope("systemscope");
+                try {
+                    Scoring scoring = CustomObjectMapper.getObjectMapper().readValue(predefinedScoringURL, Scoring.class);
+                    if (scoring.getMetadata().getScope() == null) {
+                        scoring.getMetadata().setScope("systemscope");
+                    }
+                    // Register only if scoring plan does not exist yet
+                    if (getScoringDefinition(scoring.getMetadata().getId()) == null) {
+                        setScoringDefinition(scoring);
+                        logger.info("Predefined scoring with id {} registered", scoring.getMetadata().getId());
+                    } else {
+                        logger.info("The predefined scoring with id {} is already registered, this scoring will be skipped", scoring.getMetadata().getId());
+                    }
+                } catch (IOException e) {
+                    logger.error("Error while loading segment definition " + predefinedScoringURL, e);
                 }
-                // Register only if scoring plan does not exist yet
-                if (getScoringDefinition(scoring.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
-                    setScoringDefinition(scoring);
-                    logger.info("Predefined scoring with id {} registered", scoring.getMetadata().getId());
-                } else {
-                    logger.info("The predefined scoring with id {} is already registered, this scoring will be skipped", scoring.getMetadata().getId());
-                }
-            } catch (IOException e) {
-                logger.error("Error while loading segment definition " + predefinedScoringURL, e);
             }
         }
     }
