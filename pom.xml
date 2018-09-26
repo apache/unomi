@@ -242,7 +242,15 @@
             <timezone>+1</timezone>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
+            </roles>
+        </developer>
+        <developer>
+            <id>dgaillard</id>
+            <name>Damien GAILLARD</name>
+            <email>dgaillard@apache.org</email>
+            <timezone>+1</timezone>
+            <roles>
+                <role>committer</role>
             </roles>
         </developer>
     </developers>
