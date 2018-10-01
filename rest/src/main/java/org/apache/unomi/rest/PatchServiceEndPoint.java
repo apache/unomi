@@ -45,15 +45,13 @@ public class PatchServiceEndPoint {
 
     /**
      * Apply a patch on an item
-     *
-     * @param type the type of item to patch
      */
     @POST
-    @Path("/apply/{type}")
-    public void setPatch(Patch patch, @PathParam("type") String type, @QueryParam("force") Boolean force) {
+    @Path("/apply")
+    public void setPatch(Patch patch, @QueryParam("force") Boolean force) {
         Patch previous = (force == null || !force) ? patchService.load(patch.getItemId()) : null;
         if (previous == null) {
-            patchService.patch(patch, Patch.PATCHABLE_TYPES.get(type));
+            patchService.patch(patch);
         }
     }
 

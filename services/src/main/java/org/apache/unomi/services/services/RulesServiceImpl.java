@@ -146,26 +146,21 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             return;
         }
 
-        // First apply patches on existing items
-        patchService.patch(bundleContext.getBundle().findEntries("META-INF/cxs/rules", "*-patch.json", true), Rule.class);
-
         while (predefinedRuleEntries.hasMoreElements()) {
             URL predefinedRuleURL = predefinedRuleEntries.nextElement();
-            if (!predefinedRuleURL.getFile().endsWith("-patch.json")) {
-                logger.debug("Found predefined rule at " + predefinedRuleURL + ", loading... ");
+            logger.debug("Found predefined rule at " + predefinedRuleURL + ", loading... ");
 
-                try {
-                    Rule rule = CustomObjectMapper.getObjectMapper().readValue(predefinedRuleURL, Rule.class);
-                    // Register only if rule does not exist yet
-                    if (getRule(rule.getMetadata().getId()) == null) {
-                        setRule(rule);
-                        logger.info("Predefined rule with id {} registered", rule.getMetadata().getId());
-                    } else {
-                        logger.info("The predefined rule with id {} is already registered, this rule will be skipped", rule.getMetadata().getId());
-                    }
-                } catch (IOException e) {
-                    logger.error("Error while loading rule definition " + predefinedRuleURL, e);
+            try {
+                Rule rule = CustomObjectMapper.getObjectMapper().readValue(predefinedRuleURL, Rule.class);
+                // Register only if rule does not exist yet
+                if (getRule(rule.getMetadata().getId()) == null) {
+                    setRule(rule);
+                    logger.info("Predefined rule with id {} registered", rule.getMetadata().getId());
+                } else {
+                    logger.info("The predefined rule with id {} is already registered, this rule will be skipped", rule.getMetadata().getId());
                 }
+            } catch (IOException e) {
+                logger.error("Error while loading rule definition " + predefinedRuleURL, e);
             }
         }
     }

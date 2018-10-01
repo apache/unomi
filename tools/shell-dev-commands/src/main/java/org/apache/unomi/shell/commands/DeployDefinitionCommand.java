@@ -24,7 +24,6 @@ import org.apache.karaf.shell.console.OsgiCommandSupport;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.campaigns.Campaign;
-import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.goals.Goal;
 import org.apache.unomi.api.rules.Rule;
@@ -51,7 +50,7 @@ public class DeployDefinitionCommand extends OsgiCommandSupport {
     private SegmentService segmentService;
     private PatchService patchService;
 
-    private final static List<String> definitionTypes = Arrays.asList("condition", "action", "goal", "campaign", "persona", "property", "rule", "segment", "scoring");
+    private final static List<String> definitionTypes = Arrays.asList("condition", "action", "goal", "campaign", "persona", "property", "rule", "segment", "scoring", "patch");
 
 
     @Argument(index = 0, name = "bundleId", description = "The bundle identifier where to find the definition", multiValued = false)
@@ -120,9 +119,7 @@ public class DeployDefinitionCommand extends OsgiCommandSupport {
         }
         if (fileName.startsWith("*")) {
             for (URL url : values) {
-                if (!url.getFile().endsWith("-patch.json")) {
-                    updateDefinition(definitionType, url);
-                }
+                updateDefinition(definitionType, url);
             }
         } else {
             if (!fileName.contains("/")) {
@@ -135,11 +132,7 @@ public class DeployDefinitionCommand extends OsgiCommandSupport {
             Optional<URL> optionalURL = values.stream().filter(u -> u.getFile().endsWith(fileName)).findFirst();
             if (optionalURL.isPresent()) {
                 URL url = optionalURL.get();
-                if (!url.getFile().endsWith("-patch.json")) {
-                    updateDefinition(definitionType, url);
-                } else {
-                    deployPatch(definitionType, url);
-                }
+                updateDefinition(definitionType, url);
             } else {
                 System.out.println("Couldn't find file " + fileName);
                 return null;
@@ -211,6 +204,10 @@ public class DeployDefinitionCommand extends OsgiCommandSupport {
                     Scoring scoring = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Scoring.class);
                     segmentService.setScoringDefinition(scoring);
                     break;
+                case "patch":
+                    Patch patch = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Patch.class);
+                    patchService.patch(patch);
+                    break;
             }
             System.out.println("Predefined definition registered : "+definitionURL.getFile());
         } catch (IOException e) {
@@ -218,23 +215,6 @@ public class DeployDefinitionCommand extends OsgiCommandSupport {
             System.out.println(e.getMessage());
         }
     }
-
-    private void deployPatch(String definitionType, URL patchURL) {
-        try {
-            Patch patch = CustomObjectMapper.getObjectMapper().readValue(patchURL, Patch.class);
-            Class<? extends Item> type = Patch.PATCHABLE_TYPES.get(definitionType);
-            if (type != null) {
-                patchService.patch(patch, type);
-            }
-
-            System.out.println("Definition patched : "+ patch.getItemId() + " by : " + patchURL.getFile());
-        } catch (IOException e) {
-            System.out.println("Error while saving definition " + patchURL);
-            System.out.println(e.getMessage());
-        }
-    }
-
-
 
     private String getDefinitionTypePath(String definitionType) {
         StringBuilder path = new StringBuilder("META-INF/cxs/");
@@ -265,6 +245,9 @@ public class DeployDefinitionCommand extends OsgiCommandSupport {
                 break;
             case "scoring":
                 path.append("scoring");
+                break;
+            case "patch":
+                path.append("patches");
                 break;
         }
 

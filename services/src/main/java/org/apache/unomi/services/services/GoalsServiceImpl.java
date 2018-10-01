@@ -117,29 +117,24 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             return;
         }
 
-        // First apply patches on existing items
-        patchService.patch(bundleContext.getBundle().findEntries("META-INF/cxs/goals", "*-patch.json", true), Goal.class);
-
         while (predefinedRuleEntries.hasMoreElements()) {
             URL predefinedGoalURL = predefinedRuleEntries.nextElement();
-            if (!predefinedGoalURL.getFile().endsWith("-patch.json")) {
-                logger.debug("Found predefined goals at " + predefinedGoalURL + ", loading... ");
+            logger.debug("Found predefined goals at " + predefinedGoalURL + ", loading... ");
 
-                try {
-                    Goal goal = CustomObjectMapper.getObjectMapper().readValue(predefinedGoalURL, Goal.class);
-                    if (goal.getMetadata().getScope() == null) {
-                        goal.getMetadata().setScope("systemscope");
-                    }
-                    // Register only if goal does not exist yet
-                    if (getGoal(goal.getMetadata().getId()) == null) {
-                        setGoal(goal);
-                        logger.info("Predefined goal with id {} registered", goal.getMetadata().getId());
-                    } else {
-                        logger.info("The predefined goal with id {} is already registered, this goal will be skipped", goal.getMetadata().getId());
-                    }
-                } catch (IOException e) {
-                    logger.error("Error while loading segment definition " + predefinedGoalURL, e);
+            try {
+                Goal goal = CustomObjectMapper.getObjectMapper().readValue(predefinedGoalURL, Goal.class);
+                if (goal.getMetadata().getScope() == null) {
+                    goal.getMetadata().setScope("systemscope");
                 }
+                // Register only if goal does not exist yet
+                if (getGoal(goal.getMetadata().getId()) == null) {
+                    setGoal(goal);
+                    logger.info("Predefined goal with id {} registered", goal.getMetadata().getId());
+                } else {
+                    logger.info("The predefined goal with id {} is already registered, this goal will be skipped", goal.getMetadata().getId());
+                }
+            } catch (IOException e) {
+                logger.error("Error while loading segment definition " + predefinedGoalURL, e);
             }
         }
     }
@@ -271,26 +266,21 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             return;
         }
 
-        // First apply patches on existing items
-        patchService.patch(bundleContext.getBundle().findEntries("META-INF/cxs/campaigns", "*-patch.json", true), Campaign.class);
-
         while (predefinedRuleEntries.hasMoreElements()) {
             URL predefinedCampaignURL = predefinedRuleEntries.nextElement();
-            if (!predefinedCampaignURL.getFile().endsWith("-patch.json")) {
-                logger.debug("Found predefined campaigns at " + predefinedCampaignURL + ", loading... ");
+            logger.debug("Found predefined campaigns at " + predefinedCampaignURL + ", loading... ");
 
-                try {
-                    Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(predefinedCampaignURL, Campaign.class);
-                    // Register only if campaign does not exist yet
-                    if (getCampaign(campaign.getMetadata().getId()) == null) {
-                        setCampaign(campaign);
-                        logger.info("Predefined campaign with id {} registered", campaign.getMetadata().getId());
-                    } else {
-                        logger.info("The predefined campaign with id {} is already registered, this campaign will be skipped", campaign.getMetadata().getId());
-                    }
-                } catch (IOException e) {
-                    logger.error("Error while loading segment definition " + predefinedCampaignURL, e);
+            try {
+                Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(predefinedCampaignURL, Campaign.class);
+                // Register only if campaign does not exist yet
+                if (getCampaign(campaign.getMetadata().getId()) == null) {
+                    setCampaign(campaign);
+                    logger.info("Predefined campaign with id {} registered", campaign.getMetadata().getId());
+                } else {
+                    logger.info("The predefined campaign with id {} is already registered, this campaign will be skipped", campaign.getMetadata().getId());
                 }
+            } catch (IOException e) {
+                logger.error("Error while loading segment definition " + predefinedCampaignURL, e);
             }
         }
     }

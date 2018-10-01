@@ -923,34 +923,29 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             return;
         }
 
-        // First apply patches on existing items
-        patchService.patch(bundleContext.getBundle().findEntries("META-INF/cxs/personas", "*-patch.json", true), Persona.class);
-
         while (predefinedPersonaEntries.hasMoreElements()) {
             URL predefinedPersonaURL = predefinedPersonaEntries.nextElement();
-            if (!predefinedPersonaURL.getFile().endsWith("-patch.json")) {
-                logger.debug("Found predefined persona at " + predefinedPersonaURL + ", loading... ");
+            logger.debug("Found predefined persona at " + predefinedPersonaURL + ", loading... ");
 
-                try {
-                    PersonaWithSessions persona = getObjectMapper().readValue(predefinedPersonaURL, PersonaWithSessions.class);
+            try {
+                PersonaWithSessions persona = getObjectMapper().readValue(predefinedPersonaURL, PersonaWithSessions.class);
 
-                    String itemId = persona.getPersona().getItemId();
-                    // Register only if persona does not exist yet
-                    if (persistenceService.load(itemId, Persona.class) == null) {
-                        persistenceService.save(persona.getPersona());
+                String itemId = persona.getPersona().getItemId();
+                // Register only if persona does not exist yet
+                if (persistenceService.load(itemId, Persona.class) == null) {
+                    persistenceService.save(persona.getPersona());
 
-                        List<PersonaSession> sessions = persona.getSessions();
-                        for (PersonaSession session : sessions) {
-                            session.setProfile(persona.getPersona());
-                            persistenceService.save(session);
-                        }
-                        logger.info("Predefined persona with id {} registered", itemId);
-                    } else {
-                        logger.info("The predefined persona with id {} is already registered, this persona will be skipped", itemId);
+                    List<PersonaSession> sessions = persona.getSessions();
+                    for (PersonaSession session : sessions) {
+                        session.setProfile(persona.getPersona());
+                        persistenceService.save(session);
                     }
-                } catch (IOException e) {
-                    logger.error("Error while loading persona " + predefinedPersonaURL, e);
+                    logger.info("Predefined persona with id {} registered", itemId);
+                } else {
+                    logger.info("The predefined persona with id {} is already registered, this persona will be skipped", itemId);
                 }
+            } catch (IOException e) {
+                logger.error("Error while loading persona " + predefinedPersonaURL, e);
             }
         }
     }
@@ -961,32 +956,26 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             return;
         }
 
-        // First apply patches on existing items
-
-        patchService.patch(bundleContext.getBundle().findEntries("META-INF/cxs/properties", "*-patch.json", true), PropertyType.class);
-
         List<PropertyType> bundlePropertyTypes = new ArrayList<>();
         while (predefinedPropertyTypeEntries.hasMoreElements()) {
             URL predefinedPropertyTypeURL = predefinedPropertyTypeEntries.nextElement();
-            if (!predefinedPropertyTypeURL.getFile().endsWith("-patch.json")) {
-                logger.debug("Found predefined property type at " + predefinedPropertyTypeURL + ", loading... ");
+            logger.debug("Found predefined property type at " + predefinedPropertyTypeURL + ", loading... ");
 
-                try {
-                    PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeURL, PropertyType.class);
-                    // Register only if property type does not exist yet
-                    if (getPropertyType(propertyType.getMetadata().getId()) == null) {
+            try {
+                PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeURL, PropertyType.class);
+                // Register only if property type does not exist yet
+                if (getPropertyType(propertyType.getMetadata().getId()) == null) {
 
-                        setPropertyTypeTarget(predefinedPropertyTypeURL, propertyType);
+                    setPropertyTypeTarget(predefinedPropertyTypeURL, propertyType);
 
-                        persistenceService.save(propertyType);
-                        bundlePropertyTypes.add(propertyType);
-                        logger.info("Predefined property type with id {} registered", propertyType.getMetadata().getId());
-                    } else {
-                        logger.info("The predefined property type with id {} is already registered, this property type will be skipped", propertyType.getMetadata().getId());
-                    }
-                } catch (IOException e) {
-                    logger.error("Error while loading properties " + predefinedPropertyTypeURL, e);
+                    persistenceService.save(propertyType);
+                    bundlePropertyTypes.add(propertyType);
+                    logger.info("Predefined property type with id {} registered", propertyType.getMetadata().getId());
+                } else {
+                    logger.info("The predefined property type with id {} is already registered, this property type will be skipped", propertyType.getMetadata().getId());
                 }
+            } catch (IOException e) {
+                logger.error("Error while loading properties " + predefinedPropertyTypeURL, e);
             }
         }
         propertyTypes = propertyTypes.with(bundlePropertyTypes);

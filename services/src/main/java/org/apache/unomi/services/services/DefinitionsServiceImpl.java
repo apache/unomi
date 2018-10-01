@@ -133,26 +133,21 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             return;
         }
 
-        // First apply patches on existing items
-        patchService.patch(bundleContext.getBundle().findEntries("META-INF/cxs/conditions", "*-patch.json", true), ConditionType.class);
-
         while (predefinedConditionEntries.hasMoreElements()) {
             URL predefinedConditionURL = predefinedConditionEntries.nextElement();
-            if (!predefinedConditionURL.getFile().endsWith("-patch.json")) {
-                logger.debug("Found predefined condition at " + predefinedConditionURL + ", loading... ");
+            logger.debug("Found predefined condition at " + predefinedConditionURL + ", loading... ");
 
-                try {
-                    ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(predefinedConditionURL, ConditionType.class);
-                    // Register only if condition type does not exist yet
-                    if (getConditionType(conditionType.getMetadata().getId()) == null) {
-                        setConditionType(conditionType);
-                        logger.info("Predefined condition type with id {} registered", conditionType.getMetadata().getId());
-                    } else {
-                        logger.info("The predefined condition type with id {} is already registered, this condition type will be skipped", conditionType.getMetadata().getId());
-                    }
-                } catch (IOException e) {
-                    logger.error("Error while loading condition definition " + predefinedConditionURL, e);
+            try {
+                ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(predefinedConditionURL, ConditionType.class);
+                // Register only if condition type does not exist yet
+                if (getConditionType(conditionType.getMetadata().getId()) == null) {
+                    setConditionType(conditionType);
+                    logger.info("Predefined condition type with id {} registered", conditionType.getMetadata().getId());
+                } else {
+                    logger.info("The predefined condition type with id {} is already registered, this condition type will be skipped", conditionType.getMetadata().getId());
                 }
+            } catch (IOException e) {
+                logger.error("Error while loading condition definition " + predefinedConditionURL, e);
             }
         }
     }
@@ -163,27 +158,22 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             return;
         }
 
-        // First apply patches on existing items
-        patchService.patch(bundleContext.getBundle().findEntries("META-INF/cxs/actions", "*-patch.json", true), ActionType.class);
-
         ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
         while (predefinedActionsEntries.hasMoreElements()) {
             URL predefinedActionURL = predefinedActionsEntries.nextElement();
-            if (!predefinedActionURL.getFile().endsWith("-patch.json")) {
-                logger.debug("Found predefined action at " + predefinedActionURL + ", loading... ");
+            logger.debug("Found predefined action at " + predefinedActionURL + ", loading... ");
 
-                try {
-                    ActionType actionType = CustomObjectMapper.getObjectMapper().readValue(predefinedActionURL, ActionType.class);
-                    // Register only if action type does not exist yet
-                    if (getActionType(actionType.getMetadata().getId()) == null) {
-                        setActionType(actionType);
-                        logger.info("Predefined action type with id {} registered", actionType.getMetadata().getId());
-                    } else {
-                        logger.info("The predefined action type with id {} is already registered, this action type will be skipped", actionType.getMetadata().getId());
-                    }
-                } catch (Exception e) {
-                    logger.error("Error while loading action definition " + predefinedActionURL, e);
+            try {
+                ActionType actionType = CustomObjectMapper.getObjectMapper().readValue(predefinedActionURL, ActionType.class);
+                // Register only if action type does not exist yet
+                if (getActionType(actionType.getMetadata().getId()) == null) {
+                    setActionType(actionType);
+                    logger.info("Predefined action type with id {} registered", actionType.getMetadata().getId());
+                } else {
+                    logger.info("The predefined action type with id {} is already registered, this action type will be skipped", actionType.getMetadata().getId());
                 }
+            } catch (Exception e) {
+                logger.error("Error while loading action definition " + predefinedActionURL, e);
             }
         }
 

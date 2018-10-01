@@ -214,7 +214,8 @@
     </bean>
     <service id="personalizationService" ref="personalizationServiceImpl" interface="org.apache.unomi.api.services.PersonalizationService" />
 
-    <bean id="patchServiceImpl" class="org.apache.unomi.services.services.PatchServiceImpl">
+    <bean id="patchServiceImpl" class="org.apache.unomi.services.services.PatchServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>

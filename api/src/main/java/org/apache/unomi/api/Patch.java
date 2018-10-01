@@ -50,6 +50,8 @@ public class Patch extends Item {
 
     private String patchedItemId;
 
+    private String patchedItemType;
+
     private String operation;
 
     private Object data;
@@ -62,6 +64,14 @@ public class Patch extends Item {
 
     public void setPatchedItemId(String patchedItemId) {
         this.patchedItemId = patchedItemId;
+    }
+
+    public String getPatchedItemType() {
+        return patchedItemType;
+    }
+
+    public void setPatchedItemType(String patchedItemType) {
+        this.patchedItemType = patchedItemType;
     }
 
     public String getOperation() {

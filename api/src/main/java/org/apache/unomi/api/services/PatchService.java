@@ -25,10 +25,6 @@ import java.util.Enumeration;
 public interface PatchService {
     Patch load(String id);
 
-    void patch(Enumeration<URL> urls, Class<? extends Item> type);
-
-    void patch(URL patchUrl, Class<? extends Item> type);
-
-    <T extends Item> T patch(Patch patch, Class<T> type) ;
+    Item patch(Patch patch) ;
 }
 
