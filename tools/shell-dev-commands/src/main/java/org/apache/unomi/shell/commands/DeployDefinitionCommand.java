@@ -39,6 +39,7 @@ import java.net.URL;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 @Command(scope = "unomi", name = "deploy-definition", description = "This will deploy a specific definition")
 public class DeployDefinitionCommand extends OsgiCommandSupport {
@@ -63,7 +64,7 @@ public class DeployDefinitionCommand extends OsgiCommandSupport {
     String fileName;
 
     protected Object doExecute() throws Exception {
-        Bundle bundleToUpdate;
+        List<Bundle> bundlesToUpdate;
         if (bundleIdentifier == null) {
             List<Bundle> bundles = new ArrayList<>();
             for (Bundle bundle : bundleContext.getBundles()) {
@@ -72,22 +73,39 @@ public class DeployDefinitionCommand extends OsgiCommandSupport {
                 }
             }
 
-            String bundleAnswer = askUserWithAuthorizedAnswer(session, "Which bundle ?" + getValuesWithNumber(bundles.stream().map(Bundle::getSymbolicName).collect(Collectors.toList())) + "\n",
+            bundles = bundles.stream()
+                    .filter(b -> definitionTypes.stream().anyMatch((t) -> b.findEntries(getDefinitionTypePath(t), "*.json", true) != null))
+                    .collect(Collectors.toList());
+
+            List<String> stringList = bundles.stream().map(Bundle::getSymbolicName).collect(Collectors.toList());
+            stringList.add(0, "* (All)");
+
+            String bundleAnswer = askUserWithAuthorizedAnswer(session, "Which bundle ?" + getValuesWithNumber(stringList) + "\n",
                     IntStream.range(1,bundles.size()+1).mapToObj(Integer::toString).collect(Collectors.toList()));
-            bundleToUpdate = bundles.get(new Integer(bundleAnswer)-1);
-            bundleIdentifier = bundleToUpdate.getBundleId();
+            if (bundleAnswer.equals("1")) {
+                bundlesToUpdate = bundles;
+            } else {
+                bundlesToUpdate = Collections.singletonList(bundles.get(new Integer(bundleAnswer) - 2));
+            }
         } else {
-            bundleToUpdate = bundleContext.getBundle(bundleIdentifier);
-        }
+            Bundle bundle = bundleContext.getBundle(bundleIdentifier);
 
-        if (bundleToUpdate == null) {
-            System.out.println("Couldn't find a bundle with id: " + bundleIdentifier);
-            return null;
-        }
+            if (bundle == null) {
+                System.out.println("Couldn't find a bundle with id: " + bundleIdentifier);
+                return null;
+            }
 
+            bundlesToUpdate = Collections.singletonList(bundle);
+        }
 
         if (definitionType == null) {
-            List<String> values = definitionTypes.stream().filter((t) -> bundleToUpdate.findEntries(getDefinitionTypePath(t), "*.json", true) != null).collect(Collectors.toList());
+            List<String> values = definitionTypes.stream().filter((t) -> bundlesToUpdate.stream().anyMatch(b->b.findEntries(getDefinitionTypePath(t), "*.json", true) != null)).collect(Collectors.toList());
+
+            if (values.isEmpty()) {
+                System.out.println("Couldn't find definitions in bundle : " + bundlesToUpdate);
+                return null;
+            }
+
             String definitionTypeAnswer = askUserWithAuthorizedAnswer(session, "Which kind of definition do you want to load?" + getValuesWithNumber(values) + "\n",
                     IntStream.range(1,values.size()+1).mapToObj(Integer::toString).collect(Collectors.toList()));
             definitionType = values.get(new Integer(definitionTypeAnswer)-1);
@@ -99,19 +117,14 @@ public class DeployDefinitionCommand extends OsgiCommandSupport {
         }
 
         String path = getDefinitionTypePath(definitionType);
-        Enumeration<URL> definitions = bundleToUpdate.findEntries(path, "*.json", true);
-        if (definitions == null) {
+        List<URL> values = bundlesToUpdate.stream().flatMap(b->b.findEntries(path, "*.json", true) != null ? Collections.list(b.findEntries(path, "*.json", true)).stream() : Stream.empty()).collect(Collectors.toList());
+        if (values.isEmpty()) {
             System.out.println("Couldn't find definitions in bundle with id: " + bundleIdentifier + " and definition path: " + path);
             return null;
         }
 
-        List<URL> values = new ArrayList<>();
-        while (definitions.hasMoreElements()) {
-            values.add(definitions.nextElement());
-        }
         if (fileName == null) {
-            List<String> stringList = values.stream().map(u -> StringUtils.substringAfterLast(u.getFile(), "/")).collect(Collectors.toList());
-            Collections.sort(stringList);
+            List<String> stringList = values.stream().map(u -> StringUtils.substringAfterLast(u.getFile(), "/")).sorted().collect(Collectors.toList());
             stringList.add(0, "* (All)");
             String fileNameAnswer = askUserWithAuthorizedAnswer(session, "Which file do you want to load ?" + getValuesWithNumber(stringList) + "\n",
                     IntStream.range(1,stringList.size()+1).mapToObj(Integer::toString).collect(Collectors.toList()));
