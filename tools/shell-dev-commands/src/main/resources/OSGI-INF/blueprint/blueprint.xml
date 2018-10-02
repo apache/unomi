@@ -30,6 +30,7 @@
     <reference id="clusterService" interface="org.apache.unomi.api.services.ClusterService"/>
     <reference id="queryService" interface="org.apache.unomi.api.services.QueryService"/>
     <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
+    <reference id="patchService" interface="org.apache.unomi.api.services.PatchService"/>
 
     <shell:command-bundle>
         <shell:command>
@@ -68,12 +69,13 @@
             </shell:action>
         </shell:command>
         <shell:command>
-            <shell:action class="org.apache.unomi.shell.commands.DeployDefinition">
+            <shell:action class="org.apache.unomi.shell.commands.DeployDefinitionCommand">
                 <shell:property name="definitionsService" ref="definitionsService" />
                 <shell:property name="goalsService" ref="goalsService" />
                 <shell:property name="profileService" ref="profileService" />
                 <shell:property name="rulesService" ref="rulesService" />
                 <shell:property name="segmentService" ref="segmentService" />
+                <shell:property name="patchService" ref="patchService" />
             </shell:action>
         </shell:command>
         <shell:command>

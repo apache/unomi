@@ -17,6 +17,9 @@
 
 package org.apache.unomi.services.services;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.github.fge.jsonpatch.JsonPatch;
+import com.github.fge.jsonpatch.JsonPatchException;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -25,10 +28,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.api.services.QueryService;
-import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
@@ -41,6 +41,8 @@ import java.net.URL;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static org.apache.unomi.persistence.spi.CustomObjectMapper.getObjectMapper;
 
 public class ProfileServiceImpl implements ProfileService, SynchronousBundleListener {
 
@@ -160,6 +162,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     private QueryService queryService;
 
+    private PatchService patchService;
+
     private Condition purgeProfileQuery;
     private Integer purgeProfileExistTime = 0;
     private Integer purgeProfileInactiveTime = 0;
@@ -192,6 +196,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
+    }
+
+    public void setQueryService(QueryService queryService) {
+        this.queryService = queryService;
+    }
+
+    public void setPatchService(PatchService patchService) {
+        this.patchService = patchService;
     }
 
     public void setForceRefreshOnSave(boolean forceRefreshOnSave) {
@@ -230,10 +242,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     private void processBundleStop(BundleContext bundleContext) {
-    }
-
-    public void setQueryService(QueryService queryService) {
-        this.queryService = queryService;
     }
 
     public void setPurgeProfileExistTime(Integer purgeProfileExistTime) {
@@ -920,11 +928,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             logger.debug("Found predefined persona at " + predefinedPersonaURL + ", loading... ");
 
             try {
-                PersonaWithSessions persona = CustomObjectMapper.getObjectMapper().readValue(predefinedPersonaURL, PersonaWithSessions.class);
+                PersonaWithSessions persona = getObjectMapper().readValue(predefinedPersonaURL, PersonaWithSessions.class);
 
                 String itemId = persona.getPersona().getItemId();
                 // Register only if persona does not exist yet
-                if (persistenceService.load(itemId, Persona.class) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
+                if (persistenceService.load(itemId, Persona.class) == null) {
                     persistenceService.save(persona.getPersona());
 
                     List<PersonaSession> sessions = persona.getSessions();
@@ -939,7 +947,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             } catch (IOException e) {
                 logger.error("Error while loading persona " + predefinedPersonaURL, e);
             }
-
         }
     }
 
@@ -957,7 +964,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             try {
                 PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeURL, PropertyType.class);
                 // Register only if property type does not exist yet
-                if (getPropertyType(propertyType.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
+                if (getPropertyType(propertyType.getMetadata().getId()) == null) {
 
                     setPropertyTypeTarget(predefinedPropertyTypeURL, propertyType);
 
@@ -973,6 +980,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
         propertyTypes = propertyTypes.with(bundlePropertyTypes);
     }
+
 
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {

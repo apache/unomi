@@ -178,6 +178,18 @@
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
+    <jaxrs:server address="/patches" id="restPatchService">
+        <jaxrs:providers>
+            <ref component-id="jaxb-provider"/>
+            <ref component-id="cors-filter"/>
+            <ref component-id="jaas-filter"/>
+        </jaxrs:providers>
+
+        <jaxrs:serviceBeans>
+            <ref component-id="patchServiceEndPoint"/>
+        </jaxrs:serviceBeans>
+    </jaxrs:server>
+
     <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
     <reference id="userListService" interface="org.apache.unomi.api.services.UserListService"/>
     <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
@@ -187,6 +199,7 @@
     <reference id="clusterService" interface="org.apache.unomi.api.services.ClusterService"/>
     <reference id="queryService" interface="org.apache.unomi.api.services.QueryService"/>
     <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
+    <reference id="patchService" interface="org.apache.unomi.api.services.PatchService"/>
 
     <bean id="segmentServiceEndPoint" class="org.apache.unomi.rest.SegmentServiceEndPoint">
         <property name="segmentService" ref="segmentService"/>
@@ -231,6 +244,10 @@
     <bean id="queryServiceEndPoint" class="org.apache.unomi.rest.QueryServiceEndPoint">
         <property name="queryService" ref="queryService"/>
         <property name="localizationHelper" ref="localizationHelper"/>
+    </bean>
+
+    <bean id="patchServiceEndPoint" class="org.apache.unomi.rest.PatchServiceEndPoint">
+        <property name="patchService" ref="patchService"/>
     </bean>
 
     <bean id="resourceBundleHelper" class="org.apache.unomi.rest.ResourceBundleHelper">

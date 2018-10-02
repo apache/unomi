@@ -25,10 +25,7 @@ import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.*;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.RulesService;
-import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
@@ -54,6 +51,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     private RulesService rulesService;
 
+    private PatchService patchService;
+
     private long taskExecutionPeriod = 24L * 60L * 60L * 1000L;
     private List<Segment> allSegments;
     private List<Scoring> allScoring;
@@ -74,6 +73,10 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
+    }
+
+    public void setPatchService(PatchService patchService) {
+        this.patchService = patchService;
     }
 
     public void setSegmentUpdateBatchSize(int segmentUpdateBatchSize) {
@@ -127,6 +130,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         if (predefinedSegmentEntries == null) {
             return;
         }
+
         while (predefinedSegmentEntries.hasMoreElements()) {
             URL predefinedSegmentURL = predefinedSegmentEntries.nextElement();
             logger.debug("Found predefined segment at " + predefinedSegmentURL + ", loading... ");
@@ -137,7 +141,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     segment.getMetadata().setScope("systemscope");
                 }
                 // Register only if segment does not exist yet
-                if (getSegmentDefinition(segment.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
+                if (getSegmentDefinition(segment.getMetadata().getId()) == null) {
                     setSegmentDefinition(segment);
                     logger.info("Predefined segment with id {} registered", segment.getMetadata().getId());
                 } else {
@@ -154,6 +158,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         if (predefinedScoringEntries == null) {
             return;
         }
+
         while (predefinedScoringEntries.hasMoreElements()) {
             URL predefinedScoringURL = predefinedScoringEntries.nextElement();
             logger.debug("Found predefined scoring at " + predefinedScoringURL + ", loading... ");
@@ -164,7 +169,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     scoring.getMetadata().setScope("systemscope");
                 }
                 // Register only if scoring plan does not exist yet
-                if (getScoringDefinition(scoring.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
+                if (getScoringDefinition(scoring.getMetadata().getId()) == null) {
                     setScoringDefinition(scoring);
                     logger.info("Predefined scoring with id {} registered", scoring.getMetadata().getId());
                 } else {

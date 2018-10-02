@@ -30,6 +30,7 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.GoalsService;
+import org.apache.unomi.api.services.PatchService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -57,6 +58,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     private RulesService rulesService;
 
+    private PatchService patchService;
+
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
@@ -71,6 +74,10 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
+    }
+
+    public void setPatchService(PatchService patchService) {
+        this.patchService = patchService;
     }
 
     public void postConstruct() {
@@ -109,6 +116,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         if (predefinedRuleEntries == null) {
             return;
         }
+
         while (predefinedRuleEntries.hasMoreElements()) {
             URL predefinedGoalURL = predefinedRuleEntries.nextElement();
             logger.debug("Found predefined goals at " + predefinedGoalURL + ", loading... ");
@@ -119,7 +127,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
                     goal.getMetadata().setScope("systemscope");
                 }
                 // Register only if goal does not exist yet
-                if (getGoal(goal.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
+                if (getGoal(goal.getMetadata().getId()) == null) {
                     setGoal(goal);
                     logger.info("Predefined goal with id {} registered", goal.getMetadata().getId());
                 } else {
@@ -257,6 +265,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         if (predefinedRuleEntries == null) {
             return;
         }
+
         while (predefinedRuleEntries.hasMoreElements()) {
             URL predefinedCampaignURL = predefinedRuleEntries.nextElement();
             logger.debug("Found predefined campaigns at " + predefinedCampaignURL + ", loading... ");
@@ -264,7 +273,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             try {
                 Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(predefinedCampaignURL, Campaign.class);
                 // Register only if campaign does not exist yet
-                if (getCampaign(campaign.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
+                if (getCampaign(campaign.getMetadata().getId()) == null) {
                     setCampaign(campaign);
                     logger.info("Predefined campaign with id {} registered", campaign.getMetadata().getId());
                 } else {

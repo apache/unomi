@@ -58,6 +58,7 @@
     <bean id="definitionsServiceImpl" class="org.apache.unomi.services.services.DefinitionsServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
+        <property name="patchService" ref="patchServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
     <service id="definitionsService" ref="definitionsServiceImpl">
@@ -100,6 +101,7 @@
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
+        <property name="patchService" ref="patchServiceImpl"/>
         <property name="rulesService" ref="rulesServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
@@ -120,6 +122,7 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="eventService" ref="eventServiceImpl"/>
+        <property name="patchService" ref="patchServiceImpl"/>
         <property name="actionExecutorDispatcher" ref="actionExecutorDispatcherImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
@@ -137,6 +140,7 @@
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="eventService" ref="eventServiceImpl"/>
         <property name="rulesService" ref="rulesServiceImpl"/>
+        <property name="patchService" ref="patchServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="taskExecutionPeriod" value="86400000"/>
         <property name="segmentUpdateBatchSize" value="${services.segment.update.batchSize}" />
@@ -167,6 +171,7 @@
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="segmentService" ref="segmentServiceImpl"/>
         <property name="queryService" ref="queryServiceImpl"/>
+        <property name="patchService" ref="patchServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="purgeProfileInterval" value="${services.profile.purge.interval}"/>
         <property name="purgeProfileInactiveTime" value="${services.profile.purge.inactiveTime}"/>
@@ -208,6 +213,18 @@
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
     <service id="personalizationService" ref="personalizationServiceImpl" interface="org.apache.unomi.api.services.PersonalizationService" />
+
+    <bean id="patchServiceImpl" class="org.apache.unomi.services.services.PatchServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+    </bean>
+    <service id="patchService" ref="patchServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.PatchService</value>
+        </interfaces>
+    </service>
+
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
     <reference-list id="eventListenerServices"

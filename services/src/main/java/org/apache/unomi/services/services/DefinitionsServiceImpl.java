@@ -17,6 +17,7 @@
 
 package org.apache.unomi.services.services;
 
+import org.apache.unomi.api.Persona;
 import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.PropertyMergeStrategyType;
 import org.apache.unomi.api.ValueType;
@@ -24,6 +25,7 @@ import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.PatchService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.BaseAggregate;
@@ -44,6 +46,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     private static final Logger logger = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
 
     private PersistenceService persistenceService;
+    private PatchService patchService;
 
     private Map<String, ConditionType> conditionTypeById = new ConcurrentHashMap<>();
     private Map<String, ActionType> actionTypeById = new ConcurrentHashMap<>();
@@ -63,6 +66,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
+    }
+
+    public void setPatchService(PatchService patchService) {
+        this.patchService = patchService;
     }
 
     public void postConstruct() {
@@ -133,7 +140,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             try {
                 ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(predefinedConditionURL, ConditionType.class);
                 // Register only if condition type does not exist yet
-                if (getConditionType(conditionType.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
+                if (getConditionType(conditionType.getMetadata().getId()) == null) {
                     setConditionType(conditionType);
                     logger.info("Predefined condition type with id {} registered", conditionType.getMetadata().getId());
                 } else {
@@ -150,6 +157,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         if (predefinedActionsEntries == null) {
             return;
         }
+
         ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
         while (predefinedActionsEntries.hasMoreElements()) {
             URL predefinedActionURL = predefinedActionsEntries.nextElement();
@@ -158,7 +166,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             try {
                 ActionType actionType = CustomObjectMapper.getObjectMapper().readValue(predefinedActionURL, ActionType.class);
                 // Register only if action type does not exist yet
-                if (getActionType(actionType.getMetadata().getId()) == null || bundleContext.getBundle().getVersion().toString().contains("SNAPSHOT")) {
+                if (getActionType(actionType.getMetadata().getId()) == null) {
                     setActionType(actionType);
                     logger.info("Predefined action type with id {} registered", actionType.getMetadata().getId());
                 } else {
