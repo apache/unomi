@@ -39,6 +39,7 @@
         <module>unomi-mailchimp</module>
         <module>weather-update</module>
         <module>web-tracker</module>
+        <module>twilio</module>
     </modules>
 
 </project>

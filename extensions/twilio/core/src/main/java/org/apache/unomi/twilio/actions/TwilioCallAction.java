@@ -63,7 +63,7 @@ public class TwilioCallAction implements ActionExecutor {
         try {
             textUrl = new URI(DEMO_VOICE_URL);
         } catch (URISyntaxException e) {
-            logger.error("Error when building URI with response URL = {}", "http://localhost:8181/cxs/twilio/validate");
+            logger.error("Error when building URI with response URL = {}", DEMO_VOICE_URL);
             return EventService.NO_CHANGE;
         }
 

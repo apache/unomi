@@ -19,13 +19,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <groupId>org.apache.unomi</groupId>
-        <artifactId>unomi-web-tracker</artifactId>
+        <artifactId>unomi-twilio</artifactId>
         <version>1.4.0-incubating-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>unomi-web-tracker-karaf-kar</artifactId>
-    <name>Apache Unomi :: Extension :: Web Tracker :: Apache Karaf Feature and KAR archive</name>
+    <artifactId>unomi-twilio-karaf-kar</artifactId>
+    <name>Apache Unomi :: Extension :: Twilio Integration :: Apache Karaf Feature and KAR archive</name>
     <description>This is a simple Apache Unomi plugin.</description>
     <packaging>kar</packaging>
 
@@ -37,17 +37,8 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpcore-osgi</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient-osgi</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-web-tracker-wab</artifactId>
+            <artifactId>unomi-twilio-core</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

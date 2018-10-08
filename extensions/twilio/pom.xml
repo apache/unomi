@@ -24,13 +24,13 @@
         <version>1.4.0-incubating-SNAPSHOT</version>
     </parent>
 
-    <artifactId>unomi-web-tracker</artifactId>
-    <name>Apache Unomi :: Extension :: Web Tracker</name>
-    <description>Apache Unomi Context Server to provide the web tracker</description>
+    <artifactId>unomi-twilio</artifactId>
+    <name>Apache Unomi :: Extension :: Twilio Integration</name>
+    <description>Apache Unomi Context Server to provide Twilio Integration</description>
     <packaging>pom</packaging>
 
     <modules>
-        <module>wab</module>
+        <module>core</module>
         <module>karaf-kar</module>
     </modules>
 </project>

@@ -115,7 +115,7 @@ Unomi.prototype.fillPageData = function(unomiPage, props) {
     unomiPage.pageInfo.pagePath = unomiPage.pageInfo.pagePath || props.path;
     unomiPage.pageInfo.destinationURL = unomiPage.pageInfo.destinationURL || props.url;
     unomiPage.pageInfo.referringURL = unomiPage.pageInfo.referringURL || props.referrer;
-}
+};
 
 
 /**
@@ -221,7 +221,7 @@ Unomi.prototype.onpersonalize = function (msg) {
     };
     window.digitalData.personalizationCallback = window.digitalData.personalizationCallback || [];
     window.digitalData.personalizationCallback.push({personalization: msg.personalization, callback: msg.callback});
-},
+};
 
 /**
  * This function return the basic structure for an event, it must be adapted to your need

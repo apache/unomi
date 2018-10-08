@@ -16,8 +16,8 @@
         {
           "type": "eventPropertyCondition",
           "parameterValues": {
-            "eventProperty": "requestCall",
-            "operator": "exist"
+            "propertyName": "target.phoneNumber",
+            "comparisonOperator": "exists"
           }
         }
       ],

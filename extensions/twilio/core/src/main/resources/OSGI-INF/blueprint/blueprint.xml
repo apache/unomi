@@ -21,24 +21,23 @@
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd">
 
     <!-- cfg configuration -->
-    <cm:property-placeholder persistent-id="org.apache.unomi.weatherupdate"
-                             update-strategy="reload">
+    <cm:property-placeholder persistent-id="org.apache.unomi.twilio" update-strategy="reload">
         <cm:default-properties>
-            <cm:property name="weatherUpdate.apiKey" value=""/>
-            <cm:property name="weatherUpdate.url.base" value=""/>
-            <cm:property name="weatherUpdate.url.attributes" value=""/>
+            <cm:property name="twilio.accountSid" value="YOUR_TWILIO_API_KEY"/>
+            <cm:property name="twilio.authToken" value="YOUR_TWILIO_AUTH_TOKEN"/>
+            <cm:property name="twilio.phoneNumber" value="YOUR_TWILIO_PHONE_NUMBER"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
     <!-- Action executor -->
     <service interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
-            <entry key="actionExecutorId" value="weatherUpdate"/>
+            <entry key="actionExecutorId" value="twilioCall"/>
         </service-properties>
-        <bean class="org.apache.unomi.weatherupdate.actions.WeatherUpdateAction">
-            <property name="weatherApiKey" value="${weatherUpdate.apiKey}"/>
-            <property name="weatherUrlBase" value="${weatherUpdate.url.base}"/>
-            <property name="weatherUrlAttributes" value="${weatherUpdate.url.attributes}"/>
+        <bean class="org.apache.unomi.twilio.actions.TwilioCallAction">
+            <property name="twilioAccountSid" value="${twilio.accountSid}"/>
+            <property name="twilioAuthToken" value="${twilio.authToken}"/>
+            <property name="twilioPhoneNumber" value="${twilio.phoneNumber}"/>
         </bean>
     </service>
 </blueprint>

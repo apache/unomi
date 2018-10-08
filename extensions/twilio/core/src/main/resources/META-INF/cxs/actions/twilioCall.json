@@ -13,7 +13,7 @@
   "actionExecutor": "twilioCall",
   "parameters": [
     {
-      "id": "phoneNumber",
+      "id": "visitorPhoneNumber",
       "type": "string",
       "multivalued": false
     }
