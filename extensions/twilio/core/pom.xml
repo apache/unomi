@@ -21,12 +21,12 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.apache.unomi</groupId>
-        <artifactId>unomi-twilio</artifactId>
+        <artifactId>unomi-web-tracker</artifactId>
         <version>1.4.0-incubating-SNAPSHOT</version>
     </parent>
 
-    <artifactId>unomi-twilio-core</artifactId>
-    <name>Apache Unomi :: Extension :: Twilio Integration :: Core</name>
+    <artifactId>unomi-web-tracker-wab</artifactId>
+    <name>Apache Unomi :: Extension :: Web Tracker :: Wab</name>
     <description>This is a simple Apache Unomi plugin.</description>
     <packaging>bundle</packaging>
 
@@ -37,21 +37,19 @@
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
-
         <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt</artifactId>
-            <version>0.4</version>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient-osgi</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.twilio.sdk</groupId>
-            <artifactId>twilio</artifactId>
-            <version>7.17.0</version>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore-osgi</artifactId>
+            <scope>provided</scope>
         </dependency>
-
         <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.core</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -64,40 +62,20 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
+                        <_wab>src/main/webapp</_wab>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Import-Package>
                             *
                         </Import-Package>
+                        <Web-ContextPath>/tracker</Web-ContextPath>
                     </instructions>
                 </configuration>
             </plugin>
-
-            <!-- Add config file -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>attach-artifacts</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>attach-artifact</goal>
-                        </goals>
-                        <configuration>
-                            <artifacts>
-                                <artifact>
-                                    <file>
-                                        src/main/resources/org.apache.unomi.twilio.cfg
-                                    </file>
-                                    <type>cfg</type>
-                                    <classifier>twiliocfg</classifier>
-                                </artifact>
-                            </artifacts>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
         </plugins>
+
+        <resources>
+            <resource><directory>../javascript/dist</directory></resource>
+        </resources>
     </build>
 
 </project>
