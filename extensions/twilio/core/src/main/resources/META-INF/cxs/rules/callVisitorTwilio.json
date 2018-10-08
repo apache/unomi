@@ -1,0 +1,44 @@
+{
+  "metadata": {
+    "id": "callVisitorTwilio",
+    "name": "Call visitor with Twilio",
+    "description": "Call a visitor with Twilio when receiving a requestCall event"
+  },
+  "condition": {
+    "parameterValues": {
+      "subConditions": [
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "requestCall"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "eventProperty": "requestCall",
+            "operator": "exist"
+          }
+        }
+      ],
+      "operator": "and"
+    },
+    "type": "booleanCondition"
+  },
+  "actions": [
+    {
+      "parameterValues": {
+        "setPropertyName": "properties.phoneNumber",
+        "setPropertyValue": "eventProperty::target.properties(phoneNumber)",
+        "storeInSession": false
+      },
+      "type": "setPropertyAction"
+    },
+    {
+      "parameterValues": {
+        "visitorPhoneNumber": "eventProperty::target.properties(phoneNumber)"
+      },
+      "type": "twilioCallAction"
+    }
+  ]
+}
