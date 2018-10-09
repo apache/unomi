@@ -1,0 +1,11 @@
+{
+  "itemId": "firstName-patch1",
+  "patchedItemId": "firstName",
+  "patchedItemType": "propertyType",
+  "operation": "patch",
+  "data": [
+    {
+      "op": "replace", "path": "/defaultValue", "value": "foo"
+    }
+  ]
+}

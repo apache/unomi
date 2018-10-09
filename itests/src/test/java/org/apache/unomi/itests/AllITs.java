@@ -39,7 +39,8 @@ import org.junit.runners.Suite.SuiteClasses;
         ProfileImportActorsIT.class,
         ProfileExportIT.class,
         PropertiesUpdateActionIT.class,
-        ModifyConsentIT.class
-    })
+        ModifyConsentIT.class,
+        PatchIT.class
+})
 public class AllITs {
 }

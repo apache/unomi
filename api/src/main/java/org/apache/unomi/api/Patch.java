@@ -40,7 +40,7 @@ public class Patch extends Item {
         PATCHABLE_TYPES.put("goal", Goal.class);
         PATCHABLE_TYPES.put("campaign", Campaign.class);
         PATCHABLE_TYPES.put("persona",Persona.class);
-        PATCHABLE_TYPES.put("property",PropertyType.class);
+        PATCHABLE_TYPES.put("propertyType",PropertyType.class);
         PATCHABLE_TYPES.put("rule", Rule.class);
         PATCHABLE_TYPES.put("segment", Segment.class);
         PATCHABLE_TYPES.put("scoring", Scoring.class);
@@ -58,6 +58,10 @@ public class Patch extends Item {
 
     private Date lastApplication;
 
+    /**
+     * Get the id of the item that will be concerned by this patch
+     * @return item id
+     */
     public String getPatchedItemId() {
         return patchedItemId;
     }
@@ -66,6 +70,10 @@ public class Patch extends Item {
         this.patchedItemId = patchedItemId;
     }
 
+    /**
+     * Get the item type of the item that will be concerned by this patch
+     * @return item type
+     */
     public String getPatchedItemType() {
         return patchedItemType;
     }
@@ -74,6 +82,10 @@ public class Patch extends Item {
         this.patchedItemType = patchedItemType;
     }
 
+    /**
+     * Get the type of patch operation : override, patch or remove
+     * @return operation
+     */
     public String getOperation() {
         return operation;
     }
@@ -82,7 +94,13 @@ public class Patch extends Item {
         this.operation = operation;
     }
 
-
+    /**
+     * Get the patch data
+     * For override operation, the data is the full item
+     * For patch, the data is a JsonPatch object
+     * For remove, no data is needed
+     * @return data
+     */
     public Object getData() {
         return data;
     }
@@ -91,6 +109,10 @@ public class Patch extends Item {
         this.data = data;
     }
 
+    /**
+     * Get the date of the last patch application
+     * @return last application date
+     */
     public Date getLastApplication() {
         return lastApplication;
     }

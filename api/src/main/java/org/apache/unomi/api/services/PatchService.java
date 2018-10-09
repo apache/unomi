@@ -22,9 +22,27 @@ import org.apache.unomi.api.Patch;
 import java.net.URL;
 import java.util.Enumeration;
 
+/**
+ * Service to handle and manage patches on unomi items.
+ *
+ * The service will load patches from META-INF/cxs/patches in modules. The patch is automatically applied the first time
+ * it is viewed by the service, if the item to patch exists, and then saved in persistence.
+ *
+ * The service also allows to reload a patch from persistence and apply it.
+ */
 public interface PatchService {
+    /**
+     * Load a patch from its id
+     * @param id the unique id of the patch
+     * @return the patch
+     */
     Patch load(String id);
 
+    /**
+     * Apply a patch
+     * @param patch the patch to apply
+     * @return the patched item
+     */
     Item patch(Patch patch) ;
 }
 

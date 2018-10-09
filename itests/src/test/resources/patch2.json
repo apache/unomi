@@ -1,0 +1,20 @@
+{
+  "itemId": "gender-patch1",
+  "patchedItemId": "gender",
+  "patchedItemType": "propertyType",
+  "operation": "override",
+  "data": {
+    "metadata": {
+      "id": "gender",
+      "name": "Gender",
+      "systemTags": [
+        "properties",
+        "profileProperties"
+      ]
+    },
+    "type": "string",
+    "defaultValue": "foo",
+    "automaticMappingsFrom": [ ],
+    "rank": "105.0"
+  }
+}

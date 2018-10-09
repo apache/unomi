@@ -1,0 +1,6 @@
+{
+  "itemId": "firstName-patch2",
+  "patchedItemId": "firstName",
+  "patchedItemType": "propertyType",
+  "operation": "remove"
+}
