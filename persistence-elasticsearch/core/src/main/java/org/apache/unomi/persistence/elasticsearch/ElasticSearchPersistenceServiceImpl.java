@@ -61,6 +61,7 @@ import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.IndexNotFoundException;
+import org.elasticsearch.index.query.IdsQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
@@ -83,6 +84,8 @@ import org.elasticsearch.search.aggregations.bucket.missing.MissingAggregationBu
 import org.elasticsearch.search.aggregations.bucket.range.RangeAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.range.date.DateRangeAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.range.ip.IpRangeAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.terms.support.IncludeExclude;
 import org.elasticsearch.search.aggregations.metrics.InternalNumericMetricsAggregation;
 import org.elasticsearch.search.sort.GeoDistanceSortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
@@ -1306,7 +1309,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public long queryCount(Condition query, String itemType) {
-        return queryCount(conditionESQueryBuilderDispatcher.buildFilter(query), itemType);
+        try {
+            return conditionESQueryBuilderDispatcher.count(query);
+        } catch (UnsupportedOperationException e) {
+            QueryBuilder filter = conditionESQueryBuilderDispatcher.buildFilter(query);
+            if (filter instanceof IdsQueryBuilder) {
+                return ((IdsQueryBuilder) filter).ids().size();
+            }
+            return queryCount(filter, itemType);
+        }
     }
 
     private long queryCount(final QueryBuilder filter, final String itemType) {
@@ -1564,6 +1575,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         //default
                         if (fieldName != null) {
                             bucketsAggregation = AggregationBuilders.terms("buckets").field(fieldName).size(Integer.parseInt(aggregateQueryBucketSize));
+                            if (aggregate instanceof TermsAggregate) {
+                                TermsAggregate termsAggregate = (TermsAggregate) aggregate;
+                                if (termsAggregate.getPartition() > -1 && termsAggregate.getNumPartitions() > -1) {
+                                    ((TermsAggregationBuilder) bucketsAggregation).includeExclude(new IncludeExclude(termsAggregate.getPartition(), termsAggregate.getNumPartitions()));
+                                }
+                            }
                         } else {
                             // field name could be null if no existing data exists
                         }
@@ -1780,6 +1797,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 break;
                             case "max":
                                 filterAggregation.subAggregation(AggregationBuilders.max("max").field(field));
+                                break;
+                            case "card":
+                                filterAggregation.subAggregation(AggregationBuilders.cardinality("card").field(field));
+                                break;
+                            case "count":
+                                filterAggregation.subAggregation(AggregationBuilders.count("count").field(field));
                                 break;
                         }
                     }

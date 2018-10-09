@@ -26,4 +26,7 @@ public interface ConditionESQueryBuilder {
 
     QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher);
 
+    default long count(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+        throw new UnsupportedOperationException();
+    }
 }

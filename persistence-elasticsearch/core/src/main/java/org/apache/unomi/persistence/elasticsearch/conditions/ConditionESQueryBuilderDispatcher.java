@@ -86,5 +86,37 @@ public class ConditionESQueryBuilderDispatcher {
         return QueryBuilders.matchAllQuery();
     }
 
+    public long count(Condition condition) {
+        return count(condition, new HashMap<>());
+    }
 
+    public long count(Condition condition, Map<String, Object> context) {
+        if(condition == null || condition.getConditionType() == null) {
+            throw new IllegalArgumentException("Condition is null or doesn't have type, impossible to build filter");
+        }
+
+        String queryBuilderKey = condition.getConditionType().getQueryBuilder();
+        if (queryBuilderKey == null && condition.getConditionType().getParentCondition() != null) {
+            context.putAll(condition.getParameterValues());
+            return count(condition.getConditionType().getParentCondition(), context);
+        }
+
+        if (queryBuilderKey == null) {
+            throw new UnsupportedOperationException("No query builder defined for : " + condition.getConditionTypeId());
+        }
+
+        if (queryBuilders.containsKey(queryBuilderKey)) {
+            ConditionESQueryBuilder queryBuilder = queryBuilders.get(queryBuilderKey);
+            Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context);
+            if (contextualCondition != null) {
+                return queryBuilder.count(contextualCondition, context, this);
+            }
+        }
+
+        // if no matching
+        if (logger.isDebugEnabled()) {
+            logger.debug("No matching query builder for condition {} and context {}", condition, context);
+        }
+        throw new UnsupportedOperationException();
+    }
 }

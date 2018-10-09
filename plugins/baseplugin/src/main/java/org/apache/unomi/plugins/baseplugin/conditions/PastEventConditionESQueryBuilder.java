@@ -44,6 +44,64 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
     }
 
     public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+        Condition eventCondition = getEventCondition(condition, context);
+        //todo : Check behaviour with important number of profiles
+        Set<String> ids = new HashSet<String>();
+        Integer minimumEventCount = condition.getParameter("minimumEventCount") == null ? 0 : (Integer) condition.getParameter("minimumEventCount");
+        Integer maximumEventCount = condition.getParameter("maximumEventCount") == null ? Integer.MAX_VALUE : (Integer) condition.getParameter("maximumEventCount");
+
+        Map<String, Double> m = persistenceService.getSingleValuesMetrics(eventCondition, new String[]{"card", "count"}, "profileId.keyword", Event.ITEM_TYPE);
+        long card = m.get("_card").longValue();
+
+        int numParts = (int) (card / 1000);
+        for (int i = 0; i < numParts; i++) {
+            Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId", i, numParts), Event.ITEM_TYPE);
+            if (eventCountByProfile != null) {
+                for (Map.Entry<String, Long> entry : eventCountByProfile.entrySet()) {
+                    if (!entry.getKey().startsWith("_")) {
+                        if (entry.getValue() >= minimumEventCount && entry.getValue() <= maximumEventCount) {
+                            ids.add(entry.getKey());
+                        }
+                    }
+                }
+            }
+        }
+
+        return QueryBuilders.idsQuery(Profile.ITEM_TYPE).addIds(ids.toArray(new String[ids.size()]));
+    }
+
+    public long count(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+        Condition eventCondition = getEventCondition(condition, context);
+
+        Integer minimumEventCount = condition.getParameter("minimumEventCount") == null ? 0 : (Integer) condition.getParameter("minimumEventCount");
+        Integer maximumEventCount = condition.getParameter("maximumEventCount") == null ? Integer.MAX_VALUE : (Integer) condition.getParameter("maximumEventCount");
+
+        Map<String, Double> m = persistenceService.getSingleValuesMetrics(eventCondition, new String[]{"card", "count"}, "profileId.keyword", Event.ITEM_TYPE);
+        long card = m.get("_card").longValue();
+        long count = m.get("_count").longValue();
+
+        if (minimumEventCount != 0 || maximumEventCount != Integer.MAX_VALUE) {
+            int result = 0;
+            int numParts = (int) (card / 1000);
+            for (int i = 0; i < numParts; i++) {
+                Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId", i, numParts), Event.ITEM_TYPE);
+                if (eventCountByProfile != null) {
+                    for (Map.Entry<String, Long> entry : eventCountByProfile.entrySet()) {
+                        if (!entry.getKey().startsWith("_")) {
+                            if (entry.getValue() >= minimumEventCount && entry.getValue() <= maximumEventCount) {
+                                result ++;
+                            }
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+
+        return card;
+    }
+
+    private Condition getEventCondition(Condition condition, Map<String, Object> context) {
         Condition eventCondition;
         try {
             eventCondition = (Condition) condition.getParameter("eventCondition");
@@ -70,22 +128,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
             numberOfDaysCondition.setParameter("propertyValueDateExpr", "now-" + numberOfDays + "d");
             l.add(numberOfDaysCondition);
         }
-        //todo : Check behaviour with important number of profiles
-        Set<String> ids = new HashSet<String>();
-        Integer minimumEventCount = condition.getParameter("minimumEventCount") == null ? 0 : (Integer) condition.getParameter("minimumEventCount");
-        Integer maximumEventCount = condition.getParameter("maximumEventCount") == null  ? Integer.MAX_VALUE : (Integer) condition.getParameter("maximumEventCount");
-
-        Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(andCondition, new TermsAggregate("profileId"), Event.ITEM_TYPE);
-        if (eventCountByProfile != null) {
-            for (Map.Entry<String, Long> entry : eventCountByProfile.entrySet()) {
-                if (!entry.getKey().startsWith("_")) {
-                    if (entry.getValue() >= minimumEventCount && entry.getValue() <= maximumEventCount) {
-                        ids.add(entry.getKey());
-                    }
-                }
-            }
-        }
-
-        return QueryBuilders.idsQuery(Profile.ITEM_TYPE).addIds(ids.toArray(new String[ids.size()]));
+        return andCondition;
     }
+
 }
