@@ -74,9 +74,9 @@ is needed to build your application.
 
 ==== Deployment and custom definition
 
-When you deploy a custom bundle with a custom definition (see "Predefined xxx" chapters under) for the first time, the definition will automatically be deployed at your bundle start event *if it does not exist*, after that if you redeploy the same bundle there are two cases:
-1. Your bundle *is a SNAPSHOT* then every time you redeploy it the definition will be redeployed
-2. Your bundle *is NOT a SNAPSHOT* then the definition will not be redeployed, but you can redeploy it manually using the command `unomi:deploy-definition &lt;bundleId&gt; &lt;fileName&gt;`
+When you deploy a custom bundle with a custom definition (see "Predefined xxx" chapters under) for the first time, the definition will automatically be deployed at your bundle start event *if it does not exist*.
+After that if you redeploy the same bundle, the definition will not be redeployed, but you can redeploy it manually using the command `unomi:deploy-definition &lt;bundleId&gt; &lt;fileName&gt;` If you need to modify an existing
+definition when deploying the module, see <<Migration patches>>.
 
 ==== Predefined segments
 
@@ -417,3 +417,76 @@ You can find the implementation of the two classes here :
 
 * https://github.com/apache/incubator-unomi/blob/master/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/conditions/MatchAllConditionESQueryBuilder.java[org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionESQueryBuilder]
 * https://github.com/apache/incubator-unomi/blob/master/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/conditions/MatchAllConditionEvaluator.java[org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionEvaluator]
+
+==== Migration patches
+
+You may provide patches on any predefined items by simply adding a JSON file in :
+
+[source]
+----
+src/main/resources/META-INF/cxs/patches
+----
+
+These patches will be applied when the module will be deployed the first time.
+They allow to modify an item, that would have been previously deployed on unomi by a previous version of the extension or by something else.
+
+Each patch must have a unique id - unomi will use this id to remember that the patch has already been applied. It can also be used to reapply the patch when need by using the karaf command `unomi:deploy-definition`
+
+A patch also need to reference the item to patch by setting `patchedItemId` and `patchedItemType`, and an operation that tells what the patch should do.
+
+You can apply a patch in http://jsonpatch.com/[json-patch] format in the `data` field, and by specifying operation `patch` like in this example :
+
+[source]
+----
+{
+  "itemId": "firstName-patch1",
+  "patchedItemId": "firstName",
+  "patchedItemType": "propertyType",
+  "operation": "patch",
+  "data": [
+    {
+      "op": "replace", "path": "/defaultValue", "value": "foo"
+    }
+  ]
+}
+----
+
+If you need to completely redeploy a definition, you can use the `override` operation and put the definition in `data`
+
+[source]
+----
+{
+  "itemId": "gender-patch1",
+  "patchedItemId": "gender",
+  "patchedItemType": "propertyType",
+  "operation": "override",
+  "data": {
+    "metadata": {
+      "id": "gender",
+      "name": "Gender",
+      "systemTags": [
+        "properties",
+        "profileProperties"
+      ]
+    },
+    "type": "string",
+    "defaultValue": "foo",
+    "automaticMappingsFrom": [ ],
+    "rank": "105.0"
+  }
+}
+----
+
+It is also possible to simply remove an item by using the operation `remove` :
+
+[source]
+----
+{
+  "itemId": "firstName-patch2",
+  "patchedItemId": "firstName",
+  "patchedItemType": "propertyType",
+  "operation": "remove"
+}
+----
+
+Patches can also be deployed at runtime by using the REST endpoint /patch/apply .
