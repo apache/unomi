@@ -93,6 +93,7 @@
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.PastEventConditionESQueryBuilder">
             <property name="definitionsService" ref="definitionsService"/>
             <property name="persistenceService" ref="persistenceService"/>
+            <property name="segmentService" ref="segmentService"/>
         </bean>
     </service>
 

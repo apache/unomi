@@ -21,6 +21,7 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.segments.DependentMetadata;
 import org.apache.unomi.api.segments.Scoring;
@@ -50,7 +51,7 @@ public interface SegmentService {
     /**
      * Retrieves segment metadatas for segments in the specified scope, ordered according to the specified {@code sortBy} String and and paged: only {@code size} of them are
      * retrieved, starting with the {@code offset}-th one.
-     *
+     * <p>
      * TODO: remove?
      *
      * @param scope  the scope for which we want to retrieve segment metadata
@@ -158,7 +159,7 @@ public interface SegmentService {
      * Retrieves the set of all scoring metadata.
      *
      * @param offset the offset
-     * @param size the size
+     * @param size   the size
      * @param sortBy sort by
      * @return the set of all scoring metadata
      */
@@ -219,4 +220,11 @@ public interface SegmentService {
      */
     DependentMetadata getScoringDependentMetadata(String scoringId);
 
+    /**
+     * Get generated property key for past event condition
+     * @param condition The event condition
+     * @param parentCondition The past event condition
+     * @return
+     */
+    String getGeneratedPropertyKey(Condition condition, Condition parentCondition);
 }

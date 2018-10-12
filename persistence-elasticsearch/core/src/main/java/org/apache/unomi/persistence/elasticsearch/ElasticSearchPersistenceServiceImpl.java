@@ -1312,11 +1312,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         try {
             return conditionESQueryBuilderDispatcher.count(query);
         } catch (UnsupportedOperationException e) {
-            QueryBuilder filter = conditionESQueryBuilderDispatcher.buildFilter(query);
-            if (filter instanceof IdsQueryBuilder) {
-                return ((IdsQueryBuilder) filter).ids().size();
+            try {
+                QueryBuilder filter = conditionESQueryBuilderDispatcher.buildFilter(query);
+                if (filter instanceof IdsQueryBuilder) {
+                    return ((IdsQueryBuilder) filter).ids().size();
+                }
+                return queryCount(filter, itemType);
+            } catch (UnsupportedOperationException e1) {
+                return -1;
             }
-            return queryCount(filter, itemType);
         }
     }
 
