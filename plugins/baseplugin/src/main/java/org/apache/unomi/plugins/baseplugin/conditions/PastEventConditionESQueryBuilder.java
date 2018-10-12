@@ -68,8 +68,6 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
         Integer minimumEventCount = condition.getParameter("minimumEventCount") == null ? 1 : (Integer) condition.getParameter("minimumEventCount");
         Integer maximumEventCount = condition.getParameter("maximumEventCount") == null ? Integer.MAX_VALUE : (Integer) condition.getParameter("maximumEventCount");
 
-        final Logger logger = LoggerFactory.getLogger(PastEventConditionESQueryBuilder.class.getName());
-
         if (condition.getParameter("generatedPropertyKey") != null && condition.getParameter("generatedPropertyKey").equals(segmentService.getGeneratedPropertyKey((Condition) condition.getParameter("eventCondition"), condition))) {
             // A property is already set on profiles matching the past event condition, use it
             if (minimumEventCount != 1 || maximumEventCount != Integer.MAX_VALUE) {
