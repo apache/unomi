@@ -30,8 +30,6 @@ import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -41,8 +39,8 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
     private PersistenceService persistenceService;
     private SegmentService segmentService;
 
-    private int maximumIdsQueryCount = 1000;
-    private int termsAggregatePartitionSize = 1000;
+    private int maximumIdsQueryCount = 5000;
+    private int aggregateQueryBucketSize = 5000;
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
@@ -56,8 +54,8 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
         this.maximumIdsQueryCount = maximumIdsQueryCount;
     }
 
-    public void setTermsAggregatePartitionSize(int termsAggregatePartitionSize) {
-        this.termsAggregatePartitionSize = termsAggregatePartitionSize;
+    public void setAggregateQueryBucketSize(int aggregateQueryBucketSize) {
+        this.aggregateQueryBucketSize = aggregateQueryBucketSize;
     }
 
     public void setSegmentService(SegmentService segmentService) {
@@ -95,7 +93,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
             Map<String, Double> m = persistenceService.getSingleValuesMetrics(eventCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
             long card = m.get("_card").longValue();
 
-            int numParts = (int) (card / termsAggregatePartitionSize);
+            int numParts = (int) (card / aggregateQueryBucketSize) + 2;
             for (int i = 0; i < numParts; i++) {
                 Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId", i, numParts), Event.ITEM_TYPE);
                 if (eventCountByProfile != null) {
@@ -133,7 +131,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
         if (minimumEventCount != 1 || maximumEventCount != Integer.MAX_VALUE) {
             // Event count specified, must check occurences count for each profile
             int result = 0;
-            int numParts = (int) (card / termsAggregatePartitionSize);
+            int numParts = (int) (card / aggregateQueryBucketSize) + 2;
             for (int i = 0; i < numParts; i++) {
                 Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId", i, numParts), Event.ITEM_TYPE);
                 int j = 0;

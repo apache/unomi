@@ -57,7 +57,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private List<Scoring> allScoring;
     private Timer segmentTimer;
     private int segmentUpdateBatchSize = 1000;
-    private int termsAggregatePartitionSize = 1000;
+    private int aggregateQueryBucketSize = 5000;
 
     public SegmentServiceImpl() {
         logger.info("Initializing segment service...");
@@ -83,8 +83,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         this.segmentUpdateBatchSize = segmentUpdateBatchSize;
     }
 
-    public void setTermsAggregatePartitionSize(int termsAggregatePartitionSize) {
-        this.termsAggregatePartitionSize = termsAggregatePartitionSize;
+    public void setAggregateQueryBucketSize(int aggregateQueryBucketSize) {
+        this.aggregateQueryBucketSize = aggregateQueryBucketSize;
     }
 
     public void postConstruct() {
@@ -774,7 +774,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         Map<String, Double> m = persistenceService.getSingleValuesMetrics(andCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
         long card = m.get("_card").longValue();
 
-        int numParts = (int) (card / termsAggregatePartitionSize);
+        int numParts = (int) (card / aggregateQueryBucketSize) + 2;
         for (int i = 0; i < numParts; i++) {
             Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(andCondition, new TermsAggregate("profileId", i, numParts), Event.ITEM_TYPE);
             for (Map.Entry<String, Long> entry : eventCountByProfile.entrySet()) {

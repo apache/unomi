@@ -156,7 +156,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String minimalElasticSearchVersion = "5.0.0";
     private String maximalElasticSearchVersion = "5.7.0";
 
-    private String aggregateQueryBucketSize = "5000";
+    private int aggregateQueryBucketSize = 5000;
 
     private String transportClientClassName = null;
     private String transportClientProperties = null;
@@ -259,7 +259,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.maximalElasticSearchVersion = maximalElasticSearchVersion;
     }
 
-    public void setAggregateQueryBucketSize(String aggregateQueryBucketSize) {
+    public void setAggregateQueryBucketSize(int aggregateQueryBucketSize) {
         this.aggregateQueryBucketSize = aggregateQueryBucketSize;
     }
 
@@ -1578,7 +1578,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         fieldName = getPropertyNameWithData(fieldName, itemType);
                         //default
                         if (fieldName != null) {
-                            bucketsAggregation = AggregationBuilders.terms("buckets").field(fieldName).size(Integer.parseInt(aggregateQueryBucketSize));
+                            bucketsAggregation = AggregationBuilders.terms("buckets").field(fieldName).size(aggregateQueryBucketSize);
                             if (aggregate instanceof TermsAggregate) {
                                 TermsAggregate termsAggregate = (TermsAggregate) aggregate;
                                 if (termsAggregate.getPartition() > -1 && termsAggregate.getNumPartitions() > -1) {
