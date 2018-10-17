@@ -30,7 +30,6 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.GoalsService;
-import org.apache.unomi.api.services.PatchService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -58,8 +57,6 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     private RulesService rulesService;
 
-    private PatchService patchService;
-
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
@@ -74,10 +71,6 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
-    }
-
-    public void setPatchService(PatchService patchService) {
-        this.patchService = patchService;
     }
 
     public void postConstruct() {

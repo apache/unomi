@@ -17,9 +17,6 @@
 
 package org.apache.unomi.services.services;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.github.fge.jsonpatch.JsonPatch;
-import com.github.fge.jsonpatch.JsonPatchException;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -160,10 +157,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     private SegmentService segmentService;
 
-    private QueryService queryService;
-
-    private PatchService patchService;
-
     private Condition purgeProfileQuery;
     private Integer purgeProfileExistTime = 0;
     private Integer purgeProfileInactiveTime = 0;
@@ -196,14 +189,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
-    }
-
-    public void setQueryService(QueryService queryService) {
-        this.queryService = queryService;
-    }
-
-    public void setPatchService(PatchService patchService) {
-        this.patchService = patchService;
     }
 
     public void setForceRefreshOnSave(boolean forceRefreshOnSave) {

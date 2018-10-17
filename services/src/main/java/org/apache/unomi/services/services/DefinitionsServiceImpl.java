@@ -17,7 +17,6 @@
 
 package org.apache.unomi.services.services;
 
-import org.apache.unomi.api.Persona;
 import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.PropertyMergeStrategyType;
 import org.apache.unomi.api.ValueType;
@@ -25,10 +24,8 @@ import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.PatchService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.persistence.spi.aggregate.BaseAggregate;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -46,7 +43,6 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     private static final Logger logger = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
 
     private PersistenceService persistenceService;
-    private PatchService patchService;
 
     private Map<String, ConditionType> conditionTypeById = new ConcurrentHashMap<>();
     private Map<String, ActionType> actionTypeById = new ConcurrentHashMap<>();
@@ -66,10 +62,6 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
-    }
-
-    public void setPatchService(PatchService patchService) {
-        this.patchService = patchService;
     }
 
     public void postConstruct() {

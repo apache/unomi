@@ -27,7 +27,6 @@ import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.*;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -51,8 +50,6 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     private RulesService rulesService;
 
-    private PatchService patchService;
-
     private long taskExecutionPeriod = 24L * 60L * 60L * 1000L;
     private List<Segment> allSegments;
     private List<Scoring> allScoring;
@@ -73,10 +70,6 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
-    }
-
-    public void setPatchService(PatchService patchService) {
-        this.patchService = patchService;
     }
 
     public void setSegmentUpdateBatchSize(int segmentUpdateBatchSize) {

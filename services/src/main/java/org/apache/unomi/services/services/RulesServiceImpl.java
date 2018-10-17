@@ -49,8 +49,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     private EventService eventService;
 
-    private PatchService patchService;
-
     private ActionExecutorDispatcher actionExecutorDispatcher;
     private List<Rule> allRules;
 
@@ -77,10 +75,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public void setActionExecutorDispatcher(ActionExecutorDispatcher actionExecutorDispatcher) {
         this.actionExecutorDispatcher = actionExecutorDispatcher;
-    }
-
-    public void setPatchService(PatchService patchService) {
-        this.patchService = patchService;
     }
 
     public void bindExecutor(ServiceReference<ActionExecutor> actionExecutorServiceReference) {
