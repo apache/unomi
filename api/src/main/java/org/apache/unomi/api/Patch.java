@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 public class Patch extends Item {
+    private static final long serialVersionUID = 4171966405850833985L;
 
     public final static Map<String, Class<? extends Item>> PATCHABLE_TYPES;
 
