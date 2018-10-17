@@ -434,6 +434,23 @@ Each patch must have a unique id - unomi will use this id to remember that the p
 
 A patch also need to reference the item to patch by setting `patchedItemId` and `patchedItemType`, and an operation that tells what the patch should do.
 
+
+.`patchedItemType` can take one of the following value:
+- condition
+- action
+- goal
+- campaign
+- persona
+- propertyType
+- rule
+- segment
+- scoring
+
+.`operation` can take one of the following value:
+- patch
+- override
+- remove
+
 You can apply a patch in http://jsonpatch.com/[json-patch] format in the `data` field, and by specifying operation `patch` like in this example :
 
 [source]
