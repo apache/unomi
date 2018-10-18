@@ -32,8 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.Date;
-import java.util.Enumeration;
+import java.util.*;
 
 public class PatchServiceImpl implements PatchService, SynchronousBundleListener {
 
@@ -93,8 +92,14 @@ public class PatchServiceImpl implements PatchService, SynchronousBundleListener
         // First apply patches on existing items
         Enumeration<URL> urls = bundleContext.getBundle().findEntries("META-INF/cxs/patches", "*.json", true);
         if (urls != null) {
-            while (urls.hasMoreElements()) {
-                URL patchUrl = urls.nextElement();
+            List<URL> resources = Collections.list(urls);
+            resources.sort(new Comparator<URL>() {
+                @Override public int compare(URL o1, URL o2) {
+                    return o1.getFile().compareTo(o2.getFile());
+                }
+            });
+
+            for (URL patchUrl : resources) {
                 try {
                     Patch patch = CustomObjectMapper.getObjectMapper().readValue(patchUrl, Patch.class);
                     if (persistenceService.load(patch.getItemId(), Patch.class) == null) {
