@@ -29,6 +29,14 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
+    <cm:property-placeholder persistent-id="org.apache.unomi.persistence.elasticsearch"
+                             update-strategy="reload" placeholder-prefix="${es.">
+        <cm:default-properties>
+            <cm:property name="maximumIdsQueryCount" value="5000"/>
+            <cm:property name="aggregateQueryBucketSize" value="5000"/>
+        </cm:default-properties>
+    </cm:property-placeholder>
+
     <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
@@ -93,6 +101,9 @@
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.PastEventConditionESQueryBuilder">
             <property name="definitionsService" ref="definitionsService"/>
             <property name="persistenceService" ref="persistenceService"/>
+            <property name="segmentService" ref="segmentService"/>
+            <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
+            <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}"/>
         </bean>
     </service>
 

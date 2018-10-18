@@ -44,6 +44,13 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
+    <cm:property-placeholder persistent-id="org.apache.unomi.persistence.elasticsearch"
+                             update-strategy="reload" placeholder-prefix="${es.">
+        <cm:default-properties>
+            <cm:property name="aggregateQueryBucketSize" value="5000"/>
+        </cm:default-properties>
+    </cm:property-placeholder>
+
     <reference id="persistenceService"
                interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="httpService" interface="org.osgi.service.http.HttpService"/>
@@ -140,6 +147,7 @@
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="taskExecutionPeriod" value="86400000"/>
         <property name="segmentUpdateBatchSize" value="${services.segment.update.batchSize}" />
+        <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}" />
     </bean>
     <service id="segmentService" ref="segmentServiceImpl">
         <interfaces>

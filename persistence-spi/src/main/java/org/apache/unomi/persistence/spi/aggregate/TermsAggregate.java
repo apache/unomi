@@ -18,7 +18,25 @@
 package org.apache.unomi.persistence.spi.aggregate;
 
 public class TermsAggregate extends BaseAggregate{
+    private int partition = -1;
+    private int numPartitions = -1;
+
+
     public TermsAggregate(String field) {
         super(field);
+    }
+
+    public TermsAggregate(String field, int partition, int numPartitions) {
+        super(field);
+        this.partition = partition;
+        this.numPartitions = numPartitions;
+    }
+
+    public int getPartition() {
+        return partition;
+    }
+
+    public int getNumPartitions() {
+        return numPartitions;
     }
 }
