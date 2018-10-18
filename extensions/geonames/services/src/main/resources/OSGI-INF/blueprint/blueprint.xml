@@ -29,10 +29,9 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
-    <reference id="persistenceService"
-               interface="org.apache.unomi.persistence.spi.PersistenceService"/>
-
+    <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
+    <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService"/>
 
 
     <!-- User List service -->
@@ -41,6 +40,7 @@
           destroy-method="stop">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsService"/>
+        <property name="schedulerService" ref="schedulerService"/>
         <property name="pathToGeonamesDatabase" value="${request.geonamesDatabase.location}"/>
         <property name="forceDbImport" value="${request.geonamesDatabase.forceImport}"/>
     </bean>

@@ -31,6 +31,10 @@
             <cm:property name="event.purge.existTime" value="12"/>
             <cm:property name="segment.update.batchSize" value="1000"/>
             <cm:property name="profile.forceRefreshOnSave" value="false"/>
+            <cm:property name="definitions.refresh.interval" value="10000"/>
+            <cm:property name="properties.refresh.interval" value="10000"/>
+            <cm:property name="segment.refresh.interval" value="1000"/>
+            <cm:property name="segment.recalculate.period" value="1"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -62,10 +66,20 @@
 
     <!-- Service definitions -->
 
+    <bean id="schedulerServiceImpl" class="org.apache.unomi.services.services.SchedulerServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy"/>
+    <service id="schedulerService" ref="schedulerServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.SchedulerService</value>
+        </interfaces>
+    </service>
+
     <bean id="definitionsServiceImpl" class="org.apache.unomi.services.services.DefinitionsServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="schedulerService" ref="schedulerServiceImpl"/>
+        <property name="definitionsRefreshInterval" value="${services.definitions.refresh.interval}"/>
     </bean>
     <service id="definitionsService" ref="definitionsServiceImpl">
         <interfaces>
@@ -129,6 +143,7 @@
         <property name="eventService" ref="eventServiceImpl"/>
         <property name="actionExecutorDispatcher" ref="actionExecutorDispatcherImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="schedulerService" ref="schedulerServiceImpl"/>
     </bean>
     <service id="rulesService" ref="rulesServiceImpl">
         <interfaces>
@@ -145,8 +160,10 @@
         <property name="eventService" ref="eventServiceImpl"/>
         <property name="rulesService" ref="rulesServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="taskExecutionPeriod" value="86400000"/>
+        <property name="taskExecutionPeriod" value="${services.segment.recalculate.period}"/>
         <property name="segmentUpdateBatchSize" value="${services.segment.update.batchSize}" />
+        <property name="schedulerService" ref="schedulerServiceImpl"/>
+        <property name="segmentRefreshInterval" value="${services.segment.refresh.interval}"/>
         <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}" />
     </bean>
     <service id="segmentService" ref="segmentServiceImpl">
@@ -180,6 +197,8 @@
         <property name="purgeProfileExistTime" value="${services.profile.purge.existTime}"/>
         <property name="purgeSessionsAndEventsTime" value="${services.event.purge.existTime}"/>
         <property name="forceRefreshOnSave" value="${services.profile.forceRefreshOnSave}" />
+        <property name="propertiesRefreshInterval" value="${services.properties.refresh.interval}"/>
+        <property name="schedulerService" ref="schedulerServiceImpl"/>
     </bean>
     <service id="profileService" ref="profileServiceImpl">
         <interfaces>
@@ -206,6 +225,7 @@
         <property name="karafCellarGroupName" value="${cluster.group}" />
         <property name="osgiConfigurationAdmin" ref="osgiConfigurationAdmin" />
         <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}" />
+        <property name="schedulerService" ref="schedulerServiceImpl"/>
     </bean>
     <service id="clusterService" ref="clusterServiceImpl" interface="org.apache.unomi.api.services.ClusterService"/>
 

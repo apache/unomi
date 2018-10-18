@@ -27,6 +27,7 @@ import org.apache.karaf.cellar.core.event.EventProducer;
 import org.apache.karaf.cellar.core.event.EventType;
 import org.apache.unomi.api.ClusterNode;
 import org.apache.unomi.api.services.ClusterService;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.Logger;
@@ -39,6 +40,7 @@ import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Implementation of the persistence service interface
@@ -59,8 +61,8 @@ public class ClusterServiceImpl implements ClusterService {
     private String internalAddress;
     private Map<String, Map<String,Serializable>> nodeSystemStatistics = new ConcurrentHashMap<>();
     private Group group = null;
+    private SchedulerService schedulerService;
 
-    private Timer nodeStatisticsUpdateTimer;
     private long nodeStatisticsUpdateFrequency = 10000;
 
     public void setPersistenceService(PersistenceService persistenceService) {
@@ -97,6 +99,10 @@ public class ClusterServiceImpl implements ClusterService {
 
     public void setNodeStatisticsUpdateFrequency(long nodeStatisticsUpdateFrequency) {
         this.nodeStatisticsUpdateFrequency = nodeStatisticsUpdateFrequency;
+    }
+
+    public void setSchedulerService(SchedulerService schedulerService) {
+        this.schedulerService = schedulerService;
     }
 
     public Map<String, Map<String, Serializable>> getNodeSystemStatistics() {
@@ -150,14 +156,13 @@ public class ClusterServiceImpl implements ClusterService {
                 sendEvent(clusterConfigurationEvent);
             }
 
-            nodeStatisticsUpdateTimer = new Timer();
             TimerTask statisticsTask = new TimerTask() {
                 @Override
                 public void run() {
                     updateSystemStats();
                 }
             };
-            nodeStatisticsUpdateTimer.schedule(statisticsTask, 0, nodeStatisticsUpdateFrequency);
+            schedulerService.getScheduleExecutorService().schedule(statisticsTask, nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS);
 
         }
         logger.info("Cluster service initialized.");

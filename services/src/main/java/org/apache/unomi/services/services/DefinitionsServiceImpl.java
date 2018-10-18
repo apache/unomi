@@ -24,6 +24,7 @@ import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
@@ -37,12 +38,14 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
 
     private PersistenceService persistenceService;
+    private SchedulerService schedulerService;
 
     private Map<String, ConditionType> conditionTypeById = new ConcurrentHashMap<>();
     private Map<String, ActionType> actionTypeById = new ConcurrentHashMap<>();
@@ -50,6 +53,8 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     private Map<String, Set<ValueType>> valueTypeByTag = new HashMap<>();
     private Map<Long, List<PluginType>> pluginTypes = new HashMap<>();
     private Map<String, PropertyMergeStrategyType> propertyMergeStrategyTypeById = new HashMap<>();
+
+    private long definitionsRefreshInterval = 10000;
 
     private BundleContext bundleContext;
     public DefinitionsServiceImpl() {
@@ -62,6 +67,14 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
+    }
+
+    public void setSchedulerService(SchedulerService schedulerService) {
+        this.schedulerService = schedulerService;
+    }
+
+    public void setDefinitionsRefreshInterval(long definitionsRefreshInterval) {
+        this.definitionsRefreshInterval = definitionsRefreshInterval;
     }
 
     public void postConstruct() {
@@ -77,7 +90,44 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         }
 
         bundleContext.addBundleListener(this);
+        scheduleConditionTypeLoad();
         logger.info("Definitions service initialized.");
+    }
+
+    private void scheduleConditionTypeLoad() {
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                loadConditionTypesFromPersistence();
+                loadActionTypesFromPersistence();
+            }
+        };
+        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 10000, definitionsRefreshInterval, TimeUnit.MILLISECONDS);
+        logger.info("Scheduled task for condition type loading each 10s");
+    }
+
+    private void loadConditionTypesFromPersistence() {
+        try {
+            Map<String, ConditionType> newConditionTypesById = new ConcurrentHashMap<>();
+            for (ConditionType conditionType : getAllConditionTypes()) {
+                newConditionTypesById.put(conditionType.getItemId(), conditionType);
+            }
+            this.conditionTypeById = newConditionTypesById;
+        } catch (Exception e) {
+            logger.error("Error loading condition types from persistence service", e);
+        }
+    }
+
+    private void loadActionTypesFromPersistence() {
+        try {
+            Map<String, ActionType> newActionTypesById = new ConcurrentHashMap<>();
+            for (ActionType actionType : getAllActionTypes()) {
+                newActionTypesById.put(actionType.getItemId(), actionType);
+            }
+            this.actionTypeById = newActionTypesById;
+        } catch (Exception e) {
+            logger.error("Error loading action types from persistence service", e);
+        }
     }
 
     private void processBundleStartup(BundleContext bundleContext) {

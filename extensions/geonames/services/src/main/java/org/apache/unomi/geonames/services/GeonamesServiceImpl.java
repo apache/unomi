@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +33,7 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -40,6 +42,7 @@ public class GeonamesServiceImpl implements GeonamesService {
     private static final Logger logger = LoggerFactory.getLogger(GeonamesServiceImpl.class.getName());
     private DefinitionsService definitionsService;
     private PersistenceService persistenceService;
+    private SchedulerService schedulerService;
 
     private String pathToGeonamesDatabase;
     private Boolean forceDbImport;
@@ -54,6 +57,10 @@ public class GeonamesServiceImpl implements GeonamesService {
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
+    }
+
+    public void setSchedulerService(SchedulerService schedulerService) {
+        this.schedulerService = schedulerService;
     }
 
     public void setPathToGeonamesDatabase(String pathToGeonamesDatabase) {
@@ -86,26 +93,25 @@ public class GeonamesServiceImpl implements GeonamesService {
         }
         final File f = new File(pathToGeonamesDatabase);
         if (f.exists()) {
-            final Timer t = new Timer();
-            t.schedule(new TimerTask() {
+            schedulerService.getScheduleExecutorService().schedule(new TimerTask() {
                 @Override
                 public void run() {
-                        importGeoNameDatabase(f, t);
+                    importGeoNameDatabase(f);
                 }
-            }, 5000);
+            }, 5000, TimeUnit.MILLISECONDS);
         }
     }
 
-    private void importGeoNameDatabase(final File f, final Timer t) {
+    private void importGeoNameDatabase(final File f) {
         Map<String,Map<String,Object>> typeMappings = persistenceService.getPropertiesMapping(GeonameEntry.ITEM_TYPE);
         if (typeMappings == null || typeMappings.size() == 0) {
             logger.warn("Type mappings for type {} are not yet installed, delaying import until they are ready!", GeonameEntry.ITEM_TYPE);
-            t.schedule(new TimerTask() {
+            schedulerService.getScheduleExecutorService().schedule(new TimerTask() {
                 @Override
                 public void run() {
-                    importGeoNameDatabase(f, t);
+                    importGeoNameDatabase(f);
                 }
-            }, 5000);
+            }, 5000, TimeUnit.MILLISECONDS);
             return;
         } else {
             // let's check that the mappings are correct

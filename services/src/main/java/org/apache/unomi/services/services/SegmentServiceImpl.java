@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentService, SynchronousBundleListener {
 
@@ -47,14 +48,14 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private BundleContext bundleContext;
 
     private EventService eventService;
-
     private RulesService rulesService;
+    private SchedulerService schedulerService;
 
-    private long taskExecutionPeriod = 24L * 60L * 60L * 1000L;
+    private long taskExecutionPeriod = 1;
     private List<Segment> allSegments;
     private List<Scoring> allScoring;
-    private Timer segmentTimer;
     private int segmentUpdateBatchSize = 1000;
+    private long segmentRefreshInterval = 1000;
     private int aggregateQueryBucketSize = 5000;
 
     public SegmentServiceImpl() {
@@ -73,12 +74,20 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         this.rulesService = rulesService;
     }
 
+    public void setSchedulerService(SchedulerService schedulerService) {
+        this.schedulerService = schedulerService;
+    }
+
     public void setSegmentUpdateBatchSize(int segmentUpdateBatchSize) {
         this.segmentUpdateBatchSize = segmentUpdateBatchSize;
     }
 
     public void setAggregateQueryBucketSize(int aggregateQueryBucketSize) {
         this.aggregateQueryBucketSize = aggregateQueryBucketSize;
+    }
+
+    public void setSegmentRefreshInterval(long segmentRefreshInterval) {
+        this.segmentRefreshInterval = segmentRefreshInterval;
     }
 
     public void postConstruct() {
@@ -98,15 +107,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
-        cancelTimers();
         logger.info("Segment service shutdown.");
-    }
-
-    private void cancelTimers() {
-        if (segmentTimer != null) {
-            segmentTimer.cancel();
-        }
-        logger.info("Segment purge: Purge unscheduled");
     }
 
     private void processBundleStartup(BundleContext bundleContext) {
@@ -506,19 +507,19 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         persistenceService.save(scoring);
 
         persistenceService.createMapping(Profile.ITEM_TYPE, String.format(
-                "{\n" +
-                        "    \"profile\": {\n" +
-                        "        \"properties\" : {\n" +
-                        "            \"scores\": {\n" +
-                        "                \"properties\": {\n" +
-                        "                    \"%s\": {\n" +
-                        "                        \"type\": \"long\"\n" +
-                        "                    }\n" +
-                        "                }\n" +
-                        "            }\n" +
-                        "        }\n" +
-                        "    }\n" +
-                        "}\n", scoring.getItemId()));
+            "{\n" +
+            "    \"profile\": {\n" +
+            "        \"properties\" : {\n" +
+            "            \"scores\": {\n" +
+            "                \"properties\": {\n" +
+            "                    \"%s\": {\n" +
+            "                        \"type\": \"long\"\n" +
+            "                    }\n" +
+            "                }\n" +
+            "            }\n" +
+            "        }\n" +
+            "    }\n" +
+            "}\n", scoring.getItemId()));
 
         updateExistingProfilesForScoring(scoring);
     }
@@ -970,7 +971,6 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     private void initializeTimer() {
-        segmentTimer = new Timer();
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
@@ -987,7 +987,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 }
             }
         };
-        segmentTimer.scheduleAtFixedRate(task, getDay(1).getTime(), taskExecutionPeriod);
+        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 1, taskExecutionPeriod, TimeUnit.DAYS);
 
         task = new TimerTask() {
             @Override
@@ -996,14 +996,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 allScoring = getAllScoringDefinitions();
             }
         };
-        segmentTimer.scheduleAtFixedRate(task, 0, 1000);
-    }
-
-    private GregorianCalendar getDay(int offset) {
-        GregorianCalendar gc = new GregorianCalendar();
-        gc = new GregorianCalendar(gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), gc.get(Calendar.DAY_OF_MONTH));
-        gc.add(Calendar.DAY_OF_MONTH, offset);
-        return gc;
+        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 0, segmentRefreshInterval, TimeUnit.MILLISECONDS);
     }
 
     public void setTaskExecutionPeriod(long taskExecutionPeriod) {

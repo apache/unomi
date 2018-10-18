@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -155,6 +156,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     private DefinitionsService definitionsService;
 
+    private SchedulerService schedulerService;
+
     private SegmentService segmentService;
 
     private Condition purgeProfileQuery;
@@ -162,10 +165,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private Integer purgeProfileInactiveTime = 0;
     private Integer purgeSessionsAndEventsTime = 0;
     private Integer purgeProfileInterval = 0;
-
-    private Timer allPropertyTypesTimer;
-
-    private Timer purgeProfileTimer;
+    private long propertiesRefreshInterval = 10000;
 
     private PropertyTypes propertyTypes;
 
@@ -187,12 +187,20 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         this.definitionsService = definitionsService;
     }
 
+    public void setSchedulerService(SchedulerService schedulerService) {
+        this.schedulerService = schedulerService;
+    }
+
     public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
     }
 
     public void setForceRefreshOnSave(boolean forceRefreshOnSave) {
         this.forceRefreshOnSave = forceRefreshOnSave;
+    }
+
+    public void setPropertiesRefreshInterval(long propertiesRefreshInterval) {
+        this.propertiesRefreshInterval = propertiesRefreshInterval;
     }
 
     public void postConstruct() {
@@ -213,8 +221,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
-        cancelPurge();
-        cancelPropertyTypeLoad();
         logger.info("Profile service shutdown.");
     }
 
@@ -246,14 +252,13 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     private void schedulePropertyTypeLoad() {
-        allPropertyTypesTimer = new Timer();
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
                 loadPropertyTypesFromPersistence();
             }
         };
-        allPropertyTypesTimer.scheduleAtFixedRate(task, 10000, 10000);
+        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 10000, propertiesRefreshInterval, TimeUnit.MILLISECONDS);
         logger.info("Scheduled task for property type loading each 10s");
     }
 
@@ -262,13 +267,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             this.propertyTypes = new PropertyTypes(persistenceService.getAllItems(PropertyType.class, 0, -1, "rank").getList());
         } catch (Exception e) {
             logger.error("Error loading property types from persistence service", e);
-        }
-    }
-
-    private void cancelPropertyTypeLoad() {
-        if (allPropertyTypesTimer != null) {
-            allPropertyTypesTimer.cancel();
-            logger.info("Cancelled task for property type loading");
         }
     }
 
@@ -283,7 +281,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 logger.info("Profile purge: Profile created since {} days, will be purged", purgeProfileExistTime);
             }
 
-            purgeProfileTimer = new Timer();
             TimerTask task = new TimerTask() {
                 @Override
                 public void run() {
@@ -330,26 +327,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                     logger.info("Profile purge: purge executed in {} ms", System.currentTimeMillis() - t);
                 }
             };
-            purgeProfileTimer.scheduleAtFixedRate(task, getDay(1).getTime(), purgeProfileInterval * 24L * 60L * 60L * 1000L);
+            schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 1, purgeProfileInterval, TimeUnit.DAYS);
 
             logger.info("Profile purge: purge scheduled with an interval of {} days", purgeProfileInterval);
         } else {
             logger.info("Profile purge: No purge scheduled");
         }
-    }
-
-    private void cancelPurge() {
-        if (purgeProfileTimer != null) {
-            purgeProfileTimer.cancel();
-        }
-        logger.info("Profile purge: Purge unscheduled");
-    }
-
-    private GregorianCalendar getDay(int offset) {
-        GregorianCalendar gc = new GregorianCalendar();
-        gc = new GregorianCalendar(gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), gc.get(Calendar.DAY_OF_MONTH));
-        gc.add(Calendar.DAY_OF_MONTH, offset);
-        return gc;
     }
 
     private GregorianCalendar getMonth(int offset) {

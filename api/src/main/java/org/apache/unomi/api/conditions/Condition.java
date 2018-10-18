@@ -27,6 +27,7 @@ import java.util.Map;
  * A set of elements that can be evaluated.
  */
 public class Condition implements Serializable {
+    private static final long serialVersionUID = 7584522402785053206L;
 
     ConditionType conditionType;
     String conditionTypeId;

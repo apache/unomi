@@ -36,24 +36,22 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 public class RulesServiceImpl implements RulesService, EventListenerService, SynchronousBundleListener {
 
     public static final String RULE_QUERY_PREFIX = "rule_";
     private static final Logger logger = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
+
     private BundleContext bundleContext;
 
     private PersistenceService persistenceService;
-
     private DefinitionsService definitionsService;
-
     private EventService eventService;
+    private SchedulerService schedulerService;
 
     private ActionExecutorDispatcher actionExecutorDispatcher;
     private List<Rule> allRules;
-
-    private Timer rulesTimer;
-    private Timer ruleStatisticsTimer;
 
     private Map<String,RuleStatistics> allRuleStatistics = new ConcurrentHashMap<>();
 
@@ -71,6 +69,10 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
+    }
+
+    public void setSchedulerService(SchedulerService schedulerService) {
+        this.schedulerService = schedulerService;
     }
 
     public void setActionExecutorDispatcher(ActionExecutorDispatcher actionExecutorDispatcher) {
@@ -107,18 +109,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
-        cancelTimers();
         logger.info("Rule service shutdown.");
-    }
-
-    private void cancelTimers() {
-        if(rulesTimer != null) {
-            rulesTimer.cancel();
-        }
-        if (ruleStatisticsTimer != null) {
-            ruleStatisticsTimer.cancel();
-        }
-        logger.info("Rule purge: Purge unscheduled");
     }
 
     private void processBundleStartup(BundleContext bundleContext) {
@@ -382,22 +373,21 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     private void initializeTimers() {
-        rulesTimer = new Timer();
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
                 allRules = getAllRules();
             }
         };
-        rulesTimer.schedule(task, 0, 1000);
-        ruleStatisticsTimer = new Timer();
+        schedulerService.getScheduleExecutorService().schedule(task, 1000, TimeUnit.MILLISECONDS);
+
         TimerTask statisticsTask = new TimerTask() {
             @Override
             public void run() {
                 syncRuleStatistics();
             }
         };
-        ruleStatisticsTimer.schedule(statisticsTask, 0, 10000);
+        schedulerService.getScheduleExecutorService().schedule(statisticsTask, 10000, TimeUnit.MILLISECONDS);
     }
 
     public void bundleChanged(BundleEvent event) {
