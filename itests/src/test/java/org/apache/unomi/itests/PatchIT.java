@@ -95,7 +95,7 @@ public class PatchIT extends BaseIT {
 
     @Test
     public void testRemove() throws IOException, InterruptedException {
-        PropertyType firstName = profileService.getPropertyType("firstName");
+        PropertyType firstName = profileService.getPropertyType("income");
 
         try {
             Patch patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch3.json"), Patch.class);
@@ -104,7 +104,7 @@ public class PatchIT extends BaseIT {
 
             Thread.sleep(10000);
 
-            PropertyType newFirstName = profileService.getPropertyType("firstName");
+            PropertyType newFirstName = profileService.getPropertyType("income");
             Assert.assertNull(newFirstName);
         } finally {
             profileService.setPropertyType(firstName);
