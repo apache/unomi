@@ -1,0 +1,17 @@
+{
+  "itemId": "sendMailAction-patch1",
+  "patchedItemId": "sendMailAction",
+  "patchedItemType": "action",
+  "operation": "patch",
+  "data": [
+    {
+      "op": "replace",
+      "path": "/metadata/systemTags",
+      "value": [
+        "profileTags",
+        "event",
+        "allowMultipleInstances"
+      ]
+    }
+  ]
+}

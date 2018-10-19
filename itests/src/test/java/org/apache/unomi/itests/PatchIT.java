@@ -18,6 +18,9 @@ package org.apache.unomi.itests;
 
 import org.apache.unomi.api.Patch;
 import org.apache.unomi.api.PropertyType;
+import org.apache.unomi.api.actions.ActionType;
+import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.PatchService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
@@ -48,6 +51,10 @@ public class PatchIT extends BaseIT {
     @Inject
     @Filter(timeout = 60000)
     protected ProfileService profileService;
+
+    @Inject
+    @Filter(timeout = 60000)
+    protected DefinitionsService definitionsService;
 
     @Inject
     protected BundleContext bundleContext;
@@ -105,6 +112,44 @@ public class PatchIT extends BaseIT {
             Assert.assertNull(newIncome);
         } finally {
             profileService.setPropertyType(income);
+        }
+    }
+
+    @Test
+    public void testPatchOnConditionType() throws IOException, InterruptedException {
+        ConditionType formCondition = definitionsService.getConditionType("formEventCondition");
+        Assert.assertTrue(formCondition.getMetadata().getSystemTags().contains("usableInPastEventCondition"));
+
+        try {
+            Patch patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch4.json"), Patch.class);
+
+            patchService.patch(patch);
+
+            Thread.sleep(10000);
+
+            ConditionType newFormCondition = definitionsService.getConditionType("formEventCondition");
+            Assert.assertFalse(newFormCondition.getMetadata().getSystemTags().contains("usableInPastEventCondition"));
+        } finally {
+            definitionsService.setConditionType(formCondition);
+        }
+    }
+
+    @Test
+    public void testPatchOnActionType() throws IOException, InterruptedException {
+        ActionType mailAction = definitionsService.getActionType("sendMailAction");
+        Assert.assertTrue(mailAction.getMetadata().getSystemTags().contains("availableToEndUser"));
+
+        try {
+            Patch patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch5.json"), Patch.class);
+
+            patchService.patch(patch);
+
+            Thread.sleep(10000);
+
+            ActionType newMailAction = definitionsService.getActionType("sendMailAction");
+            Assert.assertFalse(newMailAction.getMetadata().getSystemTags().contains("availableToEndUser"));
+        } finally {
+            definitionsService.setActionType(mailAction);
         }
     }
 }

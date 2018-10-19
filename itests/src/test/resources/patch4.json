@@ -1,0 +1,19 @@
+{
+  "itemId": "formEventCondition-patch1",
+  "patchedItemId": "formEventCondition",
+  "patchedItemType": "condition",
+  "operation": "patch",
+  "data": [
+    {
+      "op": "replace",
+      "path": "/metadata/systemTags",
+      "value": [
+        "profileTags",
+        "event",
+        "condition",
+        "eventCondition",
+        "trackedCondition"
+      ]
+    }
+  ]
+}
