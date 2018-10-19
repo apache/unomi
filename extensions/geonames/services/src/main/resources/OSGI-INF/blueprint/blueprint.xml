@@ -21,11 +21,11 @@
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd">
 
-    <cm:property-placeholder persistent-id="org.apache.unomi.geonames"
-                             update-strategy="reload">
+    <cm:property-placeholder persistent-id="org.apache.unomi.geonames" update-strategy="reload">
         <cm:default-properties>
             <cm:property name="request.geonamesDatabase.location" value="file:${karaf.etc}/allCountries.zip"/>
             <cm:property name="request.geonamesDatabase.forceImport" value="false"/>
+            <cm:property name="service.geonames.refresh.interval" value="5000"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -43,6 +43,7 @@
         <property name="schedulerService" ref="schedulerService"/>
         <property name="pathToGeonamesDatabase" value="${request.geonamesDatabase.location}"/>
         <property name="forceDbImport" value="${request.geonamesDatabase.forceImport}"/>
+        <property name="refreshDbInterval" value="${service.geonames.refresh.interval}"/>
     </bean>
     <service id="geonamesService" ref="geonamesServiceImpl" interface="org.apache.unomi.geonames.services.GeonamesService"/>
 

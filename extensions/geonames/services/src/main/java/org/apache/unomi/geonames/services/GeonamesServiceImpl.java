@@ -46,6 +46,7 @@ public class GeonamesServiceImpl implements GeonamesService {
 
     private String pathToGeonamesDatabase;
     private Boolean forceDbImport;
+    private Integer refreshDbInterval = 5000;
 
     public void setForceDbImport(Boolean forceDbImport) {
         this.forceDbImport = forceDbImport;
@@ -65,6 +66,10 @@ public class GeonamesServiceImpl implements GeonamesService {
 
     public void setPathToGeonamesDatabase(String pathToGeonamesDatabase) {
         this.pathToGeonamesDatabase = pathToGeonamesDatabase;
+    }
+
+    public void setRefreshDbInterval(Integer refreshDbInterval) {
+        this.refreshDbInterval = refreshDbInterval;
     }
 
     public void start() {
@@ -93,12 +98,12 @@ public class GeonamesServiceImpl implements GeonamesService {
         }
         final File f = new File(pathToGeonamesDatabase);
         if (f.exists()) {
-            schedulerService.getScheduleExecutorService().schedule(new TimerTask() {
+            schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(new TimerTask() {
                 @Override
                 public void run() {
                     importGeoNameDatabase(f);
                 }
-            }, 5000, TimeUnit.MILLISECONDS);
+            }, 0, refreshDbInterval, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -106,12 +111,12 @@ public class GeonamesServiceImpl implements GeonamesService {
         Map<String,Map<String,Object>> typeMappings = persistenceService.getPropertiesMapping(GeonameEntry.ITEM_TYPE);
         if (typeMappings == null || typeMappings.size() == 0) {
             logger.warn("Type mappings for type {} are not yet installed, delaying import until they are ready!", GeonameEntry.ITEM_TYPE);
-            schedulerService.getScheduleExecutorService().schedule(new TimerTask() {
+            schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(new TimerTask() {
                 @Override
                 public void run() {
                     importGeoNameDatabase(f);
                 }
-            }, 5000, TimeUnit.MILLISECONDS);
+            }, 0, refreshDbInterval, TimeUnit.MILLISECONDS);
             return;
         } else {
             // let's check that the mappings are correct

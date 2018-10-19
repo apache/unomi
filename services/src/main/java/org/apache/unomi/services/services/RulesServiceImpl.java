@@ -55,6 +55,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     private Map<String,RuleStatistics> allRuleStatistics = new ConcurrentHashMap<>();
 
+    private Integer rulesRefreshInterval = 1000;
+    private Integer rulesStatisticsRefreshInterval = 10000;
+
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
@@ -77,6 +80,14 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public void setActionExecutorDispatcher(ActionExecutorDispatcher actionExecutorDispatcher) {
         this.actionExecutorDispatcher = actionExecutorDispatcher;
+    }
+
+    public void setRulesRefreshInterval(Integer rulesRefreshInterval) {
+        this.rulesRefreshInterval = rulesRefreshInterval;
+    }
+
+    public void setRulesStatisticsRefreshInterval(Integer rulesStatisticsRefreshInterval) {
+        this.rulesStatisticsRefreshInterval = rulesStatisticsRefreshInterval;
     }
 
     public void bindExecutor(ServiceReference<ActionExecutor> actionExecutorServiceReference) {
@@ -379,7 +390,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 allRules = getAllRules();
             }
         };
-        schedulerService.getScheduleExecutorService().schedule(task, 1000, TimeUnit.MILLISECONDS);
+        schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0,rulesRefreshInterval, TimeUnit.MILLISECONDS);
 
         TimerTask statisticsTask = new TimerTask() {
             @Override
@@ -387,7 +398,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 syncRuleStatistics();
             }
         };
-        schedulerService.getScheduleExecutorService().schedule(statisticsTask, 10000, TimeUnit.MILLISECONDS);
+        schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(statisticsTask, 0, rulesStatisticsRefreshInterval, TimeUnit.MILLISECONDS);
     }
 
     public void bundleChanged(BundleEvent event) {

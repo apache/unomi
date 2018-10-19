@@ -162,7 +162,7 @@ public class ClusterServiceImpl implements ClusterService {
                     updateSystemStats();
                 }
             };
-            schedulerService.getScheduleExecutorService().schedule(statisticsTask, nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS);
+            schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(statisticsTask, 0, nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS);
 
         }
         logger.info("Cluster service initialized.");
