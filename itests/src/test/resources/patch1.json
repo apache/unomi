@@ -1,6 +1,6 @@
 {
-  "itemId": "firstName-patch1",
-  "patchedItemId": "firstName",
+  "itemId": "company-patch1",
+  "patchedItemId": "company",
   "patchedItemType": "propertyType",
   "operation": "patch",
   "data": [

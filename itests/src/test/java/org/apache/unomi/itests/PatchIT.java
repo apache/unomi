@@ -54,23 +54,21 @@ public class PatchIT extends BaseIT {
 
     @Test
     public void testPatch() throws IOException, InterruptedException {
-        PropertyType firstName = profileService.getPropertyType("firstName");
+        PropertyType company = profileService.getPropertyType("company");
 
         try {
             Patch patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch1.json"), Patch.class);
-            PropertyType newFirstName = (PropertyType) patchService.patch(patch);
+            PropertyType newCompany = (PropertyType) patchService.patch(patch);
 
-            Assert.assertEquals("foo", newFirstName.getDefaultValue());
+            Assert.assertEquals("foo", newCompany.getDefaultValue());
 
             Thread.sleep(10000);
 
-            newFirstName = profileService.getPropertyType("firstName");
-            Assert.assertEquals("foo", newFirstName.getDefaultValue());
+            newCompany = profileService.getPropertyType("company");
+            Assert.assertEquals("foo", newCompany.getDefaultValue());
         } finally {
-            profileService.setPropertyType(firstName);
+            profileService.setPropertyType(company);
         }
-
-
     }
 
     @Test
@@ -90,12 +88,11 @@ public class PatchIT extends BaseIT {
         } finally {
             profileService.setPropertyType(gender);
         }
-
     }
 
     @Test
     public void testRemove() throws IOException, InterruptedException {
-        PropertyType firstName = profileService.getPropertyType("income");
+        PropertyType income = profileService.getPropertyType("income");
 
         try {
             Patch patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch3.json"), Patch.class);
@@ -104,10 +101,10 @@ public class PatchIT extends BaseIT {
 
             Thread.sleep(10000);
 
-            PropertyType newFirstName = profileService.getPropertyType("income");
-            Assert.assertNull(newFirstName);
+            PropertyType newIncome = profileService.getPropertyType("income");
+            Assert.assertNull(newIncome);
         } finally {
-            profileService.setPropertyType(firstName);
+            profileService.setPropertyType(income);
         }
     }
 }
