@@ -20,8 +20,7 @@ package org.apache.unomi.api.services;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
- * A service to access {@link ScheduledExecutorService} to execute {@link java.util.TimerTask}
- * Use this service instead of creating and using a new {@link java.util.Timer}
+ * A service to centralize scheduling of tasks instead of using Timers or executors in each service
  *
  * https://stackoverflow.com/questions/409932/java-timer-vs-executorservice
  */
