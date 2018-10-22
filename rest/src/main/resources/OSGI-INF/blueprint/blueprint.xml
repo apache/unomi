@@ -190,6 +190,18 @@
         </jaxrs:serviceBeans>
     </jaxrs:server>
 
+    <jaxrs:server address="/events" id="restEventService">
+        <jaxrs:providers>
+            <ref component-id="jaxb-provider"/>
+            <ref component-id="cors-filter"/>
+            <ref component-id="jaas-filter"/>
+        </jaxrs:providers>
+
+        <jaxrs:serviceBeans>
+            <ref component-id="eventServiceEndPoint"/>
+        </jaxrs:serviceBeans>
+    </jaxrs:server>
+
     <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
     <reference id="userListService" interface="org.apache.unomi.api.services.UserListService"/>
     <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
@@ -248,6 +260,10 @@
 
     <bean id="patchServiceEndPoint" class="org.apache.unomi.rest.PatchServiceEndPoint">
         <property name="patchService" ref="patchService"/>
+    </bean>
+
+    <bean id="eventServiceEndPoint" class="org.apache.unomi.rest.EventServiceEndpoint">
+        <property name="eventService" ref="eventService"/>
     </bean>
 
     <bean id="resourceBundleHelper" class="org.apache.unomi.rest.ResourceBundleHelper">

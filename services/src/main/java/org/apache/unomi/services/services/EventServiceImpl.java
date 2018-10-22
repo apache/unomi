@@ -213,6 +213,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public PartialList<Event> searchEvents(Condition condition, int offset, int size) {
+        ParserHelper.resolveConditionType(definitionsService, condition);
         return persistenceService.query(condition, "timeStamp", Event.class, offset, size);
     }
 
