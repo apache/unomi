@@ -51,7 +51,6 @@ public interface SegmentService {
     /**
      * Retrieves segment metadatas for segments in the specified scope, ordered according to the specified {@code sortBy} String and and paged: only {@code size} of them are
      * retrieved, starting with the {@code offset}-th one.
-     * <p>
      * TODO: remove?
      *
      * @param scope  the scope for which we want to retrieve segment metadata
