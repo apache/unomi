@@ -1,6 +1,6 @@
 {
   "name": "unomi-analytics",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "The Apache Unomi analytics.js integration.",
   "main": "dist/unomi-tracker.js",
   "keywords": [

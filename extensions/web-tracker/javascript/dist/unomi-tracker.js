@@ -12011,7 +12011,49 @@ Unomi.prototype.fillPageData = function(unomiPage, props) {
     unomiPage.pageInfo.pagePath = unomiPage.pageInfo.pagePath || props.path;
     unomiPage.pageInfo.destinationURL = unomiPage.pageInfo.destinationURL || props.url;
     unomiPage.pageInfo.referringURL = unomiPage.pageInfo.referringURL || props.referrer;
-}
+    this.processReferrer();
+};
+
+Unomi.prototype.processReferrer = function() {
+    var referrerURL = document.referrer;
+    if (referrerURL) {
+        // parse referrer URL
+        var referrer = document.createElement('a');
+        referrer.href = referrerURL;
+
+        // only process referrer if it's not coming from the same site as the current page
+        var local = document.createElement('a');
+        local.href = document.URL;
+        if (referrer.host !== local.host) {
+            // get search element if it exists and extract search query if available
+            var search = referrer.search;
+            var query = undefined;
+            if (search && search != '') {
+                // parse parameters
+                var queryParams = [], param;
+                var queryParamPairs = search.slice(1).split('&');
+                for (var i = 0; i < queryParamPairs.length; i++) {
+                    param = queryParamPairs[i].split('=');
+                    queryParams.push(param[0]);
+                    queryParams[param[0]] = param[1];
+                }
+
+                // try to extract query: q is Google-like (most search engines), p is Yahoo
+                query = queryParams.q || queryParams.p;
+                query = decodeURIComponent(query).replace(/\+/g, ' ');
+            }
+
+            // add data to digitalData
+            if (window.digitalData && window.digitalData.page && window.digitalData.page.pageInfo) {
+                window.digitalData.page.pageInfo.referrerHost = referrer.host;
+                window.digitalData.page.pageInfo.referrerQuery = query;
+            }
+
+            // register referrer event
+            this.registerEvent(this.buildEvent('viewFromReferrer', this.buildTargetPage()));
+        }
+    }
+};
 
 
 /**
@@ -12117,7 +12159,7 @@ Unomi.prototype.onpersonalize = function (msg) {
     };
     window.digitalData.personalizationCallback = window.digitalData.personalizationCallback || [];
     window.digitalData.personalizationCallback.push({personalization: msg.personalization, callback: msg.callback});
-},
+};
 
 /**
  * This function return the basic structure for an event, it must be adapted to your need
