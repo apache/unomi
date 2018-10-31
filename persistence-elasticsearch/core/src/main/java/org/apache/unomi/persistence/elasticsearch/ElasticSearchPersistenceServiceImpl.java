@@ -1101,35 +1101,58 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return new InClassLoaderExecute<Map<String, Map<String, Object>>>(metricsService, this.getClass().getName() + ".getPropertiesMapping") {
             @SuppressWarnings("unchecked")
             protected Map<String, Map<String, Object>> execute(Object... args) throws Exception {
+                // Get all mapping for current itemType
                 GetMappingsResponse getMappingsResponse = client.admin().indices().prepareGetMappings().setTypes(itemType).execute().actionGet();
                 ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> mappings = getMappingsResponse.getMappings();
-                Map<String, Map<String, Object>> propertyMap = new HashMap<>();
+
+                // create a list of Keys to get the mappings in chronological order
+                // in case there is monthly context then the mapping will be added from the oldest to the most recent one
+                Set<String> orderedKeys = new TreeSet<>(Arrays.asList(mappings.keys().toArray(String.class)));
+
+                Map<String, Map<String, Object>> result = new HashMap<>();
                 try {
-                    Iterator<ImmutableOpenMap<String, MappingMetaData>> it = mappings.valuesIt();
-                    while (it.hasNext()) {
-                        ImmutableOpenMap<String, MappingMetaData> next = it.next();
-                        Map<String, Map<String, Object>> properties = (Map<String, Map<String, Object>>) next.get(itemType).getSourceAsMap().get("properties");
-                        for (Map.Entry<String, Map<String, Object>> entry : properties.entrySet()) {
-                            if (propertyMap.containsKey(entry.getKey())) {
-                                Map<String, Object> subPropMap = propertyMap.get(entry.getKey());
-                                for (Map.Entry<String, Object> subentry : entry.getValue().entrySet()) {
-                                    if (subPropMap.containsKey(subentry.getKey()) && subPropMap.get(subentry.getKey()) instanceof Map && subentry.getValue() instanceof Map) {
-                                        ((Map) subPropMap.get(subentry.getKey())).putAll((Map) subentry.getValue());
-                                    } else {
-                                        subPropMap.put(subentry.getKey(), subentry.getValue());
+                    for (String key : orderedKeys) {
+                        if (mappings.containsKey(key)) {
+                            ImmutableOpenMap<String, MappingMetaData> next = mappings.get(key);
+
+                            Map<String, Map<String, Object>> properties = (Map<String, Map<String, Object>>) next.get(itemType).getSourceAsMap().get("properties");
+                            for (Map.Entry<String, Map<String, Object>> entry : properties.entrySet()) {
+                                if (result.containsKey(entry.getKey())) {
+                                    Map<String, Object> subResult = result.get(entry.getKey());
+
+                                    for (Map.Entry<String, Object> subentry : entry.getValue().entrySet()) {
+                                        if (subResult.containsKey(subentry.getKey())
+                                            && subResult.get(subentry.getKey()) instanceof Map
+                                            && subentry.getValue() instanceof Map) {
+                                            mergePropertiesMapping((Map) subResult.get(subentry.getKey()), (Map) subentry.getValue());
+                                        } else {
+                                            subResult.put(subentry.getKey(), subentry.getValue());
+                                        }
                                     }
+                                } else {
+                                    result.put(entry.getKey(), entry.getValue());
                                 }
-                            } else {
-                                propertyMap.put(entry.getKey(), entry.getValue());
                             }
                         }
                     }
                 } catch (Throwable t) {
                     throw new Exception("Cannot get mapping for itemType="+ itemType, t);
                 }
-                return propertyMap;
+                return result;
             }
         }.catchingExecuteInClassLoader(true);
+    }
+
+    private void mergePropertiesMapping(Map<String, Object> result, Map<String, Object> entry) {
+        for (Map.Entry<String, Object> subentry : entry.entrySet()) {
+            if (result.containsKey(subentry.getKey())
+                    && result.get(subentry.getKey()) instanceof Map
+                    && subentry.getValue() instanceof Map) {
+                mergePropertiesMapping((Map) result.get(subentry.getKey()), (Map) subentry.getValue());
+            } else {
+                result.put(subentry.getKey(), subentry.getValue());
+            }
+        }
     }
 
     public Map<String, Object> getPropertyMapping(String property, String itemType) {
