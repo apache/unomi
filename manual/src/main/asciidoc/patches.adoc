@@ -1,0 +1,102 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+==== Migration patches
+
+You may provide patches on any predefined items by simply adding a JSON file in :
+
+[source]
+----
+src/main/resources/META-INF/cxs/patches
+----
+
+These patches will be applied when the module will be deployed the first time.
+They allow to modify an item, that would have been previously deployed on unomi by a previous version of the extension or by something else.
+
+Each patch must have a unique id - unomi will use this id to remember that the patch has already been applied. It can also be used to reapply the patch when need by using the karaf command `unomi:deploy-definition`
+
+A patch also need to reference the item to patch by setting `patchedItemId` and `patchedItemType`, and an operation that tells what the patch should do.
+
+
+.`patchedItemType` can take one of the following value:
+- condition
+- action
+- goal
+- campaign
+- persona
+- propertyType
+- rule
+- segment
+- scoring
+
+.`operation` can take one of the following value:
+- patch
+- override
+- remove
+
+You can apply a patch in http://jsonpatch.com/[json-patch] format in the `data` field, and by specifying operation `patch` like in this example :
+
+[source]
+----
+{
+  "itemId": "firstName-patch1",
+  "patchedItemId": "firstName",
+  "patchedItemType": "propertyType",
+  "operation": "patch",
+  "data": [
+    {
+      "op": "replace", "path": "/defaultValue", "value": "foo"
+    }
+  ]
+}
+----
+
+If you need to completely redeploy a definition, you can use the `override` operation and put the definition in `data`
+
+[source]
+----
+{
+  "itemId": "gender-patch1",
+  "patchedItemId": "gender",
+  "patchedItemType": "propertyType",
+  "operation": "override",
+  "data": {
+    "metadata": {
+      "id": "gender",
+      "name": "Gender",
+      "systemTags": [
+        "properties",
+        "profileProperties"
+      ]
+    },
+    "type": "string",
+    "defaultValue": "foo",
+    "automaticMappingsFrom": [ ],
+    "rank": "105.0"
+  }
+}
+----
+
+It is also possible to simply remove an item by using the operation `remove` :
+
+[source]
+----
+{
+  "itemId": "firstName-patch2",
+  "patchedItemId": "firstName",
+  "patchedItemType": "propertyType",
+  "operation": "remove"
+}
+----
+
+Patches can also be deployed at runtime by using the REST endpoint /patch/apply .

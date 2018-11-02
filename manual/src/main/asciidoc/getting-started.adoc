@@ -21,14 +21,9 @@ This document assumes that you are already familiar with Unomi's link:concepts.h
 
 ==== Running Unomi
 
-===== Building Unomi
-
-. Get the code: `git clone https://git-wip-us.apache.org/repos/asf/incubator-unomi.git`
-. Build and install according to the link:building-and-deploying.html[instructions] and install Unomi.
-
 ===== Start Unomi
 
-Start Unomi according to the link:building-and-deploying.html#Deploying_the_generated_package[instructions]. Once you have Karaf running,
+Start Unomi according to the link:5-min-quickstart.html[5 minute quick start] or by compiling using the building link:building-and-deploying.html#Deploying_the_generated_package[instructions]. Once you have Karaf running,
  you should wait until you see the following messages on the Karaf console:
 
 [source]

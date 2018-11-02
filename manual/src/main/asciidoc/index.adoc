@@ -24,23 +24,23 @@ Apache Software Foundation
 
 image::incubator-logo.png[pdfwidth=35%,align=center]
 
+== Quick start
+
+include::5-min-quickstart.adoc[]
+
 == Concepts
 
 include::concepts.adoc[]
 
-== Quick start
-
-include::building-and-deploying.adoc[]
+== Setup
 
 include::getting-started.adoc[]
 
+include::installing-tracker.adoc[]
+
 include::configuration.adoc[]
 
-== Extending Unomi via plugins
-
-include::extending-plugins.adoc[]
-
-== Samples
+== Integration samples
 
 include::samples/samples.adoc[]
 
@@ -60,10 +60,16 @@ include::connectors/salesforce-connector.adoc[]
 
 include::clustering.adoc[]
 
-== Custom extensions
-
-include::custom-extensions.adoc[]
-
 == Consent API
 
 include::consent-api.adoc[]
+
+== Developers
+
+include::building-and-deploying.adoc[]
+
+include::extending-plugins.adoc[]
+
+include::custom-extensions.adoc[]
+
+include::patches.adoc[]

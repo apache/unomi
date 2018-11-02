@@ -100,13 +100,9 @@ By default, the login/password for the REST API full administrative access is "k
 
 The generated package is also configured with a default SSL certificate. You can change it by following these steps :
 
-. 
-
 Replace the existing keystore in $MY_KARAF_HOME/etc/keystore by your own certificate :
 
 http://wiki.eclipse.org/Jetty/Howto/Configure_SSL[http://wiki.eclipse.org/Jetty/Howto/Configure_SSL]
-
-. 
 
 Update the keystore and certificate password in $MY_KARAF_HOME/etc/custom.properties file :
 
