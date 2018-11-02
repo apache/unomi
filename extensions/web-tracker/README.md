@@ -41,3 +41,8 @@ In your page include unomiOptions and include code snippet from `snippet.min.js`
 `window.unomiTracker` can be used to send additional events when needed.
 
 Check analytics.js API [here](https://segment.com/docs/sources/website/analytics.js/). All methods can be used on `unomiTracker` object, although not all event types are supported by Unomi intergation.
+
+## How to contribute
+
+The source code is in the folder javascript with a package.json, the file to update is `analytics.js-integration-apache-unomi.js` apply your modification in this file then use the command `yarn build` to compile a new JS file.  
+Then you can use the test page to try your changes `http://localhost:8181/tracker/index.html`.  
