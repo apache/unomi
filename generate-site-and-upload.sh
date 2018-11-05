@@ -25,6 +25,12 @@ fi
 echo Generating documentation...
 mvn clean
 cd manual
+mvn -Phtml -Ddoc.source=src/archives/1.1/asciidoc -Ddoc.output.html=target/generated-html/1_1_x
+mvn -Ppdf -Ddoc.source=src/archives/1.1/asciidoc -Ddoc.output.pdf=target/generated-pdf/1_1_x
+mvn -Phtml -Ddoc.source=src/archives/1.2/asciidoc -Ddoc.output.html=target/generated-html/1_2_x
+mvn -Ppdf -Ddoc.source=src/archives/1.2/asciidoc -Ddoc.output.pdf=target/generated-pdf/1_2_x
+mvn -Phtml -Ddoc.source=src/archives/1.3/asciidoc -Ddoc.output.html=target/generated-html/1_3_x
+mvn -Ppdf -Ddoc.source=src/archives/1.3/asciidoc -Ddoc.output.pdf=target/generated-pdf/1_3_x
 mvn -Phtml
 mvn -Ppdf
 cd ..
@@ -36,7 +42,7 @@ cd ..
 mkdir target/staging/unomi-api
 mkdir target/staging/manual
 cp -R target/site/apidocs target/staging/unomi-api
-cp -R manual/target/generated-html/latest target/staging/manual
+cp -Rf manual/target/generated-html/* target/staging/manual
 echo Committing documentation to Apache SVN...
 mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/incubator/unomi/website/manual -Dscmpublish.content=target/staging/manual -Dusername=$1 -Dpassword=$2
 mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/incubator/unomi/website/unomi-api -Dscmpublish.content=target/staging/unomi-api -Dusername=$1 -Dpassword=$2

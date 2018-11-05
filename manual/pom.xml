@@ -30,6 +30,13 @@
     <name>Apache Unomi :: Manual</name>
     <packaging>bundle</packaging>
 
+    <properties>
+        <doc.source>src/main/asciidoc</doc.source>
+        <doc.output.html>target/generated-html/latest</doc.output.html>
+        <doc.output.pdf>target/generated-pdf/latest</doc.output.pdf>
+    </properties>
+
+
     <profiles>
         <profile>
             <id>html</id>
@@ -60,11 +67,11 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <sourceDirectory>src/main/asciidoc</sourceDirectory>
-                            <outputDirectory>target/generated-html/latest</outputDirectory>
+                            <sourceDirectory>${doc.source}</sourceDirectory>
+                            <outputDirectory>${doc.output.html}</outputDirectory>
                             <preserveDirectories>true</preserveDirectories>
                             <headerFooter>true</headerFooter>
-                            <imagesDir>src/main/asciidoc/images</imagesDir>
+                            <imagesDir>${doc.source}/images</imagesDir>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -88,8 +95,8 @@
                             </dependency>
                         </dependencies>
                         <configuration>
-                            <sourceDirectory>src/main/asciidoc</sourceDirectory>
-                            <outputDirectory>target/generated-pdf/latest</outputDirectory>
+                            <sourceDirectory>${doc.source}</sourceDirectory>
+                            <outputDirectory>${doc.output.pdf}</outputDirectory>
                             <preserveDirectories>true</preserveDirectories>
                             <headerFooter>true</headerFooter>
                             <backend>pdf</backend>
