@@ -56,6 +56,8 @@ include::connectors/connectors.adoc[]
 
 include::connectors/salesforce-connector.adoc[]
 
+include::connectors/mailchimp-connector.adoc[]
+
 == Cluster setup
 
 include::clustering.adoc[]
