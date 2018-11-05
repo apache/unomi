@@ -68,6 +68,8 @@ include::consent-api.adoc[]
 
 include::building-and-deploying.adoc[]
 
+include::shell-commands.adoc[]
+
 include::extending-plugins.adoc[]
 
 include::custom-extensions.adoc[]
