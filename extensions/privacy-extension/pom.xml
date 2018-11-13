@@ -33,6 +33,6 @@
     <artifactId>cxs-privacy-extension</artifactId>
     <name>Apache Unomi :: Extensions :: Privacy</name>
     <description>Privacy management extension for the Apache Unomi Context Server</description>
-    <version>1.4.0-incubating-SNAPSHOT</version>
+
     <packaging>pom</packaging>
 </project>

@@ -34,6 +34,5 @@
     <artifactId>cxs-lists-extension</artifactId>
     <name>Apache Unomi :: Extensions :: Lists</name>
     <description>List extension for the Apache Unomi Context Server</description>
-    <version>1.4.0-incubating-SNAPSHOT</version>
     <packaging>pom</packaging>
 </project>

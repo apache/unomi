@@ -28,21 +28,20 @@
     <name>Apache Unomi :: Extensions :: Lists :: Actions</name>
     <description>List extension rule actions for the Apache Unomi Context Server</description>
 
-    <version>1.4.0-incubating-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <dependencies>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>cxs-lists-extension-services</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

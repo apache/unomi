@@ -42,92 +42,92 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-wab</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-common</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-metrics</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-services</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-elasticsearch-core</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-plugins-base</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-plugins-request</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-plugins-mail</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-plugins-optimization-test</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>cxs-lists-extension-services</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>cxs-lists-extension-rest</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>cxs-lists-extension-actions</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>cxs-geonames-services</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>cxs-geonames-rest</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>cxs-privacy-extension-services</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>cxs-privacy-extension-rest</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>shell-dev-commands</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.servicemix.bundles</groupId>
@@ -147,7 +147,7 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-web-tracker-wab</artifactId>
-            <version>1.4.0-incubating-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 
