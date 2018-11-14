@@ -1,0 +1,300 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+This section includes a quick tutorial demonstrating how to install and interface with Unomi running on Ubuntu. The purpose of this tutorial is to demonstrate how to use the features of Apache Unomi.
+
+=== Installing Apache Unomi 1.3 on Ubuntu
+Apache Unomi is a customer data platform built on top of Apache Karaf and ElasticSearch. Unomi provides a REST API and is extendible using Java.
+
+WARNING: This is not a production setup. Command executed in the tutorial were done as root.
+
+==== Install Java 8
+[source,bash]
+----
+apt install openjdk-8-jdk
+----
+Set you `JAVA_HOME` by editing `/etc/environment`:
+[source,bash]
+----
+vi /etc/environment
+----
+and add these two lines below what is already there:
+[source,bash]
+----
+JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64/"
+PATH=$JAVA_HOME/bin:$PATH
+----
+Reload environment:
+[source,bash]
+----
+source /etc/environment
+----
+WARNING: Your `JAVA_HOME` may vary. You can review the output of the `apt install` command to see where Java was installed.
+
+==== Installing ElasticSearch 5.6.3
+[source,bash]
+----
+apt-get update && apt-get -y install apt-transport-https curl wget
+wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.3.deb
+dpkg -i elasticsearch-5.6.3.deb
+----
+Next, edit the ElasticSearch configuration:
+[source,bash]
+----
+vi /etc/elasticsearch/elasticsearch.yml
+----
+Add uncomment and edit the line with `cluster.name` to:
+[source,bash]
+----
+cluster.name: contextElasticSearch
+----
+Unomi expects the cluster name to be `contextElasticSearch`.
+
+Now start and check the status of ElasticSearch to confirm it is running:
+[source,bash]
+----
+service elasticsearch start
+service elasticsearch status
+----
+
+==== Installing Unomi 1.3
+You can install a binary distribution from any of https://www.apache.org/dyn/closer.lua/incubator/unomi/1.3.0-incubating/unomi-1.3.0-incubating-bin.tar.gz[these] mirrors. Just download and extract the files, the run it using Karaf.
+
+Download and extract Unomi from binary distribution:
+[source,bash]
+----
+wget http://apache.mirrors.pair.com/incubator/unomi/1.3.0-incubating/unomi-1.3.0-incubating-bin.tar.gz
+tar -xzf unomi-1.3.0-incubating-bin.tar.gz
+----
+After it is extracted, I prefer to move it into `/opt/unomi`, just my preference to put installed software into `/opt`:
+[source,bash]
+----
+mkdir /opt/unomi
+mv unomi-1.3.0-incubating/*
+----
+
+==== Start Unomi
+To start Unomi from the terminal:
+[source,bash]
+----
+/opt/unomi/bin/karaf
+----
+In the Karaf terminal, run `unomi:start`:
+[source,bash]
+----
+karaf@root()> unomi:start
+----
+After you run the command, Unomi will be available.
+
+==== Installing Unomi as a Service
+You can install Unomi as a service using Karaf's http://karaf.apache.org/manual/latest/#_service_wrapper[Service Wrapper].
+
+From the Karaf command line:
+[source,bash]
+----
+karaf@root()> feature:install wrapper
+karaf@root()> wrapper:install
+----
+The output from the `wrapper:install` command will include instructions for finishing the installation and starting/stoping Karaf.
+
+
+=== Interfacing with Unomi
+Below are some Python scripts that demonstrate how to interface with Unomi.
+
+You can check some endpoints in a web browser, the default username and password is `karaf` and `karaf`:
+[source,bash]
+----
+https://localhost:9443/cxs/cluster
+http://localhost:8181/context.js?sessionId=1234
+----
+WARNING: You may need to change localhost if you installed this on a remote server.
+
+==== Create a New Profile
+Run the Python file to create a new profile (use Python 3):
+[source,python]
+----
+from requests import request
+
+"""
+Make a request to Unomi to create a profile with ID = 10
+"""
+r = requests.post('http://localhost:8181/cxs/profiles/',
+auth=('karaf','karaf'),
+json ={
+        "itemId":"10",
+        "itemType":"profile",
+        "version":None,
+        "properties": {
+            "firstName": "John",
+            "lastName": "Smith"
+        },
+        "systemProperties":{},
+        "segments":[],
+        "scores":{},
+        "mergedWith":None,
+        "consents":{}
+    })
+print(r)
+print(r.content)
+----
+This creates a profile with ID 10. You can view this profile with a https://unomi.incubator.apache.org/rest-api-doc/#-1185500428[GET /profile endpoint] in the browser:
+[source,bash]
+----
+http://localhost:8181/cxs/profile/10
+----
+
+==== Create a New Profile and Session
+Run the Python file to create a new profile (use Python 3):
+[source,python]
+----
+from requests import post
+from datetime import datetime
+"""
+Make a request to Unomi to create a profile with ID = 10
+"""
+profile = {
+    "itemId":"10",
+    "itemType":"profile",
+    "version":None,
+    "properties": {
+        "firstName": "John",
+        "lastName": "Smith"
+    },
+    "systemProperties":{},
+    "segments":[],
+    "scores":{},
+    "mergedWith":None,
+    "consents":{}
+}
+
+session = {
+    "itemId": "10",
+    "itemType":"session",
+    "scope":None,
+    "version":1,
+    "profileId":profile_id,
+    "profile": profile,
+    "properties":{},
+    "systemProperties":{},
+    "timeStamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+}
+
+# Create or update profile
+r = post('http://localhost:8181/cxs/profiles/',
+auth=('karaf','karaf'),
+json =profile)
+print(r)
+print(r.content)
+
+
+# Create session
+r = post('http://localhost:8181/cxs/profiles/sessions/10',
+    auth=('karaf', 'karaf'),
+    json=session)
+
+print(r)
+print(r.content)
+----
+This creates a session with ID 101 and profile with ID 10. You can view this profile with a https://unomi.incubator.apache.org/rest-api-doc/#1764110248[GET /profile/{profile_id}/sessions endpoint] in the browser:
+[source,bash]
+----
+http://localhost:8181/cxs/profiles/10/sessions/
+----
+
+==== Create a New Rule
+Run the python file to create a new rule (use Python 3):
+[source,python]
+----
+import requests
+
+"""
+Make a request to Unomi to create a rule that marks profiles as "eligible = yes"
+when annualIncome < 12000
+"""
+r = requests.post('http://localhost:8181/cxs/rules/',
+auth=('karaf','karaf'),
+json ={
+  "metadata": {
+    "id": "eligibilityRule",
+    "name": "Example eligibility rule",
+    "description": "Profile annualIncome < 12000"
+  },
+  "condition": {
+    "parameterValues": {
+      "subConditions": [
+        {
+          "parameterValues": {
+            "propertyName": "properties.annualIncome",
+            "comparisonOperator": "greaterThan",
+            "propertyValueInt": 12000
+          },
+          "type": "profilePropertyCondition"
+        },
+        {
+          "type": "profileUpdatedEventCondition",
+          "parameterValues": {
+          }
+        }
+      ],
+      "operator" : "and"
+    },
+    "type": "booleanCondition"
+  },
+  "actions": [
+    {
+      "parameterValues": {
+        "setPropertyName": "properties.eligibility",
+        "setPropertyValue": "yes"
+      },
+      "type": "setPropertyAction"
+    }
+  ]
+})
+print("Rule Response Code:", r)
+print("Rule Response Content:", r.content)
+
+
+"""
+Make a request to Unomi to create a profile with annualIncome < 12000
+"""
+r = requests.post('http://localhost:8181/cxs/profiles/',
+auth=('karaf','karaf'),
+json ={
+        "itemId":"10",
+        "itemType":"profile",
+        "version":None,
+        "properties": {
+            "firstName": "John",
+            "lastName": "Smith",
+            "annualIncome": 10000
+        },
+        "systemProperties":{},
+        "segments":[],
+        "scores":{},
+        "mergedWith":None,
+        "consents":{}
+    })
+print("Profile Response Code:", r)
+print("Profile Response Content:", r.content)
+----
+This creates a rule with ID eligibilityRule and a profile with ID 10. You can view this rule with a https://unomi.incubator.apache.org/rest-api-doc/#-1505954579[GET /rule/{rule_id} endpoint] in the browser:
+[source,bash]
+----
+http://localhost:8181/cxs/rules/eligibilityRule/
+----
+and you can view the profile which has been marked as eligible = "yes":
+[source,bash]
+----
+http://localhost:8181/cxs/profile/10
+----

@@ -50,6 +50,10 @@ include::samples/twitter-sample.adoc[]
 
 include::samples/weather-update-sample.adoc[]
 
+== Tutorials
+
+include::tutorials.adoc[]
+
 == Connectors
 
 include::connectors/connectors.adoc[]
