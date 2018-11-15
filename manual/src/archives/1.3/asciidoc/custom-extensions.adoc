@@ -14,8 +14,8 @@
 === Custom extensions
 
 Apache Unomi is a pluggeable server that may be extended in many ways. This document assumes you are familiar with the
-link:concepts.html[Apache Unomi concepts] . This document is mostly a reference document on the different things that may
-be used inside an extension. If you are looking for complete samples, please see the link:samples.html[samples page].
+<<_concepts,Apache Unomi concepts>> . This document is mostly a reference document on the different things that may
+be used inside an extension. If you are looking for complete samples, please see the <<_samples,samples page>>.
 
 ==== Creating an extension
 

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-=== Login samples
+=== Login sample
 
 This samples is an example of what is involved in integrated a login with Apache Unomi.
 
@@ -25,16 +25,12 @@ only be sent if the user has authenticated properly, and only the authentication
 
 ==== Installing the samples
 
-. 
-
 Login into the Unomi Karaf SSH shell using something like this :
 
 [source]
 ----
 ssh -p 8102 karaf@localhost (default password is karaf) 
 ----
-
-. 
 
 Install the login samples using the following command:
 
@@ -45,8 +41,6 @@ bundle:install mvn:org.apache.unomi/login-integration-samples/${project.version}
 
 when the bundle is successfully install you will get an bundle ID back we will call it BUNDLE_ID. 
 
-. 
-
 You can then do:
 
 [source]
@@ -54,16 +48,12 @@ You can then do:
 bundle:start BUNDLE_ID
 ----
 
-. 
-
 If all went well you can access the login samples HTML page here :
 
 [source]
 ----
 http://localhost:8181/login/index.html
 ----
-
-. 
 
 You can fill in the form to test it. Note that the hardcoded password is:
 

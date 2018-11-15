@@ -17,6 +17,16 @@
 
 If you want to change the default configuration, you can perform any modification you want in the $MY_KARAF_HOME/etc directory.
 
+If you want to change the HTTP ports that the server is listening on, you will need to add/change the following lines in the $MY_KARAF_HOME/etc/custom.properties file:
+
+[source]
+----
+org.osgi.service.http.port.secure=9443
+org.osgi.service.http.port=8181
+----
+
+If you change these ports, also make sure you adjust the following file in the cluster configuration.
+
 The context server configuration is kept in the $MY_KARAF_HOME/etc/org.apache.unomi.cluster.cfg . It defines the
 addresses where it can be found :
 
@@ -100,13 +110,9 @@ By default, the login/password for the REST API full administrative access is "k
 
 The generated package is also configured with a default SSL certificate. You can change it by following these steps :
 
-. 
-
 Replace the existing keystore in $MY_KARAF_HOME/etc/keystore by your own certificate :
 
 http://wiki.eclipse.org/Jetty/Howto/Configure_SSL[http://wiki.eclipse.org/Jetty/Howto/Configure_SSL]
-
-. 
 
 Update the keystore and certificate password in $MY_KARAF_HOME/etc/custom.properties file :
 

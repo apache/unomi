@@ -16,46 +16,45 @@
 
 ==== Initial Setup
 
-1) Install J2SE 8.0 SDK (or later), which can be downloaded from
+. Install J2SE 8.0 SDK (or later), which can be downloaded from
  http://www.oracle.com/technetwork/java/javase/downloads/index.html[http://www.oracle.com/technetwork/java/javase/downloads/index.html]
 
-2) Make sure that your JAVA_HOME environment variable is set to the newly installed
+. Make sure that your JAVA_HOME environment variable is set to the newly installed
  JDK location, and that your PATH includes %JAVA_HOME%\bin (windows) or
  $JAVA_HOME$/bin (unix).
 
-3) Install Maven 3.0.3 (or later), which can be downloaded from
+. Install Maven 3.0.3 (or later), which can be downloaded from
  http://maven.apache.org/download.html[http://maven.apache.org/download.html]. Make sure that your PATH includes
  the MVN_HOME/bin directory.
 
 ==== Building
 
-1) Change to the top level directory of Apache Unomi source distribution.
-2) Run
-
+. Get the code: `git clone https://git-wip-us.apache.org/repos/asf/incubator-unomi.git`
+. Change to the top level directory of Apache Unomi source distribution.
+. Run
++
 [source]
 ----
      $> mvn clean install
 ----
-
++
 This will compile Apache Unomi and run all of the tests in the
  Apache Unomi source distribution. Alternatively, you can run
-
++
 [source]
 ----
      $> mvn -P \!integration-tests,\!performance-tests clean install
 ----
-
++
 This will compile Apache Unomi without running the tests and takes less
  time to build.
 
-3) The distributions will be available under "package/target" directory.
+. The distributions will be available under "package/target" directory.
 
 ==== Installing an ElasticSearch server
 
 Starting with version 1.2, Apache Unomi no longer embeds an ElasticSearch server as this is no longer supported by
 the developers of ElasticSearch. Therefore you will need to install a standalone ElasticSearch using the following steps:
-
-. 
 
 Download an ElasticSearch version. Here's the version you will need depending
 on your version of Apache Unomi.
@@ -63,11 +62,7 @@ on your version of Apache Unomi.
 Apache Unomi &lt;= 1.2 : https://www.elastic.co/downloads/past-releases/elasticsearch-5-1-2[https://www.elastic.co/downloads/past-releases/elasticsearch-5-1-2]
 Apache Unomi &gt;= 1.3 : https://www.elastic.co/downloads/past-releases/elasticsearch-5-6-3[https://www.elastic.co/downloads/past-releases/elasticsearch-5-6-3]
 
-. 
-
 Uncompress the downloaded package into a directory
-
-. 
 
 In the config/elasticsearch.yml file, uncomment and modify the following line :
 
@@ -76,8 +71,6 @@ In the config/elasticsearch.yml file, uncomment and modify the following line :
 cluster.name: contextElasticSearch
 ----
 
-. 
-
 Launch the server using
 
 [source]
@@ -85,8 +78,6 @@ Launch the server using
 bin/elasticsearch (Mac, Linux)
 bin\elasticsearch.bat (Windows)
 ----
-
-. 
 
 Check that the ElasticSearch is up and running by accessing the following URL : 
 
@@ -128,8 +119,6 @@ environment if you intend to re-deploy the context server KAR iteratively.
 Additional requirements:
 * Apache Karaf 3.x, http://karaf.apache.org[http://karaf.apache.org]
 
-. 
-
 Before deploying, make sure that you have Apache Karaf properly installed. You will also have to increase the
 default maximum memory size and perm gen size by adjusting the following environment values in the bin/setenv(.bat)
 files (at the end of the file):
@@ -142,8 +131,6 @@ files (at the end of the file):
    export JAVA_MAX_PERM_MEM=384M
 ----
 
-. 
-
 Install the WAR support, CXF and Karaf Cellar into Karaf by doing the following in the Karaf command line:
 
 [source]
@@ -154,16 +141,12 @@ Install the WAR support, CXF and Karaf Cellar into Karaf by doing the following 
    feature:install unomi-kar
 ----
 
-. 
-
 Create a new $MY_KARAF_HOME/etc/org.apache.cxf.osgi.cfg file and put the following property inside :
 
 [source]
 ----
    org.apache.cxf.servlet.context=/cxs
 ----
-
-. 
 
 If all went smoothly, you should be able to access the context script here : http://localhost:8181/cxs/cluster[http://localhost:8181/cxs/cluster] .
  You should be able to login with karaf / karaf and see basic server information. If not something went wrong during the install.
