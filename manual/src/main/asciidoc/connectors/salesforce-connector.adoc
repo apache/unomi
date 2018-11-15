@@ -18,6 +18,8 @@ Apache Unomi profiles and Salesforce Leads.
 
 ==== Getting started
 
+===== Salesforce account setup
+
 . Create a new developer account here:
 +
 [source]
@@ -49,6 +51,8 @@ Consumer secret (click to see it)
 click on your user at the top right, select "Settings", the click on "Reset my security token". You will receive an email
 with the security token.
 
+===== Apache Unomi setup
+
 . You are now ready to configure the Apache Unomi Salesforce Connector. In the etc/org.apache.unomi.sfdc.cfg file
 change the following settings:
 +
@@ -60,7 +64,12 @@ sfdc.user.securityToken=YOUR_USER_SECURITY_TOKEN
 sfdc.consumer.key=CONNECTED_APP_CONSUMER_KEY
 sfdc.consumer.secret=CONNECTED_APP_SECRET
 ----
-+
+
+===== Deployment from Maven repository
+
+In this procedure we assume you have access to a Maven repository that contains a compiled version of the Salesforce connector.
+If this is not the case or you prefer to deploy using a KAR bundle, see the KAR deployment instructions instead.
+
 . Connect to the Apache Unomi Karaf Shell using :
 +
 [source]
@@ -75,7 +84,18 @@ ssh -p 8102 karaf@localhost (default password is karaf)
 feature:repo-add mvn:org.apache.unomi/unomi-salesforce-connectors-karaf-kar/${project.version}/xml/features
 feature:install unomi-salesforce-connectors-karaf-kar
 ----
-+
+
+===== Deployment using KAR bundle
+
+If you have a KAR bundle (for example after building from source in the `extensions/salesforce-connector/karaf-kar/target` directory),
+you can follow these steps to install :
+
+. Ensure that Apache Karaf and Apache Unomi are started
+. Execute the following command in karaf: `feature:install unomi-salesforce-connector-karaf-kar`
+. The installation is done !
+
+===== Testing the connector
+
 . You can then test the connection to Salesforce by accessing the following URLs:
 +
 [source]
