@@ -46,7 +46,7 @@
                     <plugin>
                         <groupId>org.asciidoctor</groupId>
                         <artifactId>asciidoctor-maven-plugin</artifactId>
-                        <version>1.5.6</version>
+                        <version>1.5.7.1</version>
                         <executions>
                             <execution>
                                 <id>output-html</id>
@@ -55,6 +55,12 @@
                                     <goal>process-asciidoc</goal>
                                 </goals>
                                 <configuration>
+                                    <sourceDocumentName>index.adoc</sourceDocumentName>
+                                    <sourceDirectory>${doc.source}</sourceDirectory>
+                                    <outputDirectory>${doc.output.html}</outputDirectory>
+                                    <preserveDirectories>true</preserveDirectories>
+                                    <headerFooter>true</headerFooter>
+                                    <imagesDir>${doc.source}/images</imagesDir>
                                     <backend>html5</backend>
                                     <doctype>article</doctype>
                                     <attributes>
@@ -67,11 +73,6 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <sourceDirectory>${doc.source}</sourceDirectory>
-                            <outputDirectory>${doc.output.html}</outputDirectory>
-                            <preserveDirectories>true</preserveDirectories>
-                            <headerFooter>true</headerFooter>
-                            <imagesDir>${doc.source}/images</imagesDir>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -86,7 +87,7 @@
                     <plugin>
                         <groupId>org.asciidoctor</groupId>
                         <artifactId>asciidoctor-maven-plugin</artifactId>
-                        <version>1.5.6</version>
+                        <version>1.5.7.1</version>
                         <dependencies>
                             <dependency>
                                 <groupId>org.asciidoctor</groupId>
@@ -94,26 +95,6 @@
                                 <version>1.5.0-alpha.16</version>
                             </dependency>
                         </dependencies>
-                        <configuration>
-                            <sourceDirectory>${doc.source}</sourceDirectory>
-                            <outputDirectory>${doc.output.pdf}</outputDirectory>
-                            <preserveDirectories>true</preserveDirectories>
-                            <headerFooter>true</headerFooter>
-                            <backend>pdf</backend>
-                            <attributes>
-                                <project-version>${project.version}</project-version>
-                                <pdf-stylesdir>${project.basedir}/src/theme</pdf-stylesdir>
-                                <pdf-style>apache</pdf-style>
-                                <pdf-fontsdir>${project.basedir}/src/theme/fonts</pdf-fontsdir>
-                                <imagesdir>images</imagesdir>
-                                <icons>font</icons>
-                                <pagenums>true</pagenums>
-                                <toc/>
-                                <idprefix/>
-                                <idseparator>-</idseparator>
-                                <sectnums>true</sectnums>
-                            </attributes>
-                        </configuration>
                         <executions>
                             <execution>
                                 <id>generate-pdf-doc</id>
@@ -121,6 +102,27 @@
                                 <goals>
                                     <goal>process-asciidoc</goal>
                                 </goals>
+                                <configuration>
+                                    <sourceDocumentName>index.adoc</sourceDocumentName>
+                                    <sourceDirectory>${doc.source}</sourceDirectory>
+                                    <outputDirectory>${doc.output.pdf}</outputDirectory>
+                                    <preserveDirectories>true</preserveDirectories>
+                                    <headerFooter>true</headerFooter>
+                                    <backend>pdf</backend>
+                                    <attributes>
+                                        <project-version>${project.version}</project-version>
+                                        <pdf-stylesdir>${project.basedir}/src/theme</pdf-stylesdir>
+                                        <pdf-style>apache</pdf-style>
+                                        <pdf-fontsdir>${project.basedir}/src/theme/fonts</pdf-fontsdir>
+                                        <imagesdir>images</imagesdir>
+                                        <icons>font</icons>
+                                        <pagenums>true</pagenums>
+                                        <toc/>
+                                        <idprefix/>
+                                        <idseparator>-</idseparator>
+                                        <sectnums>true</sectnums>
+                                    </attributes>
+                                </configuration>
                             </execution>
                         </executions>
                     </plugin>

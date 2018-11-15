@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-=== Login samples
+=== Login sample
 
 This samples is an example of what is involved in integrated a login with Apache Unomi.
 

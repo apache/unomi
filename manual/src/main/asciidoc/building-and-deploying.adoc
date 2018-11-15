@@ -16,40 +16,40 @@
 
 ==== Initial Setup
 
-1) Install J2SE 8.0 SDK (or later), which can be downloaded from
+. Install J2SE 8.0 SDK (or later), which can be downloaded from
  http://www.oracle.com/technetwork/java/javase/downloads/index.html[http://www.oracle.com/technetwork/java/javase/downloads/index.html]
 
-2) Make sure that your JAVA_HOME environment variable is set to the newly installed
+. Make sure that your JAVA_HOME environment variable is set to the newly installed
  JDK location, and that your PATH includes %JAVA_HOME%\bin (windows) or
  $JAVA_HOME$/bin (unix).
 
-3) Install Maven 3.0.3 (or later), which can be downloaded from
+. Install Maven 3.0.3 (or later), which can be downloaded from
  http://maven.apache.org/download.html[http://maven.apache.org/download.html]. Make sure that your PATH includes
  the MVN_HOME/bin directory.
 
 ==== Building
 
-1) Get the code: `git clone https://git-wip-us.apache.org/repos/asf/incubator-unomi.git`
-2) Change to the top level directory of Apache Unomi source distribution.
-3) Run
-
+. Get the code: `git clone https://git-wip-us.apache.org/repos/asf/incubator-unomi.git`
+. Change to the top level directory of Apache Unomi source distribution.
+. Run
++
 [source]
 ----
      $> mvn clean install
 ----
-
++
 This will compile Apache Unomi and run all of the tests in the
  Apache Unomi source distribution. Alternatively, you can run
-
++
 [source]
 ----
      $> mvn -P \!integration-tests,\!performance-tests clean install
 ----
-
++
 This will compile Apache Unomi without running the tests and takes less
  time to build.
 
-4) The distributions will be available under "package/target" directory.
+. The distributions will be available under "package/target" directory.
 
 ==== Installing an ElasticSearch server
 

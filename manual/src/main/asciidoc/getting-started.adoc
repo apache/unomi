@@ -17,13 +17,13 @@ We will first get you up and running with an example. We will then lift the corn
 
 ==== Prerequisites
 
-This document assumes that you are already familiar with Unomi's link:concepts.html[concepts]. On the technical side, we also assume working knowledge of https://git-scm.com/[git] to be able to retrieve the code for Unomi and the example. Additionnally, you will require a working Java 7 or above install. Refer to http://www.oracle.com/technetwork/java/javase/[http://www.oracle.com/technetwork/java/javase/] for details on how to download and install Java SE 7 or greater.
+This document assumes that you are already familiar with Unomi's <<_concepts,concepts>>. On the technical side, we also assume working knowledge of https://git-scm.com/[git] to be able to retrieve the code for Unomi and the example. Additionnally, you will require a working Java 7 or above install. Refer to http://www.oracle.com/technetwork/java/javase/[http://www.oracle.com/technetwork/java/javase/] for details on how to download and install Java SE 7 or greater.
 
 ==== Running Unomi
 
 ===== Start Unomi
 
-Start Unomi according to the link:5-min-quickstart.html[5 minute quick start] or by compiling using the building link:building-and-deploying.html#Deploying_the_generated_package[instructions]. Once you have Karaf running,
+Start Unomi according to the <<_5-min-quickstart,5 minute quick start>> or by compiling using the building link:building-and-deploying.html#Deploying_the_generated_package[instructions]. Once you have Karaf running,
  you should wait until you see the following messages on the Karaf console:
 
 [source]
@@ -113,4 +113,4 @@ to send additional events.
 
 ===== Where to go from here
 
-* Read the link:twitter-samples.html[Twitter samples] documentation that contains a detailed example of how to integrate with Apache Unomi.
+* Read the <<_twitter_sample,Twitter sample>> documentation that contains a detailed example of how to integrate with Apache Unomi.
