@@ -20,9 +20,13 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.graphql.propertytypes.CXSIdentifierPropertyType;
-import org.apache.unomi.graphql.propertytypes.CXSPropertyType;
 import org.apache.unomi.graphql.propertytypes.CXSSetPropertyType;
 import org.apache.unomi.graphql.propertytypes.CXSStringPropertyType;
+import org.apache.unomi.graphql.types.input.CXSEventInput;
+import org.apache.unomi.graphql.types.input.CXSEventTypeInput;
+import org.apache.unomi.graphql.types.input.CXSPropertyTypeInput;
+import org.apache.unomi.graphql.types.input.CXSSetPropertyTypeInput;
+import org.apache.unomi.graphql.types.output.CXSEventType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +45,7 @@ public class CXSMutation {
 
         CXSEventType cxsEventType = new CXSEventType(cxsEventTypeInput.getId(), cxsEventTypeInput.getScope(), cxsEventTypeInput.getTypeName(), new ArrayList<>());
         for (CXSPropertyTypeInput propertyTypeInput : cxsEventTypeInput.getProperties()) {
-            CXSPropertyType propertyType = getPropertyType(propertyTypeInput);
+            org.apache.unomi.graphql.propertytypes.CXSPropertyType propertyType = getPropertyType(propertyTypeInput);
             cxsEventType.getProperties().add(propertyType);
         }
         cxsGraphQLProvider.getEventTypes().put(cxsEventType.getTypeName(), cxsEventType);
@@ -58,8 +62,8 @@ public class CXSMutation {
         return 0;
     }
 
-    private CXSPropertyType getPropertyType(CXSPropertyTypeInput cxsPropertyTypeInput) {
-        CXSPropertyType propertyType = null;
+    private org.apache.unomi.graphql.propertytypes.CXSPropertyType getPropertyType(CXSPropertyTypeInput cxsPropertyTypeInput) {
+        org.apache.unomi.graphql.propertytypes.CXSPropertyType propertyType = null;
         if (cxsPropertyTypeInput.identifierPropertyTypeInput != null) {
             propertyType = getIdentifierPropertyType(cxsPropertyTypeInput.identifierPropertyTypeInput);
         } else if (cxsPropertyTypeInput.stringPropertyTypeInput != null) {
@@ -70,12 +74,12 @@ public class CXSMutation {
         return propertyType;
     }
 
-    private CXSPropertyType getSetPropertyType(CXSSetPropertyTypeInput cxsSetPropertyTypeInput) {
-        List<CXSPropertyType> setProperties = null;
+    private org.apache.unomi.graphql.propertytypes.CXSPropertyType getSetPropertyType(CXSSetPropertyTypeInput cxsSetPropertyTypeInput) {
+        List<org.apache.unomi.graphql.propertytypes.CXSPropertyType> setProperties = null;
         if (cxsSetPropertyTypeInput.getProperties() != null) {
             setProperties = new ArrayList<>();
             for (CXSPropertyTypeInput setProperty : cxsSetPropertyTypeInput.getProperties()) {
-                CXSPropertyType subPropertyType = getPropertyType(setProperty);
+                org.apache.unomi.graphql.propertytypes.CXSPropertyType subPropertyType = getPropertyType(setProperty);
                 if (subPropertyType != null) {
                     setProperties.add(subPropertyType);
                 }
@@ -92,7 +96,7 @@ public class CXSMutation {
                 setProperties);
     }
 
-    private CXSPropertyType getStringPropertyType(CXSStringPropertyType stringPropertyType) {
+    private org.apache.unomi.graphql.propertytypes.CXSPropertyType getStringPropertyType(CXSStringPropertyType stringPropertyType) {
         return new CXSStringPropertyType(
                 stringPropertyType.getId(),
                 stringPropertyType.getName(),
@@ -106,7 +110,7 @@ public class CXSMutation {
                 );
     }
 
-    private CXSPropertyType getIdentifierPropertyType(CXSIdentifierPropertyType identifierPropertyType) {
+    private org.apache.unomi.graphql.propertytypes.CXSPropertyType getIdentifierPropertyType(CXSIdentifierPropertyType identifierPropertyType) {
         return new CXSIdentifierPropertyType(
                 identifierPropertyType.getId(),
                 identifierPropertyType.getName(),

@@ -14,31 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-@GraphQLName("CXS_EventTypeInput")
-public class CXSEventTypeInput {
-
+@GraphQLName("CXS_Event")
+public class CXSEventInput {
     private String id;
-    private String scope;
-    private String typeName;
-    private List<CXSPropertyTypeInput> properties = new ArrayList<>();
-
-    public CXSEventTypeInput(@GraphQLName("id") String id,
-                             @GraphQLName("scope") String scope,
-                             @GraphQLName("typeName") String typeName,
-                             @GraphQLName("properties") List<CXSPropertyTypeInput> properties) {
-        this.id = id;
-        this.scope = scope;
-        this.typeName = typeName;
-        this.properties = properties;
-    }
+    private String eventType;
+    private long timeStamp;
+    private String subject;
+    private String object;
+    private Map<Object,Object> properties = new LinkedHashMap<>();
+    private CXSGeoPointInput location;
 
     @GraphQLField
     public String getId() {
@@ -46,17 +38,32 @@ public class CXSEventTypeInput {
     }
 
     @GraphQLField
-    public String getScope() {
-        return scope;
+    public String getEventType() {
+        return eventType;
     }
 
     @GraphQLField
-    public String getTypeName() {
-        return typeName;
+    public long getTimeStamp() {
+        return timeStamp;
     }
 
     @GraphQLField
-    public List<CXSPropertyTypeInput> getProperties() {
+    public String getSubject() {
+        return subject;
+    }
+
+    @GraphQLField
+    public String getObject() {
+        return object;
+    }
+
+    public Map<Object, Object> getProperties() {
         return properties;
     }
+
+    @GraphQLField
+    public CXSGeoPointInput getLocation() {
+        return location;
+    }
+
 }

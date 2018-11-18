@@ -19,8 +19,13 @@ package org.apache.unomi.graphql.builders;
 import graphql.annotations.processor.GraphQLAnnotationsComponent;
 import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.schema.*;
-import org.apache.unomi.graphql.*;
 import org.apache.unomi.graphql.propertytypes.*;
+import org.apache.unomi.graphql.types.input.CXSEventInput;
+import org.apache.unomi.graphql.types.input.CXSEventOccurrenceFilterInput;
+import org.apache.unomi.graphql.types.output.CXSEvent;
+import org.apache.unomi.graphql.types.output.CXSEventProperties;
+import org.apache.unomi.graphql.types.output.CXSEventType;
+import org.apache.unomi.graphql.types.output.PageInfo;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +41,7 @@ public class CXSEventBuilders implements CXSBuilder {
 
     private GraphQLAnnotationsComponent annotationsComponent;
     private ProcessingElementsContainer container;
-    private Map<String,CXSEventType> eventTypes;
+    private Map<String, CXSEventType> eventTypes;
     private Map<String,GraphQLType> typeRegistry;
 
     public CXSEventBuilders(GraphQLAnnotationsComponent annotationsComponent,

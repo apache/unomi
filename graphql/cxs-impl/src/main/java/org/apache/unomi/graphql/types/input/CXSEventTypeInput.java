@@ -14,29 +14,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
-import org.apache.unomi.graphql.propertytypes.CXSPropertyType;
 
+import java.util.ArrayList;
 import java.util.List;
 
-@GraphQLName("CXS_SetPropertyTypeInput")
-public class CXSSetPropertyTypeInput extends CXSPropertyType {
+@GraphQLName("CXS_EventType")
+public class CXSEventTypeInput {
 
-    private List<CXSPropertyTypeInput> properties;
+    private String id;
+    private String scope;
+    private String typeName;
+    private List<CXSPropertyTypeInput> properties = new ArrayList<>();
 
-    public CXSSetPropertyTypeInput(@GraphQLName("id") String id,
-                                   @GraphQLName("name") String name,
-                                   @GraphQLName("minOccurrences") Integer minOccurrences,
-                                   @GraphQLName("maxOccurrences") Integer maxOccurrences,
-                                   @GraphQLName("tags") List<String> tags,
-                                   @GraphQLName("systemTags") List<String> systemTags,
-                                   @GraphQLName("personalData") Boolean personalData,
-                                   @GraphQLName("properties") List<CXSPropertyTypeInput> properties) {
-        super(id, name, minOccurrences, maxOccurrences, tags, systemTags, personalData);
+    public CXSEventTypeInput(@GraphQLName("id") String id,
+                             @GraphQLName("scope") String scope,
+                             @GraphQLName("typeName") String typeName,
+                             @GraphQLName("properties") List<CXSPropertyTypeInput> properties) {
+        this.id = id;
+        this.scope = scope;
+        this.typeName = typeName;
         this.properties = properties;
+    }
+
+    @GraphQLField
+    public String getId() {
+        return id;
+    }
+
+    @GraphQLField
+    public String getScope() {
+        return scope;
+    }
+
+    @GraphQLField
+    public String getTypeName() {
+        return typeName;
     }
 
     @GraphQLField

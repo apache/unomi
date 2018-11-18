@@ -14,19 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import org.apache.unomi.graphql.types.output.CXSGeoDistanceUnit;
+import org.apache.unomi.graphql.types.output.CXSGeoPoint;
 
-import java.util.List;
-
-@GraphQLName("CXS_EventFilter")
-public class CXSEventFilter {
-
+@GraphQLName("CXS_GeoDistance")
+public class CXSGeoDistanceInput {
     @GraphQLField
-    public List<CXSEventFilter> andFilters;
+    public CXSGeoPoint center;
     @GraphQLField
-    public List<CXSEventFilter> orFilters;
-
+    public CXSGeoDistanceUnit unit;
+    @GraphQLField
+    public Double distance;
 }

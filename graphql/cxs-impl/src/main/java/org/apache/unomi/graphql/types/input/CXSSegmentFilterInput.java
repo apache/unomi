@@ -14,13 +14,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.input;
 
+import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CXS_GeoDistanceUnit")
-public enum CXSGeoDistanceUnit {
-    METERS,
-    KILOMETERS,
-    MILES
+import java.util.List;
+
+@GraphQLName("CXS_SegmentFilter")
+public class CXSSegmentFilterInput {
+
+    @GraphQLField
+    @GraphQLName("and")
+    public List<CXSSegmentFilterInput> andFilters;
+
+    @GraphQLField
+    @GraphQLName("or")
+    public List<CXSSegmentFilterInput> orFilters;
+
+    @GraphQLField
+    @GraphQLName("view_equals")
+    public String viewEquals;
+
+    @GraphQLField
+    @GraphQLName("view_regexp")
+    public String viewRegexp;
+
+    @GraphQLField
+    @GraphQLName("name_equals")
+    public String nameEquals;
+
+    @GraphQLField
+    @GraphQLName("name_regexp")
+    public String nameRegexp;
+
 }

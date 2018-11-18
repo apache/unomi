@@ -14,15 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CXS_GeoPointInput")
-public class CXSGeoPointInput {
+import java.util.List;
+
+@GraphQLName("CXS_EventFilter")
+public class CXSEventFilter {
+
     @GraphQLField
-    public float longitude;
+    public List<CXSEventFilter> andFilters;
     @GraphQLField
-    public float latitude;
+    public List<CXSEventFilter> orFilters;
+
 }

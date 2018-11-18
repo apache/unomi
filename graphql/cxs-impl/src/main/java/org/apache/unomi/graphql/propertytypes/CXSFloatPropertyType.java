@@ -24,9 +24,9 @@ import java.util.List;
 @GraphQLName("CXS_FloatPropertyType")
 public class CXSFloatPropertyType extends CXSPropertyType {
 
-    private Float minValue;
-    private Float maxValue;
-    private Float defaultValue;
+    private Double minValue;
+    private Double maxValue;
+    private Double defaultValue;
 
     public CXSFloatPropertyType(@GraphQLName("id") String id,
                                 @GraphQLName("name") String name,
@@ -35,9 +35,9 @@ public class CXSFloatPropertyType extends CXSPropertyType {
                                 @GraphQLName("tags") List<String> tags,
                                 @GraphQLName("systemTags") List<String> systemTags,
                                 @GraphQLName("personalData") Boolean personalData,
-                                @GraphQLName("minValue") Float minValue,
-                                @GraphQLName("maxValue") Float maxValue,
-                                @GraphQLName("defaultValue") Float defaultValue) {
+                                @GraphQLName("minValue") Double minValue,
+                                @GraphQLName("maxValue") Double maxValue,
+                                @GraphQLName("defaultValue") Double defaultValue) {
         super(id, name, minOccurrences, maxOccurrences, tags, systemTags, personalData);
         this.minValue = minValue;
         this.maxValue = maxValue;
@@ -45,17 +45,17 @@ public class CXSFloatPropertyType extends CXSPropertyType {
     }
 
     @GraphQLField
-    public Float getMinValue() {
+    public Double getMinValue() {
         return minValue;
     }
 
     @GraphQLField
-    public Float getMaxValue() {
+    public Double getMaxValue() {
         return maxValue;
     }
 
     @GraphQLField
-    public Float getDefaultValue() {
+    public Double getDefaultValue() {
         return defaultValue;
     }
 }

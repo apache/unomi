@@ -17,9 +17,11 @@
 package org.apache.unomi.graphql.internal;
 
 import graphql.annotations.processor.GraphQLAnnotationsComponent;
+import graphql.annotations.processor.retrievers.GraphQLFieldRetriever;
 import graphql.servlet.GraphQLMutationProvider;
 import graphql.servlet.GraphQLQueryProvider;
 import graphql.servlet.GraphQLTypesProvider;
+import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.graphql.CXSGraphQLProvider;
 import org.apache.unomi.graphql.CXSProviderManager;
 import org.osgi.framework.BundleContext;
@@ -40,12 +42,33 @@ public class CXSProviderManagerImpl implements CXSProviderManager {
 
     private CXSGraphQLProvider cxsGraphQLProvider;
     private GraphQLAnnotationsComponent annotationsComponent;
+    private GraphQLFieldRetriever graphQLFieldRetriever;
+    private SegmentService segmentService;
+
     private ServiceRegistration<?> providerSR;
     private BundleContext bundleContext;
 
     @Reference
     public void setAnnotationsComponent(GraphQLAnnotationsComponent annotationsComponent) {
         this.annotationsComponent = annotationsComponent;
+    }
+
+    @Reference
+    public void setGraphQLFieldRetriever(GraphQLFieldRetriever graphQLFieldRetriever) {
+        this.graphQLFieldRetriever = graphQLFieldRetriever;
+        if (graphQLFieldRetriever != null) {
+            graphQLFieldRetriever.setAlwaysPrettify(true);
+        }
+    }
+
+    @Reference
+    public void setSegmentService(SegmentService segmentService) {
+        this.segmentService = segmentService;
+    }
+
+    @Override
+    public SegmentService getSegmentService() {
+        return segmentService;
     }
 
     @Activate

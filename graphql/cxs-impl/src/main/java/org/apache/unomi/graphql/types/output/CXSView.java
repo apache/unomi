@@ -14,17 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CXS_GeoDistanceInput")
-public class CXSGeoDistanceInput {
+@GraphQLName("CXS_view")
+public class CXSView {
     @GraphQLField
-    public CXSGeoPoint center;
-    @GraphQLField
-    public CXSGeoDistanceUnit unit;
-    @GraphQLField
-    public float distance;
+    public String name;
 }

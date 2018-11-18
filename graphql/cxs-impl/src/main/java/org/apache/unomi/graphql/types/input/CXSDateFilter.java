@@ -14,22 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CXS_EventOccurrenceFilterInput")
-public class CXSEventOccurrenceFilterInput {
-
+@GraphQLName("CXS_DateFilter")
+public class CXSDateFilter {
     @GraphQLField
-    public String eventId;
+    public long after;
     @GraphQLField
-    public String beforeTime;
+    public boolean includeAfter;
     @GraphQLField
-    public String afterTime;
+    public long before;
     @GraphQLField
-    public String betweenTime;
-    @GraphQLField
-    public int count;
+    public boolean includeBefore;
 }

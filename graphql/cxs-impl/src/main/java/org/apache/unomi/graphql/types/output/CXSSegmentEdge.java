@@ -14,14 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.output;
 
-import org.apache.unomi.api.services.SegmentService;
+import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
 
-public interface CXSProviderManager {
+@GraphQLName("CXS_SegmentEdge")
+public class CXSSegmentEdge {
 
-    void refreshProviders();
+    @GraphQLField
+    public CXSSegment edge;
 
-    SegmentService getSegmentService();
+    @GraphQLField
+    public String cursor;
 
 }

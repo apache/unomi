@@ -19,6 +19,14 @@ package org.apache.unomi.graphql;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.query.Query;
+import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.graphql.types.input.CXSEventFilter;
+import org.apache.unomi.graphql.types.input.CXSOrderByInput;
+import org.apache.unomi.graphql.types.input.CXSSegmentFilterInput;
+import org.apache.unomi.graphql.types.output.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +51,7 @@ public class CXSQuery {
     }
 
     @GraphQLField
-    public CXSEventConnection findEvents(@GraphQLName("filter") CXSEventFilterInput filter,
+    public CXSEventConnection findEvents(@GraphQLName("filter") CXSEventFilter filter,
                                          @GraphQLName("orderBy") CXSOrderByInput orderBy,
                                          DataFetchingEnvironment env) {
         env.getArgument("first");
@@ -52,7 +60,40 @@ public class CXSQuery {
     }
 
     @GraphQLField
+    public CXSSegmentConnection findSegments(@GraphQLName("filter") CXSSegmentFilterInput filter,
+                                             @GraphQLName("orderBy") CXSOrderByInput orderBy,
+                                             DataFetchingEnvironment env) {
+        SegmentService segmentService = cxsGraphQLProvider.getCxsProviderManager().getSegmentService();
+        Query query = new Query();
+        segmentService.getSegmentMetadatas(query);
+        return new CXSSegmentConnection();
+    }
+
+    @GraphQLField
     public CXSSegment getSegment(@GraphQLName("segmentId") String segmentId) {
-        return new CXSSegment();
+        SegmentService segmentService = cxsGraphQLProvider.getCxsProviderManager().getSegmentService();
+        Segment segment = segmentService.getSegmentDefinition(segmentId);
+        if (segment == null) {
+            return null;
+        }
+        CXSSegment cxsSegment = new CXSSegment();
+        cxsSegment.id = segment.getItemId();
+        cxsSegment.name = segment.getMetadata().getName();
+        CXSView cxsView = new CXSView();
+        cxsView.name = segment.getScope();
+        cxsSegment.view = cxsView;
+        cxsSegment.condition = getSegmentCondition(segment.getCondition());
+        return cxsSegment;
+    }
+
+    private CXSSegmentCondition getSegmentCondition(Condition segmentRootCondition) {
+        if (segmentRootCondition == null) {
+            return null;
+        }
+        // @todo translate the conditions into something that the CXS spec can work with.
+
+        // we probably have to scan the tree to find any event conditions and seperate them
+        // from the profile property conditions (what about session conditions ?)
+        return null;
     }
 }

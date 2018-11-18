@@ -14,13 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CXS_view")
-public class CXSView {
+@GraphQLName("CXS_Segment")
+public class CXSSegment {
+    @GraphQLField
+    public String id;
+    @GraphQLField
+    public CXSView view;
     @GraphQLField
     public String name;
+    @GraphQLField
+    public CXSSegmentCondition condition;
 }

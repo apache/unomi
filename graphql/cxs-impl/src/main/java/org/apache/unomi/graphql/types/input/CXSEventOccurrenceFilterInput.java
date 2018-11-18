@@ -14,14 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.input;
 
-import org.apache.unomi.api.services.SegmentService;
+import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
 
-public interface CXSProviderManager {
+@GraphQLName("CXS_EventOccurrenceFilter")
+public class CXSEventOccurrenceFilterInput {
 
-    void refreshProviders();
-
-    SegmentService getSegmentService();
-
+    @GraphQLField
+    public String eventId;
+    @GraphQLField
+    public String beforeTime;
+    @GraphQLField
+    public String afterTime;
+    @GraphQLField
+    public String betweenTime;
+    @GraphQLField
+    public int count;
 }

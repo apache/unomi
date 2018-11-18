@@ -14,19 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CXS_Segment")
-public class CXSSegment {
+import java.util.List;
+
+@GraphQLName("CXS_EventConnection")
+public class CXSEventConnection {
+
     @GraphQLField
-    public String id;
+    public List<CXSEventEdge> edges;
     @GraphQLField
-    public CXSView view;
-    @GraphQLField
-    public String name;
-    @GraphQLField
-    public CXSSegmentCondition condition;
+    public PageInfo pageInfo;
+
 }

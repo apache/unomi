@@ -14,18 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CXS_GeoPoint")
-public class CXSGeoPoint {
+public class PageInfo {
 
     @GraphQLField
-    public double latitude;
-
+    public boolean hasPreviousPage;
     @GraphQLField
-    public double longitude;
+    public boolean hasNextPage;
 
 }

@@ -14,23 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CXS_EventOccurrenceFilter")
-public class CXSEventOccurrenceFilter {
+@GraphQLName("CXS_GeoPoint")
+public class CXSGeoPointInput {
     @GraphQLField
-    public String eventType;
+    public Double longitude;
     @GraphQLField
-    public String beforeTime;
-    @GraphQLField
-    public String afterTime;
-    @GraphQLField
-    public String betweenTime;
-    @GraphQLField
-    public int count;
-
-    public CXSEventFilter eventFilter;
+    public Double latitude;
 }

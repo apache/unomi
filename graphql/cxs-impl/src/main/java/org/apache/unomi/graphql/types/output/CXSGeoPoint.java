@@ -14,19 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-import java.util.List;
+@GraphQLName("CXS_GeoPoint")
+public class CXSGeoPoint {
 
-@GraphQLName("CXS_SegmentCondition")
-public class CXSSegmentCondition {
     @GraphQLField
-    public CXSProfilePropertiesFilter profilePropertiesFilter;
+    public Double latitude;
+
     @GraphQLField
-    public List<String> grantedConsents;
-    @GraphQLField
-    public CXSEventOccurrenceFilter eventOccurrenceFilter;
+    public Double longitude;
+
 }

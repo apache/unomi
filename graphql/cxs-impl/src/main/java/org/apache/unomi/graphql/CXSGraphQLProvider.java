@@ -16,11 +16,13 @@
  */
 package org.apache.unomi.graphql;
 
+import org.apache.unomi.graphql.types.output.CXSEventType;
+
 import java.util.Map;
 
 public interface CXSGraphQLProvider {
 
-    Map<String,CXSEventType> getEventTypes();
+    Map<String, CXSEventType> getEventTypes();
     CXSProviderManager getCxsProviderManager();
     void updateGraphQLTypes();
     void setCxsProviderManager(CXSProviderManager cxsProviderManager);

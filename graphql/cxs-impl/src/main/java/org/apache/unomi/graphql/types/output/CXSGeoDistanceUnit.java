@@ -14,22 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.output;
 
-import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-@GraphQLName("CXS_EventProperties")
-public class CXSEventProperties {
-    @GraphQLField
-    public int nbProperties;
-
-    Map<Object,Object> properties = new LinkedHashMap<>();
-
-    public Map<Object, Object> getProperties() {
-        return properties;
-    }
+@GraphQLName("CXS_GeoDistanceUnit")
+public enum CXSGeoDistanceUnit {
+    METERS,
+    KILOMETERS,
+    MILES
 }

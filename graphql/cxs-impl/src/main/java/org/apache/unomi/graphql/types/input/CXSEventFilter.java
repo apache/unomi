@@ -14,19 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CXS_DateFilterInput")
-public class CXSDateFilterInput {
+import java.util.List;
+
+@GraphQLName("CXS_EventFilter")
+public class CXSEventFilter {
+
     @GraphQLField
-    public long after;
+    @GraphQLName("and")
+    public List<CXSEventFilter> andFilters;
+
     @GraphQLField
-    public boolean includeAfter;
-    @GraphQLField
-    public long before;
-    @GraphQLField
-    public boolean includeBefore;
+    @GraphQLName("or")
+    public List<CXSEventFilter> orFilters;
+
 }

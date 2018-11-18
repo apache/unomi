@@ -22,9 +22,19 @@ import graphql.schema.*;
 import graphql.servlet.GraphQLMutationProvider;
 import graphql.servlet.GraphQLQueryProvider;
 import graphql.servlet.GraphQLTypesProvider;
-import org.apache.unomi.graphql.*;
+import org.apache.unomi.graphql.CXSGraphQLProvider;
+import org.apache.unomi.graphql.CXSMutation;
+import org.apache.unomi.graphql.CXSProviderManager;
+import org.apache.unomi.graphql.CXSQuery;
 import org.apache.unomi.graphql.builders.CXSEventBuilders;
 import org.apache.unomi.graphql.propertytypes.CXSSetPropertyType;
+import org.apache.unomi.graphql.types.input.CXSDateFilter;
+import org.apache.unomi.graphql.types.input.CXSEventTypeInput;
+import org.apache.unomi.graphql.types.input.CXSGeoDistanceInput;
+import org.apache.unomi.graphql.types.input.CXSOrderByInput;
+import org.apache.unomi.graphql.types.output.CXSEventType;
+import org.apache.unomi.graphql.types.output.CXSGeoPoint;
+import org.apache.unomi.graphql.types.output.PageInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,11 +56,13 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
     private CXSEventBuilders cxsEventBuilders;
     private Map<String,GraphQLType> typeRegistry;
 
-    private Map<String,CXSEventType> eventTypes = new TreeMap<>();
+    private Map<String, CXSEventType> eventTypes = new TreeMap<>();
 
     public CXSGraphQLProviderImpl(GraphQLAnnotationsComponent annotationsComponent) {
         this.annotationsComponent = annotationsComponent;
         container = annotationsComponent.createContainer();
+        container.setInputPrefix("");
+        container.setInputSuffix("Input");
         typeRegistry = container.getTypeRegistry();
         cxsEventBuilders = new CXSEventBuilders(annotationsComponent, container, eventTypes);
         updateGraphQLTypes();
@@ -74,7 +86,7 @@ public class CXSGraphQLProviderImpl implements CXSGraphQLProvider, GraphQLQueryP
         typeRegistry.put("CXS_EventType", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CXSEventType.class, container));
 
         typeRegistry.put("CXS_GeoDistanceInput", annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSGeoDistanceInput.class, container));
-        typeRegistry.put("CXS_DateFilterInput", annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSDateFilterInput.class, container));
+        typeRegistry.put("CXS_DateFilterInput", annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSDateFilter.class, container));
         typeRegistry.put("CXS_EventTypeInput", annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSEventTypeInput.class, container));
         typeRegistry.put("CXS_OrderByInput", annotationsComponent.getInputTypeProcessor().getInputTypeOrRef(CXSOrderByInput.class, container));
 

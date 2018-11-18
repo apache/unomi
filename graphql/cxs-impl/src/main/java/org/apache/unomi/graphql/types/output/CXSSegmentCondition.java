@@ -14,17 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import org.apache.unomi.graphql.CXSProfilePropertiesFilter;
 
-@GraphQLName("CXS_OrderByInput")
-public class CXSOrderByInput {
+import java.util.List;
 
+@GraphQLName("CXS_SegmentCondition")
+public class CXSSegmentCondition {
     @GraphQLField
-    public String fieldName;
-
+    public CXSProfilePropertiesFilter profilePropertiesFilter;
     @GraphQLField
-    public CXSSortOrder sortOrder;
+    public List<String> grantedConsents;
+    @GraphQLField
+    public CXSEventOccurrenceFilter eventOccurrenceFilter;
 }
