@@ -1,6 +1,6 @@
 {
   "name": "unomi-analytics",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "The Apache Unomi analytics.js integration.",
   "main": "dist/unomi-tracker.js",
   "keywords": [
@@ -15,7 +15,7 @@
     "browserify": "browserify src/index.js -p [ browserify-header --file src/license.js ] -s unomiTracker -o dist/unomi-tracker.js",
     "replace": "replace-in-file 'analytics.require = require' '//analytics.require = require' dist/unomi-tracker.js",
     "minify": "uglifyjs -c -m --comments '/@license/' -o dist/unomi-tracker.min.js -- dist/unomi-tracker.js",
-    "snippet:minify": "uglifyjs -c -m -o snippet.min.js -- snippet.js",
+    "snippet:minify": "uglifyjs -c -m -o snippet.min.js --source-map snippet.min.js.map -- snippet.js",
     "clean": "rimraf *.log dist/unomi-tracker.js dist/unomi-tracker.min.js",
     "clean:all": "yarn clean && rimraf node_modules"
   },
