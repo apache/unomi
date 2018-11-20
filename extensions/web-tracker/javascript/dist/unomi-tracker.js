@@ -11856,7 +11856,7 @@ module.exports = uuid;
 },{"./rng":94}],96:[function(require,module,exports){
 module.exports={
   "name": "unomi-analytics",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "The Apache Unomi analytics.js integration.",
   "main": "dist/unomi-tracker.js",
   "keywords": [
@@ -11871,7 +11871,7 @@ module.exports={
     "browserify": "browserify src/index.js -p [ browserify-header --file src/license.js ] -s unomiTracker -o dist/unomi-tracker.js",
     "replace": "replace-in-file 'analytics.require = require' '//analytics.require = require' dist/unomi-tracker.js",
     "minify": "uglifyjs -c -m --comments '/@license/' -o dist/unomi-tracker.min.js -- dist/unomi-tracker.js",
-    "snippet:minify": "uglifyjs -c -m -o snippet.min.js -- snippet.js",
+    "snippet:minify": "uglifyjs -c -m -o snippet.min.js --source-map snippet.min.js.map -- snippet.js",
     "clean": "rimraf *.log dist/unomi-tracker.js dist/unomi-tracker.min.js",
     "clean:all": "yarn clean && rimraf node_modules"
   },
@@ -11997,7 +11997,7 @@ Unomi.prototype.loaded = function() {
  * @param {Page} page
  */
 Unomi.prototype.onpage = function(page) {
-    var unomiPage = { pageInfo:{} };
+    var unomiPage = { };
     this.fillPageData(unomiPage, page.json().properties);
 
     this.collectEvent(this.buildEvent('view', this.buildPage(unomiPage), this.buildSource(this.options.scope, 'site')));
@@ -12006,6 +12006,8 @@ Unomi.prototype.onpage = function(page) {
 Unomi.prototype.fillPageData = function(unomiPage, props) {
     unomiPage.attributes = [];
     unomiPage.consentTypes = [];
+    unomiPage.interests = props.interests || {};
+    unomiPage.pageInfo = unomiPage.pageInfo || props.pageInfo || {};
     unomiPage.pageInfo.pageName = unomiPage.pageInfo.pageName || props.title;
     unomiPage.pageInfo.pageID = unomiPage.pageInfo.pageID || props.path;
     unomiPage.pageInfo.pagePath = unomiPage.pageInfo.pagePath || props.path;

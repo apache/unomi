@@ -489,6 +489,7 @@
                                 <!-- exclude node_modules directories and JS package manager files -->
                                 <exclude>**/node_modules/**/*</exclude>
                                 <exclude>**/yarn.lock</exclude>
+                                <exclude>**/*.js.map</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

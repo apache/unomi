@@ -42,3 +42,74 @@ All methods can be used on `unomiTracker` object, although not all event types a
 
 The source code is in the folder javascript with a package.json, the file to update is `analytics.js-integration-apache-unomi.js` apply your modification in this file then use the command `yarn build` to compile a new JS file.
 Then you can use the test page to try your changes `http://localhost:8181/tracker/index.html`.
+
+===== Tracking page views
+
+By default the script will track page views, but maybe you want to take control over this mechanism of add page views
+to a single page application. In order to generate a page view programmatically from Javascript you can use code similar
+to this :
+
+[source]
+----
+    <script type="text/javascript">
+        // This is an example of how to provide more details page properties to the view event. This can be useful
+        // in the case of an SPA that wants to provide information about a view that has metadata such as categories,
+        // tags or interests.
+        path = location.pathname + location.hash;
+        properties = {
+            path: path,
+            pageInfo: {
+                destinationURL: location.href,
+                tags : [ "tag1", "tag2", "tag3"],
+                categories : ["category1", "category2", "category3"],
+                language : "en"
+            },
+            interests : {
+                "interest1" : 1,
+                "interest2" : 2,
+                "interest3" : 3
+            }
+        };
+        console.log(properties);
+        // this will trigger a second page view for the same page (the first page view is in the tracker snippet).
+        window.unomiTracker.page(properties);
+    </script>
+----
+
+Here is a more detail view of what you may include in the pageInfo object :
+
+.PageInfo Properties
+|===
+|Name|Description
+
+|pageID
+|A unique identifier in string format for the page. Default value : page path
+
+|pageName
+|A user-displayed name for the page. Default value : page title
+
+|pagePath
+|The path of the page, stored by Unomi. This value should be the same as the one passed in the `page` property of the
+object passed to the unomiTracker call. Default value : page path
+
+|destinationURL
+|The full URL for the page view. This doesn't have to be a real existing URL it could be an internal SPA route. Default value : page URL
+
+|referringURL
+|The referringURL also known as the previous URL of the page/screen viewed. Default value : page referrer URL
+
+|language
+|An identifier (usually a locale for such as en_US or fr_CH) for the language
+
+|tags
+|A String array of tag identifiers. For example `['tag1', 'tag2', 'tag3']`
+
+|categories
+|A String array of category identifiers. For example `['category1', 'category2', 'category3']`
+
+|===
+
+The `interests` object is basically list of interests with "weights" attached to them. These interests will be accumulated
+in Apache Unomi on profiles to indicate growing interest over time for specific topics. These are freely defined and
+will be accepted by Apache Unomi without needing to declare them previously anywhere (the same is true for tags and
+categories).

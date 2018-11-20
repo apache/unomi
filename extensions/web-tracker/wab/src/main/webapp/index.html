@@ -32,6 +32,30 @@
         };
         window.unomiTracker||(window.unomiTracker={}),function(){function e(e){for(unomiTracker.initialize({"Apache Unomi":unomiOption});n.length>0;){var r=n.shift(),t=r.shift();unomiTracker[t]&&unomiTracker[t].apply(unomiTracker,r)}}for(var n=[],r=["trackSubmit","trackClick","trackLink","trackForm","initialize","pageview","identify","reset","group","track","ready","alias","debug","page","once","off","on","personalize"],t=0;t<r.length;t++){var i=r[t];window.unomiTracker[i]=function(e){return function(){var r=Array.prototype.slice.call(arguments);return r.unshift(e),n.push(r),window.unomiTracker}}(i)}unomiTracker.load=function(){var n=document.createElement("script");n.type="text/javascript",n.async=!0,n.src=unomiOption.url+"/tracker/unomi-tracker.min.js",n.addEventListener?n.addEventListener("load",function(n){"function"==typeof e&&e(n)},!1):n.onreadystatechange=function(){"complete"!==this.readyState&&"loaded"!==this.readyState||e(window.event)};var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(n,r)},document.addEventListener("DOMContentLoaded",unomiTracker.load),unomiTracker.page()}();
     </script>
+
+    <script type="text/javascript">
+        // This is an example of how to provide more details page properties to the view event. This can be useful
+        // in the case of an SPA that wants to provide information about a view that has metadata such as categories,
+        // tags or interests.
+        path = location.pathname + location.hash;
+        properties = {
+            path: path,
+            pageInfo: {
+                destinationURL: location.href,
+                tags : [ "tag1", "tag2", "tag3"],
+                categories : ["category1", "category2", "category3"],
+                language : "en"
+            },
+            interests : {
+                "interest1" : 1,
+                "interest2" : 2,
+                "interest3" : 3
+            }
+        };
+        console.log(properties);
+        // this will trigger a second page view for the same page (the first page view is in the tracker snippet).
+        window.unomiTracker.page(properties);
+    </script>
 </head>
 <body class="composite">
 Test unomi

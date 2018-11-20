@@ -101,7 +101,7 @@ Unomi.prototype.loaded = function() {
  * @param {Page} page
  */
 Unomi.prototype.onpage = function(page) {
-    var unomiPage = { pageInfo:{} };
+    var unomiPage = { };
     this.fillPageData(unomiPage, page.json().properties);
 
     this.collectEvent(this.buildEvent('view', this.buildPage(unomiPage), this.buildSource(this.options.scope, 'site')));
@@ -110,6 +110,8 @@ Unomi.prototype.onpage = function(page) {
 Unomi.prototype.fillPageData = function(unomiPage, props) {
     unomiPage.attributes = [];
     unomiPage.consentTypes = [];
+    unomiPage.interests = props.interests || {};
+    unomiPage.pageInfo = unomiPage.pageInfo || props.pageInfo || {};
     unomiPage.pageInfo.pageName = unomiPage.pageInfo.pageName || props.title;
     unomiPage.pageInfo.pageID = unomiPage.pageInfo.pageID || props.path;
     unomiPage.pageInfo.pagePath = unomiPage.pageInfo.pagePath || props.path;
