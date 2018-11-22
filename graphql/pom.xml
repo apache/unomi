@@ -31,9 +31,10 @@
     <packaging>pom</packaging>
 
     <properties>
-        <graphql.java.servlet.version>5.0.1</graphql.java.servlet.version>
-        <graphql.java.version>8.0</graphql.java.version>
+        <graphql.java.servlet.version>7.1.0</graphql.java.servlet.version>
+        <graphql.java.version>11.0</graphql.java.version>
         <graphql.java.annotations.version>6.1</graphql.java.annotations.version>
+        <jackson.version>2.9.7</jackson.version>
     </properties>
 
     <modules>

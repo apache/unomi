@@ -32,7 +32,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.graphql-java</groupId>
+            <groupId>com.graphql-java-kickstart</groupId>
             <artifactId>graphql-java-servlet</artifactId>
             <version>${graphql.java.servlet.version}</version>
             <scope>provided</scope>
