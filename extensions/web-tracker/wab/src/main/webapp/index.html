@@ -20,17 +20,61 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-    <title>Test</title>
+    <title>Apache Unomi Web Tracker Test Page</title>
 
     <meta name="Date-Revision-yyyymmdd" content="20180919"/>
     <meta http-equiv="Content-Language" content="en"/>
+
+    <style type="text/css">
+        form {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            grid-gap: 16px;
+        }
+
+        label {
+            grid-column: 1 / 2;
+        }
+
+        input,
+        button {
+            grid-column: 2 / 3;
+        }
+    </style>
 
     <script type="text/javascript">
         var unomiOption = {
             scope: 'realEstateManager',
             url: 'http://localhost:8181'
         };
-        window.unomiTracker||(window.unomiTracker={}),function(){function e(e){for(unomiTracker.initialize({"Apache Unomi":unomiOption});n.length>0;){var r=n.shift(),t=r.shift();unomiTracker[t]&&unomiTracker[t].apply(unomiTracker,r)}}for(var n=[],r=["trackSubmit","trackClick","trackLink","trackForm","initialize","pageview","identify","reset","group","track","ready","alias","debug","page","once","off","on","personalize"],t=0;t<r.length;t++){var i=r[t];window.unomiTracker[i]=function(e){return function(){var r=Array.prototype.slice.call(arguments);return r.unshift(e),n.push(r),window.unomiTracker}}(i)}unomiTracker.load=function(){var n=document.createElement("script");n.type="text/javascript",n.async=!0,n.src=unomiOption.url+"/tracker/unomi-tracker.min.js",n.addEventListener?n.addEventListener("load",function(n){"function"==typeof e&&e(n)},!1):n.onreadystatechange=function(){"complete"!==this.readyState&&"loaded"!==this.readyState||e(window.event)};var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(n,r)},document.addEventListener("DOMContentLoaded",unomiTracker.load),unomiTracker.page()}();
+        window.unomiTracker || (window.unomiTracker = {}), function () {
+            function e(e) {
+                for (unomiTracker.initialize({"Apache Unomi": unomiOption}); n.length > 0;) {
+                    var r = n.shift(), t = r.shift();
+                    unomiTracker[t] && unomiTracker[t].apply(unomiTracker, r)
+                }
+            }
+
+            for (var n = [], r = ["trackSubmit", "trackClick", "trackLink", "trackForm", "initialize", "pageview", "identify", "reset", "group", "track", "ready", "alias", "debug", "page", "once", "off", "on", "personalize"], t = 0; t < r.length; t++) {
+                var i = r[t];
+                window.unomiTracker[i] = function (e) {
+                    return function () {
+                        var r = Array.prototype.slice.call(arguments);
+                        return r.unshift(e), n.push(r), window.unomiTracker
+                    }
+                }(i)
+            }
+            unomiTracker.load = function () {
+                var n = document.createElement("script");
+                n.type = "text/javascript", n.async = !0, n.src = unomiOption.url + "/tracker/unomi-tracker.js", n.addEventListener ? n.addEventListener("load", function (n) {
+                    "function" == typeof e && e(n)
+                }, !1) : n.onreadystatechange = function () {
+                    "complete" !== this.readyState && "loaded" !== this.readyState || e(window.event)
+                };
+                var r = document.getElementsByTagName("script")[0];
+                r.parentNode.insertBefore(n, r)
+            }, document.addEventListener("DOMContentLoaded", unomiTracker.load), unomiTracker.page()
+        }();
     </script>
 
     <script type="text/javascript">
@@ -42,14 +86,14 @@
             path: path,
             pageInfo: {
                 destinationURL: location.href,
-                tags : [ "tag1", "tag2", "tag3"],
-                categories : ["category1", "category2", "category3"],
-                language : "en"
+                tags: ["tag1", "tag2", "tag3"],
+                categories: ["category1", "category2", "category3"],
+                language: "en"
             },
-            interests : {
-                "interest1" : 1,
-                "interest2" : 2,
-                "interest3" : 3
+            interests: {
+                "interest1": 1,
+                "interest2": 2,
+                "interest3": 3
             }
         };
         console.log(properties);
@@ -57,8 +101,11 @@
         window.unomiTracker.page(properties);
     </script>
 </head>
-<body class="composite">
-Test unomi
+<body>
+<h1>Apache Unomi Web Tracker Test Page</h1>
+
+<p>The line below this one will be personalized depending on whether you have been here for more or less than 5
+    seconds. Try reload the page to see the changes.</p>
 
 <div id="var1" style="display: none">
     You have been there for more than 5s
@@ -81,12 +128,36 @@ Test unomi
                     "type": "sessionDurationCondition"
                 }
             }]
-        },  {
+        }, {
             "id": "var2"
         }]
-    }, function(res) {
+    }, function (res) {
         console.log(res);
         document.getElementById(res[0]).style.display = 'block';
+    });
+</script>
+
+<p>
+    The following form is an example of tracking form submissions with Apache Unomi's web tracker.
+</p>
+
+<form id="testFormTracking" action="#" name="testFormTracking">
+    <label for="firstName">First name</label>
+    <input type="text" id="firstName" name="firstName" value="John"/>
+
+    <label for="lastName">Last name</label>
+    <input type="text" id="lastName" name="lastName" value="Doe"/>
+
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" value="johndoe@acme.com"/>
+
+    <input type="submit" name="submitButton" value="Submit"/>
+</form>
+
+<script type="text/javascript">
+    window.addEventListener("load", function () {
+        var form = document.getElementById('testFormTracking');
+        unomiTracker.trackForm(form, 'formSubmitted', {formName: form.name});
     });
 </script>
 

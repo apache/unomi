@@ -180,14 +180,15 @@ Unomi.prototype.onidentify = function(identify) {
  * @api private
  * @param {Track} track
  */
-// TODO: figure out why we need this.
 Unomi.prototype.ontrack = function(track) {
-    console.log('ontrack');
-    console.log(track);
-    // var json = track.json();
-
-    // delete json.traits;
-    // this.collectEvent(json);
+    // we use the track event name to know that we are submitted a form because Analytics.js trackForm method doesn't give
+    // us another way of knowing that we are processing a form.
+    if (track.event() && track.event().indexOf("form") === 0) {
+        var form = document.forms[track.properties().formName];
+        var formEvent = this.buildFormEvent(form.name);
+        formEvent.properties = this.extractFormData(form);
+        this.collectEvent(formEvent);
+    }
 };
 
 /**
@@ -310,6 +311,16 @@ Unomi.prototype.buildFormEvent = function (formName) {
 Unomi.prototype.buildTargetPage = function () {
     return this.buildTarget(window.digitalData.page.pageInfo.pageID, 'page', window.digitalData.page);
 };
+
+/**
+ * This function return the source object for a source of type page
+ *
+ * @returns {*|{scope, itemId: *, itemType: *}}
+ */
+Unomi.prototype.buildSourcePage = function () {
+    return this.buildSource(window.digitalData.page.pageInfo.pageID, 'page', window.digitalData.page);
+};
+
 
 /**
  * This function return the source object for a source of type page
@@ -531,4 +542,58 @@ Unomi.prototype.executeFallback = function () {
             window.digitalData.personalizationCallback[i].callback([window.digitalData.personalizationCallback[i].personalization.strategyOptions.fallback]);
         }
     }
+};
+
+Unomi.prototype.extractFormData = function (form) {
+    var params = {};
+    for (var i = 0; i < form.elements.length; i++) {
+        var e = form.elements[i];
+        if (typeof(e.name) != 'undefined') {
+            switch (e.nodeName) {
+                case 'TEXTAREA':
+                case 'INPUT':
+                    switch (e.type) {
+                        case 'checkbox':
+                            var checkboxes = document.querySelectorAll('input[name="' + e.name + '"]');
+                            if (checkboxes.length > 1) {
+                                if (!params[e.name]) {
+                                    params[e.name] = [];
+                                }
+                                if (e.checked) {
+                                    params[e.name].push(e.value);
+                                }
+
+                            }
+                            break;
+                        case 'radio':
+                            if (e.checked) {
+                                params[e.name] = e.value;
+                            }
+                            break;
+                        default:
+                            if (!e.value || e.value == '') {
+                                // ignore element if no value is provided
+                                break;
+                            }
+                            params[e.name] = e.value;
+                    }
+                    break;
+                case 'SELECT':
+                    if (e.options && e.options[e.selectedIndex]) {
+                        if (e.multiple) {
+                            params[e.name] = [];
+                            for (var j = 0; j < e.options.length; j++) {
+                                if (e.options[j].selected) {
+                                    params[e.name].push(e.options[j].value);
+                                }
+                            }
+                        } else {
+                            params[e.name] = e.options[e.selectedIndex].value;
+                        }
+                    }
+                    break;
+            }
+        }
+    }
+    return params;
 };

@@ -74,7 +74,12 @@
         </plugins>
 
         <resources>
-            <resource><directory>../javascript/dist</directory></resource>
+            <resource>
+                <directory>../javascript/dist</directory>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
         </resources>
     </build>
 

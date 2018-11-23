@@ -17,6 +17,7 @@
 package org.apache.unomi.shell.commands;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
@@ -34,6 +35,9 @@ public class SegmentListCommand extends ListCommandSupport {
         this.segmentService = segmentService;
     }
 
+    @Argument(index = 0, name = "maxEntries", description = "The maximum number of entries to retrieve (defaults to 100)", required = false, multiValued = false)
+    int maxEntries = 100;
+
     @Override
     protected String[] getHeaders() {
         return new String[] {
@@ -48,7 +52,7 @@ public class SegmentListCommand extends ListCommandSupport {
 
     @Override
     protected DataTable buildDataTable() {
-        PartialList<Metadata> segmentMetadatas = segmentService.getSegmentMetadatas(0, -1, null);
+        PartialList<Metadata> segmentMetadatas = segmentService.getSegmentMetadatas(0, maxEntries, null);
 
         DataTable dataTable = new DataTable();
         for (Metadata metadata : segmentMetadatas.getList()) {

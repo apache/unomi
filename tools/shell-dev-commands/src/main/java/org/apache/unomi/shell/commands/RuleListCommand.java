@@ -17,24 +17,36 @@
 package org.apache.unomi.shell.commands;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.RuleStatistics;
+import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.common.DataTable;
 
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.Set;
 
 @Command(scope = "unomi", name = "rule-list", description = "This will list all the rules deployed in the Apache Unomi Context Server")
 public class RuleListCommand extends ListCommandSupport {
 
     private RulesService rulesService;
+    private DefinitionsService definitionsService;
 
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
     }
+
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
+    }
+
+    @Argument(index = 0, name = "maxEntries", description = "The maximum number of entries to retrieve (defaults to 100)", required = false, multiValued = false)
+    int maxEntries = 100;
 
     @Override
     protected String[] getHeaders() {
@@ -55,11 +67,18 @@ public class RuleListCommand extends ListCommandSupport {
 
     @Override
     protected DataTable buildDataTable() {
-        Set<Metadata> ruleMetadatas = rulesService.getRuleMetadatas();
+        Query query = new Query();
+        Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
+        query.setCondition(matchAllCondition);
+        query.setLimit(maxEntries);
+        PartialList<Metadata> ruleMetadatas = rulesService.getRuleMetadatas(query);
+        if (ruleMetadatas.getList().size() != ruleMetadatas.getTotalSize()) {
+            System.out.println("WARNING : Only the first " + ruleMetadatas.getPageSize() + " have been retrieved, there are " + ruleMetadatas + " rules registered. Use the maxEntries parameter to retrieve more rules");
+        }
         Map<String,RuleStatistics> allRuleStatistics = rulesService.getAllRuleStatistics();
 
         DataTable dataTable = new DataTable();
-        for (Metadata ruleMetadata : ruleMetadatas) {
+        for (Metadata ruleMetadata : ruleMetadatas.getList()) {
             ArrayList<Comparable> rowData = new ArrayList<>();
             String ruleId = ruleMetadata.getId();
             rowData.add(ruleMetadata.isEnabled() ? "x" : "");

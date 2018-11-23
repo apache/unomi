@@ -17,6 +17,7 @@
 package org.apache.unomi.shell.commands;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
@@ -42,6 +43,9 @@ public class ProfileListCommand extends ListCommandSupport {
         this.definitionsService = definitionsService;
     }
 
+    @Argument(index = 0, name = "maxEntries", description = "The maximum number of entries to retrieve (defaults to 100)", required = false, multiValued = false)
+    int maxEntries = 100;
+
     @java.lang.Override
     protected String[] getHeaders() {
         return new String[] {
@@ -57,6 +61,7 @@ public class ProfileListCommand extends ListCommandSupport {
     protected DataTable buildDataTable() {
         Query query = new Query();
         query.setSortby("properties.lastVisit:desc");
+        query.setLimit(maxEntries);
         Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
         query.setCondition(matchAllCondition);
         PartialList<Profile> lastModifiedProfiles = profileService.search(query, Profile.class);

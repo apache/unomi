@@ -36,6 +36,7 @@
         <shell:command>
             <shell:action class="org.apache.unomi.shell.commands.RuleListCommand">
                 <shell:property name="rulesService" ref="rulesService" />
+                <shell:property name="definitionsService" ref="definitionsService" />
             </shell:action>
         </shell:command>
         <shell:command>
