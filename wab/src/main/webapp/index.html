@@ -14,7 +14,7 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
     <!-- Required meta tags -->
@@ -25,28 +25,63 @@
     <title>Apache Unomi Welcome Page</title>
 </head>
 <body>
-<div class="container">
-    <h1>Welcome to Apache Unomi</h1>
-    <p>Congratulations, you have successfully installed Apache Unomi !</p>
-    <h2>Where to go from here</h2>
-    <ul>
-        <li>Checkout some cool <a href="http://unomi.apache.org/resources.html" target="_blank">videos & tutorials</a>
-        </li>
-        <li>Read <a href="http://unomi.apache.org/manual/latest/index.html" target="_blank">Apache Unomi's manual</a>
-        </li>
-        <li>Try out some <a href="http://unomi.apache.org/manual/latest/index.html#_integration_samples"
-                            target="_blank">samples</a></li>
-        <li>Join <a href="http://unomi.apache.org/community.html" target="_blank">Apache Unomi's mailing lists</a></li>
-        <li>Star the project on Github <!-- Place this tag where you want the button to render. -->
-            <a class="github-button" href="https://github.com/apache/incubator-unomi" data-icon="octicon-star"
-               data-show-count="true" aria-label="Star apache/incubator-unomi on GitHub">Star</a>
-        </li>
-        <li>Fork the <a href="https://github.com/apache/incubator-unomi" target="_blank">code</a> and submit pull
-            requests (github repository)
-        </li>
-    </ul>
+  <header>
+      <nav class="navbar navbar-expand-md navbar-light bg-white fixed-top border-bottom box-shadow">
+          <div class="container">
+              <a class="navbar-brand" href="index.html">
+                  <img src="images/unomi-86x20.png" alt="Logo Apache Unomi"/>
+              </a>
+              <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+                  <span class="navbar-toggler-icon"></span>
+              </button>
+              <div class="collapse navbar-collapse justify-content-end" id="navbarCollapse">
+                  <div>
+                      <ul class="navbar-nav mr-auto align-items-center text-uppercase">
+                          <li class="nav-item">
+                              <a class="nav-link disabled" target="_blank" href="https://www.apache.org">
+                                  <img src="images/apache-feather-tm-new.png" alt="Logo Apache Feather"/>
+                              </a>
+                          </li>
+                      </ul>
+                  </div>
+              </div>
+          </div>
+      </nav>
 
-</div>
+  </header>
+  <main>
+      <div class="container-fluid product pt-5 pb-5 mx-auto">
+          <div class="row pt-5 pb-5">
+              <div class="container">
+                  <div class="col pt-5 mx-auto text-left">
+                      <h1 class="display-5">Welcome to Apache Unomi !</h1>
+                      <p class="lead">Apache Unomi is a Java Open Source customer data platform, a Java server designed to manage customers, <br>leads and visitors data and help personalize customers experiences while also offering features to respect visitor privacy rules (such as GDPR)</p>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      <div class="container" id="where-to-go">
+          <h2>Where to go from here</h2>
+          <ul>
+              <li>Checkout some cool <a href="http://unomi.apache.org/resources.html" target="_blank">videos & tutorials</a>
+              </li>
+              <li>Read <a href="http://unomi.apache.org/manual/latest/index.html" target="_blank">Apache Unomi's manual</a>
+              </li>
+              <li>Try out some <a href="http://unomi.apache.org/manual/latest/index.html#_integration_samples"
+                                  target="_blank">samples</a></li>
+              <li>Join <a href="http://unomi.apache.org/community.html" target="_blank">Apache Unomi's mailing lists</a></li>
+              <li>Star the project on Github <!-- Place this tag where you want the button to render. -->
+                  <a class="github-button" href="https://github.com/apache/incubator-unomi" data-icon="octicon-star"
+                     data-show-count="true" aria-label="Star apache/incubator-unomi on GitHub">Star</a>
+              </li>
+              <li>Fork the <a href="https://github.com/apache/incubator-unomi" target="_blank">code</a> and submit pull
+                  requests (github repository)
+              </li>
+          </ul>
+
+      </div>
+  </main>
 
 <!-- Place this tag in your head or just before your close body tag. -->
 <script async defer src="https://buttons.github.io/buttons.js"></script>
