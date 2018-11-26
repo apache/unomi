@@ -46,7 +46,8 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-
+                        <_wab>src/main/webapp</_wab>
+                        <Web-ContextPath>/twitter</Web-ContextPath>
                     </instructions>
                 </configuration>
             </plugin>

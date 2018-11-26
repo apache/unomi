@@ -18,163 +18,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Unomi Tweet button integration example</title>
-    <script type="application/javascript">
-        window.twttr = (function (d, s, id) {
-            var js, fjs = d.getElementsByTagName(s)[0],
-                    t = window.twttr || {};
-            if (d.getElementById(id)) return;
-            js = d.createElement(s);
-            js.id = id;
-            js.src = "https://platform.twitter.com/widgets.js";
-            fjs.parentNode.insertBefore(js, fjs);
-
-            t._e = [];
-            t.ready = function (f) {
-                t._e.push(f);
-            };
-
-            return t;
-        }(document, "script", "twitter-wjs"));
-
-        // Load context from Unomi asynchronously
-        (function (document, elementToCreate, id) {
-            var js, fjs = document.getElementsByTagName(elementToCreate)[0];
-            if (document.getElementById(id)) return;
-            js = document.createElement(elementToCreate);
-            js.id = id;
-            js.src = "http://localhost:8181/context.js";
-            fjs.parentNode.insertBefore(js, fjs);
-        }(document, 'script', 'context'));
-
-        // Wait for the asynchronous resources to load
-        twttr.ready(function (twttr) {
-            // Now bind our custom intent events
-            twttr.events.bind('tweet', function (event) {
-
-                var defaultErrorCallback = function () {
-                    alert('There was an error making the request.');
-                };
-
-                function generateUUID() {
-                    var d = new Date().getTime();
-                    if (window.performance && typeof window.performance.now === "function") {
-                        d += performance.now();  //use high-precision timer if available
-                    }
-                    var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-                        var r = (d + Math.random() * 16) % 16 | 0;
-                        d = Math.floor(d / 16);
-                        return (c == 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-                    });
-                    return uuid;
-                }
-
-                function contextRequest(successCallback, errorCallback, payload) {
-                    var data = JSON.stringify(payload);
-                    // if we don't already have a session id, generate one
-                    var sessionId;
-                    try {
-                        sessionId = cxs.sessionId;
-                    } catch (e) {
-                        sessionId = generateUUID();
-                    }
-
-                    var url = 'http://localhost:8181/context.json?sessionId=' + sessionId;
-                    var xhr = new XMLHttpRequest();
-                    var isGet = data.length < 100;
-                    if (isGet) {
-                        xhr.withCredentials = true;
-                        xhr.open("GET", url + "&payload=" + encodeURIComponent(data), true);
-                    } else if ("withCredentials" in xhr) {
-                        xhr.open("POST", url, true);
-                        xhr.withCredentials = true;
-                    } else if (typeof XDomainRequest != "undefined") {
-                        xhr = new XDomainRequest();
-                        xhr.open("POST", url);
-                    }
-                    xhr.onreadystatechange = function () {
-                        if (xhr.readyState != 4) {
-                            return;
-                        }
-                        if (xhr.status == 200) {
-                            var response = xhr.responseText ? JSON.parse(xhr.responseText) : undefined;
-                            if (response) {
-                                cxs.sessionId = response.sessionId;
-                                successCallback(response);
-                            }
-                        } else {
-                            console.log("contextserver: " + xhr.status + " ERROR: " + xhr.statusText);
-                            if (errorCallback) {
-                                errorCallback(xhr);
-                            }
-                        }
-                    };
-                    xhr.setRequestHeader("Content-Type", "text/plain;charset=UTF-8"); // Use text/plain to avoid CORS preflight
-                    if (isGet) {
-                        xhr.send();
-                    } else {
-                        xhr.send(data);
-                    }
-                }
-
-                var scope = 'unomi-tweet-button-sample';
-                var itemId = btoa(window.location.href);
-                var source = {
-                    itemType: 'page',
-                    scope: scope,
-                    itemId: itemId,
-                    properties: {
-                        url: window.location.href
-                    }
-                };
-                var contextPayload = {
-                    source: source,
-                    events: [
-                        {
-                            eventType: 'tweetEvent',
-                            scope: scope,
-                            source: source
-                        }
-                    ],
-                    requiredProfileProperties: [
-                        'tweetNb',
-                        'tweetedFrom'
-                    ]
-                };
-
-                contextRequest(function (response) {
-                    var element = document.querySelector('#tweetNB');
-                    element.setAttribute("value", response.profileProperties.tweetNb);
-                    var list = document.querySelector("#tweetedFrom");
-                    list.innerHTML = '';
-                    var tweetedFrom = response.profileProperties.tweetedFrom;
-                    for (var index in tweetedFrom) {
-                        var entry = document.createElement('li');
-                        entry.appendChild(document.createTextNode(tweetedFrom[index]));
-                        list.appendChild(entry);
-                    }
-                    element = document.querySelector("#response");
-                    element.appendChild(document.createTextNode(JSON.stringify(response)));
-                }, defaultErrorCallback, contextPayload);
-            });
-        });
-    </script>
+    <title>Apache Unomi Welcome Page</title>
 </head>
 <body>
-<a href="https://twitter.com/share" class="twitter-share-button" data-via="jahia" data-related="jahia" data-hashtags="jahia">Tweet</a>
-<ul>
-    <li>
-        <label for="tweetNB">Number of tweets:</label>
-        <input id="tweetNB" readonly value="0">
-    </li>
-    <li>
-        <label for="tweetedFrom">Tweeted from URLs:</label>
-        <ul id="tweetedFrom"></ul>
-    </li>
-    <li>
-        <label for="response">Raw response:</label>
-        <pre id="response"></pre>
-    </li>
-</ul>
+  <h1>Welcome to Apache Unomi</h1>
+  <p>Congratulations, you have successfully installed Apache Unomi !</p>
+  <h2>Where to go from here</h2>
+  <ul>
+      <li>Checkout some cool <a href="http://unomi.apache.org/resources.html" target="_blank">videos & tutorials</a></li>
+      <li>Read <a href="http://unomi.apache.org/manual/latest/index.html" target="_blank">Apache Unomi's manual</a></li>
+      <li>Try out some <a href="http://unomi.apache.org/manual/latest/index.html#_integration_samples" target="_blank">samples</a></li>
+      <li>Join <a href="http://unomi.apache.org/community.html" target="_blank">Apache Unomi's mailing lists</a></li>
+      <li>Star the project on Github <!-- Place this tag where you want the button to render. -->
+          <a class="github-button" href="https://github.com/apache/incubator-unomi" data-icon="octicon-star" data-show-count="true" aria-label="Star apache/incubator-unomi on GitHub">Star</a>
+      </li>
+      <li>Fork the <a href="https://github.com/apache/incubator-unomi" target="_blank">code</a> and submit pull requests (github repository)</li>
+  </ul>
+
+  <!-- Place this tag in your head or just before your close body tag. -->
+  <script async defer src="https://buttons.github.io/buttons.js"></script>
 </body>
 </html>
