@@ -17,18 +17,31 @@
 
 package org.apache.unomi.itests;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.HttpResponse;
 import org.apache.http.util.EntityUtils;
+import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
 import java.io.IOException;
 
 public class TestUtils {
 
     public static <T> T retrieveResourceFromResponse(HttpResponse response, Class<T> clazz) throws IOException {
+        if (response == null) {
+            return null;
+        }
+        if (response.getEntity() == null) {
+            return null;
+        }
         String jsonFromResponse = EntityUtils.toString(response.getEntity());
-        ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        return mapper.readValue(jsonFromResponse, clazz);
+        // ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
+        try {
+            T value = mapper.readValue(jsonFromResponse, clazz);
+            return value;
+        } catch (Throwable t) {
+            t.printStackTrace();
+        }
+        return null;
     }
 }

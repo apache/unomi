@@ -34,7 +34,17 @@ public class LineSplitFailureHandler implements Processor {
     public void process(Exchange exchange) throws Exception {
         logger.debug("Route: {}, Error: {}", exchange.getProperty(Exchange.FAILURE_ROUTE_ID), exchange.getProperty(Exchange.EXCEPTION_CAUGHT));
         ImportLineError importLineError = new ImportLineError();
-        importLineError.setErrorCode(((BadProfileDataFormatException) exchange.getProperty(Exchange.EXCEPTION_CAUGHT)).getCause().getMessage());
+        if (exchange.getProperty(Exchange.EXCEPTION_CAUGHT) instanceof BadProfileDataFormatException) {
+            importLineError.setErrorCode(((BadProfileDataFormatException) exchange.getProperty(Exchange.EXCEPTION_CAUGHT)).getCause().getMessage());
+        } else if (exchange.getProperty(Exchange.EXCEPTION_CAUGHT) instanceof Throwable) {
+            Throwable rootCause = (Throwable) exchange.getProperty(Exchange.EXCEPTION_CAUGHT);
+            while (rootCause.getCause() != null) {
+                rootCause = rootCause.getCause();
+            }
+            importLineError.setErrorCode(rootCause.getMessage());
+        } else {
+            importLineError.setErrorCode(exchange.getProperty(Exchange.EXCEPTION_CAUGHT).toString());
+        }
         importLineError.setLineContent(exchange.getIn().getBody(String.class));
         importLineError.setLineNb(((Integer) exchange.getProperty("CamelSplitIndex") + 1));
         exchange.getIn().setHeader(RouterConstants.HEADER_FAILED_MESSAGE, new Boolean(true));
