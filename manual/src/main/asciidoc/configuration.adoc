@@ -341,11 +341,11 @@ or the user/password you have setup to protect the system if you have changed it
 It is now possible to use X-Pack to connect to ElasticSearch. However, for licensing reasons this is not provided out
 of the box. Here is the procedure to install X-Pack with Apache Unomi:
 
-=== Important !
+===== Important !
 
 Do not start Unomi directly with unomi:start, perform the following steps below first !
 
-=== Installation steps
+===== Installation steps
 
 . Create a directory for all the JARs that you will download, we will call it XPACK_JARS_DIRECTORY
 . Download https://artifacts.elastic.co/maven/org/elasticsearch/client/x-pack-transport/5.6.3/x-pack-transport-5.6.3.jar[https://artifacts.elastic.co/maven/org/elasticsearch/client/x-pack-transport/5.6.3/x-pack-transport-5.6.3.jar] to XPACK_JARS_DIRECTORY

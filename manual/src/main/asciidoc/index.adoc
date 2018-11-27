@@ -40,6 +40,8 @@ include::installing-tracker.adoc[]
 
 include::configuration.adoc[]
 
+include::useful-unomi-urls.adoc[]
+
 == Integration samples
 
 include::samples/samples.adoc[]
