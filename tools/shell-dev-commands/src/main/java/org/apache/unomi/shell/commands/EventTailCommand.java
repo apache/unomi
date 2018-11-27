@@ -49,9 +49,9 @@ public class EventTailCommand extends OsgiCommandSupport  {
 
     @Override
     protected Object doExecute() throws Exception {
+        // Do not use System.out as it may write to the wrong console depending on the thread that calls our log handler
         PrintStream out = session.getConsole();
         out.flush();
-
         TailEventListener tailEventListener = new TailEventListener(out);
 
         StringBuilder headerLine = new StringBuilder();
@@ -59,8 +59,8 @@ public class EventTailCommand extends OsgiCommandSupport  {
             headerLine.append(getColumn(columnSizes[i], columnHeaders[i]));
             headerLine.append("|");
         }
-        System.out.println(headerLine.toString());
-        System.out.println(StringUtils.repeat("-", headerLine.length()));
+        out.println(headerLine.toString());
+        out.println(StringUtils.repeat("-", headerLine.length()));
         ServiceRegistration<EventListenerService> tailServiceRegistration = bundleContext.registerService(EventListenerService.class, tailEventListener, new Hashtable<>());
         try {
             synchronized (this) {
@@ -118,7 +118,7 @@ public class EventTailCommand extends OsgiCommandSupport  {
                 eventLine.append(getColumn(columnSizes[i], eventInfo.get(i)));
                 eventLine.append("|");
             }
-            System.out.println(eventLine.toString());
+            out.println(eventLine.toString());
             return EventService.NO_CHANGE;
         }
     }
