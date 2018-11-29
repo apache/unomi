@@ -83,34 +83,57 @@ These commands are available once the application is running. If an argument is 
 .Table Runtime commands
 |===
 |Command|Arguments|Description
+
 |rule-list
-|[--csv]
-|Lists all the rules registered in the Apache Unomi server. If you add the "--csv" option the list will be output
-as a CSV formatted table
+|[maxEntries] [--csv]
+|Lists all the rules registered in the Apache Unomi server. The maxEntries (defaults to 100) will allow you to specify
+how many entries need to be retrieved. If the value is inferior to the total value, a message will display the total
+value of rules registered in the server. If you add the "--csv" option the list will be output as a CSV formatted table
 |rule-view
 |rule-id
 |Dumps a single rule in JSON. The rule-id argument can be retrieved from the `rule-list` command output.
 |rule-reset-stats
 |n/a
 |Resets the rule statistics. This is notably useful when trying to understand rule performance and impact
+|rule-tail
+|n/a
+|Dumps any rule that is executed by the server. Only executed rules are logged here. If you want to have more detailed
+information about a particular rule's condition evaluation and if it's already been raised use the `rule-watch` command
+instead. This tail will continue until a CTRL+C key combination is pressed.
+|rule-watch
+|rule-ids
+|Dumps detailed evaluation and execution information about the rules that are where specified in the `rule-ids` arguments
+(you can specify multiple rule identifiers separated by spaces). The `Status` column has the following values: EVALUATE -
+indicates that the rule's conditions are being evaluated (but they might not be satisfied), AR PROFILE - means the rule
+has already been raised for the profile and will therefore not execute again for this profile, AR SESSION - means the
+rule has already been executed for this session and will therefore only executed when another session for the profile is
+created, EXECUTE means the rule's actions are being executed.
+
 |event-tail
 |n/a
 |Dumps any incoming events to the Apache Unomi server to the console. Use CTRL+C to exit tail
 |event-view
 |event-id
 |Dumps a single event in JSON. The `event-id` can be retrieved from the event-tail command output.
+
 |action-list
 |[--csv]
 |Lists all the rule actions registered in the Apache Unomi server. This command is useful when developing plugins to
-check that everything is properly registered. If you add the "--csv" option the list will be output
-                                              as a CSV formatted table
+check that everything is properly registered. If you add the "--csv" option the list will be output as a CSV formatted table
 |action-view
 |action-id
 |Dumps a single action in JSON. The action-id argument can be retrieved from the `action-list` command output.
+
+|condition-list
+|[csv]
+|List all the conditions registered in the server. If you add the "--csv" option the list will be output as a CSV formatted table
+|condition-view
+|condition-id
+|Dumps a single condition in JSON. The condition-id can be retrieved from the `condition-list` command output.
+
 |profile-list
 |[--csv]
-|List the last 10 modified profiles. If you add the "--csv" option the list will be output
-                                     as a CSV formatted table
+|List the last 10 modified profiles. If you add the "--csv" option the list will be output as a CSV formatted table
 |profile-view
 |profile-id
 |Dumps a single profile in JSON. The profile-id argument can be retrieved from the `profile-list` command output.

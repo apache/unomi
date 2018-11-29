@@ -16,24 +16,20 @@
  */
 package org.apache.unomi.shell.commands;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
-import org.osgi.framework.ServiceRegistration;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.Hashtable;
 import java.util.List;
 
 @Command(scope = "unomi", name = "event-tail", description = "This will tail all the events coming into the Apache Unomi Context Server")
-public class EventTailCommand extends OsgiCommandSupport  {
+public class EventTailCommand extends TailCommandSupport  {
 
-    @Argument(index = 0, name = "withInternal", description = "The identifier for the event", required = false, multiValued = false)
+    @Argument(index = 0, name = "withInternal", description = "Whether to also monitor internal events (such as profileUpdated)", required = false, multiValued = false)
     boolean withInternal = false;
 
     int[] columnSizes = new int[] { 36, 14, 36, 36, 29, 15, 5 };
@@ -48,43 +44,18 @@ public class EventTailCommand extends OsgiCommandSupport  {
     };
 
     @Override
-    protected Object doExecute() throws Exception {
-        // Do not use System.out as it may write to the wrong console depending on the thread that calls our log handler
-        PrintStream out = session.getConsole();
-        out.flush();
-        TailEventListener tailEventListener = new TailEventListener(out);
-
-        StringBuilder headerLine = new StringBuilder();
-        for (int i=0; i < columnSizes.length; i++) {
-            headerLine.append(getColumn(columnSizes[i], columnHeaders[i]));
-            headerLine.append("|");
-        }
-        out.println(headerLine.toString());
-        out.println(StringUtils.repeat("-", headerLine.length()));
-        ServiceRegistration<EventListenerService> tailServiceRegistration = bundleContext.registerService(EventListenerService.class, tailEventListener, new Hashtable<>());
-        try {
-            synchronized (this) {
-                wait();
-            }
-        } catch (InterruptedException e) {
-            // Ignore as it will happen if the user breaks the tail using Ctrl-C
-        } finally {
-            tailServiceRegistration.unregister();
-        }
-        return null;
+    public int[] getColumnSizes() {
+        return columnSizes;
     }
 
-    protected String getColumn(int columnSize, String columnContent) {
-        if (columnContent == null) {
-            columnContent = "null";
-        }
-        if (columnContent.length() == columnSize) {
-            return columnContent;
-        }
-        if (columnContent.length() < columnSize) {
-            return columnContent + StringUtils.repeat(" ", columnSize - columnContent.length());
-        }
-        return columnContent.substring(0, columnSize);
+    @Override
+    public String[] getColumnHeaders() {
+        return columnHeaders;
+    }
+
+    @Override
+    public Object getListener() {
+        return new TailEventListener(session.getConsole());
     }
 
     class TailEventListener implements EventListenerService {
@@ -113,13 +84,9 @@ public class EventTailCommand extends OsgiCommandSupport  {
             eventInfo.add(event.getTimeStamp().toString());
             eventInfo.add(event.getScope());
             eventInfo.add(Boolean.toString(event.isPersistent()));
-            StringBuilder eventLine = new StringBuilder();
-            for (int i=0; i < columnSizes.length; i++) {
-                eventLine.append(getColumn(columnSizes[i], eventInfo.get(i)));
-                eventLine.append("|");
-            }
-            out.println(eventLine.toString());
+            outputLine(out, eventInfo);
             return EventService.NO_CHANGE;
         }
+
     }
 }

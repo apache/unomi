@@ -260,6 +260,14 @@
                 bind-method="bind" unbind-method="unbind" ref="eventServiceImpl"/>
     </reference-list>
 
+    <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
+    <reference-list id="ruleListenerServices"
+                    interface="org.apache.unomi.api.services.RuleListenerService"
+                    availability="optional">
+        <reference-listener
+                bind-method="bind" unbind-method="unbind" ref="rulesServiceImpl"/>
+    </reference-list>
+
     <reference-list id="actionExecutors"
                     interface="org.apache.unomi.api.actions.ActionExecutor"
                     availability="optional">

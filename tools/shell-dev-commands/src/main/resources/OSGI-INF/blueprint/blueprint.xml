@@ -50,12 +50,30 @@
             </shell:action>
         </shell:command>
         <shell:command>
+            <shell:action class="org.apache.unomi.shell.commands.RuleTailCommand">
+            </shell:action>
+        </shell:command>
+        <shell:command>
+            <shell:action class="org.apache.unomi.shell.commands.RuleWatchCommand">
+            </shell:action>
+        </shell:command>
+        <shell:command>
             <shell:action class="org.apache.unomi.shell.commands.ActionListCommand">
                 <shell:property name="definitionsService" ref="definitionsService" />
             </shell:action>
         </shell:command>
         <shell:command>
             <shell:action class="org.apache.unomi.shell.commands.ActionViewCommand">
+                <shell:property name="definitionsService" ref="definitionsService" />
+            </shell:action>
+        </shell:command>
+        <shell:command>
+            <shell:action class="org.apache.unomi.shell.commands.ConditionListCommand">
+                <shell:property name="definitionsService" ref="definitionsService" />
+            </shell:action>
+        </shell:command>
+        <shell:command>
+            <shell:action class="org.apache.unomi.shell.commands.ConditionViewCommand">
                 <shell:property name="definitionsService" ref="definitionsService" />
             </shell:action>
         </shell:command>

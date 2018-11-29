@@ -17,7 +17,10 @@
 
 package org.apache.unomi.services.services;
 
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Item;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.conditions.Condition;
@@ -57,6 +60,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     private Integer rulesRefreshInterval = 1000;
     private Integer rulesStatisticsRefreshInterval = 10000;
+
+    private List<RuleListenerService> ruleListeners = new ArrayList<RuleListenerService>();
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -184,6 +189,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                     continue;
                 }
 
+                fireEvaluate(rule, event);
+
                 if (!persistenceService.testMatch(eventCondition, event)) {
                     updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
                     continue;
@@ -199,12 +206,14 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                     hasEventAlreadyBeenRaisedForProfile = hasEventAlreadyBeenRaisedForProfile != null ? hasEventAlreadyBeenRaisedForProfile : eventService.hasEventAlreadyBeenRaised(event, false);
                     if (hasEventAlreadyBeenRaisedForProfile) {
                         updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
+                        fireAlreadyRaised(RuleListenerService.AlreadyRaisedFor.PROFILE, rule, event);
                         continue;
                     }
                 } else if (rule.isRaiseEventOnlyOnceForSession()) {
                     hasEventAlreadyBeenRaisedForSession = hasEventAlreadyBeenRaisedForSession != null ? hasEventAlreadyBeenRaisedForSession : eventService.hasEventAlreadyBeenRaised(event, true);
                     if (hasEventAlreadyBeenRaisedForSession) {
                         updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
+                        fireAlreadyRaised(RuleListenerService.AlreadyRaisedFor.SESSION, rule, event);
                         continue;
                     }
                 }
@@ -260,6 +269,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         int changes = EventService.NO_CHANGE;
         for (Rule rule : rules) {
             logger.debug("Fired rule " + rule.getMetadata().getId() + " for " + event.getEventType() + " - " + event.getItemId());
+            fireExecuteActions(rule, event);
+
             long actionsStartTime = System.currentTimeMillis();
             for (Action action : rule.getActions()) {
                 changes |= actionExecutorDispatcher.execute(action, event);
@@ -470,4 +481,35 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             }
         }
     }
+
+    public void bind(ServiceReference<RuleListenerService> serviceReference) {
+        RuleListenerService ruleListenerService = bundleContext.getService(serviceReference);
+        ruleListeners.add(ruleListenerService);
+    }
+
+    public void unbind(ServiceReference<RuleListenerService> serviceReference) {
+        if (serviceReference != null) {
+            RuleListenerService ruleListenerService = bundleContext.getService(serviceReference);
+            ruleListeners.remove(ruleListenerService);
+        }
+    }
+
+    public void fireEvaluate(Rule rule, Event event) {
+        for (RuleListenerService ruleListenerService : ruleListeners) {
+            ruleListenerService.onEvaluate(rule, event);
+        }
+    }
+
+    public void fireAlreadyRaised(RuleListenerService.AlreadyRaisedFor alreadyRaisedFor, Rule rule, Event event) {
+        for (RuleListenerService ruleListenerService : ruleListeners) {
+            ruleListenerService.onAlreadyRaised(alreadyRaisedFor, rule, event);
+        }
+    }
+
+    public void fireExecuteActions(Rule rule, Event event) {
+        for (RuleListenerService ruleListenerService : ruleListeners) {
+            ruleListenerService.onExecuteActions(rule, event);
+        }
+    }
+
 }

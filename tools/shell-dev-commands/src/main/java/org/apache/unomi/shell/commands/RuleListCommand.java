@@ -73,7 +73,7 @@ public class RuleListCommand extends ListCommandSupport {
         query.setLimit(maxEntries);
         PartialList<Metadata> ruleMetadatas = rulesService.getRuleMetadatas(query);
         if (ruleMetadatas.getList().size() != ruleMetadatas.getTotalSize()) {
-            System.out.println("WARNING : Only the first " + ruleMetadatas.getPageSize() + " have been retrieved, there are " + ruleMetadatas + " rules registered. Use the maxEntries parameter to retrieve more rules");
+            System.out.println("WARNING : Only the first " + ruleMetadatas.getPageSize() + " rules have been retrieved, there are " + ruleMetadatas.getTotalSize() + " rules registered in total. Use the maxEntries parameter to retrieve more rules");
         }
         Map<String,RuleStatistics> allRuleStatistics = rulesService.getAllRuleStatistics();
 
