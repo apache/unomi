@@ -17,6 +17,7 @@
 'use strict';
 
 var integration = require('@segment/analytics.js-integration');
+var extend  = require('extend');
 
 var Unomi = module.exports = integration('Apache Unomi')
     .assumesPageview()
@@ -111,7 +112,7 @@ Unomi.prototype.fillPageData = function(unomiPage, props) {
     unomiPage.attributes = [];
     unomiPage.consentTypes = [];
     unomiPage.interests = props.interests || {};
-    unomiPage.pageInfo = unomiPage.pageInfo || props.pageInfo || {};
+    unomiPage.pageInfo = extend({}, unomiPage.pageInfo, props.pageInfo);
     unomiPage.pageInfo.pageName = unomiPage.pageInfo.pageName || props.title;
     unomiPage.pageInfo.pageID = unomiPage.pageInfo.pageID || props.path;
     unomiPage.pageInfo.pagePath = unomiPage.pageInfo.pagePath || props.path;
@@ -592,6 +593,8 @@ Unomi.prototype.extractFormData = function (form) {
                         }
                     }
                     break;
+                default:
+                    console.log("unomiTracker: " + e.nodeName + " form element type not implemented and will not be tracked.");
             }
         }
     }

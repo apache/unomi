@@ -14,10 +14,8 @@
 ~ See the License for the specific language governing permissions and
 ~ limitations under the License.
 -->
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!doctype html>
+<html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <title>Apache Unomi Web Tracker Test Page</title>
@@ -43,62 +41,95 @@
     </style>
 
     <script type="text/javascript">
+        var path = location.pathname + location.hash;
         var unomiOption = {
             scope: 'realEstateManager',
-            url: 'http://localhost:8181'
+            url: '', // we use an empty URL to make it relative to this page.
+            initialPageProperties: {
+                path: path,
+                pageInfo: {
+                    destinationURL: location.href,
+                    tags: ["tag1", "tag2", "tag3"],
+                    categories: ["category1", "category2", "category3"] /*,
+                    language: "en" */
+                },
+                interests: {
+                    "interest1": 1,
+                    "interest2": 2,
+                    "interest3": 3
+                }
+            }
         };
-        window.unomiTracker || (window.unomiTracker = {}), function () {
-            function e(e) {
-                for (unomiTracker.initialize({"Apache Unomi": unomiOption}); n.length > 0;) {
-                    var r = n.shift(), t = r.shift();
-                    unomiTracker[t] && unomiTracker[t].apply(unomiTracker, r)
+        window.unomiTracker || (window.unomiTracker = {});
+        (function () {
+            var unomiTracker_queue = [];
+
+            var methods = ['trackSubmit', 'trackClick', 'trackLink', 'trackForm', 'initialize', 'pageview', 'identify', 'reset', 'group', 'track', 'ready', 'alias', 'debug', 'page', 'once', 'off', 'on', 'personalize'];
+
+            var factory = function (method) {
+                return function () {
+                    var args = Array.prototype.slice.call(arguments);
+                    args.unshift(method);
+                    unomiTracker_queue.push(args);
+                    return window.unomiTracker;
+                };
+            };
+
+            // For each of our methods, generate a queueing stub.
+            for (var i = 0; i < methods.length; i++) {
+                var method = methods[i];
+                window.unomiTracker[method] = factory(method);
+            }
+
+            function callback(e) {
+                unomiTracker.initialize({
+                    'Apache Unomi': unomiOption
+                });
+
+                // Loop through the interim analytics queue and reapply the calls to their
+                // proper analytics.js method.
+                while (unomiTracker_queue.length > 0) {
+                    var item = unomiTracker_queue.shift();
+                    var method = item.shift();
+                    if (unomiTracker[method]) {
+                        unomiTracker[method].apply(unomiTracker, item);
+                    }
                 }
             }
 
-            for (var n = [], r = ["trackSubmit", "trackClick", "trackLink", "trackForm", "initialize", "pageview", "identify", "reset", "group", "track", "ready", "alias", "debug", "page", "once", "off", "on", "personalize"], t = 0; t < r.length; t++) {
-                var i = r[t];
-                window.unomiTracker[i] = function (e) {
-                    return function () {
-                        var r = Array.prototype.slice.call(arguments);
-                        return r.unshift(e), n.push(r), window.unomiTracker
-                    }
-                }(i)
-            }
+            // Define a method to load Analytics.js from our CDN,
+            // and that will be sure to only ever load it once.
             unomiTracker.load = function () {
-                var n = document.createElement("script");
-                n.type = "text/javascript", n.async = !0, n.src = unomiOption.url + "/tracker/unomi-tracker.js", n.addEventListener ? n.addEventListener("load", function (n) {
-                    "function" == typeof e && e(n)
-                }, !1) : n.onreadystatechange = function () {
-                    "complete" !== this.readyState && "loaded" !== this.readyState || e(window.event)
-                };
-                var r = document.getElementsByTagName("script")[0];
-                r.parentNode.insertBefore(n, r)
-            }, document.addEventListener("DOMContentLoaded", unomiTracker.load), unomiTracker.page()
-        }();
-    </script>
+                // Create an async script element based on your key.
+                var script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.async = true;
+                // TODO we might want to add a check on the url to see if it ends with / or not
+                script.src = unomiOption.url + '/tracker/unomi-tracker.js';
 
-    <script type="text/javascript">
-        // This is an example of how to provide more details page properties to the view event. This can be useful
-        // in the case of an SPA that wants to provide information about a view that has metadata such as categories,
-        // tags or interests.
-        path = location.pathname + location.hash;
-        properties = {
-            path: path,
-            pageInfo: {
-                destinationURL: location.href,
-                tags: ["tag1", "tag2", "tag3"],
-                categories: ["category1", "category2", "category3"],
-                language: "en"
-            },
-            interests: {
-                "interest1": 1,
-                "interest2": 2,
-                "interest3": 3
-            }
-        };
-        console.log(properties);
-        // this will trigger a second page view for the same page (the first page view is in the tracker snippet).
-        window.unomiTracker.page(properties);
+                if (script.addEventListener) {
+                    script.addEventListener('load', function (e) {
+                        if (typeof callback === 'function') {
+                            callback(e);
+                        }
+                    }, false);
+                } else {
+                    script.onreadystatechange = function () {
+                        if (this.readyState === 'complete' || this.readyState === 'loaded') {
+                            callback(window.event);
+                        }
+                    };
+                }
+
+                // Insert our script next to the first script element.
+                var first = document.getElementsByTagName('script')[0];
+                first.parentNode.insertBefore(script, first);
+            };
+
+            document.addEventListener('DOMContentLoaded', unomiTracker.load);
+
+            unomiTracker.page(unomiOption.initialPageProperties);
+        })();
     </script>
 </head>
 <body>
@@ -160,6 +191,12 @@
         unomiTracker.trackForm(form, 'formSubmitted', {formName: form.name});
     });
 </script>
+
+<p>
+    You can find more information about how this tracker works and how to integrate it into your pages in the
+    <a href="http://unomi.apache.org/manual/latest/index.html#_web_tracker" target="_blank">Apache Unomi manual tracker
+        documentation</a>
+</p>
 
 </body>
 </html>
