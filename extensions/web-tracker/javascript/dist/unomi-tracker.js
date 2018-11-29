@@ -13084,7 +13084,7 @@ Unomi.prototype.extractFormData = function (form) {
                             }
                             break;
                         default:
-                            if (!e.value || e.value == '') {
+                            if (!e.value || e.value === '') {
                                 // ignore element if no value is provided
                                 break;
                             }
@@ -13105,6 +13105,8 @@ Unomi.prototype.extractFormData = function (form) {
                         }
                     }
                     break;
+                default:
+                    console.log("unomiTracker: " + e.nodeName + " form element type not implemented and will not be tracked.");
             }
         }
     }

@@ -572,7 +572,7 @@ Unomi.prototype.extractFormData = function (form) {
                             }
                             break;
                         default:
-                            if (!e.value || e.value == '') {
+                            if (!e.value || e.value === '') {
                                 // ignore element if no value is provided
                                 break;
                             }
