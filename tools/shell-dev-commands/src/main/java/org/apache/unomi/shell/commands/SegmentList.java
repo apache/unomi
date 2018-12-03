@@ -17,8 +17,10 @@
 package org.apache.unomi.shell.commands;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.karaf.shell.commands.Argument;
-import org.apache.karaf.shell.commands.Command;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.services.SegmentService;
@@ -27,13 +29,11 @@ import org.apache.unomi.common.DataTable;
 import java.util.ArrayList;
 
 @Command(scope = "unomi", name = "segment-list", description = "This will list all the segments present in the Apache Unomi Context Server")
-public class SegmentListCommand extends ListCommandSupport {
+@Service
+public class SegmentList extends ListCommandSupport {
 
-    private SegmentService segmentService;
-
-    public void setSegmentService(SegmentService segmentService) {
-        this.segmentService = segmentService;
-    }
+    @Reference
+    SegmentService segmentService;
 
     @Argument(index = 0, name = "maxEntries", description = "The maximum number of entries to retrieve (defaults to 100)", required = false, multiValued = false)
     int maxEntries = 100;

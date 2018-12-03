@@ -16,27 +16,26 @@
  */
 package org.apache.unomi.shell.commands;
 
-import org.apache.karaf.shell.commands.Argument;
-import org.apache.karaf.shell.commands.Command;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
 @Command(scope = "unomi", name = "condition-view", description = "This will display a single condition deployed in the Apache Unomi Context Server")
-public class ConditionViewCommand extends OsgiCommandSupport {
+@Service
+public class ConditionView implements Action {
 
-    private DefinitionsService definitionsService;
+    @Reference
+    DefinitionsService definitionsService;
 
     @Argument(index = 0, name = "conditionId", description = "The identifier for the condition", required = true, multiValued = false)
     String conditionTypeIdentifier;
 
-    public void setDefinitionsService(DefinitionsService definitionsService) {
-        this.definitionsService = definitionsService;
-    }
-
-    @Override
-    protected Object doExecute() throws Exception {
+    public Object execute() throws Exception {
         ConditionType conditionType = definitionsService.getConditionType(conditionTypeIdentifier);
         if (conditionType == null) {
             System.out.println("Couldn't find an action with id=" + conditionTypeIdentifier);

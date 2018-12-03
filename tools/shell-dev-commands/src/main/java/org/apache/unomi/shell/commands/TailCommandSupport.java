@@ -17,7 +17,10 @@
 package org.apache.unomi.shell.commands;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.console.Session;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 
 import java.io.PrintStream;
@@ -25,11 +28,17 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 
-public abstract class TailCommandSupport extends OsgiCommandSupport {
+public abstract class TailCommandSupport implements Action {
 
     public abstract int[] getColumnSizes();
 
     public abstract String[] getColumnHeaders();
+
+    @Reference
+    Session session;
+
+    @Reference
+    BundleContext bundleContext;
 
     public void outputHeaders(PrintStream out) {
         StringBuilder headerLine = new StringBuilder();
@@ -68,9 +77,7 @@ public abstract class TailCommandSupport extends OsgiCommandSupport {
     
     public abstract Object getListener();
 
-
-    @Override
-    protected Object doExecute() throws Exception {
+    public Object execute() throws Exception {
         // Do not use System.out as it may write to the wrong console depending on the thread that calls our log handler
         PrintStream out = session.getConsole();
         out.flush();

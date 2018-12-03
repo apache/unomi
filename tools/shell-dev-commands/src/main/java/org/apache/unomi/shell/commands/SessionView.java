@@ -16,26 +16,26 @@
  */
 package org.apache.unomi.shell.commands;
 
-import org.apache.karaf.shell.commands.Argument;
-import org.apache.karaf.shell.commands.Command;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
 @Command(scope = "unomi", name = "session-view", description = "This command will dump a session as a JSON string")
-public class SessionViewCommand extends OsgiCommandSupport {
-    private ProfileService profileService;
+@Service
+public class SessionView implements Action {
 
-    public void setProfileService(ProfileService profileService) {
-        this.profileService = profileService;
-    }
+    @Reference
+    ProfileService profileService;
 
     @Argument(index = 0, name = "session", description = "The identifier for the session", required = true, multiValued = false)
     String sessionIdentifier;
 
-    @Override
-    protected Object doExecute() throws Exception {
+    public Object execute() throws Exception {
         Session session = profileService.loadSession(sessionIdentifier, null);
         if (session == null) {
             System.out.println("Couldn't find a session with id=" + sessionIdentifier);

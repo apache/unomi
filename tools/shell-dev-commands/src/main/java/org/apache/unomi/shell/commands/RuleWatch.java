@@ -16,7 +16,10 @@
  */
 package org.apache.unomi.shell.commands;
 
-import org.apache.karaf.shell.commands.Command;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.RuleListenerService;
@@ -26,13 +29,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * This command will list all the rules executions in the shell console.
+ * This command can watch the evaluations of the conditions as well as the executions of a specified number of rules.
  */
-@Command(scope = "unomi", name = "rule-tail", description = "This will tail all the rules executed in the Apache Unomi Context Server")
-public class RuleTailCommand extends TailCommandSupport {
+@Command(scope = "unomi", name = "rule-watch", description = "This will watch the specified rules evaluating and executing in the Apache Unomi Context Server")
+@Service
+public class RuleWatch extends TailCommandSupport {
 
-    int[] columnSizes = new int[] { 36, 36, 14, 36, 29, 15, 5 };
+    @Argument(index = 0, name = "ruleIds", description = "Identifier(s) of rule(s) to watch", required = true, multiValued = true)
+    String[] ruleIds;
+
+    int[] columnSizes = new int[] { 10, 36, 36, 14, 36, 29, 15, 5 };
     String[] columnHeaders = new String[] {
+            "Status",
             "Rule ID",
             "Rule Name",
             "Event Type",
@@ -54,30 +62,39 @@ public class RuleTailCommand extends TailCommandSupport {
 
     @Override
     public Object getListener() {
-        return new TailRuleListener(session.getConsole());
+        return new RuleWatchListener(session.getConsole());
     }
 
-    class TailRuleListener implements RuleListenerService {
+    class RuleWatchListener implements RuleListenerService {
 
         PrintStream out;
 
-        public TailRuleListener(PrintStream out) {
+        public RuleWatchListener(PrintStream out) {
             this.out = out;
         }
 
         @Override
         public void onEvaluate(Rule rule, Event event) {
-            // this method is not used by this command
+            populateRuleInfo(rule, event, "EVALUATE");
         }
+
 
         @Override
         public void onAlreadyRaised(AlreadyRaisedFor alreadyRaisedFor, Rule rule, Event event) {
-            // not displayed using this command, see the rule watch command instead.
+            populateRuleInfo(rule, event, "AR " + alreadyRaisedFor.toString());
         }
 
         @Override
         public void onExecuteActions(Rule rule, Event event) {
+            populateRuleInfo(rule, event, "EXECUTE");
+        }
+
+        public void populateRuleInfo(Rule rule, Event event, String status) {
+            if (!ArrayUtils.contains(ruleIds, rule.getItemId())) {
+                return;
+            }
             List<String> ruleExecutionInfo = new ArrayList<>();
+            ruleExecutionInfo.add(status);
             ruleExecutionInfo.add(rule.getItemId());
             ruleExecutionInfo.add(rule.getMetadata().getName());
             ruleExecutionInfo.add(event.getEventType());
@@ -87,5 +104,7 @@ public class RuleTailCommand extends TailCommandSupport {
             ruleExecutionInfo.add(event.getScope());
             outputLine(out, ruleExecutionInfo);
         }
+
     }
+
 }

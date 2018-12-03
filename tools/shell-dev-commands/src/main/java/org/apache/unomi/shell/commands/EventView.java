@@ -16,9 +16,11 @@
  */
 package org.apache.unomi.shell.commands;
 
-import org.apache.karaf.shell.commands.Argument;
-import org.apache.karaf.shell.commands.Command;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
@@ -27,24 +29,19 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
 @Command(scope = "unomi", name = "event-view", description = "This command will dump an Event as a JSON object")
-public class EventViewCommand extends OsgiCommandSupport {
+@Service
+public class EventView implements Action {
 
-    private EventService eventService;
-    private DefinitionsService definitionsService;
+    @Reference
+    EventService eventService;
 
-    public void setEventService(EventService eventService) {
-        this.eventService = eventService;
-    }
-
-    public void setDefinitionsService(DefinitionsService definitionsService) {
-        this.definitionsService = definitionsService;
-    }
+    @Reference
+    DefinitionsService definitionsService;
 
     @Argument(index = 0, name = "event", description = "The identifier for the event", required = true, multiValued = false)
     String eventIdentifier;
 
-    @Override
-    protected Object doExecute() throws Exception {
+    public Object execute() throws Exception {
 
         Condition eventCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
         eventCondition.setParameter("propertyName", "itemId");

@@ -16,8 +16,8 @@
  */
 package org.apache.unomi.shell.commands;
 
-import org.apache.karaf.shell.commands.Option;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Option;
 import org.apache.karaf.shell.support.table.Row;
 import org.apache.karaf.shell.support.table.ShellTable;
 import org.apache.unomi.common.DataTable;
@@ -27,7 +27,7 @@ import java.util.ArrayList;
 /**
  * A utility class to make it easier to build tables for listing Apache Unomi objects.
  */
-public abstract class ListCommandSupport extends OsgiCommandSupport {
+public abstract class ListCommandSupport implements Action {
 
     @Option(name = "--csv", description = "Output table in CSV format", required = false, multiValued = false)
     boolean csv;
@@ -46,8 +46,7 @@ public abstract class ListCommandSupport extends OsgiCommandSupport {
      */
     protected abstract DataTable buildDataTable();
 
-    @Override
-    protected Object doExecute() throws Exception {
+    public Object execute() throws Exception {
 
         DataTable dataTable = buildDataTable();
 

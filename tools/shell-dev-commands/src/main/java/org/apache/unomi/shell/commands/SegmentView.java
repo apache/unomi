@@ -16,28 +16,26 @@
  */
 package org.apache.unomi.shell.commands;
 
-import org.apache.karaf.shell.commands.Argument;
-import org.apache.karaf.shell.commands.Command;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
 @Command(scope = "unomi", name = "segment-view", description = "This will allows to view a segment in the Apache Unomi Context Server")
-public class SegmentViewCommand extends OsgiCommandSupport {
+@Service
+public class SegmentView implements Action {
 
-    private SegmentService segmentService;
+    @Reference
+    SegmentService segmentService;
 
     @Argument(index = 0, name = "segmentId", description = "The identifier for the segment", required = true, multiValued = false)
     String segmentIdentifier;
 
-
-    public void setSegmentService(SegmentService segmentService) {
-        this.segmentService = segmentService;
-    }
-
-    @Override
-    protected Object doExecute() throws Exception {
+    public Object execute() throws Exception {
         Segment segment = segmentService.getSegmentDefinition(segmentIdentifier);
         if (segment == null) {
             System.out.println("Couldn't find an action with id=" + segmentIdentifier);

@@ -17,11 +17,15 @@
 package org.apache.unomi.shell.commands;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.felix.service.command.CommandSession;
-import org.apache.karaf.shell.commands.Argument;
-import org.apache.karaf.shell.commands.Command;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
-import org.apache.unomi.api.*;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
+import org.apache.karaf.shell.api.console.Session;
+import org.apache.unomi.api.Patch;
+import org.apache.unomi.api.PersonaWithSessions;
+import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.campaigns.Campaign;
 import org.apache.unomi.api.conditions.ConditionType;
@@ -33,6 +37,7 @@ import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.jline.reader.LineReader;
 import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
 
 import java.io.IOException;
 import java.net.URL;
@@ -42,17 +47,34 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 @Command(scope = "unomi", name = "deploy-definition", description = "This will deploy a specific definition")
-public class DeployDefinitionCommand extends OsgiCommandSupport {
+@Service
+public class DeployDefinition implements Action {
 
-    private DefinitionsService definitionsService;
-    private GoalsService goalsService;
-    private ProfileService profileService;
-    private RulesService rulesService;
-    private SegmentService segmentService;
-    private PatchService patchService;
+    @Reference
+    DefinitionsService definitionsService;
+
+    @Reference
+    GoalsService goalsService;
+
+    @Reference
+    ProfileService profileService;
+
+    @Reference
+    RulesService rulesService;
+
+    @Reference
+    SegmentService segmentService;
+
+    @Reference
+    PatchService patchService;
+
+    @Reference
+    BundleContext bundleContext;
+
+    @Reference
+    Session session;
 
     private final static List<String> definitionTypes = Arrays.asList("condition", "action", "goal", "campaign", "persona", "property", "rule", "segment", "scoring", "patch");
-
 
     @Argument(index = 0, name = "bundleId", description = "The bundle identifier where to find the definition", multiValued = false)
     Long bundleIdentifier;
@@ -63,7 +85,7 @@ public class DeployDefinitionCommand extends OsgiCommandSupport {
     @Argument(index = 2, name = "fileName", description = "The name of the file which contains the definition, without its extension (e.g: firstName)", required = false, multiValued = false)
     String fileName;
 
-    protected Object doExecute() throws Exception {
+    public Object execute() throws Exception {
         List<Bundle> bundlesToUpdate;
         if (bundleIdentifier == null) {
             List<Bundle> bundles = new ArrayList<>();
@@ -155,7 +177,7 @@ public class DeployDefinitionCommand extends OsgiCommandSupport {
         return null;
     }
 
-    private String askUserWithAuthorizedAnswer(CommandSession session, String msg, List<String> authorizedAnswer) throws IOException {
+    private String askUserWithAuthorizedAnswer(Session session, String msg, List<String> authorizedAnswer) throws IOException {
         String answer;
         do {
             answer = promptMessageToUser(session,msg);
@@ -163,7 +185,7 @@ public class DeployDefinitionCommand extends OsgiCommandSupport {
         return answer;
     }
 
-    private String promptMessageToUser(CommandSession session, String msg) throws IOException {
+    private String promptMessageToUser(Session session, String msg) throws IOException {
         LineReader reader = (LineReader) session.get(".jline.reader");
         return reader.readLine(msg, null);
     }
@@ -267,27 +289,4 @@ public class DeployDefinitionCommand extends OsgiCommandSupport {
         return path.toString();
     }
 
-    public void setDefinitionsService(DefinitionsService definitionsService) {
-        this.definitionsService = definitionsService;
-    }
-
-    public void setGoalsService(GoalsService goalsService) {
-        this.goalsService = goalsService;
-    }
-
-    public void setProfileService(ProfileService profileService) {
-        this.profileService = profileService;
-    }
-
-    public void setRulesService(RulesService rulesService) {
-        this.rulesService = rulesService;
-    }
-
-    public void setSegmentService(SegmentService segmentService) {
-        this.segmentService = segmentService;
-    }
-
-    public void setPatchService(PatchService patchService) {
-        this.patchService = patchService;
-    }
 }

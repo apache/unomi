@@ -17,22 +17,22 @@
 package org.apache.unomi.shell.commands;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.karaf.shell.commands.Command;
-import org.apache.unomi.api.actions.ActionType;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
+import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.common.DataTable;
 
 import java.util.ArrayList;
 import java.util.Collection;
 
-@Command(scope = "unomi", name = "action-list", description = "This will list all the actions deployed in the Apache Unomi Context Server")
-public class ActionListCommand extends ListCommandSupport {
+@Command(scope = "unomi", name = "condition-list", description = "This will list all the conditions deployed in the Apache Unomi Context Server")
+@Service
+public class ConditionList extends ListCommandSupport {
 
-    private DefinitionsService definitionsService;
-
-    public void setDefinitionsService(DefinitionsService definitionsService) {
-        this.definitionsService = definitionsService;
-    }
+    @Reference
+    DefinitionsService definitionsService;
 
     @Override
     protected String[] getHeaders() {
@@ -45,15 +45,15 @@ public class ActionListCommand extends ListCommandSupport {
 
     @Override
     protected DataTable buildDataTable() {
-        Collection<ActionType> allActions = definitionsService.getAllActionTypes();
+        Collection<ConditionType> allConditionTypes = definitionsService.getAllConditionTypes();
 
         DataTable dataTable = new DataTable();
 
-        for (ActionType actionType : allActions) {
+        for (ConditionType conditionType : allConditionTypes) {
             ArrayList<Comparable> rowData = new ArrayList<>();
-            rowData.add(actionType.getItemId());
-            rowData.add(actionType.getMetadata().getName());
-            rowData.add(StringUtils.join(actionType.getMetadata().getSystemTags(), ","));
+            rowData.add(conditionType.getItemId());
+            rowData.add(conditionType.getMetadata().getName());
+            rowData.add(StringUtils.join(conditionType.getMetadata().getSystemTags(), ","));
             dataTable.addRow(rowData.toArray(new Comparable[rowData.size()]));
         }
 

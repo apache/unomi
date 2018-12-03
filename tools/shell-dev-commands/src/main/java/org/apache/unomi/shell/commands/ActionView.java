@@ -16,28 +16,26 @@
  */
 package org.apache.unomi.shell.commands;
 
-import org.apache.karaf.shell.commands.Argument;
-import org.apache.karaf.shell.commands.Command;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
 @Command(scope = "unomi", name = "action-view", description = "This will display a single action deployed in the Apache Unomi Context Server")
-public class ActionViewCommand extends OsgiCommandSupport {
+@Service
+public class ActionView implements Action {
 
-    private DefinitionsService definitionsService;
+    @Reference
+    DefinitionsService definitionsService;
 
     @Argument(index = 0, name = "actionId", description = "The identifier for the action", required = true, multiValued = false)
     String actionTypeIdentifier;
 
-
-    public void setDefinitionsService(DefinitionsService definitionsService) {
-        this.definitionsService = definitionsService;
-    }
-
-    @Override
-    protected Object doExecute() throws Exception {
+    public Object execute() throws Exception {
         ActionType actionType = definitionsService.getActionType(actionTypeIdentifier);
         if (actionType == null) {
             System.out.println("Couldn't find an action with id=" + actionTypeIdentifier);

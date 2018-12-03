@@ -16,27 +16,26 @@
  */
 package org.apache.unomi.shell.commands;
 
-import org.apache.karaf.shell.commands.Argument;
-import org.apache.karaf.shell.commands.Command;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
 @Command(scope = "unomi", name = "rule-view", description = "This will allows to view a rule in the Apache Unomi Context Server")
-public class RuleViewcommand extends OsgiCommandSupport {
+@Service
+public class RuleView implements Action {
 
-    private RulesService rulesService;
+    @Reference
+    RulesService rulesService;
 
     @Argument(index = 0, name = "rule", description = "The identifier for the rule", required = true, multiValued = false)
     String ruleIdentifier;
 
-    public void setRulesService(RulesService rulesService) {
-        this.rulesService = rulesService;
-    }
-
-    @Override
-    protected Object doExecute() throws Exception {
+    public Object execute() throws Exception {
         Rule rule = rulesService.getRule(ruleIdentifier);
         if (rule == null) {
             System.out.println("Couldn't find a rule with id=" + ruleIdentifier);

@@ -16,8 +16,9 @@
  */
 package org.apache.unomi.shell.commands;
 
-import org.apache.karaf.shell.commands.Argument;
-import org.apache.karaf.shell.commands.Command;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
@@ -27,7 +28,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Command(scope = "unomi", name = "event-tail", description = "This will tail all the events coming into the Apache Unomi Context Server")
-public class EventTailCommand extends TailCommandSupport  {
+@Service
+public class EventTail extends TailCommandSupport  {
 
     @Argument(index = 0, name = "withInternal", description = "Whether to also monitor internal events (such as profileUpdated)", required = false, multiValued = false)
     boolean withInternal = false;

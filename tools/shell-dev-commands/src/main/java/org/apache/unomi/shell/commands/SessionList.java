@@ -16,11 +16,12 @@
  */
 package org.apache.unomi.shell.commands;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.karaf.shell.commands.Argument;
-import org.apache.karaf.shell.commands.Command;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Session;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
@@ -29,19 +30,15 @@ import org.apache.unomi.common.DataTable;
 
 import java.util.ArrayList;
 
-@Command(scope = "unomi", name = "profile-list", description = "This commands lists the latest profiles updated in the Apache Unomi Context Server")
-public class ProfileListCommand extends ListCommandSupport {
+@Command(scope = "unomi", name = "session-list", description = "This commands lists the latest sessions updated in the Apache Unomi Context Server")
+@Service
+public class SessionList extends ListCommandSupport {
 
-    private ProfileService profileService;
-    private DefinitionsService definitionsService;
+    @Reference
+    ProfileService profileService;
 
-    public void setProfileService(ProfileService profileService) {
-        this.profileService = profileService;
-    }
-
-    public void setDefinitionsService(DefinitionsService definitionsService) {
-        this.definitionsService = definitionsService;
-    }
+    @Reference
+    DefinitionsService definitionsService;
 
     @Argument(index = 0, name = "maxEntries", description = "The maximum number of entries to retrieve (defaults to 100)", required = false, multiValued = false)
     int maxEntries = 100;
@@ -51,28 +48,30 @@ public class ProfileListCommand extends ListCommandSupport {
         return new String[] {
                 "ID",
                 "Scope",
-                "Segments",
-                "Consents",
-                "Last modification",
+                "Last event",
+                "Duration",
+                "Profile",
+                "Timestamp"
         };
     }
 
     @java.lang.Override
     protected DataTable buildDataTable() {
         Query query = new Query();
-        query.setSortby("properties.lastVisit:desc");
+        query.setSortby("lastEventDate:desc");
         query.setLimit(maxEntries);
         Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
         query.setCondition(matchAllCondition);
-        PartialList<Profile> lastModifiedProfiles = profileService.search(query, Profile.class);
+        PartialList<Session> lastModifiedProfiles = profileService.searchSessions(query);
         DataTable dataTable = new DataTable();
-        for (Profile profile : lastModifiedProfiles.getList()) {
+        for (Session session : lastModifiedProfiles.getList()) {
             ArrayList<Comparable> rowData = new ArrayList<>();
-            rowData.add(profile.getItemId());
-            rowData.add(profile.getScope());
-            rowData.add(StringUtils.join(profile.getSegments(), ","));
-            rowData.add(StringUtils.join(profile.getConsents().keySet(), ","));
-            rowData.add((String) profile.getProperty("lastVisit"));
+            rowData.add(session.getItemId());
+            rowData.add(session.getScope());
+            rowData.add(session.getLastEventDate());
+            rowData.add(session.getDuration());
+            rowData.add(session.getProfileId());
+            rowData.add(session.getTimeStamp());
             dataTable.addRow(rowData.toArray(new Comparable[rowData.size()]));
         }
         return dataTable;

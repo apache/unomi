@@ -16,21 +16,21 @@
  */
 package org.apache.unomi.shell.commands;
 
-import org.apache.karaf.shell.commands.Command;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.services.RulesService;
 
 @Command(scope = "unomi", name = "rule-reset-stats", description = "This command will reset the rule statistics")
-public class RuleResetStatsCommand extends OsgiCommandSupport {
+@Service
+public class RuleResetStats implements Action {
 
-    private RulesService rulesService;
-
-    public void setRulesService(RulesService rulesService) {
-        this.rulesService = rulesService;
-    }
+    @Reference
+    RulesService rulesService;
 
     @Override
-    protected Object doExecute() throws Exception {
+    public Object execute() throws Exception {
         rulesService.resetAllRuleStatistics();
         System.out.println("Rule statistics successfully reset.");
         return null;

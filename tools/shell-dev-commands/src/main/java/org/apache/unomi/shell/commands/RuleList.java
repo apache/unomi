@@ -17,8 +17,10 @@
 package org.apache.unomi.shell.commands;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.karaf.shell.commands.Argument;
-import org.apache.karaf.shell.commands.Command;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
@@ -32,18 +34,14 @@ import java.util.ArrayList;
 import java.util.Map;
 
 @Command(scope = "unomi", name = "rule-list", description = "This will list all the rules deployed in the Apache Unomi Context Server")
-public class RuleListCommand extends ListCommandSupport {
+@Service
+public class RuleList extends ListCommandSupport {
 
-    private RulesService rulesService;
-    private DefinitionsService definitionsService;
+    @Reference
+    RulesService rulesService;
 
-    public void setRulesService(RulesService rulesService) {
-        this.rulesService = rulesService;
-    }
-
-    public void setDefinitionsService(DefinitionsService definitionsService) {
-        this.definitionsService = definitionsService;
-    }
+    @Reference
+    DefinitionsService definitionsService;
 
     @Argument(index = 0, name = "maxEntries", description = "The maximum number of entries to retrieve (defaults to 100)", required = false, multiValued = false)
     int maxEntries = 100;

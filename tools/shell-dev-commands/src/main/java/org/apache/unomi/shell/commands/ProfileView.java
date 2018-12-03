@@ -16,27 +16,26 @@
  */
 package org.apache.unomi.shell.commands;
 
-import org.apache.karaf.shell.commands.Argument;
-import org.apache.karaf.shell.commands.Command;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
 @Command(scope = "unomi", name = "profile-view", description = "This command will dump a profile as a JSON string")
-public class ProfileViewCommand extends OsgiCommandSupport {
+@Service
+public class ProfileView implements Action {
 
-    private ProfileService profileService;
-
-    public void setProfileService(ProfileService profileService) {
-        this.profileService = profileService;
-    }
+    @Reference
+    ProfileService profileService;
 
     @Argument(index = 0, name = "profile", description = "The identifier for the profile", required = true, multiValued = false)
     String profileIdentifier;
 
-    @Override
-    protected Object doExecute() throws Exception {
+    public Object execute() throws Exception {
         Profile profile = profileService.load(profileIdentifier);
         if (profile == null) {
             System.out.println("Couldn't find a profile with id=" + profileIdentifier);
