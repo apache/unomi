@@ -17,25 +17,36 @@
 package org.apache.unomi.shell.migration.actions;
 
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
-import org.apache.karaf.shell.commands.Command;
-import org.apache.karaf.shell.commands.Argument;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
+import org.apache.karaf.shell.api.console.Session;
 import org.apache.unomi.shell.migration.Migration;
 import org.apache.unomi.shell.migration.utils.ConsoleUtils;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceReference;
 import org.osgi.framework.Version;
 
 import java.util.*;
 
 @Command(scope = "unomi", name = "migrate", description = "This will Migrate your date in ES to be compliant with current version")
-public class Migrate extends OsgiCommandSupport {
+@Service
+public class Migrate implements Action {
 
-    private List<Migration> migrations;
+    @Reference
+    Session session;
+
+    @Reference
+    BundleContext bundleContext;
 
     @Argument(name = "fromVersionWithoutSuffix", description = "Origin version without suffix/qualifier (e.g: 1.2.0)", multiValued = false, valueToShowInHelp = "1.2.0")
     private String fromVersionWithoutSuffix;
 
-    protected Object doExecute() throws Exception {
+    public Object execute() throws Exception {
         if (fromVersionWithoutSuffix == null) {
             listMigrations();
             return null;
@@ -63,7 +74,7 @@ public class Migrate extends OsgiCommandSupport {
 
             String esAddress = ConsoleUtils.askUserWithDefaultAnswer(session, "Elasticsearch address (default = http://localhost:9200): ", "http://localhost:9200");
 
-            for (Migration migration : migrations) {
+            for (Migration migration : getMigrations()) {
                 if (fromVersion.compareTo(migration.getToVersion()) < 0) {
                     String migrateConfirmation = ConsoleUtils.askUserWithAuthorizedAnswer(session,"Starting migration to version " + migration.getToVersion() + ", do you want to proceed? (yes/no): ", Arrays.asList("yes", "no"));
                     if (migrateConfirmation.equalsIgnoreCase("no")) {
@@ -90,7 +101,7 @@ public class Migrate extends OsgiCommandSupport {
 
     private void listMigrations() {
         Version previousVersion = new Version("0.0.0");
-        for (Migration migration : migrations) {
+        for (Migration migration : getMigrations()) {
             if (migration.getToVersion().getMajor() > previousVersion.getMajor() || migration.getToVersion().getMinor() > previousVersion.getMinor()) {
                 System.out.println("From " + migration.getToVersion().getMajor() + "." + migration.getToVersion().getMinor() + ".0:");
             }
@@ -101,7 +112,24 @@ public class Migrate extends OsgiCommandSupport {
 
     }
 
-    public void setMigrations(List<Migration> migrations) {
-        this.migrations = migrations;
+    private List<Migration> getMigrations() {
+        Collection<ServiceReference<Migration>> migrationServiceReferences = null;
+        try {
+            migrationServiceReferences = bundleContext.getServiceReferences(Migration.class, null);
+        } catch (InvalidSyntaxException e) {
+            e.printStackTrace();
+        }
+        SortedSet<Migration> migrations = new TreeSet<>(new Comparator<Migration>() {
+            @Override
+            public int compare(Migration o1, Migration o2) {
+                return o1.getToVersion().compareTo(o2.getToVersion());
+            }
+        });
+        for (ServiceReference<Migration> migrationServiceReference : migrationServiceReferences) {
+            Migration migration = bundleContext.getService(migrationServiceReference);
+            migrations.add(migration);
+        }
+        return new ArrayList<>(migrations);
     }
+
 }

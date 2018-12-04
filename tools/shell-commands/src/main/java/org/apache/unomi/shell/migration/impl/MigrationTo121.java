@@ -17,14 +17,15 @@
 package org.apache.unomi.shell.migration.impl;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.felix.service.command.CommandSession;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.karaf.shell.api.console.Session;
 import org.apache.unomi.shell.migration.Migration;
 import org.apache.unomi.shell.migration.utils.ConsoleUtils;
 import org.apache.unomi.shell.migration.utils.MigrationUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.osgi.framework.Version;
+import org.osgi.service.component.annotations.Component;
 
 import java.io.IOException;
 import java.util.*;
@@ -32,10 +33,11 @@ import java.util.*;
 /**
  * @author dgaillard
  */
+@Component
 public class MigrationTo121 implements Migration {
 
     private CloseableHttpClient httpClient;
-    private CommandSession session;
+    private Session session;
     private String esAddress;
     private LinkedHashMap<String, List<String>> tagsStructurePriorTo130;
     private List propsTaggedAsPersonalIdentifier = Arrays.asList("firstName", "lastName", "email", "phoneNumber", "address", "facebookId", "googleId", "linkedInId", "twitterId");
@@ -56,7 +58,7 @@ public class MigrationTo121 implements Migration {
     }
 
     @Override
-    public void execute(CommandSession session, CloseableHttpClient httpClient, String esAddress) throws IOException {
+    public void execute(Session session, CloseableHttpClient httpClient, String esAddress) throws IOException {
         this.httpClient = httpClient;
         this.session = session;
         this.esAddress = esAddress;

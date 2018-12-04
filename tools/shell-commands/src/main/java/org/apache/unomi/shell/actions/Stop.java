@@ -16,22 +16,23 @@
  */
 package org.apache.unomi.shell.actions;
 
-import org.apache.karaf.shell.commands.Command;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.shell.services.UnomiManagementService;
 
 @Command(scope = "unomi", name = "stop", description = "This will stop Apache Unomi")
-public class Stop extends OsgiCommandSupport {
+@Service
+public class Stop implements Action {
 
-    private UnomiManagementService unomiManagementService;
+    @Reference
+    UnomiManagementService unomiManagementService;
 
-    protected Object doExecute() throws Exception {
+    public Object execute() throws Exception {
         unomiManagementService.stopUnomi();
 
         return null;
     }
 
-    public void setUnomiManagementService(UnomiManagementService unomiManagementService) {
-        this.unomiManagementService = unomiManagementService;
-    }
 }

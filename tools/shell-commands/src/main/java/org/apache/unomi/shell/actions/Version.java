@@ -16,13 +16,20 @@
  */
 package org.apache.unomi.shell.actions;
 
-import org.apache.karaf.shell.commands.Command;
-import org.apache.karaf.shell.console.OsgiCommandSupport;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
+import org.osgi.framework.BundleContext;
 
 @Command(scope = "unomi", name = "version", description = "This will print Apache Unomi current version")
-public class Version extends OsgiCommandSupport {
+@Service
+public class Version implements Action {
 
-    protected Object doExecute() throws Exception {
+    @Reference
+    BundleContext bundleContext;
+
+    public Object execute() throws Exception {
          System.out.println("Apache Unomi version: " + bundleContext.getBundle().getVersion().toString());
          return null;
     }

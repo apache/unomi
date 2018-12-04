@@ -16,7 +16,6 @@
  */
 package org.apache.unomi.shell.migration.utils;
 
-import org.apache.felix.service.command.CommandSession;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
@@ -32,6 +31,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
+import org.apache.karaf.shell.api.console.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +52,7 @@ import java.util.Map;
 public class HttpUtils {
     private static final Logger logger = LoggerFactory.getLogger(HttpUtils.class);
 
-    public static CloseableHttpClient initHttpClient(CommandSession session) throws IOException {
+    public static CloseableHttpClient initHttpClient(Session session) throws IOException {
         String confirmation = ConsoleUtils.askUserWithAuthorizedAnswer(session,"We need to initialize a HttpClient, do we need to trust all certificates? (yes/no): ", Arrays.asList("yes", "no"));
         boolean trustAllCertificates = confirmation.equalsIgnoreCase("yes");
 
