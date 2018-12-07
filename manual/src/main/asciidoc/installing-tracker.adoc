@@ -62,7 +62,6 @@ to this :
                 destinationURL: location.href,
                 tags : [ "tag1", "tag2", "tag3"],
                 categories : ["category1", "category2", "category3"],
-                language : "en"
             },
             interests : {
                 "interest1" : 1,
@@ -97,9 +96,6 @@ object passed to the unomiTracker call. Default value : page path
 
 |referringURL
 |The referringURL also known as the previous URL of the page/screen viewed. Default value : page referrer URL
-
-|language
-|An identifier (usually a locale for such as en_US or fr_CH) for the language
 
 |tags
 |A String array of tag identifiers. For example `['tag1', 'tag2', 'tag3']`
