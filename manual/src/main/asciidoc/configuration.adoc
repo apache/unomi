@@ -15,9 +15,12 @@
 
 ==== Changing the default configuration
 
-If you want to change the default configuration, you can perform any modification you want in the $MY_KARAF_HOME/etc directory.
+If you want to change the default configuration, you can perform any modification you want in the $MY_KARAF_HOME/etc/unomi.custom.system.properties file.
+By default this file does not exist and is designed to be a file that will contain only your custom modifications to the
+default configuration.
 
-If you want to change the HTTP ports that the server is listening on, you will need to add/change the following lines in the $MY_KARAF_HOME/etc/custom.properties file:
+For example, if you want to change the HTTP ports that the server is listening on, you will need to add/change the
+following lines in the $MY_KARAF_HOME/etc/unomi.custom.system.properties file:
 
 [source]
 ----
@@ -25,15 +28,12 @@ org.osgi.service.http.port.secure=9443
 org.osgi.service.http.port=8181
 ----
 
-If you change these ports, also make sure you adjust the following file in the cluster configuration.
-
-The context server configuration is kept in the $MY_KARAF_HOME/etc/org.apache.unomi.cluster.cfg . It defines the
-addresses where it can be found :
+If you change these ports, also make sure you adjust the following settings in the same file :
 
 [source]
 ----
-contextserver.publicAddress=https://localhost:9443
-contextserver.internalAddress=http://127.0.0.1:8181
+org.apache.unomi.public.address=http://localhost:8181
+org.apache.unomi.internal.address=https://localhost:9443
 ----
 
 If you need to specify an Elasticsearch cluster name, or a host and port that are different than the default,
