@@ -26,7 +26,6 @@ import org.ops4j.pax.exam.options.MavenArtifactUrlReference;
 import org.ops4j.pax.exam.options.MavenUrlReference;
 
 import java.io.File;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -127,6 +126,11 @@ public abstract class BaseIT {
                 systemProperty("org.apache.unomi.itests.elasticsearch.cluster.name").value("contextElasticSearchITests"),
                 systemProperty("org.apache.unomi.itests.elasticsearch.http.port").value("9400"),
                 systemProperty("org.apache.unomi.itests.elasticsearch.bootstrap.seccomp").value("false"),
+                systemProperty("org.apache.unomi.hazelcast.group.name").value("cellar"),
+                systemProperty("org.apache.unomi.hazelcast.group.password").value("pass"),
+                systemProperty("org.apache.unomi.hazelcast.network.port").value("5701"),
+                systemProperty("org.apache.unomi.hazelcast.tcp-ip.members").value("127.0.0.1"),
+                systemProperty("org.apache.unomi.hazelcast.tcp-ip.interface").value("127.0.0.1"),
                 systemProperty("unomi.autoStart").value("true"),
                 features(karafCxfRepo, "cxf"),
                 features(karafCellarRepo, "cellar"),

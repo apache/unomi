@@ -19,15 +19,15 @@
            xmlns="http://www.hazelcast.com/schema/config"
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <group>
-        <name>cellar</name>
-        <password>pass</password>
+        <name>${org.apache.unomi.hazelcast.group.name}</name>
+        <password>${org.apache.unomi.hazelcast.group.password}</password>
     </group>
     <management-center enabled="false">http://localhost:8080/mancenter</management-center>
     <properties>
         <property name="hazelcast.jmx">true</property>
     </properties>
     <network>
-        <port auto-increment="true" port-count="100">5701</port>
+        <port auto-increment="true" port-count="100">${org.apache.unomi.hazelcast.network.port}</port>
         <outbound-ports>
             <!--
                 Allowed port range when connecting to other nodes.
@@ -41,7 +41,8 @@
                 <multicast-port>54327</multicast-port>
             </multicast>
             <tcp-ip enabled="true">
-                <interface>127.0.0.1</interface>
+                <members>${org.apache.unomi.hazelcast.tcp-ip.members}</members>
+                <interface>${org.apache.unomi.hazelcast.tcp-ip.interface}</interface>
             </tcp-ip>
             <aws enabled="false">
                 <access-key>my-access-key</access-key>
