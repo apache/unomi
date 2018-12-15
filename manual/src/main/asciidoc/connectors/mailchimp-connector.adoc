@@ -25,12 +25,12 @@ This extension has 3 actions:
 
 . Generate a new API Key, or get the default: https://usX.admin.mailchimp.com/account/api/
 
-. Configure the MailChimp Connector Basic in the `etc/org.apache.unomi.mailchimpconnector.cfg` file change the following settings:
+. Configure the MailChimp Connector Basic in the `etc/unomi.custom.system.properties` file and add/change the following settings:
 +
 [source]
 ----
-    mailChimpConnector.apiKey=YOUR_APIKEY
-    mailChimpConnector.url.subDomain=YOUR_SUB_DOMAIN  (exemple: https://usX.admin.mailchimp.com/account/api/, the X is the SUB_DOMAIN)
+org.apache.unomi.mailchimp.apiKey=${env:UNOMI_MAILCHIMP_APIKEY:-yourApiKey}
+org.apache.unomi.mailchimp.url.subDomain=${env:UNOMI_MAILCHIMP_URL_SUBDOMAIN:-us16}
 ----
 +
 . Before starting configure the mapping between Apache Unomi profile properties and MailChimp member properties. +
@@ -45,11 +45,11 @@ This extension has 3 actions:
 +
 
 +
-Then in the cfg file `mailChimpConnector.list.merge-fields.activate={Boolean} if you like to activate the mapping feature.`
+Then in the cfg file `org.apache.unomi.mailchimp.list.merge-fields.activate={Boolean} if you like to activate the mapping feature.`
 +
 
 +
-This is the property to configure for the mapping, the format is as shown. `mailChimpConnector.list.merge-fields.mapping={Apache Unomi property ID}<=>{MailChimp Tag name}`
+This is the property to configure for the mapping, the format is as shown. `org.apache.unomi.mailchimp.list.merge-fields.mapping={Apache Unomi property ID}<=>{MailChimp Tag name}`
 +
 
 +

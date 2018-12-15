@@ -13,14 +13,48 @@
 //
 === Configuration
 
-==== Changing the default configuration
+==== Centralized configuration
 
-If you want to change the default configuration, you can perform any modification you want in the $MY_KARAF_HOME/etc/unomi.custom.system.properties file.
+Apache Unomi uses a centralized configuration file that contains both system properties and configuration properties.
+These settings are then fed to the OSGi and other configuration files using placeholder that look something like this:
+
+[source]
+----
+contextserver.publicAddress=${org.apache.unomi.cluster.public.address:-http://localhost:8181}
+contextserver.internalAddress=${org.apache.unomi.cluster.internal.address:-https://localhost:9443}
+----
+
+Default values are stored in a file called `$MY_KARAF_HOME/etc/custom.system.properties` but you should never modify
+this file directly, as an override mechanism is available. Simply create a file called:
+
+    unomi.custom.system.properties
+
+and put your own property values in their to override the defaults OR you can use environment variables to also override
+the values in the `$MY_KARAF_HOME/etc/custom.system.properties`. See the next section for more information about that.
+
+==== Changing the default configuration using environment variables (i.e. Docker configuration)
+
+You might want to use environment variables to change the default system configuration, especially if you intend to run
+Apache Unomi inside a Docker container. You can find the list of all the environment variable names in the following file:
+
+https://github.com/apache/incubator-unomi/blob/master/package/src/main/resources/etc/custom.system.properties
+
+If you are using Docker Container, simply pass the environment variables on the docker command line or if you are using
+Docker Compose you can put the environment variables in the docker-compose.yml file.
+
+If you want to "save" the environment values in a file, you can use the `bin/setenv(.bat)` to setup the environment
+variables you want to use.
+
+==== Changing the default configuration using property files
+
+If you want to change the default configuration using property files instead of environment variables, you can perform
+any modification you want in the `$MY_KARAF_HOME/etc/unomi.custom.system.properties` file.
+
 By default this file does not exist and is designed to be a file that will contain only your custom modifications to the
 default configuration.
 
-For example, if you want to change the HTTP ports that the server is listening on, you will need to add/change the
-following lines in the $MY_KARAF_HOME/etc/unomi.custom.system.properties file:
+For example, if you want to change the HTTP ports that the server is listening on, you will need to create the
+following lines in the $MY_KARAF_HOME/etc/unomi.custom.system.properties (and create it if you haven't yet) file:
 
 [source]
 ----
@@ -32,44 +66,51 @@ If you change these ports, also make sure you adjust the following settings in t
 
 [source]
 ----
-org.apache.unomi.public.address=http://localhost:8181
-org.apache.unomi.internal.address=https://localhost:9443
+org.apache.unomi.cluster.public.address=http://localhost:8181
+org.apache.unomi.cluster.internal.address=https://localhost:9443
 ----
 
-If you need to specify an Elasticsearch cluster name, or a host and port that are different than the default,
+If you need to specify an ElasticSearch cluster name, or a host and port that are different than the default,
 it is recommended to do this BEFORE you start the server for the first time, or you will loose all the data
 you have stored previously.
 
-To change these settings, you will need to modify a file called 
-
+You can use the following properties for the ElasticSearch configuration
 [source]
 ----
-$MY_KARAF_HOME/etc/org.apache.unomi.persistence.elasticsearch.cfg
-----
-
-with the following contents:
-
-[source]
-----
-cluster.name=contextElasticSearch
-# The elasticSearchAddresses may be a comma seperated list of host names and ports such as
+org.apache.unomi.elasticsearch.cluster.name=contextElasticSearch
+# The elasticsearch.adresses may be a comma seperated list of host names and ports such as
 # hostA:9300,hostB:9300
 # Note: the port number must be repeated for each host.
-elasticSearchAddresses=localhost:9300
-index.name=context
+org.apache.unomi.elasticsearch.addresses=localhost:9300
 ----
 
 ==== Secured events configuration
 
-Unomi secures some events by default. You can find the default configuration in the following file (created after the
-first server startup):
+Apache Unomi secures some events by default. It comes out of the box with a default configuration that you can adjust
+by using the centralized configuration file override in `$MY_KARAF_HOME/etc/unomi.custom.system.properties`
 
-[source]
-----
-$MY_KARAF_HOME/etc/org.apache.unomi.thirdparty.cfg
-----
 
-Ususally, login events, which operate on profiles and do merge on protected properties, must be secured. For each
+You can find the default configuration in the following file:
+
+    $MY_KARAF_HOME/etc/custom.system.properties
+
+The properties start with the prefix : `org.apache.unomi.thirdparty.*` and here are the default values :
+
+    org.apache.unomi.thirdparty.provider1.key=${env:UNOMI_THIRDPARTY_PROVIDER1_KEY:-670c26d1cc413346c3b2fd9ce65dab41}
+    org.apache.unomi.thirdparty.provider1.ipAddresses=${env:UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES:-127.0.0.1,::1}
+    org.apache.unomi.thirdparty.provider1.allowedEvents=${env:UNOMI_THIRDPARTY_PROVIDER1_ALLOWEDEVENTS:-login,updateProperties}
+
+The events set in allowedEvents will be secured and will only be accepted if the call comes from the specified IP
+address, and if the secret-key is passed in the X-Unomi-Peer HTTP request header. The "env:" part means that it will
+attempt to read an environment variable by that name, and if it's not found it will default to the value after the ":-"
+marker.
+
+If you want to add another provider you will need to add them manually in the following file (and make sure you maintain
+the changes when upgrading) :
+
+    $MY_KARAF_HOME/etc/org.apache.unomi.thirdparty.cfg
+
+Usually, login events, which operate on profiles and do merge on protected properties, must be secured. For each
 trusted third party server, you need to add these 3 lines :
 
 [source]
@@ -79,12 +120,10 @@ thirdparty.provider1.ipAddresses=127.0.0.1,::1
 thirdparty.provider1.allowedEvents=login,updateProperties
 ----
 
-The events set in allowedEvents will be secured and will only be accepted if the call comes from the specified IP
-address, and if the secret-key is passed in the X-Unomi-Peer header. 
 
 ==== Installing the MaxMind GeoIPLite2 IP lookup database
 
-The Context Server requires an IP database in order to resolve IP addresses to user location.
+Apache Unomi requires an IP database in order to resolve IP addresses to user location.
 The GeoLite2 database can be downloaded from MaxMind here :
 http://dev.maxmind.com/geoip/geoip2/geolite2/[http://dev.maxmind.com/geoip/geoip2/geolite2/]
 
@@ -92,20 +131,21 @@ Simply download the GeoLite2-City.mmdb file into the "etc" directory.
 
 ==== Installing Geonames database
 
-Context server includes a geocoding service based on the geonames database ( http://www.geonames.org/[http://www.geonames.org/] ). It can be
+Apache Unomi includes a geocoding service based on the geonames database ( http://www.geonames.org/[http://www.geonames.org/] ). It can be
 used to create conditions on countries or cities.
 
 In order to use it, you need to install the Geonames database into . Get the "allCountries.zip" database from here :
 http://download.geonames.org/export/dump/[http://download.geonames.org/export/dump/]
 
 Download it and put it in the "etc" directory, without unzipping it.
-Edit $MY_KARAF_HOME/etc/org.apache.unomi.geonames.cfg and set request.geonamesDatabase.forceImport to true, import should start right away.
+Edit `$MY_KARAF_HOME/etc/unomi.custom.system.properties` and set `org.apache.unomi.geonames.forceImport` to true,
+import should start right away.
 Otherwise, import should start at the next startup. Import runs in background, but can take about 15 minutes.
 At the end, you should have about 4 million entries in the geonames index.
 
 ==== REST API Security
 
-The Context Server REST API is protected using JAAS authentication and using Basic or Digest HTTP auth.
+The Apache Unomi Context Server REST API is protected using JAAS authentication and using Basic or Digest HTTP auth.
 By default, the login/password for the REST API full administrative access is "karaf/karaf".
 
 The generated package is also configured with a default SSL certificate. You can change it by following these steps :
@@ -114,24 +154,23 @@ Replace the existing keystore in $MY_KARAF_HOME/etc/keystore by your own certifi
 
 http://wiki.eclipse.org/Jetty/Howto/Configure_SSL[http://wiki.eclipse.org/Jetty/Howto/Configure_SSL]
 
-Update the keystore and certificate password in $MY_KARAF_HOME/etc/custom.properties file :
+Update the keystore and certificate password in $MY_KARAF_HOME/etc/unomi.custom.system.properties file :
 
 [source]
 ----
-    org.osgi.service.http.secure.enabled = true
-    org.ops4j.pax.web.ssl.keystore=${karaf.etc}/keystore
-    org.ops4j.pax.web.ssl.password=changeme
-    org.ops4j.pax.web.ssl.keypassword=changeme
-    org.osgi.service.http.port.secure=9443
+org.ops4j.pax.web.ssl.keystore=${env:UNOMI_SSL_KEYSTORE:-${karaf.etc}/keystore}
+org.ops4j.pax.web.ssl.password=${env:UNOMI_SSL_PASSWORD:-changeme}
+org.ops4j.pax.web.ssl.keypassword=${env:UNOMI_SSL_KEYPASSWORD:-changeme}
 ----
 
 You should now have SSL setup on Karaf with your certificate, and you can test it by trying to access it on port 9443.
 
-. Changing the default Karaf password can be done by modifying the etc/users.properties file
+Changing the default Karaf password can be done by modifying the `org.apache.unomi.security.root.password` in the
+`$MY_KARAF_HOME/etc/unomi.custom.system.properties` file
 
 ==== Automatic profile merging
 
-The context server is capable of merging profiles based on a common property value. In order to use this, you must
+Apache Unomi is capable of merging profiles based on a common property value. In order to use this, you must
 add the MergeProfileOnPropertyAction to a rule (such as a login rule for example), and configure it with the name
  of the property that will be used to identify the profiles to be merged. An example could be the "email" property,
  meaning that if two (or more) profiles are found to have the same value for the "email" property they will be merged
@@ -159,7 +198,7 @@ application-level firewall you should only allow the following connections open 
 
 All other ports should not be accessible to the world.
 
-For your Context Server client applications (such as the Jahia CMS), you will need to make the following ports
+For your Apache Unomi client applications (such as the Jahia CMS), you will need to make the following ports
 accessible : 
 
 [source]
@@ -168,7 +207,7 @@ accessible :
 9443 (Context Server HTTPS port)
 ----
 
-The context server actually requires HTTP Basic Auth for access to the Context Server administration REST API, so it is
+The Apache Unomi actually requires HTTP Basic Auth for access to the Context Server administration REST API, so it is
 highly recommended that you design your client applications to use the HTTPS port for accessing the REST API.
 
 The user accounts to access the REST API are actually routed through Karaf's JAAS support, which you may find the
@@ -183,13 +222,16 @@ The default username/password is
 karaf/karaf
 ----
 
-You should really change this default username/password as soon as possible. To do so, simply modify the following
-file : 
+You should really change this default username/password as soon as possible. Changing the default Karaf password can be
+done by modifying the `org.apache.unomi.security.root.password` in the `$MY_KARAF_HOME/etc/unomi.custom.system.properties` file
 
-[source]
-----
-$MY_KARAF_HOME/etc/users.properties
-----
+Or if you want to also change the user name you could modify the following file :
+
+    $MY_KARAF_HOME/etc/users.properties
+
+But you will also need to change the following property in the $MY_KARAF_HOME/etc/unomi.custom.system.properties :
+
+    karaf.local.user = karaf
 
 For your context servers, and for any standalone Elasticsearch nodes you will need to open the following ports for proper
 node-to-node communication : 9200 (Elasticsearch REST API), 9300 (Elasticsearch TCP transport)
@@ -213,14 +255,15 @@ a proxy, and use it to filter any communication.
 If you want to setup an Apache HTTP web server in from of Apache Unomi, here is an example configuration using
 mod_proxy.
 
-In your Unomi package directory, in /etc/org.apache.unomi.cluster.cfg for unomi.apache.org
+In your Unomi package directory, in $MY_KARAF_HOME/etc/unomi.custom.system.properties setup the public address for
+the hostname `unomi.apache.org`:
 
-contextserver.publicAddress=https://unomi.apache.org/
- contextserver.internalAddress=http://192.168.1.1:8181
+org.apache.unomi.cluster.public.address=https://unomi.apache.org/
+org.apache.unomi.cluster.internal.address=http://192.168.1.1:8181
 
-and you will also need to change the contextserver.domain in the /etc/org.apache.unomi.web.cfg file
+and you will also need to change the cookie domain in the same file:
 
-contextserver.domain=apache.org
+org.apache.unomi.profile.cookie.domain=apache.org
 
 Main virtual host config:
 
@@ -300,26 +343,23 @@ ProxyPassReverse / http://localhost:8181/
 ==== Changing the default tracking location
 
 When performing localhost requests to Apache Unomi, a default location will be used to insert values into the session
-to make the location-based personalization still work. You can find the default location settings in the file : 
+to make the location-based personalization still work. You can modify the default location settings using the
+centralized configuration file (`$MY_KARAF_HOME/etc/unomi.custom.system.properties`).
 
-[source]
-----
-org.apache.unomi.plugins.request.cfg
-----
-
-that contains the following default settings:
+Here are the default values for the location settings :
 
 [source]
 ----
 # The following settings represent the default position that is used for localhost requests
-defaultSessionCountryCode=CH
-defaultSessionCountryName=Switzerland
-defaultSessionCity=Geneva
-defaultSessionAdminSubDiv1=2660645
-defaultSessionAdminSubDiv2=6458783
-defaultSessionIsp=Cablecom
-defaultLatitude=46.1884341
-defaultLongitude=6.1282508
+org.apache.unomi.ip.database.location=${env:UNOMI_IP_DB:-${karaf.etc}/GeoLite2-City.mmdb}
+org.apache.unomi.ip.default.countryCode=${env:UNOMI_IP_DEFAULT_COUNTRYCODE:-CH}
+org.apache.unomi.ip.default.countryName=${env:UNOMI_IP_DEFAULT_COUNTRYNAME:-Switzerland}
+org.apache.unomi.ip.default.city=${env:UNOMI_IP_DEFAULT_CITY:-Geneva}
+org.apache.unomi.ip.default.subdiv1=${env:UNOMI_IP_DEFAULT_SUBDIV1:-2660645}
+org.apache.unomi.ip.default.subdiv2=${env:UNOMI_IP_DEFAULT_SUBDIV2:-6458783}
+org.apache.unomi.ip.default.isp=${env:UNOMI_IP_DEFAULT_ISP:-Cablecom}
+org.apache.unomi.ip.default.latitude=${env:UNOMI_IP_DEFAULT_LATITUDE:-46.1884341}
+org.apache.unomi.ip.default.longitude=${env:UNOMI_IP_DEFAULT_LONGITUDE:-6.1282508}
 ----
 
 You might want to change these for testing or for demonstration purposes.
@@ -334,7 +374,8 @@ The Apache Karaf SSH console is available inside Apache Unomi, but the port has 
 ssh -p 8102 karaf@localhost
 ----
 
-or the user/password you have setup to protect the system if you have changed it.
+or the user/password you have setup to protect the system if you have changed it. You can find the list of Apache Unomi
+shell commands in the "Shell commands" section of the documentation.
 
 ==== ElasticSearch X-Pack Support
 

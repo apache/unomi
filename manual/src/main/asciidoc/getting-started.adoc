@@ -13,11 +13,14 @@
 //
 === Getting started with Unomi
 
-We will first get you up and running with an example. We will then lift the corner of the cover somewhat and explain in greater details what just happened.
+We will first get you up and running with an example. We will then lift the corner of the cover somewhat and explain
+in greater details what just happened.
 
 ==== Prerequisites
 
-This document assumes that you are already familiar with Unomi's <<_concepts,concepts>>. On the technical side, we also assume working knowledge of https://git-scm.com/[git] to be able to retrieve the code for Unomi and the example. Additionnally, you will require a working Java 7 or above install. Refer to http://www.oracle.com/technetwork/java/javase/[http://www.oracle.com/technetwork/java/javase/] for details on how to download and install Java SE 7 or greater.
+This document assumes that you are already familiar with Unomi's <<_concepts,concepts>>. On the technical side, we
+also assume working knowledge of https://git-scm.com/[git] to be able to retrieve the code for Unomi and the example.
+Additionally, you will require a working Java 7 or above install. Refer to http://www.oracle.com/technetwork/java/javase/[http://www.oracle.com/technetwork/java/javase/] for details on how to download and install Java SE 7 or greater.
 
 ==== Running Unomi
 

@@ -15,11 +15,17 @@ Unomi is architected so that users can provided extensions in the form of plugin
 
 === Types vs. instances
 
-Several extension points in Unomi rely on the concept of type: the extension defines a prototype for what the actual items will be once parameterized with values known only at runtime. This is similar to the concept of classes in object-oriented programming: types define classes, providing the expected structure and which fields are expected to be provided at runtime, that are then instantiated when needed with actual values.
+Several extension points in Unomi rely on the concept of type: the extension defines a prototype for what the actual
+items will be once parameterized with values known only at runtime. This is similar to the concept of classes in
+object-oriented programming: types define classes, providing the expected structure and which fields are expected to
+be provided at runtime, that are then instantiated when needed with actual values.
 
 === Plugin structure
 
-Being built on top of Apache Karaf, Unomi leverages OSGi to support plugins. A Unomi plugin is, thus, an OSGi bundle specifying some specific metadata to tell Unomi the kind of entities it provides. A plugin can provide the following entities to extend Unomi, each with its associated definition (as a JSON file), located in a specific spot within the `META-INF/cxs/` directory of the bundle JAR file:
+Being built on top of Apache Karaf, Unomi leverages OSGi to support plugins. A Unomi plugin is, thus, an OSGi
+bundle specifying some specific metadata to tell Unomi the kind of entities it provides. A plugin can provide the
+following entities to extend Unomi, each with its associated definition (as a JSON file), located in a specific spot
+within the `META-INF/cxs/` directory of the bundle JAR file:
 
 |====
 |Entity |Location in `cxs` directory 
@@ -35,7 +41,8 @@ Being built on top of Apache Karaf, Unomi leverages OSGi to support plugins. A U
 |ValueType |values 
 |====
 
-http://aries.apache.org/modules/blueprint.html[Blueprint] is used to declare what the plugin provides and inject any required dependency. The Blueprint file is located, as usual, at `OSGI-INF/blueprint/blueprint.xml` in the bundle JAR file.
+http://aries.apache.org/modules/blueprint.html[Blueprint] is used to declare what the plugin provides and inject
+any required dependency. The Blueprint file is located, as usual, at `OSGI-INF/blueprint/blueprint.xml` in the bundle JAR file.
 
 The plugin otherwise follows a regular maven project layout and should depend on the Unomi API maven artifact:
 
@@ -48,7 +55,8 @@ The plugin otherwise follows a regular maven project layout and should depend on
 </dependency>
 ----
 
-Some plugins consists only of JSON definitions that are used to instantiate the appropriate structures at runtime while some more involved plugins provide code that extends Unomi in deeper ways.
+Some plugins consists only of JSON definitions that are used to instantiate the appropriate structures at runtime
+while some more involved plugins provide code that extends Unomi in deeper ways.
 
 In both cases, plugins can provide more that one type of extension. For example, a plugin could provide both `ActionType`s and `ConditionType`s.
 

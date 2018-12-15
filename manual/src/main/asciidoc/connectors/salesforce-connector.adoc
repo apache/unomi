@@ -53,16 +53,16 @@ with the security token.
 
 ===== Apache Unomi setup
 
-. You are now ready to configure the Apache Unomi Salesforce Connector. In the etc/org.apache.unomi.sfdc.cfg file
-change the following settings:
+. You are now ready to configure the Apache Unomi Salesforce Connector. In the etc/unomi.custom.system.properties file
+add/change the following settings:
 +
 [source]
 ----
-sfdc.user.username=YOUR_USER_NAME
-sfdc.user.password=YOUR_PASSWORD
-sfdc.user.securityToken=YOUR_USER_SECURITY_TOKEN
-sfdc.consumer.key=CONNECTED_APP_CONSUMER_KEY
-sfdc.consumer.secret=CONNECTED_APP_SECRET
+org.apache.unomi.sfdc.user.username=${env:UNOMI_SFDC_USER_USERNAME:-}
+org.apache.unomi.sfdc.user.password=${env:UNOMI_SFDC_USER_PASSWORD:-}
+org.apache.unomi.sfdc.user.securityToken=${env:UNOMI_SFDC_USER_SECURITYTOKEN:-}
+org.apache.unomi.sfdc.consumer.key=${env:UNOMI_SFDC_CONSUMER_KEY:-}
+org.apache.unomi.sfdc.consumer.secret=${env:UNOMI_SFDC_CONSUMER_SECRET:-}
 ----
 
 ===== Deployment from Maven repository
@@ -120,7 +120,7 @@ To define how Salesforce attributes will be mapped to Marketing Factory profile 
 
 [source]
 ----
-sfdc.fields.mappings=myMarketingFactoryProperty1<=>mySFDCAttribute1,myMarketingFactoryProperty2<=>mySFDCAttribute2
+org.apache.unomi.sfdc.fields.mappings=${env:UNOMI_SFDC_FIELDS_MAPPINGS:-email<=>Email,firstName<=>FirstName,lastName<=>LastName,company<=>Company,phoneNumber<=>Phone,jobTitle<=>Title,city<=>City,zipCode<=>PostalCode,address<=>Street,sfdcStatus<=>Status,sfdcRating<=>Rating}
 ----
 
 Please note that Salesforce needs the company and the last name to be set, otherwise the lead won't be created.
@@ -128,7 +128,7 @@ An identifier needs to be set as well. The identifier will be used to map the Ma
 
 [source]
 ----
-sfdc.fields.mappings.identifier=email<=>Email
+org.apache.unomi.sfdc.fields.mappings.identifier=${env:UNOMI_SFDC_FIELDS_MAPPINGS_IDENTIFIER:-email<=>Email}
 ----
 
 ==== Hot-deploying updates to the Salesforce connector (for developers)

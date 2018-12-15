@@ -14,70 +14,26 @@
 === Cluster setup
 
 Apache Karaf relies on Apache Karaf Cellar, which in turn uses Hazelcast to discover and configure its cluster.
-You just need to install multiple context servers on the same network, and then (optionally) change the Hazelcast
- configuration in the following file :
+
+You can control most of the important clustering settings through the centralized configuration file at
+
+    etc/unomi.custom.system.properties
+
+And notably using the following properties:
+
+    org.apache.unomi.hazelcast.group.name=${env:UNOMI_HAZELCAST_GROUP_NAME:-cellar}
+    org.apache.unomi.hazelcast.group.password=${env:UNOMI_HAZELCAST_GROUP_PASSWORD:-pass}
+    # This list can be comma separated and use ranges such as 192.168.1.0-7,192.168.1.21
+    org.apache.unomi.hazelcast.tcp-ip.members=${env:UNOMI_HAZELCAST_TCPIP_MEMBERS:-127.0.0.1}
+    org.apache.unomi.hazelcast.tcp-ip.interface=${env:UNOMI_HAZELCAST_TCPIP_INTERFACE:-127.0.0.1}
+    org.apache.unomi.hazelcast.network.port=${env:UNOMI_HAZELCAST_NETWORK_PORT:-5701}
+
+If you need more fine-grained control over the Hazelcast configuration you could also edit the following file:
 
 [source]
 ----
 etc/hazelcast.xml
 ----
 
-All nodes on the same network, sharing the same cluster name will be part of the same cluster.
-
-For the actual ElasticSearch configuration however, this must be done using the following file:
-
-[source]
-----
-etc/org.apache.unomi.persistence.elasticsearch.cfg
-----
-
-Depending on the cluster size, you will want to adjust the following parameters to make sure your setup is optimal in
-terms of performance and safety.
-
-==== 2 nodes configuration
-
-One node dedicated to context server, 1 node for elasticsearch storage.
-
-Node A :
-
-[source]
-----
-numberOfReplicas=0
-monthlyIndex.numberOfReplicas=0
-----
-
-Node B :
-
-[source]
-----
-numberOfReplicas=0
-monthlyIndex.numberOfReplicas=0
-----
-
-==== 3 nodes configuration
-
-One node dedicated to context server, 2 nodes for elasticsearch storage with fault-tolerance
-
-Node A :
-
-[source]
-----
-numberOfReplicas=1
-monthlyIndex.numberOfReplicas=1
-----
-
-Node B :
-
-[source]
-----
-numberOfReplicas=1
-monthlyIndex.numberOfReplicas=1
-----
-
-Node C :
-
-[source]
-----
-numberOfReplicas=1
-monthlyIndex.numberOfReplicas=1
-----
+Note that it would be best to keep all configuration in the centralized custom configuration, for example by adding
+placeholders in the hazelcast.xml file if need be and adding the properties to the centralized configuration file.
