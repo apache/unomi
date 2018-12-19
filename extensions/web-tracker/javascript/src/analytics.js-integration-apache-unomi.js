@@ -170,9 +170,7 @@ Unomi.prototype.processReferrer = function() {
  * @param {Identify} identify
  */
 Unomi.prototype.onidentify = function(identify) {
-    console.log('onidentify');
-    console.log(identify);
-    // this.collectEvent(identify.json());
+    this.collectEvent(identify.json());
 };
 
 /**
