@@ -42,7 +42,6 @@
             </multicast>
             <tcp-ip enabled="true">
                 <members>${org.apache.unomi.hazelcast.tcp-ip.members}</members>
-                <interface>${org.apache.unomi.hazelcast.tcp-ip.interface}</interface>
             </tcp-ip>
             <aws enabled="false">
                 <access-key>my-access-key</access-key>
