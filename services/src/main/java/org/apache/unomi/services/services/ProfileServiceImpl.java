@@ -628,10 +628,16 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
         }
 
+        // merge System properties
+        for (Profile profile : profilesToMerge) {
+            masterProfileChanged = mergeSystemProperties(masterProfile.getSystemProperties(), profile.getSystemProperties()) || masterProfileChanged;
+        }
+
         // we now have to merge the profile's segments
         for (Profile profile : profilesToMerge) {
             if (profile.getSegments() != null && profile.getSegments().size() > 0) {
                 masterProfile.getSegments().addAll(profile.getSegments());
+                // TODO better segments diff calculation
                 masterProfileChanged = true;
             }
         }
@@ -1010,4 +1016,49 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return changed;
     }
 
+    private boolean mergeSystemProperties(Map<String, Object> targetProperties, Map<String, Object> toBeMergeProperties) {
+        boolean changed = false;
+        for (Map.Entry<String, Object> toBeMergeProperty : toBeMergeProperties.entrySet()) {
+            if (toBeMergeProperty.getValue() != null) {
+                if (!targetProperties.containsKey(toBeMergeProperty.getKey())) {
+                    targetProperties.put(toBeMergeProperty.getKey(), toBeMergeProperty.getValue());
+                    changed = true;
+                } else {
+                    Object targetProperty = targetProperties.get(toBeMergeProperty.getKey());
+
+                    if (targetProperty instanceof Map && toBeMergeProperty.getValue() instanceof Map) {
+                        // merge Maps like "goals", "campaigns"
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> mapToBeMergeProp = (Map<String, Object>) toBeMergeProperty.getValue();
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> mapTargetProp = (Map<String, Object>) targetProperty;
+
+                        for (Map.Entry<String, ?> mapToBeMergeEntry : mapToBeMergeProp.entrySet()) {
+                            if (!mapTargetProp.containsKey(mapToBeMergeEntry.getKey())) {
+                                mapTargetProp.put(mapToBeMergeEntry.getKey(), mapToBeMergeEntry.getValue());
+                                changed = true;
+                            }
+                        }
+                    } else if (targetProperty instanceof Collection && toBeMergeProperty.getValue() instanceof Collection) {
+                        // merge Collections like "lists"
+                        Collection collectionToBeMerge = (Collection) toBeMergeProperty.getValue();
+                        Collection collectionTarget = (Collection) targetProperty;
+
+                        for (Object itemToBeMerge : collectionToBeMerge) {
+                            if (!collectionTarget.contains(itemToBeMerge)) {
+                                try {
+                                    collectionTarget.add(itemToBeMerge);
+                                    changed = true;
+                                } catch (Exception e) {
+                                    // may be Collection type issue
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return changed;
+    }
 }
