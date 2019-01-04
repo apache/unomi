@@ -1016,38 +1016,38 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return changed;
     }
 
-    private boolean mergeSystemProperties(Map<String, Object> targetProperties, Map<String, Object> toBeMergeProperties) {
+    private boolean mergeSystemProperties(Map<String, Object> targetProperties, Map<String, Object> sourceProperties) {
         boolean changed = false;
-        for (Map.Entry<String, Object> toBeMergeProperty : toBeMergeProperties.entrySet()) {
-            if (toBeMergeProperty.getValue() != null) {
-                if (!targetProperties.containsKey(toBeMergeProperty.getKey())) {
-                    targetProperties.put(toBeMergeProperty.getKey(), toBeMergeProperty.getValue());
+        for (Map.Entry<String, Object> sourceProperty : sourceProperties.entrySet()) {
+            if (sourceProperty.getValue() != null) {
+                if (!targetProperties.containsKey(sourceProperty.getKey())) {
+                    targetProperties.put(sourceProperty.getKey(), sourceProperty.getValue());
                     changed = true;
                 } else {
-                    Object targetProperty = targetProperties.get(toBeMergeProperty.getKey());
+                    Object targetProperty = targetProperties.get(sourceProperty.getKey());
 
-                    if (targetProperty instanceof Map && toBeMergeProperty.getValue() instanceof Map) {
+                    if (targetProperty instanceof Map && sourceProperty.getValue() instanceof Map) {
                         // merge Maps like "goals", "campaigns"
                         @SuppressWarnings("unchecked")
-                        Map<String, Object> mapToBeMergeProp = (Map<String, Object>) toBeMergeProperty.getValue();
+                        Map<String, Object> mapSourceProp = (Map<String, Object>) sourceProperty.getValue();
                         @SuppressWarnings("unchecked")
                         Map<String, Object> mapTargetProp = (Map<String, Object>) targetProperty;
 
-                        for (Map.Entry<String, ?> mapToBeMergeEntry : mapToBeMergeProp.entrySet()) {
-                            if (!mapTargetProp.containsKey(mapToBeMergeEntry.getKey())) {
-                                mapTargetProp.put(mapToBeMergeEntry.getKey(), mapToBeMergeEntry.getValue());
+                        for (Map.Entry<String, ?> mapSourceEntry : mapSourceProp.entrySet()) {
+                            if (!mapTargetProp.containsKey(mapSourceEntry.getKey())) {
+                                mapTargetProp.put(mapSourceEntry.getKey(), mapSourceEntry.getValue());
                                 changed = true;
                             }
                         }
-                    } else if (targetProperty instanceof Collection && toBeMergeProperty.getValue() instanceof Collection) {
+                    } else if (targetProperty instanceof Collection && sourceProperty.getValue() instanceof Collection) {
                         // merge Collections like "lists"
-                        Collection collectionToBeMerge = (Collection) toBeMergeProperty.getValue();
-                        Collection collectionTarget = (Collection) targetProperty;
+                        Collection sourceCollection = (Collection) sourceProperty.getValue();
+                        Collection targetCollection = (Collection) targetProperty;
 
-                        for (Object itemToBeMerge : collectionToBeMerge) {
-                            if (!collectionTarget.contains(itemToBeMerge)) {
+                        for (Object sourceItem : sourceCollection) {
+                            if (!targetCollection.contains(sourceItem)) {
                                 try {
-                                    collectionTarget.add(itemToBeMerge);
+                                    targetCollection.add(sourceItem);
                                     changed = true;
                                 } catch (Exception e) {
                                     // may be Collection type issue
