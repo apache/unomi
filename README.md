@@ -15,6 +15,10 @@
   ~ limitations under the License.
   -->
 
+[![Build Status](https://builds.apache.org/job/unomi-master/badge/icon)](https://builds.apache.org/job/unomi-master/)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.apache.unomi/unomi-root/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.apache.unomi/unomi-root)
+
+
 Apache Unomi
 ============
 
