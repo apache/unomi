@@ -217,7 +217,7 @@ public class ProfileServiceEndPoint {
     @DELETE
     @Path("/{profileId}")
     public void delete(@PathParam("profileId") String profileId, @QueryParam("persona") @DefaultValue("false") boolean persona) {
-        profileService.delete(profileId, false);
+        profileService.delete(profileId, persona);
     }
 
     /**
@@ -335,11 +335,12 @@ public class ProfileServiceEndPoint {
      * Removes the persona identified by the specified identifier.
      *
      * @param personaId the identifier of the persona to delete
+     * @param persona   {@code true} if the specified identifier is supposed to refer to a persona, {@code false} if it is supposed to refer to a profile
      */
     @DELETE
     @Path("/personas/{personaId}")
-    public void deletePersona(@PathParam("personaId") String personaId) {
-        profileService.delete(personaId, true);
+    public void deletePersona(@PathParam("personaId") String personaId, @QueryParam("persona") @DefaultValue("true") boolean persona) {
+        profileService.delete(personaId, persona);
     }
 
     /**
