@@ -83,7 +83,7 @@ public class EventServiceImpl implements EventService {
                     Set<InetAddress> inetAddresses = new HashSet<>();
                     for (String ip : StringUtils.split(entry.getValue(), ',')) {
                         try {
-                            inetAddresses.add(InetAddress.getByName(ip));
+                            inetAddresses.add(InetAddress.getByName(ip.trim()));
                         } catch (UnknownHostException e) {
                             logger.error("Cannot resolve address",e);
                         }
