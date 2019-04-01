@@ -63,6 +63,8 @@ public class ScorePersonalizationStrategy implements PersonalizationStrategy {
                 for (String scoringPlan : scoringPlanList.split(" ")) {
                     if (scoreValues.get(scoringPlan) != null) {
                         score += scoreValues.get(scoringPlan);
+                    } else {
+                        score++;
                     }
                 }
             }
