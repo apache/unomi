@@ -101,9 +101,9 @@ public class MigrationTo121 implements Migration {
                         JSONObject hitSource = hit.getJSONObject("_source");
                         if (tagsInMetadata && hitSource.has("metadata")) {
                             JSONObject hitMetadata = hitSource.getJSONObject("metadata");
-                            updateTagsForHit(updatedHits, hit.getString("_id"), hitMetadata, tagsInMetadata, tagsOperation, removeNamespaceOnSystemTags);
+                            updateTagsForHit(updatedHits, hit.optString("_id"), hitMetadata, tagsInMetadata, tagsOperation, removeNamespaceOnSystemTags);
                         } else if (!tagsInMetadata) {
-                            updateTagsForHit(updatedHits, hit.getString("_id"), hitSource, tagsInMetadata, tagsOperation, removeNamespaceOnSystemTags);
+                            updateTagsForHit(updatedHits, hit.optString("_id"), hitSource, tagsInMetadata, tagsOperation, removeNamespaceOnSystemTags);
                         }
                     }
                 }
@@ -113,7 +113,7 @@ public class MigrationTo121 implements Migration {
                 }
 
                 if (hitsObject.getInt("total") > currentOffset) {
-                    migrateTagsInResult(hostAddress, type, currentOffset + 10, tagsInMetadata, tagsOperation, removeNamespaceOnSystemTags, responseJSON.getString("_scroll_id"));
+                    migrateTagsInResult(hostAddress, type, currentOffset + 10, tagsInMetadata, tagsOperation, removeNamespaceOnSystemTags, responseJSON.optString("_scroll_id"));
                 }
             }
         }
