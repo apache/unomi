@@ -44,7 +44,7 @@ mkdir target/staging/manual
 cp -R target/site/apidocs target/staging/unomi-api
 cp -Rf manual/target/generated-html/* target/staging/manual
 echo Committing documentation to Apache SVN...
-mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/incubator/unomi/website/manual -Dscmpublish.content=target/staging/manual -Dusername=$1 -Dpassword=$2
-mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/incubator/unomi/website/unomi-api -Dscmpublish.content=target/staging/unomi-api -Dusername=$1 -Dpassword=$2
-mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/incubator/unomi/website/rest-api-doc -Dscmpublish.content=target/staging/rest-api-doc -Dusername=$1 -Dpassword=$2
+mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/unomi/website/manual -Dscmpublish.content=target/staging/manual -Dusername=$1 -Dpassword=$2
+mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/unomi/website/unomi-api -Dscmpublish.content=target/staging/unomi-api -Dusername=$1 -Dpassword=$2
+mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/unomi/website/rest-api-doc -Dscmpublish.content=target/staging/rest-api-doc -Dusername=$1 -Dpassword=$2
 echo Documentation generation and upload completed.

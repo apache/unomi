@@ -32,4 +32,4 @@ The source code is available under the Apache License V2
 Documentation
 -------------
 You can find all the updated documentation, including building and deployment instructions, on the [Apache Unomi 
-web site](http://unomi.incubator.apache.org).
+web site](https://unomi.apache.org).

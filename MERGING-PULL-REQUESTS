@@ -41,7 +41,7 @@ Step-by-step guide
   lines that mention "refs" to it.
 
         [remote "github"]
-        url = https://github.com/apache/incubator-unomi.git
+        url = https://github.com/apache/unomi.git
         fetch = +refs/heads/*:refs/remotes/github/*
         fetch = +refs/pull/*/head:refs/remotes/github/pr/*
 
