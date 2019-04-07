@@ -60,16 +60,9 @@
             <version>20.0</version>
         </dependency>
         <dependency>
-            <groupId>org.elasticsearch</groupId>
-            <artifactId>elasticsearch</artifactId>
-            <version>${elasticsearch.version}</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
             <groupId>org.elasticsearch.client</groupId>
-            <artifactId>transport</artifactId>
-            <version>${elasticsearch.version}</version>
-            <scope>compile</scope>
+            <artifactId>elasticsearch-rest-high-level-client</artifactId>
+            <version>7.0.0-beta1</version>
         </dependency>
 
         <!-- The following are optional dependencies from the ElasticSearch that are made mandatory -->
