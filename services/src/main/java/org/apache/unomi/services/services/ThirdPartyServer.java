@@ -17,7 +17,8 @@
 
 package org.apache.unomi.services.services;
 
-import java.net.InetAddress;
+import inet.ipaddr.IPAddress;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -29,7 +30,7 @@ public class ThirdPartyServer {
 
     private String key;
 
-    private Set<InetAddress> ipAddresses;
+    private Set<IPAddress> ipAddresses;
 
     private Set<String> allowedEvents = new HashSet<>();
 
@@ -45,7 +46,7 @@ public class ThirdPartyServer {
         return key;
     }
 
-    public Set<InetAddress> getIpAddresses() {
+    public Set<IPAddress> getIpAddresses() {
         return ipAddresses;
     }
 
@@ -57,7 +58,7 @@ public class ThirdPartyServer {
         this.key = key;
     }
 
-    public void setIpAddresses(Set<InetAddress> ipAddresses) {
+    public void setIpAddresses(Set<IPAddress> ipAddresses) {
         this.ipAddresses = ipAddresses;
     }
 
