@@ -34,8 +34,8 @@
         worked on by the OASIS Context Server Technical Committee. It provides a high-performance user profile and
         event tracking server.
     </description>
-    <url>http://unomi.incubator.apache.org</url>
-    <version>1.4.0-incubating-SNAPSHOT</version>
+    <url>https://unomi.apache.org</url>
+    <version>1.4.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <licenses>
@@ -94,25 +94,25 @@
     <mailingLists>
         <mailingList>
             <name>unomi-dev</name>
-            <subscribe>dev-subscribe@unomi.incubator.apache.org</subscribe>
-            <unsubscribe>dev-unsubscribe@unomi.incubator.apache.org</unsubscribe>
-            <post>dev@unomi.incubator.apache.org</post>
-            <archive>http://mail-archives.apache.org/mod_mbox/incubator-unomi-dev/</archive>
+            <subscribe>dev-subscribe@unomi.apache.org</subscribe>
+            <unsubscribe>dev-unsubscribe@unomi.apache.org</unsubscribe>
+            <post>dev@unomi.apache.org</post>
+            <archive>http://mail-archives.apache.org/mod_mbox/unomi-dev/</archive>
         </mailingList>
         <mailingList>
             <name>unomi-commits</name>
-            <subscribe>commits-subscribe@unomi.incubator.apache.org</subscribe>
-            <unsubscribe>commits-unsubscribe@unomi.incubator.apache.org</unsubscribe>
-            <post>commits@unomi.incubator.apache.org</post>
-            <archive>http://mail-archives.apache.org/mod_mbox/incubator-unomi-commits/</archive>
+            <subscribe>commits-subscribe@unomi.apache.org</subscribe>
+            <unsubscribe>commits-unsubscribe@unomi.apache.org</unsubscribe>
+            <post>commits@unomi.apache.org</post>
+            <archive>http://mail-archives.apache.org/mod_mbox/unomi-commits/</archive>
         </mailingList>
     </mailingLists>
 
     <scm>
-        <connection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</connection>
-        <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</developerConnection>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/unomi.git</connection>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/unomi.git</developerConnection>
         <tag>HEAD</tag>
-        <url>https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</url>
+        <url>https://gitbox.apache.org/repos/asf/unomi.git</url>
     </scm>
 
     <developers>
