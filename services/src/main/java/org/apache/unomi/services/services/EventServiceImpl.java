@@ -123,16 +123,13 @@ public class EventServiceImpl implements EventService {
         if (key != null) {
             for (Map.Entry<String, ThirdPartyServer> entry : thirdPartyServers.entrySet()) {
                 ThirdPartyServer server = entry.getValue();
-                IPAddress ipAddress = new IPAddressString(ip).getAddress();
-                boolean matched = false;
-                for (IPAddress serverIpAddress : server.getIpAddresses()) {
-                    if (serverIpAddress.contains(ipAddress)) {
-                        matched = true;
-                        break;
+                if (server.getKey().equals(key)) {
+                    IPAddress ipAddress = new IPAddressString(ip).getAddress();
+                    for (IPAddress serverIpAddress : server.getIpAddresses()) {
+                        if (serverIpAddress.contains(ipAddress)) {
+                            return server.getId();
+                        }
                     }
-                }
-                if (server.getKey().equals(key) && matched) {
-                    return server.getId();
                 }
             }
             logger.debug("Could not authenticate any third party servers");
