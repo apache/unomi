@@ -30,10 +30,9 @@
     <dependencies>
         <dependency>
             <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-kar</artifactId>
-            <classifier>features</classifier>
+            <artifactId>unomi</artifactId>
             <version>${project.version}</version>
-            <type>xml</type>
+            <type>tar.gz</type>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -63,34 +62,6 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>org.apache.karaf.features</groupId>
-            <artifactId>standard</artifactId>
-            <classifier>features</classifier>
-            <type>xml</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.karaf.cellar</groupId>
-            <artifactId>apache-karaf-cellar</artifactId>
-            <classifier>features</classifier>
-            <type>xml</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.ops4j.pax.web</groupId>
-            <artifactId>pax-web-features</artifactId>
-            <classifier>features</classifier>
-            <type>xml</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.cxf.karaf</groupId>
-            <artifactId>apache-cxf</artifactId>
-            <classifier>features</classifier>
-            <type>xml</type>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>

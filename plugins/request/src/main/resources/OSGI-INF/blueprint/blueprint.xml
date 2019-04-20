@@ -67,6 +67,8 @@
         </service-properties>
         <bean class="org.apache.unomi.plugins.request.actions.SetRemoteHostInfoAction"
               init-method="postConstruct">
+            <property name="userAgentDetectorService" ref="userAgentDetectorServiceImpl"/>
+
             <property name="pathToGeoLocationDatabase" value="${request.ipDatabase.location}"/>
 
             <property name="defaultSessionCountryCode" value="${defaultSessionCountryCode}"/>
@@ -80,5 +82,9 @@
 
         </bean>
     </service>
+
+    <bean id="userAgentDetectorServiceImpl" class="org.apache.unomi.plugins.request.useragent.UserAgentDetectorServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+    </bean>
 
 </blueprint>
