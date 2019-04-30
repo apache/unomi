@@ -105,6 +105,31 @@ address, and if the secret-key is passed in the X-Unomi-Peer HTTP request header
 attempt to read an environment variable by that name, and if it's not found it will default to the value after the ":-"
 marker.
 
+It is now also possible to use IP address ranges instead of having to list all valid IP addresses for event sources. This
+is very useful when working in cluster deployments where servers may be added or removed dynamically. In order to support
+this Apache Unomi uses a library called https://seancfoley.github.io/IPAddress/#_Toc525135541[IPAddress] that supports
+IP ranges and subnets. Here is an example of how to setup a range:
+
+    org.apache.unomi.thirdparty.provider1.ipAddresses=${env:UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES:-192.168.1.1-100,::1}
+
+The above configuration will allow a range of IP addresses between 192.168.1.1 and 192.168.1.100 as well as the IPv6
+loopback.
+
+Here's another example using the subnet format:
+
+    org.apache.unomi.thirdparty.provider1.ipAddresses=${env:UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES:-1.2.0.0/16,::1}
+
+The above configuration will allow all addresses starting with 1.2 as well as the IPv6 loopback address.
+
+Wildcards may also be used:
+
+    org.apache.unomi.thirdparty.provider1.ipAddresses=${env:UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES:-1.2.*.*,::1}
+
+The above configuration is exactly the same as the previous one.
+
+More advanced ranges and subnets can be used as well, please refer to the https://seancfoley.github.io/IPAddress[IPAddress] library documentation for details on
+how to format them.
+
 If you want to add another provider you will need to add them manually in the following file (and make sure you maintain
 the changes when upgrading) :
 
