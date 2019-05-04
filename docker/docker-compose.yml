@@ -15,8 +15,7 @@ services:
       - "9200:9200"
 
   unomi:
-    # TODO: Replace with official image
-    image: mikeghen/unomi:1.3
+    build: .
     container_name: unomi
     environment:
       - ELASTICSEARCH_HOST=elasticsearch

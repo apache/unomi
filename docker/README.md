@@ -1,14 +1,13 @@
 # Unomi Docker Image
 
-![Docker Pulls](https://img.shields.io/docker/pulls/mikeghen/unomi.svg)
- [![](https://images.microbadger.com/badges/version/mikeghen/unomi:1.3.svg)](https://microbadger.com/images/mikeghen/unomi:1.3 "Get your own version badge on microbadger.com")
-# Running Unomi
+## Running Unomi
 Unomi requires ElasticSearch so it is recommended to run Unomi and ElasticSearch using docker-compose:
 ```
 docker-compose up
 ```
+You will need to wait while Docker builds the containers and they boot up (ES will take a minute or two). Once they are up you can check that the Unomi services are available by visiting http://localhost:8181/cxs in a web browser.
 
-# Environment variables
+## Environment variables
 
 When you start the `unomi` image, you can adjust the configuration of the Unomi instance by passing one or more environment variables on the `docker run` command line.
 
