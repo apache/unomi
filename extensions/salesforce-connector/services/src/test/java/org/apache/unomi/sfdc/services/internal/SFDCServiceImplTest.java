@@ -17,6 +17,7 @@
 
 package org.apache.unomi.sfdc.services.internal;
 
+import org.apache.felix.utils.properties.Properties;
 import org.apache.http.HttpException;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.sfdc.services.SFDCConfiguration;
@@ -30,7 +31,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 
@@ -50,7 +50,7 @@ public class SFDCServiceImplTest {
         sfdcServiceImpl = new SFDCServiceImpl();
         // we must now configure it.
         InputStream configPropertiesStream = SFDCServiceImplTest.class.getClassLoader().getResourceAsStream("org.apache.unomi.sfdc.cfg");
-        Properties properties = new Properties();
+        Properties properties = new Properties(true);
         properties.load(configPropertiesStream);
         sfdcConfiguration = new SFDCConfiguration();
         sfdcConfiguration.setSfdcLoginEndpoint(properties.getProperty("sfdc.login.endpoint"));
