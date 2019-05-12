@@ -16,34 +16,35 @@
  */
 package org.apache.unomi.graphql.internal;
 
+import com.google.common.base.Charsets;
 import graphql.schema.GraphQLSchema;
-import graphql.schema.StaticDataFetcher;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.osgi.framework.BundleContext;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 
-import static graphql.schema.idl.TypeRuntimeWiring.newTypeWiring;
-
 @Component(
         service={javax.servlet.http.HttpServlet.class,javax.servlet.Servlet.class},
-        property = {"alias=/graphql", "jmx.objectname=graphql.servlet:type=graphql"}
+        property = {"alias=/sdlgraphql", "jmx.objectname=graphql.servlet:type=graphql"}
 )
 public class CDPSDLServletImpl extends HttpServlet {
 
-    @Reference
     private BundleContext bundleContext;
+
+    @Activate
+    void activate(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
 
     RuntimeWiring buildRuntimeWiring() {
         return RuntimeWiring.newRuntimeWiring()
@@ -96,7 +97,7 @@ public class CDPSDLServletImpl extends HttpServlet {
 
     private Reader getSchemaReader(String resourceUrl) {
         try {
-            return new InputStreamReader(bundleContext.getBundle().getResource(resourceUrl).openConnection().getInputStream());
+            return new InputStreamReader(bundleContext.getBundle().getResource(resourceUrl).openConnection().getInputStream(), Charsets.UTF_8.name());
         } catch (IOException e) {
             e.printStackTrace();
         }
