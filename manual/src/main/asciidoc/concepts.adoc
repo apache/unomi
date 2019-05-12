@@ -123,3 +123,9 @@ It is interesting to note that there is not necessarily a one to one mapping bet
 === Sessions
 
 A session represents a time-bounded interaction between a user (via their associated profile) and a Unomi-enabled application. A session represents the sequence of actions the user performed during its duration. For this reason, events are associated with the session during which they occurred. In the context of web applications, sessions are usually linked to HTTP sessions.
+
+=== Request flow
+
+Here is an overview of how Unomi processes incoming requests to the `ContextServlet`.
+
+image::unomi-request.png[Unomi request overview]
