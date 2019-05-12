@@ -11,12 +11,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-==== Web Tracker
+=== Web Tracker
 
 This extension is providing the web tracker to start collecting visitors data on your website.
 The tracker is implemented as an integration of https://github.com/segmentio/analytics.js[analytics.js] for Unomi.
 
-===== Getting started
+==== Getting started
 
 Extension can be tested at : `http://localhost:8181/tracker/index.html`
 
@@ -38,12 +38,12 @@ In your page include unomiOptions and include code snippet from `snippet.min.js`
 Check analytics.js API https://segment.com/docs/sources/website/analytics.js/[here].
 All methods can be used on `unomiTracker` object, although not all event types are supported by Unomi intergation.
 
-===== How to contribute
+==== How to contribute
 
 The source code is in the folder javascript with a package.json, the file to update is `analytics.js-integration-apache-unomi.js` apply your modification in this file then use the command `yarn build` to compile a new JS file.
 Then you can use the test page to try your changes `http://localhost:8181/tracker/index.html`.
 
-===== Tracking page views
+==== Tracking page views
 
 By default the script will track page views, but maybe you want to take control over this mechanism of add page views
 to a single page application. In order to generate a page view programmatically from Javascript you can use code similar
@@ -110,7 +110,7 @@ in Apache Unomi on profiles to indicate growing interest over time for specific 
 will be accepted by Apache Unomi without needing to declare them previously anywhere (the same is true for tags and
 categories).
 
-===== Tracking form submissions
+==== Tracking form submissions
 
 Using the web tracker you can also track form submissions. In order to do this a few steps are required to get a form's
 submission to be tracked and then its form values to be sent as events to Apache Unomi. Finally setting up a rule to

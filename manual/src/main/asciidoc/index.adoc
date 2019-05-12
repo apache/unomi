@@ -32,15 +32,25 @@ include::5-min-quickstart.adoc[]
 
 include::concepts.adoc[]
 
-== Setup
+== First steps with Apache Unomi
 
 include::getting-started.adoc[]
 
-include::installing-tracker.adoc[]
+include::request-examples.adoc[]
+
+include::web-tracker.adoc[]
 
 include::configuration.adoc[]
 
 include::useful-unomi-urls.adoc[]
+
+== Consent management
+
+include::consent-api.adoc[]
+
+== Cluster setup
+
+include::clustering.adoc[]
 
 == Integration samples
 
@@ -59,14 +69,6 @@ include::connectors/connectors.adoc[]
 include::connectors/salesforce-connector.adoc[]
 
 include::connectors/mailchimp-connector.adoc[]
-
-== Cluster setup
-
-include::clustering.adoc[]
-
-== Consent API
-
-include::consent-api.adoc[]
 
 == Developers
 
