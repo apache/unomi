@@ -39,6 +39,8 @@ public class PropertyConditionEvaluatorTest {
     public static final String PAGE_PATH_VALUE = "/site/en/home/aboutus.html";
     public static final String PAGE_URL_VALUE = "http://localhost:8080/site/en/home/aboutus.html";
     public static final Date SESSION_LAST_EVENT_DATE = new Date();
+    public static final int THREAD_POOL_SIZE = 300;
+    public static final int WORKER_COUNT = 500000;
     private static PropertyConditionEvaluator propertyConditionEvaluator = new PropertyConditionEvaluator();
     private static Event mockEvent = generateMockEvent();
     private static Profile mockProfile = generateMockProfile();
@@ -77,8 +79,8 @@ public class PropertyConditionEvaluatorTest {
 
     @Test
     public void testCompareOGNLvsHardcodedPerformance() throws InterruptedException {
-        int workerCount = 5000000;
-        ExecutorService executorService = Executors.newFixedThreadPool(3000);
+        int workerCount = WORKER_COUNT;
+        ExecutorService executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 
         runHardcodedTest(workerCount, executorService);
         runOGNLTest(workerCount, executorService);
