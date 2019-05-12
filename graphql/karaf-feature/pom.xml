@@ -82,7 +82,7 @@
             <version>1.0.2</version>
         </dependency>
 
-
+<!--
         <dependency>
             <groupId>com.graphql-java-kickstart</groupId>
             <artifactId>graphql-java-servlet</artifactId>
@@ -98,6 +98,7 @@
                 </exclusion>
             </exclusions>
         </dependency>
+-->
         <dependency>
             <groupId>com.graphql-java</groupId>
             <artifactId>graphql-java</artifactId>
@@ -109,12 +110,13 @@
                 </exclusion>
             </exclusions>
         </dependency>
+<!--
         <dependency>
             <groupId>io.github.graphql-java</groupId>
             <artifactId>graphql-java-annotations</artifactId>
             <version>${graphql.java.annotations.version}</version>
         </dependency>
-
+-->
         <dependency>
             <groupId>org.apache.unomi</groupId>
                 <artifactId>cdp-graphql-api-impl</artifactId>
