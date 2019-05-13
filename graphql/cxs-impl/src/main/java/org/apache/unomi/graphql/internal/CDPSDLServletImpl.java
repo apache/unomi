@@ -24,6 +24,7 @@ import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.TypeResolutionEnvironment;
+import graphql.execution.instrumentation.tracing.TracingInstrumentation;
 import graphql.introspection.IntrospectionQuery;
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.*;
@@ -179,6 +180,7 @@ public class CDPSDLServletImpl extends HttpServlet {
         RuntimeWiring wiring = buildRuntimeWiring();
         GraphQLSchema graphQLSchema = schemaGenerator.makeExecutableSchema(typeRegistry, wiring);
         graphQL = GraphQL.newGraphQL(graphQLSchema)
+                .instrumentation(new TracingInstrumentation())
                 .build();
 
         objectMapper = new ObjectMapper();
