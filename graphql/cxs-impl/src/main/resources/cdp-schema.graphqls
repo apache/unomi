@@ -972,7 +972,3 @@ https://github.com/graphql-java/graphql-java-extended-scalars for example
 implementation 
 """
 scalar Time
-
-"""The `Upload` scalar type represents a file upload."""
-scalar Upload
-

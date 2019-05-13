@@ -34,6 +34,7 @@
         <graphql.java.servlet.version>7.4.1</graphql.java.servlet.version>
         <graphql.java.version>12.0</graphql.java.version>
         <graphql.java.annotations.version>7.0</graphql.java.annotations.version>
+        <graphql.java.extended.scalars.version>1.0</graphql.java.extended.scalars.version>
         <jackson.version>2.9.7</jackson.version>
     </properties>
 

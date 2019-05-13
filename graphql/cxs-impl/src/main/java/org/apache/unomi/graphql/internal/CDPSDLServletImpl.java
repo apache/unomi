@@ -16,8 +16,17 @@
  */
 package org.apache.unomi.graphql.internal;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Charsets;
-import graphql.schema.GraphQLSchema;
+import graphql.ExecutionInput;
+import graphql.ExecutionResult;
+import graphql.GraphQL;
+import graphql.TypeResolutionEnvironment;
+import graphql.introspection.IntrospectionQuery;
+import graphql.scalars.ExtendedScalars;
+import graphql.schema.*;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
@@ -29,9 +38,11 @@ import org.osgi.service.component.annotations.Component;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component(
         service={javax.servlet.http.HttpServlet.class,javax.servlet.Servlet.class},
@@ -40,6 +51,9 @@ import java.io.Reader;
 public class CDPSDLServletImpl extends HttpServlet {
 
     private BundleContext bundleContext;
+    private ObjectMapper objectMapper;
+    private GraphQL graphQL;
+
 
     @Activate
     void activate(BundleContext bundleContext) {
@@ -47,7 +61,77 @@ public class CDPSDLServletImpl extends HttpServlet {
     }
 
     RuntimeWiring buildRuntimeWiring() {
+
+        GraphQLScalarType emptyTypeWorkAroundScalarType = GraphQLScalarType.newScalar()
+                .name("EmptyTypeWorkAround")
+                .description("A marker type to get around the limitation of GraphQL that doesn't allow empty types. It should be always ignored.")
+                .coercing(new Coercing() {
+                    @Override
+                    public Object serialize(Object dataFetcherResult) throws CoercingSerializeException {
+                        return null;
+                    }
+
+                    @Override
+                    public Object parseValue(Object input) throws CoercingParseValueException {
+                        return input;
+                    }
+
+                    @Override
+                    public Object parseLiteral(Object input) throws CoercingParseLiteralException {
+                        return input;
+                    }
+                })
+                .build();
+
+        GraphQLScalarType geopointScalarType = GraphQLScalarType.newScalar()
+                .name("GeoPoint")
+                .description("A type that represents a geographical location")
+                .coercing(new Coercing() {
+                    @Override
+                    public Object serialize(Object dataFetcherResult) throws CoercingSerializeException {
+                        return null;
+                    }
+
+                    @Override
+                    public Object parseValue(Object input) throws CoercingParseValueException {
+                        return input;
+                    }
+
+                    @Override
+                    public Object parseLiteral(Object input) throws CoercingParseLiteralException {
+                        return input;
+                    }
+                })
+                .build();
+
         return RuntimeWiring.newRuntimeWiring()
+                .scalar(ExtendedScalars.DateTime)
+                .scalar(ExtendedScalars.Date)
+                .scalar(ExtendedScalars.Json)
+                .scalar(ExtendedScalars.Time)
+                .scalar(emptyTypeWorkAroundScalarType)
+                .scalar(geopointScalarType)
+                .type("CDP_EventInterface", typeWiring -> typeWiring
+                        .typeResolver(new TypeResolver() {
+                            @Override
+                            public GraphQLObjectType getType(TypeResolutionEnvironment env) {
+                                return null;
+                            }
+                        }))
+                .type("CDP_ProfileInterface", typeWiring -> typeWiring
+                        .typeResolver(new TypeResolver() {
+                            @Override
+                            public GraphQLObjectType getType(TypeResolutionEnvironment env) {
+                                return null;
+                            }
+                        }))
+                .type("CDP_PropertyInterface", typeWiring -> typeWiring
+                        .typeResolver(new TypeResolver() {
+                            @Override
+                            public GraphQLObjectType getType(TypeResolutionEnvironment env) {
+                                return null;
+                            }
+                        }))
                 // .scalar(CustomScalar)
                 // this uses builder function lambda syntax
                 /*
@@ -93,6 +177,60 @@ public class CDPSDLServletImpl extends HttpServlet {
 
         RuntimeWiring wiring = buildRuntimeWiring();
         GraphQLSchema graphQLSchema = schemaGenerator.makeExecutableSchema(typeRegistry, wiring);
+        graphQL = GraphQL.newGraphQL(graphQLSchema)
+                .build();
+
+        objectMapper = new ObjectMapper();
+        objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        String query = req.getParameter("query");
+        if ("/schema.json".equals(req.getPathInfo())) {
+            query = IntrospectionQuery.INTROSPECTION_QUERY;
+        }
+        String operationName = req.getParameter("operationName");
+        String variableStr = req.getParameter("variables");
+        Map<String, Object> variables = new HashMap<>();
+        if ((variableStr != null) && (variableStr.trim().length() > 0)) {
+            TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {
+            };
+            variables = objectMapper.readValue(variableStr, typeRef);
+        }
+
+        executeGraphQLRequest(resp, query, operationName, variables);
+    }
+
+    private void executeGraphQLRequest(HttpServletResponse resp, String query, String operationName, Map<String, Object> variables) throws IOException {
+        ExecutionInput executionInput = ExecutionInput.newExecutionInput()
+                .query(query)
+                .variables(variables)
+                .operationName(operationName)
+                .build();
+
+        ExecutionResult executionResult = graphQL.execute(executionInput);
+
+        Map<String, Object> toSpecificationResult = executionResult.toSpecification();
+
+        PrintWriter out = resp.getWriter();
+        objectMapper.writeValue(out, toSpecificationResult);
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        InputStream bodyStream = req.getInputStream();
+        TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {
+        };
+        Map<String, Object> body = objectMapper.readValue(bodyStream, typeRef);
+        String query = (String) body.get("query");
+        String operationName = (String) body.get("operationName");
+        Map<String, Object> variables = (Map<String, Object>) body.get("variables");
+        if (variables == null) {
+            variables = new HashMap<>();
+        }
+
+        executeGraphQLRequest(resp, query, operationName, variables);
     }
 
     private Reader getSchemaReader(String resourceUrl) {
