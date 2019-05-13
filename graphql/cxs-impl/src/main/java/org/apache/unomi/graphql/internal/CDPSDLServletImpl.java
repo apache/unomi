@@ -37,6 +37,7 @@ import org.osgi.service.component.annotations.Component;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -199,22 +200,8 @@ public class CDPSDLServletImpl extends HttpServlet {
             variables = objectMapper.readValue(variableStr, typeRef);
         }
 
+        setupCORSHeaders(req, resp);
         executeGraphQLRequest(resp, query, operationName, variables);
-    }
-
-    private void executeGraphQLRequest(HttpServletResponse resp, String query, String operationName, Map<String, Object> variables) throws IOException {
-        ExecutionInput executionInput = ExecutionInput.newExecutionInput()
-                .query(query)
-                .variables(variables)
-                .operationName(operationName)
-                .build();
-
-        ExecutionResult executionResult = graphQL.execute(executionInput);
-
-        Map<String, Object> toSpecificationResult = executionResult.toSpecification();
-
-        PrintWriter out = resp.getWriter();
-        objectMapper.writeValue(out, toSpecificationResult);
     }
 
     @Override
@@ -230,7 +217,31 @@ public class CDPSDLServletImpl extends HttpServlet {
             variables = new HashMap<>();
         }
 
+        setupCORSHeaders(req, resp);
         executeGraphQLRequest(resp, query, operationName, variables);
+    }
+
+    @Override
+    protected void doOptions(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        setupCORSHeaders(req, resp);
+        resp.flushBuffer();
+    }
+
+    private void executeGraphQLRequest(HttpServletResponse resp, String query, String operationName, Map<String, Object> variables) throws IOException {
+        if (query == null || query.trim().length() == 0) {
+            throw new RuntimeException("Query cannot be empty or null");
+        }
+        ExecutionInput executionInput = ExecutionInput.newExecutionInput()
+                .query(query)
+                .variables(variables)
+                .operationName(operationName)
+                .build();
+
+        ExecutionResult executionResult = graphQL.execute(executionInput);
+
+        Map<String, Object> toSpecificationResult = executionResult.toSpecification();
+        PrintWriter out = resp.getWriter();
+        objectMapper.writeValue(out, toSpecificationResult);
     }
 
     private Reader getSchemaReader(String resourceUrl) {
@@ -241,4 +252,29 @@ public class CDPSDLServletImpl extends HttpServlet {
         }
         return null;
     }
+
+    /**
+     * Setup CORS headers as soon as possible so that errors are not misconstrued on the client for CORS errors
+     *
+     * @param httpServletRequest
+     * @param response
+     * @throws IOException
+     */
+    public void setupCORSHeaders(HttpServletRequest httpServletRequest, ServletResponse response) throws IOException {
+        if (response instanceof HttpServletResponse) {
+            HttpServletResponse httpServletResponse = (HttpServletResponse) response;
+            if (httpServletRequest != null && httpServletRequest.getHeader("Origin") != null) {
+                httpServletResponse.setHeader("Access-Control-Allow-Origin", httpServletRequest.getHeader("Origin"));
+            } else {
+                httpServletResponse.setHeader("Access-Control-Allow-Origin", "*");
+            }
+            httpServletResponse.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, X-Apollo-Tracing, test");
+            httpServletResponse.setHeader("Access-Control-Allow-Credentials", "true");
+            httpServletResponse.setHeader("Access-Control-Allow-Methods", "OPTIONS, POST, GET");
+            // httpServletResponse.setHeader("Access-Control-Max-Age", "600");
+            // httpServletResponse.setHeader("Access-Control-Expose-Headers","Access-Control-Allow-Origin");
+            // httpServletResponse.flushBuffer();
+        }
+    }
+
 }
