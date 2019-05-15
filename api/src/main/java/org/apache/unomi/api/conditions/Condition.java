@@ -90,7 +90,8 @@ public class Condition implements Serializable {
     /**
      * Retrieves a Map of all parameter name - value pairs for this condition.
      *
-     * @return a Map of all parameter name - value pairs for this condition
+     * @return a Map of all parameter name - value pairs for this condition. These depend on the condition type being used in the condition.
+     *
      */
     public Map<String, Object> getParameterValues() {
         return parameterValues;
