@@ -41,13 +41,13 @@
     <licenses>
         <license>
             <name>The Apache Software License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
         </license>
     </licenses>
 
     <organization>
         <name>Apache Software Foundation</name>
-        <url>http://www.apache.org</url>
+        <url>https://www.apache.org</url>
     </organization>
 
     <issueManagement>
@@ -98,14 +98,14 @@
             <subscribe>dev-subscribe@unomi.apache.org</subscribe>
             <unsubscribe>dev-unsubscribe@unomi.apache.org</unsubscribe>
             <post>dev@unomi.apache.org</post>
-            <archive>http://mail-archives.apache.org/mod_mbox/unomi-dev/</archive>
+            <archive>https://mail-archives.apache.org/mod_mbox/unomi-dev/</archive>
         </mailingList>
         <mailingList>
             <name>unomi-commits</name>
             <subscribe>commits-subscribe@unomi.apache.org</subscribe>
             <unsubscribe>commits-unsubscribe@unomi.apache.org</unsubscribe>
             <post>commits@unomi.apache.org</post>
-            <archive>http://mail-archives.apache.org/mod_mbox/unomi-commits/</archive>
+            <archive>https://mail-archives.apache.org/mod_mbox/unomi-commits/</archive>
         </mailingList>
     </mailingLists>
 
@@ -280,13 +280,13 @@
         <repository>
             <id>smx.m2</id>
             <name>Apache ServiceMix M2</name>
-            <url>http://svn.apache.org/repos/asf/servicemix/m2-repo/</url>
+            <url>https://svn.apache.org/repos/asf/servicemix/m2-repo/</url>
         </repository>
         <!-- Apache snapshots -->
         <repository>
             <id>apache-snapshots</id>
             <name>Apache Snapshots Repository</name>
-            <url>http://repository.apache.org/content/groups/snapshots-group</url>
+            <url>https://repository.apache.org/content/groups/snapshots-group</url>
             <releases>
                 <enabled>false</enabled>
             </releases>
