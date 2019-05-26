@@ -32,9 +32,13 @@ import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.services.EventService;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -56,10 +60,16 @@ public class CDPSDLServletImpl extends HttpServlet {
     private ObjectMapper objectMapper;
     private GraphQL graphQL;
 
+    private EventService eventService;
 
     @Activate
     void activate(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
+    }
+
+    @Reference
+    public void setEventService(EventService eventService) {
+        this.eventService = eventService;
     }
 
     RuntimeWiring buildRuntimeWiring() {
@@ -134,7 +144,13 @@ public class CDPSDLServletImpl extends HttpServlet {
                                 return null;
                             }
                         }))
-                // .scalar(CustomScalar)
+                .type("CDP_Query", typeWiring -> typeWiring.dataFetcher("findEvents", new DataFetcher() {
+                    @Override
+                    public Object get(DataFetchingEnvironment dataFetchingEnvironment) throws Exception {
+                        // PartialList<Event> events = eventService.searchEvents(condition, offset, size);
+                        return null;
+                    }
+                }))
                 // this uses builder function lambda syntax
                 /*
                 .type("QueryType", typeWiring -> typeWiring
