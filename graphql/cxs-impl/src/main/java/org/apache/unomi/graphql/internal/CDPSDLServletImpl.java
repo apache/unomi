@@ -32,8 +32,6 @@ import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.services.EventService;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
@@ -280,6 +278,7 @@ public class CDPSDLServletImpl extends HttpServlet {
      */
     public void setupCORSHeaders(HttpServletRequest httpServletRequest, ServletResponse response) throws IOException {
         if (response instanceof HttpServletResponse) {
+            // todo this should be configurable
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
             if (httpServletRequest != null && httpServletRequest.getHeader("Origin") != null) {
                 httpServletResponse.setHeader("Access-Control-Allow-Origin", httpServletRequest.getHeader("Origin"));
