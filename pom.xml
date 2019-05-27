@@ -125,10 +125,10 @@
             <roles>
                 <role>champion</role>
                 <role>committer</role>
-                <role>PPMC</role>
+                <role>PMC</role>
             </roles>
             <organization>Talend</organization>
-            <organizationUrl>http://www.talend.com</organizationUrl>
+            <organizationUrl>https://www.talend.com</organizationUrl>
         </developer>
         <developer>
             <id>shuber</id>
@@ -137,10 +137,10 @@
             <timezone>+1</timezone>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
+                <role>PMC Chair</role>
             </roles>
             <organization>Jahia</organization>
-            <organizationUrl>http://www.jahia.com</organizationUrl>
+            <organizationUrl>https://www.jahia.com</organizationUrl>
         </developer>
         <developer>
             <id>bdelacretaz</id>
@@ -148,8 +148,8 @@
             <email>bdelacretaz@apache.org</email>
             <timezone>+1</timezone>
             <roles>
-                <role>Mentor</role>
-                <role>PPMC</role>
+                <role>Retired(Mentor)</role>
+                <role>Retired(PPMC)</role>
             </roles>
             <organization>Adobe</organization>
         </developer>
@@ -158,8 +158,8 @@
             <name>Roman Shaposhnik</name>
             <email>rvs@apache.org</email>
             <roles>
-                <role>Mentor</role>
-                <role>PPMC</role>
+                <role>Retired(Mentor)</role>
+                <role>Retired(PPMC)</role>
             </roles>
             <organization>Pivotal</organization>
         </developer>
@@ -168,8 +168,8 @@
             <name>Chris Mattmann</name>
             <email>mattmann@apache.org</email>
             <roles>
-                <role>Mentor</role>
-                <role>PPMC</role>
+                <role>Retired(Mentor)</role>
+                <role>Retired(PPMC)</role>
             </roles>
             <organization>NASA JPL</organization>
         </developer>
@@ -179,42 +179,40 @@
             <email>draier@apache.org</email>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
+                <role>PMC</role>
             </roles>
         </developer>
         <developer>
             <name>Sergiy Shyrkov</name>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
             </roles>
         </developer>
         <developer>
             <name>Kevan Jahanshahi</name>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
+                <role>PMC</role>
             </roles>
         </developer>
         <developer>
             <name>Cédric Mailleux</name>
             <roles>
-                <role>committer</role>
-                <role>PPMC</role>
+                <role>Retired(committer)</role>
+                <role>Retired(PPMC)</role>
             </roles>
         </developer>
         <developer>
             <name>Régis Mora</name>
             <roles>
-                <role>committer</role>
-                <role>PPMC</role>
+                <role>Retired(committer)</role>
+                <role>Retired(PPMC)</role>
             </roles>
         </developer>
         <developer>
             <name>Quentin Lamerand</name>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
             </roles>
         </developer>
         <developer>
@@ -224,16 +222,15 @@
             <timezone>+1</timezone>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
             </roles>
-            <organization>Jahia</organization>
-            <organizationUrl>http://www.jahia.com</organizationUrl>
+            <organization>RedHat</organization>
+            <organizationUrl>https://www.redhat.com</organizationUrl>
         </developer>
         <developer>
             <name>David Griffon</name>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
+                <role>PMC</role>
             </roles>
         </developer>
         <developer>
@@ -261,7 +258,7 @@
             <timezone>+4</timezone>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
+                <role>PMC</role>
             </roles>
             <organization>Yupiik</organization>
             <organizationUrl>https://www.yupiik.com</organizationUrl>
