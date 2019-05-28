@@ -1,0 +1,74 @@
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# This file contains extensions to the CDP specification that are specific to Apache Unomi
+
+type Unomi_PageView {
+    url : String
+    path : String
+    referrer : String
+}
+
+type Unomi_PageViewEvent implements CDP_EventInterface {
+    id: ID!
+    cdp_source: CDP_Source
+    cdp_client: CDP_Client
+    cdp_profileID: CDP_ProfileID!
+    cdp_profile: CDP_Profile!
+    cdp_object: CDP_Object!
+    cdp_location: GeoPoint
+    cdp_timestamp: DateTime
+    cdp_topics: [CDP_Topic]
+
+    pageView : Unomi_PageView
+}
+
+type Unomi_SessionCreated {
+    creationTime : DateTime
+    duration : Int
+}
+
+type Unomi_SessionCreatedEvent implements CDP_EventInterface {
+    id: ID!
+    cdp_source: CDP_Source
+    cdp_client: CDP_Client
+    cdp_profileID: CDP_ProfileID!
+    cdp_profile: CDP_Profile!
+    cdp_object: CDP_Object!
+    cdp_location: GeoPoint
+    cdp_timestamp: DateTime
+    cdp_topics: [CDP_Topic]
+
+    sessionCreated : Unomi_SessionCreated
+}
+
+type Unomi_PropertyPair {
+    name : String
+    value : JSON
+}
+
+type Unomi_UnknownEvent implements CDP_EventInterface {
+
+    id: ID!
+    cdp_source: CDP_Source
+    cdp_client: CDP_Client
+    cdp_profileID: CDP_ProfileID!
+    cdp_profile: CDP_Profile!
+    cdp_object: CDP_Object!
+    cdp_location: GeoPoint
+    cdp_timestamp: DateTime
+    cdp_topics: [CDP_Topic]
+
+    unknownProperties : [Unomi_PropertyPair]
+}

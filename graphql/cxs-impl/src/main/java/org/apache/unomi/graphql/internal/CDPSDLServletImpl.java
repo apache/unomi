@@ -148,7 +148,15 @@ public class CDPSDLServletImpl extends HttpServlet {
                         .typeResolver(new TypeResolver() {
                             @Override
                             public GraphQLObjectType getType(TypeResolutionEnvironment env) {
-                                return env.getSchema().getObjectType("CDP_ProfileUpdateEvent");
+                                Map<String,Object> object = env.getObject();
+                                String unomiEventType = (String) object.get("__unomiEventType");
+                                if ("view".equals(unomiEventType)) {
+                                    return env.getSchema().getObjectType("Unomi_PageViewEvent");
+                                } else if ("sessionCreated".equals(unomiEventType)) {
+                                    return env.getSchema().getObjectType("Unomi_SessionCreatedEvent");
+                                } else {
+                                    return env.getSchema().getObjectType("Unomi_UnknownEvent");
+                                }
                             }
                         }))
                 .type("CDP_ProfileInterface", typeWiring -> typeWiring
@@ -282,14 +290,16 @@ public class CDPSDLServletImpl extends HttpServlet {
         SchemaParser schemaParser = new SchemaParser();
         SchemaGenerator schemaGenerator = new SchemaGenerator();
 
-        Reader schemaReader = getSchemaReader("cdp-schema.graphqls");
+        Reader cdpSchemaReader = getSchemaReader("cdp-schema.graphqls");
+        Reader unomiSchemaReader = getSchemaReader("unomi-schema.graphqls");
         //File schemaFile2 = loadSchema("cdp-schema.graphqls");
         //File schemaFile3 = loadSchema("cdp-schema.graphqls");
 
         TypeDefinitionRegistry typeRegistry = new TypeDefinitionRegistry();
 
         // each registry is merged into the main registry
-        typeRegistry.merge(schemaParser.parse(schemaReader));
+        typeRegistry.merge(schemaParser.parse(cdpSchemaReader));
+        typeRegistry.merge(schemaParser.parse(unomiSchemaReader));
         //typeRegistry.merge(schemaParser.parse(schemaFile2));
         //typeRegistry.merge(schemaParser.parse(schemaFile3));
 

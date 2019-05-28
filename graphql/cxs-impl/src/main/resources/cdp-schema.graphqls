@@ -972,9 +972,3 @@ https://github.com/graphql-java/graphql-java-extended-scalars for example
 implementation 
 """
 scalar Time
-
-schema {
-  query : Query
-  mutation : Mutation
-  subscription : Subscription
-}
