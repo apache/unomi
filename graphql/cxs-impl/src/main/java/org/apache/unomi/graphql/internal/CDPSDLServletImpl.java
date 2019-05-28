@@ -32,7 +32,15 @@ import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.query.Query;
+import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.SegmentService;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -45,7 +53,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component(
@@ -59,6 +69,9 @@ public class CDPSDLServletImpl extends HttpServlet {
     private GraphQL graphQL;
 
     private EventService eventService;
+    private DefinitionsService definitionsService;
+    private SegmentService segmentService;
+
 
     @Activate
     void activate(BundleContext bundleContext) {
@@ -68,6 +81,16 @@ public class CDPSDLServletImpl extends HttpServlet {
     @Reference
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
+    }
+
+    @Reference
+    public void setDefinitionService(DefinitionsService definitionService) {
+        this.definitionsService = definitionService;
+    }
+
+    @Reference
+    public void setSegmentService(SegmentService segmentService) {
+        this.segmentService = segmentService;
     }
 
     RuntimeWiring buildRuntimeWiring() {
@@ -125,7 +148,7 @@ public class CDPSDLServletImpl extends HttpServlet {
                         .typeResolver(new TypeResolver() {
                             @Override
                             public GraphQLObjectType getType(TypeResolutionEnvironment env) {
-                                return null;
+                                return env.getSchema().getObjectType("CDP_ProfileUpdateEvent");
                             }
                         }))
                 .type("CDP_ProfileInterface", typeWiring -> typeWiring
@@ -142,35 +165,114 @@ public class CDPSDLServletImpl extends HttpServlet {
                                 return null;
                             }
                         }))
-                .type("CDP_Query", typeWiring -> typeWiring.dataFetcher("findEvents", new DataFetcher() {
-                    @Override
-                    public Object get(DataFetchingEnvironment dataFetchingEnvironment) throws Exception {
-                        // PartialList<Event> events = eventService.searchEvents(condition, offset, size);
-                        return null;
+                .type("Query", typeWiring -> typeWiring.dataFetcher("cdp", dataFetchingEnvironment -> "CDP"))
+                .type("CDP_Query", typeWiring -> typeWiring
+                        .dataFetcher("findEvents", dataFetchingEnvironment -> {
+                    Map<String,Object> arguments = dataFetchingEnvironment.getArguments();
+                    Integer size = (Integer) arguments.get("first");
+                    if (size == null) {
+                        size = 10;
                     }
+                    String after = (String) arguments.get("after");
+                    if (after == null) {
+                        after = "0";
+                    }
+                    int offset = Integer.parseInt(after);
+                    Object filter = arguments.get("filter");
+                    Condition condition = eventFilter2Condition(filter);
+                    PartialList<Event> events = eventService.searchEvents(condition, offset, size);
+                    Map<String,Object> eventConnection = new HashMap<>();
+                    List<Map<String,Object>> eventEdges = new ArrayList<>();
+                    for (Event event : events.getList()) {
+                        Map<String,Object> eventEdge = new HashMap<>();
+                        Map<String,Object> eventNode = new HashMap<>();
+                        eventNode.put("id", event.getItemId());
+                        eventNode.put("__unomiEventType", event.getEventType());
+                        eventNode.put("cdp_profileID", getCDPProfileID(event.getProfileId()));
+                        eventEdge.put("node", eventNode);
+                        eventEdge.put("cursor", event.getItemId());
+                        eventEdges.add(eventEdge);
+                    }
+                    eventConnection.put("edges", eventEdges);
+                    Map<String,Object> pageInfo = new HashMap<>();
+                    pageInfo.put("hasPreviousPage", false);
+                    pageInfo.put("hasNextPage", events.getTotalSize() > events.getList().size());
+                    eventConnection.put("pageInfo", pageInfo);
+                    return eventConnection;
+                })
+                .dataFetcher("findSegments", dataFetchingEnvironment -> {
+                    Map<String,Object> arguments = dataFetchingEnvironment.getArguments();
+                    Integer size = (Integer) arguments.get("first");
+                    if (size == null) {
+                        size = 10;
+                    }
+                    String after = (String) arguments.get("after");
+                    if (after == null) {
+                        after = "0";
+                    }
+                    int offset = Integer.parseInt(after);
+                    Object filter = arguments.get("filter");
+                    Condition condition = eventFilter2Condition(filter);
+
+                    Map<String,Object> segmentConnection = new HashMap<>();
+                    Query query = new Query();
+                    query.setCondition(condition);
+                    query.setLimit(size);
+                    query.setOffset(offset);
+                    // query.setSortby(sortBy);
+                    PartialList<Metadata> segmentMetadatas = segmentService.getSegmentMetadatas(query);
+                    List<Map<String,Object>> segmentEdges = new ArrayList<>();
+                    for (Metadata segmentMetadata : segmentMetadatas.getList()) {
+                        Map<String,Object> segment = new HashMap<>();
+                        segment.put("id", segmentMetadata.getId());
+                        segment.put("name", segmentMetadata.getName());
+                        Map<String,Object> segmentView = new HashMap<>();
+                        segmentView.put("name", segmentMetadata.getScope());
+                        segment.put("view", segmentView);
+                        Segment unomiSegment = segmentService.getSegmentDefinition(segmentMetadata.getId());
+                        Condition segmentCondition = unomiSegment.getCondition();
+                        segment.put("profiles", segmentConditionToProfileFilter(segmentCondition));
+                        Map<String,Object> segmentEdge = new HashMap<>();
+                        segmentEdge.put("node", segment);
+                        segmentEdge.put("cursor", segmentMetadata.getId());
+                        segmentEdges.add(segmentEdge);
+                    }
+                    segmentConnection.put("edges", segmentEdges);
+                    Map<String,Object> pageInfo = new HashMap<>();
+                    pageInfo.put("hasPreviousPage", false);
+                    pageInfo.put("hasNextPage", segmentMetadatas.getTotalSize() > segmentMetadatas.getList().size());
+                    segmentConnection.put("pageInfo", pageInfo);
+                    return segmentConnection;
                 }))
-                // this uses builder function lambda syntax
-                /*
-                .type("QueryType", typeWiring -> typeWiring
-                        .dataFetcher("hero", new StaticDataFetcher(StarWarsData.getArtoo()))
-                        .dataFetcher("human", StarWarsData.getHumanDataFetcher())
-                        .dataFetcher("droid", StarWarsData.getDroidDataFetcher())
-                )
-                .type("Human", typeWiring -> typeWiring
-                        .dataFetcher("friends", StarWarsData.getFriendsDataFetcher())
-                )
-                // you can use builder syntax if you don't like the lambda syntax
-                .type("Droid", typeWiring -> typeWiring
-                        .dataFetcher("friends", StarWarsData.getFriendsDataFetcher())
-                )
-                // or full builder syntax if that takes your fancy
-                .type(
-                        newTypeWiring("Character")
-                                .typeResolver(StarWarsData.getCharacterTypeResolver())
-                                .build()
-                )
-                */
                 .build();
+    }
+
+    private Map<String, Object> segmentConditionToProfileFilter(Condition segmentCondition) {
+        Map<String,Object> profileFilter = new HashMap<>();
+        // profileFilter.put("profileIDs", new ArrayList<String>());
+        return profileFilter;
+    }
+
+    private Map<String,Object> getCDPProfileID(String profileId) {
+        Map<String,Object> cdpProfileID = new HashMap<>();
+        Map<String,Object> client = getCDPClient(profileId);
+        cdpProfileID.put("client", client);
+        cdpProfileID.put("id", profileId);
+        cdpProfileID.put("uri", "cdp_profile:" + client.get("id") + "/" + profileId);
+        return cdpProfileID;
+    }
+
+    private Map<String,Object> getCDPClient(String profileId) {
+        Map<String,Object> cdpClient = new HashMap<>();
+        cdpClient.put("id", "unomi");
+        cdpClient.put("title", "Default Unomi client");
+        return cdpClient;
+    }
+
+    private Condition eventFilter2Condition(Object filter) {
+        // todo implement transformation to proper event conditions
+        Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
+        return matchAllCondition;
     }
 
     @Override
