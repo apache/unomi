@@ -25,7 +25,10 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
@@ -255,7 +258,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                loadPropertyTypesFromPersistence();
+                try {
+                    loadPropertyTypesFromPersistence();
+                } catch (Throwable t) {
+                    logger.error("Error loading property types from persistence back-end", t);
+                }
             }
         };
         schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 10000, propertiesRefreshInterval, TimeUnit.MILLISECONDS);
@@ -284,47 +291,51 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             TimerTask task = new TimerTask() {
                 @Override
                 public void run() {
-                    long t = System.currentTimeMillis();
-                    logger.debug("Profile purge: Purge triggered");
+                    try {
+                        long purgeStartTime = System.currentTimeMillis();
+                        logger.debug("Profile purge: Purge triggered");
 
-                    if (purgeProfileQuery == null) {
-                        ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
-                        ConditionType booleanCondition = definitionsService.getConditionType("booleanCondition");
-                        if (profilePropertyConditionType == null || booleanCondition == null) {
-                            // definition service not yet fully instantiate
-                            return;
+                        if (purgeProfileQuery == null) {
+                            ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
+                            ConditionType booleanCondition = definitionsService.getConditionType("booleanCondition");
+                            if (profilePropertyConditionType == null || booleanCondition == null) {
+                                // definition service not yet fully instantiate
+                                return;
+                            }
+
+                            purgeProfileQuery = new Condition(booleanCondition);
+                            purgeProfileQuery.setParameter("operator", "or");
+                            List<Condition> subConditions = new ArrayList<>();
+
+                            if (purgeProfileInactiveTime > 0) {
+                                Condition inactiveTimeCondition = new Condition(profilePropertyConditionType);
+                                inactiveTimeCondition.setParameter("propertyName", "lastVisit");
+                                inactiveTimeCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+                                inactiveTimeCondition.setParameter("propertyValueDateExpr", "now-" + purgeProfileInactiveTime + "d");
+                                subConditions.add(inactiveTimeCondition);
+                            }
+
+                            if (purgeProfileExistTime > 0) {
+                                Condition existTimeCondition = new Condition(profilePropertyConditionType);
+                                existTimeCondition.setParameter("propertyName", "firstVisit");
+                                existTimeCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+                                existTimeCondition.setParameter("propertyValueDateExpr", "now-" + purgeProfileExistTime + "d");
+                                subConditions.add(existTimeCondition);
+                            }
+
+                            purgeProfileQuery.setParameter("subConditions", subConditions);
                         }
 
-                        purgeProfileQuery = new Condition(booleanCondition);
-                        purgeProfileQuery.setParameter("operator", "or");
-                        List<Condition> subConditions = new ArrayList<>();
+                        persistenceService.removeByQuery(purgeProfileQuery, Profile.class);
 
-                        if (purgeProfileInactiveTime > 0) {
-                            Condition inactiveTimeCondition = new Condition(profilePropertyConditionType);
-                            inactiveTimeCondition.setParameter("propertyName", "lastVisit");
-                            inactiveTimeCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
-                            inactiveTimeCondition.setParameter("propertyValueDateExpr", "now-" + purgeProfileInactiveTime + "d");
-                            subConditions.add(inactiveTimeCondition);
+                        if (purgeSessionsAndEventsTime > 0) {
+                            persistenceService.purge(getMonth(-purgeSessionsAndEventsTime).getTime());
                         }
 
-                        if (purgeProfileExistTime > 0) {
-                            Condition existTimeCondition = new Condition(profilePropertyConditionType);
-                            existTimeCondition.setParameter("propertyName", "firstVisit");
-                            existTimeCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
-                            existTimeCondition.setParameter("propertyValueDateExpr", "now-" + purgeProfileExistTime + "d");
-                            subConditions.add(existTimeCondition);
-                        }
-
-                        purgeProfileQuery.setParameter("subConditions", subConditions);
+                        logger.info("Profile purge: purge executed in {} ms", System.currentTimeMillis() - purgeStartTime);
+                    } catch (Throwable t) {
+                        logger.error("Error while purging profiles", t);
                     }
-
-                    persistenceService.removeByQuery(purgeProfileQuery, Profile.class);
-
-                    if (purgeSessionsAndEventsTime > 0) {
-                        persistenceService.purge(getMonth(-purgeSessionsAndEventsTime).getTime());
-                    }
-
-                    logger.info("Profile purge: purge executed in {} ms", System.currentTimeMillis() - t);
                 }
             };
             schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 1, purgeProfileInterval, TimeUnit.DAYS);

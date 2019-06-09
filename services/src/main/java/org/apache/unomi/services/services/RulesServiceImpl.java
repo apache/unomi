@@ -398,7 +398,11 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                allRules = getAllRules();
+                try {
+                    allRules = getAllRules();
+                } catch (Throwable t) {
+                    logger.error("Error loading rules from persistence back-end", t);
+                }
             }
         };
         schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0,rulesRefreshInterval, TimeUnit.MILLISECONDS);
@@ -406,7 +410,11 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         TimerTask statisticsTask = new TimerTask() {
             @Override
             public void run() {
-                syncRuleStatistics();
+                try {
+                    syncRuleStatistics();
+                } catch (Throwable t) {
+                    logger.error("Error synching rule statistics between memory and persistence back-end", t);
+                }
             }
         };
         schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(statisticsTask, 0, rulesStatisticsRefreshInterval, TimeUnit.MILLISECONDS);

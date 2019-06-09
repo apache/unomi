@@ -18,14 +18,20 @@
 package org.apache.unomi.services.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.*;
-import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.osgi.framework.Bundle;
@@ -974,16 +980,20 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                for (Metadata metadata : rulesService.getRuleMetadatas()) {
-                    Rule rule = rulesService.getRule(metadata.getId());
-                    for (Action action : rule.getActions()) {
-                        if (action.getActionTypeId().equals("setEventOccurenceCountAction")) {
-                            Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
-                            if (pastEventCondition.containsParameter("numberOfDays")) {
-                                updateExistingProfilesForPastEventCondition(rule.getCondition(), pastEventCondition);
+                try {
+                    for (Metadata metadata : rulesService.getRuleMetadatas()) {
+                        Rule rule = rulesService.getRule(metadata.getId());
+                        for (Action action : rule.getActions()) {
+                            if (action.getActionTypeId().equals("setEventOccurenceCountAction")) {
+                                Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
+                                if (pastEventCondition.containsParameter("numberOfDays")) {
+                                    updateExistingProfilesForPastEventCondition(rule.getCondition(), pastEventCondition);
+                                }
                             }
                         }
                     }
+                } catch (Throwable t) {
+                    logger.error("Error while updating profiles for past event conditions", t);
                 }
             }
         };
@@ -992,8 +1002,12 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         task = new TimerTask() {
             @Override
             public void run() {
-                allSegments = getAllSegmentDefinitions();
-                allScoring = getAllScoringDefinitions();
+                try {
+                    allSegments = getAllSegmentDefinitions();
+                    allScoring = getAllScoringDefinitions();
+                } catch (Throwable t) {
+                    logger.error("Error while loading segments and scoring definitions from persistence back-end", t);
+                }
             }
         };
         schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 0, segmentRefreshInterval, TimeUnit.MILLISECONDS);
