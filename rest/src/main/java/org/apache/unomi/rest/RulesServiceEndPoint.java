@@ -33,6 +33,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
 
 /**
  * A JAX-RS endpoint to manage {@link Rule}s.
@@ -66,8 +67,8 @@ public class RulesServiceEndPoint {
      */
     @GET
     @Path("/")
-    public Set<Metadata> getRuleMetadatas() {
-        return rulesService.getRuleMetadatas();
+    public List<Rule> getRuleMetadatas() {
+        return rulesService.getAllRules();
     }
 
     /**

@@ -249,7 +249,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         allRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
     }
 
-    private List<Rule> getAllRules() {
+    public List<Rule> getAllRules() {
         List<Rule> allItems = persistenceService.getAllItems(Rule.class, 0, -1, "priority").getList();
         for (Rule rule : allItems) {
             ParserHelper.resolveConditionType(definitionsService, rule.getCondition());

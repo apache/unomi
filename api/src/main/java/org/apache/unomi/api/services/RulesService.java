@@ -27,11 +27,19 @@ import org.apache.unomi.api.rules.RuleStatistics;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
 
 /**
  * A service to access and operate on {@link Rule}s.
  */
 public interface RulesService {
+
+    /**
+     * Retrieves all known action types.
+     *
+     * @return all known action types
+     */
+    List<Rule> getAllRules();
 
     /**
      * Retrieves the metadata for all known rules.
