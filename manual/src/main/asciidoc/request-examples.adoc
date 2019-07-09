@@ -119,10 +119,11 @@ respond quickly and minimize network traffic. Here is an example of using this s
 
 [source]
 ----
-curl -X POST http://localhost:8181/context.json?sessionId=1234 \
+curl -X POST http://localhost:8181/eventcollector \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
+    "sessionId" : "1234",
     "events":[
         {
             "eventType":"view",

@@ -37,6 +37,7 @@ import java.util.List;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/")
 public class PrivacyServiceEndPoint {
 
     private PrivacyService privacyService;
