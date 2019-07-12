@@ -997,6 +997,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private boolean merge(Map<String, Object> target, Map<String, Object> object) {
         boolean changed = false;
         for (Map.Entry<String, Object> newEntry : object.entrySet()) {
+
+            String packageName = newEntry.getValue().getClass().getPackage().getName();
+
             if (newEntry.getValue() != null) {
                 if (newEntry.getValue() instanceof Collection) {
                     target.put(newEntry.getKey(), newEntry.getValue());
@@ -1009,7 +1012,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                     } else {
                         changed |= merge(currentMap, (Map) newEntry.getValue());
                     }
-                } else if (newEntry.getValue().getClass().getPackage().getName().equals("java.lang")) {
+                } else if (StringUtils.equals(packageName, "java.lang")
+                        || StringUtils.equals(packageName, "org.apache.unomi.api")) {
                     if (newEntry.getValue() != null && !newEntry.getValue().equals(target.get(newEntry.getKey()))) {
                         target.put(newEntry.getKey(), newEntry.getValue());
                         changed = true;
