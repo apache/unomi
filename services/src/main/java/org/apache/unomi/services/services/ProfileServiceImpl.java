@@ -997,10 +997,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private boolean merge(Map<String, Object> target, Map<String, Object> object) {
         boolean changed = false;
         for (Map.Entry<String, Object> newEntry : object.entrySet()) {
-
-            String packageName = newEntry.getValue().getClass().getPackage().getName();
-
             if (newEntry.getValue() != null) {
+                String packageName = newEntry.getValue().getClass().getPackage().getName();
                 if (newEntry.getValue() instanceof Collection) {
                     target.put(newEntry.getKey(), newEntry.getValue());
                     changed = true;
