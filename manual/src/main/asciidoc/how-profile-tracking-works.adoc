@@ -15,7 +15,7 @@
 
 In this section you will learn how Apache Unomi keeps track of visitors.
 
-Steps:
+==== Steps
 
 1. A visitor comes to a website
 2. The web server resolves a previous request session ID if it exists, or if it doesn't it create a new sessionID
