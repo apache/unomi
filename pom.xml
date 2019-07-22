@@ -274,11 +274,6 @@
     </distributionManagement>
 
     <repositories>
-        <repository>
-            <id>smx.m2</id>
-            <name>Apache ServiceMix M2</name>
-            <url>https://svn.apache.org/repos/asf/servicemix/m2-repo/</url>
-        </repository>
         <!-- Apache snapshots -->
         <repository>
             <id>apache-snapshots</id>
