@@ -284,6 +284,7 @@
             </releases>
             <snapshots>
                 <enabled>true</enabled>
+                <updatePolicy>never</updatePolicy>
             </snapshots>
         </repository>
         <!-- OPS4J SNAPSHOT repository -->
