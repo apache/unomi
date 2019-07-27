@@ -25,4 +25,4 @@ install:
 - 'true'
 
 script:
-- "mvn -e -B clean install"
+- "mvn -e -B clean install -Dmaven.repo.local=/home/travis/.m2/repository"
