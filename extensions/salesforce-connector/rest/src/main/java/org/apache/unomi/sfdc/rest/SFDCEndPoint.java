@@ -38,6 +38,7 @@ import java.util.Map;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/")
 public class SFDCEndPoint {
 
     private SFDCService sfdcService;

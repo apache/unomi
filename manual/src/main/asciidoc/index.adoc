@@ -36,6 +36,8 @@ include::concepts.adoc[]
 
 include::getting-started.adoc[]
 
+include::recipes.adoc[]
+
 include::request-examples.adoc[]
 
 include::web-tracker.adoc[]
@@ -44,13 +46,25 @@ include::configuration.adoc[]
 
 include::useful-unomi-urls.adoc[]
 
+include::how-profile-tracking-works.adoc[]
+
 == Consent management
 
 include::consent-api.adoc[]
 
+== Privacy management
+
+include::privacy.adoc[]
+
 == Cluster setup
 
 include::clustering.adoc[]
+
+== Reference
+
+include::conditions.adoc[]
+
+include::actions.adoc[]
 
 == Integration samples
 
