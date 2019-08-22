@@ -1,0 +1,239 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+The profile import and export feature in Apache Unomi is based on configurations and consumes or produces CSV files that
+contain the profiles to import and export.
+
+=== Importing profiles
+
+Only `ftp`, `sftp`, `ftps` and ``file` are supported in the source path. For example:
+
+    file:///tmp/?fileName=profiles.csv&move=.done&consumer.delay=25s
+
+Where:
+
+- `fileName` Can be a pattern, for example `include=.*.csv` instead of `fileName=...` to consume all CSV files. 
+By default the processed files are moved to `.camel` folder you can change it using the `move` option.
+- `consumer.delay` Is the frequency of polling in milliseconds. For example, 20000 milliseconds is 20 seconds. This
+frequency can also be 20s. Other possible format are: 2h30m10s = 2 hours and 30 minutes and 10 seconds.
+
+See http://camel.apache.org/ftp.html and http://camel.apache.org/file2.html to build more complex source path. Also be
+careful with FTP configuration as most servers won't accept clear text FTP anymore and you should use SFTP or FTPS
+instead, but they are a little more difficult to configure properly. It is recommended to test the connection with an
+FTP client first before setting up these source paths to make sure everything is working properly. Also on FTP
+connections most servers require PASSIVE mode so you can specify that in the path using the `passiveMode=true` parameter.
+
+Here are some examples of FTPS and SFTP source paths:
+
+    sftp://USER@HOST/PATH?password=PASSWORD&include=.*.csv
+    ftps://USER@HOST?password=PASSWORD&fileName=profiles.csv&passiveMode=true
+
+Where:
+
+- `USER` is the user name of the SFTP/FTPS user account to login with
+- `PASSWORD` is the password for the user account
+- `HOST` is the host name (or IP address) of the host server that provides the SFTP / FTPS server
+- `PATH` is a path to a directory inside the user's account where the file will be retrieved.
+
+==== Import API
+
+Apache Unomi provides REST endpoints to manage import configurations:
+
+      GET /cxs/importConfiguration
+      GET /cxs/importConfiguration/{configId}
+      POST /cxs/importConfiguration
+      DELETE /cxs/importConfiguration/{configId}
+
+This is how a oneshot import configuration looks like:
+
+    {
+        "itemId": "importConfigId",
+        "itemType": "importConfig",
+        "name": "Import Config Sample",
+        "description": "Sample description",
+        "configType": "oneshot",        //Config type can be 'oneshot' or 'recurrent'
+        "properties": {
+            "mapping": {
+                "email": 0,                 //<Apache Unomi Property Id> : <Column Index In the CSV>
+                "firstName": 2,
+                ...
+            }
+        },
+        "columnSeparator": ",",         //Character used to separate columns
+        "lineSeparator": "\\n",         //Character used to separate lines (\n or \r)
+        "multiValueSeparator": ";",     //Character used to separate values for multivalued columns
+        "multiValueDelimiter": "[]",    //Character used to wrap values for multivalued columns
+        "status": "SUCCESS",            //Status of last execution
+        "executions": [                 //(RETURN) Last executions by default only last 5 are returned
+            ...
+        ],
+        "mergingProperty": "email",         //Apache Unomi Property Id used to check duplicates
+        "overwriteExistingProfiles": true,  //Overwrite profiles that have duplicates
+        "propertiesToOverwrite": "firstName, lastName, ...",      //If last is set to true, which property to overwrite, 'null' means overwrite all
+        "hasHeader": true,                  //CSV file to import contains a header line
+        "hasDeleteColumn": false            //CSV file to import doesn't contain a TO DELETE column (if it contains, will be the last column)
+    }
+
+A recurrent import configuration is similar to the previous one with some specific information to add to the JSON like:
+
+  {
+    ...
+    "configType": "recurrent",
+    "properties": {
+      "source": "ftp://USER@SERVER[:PORT]/PATH?password=xxx&fileName=profiles.csv&move=.done&consumer.delay=20000",
+                // Only 'ftp', 'sftp', 'ftps' and 'file' are supported in the 'source' path
+                // eg. file:///tmp/?fileName=profiles.csv&move=.done&consumer.delay=25s
+                // 'fileName' can be a pattern eg 'include=.*.csv' instead of 'fileName=...' to consume all CSV files
+                // By default the processed files are moved to '.camel' folder you can change it using the 'move' option
+                // 'consumer.delay' is the frequency of polling. '20000' (in milliseconds) means 20 seconds. Can be also '20s'
+                // Other possible format are: '2h30m10s' = 2 hours and 30 minutes and 10 seconds
+      "mapping": {
+        ...
+      }
+    },
+    ...
+    "active": true,  //If true the polling will start according to the 'source' configured above
+    ...
+  }
+
+
+=== Exporting profiles
+
+Only `ftp`, `sftp`, `ftps` and `file are supported in the source path. For example:
+
+    file:///tmp/?fileName=profiles-export-${date:now:yyyyMMddHHmm}.csv&fileExist=Append) 
+    sftp://USER@HOST/PATH?password=PASSWORD&binary=true&fileName=profiles-export-${date:now:yyyyMMddHHmm}.csv&fileExist=Append
+    ftps://USER@HOST?password=PASSWORD&binary=true&fileName=profiles-export-${date:now:yyyyMMddHHmm}.csv&fileExist=Append&passiveMode=true
+
+As you can see in the examples above, you can inject variables in the produced file name `${date:now:yyyyMMddHHmm}` is
+the current date formatted with the pattern `yyyyMMddHHmm`. `fileExist` option put as `Append` will tell the file writer
+to append to the same file for each execution of the export configuration. You cam omit this option to write a profile
+per file.
+
+See http://camel.apache.org/ftp.html and http://camel.apache.org/file2.html to build more complex destination path.
+
+==== Export API
+
+Apache Unomi provides REST endpoints to manage export configurations:
+
+      GET /cxs/exportConfiguration
+      GET /cxs/exportConfiguration/{configId}
+      POST /cxs/exportConfiguration
+      DELETE /cxs/exportConfiguration/{configId}
+
+This is how a oneshot export configuration looks like:
+
+    {
+        "itemId": "exportConfigId",
+        "itemType": "exportConfig",
+        "name": "Export configuration sample",
+        "description": "Sample description",
+        "configType": "oneshot",
+        "properties": {
+            "period": "2m30s",
+            "segment": "contacts",
+            "mapping": {
+                "0": "firstName",
+                "1": "lastName",
+                ...
+            }
+        },
+        "columnSeparator": ",",
+        "lineSeparator": "\\n",
+        "multiValueSeparator": ";",
+        "multiValueDelimiter": "[]",
+        "status": "RUNNING",
+        "executions": [
+            ...
+        ]
+    }
+
+A recurrent export configuration is similar to the previous one with some specific information to add to the JSON like:
+
+    {
+        ...
+        "configType": "recurrent",
+        "properties": {
+        "destination": "sftp://USER@SERVER:PORT/PATH?password=XXX&fileName=profiles-export-${date:now:yyyyMMddHHmm}.csv&fileExist=Append",
+        "period": "2m30s",      //Same as 'consumer.delay' option in the import source path
+        "segment": "contacts",  //Segment ID to use to collect profiles to export
+        "mapping": {
+            ...
+            }
+        },
+        ...
+        "active": true,           //If true the configuration will start polling upon save until the user deactivate it
+        ...
+    }
+
+=== Configuration in details
+
+First configuration you need to change would be the configuration type of your import / export feature (code name
+`router) in the `etc/unomi.custom.system.properties` file (creating it if necessary):
+
+    #Configuration Type values {'nobroker', 'kafka'}
+    org.apache.unomi.router.config.type=nobroker
+
+By default the feature is configured (as above) to use no external broker,  which means to handle import/export data it
+will use in memory queues (In the same JVM as Apache Unomi). If you are clustering Apache Unomi, most important thing
+to know about this type of configuration is that each Apache Unomi will handle the import/export task by itself without
+the help of other nodes (No Load-Distribution).
+
+Changing this property to kafka means you have to provide the Apache Kafka configuration, and in the opposite of the
+nobroker option import/export data will be handled using an external broker (Apache Kafka), this will lighten the burden
+on the Apache Unomi machines.
+
+You may use several Apache Kafka instance, 1 per N Apache Unomi nodes for better application scaling.
+
+To enable using Apache Kafka you need to configure the feature as follows:
+
+    #Configuration Type values {'nobroker', 'kafka'}
+    org.apache.unomi.router.config.type=kafka
+
+    #Uncomment and update Kafka settings to use Kafka as a broker
+
+    #Kafka
+    org.apache.unomi.router.kafka.host=localhost
+    org.apache.unomi.router.kafka.port=9092
+    org.apache.unomi.router.kafka.import.topic=import-deposit
+    org.apache.unomi.router.kafka.export.topic=export-deposit
+    org.apache.unomi.router.kafka.import.groupId=unomi-import-group
+    org.apache.unomi.router.kafka.export.groupId=unomi-import-group
+    org.apache.unomi.router.kafka.consumerCount=10
+    org.apache.unomi.router.kafka.autoCommit=true
+
+There is couple of properties you may want to change to fit your needs, one of the is the import.oneshot.uploadDir which
+will tell Apache Unomi where to store temporarily the CSV files to import in Oneshot mode, it's a technical property
+to allow the choose of the convenient disk space where to store files to import. It defaults to the following path
+under the Apache Unomi Karaf (It is recommended to change the path to a more convenient one).
+
+    #Import One Shot upload directory
+    org.apache.unomi.router.import.oneshot.uploadDir=${karaf.data}/tmp/unomi_oneshot_import_configs/
+
+Next two properties are max sizes for executions history and error reports, for some reason you dont want Apache Unomi
+to report all the executions history and error reports generated by the executions of an import/export configuration.
+To change this you have to change the default values of these properties.
+
+    #Import/Export executions history size
+    org.apache.unomi.router.executionsHistory.size=5
+
+    #errors report size
+    org.apache.unomi.router.executions.error.report.size=200
+
+Final one is about the allowed endpoints you can use when building the source or destionation path, as mentioned above
+we can have a path of type `file`, `ftp`, `ftps`, `sftp`. You can make it less if you want to omit some endpoints (eg.
+you don't want to permit the use of non secure FTP).
+
+    #Allowed source endpoints
+    org.apache.unomi.router.config.allowedEndpoints=file,ftp,sftp,ftps
+
