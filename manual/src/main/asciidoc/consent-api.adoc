@@ -193,6 +193,6 @@ Upon receiving this event, Apache Unomi will trigger the modifyAnyConsent rule t
 ----
 
 As we can see this rule is pretty simple it will simply execute the modifyConsentAction that is implemented by the
-https://github.com/apache/incubator-unomi/blob/9f1bab437fd93826dc54d318ed00d3b2e3161437/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/actions/ModifyConsentAction.java[ModifyConsentAction Java class]
+https://github.com/apache/unomi/blob/9f1bab437fd93826dc54d318ed00d3b2e3161437/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/actions/ModifyConsentAction.java[ModifyConsentAction Java class]
 
 This class will update the current visitor profile to add/update/revoke any consents that are included in the event.
