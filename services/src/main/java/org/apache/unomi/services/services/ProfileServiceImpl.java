@@ -1010,14 +1010,18 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                     } else {
                         changed |= merge(currentMap, (Map) newEntry.getValue());
                     }
-                } else if (StringUtils.equals(packageName, "java.lang")
-                        || StringUtils.equals(packageName, "org.apache.unomi.api")) {
+                } else if (StringUtils.equals(packageName, "java.lang")) {
                     if (newEntry.getValue() != null && !newEntry.getValue().equals(target.get(newEntry.getKey()))) {
                         target.put(newEntry.getKey(), newEntry.getValue());
                         changed = true;
                     }
                 } else {
-                    changed |= merge(target.get(newEntry.getKey()), newEntry.getValue());
+                    if (target.get(newEntry.getKey()) != null) {
+                        changed |= merge(target.get(newEntry.getKey()), newEntry.getValue());
+                    } else {
+                        target.put(newEntry.getKey(), newEntry.getValue());
+                        changed = true;
+                    }
                 }
             } else {
                 if (target.containsKey(newEntry.getKey())) {
