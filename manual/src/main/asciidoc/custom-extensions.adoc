@@ -345,7 +345,7 @@ content:
 
 You can note here the `actionExecutorId` that corresponds to the `actionExecutor` in the JSON file.
 
-The implementation of the action is available here : https://github.com/apache/incubator-unomi/blob/master/extensions/lists-extension/actions/src/main/java/org/apache/unomi/lists/actions/AddToListsAction.java[org.apache.unomi.lists.actions.AddToListsAction] 
+The implementation of the action is available here : https://github.com/apache/unomi/blob/master/extensions/lists-extension/actions/src/main/java/org/apache/unomi/lists/actions/AddToListsAction.java[org.apache.unomi.lists.actions.AddToListsAction]
 
 ==== Custom conditions
 
@@ -415,6 +415,6 @@ src/main/resources/OSGI-INF/blueprint/blueprint.xml
 
 You can find the implementation of the two classes here : 
 
-* https://github.com/apache/incubator-unomi/blob/master/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/conditions/MatchAllConditionESQueryBuilder.java[org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionESQueryBuilder]
-* https://github.com/apache/incubator-unomi/blob/master/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/conditions/MatchAllConditionEvaluator.java[org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionEvaluator]
+* https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/conditions/MatchAllConditionESQueryBuilder.java[org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionESQueryBuilder]
+* https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/conditions/MatchAllConditionEvaluator.java[org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionEvaluator]
 

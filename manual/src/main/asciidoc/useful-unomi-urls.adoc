@@ -54,12 +54,12 @@ Important : all URLs are relative to the private Apache Unomi URL, by default: h
 
 |/cxs/profiles/sessions/SESSION_ID/events
 |GET
-|Listing events for a session. This query can have additional such as eventTypes, q (query), offset, size, sort. See the https://unomi.incubator.apache.org/rest-api-doc/#1019321624[related
+|Listing events for a session. This query can have additional such as eventTypes, q (query), offset, size, sort. See the https://unomi.apache.org/rest-api-doc/#1019321624[related
 section in the REST API] for details.
 
 |/cxs/events/search
 |POST
-|Listing events for a profile. You will need to provide a query in the body of the request that looks something like this (and https://unomi.incubator.apache.org/rest-api-doc/#1768188821[documentation is available in the REST API]) :
+|Listing events for a profile. You will need to provide a query in the body of the request that looks something like this (and https://unomi.apache.org/rest-api-doc/#1768188821[documentation is available in the REST API]) :
 { "offset" : 0,
   "limit" : 20,
   "condition" : {

@@ -29,7 +29,7 @@
 
 ==== Building
 
-. Get the code: `git clone https://git-wip-us.apache.org/repos/asf/incubator-unomi.git`
+. Get the code: `git clone https://github.com/apache/unomi.git`
 . Change to the top level directory of Apache Unomi source distribution.
 . Run
 +

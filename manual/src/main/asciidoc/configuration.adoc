@@ -37,7 +37,7 @@ the values in the `$MY_KARAF_HOME/etc/custom.system.properties`. See the next se
 You might want to use environment variables to change the default system configuration, especially if you intend to run
 Apache Unomi inside a Docker container. You can find the list of all the environment variable names in the following file:
 
-https://github.com/apache/incubator-unomi/blob/master/package/src/main/resources/etc/custom.system.properties
+https://github.com/apache/unomi/blob/master/package/src/main/resources/etc/custom.system.properties
 
 If you are using Docker Container, simply pass the environment variables on the docker command line or if you are using
 Docker Compose you can put the environment variables in the docker-compose.yml file.

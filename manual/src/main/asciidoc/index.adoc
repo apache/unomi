@@ -22,7 +22,7 @@ Apache Software Foundation
 :numbered:
 :homepage: https://unomi.apache.org
 
-image::incubator-logo.png[pdfwidth=35%,align=center]
+image::asf_logo_url.png[pdfwidth=35%,align=center]
 
 == Quick start
 

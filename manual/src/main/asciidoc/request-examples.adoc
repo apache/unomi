@@ -63,7 +63,7 @@ EOF
 
 The `requiredProfileProperties` and `requiredSessionProperties` are properties that take an array of property names
 that should be retrieved. In this case we use the wildcard character '*' to say we want to retrieve all the available
-properties. The structure of the JSON object that you should send is a JSON-serialized version of the http://unomi.incubator.apache.org/unomi-api/apidocs/org/apache/unomi/api/ContextRequest.html[ContextRequest]
+properties. The structure of the JSON object that you should send is a JSON-serialized version of the http://unomi.apache.org/unomi-api/apidocs/org/apache/unomi/api/ContextRequest.html[ContextRequest]
 Java class.
 
 ==== Sending events using the context servlet
