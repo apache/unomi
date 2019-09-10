@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ################################################################################
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -14,8 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-#!/bin/sh
-
 # Wait for heathy ElasticSearch
 # next wait for ES status to turn to Green
 health_check="$(curl -fsSL "$ELASTICSEARCH_HOST:9200/_cat/health?h=status")"
@@ -26,7 +26,10 @@ until ([ "$health_check" = 'yellow' ] || [ "$health_check" = 'green' ]); do
     sleep 1
 done
 
-sed -i "s/elasticSearchAddresses=localhost:9300/elasticSearchAddresses=${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}/g" /opt/apache-unomi/etc/org.apache.unomi.persistence.elasticsearch.cfg
-$KARAF_HOME/bin/start
-$KARAF_HOME/bin/status # Call to status delays while Karaf creates karaf.log
-tail -f $KARAF_HOME/data/log/karaf.log
+cp -f $UNOMI_HOME/etc/custom.properties.template $UNOMI_HOME/etc/custom.properties
+echo org.apache.unomi.elasticsearch.addresses=$ELASTICSEARCH_HOST:$ELASTICSEARCH_PORT >> $UNOMI_HOME/etc/custom.properties
+
+$UNOMI_HOME/bin/start
+$UNOMI_HOME/bin/status # Call to status delays while Karaf creates karaf.log
+
+tail -f $UNOMI_HOME/data/log/karaf.log
