@@ -16,7 +16,7 @@ contain the profiles to import and export.
 
 === Importing profiles
 
-Only `ftp`, `sftp`, `ftps` and ``file` are supported in the source path. For example:
+Only `ftp`, `sftp`, `ftps` and `file` are supported in the source path. For example:
 
     file:///tmp/?fileName=profiles.csv&move=.done&consumer.delay=25s
 
