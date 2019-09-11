@@ -212,7 +212,7 @@ To enable using Apache Kafka you need to configure the feature as follows:
     org.apache.unomi.router.kafka.consumerCount=10
     org.apache.unomi.router.kafka.autoCommit=true
 
-There is couple of properties you may want to change to fit your needs, one of the is the import.oneshot.uploadDir which
+There is couple of properties you may want to change to fit your needs, one of them is the *import.oneshot.uploadDir which*
 will tell Apache Unomi where to store temporarily the CSV files to import in Oneshot mode, it's a technical property
 to allow the choice of the convenient disk space where to store the files to be imported. It defaults to the following path
 under the Apache Unomi Karaf (It is recommended to change the path to a more convenient one).
