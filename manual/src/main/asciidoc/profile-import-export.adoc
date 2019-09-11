@@ -179,7 +179,7 @@ A recurrent export configuration is similar to the previous one with some specif
 === Configuration in details
 
 First configuration you need to change would be the configuration type of your import / export feature (code name
-`router) in the `etc/unomi.custom.system.properties` file (creating it if necessary):
+router) in the `etc/unomi.custom.system.properties` file (creating it if necessary):
 
     #Configuration Type values {'nobroker', 'kafka'}
     org.apache.unomi.router.config.type=nobroker
