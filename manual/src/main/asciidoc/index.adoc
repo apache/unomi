@@ -48,6 +48,10 @@ include::useful-unomi-urls.adoc[]
 
 include::how-profile-tracking-works.adoc[]
 
+== Profile import & export
+
+include::profile-import-export.adoc[]
+
 == Consent management
 
 include::consent-api.adoc[]
