@@ -27,7 +27,7 @@ By default the processed files are moved to `.camel` folder you can change it us
 - `consumer.delay` Is the frequency of polling in milliseconds. For example, 20000 milliseconds is 20 seconds. This
 frequency can also be 20s. Other possible format are: 2h30m10s = 2 hours and 30 minutes and 10 seconds.
 
-See http://camel.apache.org/ftp.html and http://camel.apache.org/file2.html to build more complex source path. Also be
+See http://camel.apache.org/ftp.html and http://camel.apache.org/file2.html to build more complex source path. Also be
 careful with FTP configuration as most servers no longer support plain text FTP and you should use SFTP or FTPS
 instead, but they are a little more difficult to configure properly. It is recommended to test the connection with an
 FTP client first before setting up these source paths to ensure that everything works properly. Also on FTP
