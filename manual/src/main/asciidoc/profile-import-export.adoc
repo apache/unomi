@@ -30,7 +30,7 @@ frequency can also be 20s. Other possible format are: 2h30m10s = 2 hours and 3
 See http://camel.apache.org/ftp.html and http://camel.apache.org/file2.html to build more complex source path. Also be
 careful with FTP configuration as most servers won't accept clear text FTP anymore and you should use SFTP or FTPS
 instead, but they are a little more difficult to configure properly. It is recommended to test the connection with an
-FTP client first before setting up these source paths to make sure everything is working properly. Also on FTP
+FTP client first before setting up these source paths to ensure that everything works properly. Also on FTP
 connections most servers require PASSIVE mode so you can specify that in the path using the `passiveMode=true` parameter.
 
 Here are some examples of FTPS and SFTP source paths:
