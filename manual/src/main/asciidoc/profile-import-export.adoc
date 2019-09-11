@@ -200,7 +200,7 @@ To enable using Apache Kafka you need to configure the feature as follows:
     #Configuration Type values {'nobroker', 'kafka'}
     org.apache.unomi.router.config.type=kafka
 
-    #Uncomment and update Kafka settings to use Kafka as a broker
+Uncomment and update Kafka settings to use Kafka as a broker
 
     #Kafka
     org.apache.unomi.router.kafka.host=localhost
