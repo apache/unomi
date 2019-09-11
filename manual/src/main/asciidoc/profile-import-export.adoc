@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 The profile import and export feature in Apache Unomi is based on configurations and consumes or produces CSV files that
-contain the profiles to import and export.
+contain profiles to be imported and exported.
 
 === Importing profiles
 
