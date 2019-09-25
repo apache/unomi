@@ -81,8 +81,8 @@ ssh -p 8102 karaf@localhost (default password is karaf)
 +
 [source]
 ----
-feature:repo-add mvn:org.apache.unomi/unomi-salesforce-connectors-karaf-kar/${project.version}/xml/features
-feature:install unomi-salesforce-connectors-karaf-kar
+feature:repo-add mvn:org.apache.unomi/unomi-salesforce-connector-karaf-kar/${project.version}/xml/features
+feature:install unomi-salesforce-connector-karaf-kar
 ----
 
 ===== Deployment using KAR bundle
@@ -139,7 +139,7 @@ If you followed all the steps in the Getting Started section, you can upgrade th
 +
 [source]
 ----
-cd extensions/salesforce-connectors
+cd extensions/salesforce-connector
 mvn clean install
 ----
 +
@@ -155,8 +155,8 @@ ssh -p 8102 karaf@localhost (password by default is karaf)
 [source]
 ----
 feature:repo-refresh
-feature:uninstall unomi-salesforce-connectors-karaf-feature
-feature:install unomi-salesforce-connectors-karaf-feature
+feature:uninstall unomi-salesforce-connector-karaf-feature
+feature:install unomi-salesforce-connector-karaf-feature
 ----
 +
 . You can then check that the new version is properly deployed by accessing the following URL and checking the build date:
@@ -226,7 +226,7 @@ and then use the following command line to reference the file:
 
 [source]
 ----
-cd extensions/salesforce-connectors
+cd extensions/salesforce-connector
 mvn clean install -DsfdcProperties=../test.properties
 ----
 
