@@ -30,7 +30,7 @@ ENV UNOMI_VERSION "1.4.0"
 
 WORKDIR $UNOMI_HOME
 
-RUN wget http://apache.mirrors.pair.com/unomi/${UNOMI_VERION}/unomi-${UNOMI_VERION}-bin.tar.gz
+RUN wget http://apache.mirrors.pair.com/unomi/${UNOMI_VERSION}/unomi-${UNOMI_VERSION}-bin.tar.gz
 
 RUN tar -xzf unomi-${UNOMI_VERION}-bin.tar.gz \
 	&& mv unomi-*/* . \
