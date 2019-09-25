@@ -166,7 +166,7 @@ curl -X POST http://localhost:8181/eventcollector \
             "target":{
                 "itemType":"form",
                 "scope":"example",
-                "itemId":"contactForm",
+                "itemId":"contactForm"
             },
             "properties" : {
               "firstName" : "John",
@@ -187,7 +187,7 @@ that looks something like this (and https://unomi.apache.org/rest-api-doc/#17681
 
 [source]
 ----
-curl -X POST http://localhost:8181/cxs/event/search \
+curl -X POST http://localhost:8181/cxs/events/search \
 --user karaf:karaf \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
@@ -257,7 +257,7 @@ structure. Here's an example of a profile search with a Query object:
 
 [source]
 ----
-curl -X POST http://localhost:8181/cxs/rules \
+curl -X POST http://localhost:8181/cxs/profiles/search \
 --user karaf:karaf \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
@@ -284,7 +284,7 @@ curl -X POST http://localhost:8181/cxs/rules \
             "propertyName": "properties.lastName",
             "comparisonOperator": "exists"
           }
-        },
+        }
       ]
     }
   }
