@@ -15,9 +15,12 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.services.services;
+package org.apache.unomi.services.impl.goals;
 
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Session;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.campaigns.Campaign;
 import org.apache.unomi.api.campaigns.CampaignDetail;
@@ -34,6 +37,7 @@ import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
+import org.apache.unomi.services.impl.ParserHelper;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;

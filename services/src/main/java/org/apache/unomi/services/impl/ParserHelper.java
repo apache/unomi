@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.services.services;
+package org.apache.unomi.services.impl;
 
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.ValueType;
@@ -31,6 +31,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * Helper class to resolve condition, action and values types when loading definitions from JSON files
+ */
 public class ParserHelper {
 
     private static final Logger logger = LoggerFactory.getLogger(ParserHelper.class);

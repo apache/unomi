@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.services.services;
+package org.apache.unomi.services.impl.cluster;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.karaf.cellar.config.ClusterConfigurationEvent;

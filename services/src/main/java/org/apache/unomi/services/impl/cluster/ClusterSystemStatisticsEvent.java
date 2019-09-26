@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.services.services;
+package org.apache.unomi.services.impl.cluster;
 
 import org.apache.karaf.cellar.core.event.Event;
 

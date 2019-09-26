@@ -15,12 +15,13 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.services.services;
+package org.apache.unomi.services.impl.lists;
 
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.lists.UserList;
 import org.apache.unomi.api.services.UserListService;
+import org.apache.unomi.services.impl.AbstractServiceImpl;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.SynchronousBundleListener;

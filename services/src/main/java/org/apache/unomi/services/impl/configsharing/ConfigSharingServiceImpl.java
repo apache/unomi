@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.services.services;
+package org.apache.unomi.services.impl.configsharing;
 
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.osgi.framework.*;

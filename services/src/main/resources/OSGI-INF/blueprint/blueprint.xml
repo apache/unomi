@@ -68,7 +68,7 @@
 
     <!-- Service definitions -->
 
-    <bean id="schedulerServiceImpl" class="org.apache.unomi.services.services.SchedulerServiceImpl"
+    <bean id="schedulerServiceImpl" class="org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy"/>
     <service id="schedulerService" ref="schedulerServiceImpl">
         <interfaces>
@@ -76,7 +76,7 @@
         </interfaces>
     </service>
 
-    <bean id="definitionsServiceImpl" class="org.apache.unomi.services.services.DefinitionsServiceImpl"
+    <bean id="definitionsServiceImpl" class="org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
@@ -90,7 +90,7 @@
         </interfaces>
     </service>
 
-    <bean id="eventServiceImpl" class="org.apache.unomi.services.services.EventServiceImpl"
+    <bean id="eventServiceImpl" class="org.apache.unomi.services.impl.events.EventServiceImpl"
         init-method="init" destroy-method="destroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
@@ -119,7 +119,7 @@
     </bean>
     <service id="eventService" ref="eventServiceImpl" interface="org.apache.unomi.api.services.EventService"/>
 
-    <bean id="goalsServiceImpl" class="org.apache.unomi.services.services.GoalsServiceImpl"
+    <bean id="goalsServiceImpl" class="org.apache.unomi.services.impl.goals.GoalsServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
@@ -138,7 +138,7 @@
         <property name="metricsService" ref="metricsService" />
     </bean>
 
-    <bean id="rulesServiceImpl" class="org.apache.unomi.services.services.RulesServiceImpl"
+    <bean id="rulesServiceImpl" class="org.apache.unomi.services.impl.rules.RulesServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
@@ -157,7 +157,7 @@
         </interfaces>
     </service>
 
-    <bean id="segmentServiceImpl" class="org.apache.unomi.services.services.SegmentServiceImpl"
+    <bean id="segmentServiceImpl" class="org.apache.unomi.services.impl.segments.SegmentServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
@@ -177,7 +177,7 @@
         </interfaces>
     </service>
 
-    <bean id="userListServiceImpl" class="org.apache.unomi.services.services.UserListServiceImpl"
+    <bean id="userListServiceImpl" class="org.apache.unomi.services.impl.lists.UserListServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
@@ -190,7 +190,7 @@
         </interfaces>
     </service>
 
-    <bean id="profileServiceImpl" class="org.apache.unomi.services.services.ProfileServiceImpl"
+    <bean id="profileServiceImpl" class="org.apache.unomi.services.impl.profiles.ProfileServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
@@ -211,14 +211,14 @@
         </interfaces>
     </service>
 
-    <bean id="queryServiceImpl" class="org.apache.unomi.services.services.QueryServiceImpl"
+    <bean id="queryServiceImpl" class="org.apache.unomi.services.impl.queries.QueryServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
     </bean>
     <service id="queryService" ref="queryServiceImpl" interface="org.apache.unomi.api.services.QueryService"/>
 
-    <bean id="clusterServiceImpl" class="org.apache.unomi.services.services.ClusterServiceImpl"
+    <bean id="clusterServiceImpl" class="org.apache.unomi.services.impl.cluster.ClusterServiceImpl"
           init-method="init" destroy-method="destroy">
         <property name="publicAddress" value="${cluster.contextserver.publicAddress}"/>
         <property name="internalAddress" value="${cluster.contextserver.internalAddress}"/>
@@ -234,13 +234,13 @@
     <service id="clusterService" ref="clusterServiceImpl" interface="org.apache.unomi.api.services.ClusterService"/>
 
 
-    <bean id="personalizationServiceImpl" class="org.apache.unomi.services.services.PersonalizationServiceImpl">
+    <bean id="personalizationServiceImpl" class="org.apache.unomi.services.impl.personalization.PersonalizationServiceImpl">
         <property name="profileService" ref="profileServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
     <service id="personalizationService" ref="personalizationServiceImpl" interface="org.apache.unomi.api.services.PersonalizationService" />
 
-    <bean id="patchServiceImpl" class="org.apache.unomi.services.services.PatchServiceImpl"
+    <bean id="patchServiceImpl" class="org.apache.unomi.services.impl.patches.PatchServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
@@ -352,7 +352,7 @@
     </service>
 
 
-    <bean id="configSharingServiceImpl" class="org.apache.unomi.services.services.ConfigSharingServiceImpl" destroy-method="preDestroy">
+    <bean id="configSharingServiceImpl" class="org.apache.unomi.services.impl.configsharing.ConfigSharingServiceImpl" destroy-method="preDestroy">
         <property name="configProperties">
             <map>
                 <entry key="internalServerAddress" value="${cluster.contextserver.internalAddress}" />
@@ -369,7 +369,7 @@
     </service>
 
     <!-- Cluster System Statistics Event Handler -->
-    <bean id="clusterSystemStatisticsEventHandler" class="org.apache.unomi.services.services.ClusterSystemStatisticsEventHandler"
+    <bean id="clusterSystemStatisticsEventHandler" class="org.apache.unomi.services.impl.cluster.ClusterSystemStatisticsEventHandler"
           init-method="init" destroy-method="destroy">
         <property name="configurationAdmin" ref="osgiConfigurationAdmin"/>
         <property name="clusterManager" ref="karafCellarClusterManager"/>

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.services.services;
+package org.apache.unomi.services.impl.segments;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.unomi.api.Event;
@@ -34,6 +34,8 @@ import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
+import org.apache.unomi.services.impl.AbstractServiceImpl;
+import org.apache.unomi.services.impl.ParserHelper;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;

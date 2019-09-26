@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.services.services;
+package org.apache.unomi.services.impl.personalization;
 
+import org.apache.unomi.api.PersonalizationStrategy;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
-import org.apache.unomi.api.PersonalizationStrategy;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.ProfileService;

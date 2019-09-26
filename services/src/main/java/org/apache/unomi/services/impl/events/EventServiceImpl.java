@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.services.services;
+package org.apache.unomi.services.impl.events;
 
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.IPAddressString;
@@ -31,6 +31,7 @@ import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
+import org.apache.unomi.services.impl.ParserHelper;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
