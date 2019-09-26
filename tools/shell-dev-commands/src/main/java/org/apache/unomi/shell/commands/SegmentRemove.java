@@ -21,13 +21,12 @@ import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.api.segments.DependentMetadata;
 import org.apache.unomi.api.services.SegmentService;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
-@Command(scope = "unomi", name = "segment-view", description = "This will allows to view a segment in the Apache Unomi Context Server")
+@Command(scope = "unomi", name = "segment-remove", description = "Remove segments in the Apache Unomi Context Server")
 @Service
-public class SegmentView implements Action {
+public class SegmentRemove implements Action {
 
     @Reference
     SegmentService segmentService;
@@ -35,14 +34,23 @@ public class SegmentView implements Action {
     @Argument(index = 0, name = "segmentId", description = "The identifier for the segment", required = true, multiValued = false)
     String segmentIdentifier;
 
+    @Argument(index = 1, name = "validate", description = "Check if the segment is used in goals or other segments", required = false, multiValued = false)
+    Boolean validate = true;
+
+
     public Object execute() throws Exception {
-        Segment segment = segmentService.getSegmentDefinition(segmentIdentifier);
-        if (segment == null) {
-            System.out.println("Couldn't find a segment with id=" + segmentIdentifier);
-            return null;
+        DependentMetadata dependantMetadata = segmentService.removeSegmentDefinition(segmentIdentifier, validate);
+        if (!validate || (dependantMetadata.getSegments().isEmpty() && dependantMetadata.getScorings().isEmpty())) {
+            System.out.println("Segment " + segmentIdentifier + " successfully deleted");
+        } else if (validate) {
+            System.out.print("Segment " + segmentIdentifier + " could not be deleted because of the following dependents:");
+            if (!dependantMetadata.getScorings().isEmpty()) {
+                System.out.print(" scoring:" + dependantMetadata.getScorings());
+            }
+            if (!dependantMetadata.getSegments().isEmpty()) {
+                System.out.println(" segments:" + dependantMetadata.getSegments());
+            }
         }
-        String jsonRule = CustomObjectMapper.getObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(segment);
-        System.out.println(jsonRule);
         return null;
     }
 }

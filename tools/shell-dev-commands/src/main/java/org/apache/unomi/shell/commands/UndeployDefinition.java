@@ -33,9 +33,9 @@ import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import java.io.IOException;
 import java.net.URL;
 
-@Command(scope = "unomi", name = "deploy-definition", description = "This will deploy Unomi definitions contained in bundles")
+@Command(scope = "unomi", name = "undeploy-definition", description = "This will undeploy definitions contained in bundles")
 @Service
-public class DeployDefinition extends DeploymentCommandSupport {
+public class UndeployDefinition extends DeploymentCommandSupport {
 
     public void processDefinition(String definitionType, URL definitionURL) {
         try {
@@ -56,58 +56,56 @@ public class DeployDefinition extends DeploymentCommandSupport {
             switch (definitionType) {
                 case CONDITION_DEFINITION_TYPE:
                     ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(definitionURL, ConditionType.class);
-                    definitionsService.setConditionType(conditionType);
+                    definitionsService.removeActionType(conditionType.getItemId());
                     break;
                 case ACTION_DEFINITION_TYPE:
                     ActionType actionType = CustomObjectMapper.getObjectMapper().readValue(definitionURL, ActionType.class);
-                    definitionsService.setActionType(actionType);
+                    definitionsService.removeActionType(actionType.getItemId());
                     break;
                 case GOAL_DEFINITION_TYPE:
                     Goal goal = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Goal.class);
-                    goalsService.setGoal(goal);
+                    goalsService.removeGoal(goal.getItemId());
                     break;
                 case CAMPAIGN_DEFINITION_TYPE:
                     Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Campaign.class);
-                    goalsService.setCampaign(campaign);
+                    goalsService.removeCampaign(campaign.getItemId());
                     break;
                 case PERSONA_DEFINITION_TYPE:
                     PersonaWithSessions persona = CustomObjectMapper.getObjectMapper().readValue(definitionURL, PersonaWithSessions.class);
-                    profileService.savePersonaWithSessions(persona);
+                    profileService.delete(persona.getPersona().getItemId(), true);
                     break;
                 case PROPERTY_DEFINITION_TYPE:
                     PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(definitionURL, PropertyType.class);
-                    profileService.setPropertyTypeTarget(definitionURL, propertyType);
-                    profileService.setPropertyType(propertyType);
+                    profileService.deletePropertyType(propertyType.getItemId());
                     break;
                 case RULE_DEFINITION_TYPE:
                     Rule rule = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Rule.class);
-                    rulesService.setRule(rule);
+                    rulesService.removeRule(rule.getItemId());
                     break;
                 case SEGMENT_DEFINITION_TYPE:
                     Segment segment = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Segment.class);
-                    segmentService.setSegmentDefinition(segment);
+                    segmentService.removeSegmentDefinition(segment.getItemId(), false);
                     break;
                 case SCORING_DEFINITION_TYPE:
                     Scoring scoring = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Scoring.class);
-                    segmentService.setScoringDefinition(scoring);
+                    segmentService.removeScoringDefinition(scoring.getItemId(), false);
                     break;
                 case PATCH_DEFINITION_TYPE:
                     Patch patch = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Patch.class);
-                    patchService.patch(patch);
+                    // patchService.patch(patch);
                     break;
                 default:
-                    System.out.println("Unrecognized definition type:" + definitionType);
+                    System.out.println("Unrecognized definition type: " + definitionType);
                     successful = false;
                     break;
             }
             if (successful) {
-                System.out.println("Predefined definition registered : " + definitionURL.getFile());
+                System.out.println("Predefined definition unregistered : " + definitionURL.getFile());
             }
         } catch (IOException e) {
-            System.out.println("Error while saving definition " + definitionURL);
+            System.out.println("Error while removing definition " + definitionURL);
             System.out.println(e.getMessage());
         }
     }
-
 
 }
