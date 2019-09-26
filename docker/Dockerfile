@@ -18,20 +18,30 @@
 FROM openjdk:8-jre
 
 # Unomi environment variables
-ENV KARAF_INSTALL_PATH /opt
-ENV KARAF_HOME $KARAF_INSTALL_PATH/apache-unomi
-ENV PATH $PATH:$KARAF_HOME/bin
-ENV KARAF_OPTS "-Dunomi.autoStart=true"
-WORKDIR $KARAF_HOME
+ENV UNOMI_HOME /opt/apache-unomi
+ENV PATH $PATH:$UNOMI_HOME/bin
 
-RUN wget http://apache.mirrors.pair.com/incubator/unomi/1.3.0-incubating/unomi-1.3.0-incubating-bin.tar.gz
-RUN tar -xzf unomi-1.3.0-incubating-bin.tar.gz
-RUN mv unomi-1.3.0-incubating/* .
-RUN rm unomi-1.3.0-incubating-bin.tar.gz
-RUN rm -r unomi-1.3.0-incubating
+ENV KARAF_OPTS "-Dunomi.autoStart=true"
+
+ENV ELASTICSEARCH_HOST localhost
+ENV ELASTICSEARCH_PORT 9300
+
+ENV UNOMI_VERSION "1.4.0"
+
+WORKDIR $UNOMI_HOME
+
+RUN wget http://apache.mirrors.pair.com/unomi/${UNOMI_VERSION}/unomi-${UNOMI_VERSION}-bin.tar.gz
+
+RUN tar -xzf unomi-${UNOMI_VERSION}-bin.tar.gz \
+	&& mv unomi-*/* . \
+	&& rm -rf unomi-*
+
+RUN cp ${UNOMI_HOME}/etc/custom.properties ${UNOMI_HOME}/etc/custom.properties.template
+
 COPY ./entrypoint.sh ./entrypoint.sh
 
 EXPOSE 9443
 EXPOSE 8181
+EXPOSE 8102
 
 CMD ["/bin/bash", "./entrypoint.sh"]
