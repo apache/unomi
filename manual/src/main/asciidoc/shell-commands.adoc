@@ -92,6 +92,10 @@ value of rules registered in the server. If you add the "--csv" option the list 
 |rule-view
 |rule-id
 |Dumps a single rule in JSON. The rule-id argument can be retrieved from the `rule-list` command output.
+|rule-remove
+|rule-id
+|Removes a single rule from Apache Unomi. The `rule-id` argument can be retrieved from the `rule-list` command output.
+Warning: no confirmation is asked, be careful with this command.
 |rule-reset-stats
 |n/a
 |Resets the rule statistics. This is notably useful when trying to understand rule performance and impact
@@ -116,11 +120,11 @@ created, EXECUTE means the rule's actions are being executed.
 |event-id
 |Dumps a single event in JSON. The `event-id` can be retrieved from the event-tail command output.
 |event-list
-|max-entries,--csv
+|[max-entries] [--csv]
 |List the last events processed by Apache Unomi. The `max-entries` parameter can be used to control how many events are
 displayed (default is 100). The `--csv` argument is used to output the list as a CSV list instead of an ASCII table.
 |event-search
-|profile-id,event-type,max-entries
+|profile-id [event-type] [max-entries]
 |This command makes it possible to search for the last events by `profile-id` and by `event-type`. A `max-entries`
 parameter (with a default value of 100) is also accepted to control the number of results returned by the search.
 
