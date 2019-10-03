@@ -92,3 +92,10 @@ Segment query operation:
         }
       }
     }
+
+Manually validating against specification schema
+---------------------------------------
+
+Steps:
+1. Build aggregation schema using graphql-FIND_NAME_OF_TOOL
+2. Validate aggregated schema using https://github.com/kamilkisiela/graphql-inspector against running instance of Apache Unomi
