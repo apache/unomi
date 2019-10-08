@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.services.services;
+package org.apache.unomi.services.impl.rules;
 
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Item;
@@ -31,6 +31,7 @@ import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.services.actions.ActionExecutorDispatcher;
+import org.apache.unomi.services.impl.ParserHelper;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

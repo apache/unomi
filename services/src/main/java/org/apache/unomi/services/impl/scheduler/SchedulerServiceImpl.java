@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.services.services;
+package org.apache.unomi.services.impl.scheduler;
 
 import org.apache.unomi.api.services.SchedulerService;
 import org.slf4j.Logger;

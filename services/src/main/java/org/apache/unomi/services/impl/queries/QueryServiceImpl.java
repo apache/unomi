@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.services.services;
+package org.apache.unomi.services.impl.queries;
 
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.AggregateQuery;
@@ -23,6 +23,7 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.QueryService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
+import org.apache.unomi.services.impl.ParserHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

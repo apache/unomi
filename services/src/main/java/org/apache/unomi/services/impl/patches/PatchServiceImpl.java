@@ -14,12 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.services.services;
+package org.apache.unomi.services.impl.patches;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.fge.jsonpatch.JsonPatch;
 import com.github.fge.jsonpatch.JsonPatchException;
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.Item;
+import org.apache.unomi.api.Patch;
 import org.apache.unomi.api.services.PatchService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;

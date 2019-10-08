@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.services.services;
+package org.apache.unomi.services.impl;
 
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
@@ -32,9 +32,9 @@ import java.util.List;
  */
 public abstract class AbstractServiceImpl {
 
-    PersistenceService persistenceService;
+    protected PersistenceService persistenceService;
 
-    DefinitionsService definitionsService;
+    protected DefinitionsService definitionsService;
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -44,7 +44,7 @@ public abstract class AbstractServiceImpl {
         this.definitionsService = definitionsService;
     }
 
-    <T extends MetadataItem> PartialList<Metadata> getMetadatas(int offset, int size, String sortBy, Class<T> clazz) {
+    protected <T extends MetadataItem> PartialList<Metadata> getMetadatas(int offset, int size, String sortBy, Class<T> clazz) {
         PartialList<T> items = persistenceService.getAllItems(clazz, offset, size, sortBy);
         List<Metadata> details = new LinkedList<>();
         for (T definition : items.getList()) {
@@ -53,7 +53,7 @@ public abstract class AbstractServiceImpl {
         return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize());
     }
 
-    <T extends MetadataItem> PartialList<Metadata> getMetadatas(Query query, Class<T> clazz) {
+    protected <T extends MetadataItem> PartialList<Metadata> getMetadatas(Query query, Class<T> clazz) {
         if (query.isForceRefresh()) {
             persistenceService.refresh();
         }
