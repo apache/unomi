@@ -21,28 +21,20 @@ import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.api.services.SegmentService;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.apache.unomi.api.services.ProfileService;
 
-@Command(scope = "unomi", name = "segment-view", description = "This will allows to view a segment in the Apache Unomi Context Server")
+@Command(scope = "unomi", name = "profile-remove", description = "This command will remove a profile")
 @Service
-public class SegmentView implements Action {
+public class ProfileRemove implements Action {
 
     @Reference
-    SegmentService segmentService;
+    ProfileService profileService;
 
-    @Argument(index = 0, name = "segmentId", description = "The identifier for the segment", required = true, multiValued = false)
-    String segmentIdentifier;
+    @Argument(index = 0, name = "profile", description = "The identifier for the profile", required = true, multiValued = false)
+    String profileIdentifier;
 
     public Object execute() throws Exception {
-        Segment segment = segmentService.getSegmentDefinition(segmentIdentifier);
-        if (segment == null) {
-            System.out.println("Couldn't find a segment with id=" + segmentIdentifier);
-            return null;
-        }
-        String jsonRule = CustomObjectMapper.getObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(segment);
-        System.out.println(jsonRule);
+        profileService.delete(profileIdentifier, false);
         return null;
     }
 }
