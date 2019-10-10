@@ -90,6 +90,8 @@
         <httpclient-osgi.version>4.5.5</httpclient-osgi.version>
         <httpcore-osgi.version>4.4.9</httpcore-osgi.version>
 
+        <release.arguments>-Papache-release,integration-tests</release.arguments>
+
     </properties>
 
     <mailingLists>
@@ -1027,7 +1029,7 @@
                         <autoVersionSubmodules>true</autoVersionSubmodules>
                         <preparationGoals>clean install</preparationGoals>
                         <goals>deploy</goals>
-                        <arguments>-Papache-release,integration-tests</arguments>
+                        <arguments>${release.arguments}</arguments>
                     </configuration>
                 </plugin>
                 <plugin>
