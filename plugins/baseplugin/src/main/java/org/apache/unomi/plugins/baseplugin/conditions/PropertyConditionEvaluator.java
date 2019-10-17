@@ -17,6 +17,15 @@
 
 package org.apache.unomi.plugins.baseplugin.conditions;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
 import ognl.Node;
 import ognl.Ognl;
 import ognl.OgnlContext;
@@ -24,22 +33,18 @@ import ognl.OgnlException;
 import ognl.enhance.ExpressionAccessor;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.CustomItem;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Item;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Session;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.PropertyHelper;
-import org.elasticsearch.ElasticsearchParseException;
-import org.elasticsearch.common.joda.DateMathParser;
-import org.elasticsearch.index.mapper.DateFieldMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.function.LongSupplier;
-import java.util.regex.Pattern;
 
 /**
  * Evaluator for property comparison conditions
@@ -385,6 +390,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         if (value == null) {
             return null;
         }
+        /* TODO implement ES7
         if (value instanceof Date) {
             return ((Date) value);
         } else {
@@ -399,6 +405,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 logger.warn("unable to parse date " + value.toString(), e);
             }
         }
+        */
         return null;
     }
 

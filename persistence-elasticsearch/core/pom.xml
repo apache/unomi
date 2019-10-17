@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-persistence-elasticsearch</artifactId>
-        <version>1.4.0-incubating-SNAPSHOT</version>
+        <version>1.5.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>unomi-persistence-elasticsearch-core</artifactId>
@@ -62,7 +62,43 @@
         <dependency>
             <groupId>org.elasticsearch.client</groupId>
             <artifactId>elasticsearch-rest-high-level-client</artifactId>
-            <version>7.0.0-beta1</version>
+            <version>${elasticsearch.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.elasticsearch.test</groupId>
+            <artifactId>framework</artifactId>
+            <version>${elasticsearch.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.elasticsearch.plugin</groupId>
+            <artifactId>transport-netty4-client</artifactId>
+            <version>${elasticsearch.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-test-framework</artifactId>
+            <version>8.2.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.12.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>2.12.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <version>2.12.1</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- The following are optional dependencies from the ElasticSearch that are made mandatory -->
@@ -142,7 +178,6 @@
             <artifactId>commons-io</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast-all</artifactId>
@@ -161,69 +196,69 @@
                 <configuration>
                     <instructions>
                         <Import-Package>
-                            com.google.protobuf;resolution:=optional,
-                            com.twitter.util;resolution:=optional,
-                            com.vividsolutions.jts.*;resolution:=optional,
-                            javax.annotation;resolution:=optional,
-                            javax.crypto;resolution:=optional,
-                            javax.crypto.spec;resolution:=optional,
-                            javax.net.ssl;resolution:=optional,
-                            javax.security.auth.x500;resolution:=optional,
-                            javax.security.cert;resolution:=optional,
-                            javax.servlet;resolution:=optional,
-                            javax.servlet.http;resolution:=optional,
-                            javax.xml.bind;resolution:=optional,
-                            javax.xml.parsers;resolution:=optional,
-                            javax.xml.transform;resolution:=optional,
-                            javax.xml.transform.dom;resolution:=optional,
-                            javax.xml.transform.stream;resolution:=optional,
-                            org.apache.commons.logging;resolution:=optional,
-                            org.apache.regexp;resolution:=optional,
-                            org.apache.tomcat.jni;resolution:=optional,
-                            org.bouncycastle.*;resolution:=optional,
-                            org.eclipse.jetty.npn;resolution:=optional,
-                            org.jboss.logging;resolution:=optional,
-                            org.jboss.marshalling;resolution:=optional,
-                            org.jruby;resolution:=optional,
-                            org.jruby.embed;resolution:=optional,
-                            sun.misc;resolution:=optional,
-                            sun.security.util;resolution:=optional,
-                            sun.security.x509;resolution:=optional,
-                            com.google.protobuf.nano;resolution:=optional,
-                            com.jcraft.jzlib;resolution:=optional,
-                            com.ning.compress;resolution:=optional,
-                            com.ning.compress.lzf;resolution:=optional,
-                            com.ning.compress.lzf.util;resolution:=optional,
-                            javassist;resolution:=optional,
-                            lzma.sdk;resolution:=optional,
-                            lzma.sdk.lzma;resolution:=optional,
-                            net.jpountz.lz4;resolution:=optional,
-                            net.jpountz.xxhash;resolution:=optional,
-                            org.apache.tomcat;resolution:=optional,
-                            org.eclipse.jetty.alpn;resolution:=optional,
-                            org.joda.convert;resolution:=optional,
-                            org.locationtech.spatial4j.context;resolution:=optional,
-                            org.locationtech.spatial4j.context.jts;resolution:=optional,
-                            org.locationtech.spatial4j.distance;resolution:=optional,
-                            org.locationtech.spatial4j.exception;resolution:=optional,
-                            org.locationtech.spatial4j.io;resolution:=optional,
-                            org.locationtech.spatial4j.shape;resolution:=optional,
-                            org.locationtech.spatial4j.shape.impl;resolution:=optional,
-                            org.locationtech.spatial4j.shape.jts;resolution:=optional,
-                            org.zeromq;resolution:=optional,
-                            org.apache.commons.compress.compressors;resolution:=optional,
-                            org.apache.commons.compress.utils;resolution:=optional,
-                            org.apache.commons.csv;resolution:=optional,
-                            org.apache.kafka.clients.producer;resolution:=optional,
-                            javax.persistence;resolution:=optional,
-                            com.google.errorprone.annotations.concurrent;resolution:=optional,
-                            com.lmax.disruptor;resolution:=optional,
-                            com.lmax.disruptor.dsl;resolution:=optional,
-                            com.fasterxml.jackson.dataformat.xml;resolution:=optional,
-                            com.fasterxml.jackson.dataformat.xml.annotation;resolution:=optional,
-                            com.fasterxml.jackson.dataformat.xml.util;resolution:=optional,
-                            io.netty.internal.tcnative;resolution:=optional,
-                            org.conscrypt;resolution:=optional,
+<!--                            com.google.protobuf;resolution:=optional,-->
+<!--                            com.twitter.util;resolution:=optional,-->
+<!--                            com.vividsolutions.jts.*;resolution:=optional,-->
+<!--                            javax.annotation;resolution:=optional,-->
+<!--                            javax.crypto;resolution:=optional,-->
+<!--                            javax.crypto.spec;resolution:=optional,-->
+<!--                            javax.net.ssl;resolution:=optional,-->
+<!--                            javax.security.auth.x500;resolution:=optional,-->
+<!--                            javax.security.cert;resolution:=optional,-->
+<!--                            javax.servlet;resolution:=optional,-->
+<!--                            javax.servlet.http;resolution:=optional,-->
+<!--                            javax.xml.bind;resolution:=optional,-->
+<!--                            javax.xml.parsers;resolution:=optional,-->
+<!--                            javax.xml.transform;resolution:=optional,-->
+<!--                            javax.xml.transform.dom;resolution:=optional,-->
+<!--                            javax.xml.transform.stream;resolution:=optional,-->
+<!--                            org.apache.commons.logging;resolution:=optional,-->
+<!--                            org.apache.regexp;resolution:=optional,-->
+<!--                            org.apache.tomcat.jni;resolution:=optional,-->
+<!--                            org.bouncycastle.*;resolution:=optional,-->
+<!--                            org.eclipse.jetty.npn;resolution:=optional,-->
+<!--                            org.jboss.logging;resolution:=optional,-->
+<!--                            org.jboss.marshalling;resolution:=optional,-->
+<!--                            org.jruby;resolution:=optional,-->
+<!--                            org.jruby.embed;resolution:=optional,-->
+<!--                            sun.misc;resolution:=optional,-->
+<!--                            sun.security.util;resolution:=optional,-->
+<!--                            sun.security.x509;resolution:=optional,-->
+<!--                            com.google.protobuf.nano;resolution:=optional,-->
+<!--                            com.jcraft.jzlib;resolution:=optional,-->
+<!--                            com.ning.compress;resolution:=optional,-->
+<!--                            com.ning.compress.lzf;resolution:=optional,-->
+<!--                            com.ning.compress.lzf.util;resolution:=optional,-->
+<!--                            javassist;resolution:=optional,-->
+<!--                            lzma.sdk;resolution:=optional,-->
+<!--                            lzma.sdk.lzma;resolution:=optional,-->
+<!--                            net.jpountz.lz4;resolution:=optional,-->
+<!--                            net.jpountz.xxhash;resolution:=optional,-->
+<!--                            org.apache.tomcat;resolution:=optional,-->
+<!--                            org.eclipse.jetty.alpn;resolution:=optional,-->
+<!--                            org.joda.convert;resolution:=optional,-->
+<!--                            org.locationtech.spatial4j.context;resolution:=optional,-->
+<!--                            org.locationtech.spatial4j.context.jts;resolution:=optional,-->
+<!--                            org.locationtech.spatial4j.distance;resolution:=optional,-->
+<!--                            org.locationtech.spatial4j.exception;resolution:=optional,-->
+<!--                            org.locationtech.spatial4j.io;resolution:=optional,-->
+<!--                            org.locationtech.spatial4j.shape;resolution:=optional,-->
+<!--                            org.locationtech.spatial4j.shape.impl;resolution:=optional,-->
+<!--                            org.locationtech.spatial4j.shape.jts;resolution:=optional,-->
+<!--                            org.zeromq;resolution:=optional,-->
+<!--                            org.apache.commons.compress.compressors;resolution:=optional,-->
+<!--                            org.apache.commons.compress.utils;resolution:=optional,-->
+<!--                            org.apache.commons.csv;resolution:=optional,-->
+<!--                            org.apache.kafka.clients.producer;resolution:=optional,-->
+<!--                            javax.persistence;resolution:=optional,-->
+<!--                            com.google.errorprone.annotations.concurrent;resolution:=optional,-->
+<!--                            com.lmax.disruptor;resolution:=optional,-->
+<!--                            com.lmax.disruptor.dsl;resolution:=optional,-->
+<!--                            com.fasterxml.jackson.dataformat.xml;resolution:=optional,-->
+<!--                            com.fasterxml.jackson.dataformat.xml.annotation;resolution:=optional,-->
+<!--                            com.fasterxml.jackson.dataformat.xml.util;resolution:=optional,-->
+<!--                            io.netty.internal.tcnative;resolution:=optional,-->
+<!--                            org.conscrypt;resolution:=optional,-->
                             org.apache.unomi.api,
                             org.apache.unomi.api.rules,
                             org.apache.unomi.api.actions,
@@ -236,13 +271,13 @@
                             org.apache.unomi.api.segments,
                             *
                         </Import-Package>
-                        <Export-Package>
-                            org.elasticsearch.*;version="${elasticsearch.version}",
-                            org.elasticsearch.index.query.*;version="${elasticsearch.version}",
-                            org.apache.unomi.persistence.elasticsearch.conditions;version="${project.version}"
-                        </Export-Package>
-                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
-                        <Embed-Transitive>true</Embed-Transitive>
+<!--                        <Export-Package>-->
+<!--                            org.elasticsearch.*;version="${elasticsearch.version}",-->
+<!--                            org.elasticsearch.index.query.*;version="${elasticsearch.version}",-->
+<!--                            org.apache.unomi.persistence.elasticsearch.conditions;version="${project.version}"-->
+<!--                        </Export-Package>-->
+<!--                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>-->
+<!--                        <Embed-Transitive>true</Embed-Transitive>-->
                     </instructions>
                 </configuration>
             </plugin>

@@ -8,9 +8,10 @@
     "parameterValues": {
       "subConditions": [
         {
+          "type": "eventTypeCondition",
           "parameterValues": {
-          },
-          "type": "loginEventCondition"
+            "eventTypeId": "login"
+          }
         }
       ],
       "operator": "and"

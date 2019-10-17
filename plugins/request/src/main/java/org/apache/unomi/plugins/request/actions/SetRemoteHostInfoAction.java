@@ -20,20 +20,6 @@ package org.apache.unomi.plugins.request.actions;
 import com.maxmind.geoip2.DatabaseReader;
 import com.maxmind.geoip2.exception.GeoIp2Exception;
 import com.maxmind.geoip2.model.CityResponse;
-import net.sf.uadetector.ReadableUserAgent;
-import net.sf.uadetector.UserAgentStringParser;
-import net.sf.uadetector.service.UADetectorServiceFactory;
-import org.apache.http.conn.util.InetAddressUtils;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Session;
-import org.apache.unomi.api.actions.Action;
-import org.apache.unomi.api.actions.ActionExecutor;
-import org.apache.unomi.api.services.EventService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.PostConstruct;
-import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -42,9 +28,23 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
+import javax.annotation.PostConstruct;
+import javax.servlet.http.HttpServletRequest;
+import org.apache.http.conn.util.InetAddressUtils;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Session;
+import org.apache.unomi.api.actions.Action;
+import org.apache.unomi.api.actions.ActionExecutor;
+import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.plugins.request.useragent.UserAgent;
+import org.apache.unomi.plugins.request.useragent.UserAgentDetectorServiceImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SetRemoteHostInfoAction implements ActionExecutor {
     private static final Logger logger = LoggerFactory.getLogger(SetRemoteHostInfoAction.class.getName());
+
+    private UserAgentDetectorServiceImpl userAgentDetectorService;
 
     private DatabaseReader databaseReader;
     private String pathToGeoLocationDatabase;
@@ -57,6 +57,14 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
     private String defaultSessionIsp = "Cablecom";
     private double defaultLatitude = 46.1884341;
     private double defaultLongitude = 6.1282508;
+
+    public UserAgentDetectorServiceImpl getUserAgentDetectorService() {
+        return userAgentDetectorService;
+    }
+
+    public void setUserAgentDetectorService(UserAgentDetectorServiceImpl userAgentDetectorService) {
+        this.userAgentDetectorService = userAgentDetectorService;
+    }
 
     public void setPathToGeoLocationDatabase(String pathToGeoLocationDatabase) {
         this.pathToGeoLocationDatabase = pathToGeoLocationDatabase;
@@ -150,14 +158,14 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             logger.error("Cannot lookup IP", e);
         }
 
-        UserAgentStringParser parser = UADetectorServiceFactory.getResourceModuleParser();
-        ReadableUserAgent agent = parser.parse(httpServletRequest.getHeader("User-Agent"));
-        session.setProperty("operatingSystemFamily", agent.getOperatingSystem().getFamilyName());
-        session.setProperty("operatingSystemName", agent.getOperatingSystem().getName());
-        session.setProperty("userAgentName", agent.getName());
-        session.setProperty("userAgentVersion", agent.getVersionNumber().toVersionString());
-        session.setProperty("userAgentNameAndVersion", session.getProperty("userAgentName") + "@@" + session.getProperty("userAgentVersion"));
-        session.setProperty("deviceCategory", agent.getDeviceCategory().getName());
+
+        UserAgent agent =userAgentDetectorService.parseUserAgent(httpServletRequest.getHeader("User-Agent"));
+        session.setProperty("operatingSystemFamily", agent.getOperatingSystemFamily());
+        session.setProperty("operatingSystemName", agent.getOperatingSystemName());
+        session.setProperty("userAgentName", agent.getUserAgentName());
+        session.setProperty("userAgentVersion", agent.getUserAgentVersion());
+        session.setProperty("userAgentNameAndVersion", agent.getUserAgentNameAndVersion());
+        session.setProperty("deviceCategory", agent.getDeviceCategory());
 
         return EventService.SESSION_UPDATED;
     }

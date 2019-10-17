@@ -1,0 +1,69 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+=== Built-in actions
+
+Unomi comes with quite a lot of built-in actions. Instead of detailing them one by one you will find here an overview of
+what an action descriptor looks like:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "UNIQUE_IDENTIFIER_STRING",
+    "name": "DISPLAYABLE_ACTION_NAME",
+    "description": "DISPLAYABLE_ACTION_DESCRIPTION",
+    "systemTags": [
+      "profileTags",
+      "event",
+      "availableToEndUser",
+      "allowMultipleInstances"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "ACTION_EXECUTOR_ID",
+  "parameters": [
+     ... parameters specific to each action ...
+  ]
+}
+----
+
+The ACTION_EXECUTOR_ID points to a OSGi Blueprint parameter that is defined when implementing the action in a plugin.
+Here's an example of such a registration:
+
+From https://github.com/apache/unomi/blob/master/plugins/mail/src/main/resources/OSGI-INF/blueprint/blueprint.xml
+
+[source,xml]
+----
+    <bean id="sendMailActionImpl" class="org.apache.unomi.plugins.mail.actions.SendMailAction">
+       <!-- ... bean properties ... -->
+    </bean>
+    <service id="sendMailAction" ref="sendMailActionImpl" interface="org.apache.unomi.api.actions.ActionExecutor">
+        <service-properties>
+            <entry key="actionExecutorId" value="sendMail"/>
+        </service-properties>
+    </service>
+----
+
+In the above example the ACTION_EXECUTOR_ID is `sendMail`
+
+==== Existing actions descriptors
+
+Here is a non-exhaustive list of actions built into Apache Unomi. Feel free to browse the source code if you want to
+discover more. But the list below should get you started with the most useful actions:
+
+- https://github.com/apache/unomi/tree/master/plugins/baseplugin/src/main/resources/META-INF/cxs/actions
+- https://github.com/apache/unomi/tree/master/plugins/request/src/main/resources/META-INF/cxs/actions
+- https://github.com/apache/unomi/tree/master/plugins/mail/src/main/resources/META-INF/cxs/actions
+
+Of course it is also possible to build your own custom actions by developing custom Unomi plugins/extensions.

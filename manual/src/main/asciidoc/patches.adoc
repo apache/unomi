@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-==== Migration patches
+=== Migration patches
 
 You may provide patches on any predefined items by simply adding a JSON file in :
 

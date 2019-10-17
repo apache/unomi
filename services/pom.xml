@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
-        <version>1.4.0-incubating-SNAPSHOT</version>
+        <version>1.5.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>unomi-services</artifactId>
@@ -132,6 +132,27 @@
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.github.seancfoley</groupId>
+            <artifactId>ipaddress</artifactId>
+            <version>4.3.0</version>
+        </dependency>
+
+        <!-- Unit tests -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.6.6</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>

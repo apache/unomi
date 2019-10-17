@@ -159,7 +159,11 @@ public class ClusterServiceImpl implements ClusterService {
             TimerTask statisticsTask = new TimerTask() {
                 @Override
                 public void run() {
-                    updateSystemStats();
+                    try {
+                        updateSystemStats();
+                    } catch (Throwable t) {
+                        logger.error("Error updating system statistics", t);
+                    }
                 }
             };
             schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(statisticsTask, 0, nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS);

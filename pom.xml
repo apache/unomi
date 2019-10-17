@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache</groupId>
         <artifactId>apache</artifactId>
-        <version>15</version>
+        <version>21</version>
         <relativePath />
     </parent>
 
@@ -34,20 +34,20 @@
         worked on by the OASIS Context Server Technical Committee. It provides a high-performance user profile and
         event tracking server.
     </description>
-    <url>http://unomi.incubator.apache.org</url>
-    <version>1.4.0-incubating-SNAPSHOT</version>
+    <url>https://unomi.apache.org</url>
+    <version>1.5.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <licenses>
         <license>
             <name>The Apache Software License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
         </license>
     </licenses>
 
     <organization>
         <name>Apache Software Foundation</name>
-        <url>http://www.apache.org</url>
+        <url>https://www.apache.org</url>
     </organization>
 
     <issueManagement>
@@ -70,7 +70,7 @@
         <version.karaf>4.1.7</version.karaf>
         <version.karaf.cellar>4.1.0</version.karaf.cellar>
         <version.pax.exam>4.11.0</version.pax.exam>
-        <elasticsearch.version>5.6.3</elasticsearch.version>
+        <elasticsearch.version>7.4.0</elasticsearch.version>
 
         <maven.compiler.source>1.7</maven.compiler.source>
         <maven.compiler.target>1.7</maven.compiler.target>
@@ -83,6 +83,7 @@
         <!-- Librairies for Karaf packaging -->
         <xerces.version>2.11.0_1</xerces.version>
         <servicemix.specs.version>2.9.0</servicemix.specs.version>
+        <jsr305.bundle.version>3.0.2_1</jsr305.bundle.version>
         <xalan.bundle.version>2.7.2_3</xalan.bundle.version>
         <xalan-serializer.bundle.version>2.7.2_1</xalan-serializer.bundle.version>
         <jna.version>4.5.0</jna.version>
@@ -94,25 +95,25 @@
     <mailingLists>
         <mailingList>
             <name>unomi-dev</name>
-            <subscribe>dev-subscribe@unomi.incubator.apache.org</subscribe>
-            <unsubscribe>dev-unsubscribe@unomi.incubator.apache.org</unsubscribe>
-            <post>dev@unomi.incubator.apache.org</post>
-            <archive>http://mail-archives.apache.org/mod_mbox/incubator-unomi-dev/</archive>
+            <subscribe>dev-subscribe@unomi.apache.org</subscribe>
+            <unsubscribe>dev-unsubscribe@unomi.apache.org</unsubscribe>
+            <post>dev@unomi.apache.org</post>
+            <archive>https://mail-archives.apache.org/mod_mbox/unomi-dev/</archive>
         </mailingList>
         <mailingList>
             <name>unomi-commits</name>
-            <subscribe>commits-subscribe@unomi.incubator.apache.org</subscribe>
-            <unsubscribe>commits-unsubscribe@unomi.incubator.apache.org</unsubscribe>
-            <post>commits@unomi.incubator.apache.org</post>
-            <archive>http://mail-archives.apache.org/mod_mbox/incubator-unomi-commits/</archive>
+            <subscribe>commits-subscribe@unomi.apache.org</subscribe>
+            <unsubscribe>commits-unsubscribe@unomi.apache.org</unsubscribe>
+            <post>commits@unomi.apache.org</post>
+            <archive>https://mail-archives.apache.org/mod_mbox/unomi-commits/</archive>
         </mailingList>
     </mailingLists>
 
     <scm>
-        <connection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</connection>
-        <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</developerConnection>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/unomi.git</connection>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/unomi.git</developerConnection>
         <tag>HEAD</tag>
-        <url>https://git-wip-us.apache.org/repos/asf/incubator-unomi.git</url>
+        <url>https://gitbox.apache.org/repos/asf/unomi.git</url>
     </scm>
 
     <developers>
@@ -124,10 +125,10 @@
             <roles>
                 <role>champion</role>
                 <role>committer</role>
-                <role>PPMC</role>
+                <role>PMC</role>
             </roles>
             <organization>Talend</organization>
-            <organizationUrl>http://www.talend.com</organizationUrl>
+            <organizationUrl>https://www.talend.com</organizationUrl>
         </developer>
         <developer>
             <id>shuber</id>
@@ -136,10 +137,10 @@
             <timezone>+1</timezone>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
+                <role>PMC Chair</role>
             </roles>
             <organization>Jahia</organization>
-            <organizationUrl>http://www.jahia.com</organizationUrl>
+            <organizationUrl>https://www.jahia.com</organizationUrl>
         </developer>
         <developer>
             <id>bdelacretaz</id>
@@ -147,8 +148,8 @@
             <email>bdelacretaz@apache.org</email>
             <timezone>+1</timezone>
             <roles>
-                <role>Mentor</role>
-                <role>PPMC</role>
+                <role>Retired(Mentor)</role>
+                <role>Retired(PPMC)</role>
             </roles>
             <organization>Adobe</organization>
         </developer>
@@ -157,8 +158,8 @@
             <name>Roman Shaposhnik</name>
             <email>rvs@apache.org</email>
             <roles>
-                <role>Mentor</role>
-                <role>PPMC</role>
+                <role>Retired(Mentor)</role>
+                <role>Retired(PPMC)</role>
             </roles>
             <organization>Pivotal</organization>
         </developer>
@@ -167,8 +168,8 @@
             <name>Chris Mattmann</name>
             <email>mattmann@apache.org</email>
             <roles>
-                <role>Mentor</role>
-                <role>PPMC</role>
+                <role>Retired(Mentor)</role>
+                <role>Retired(PPMC)</role>
             </roles>
             <organization>NASA JPL</organization>
         </developer>
@@ -178,42 +179,40 @@
             <email>draier@apache.org</email>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
+                <role>PMC</role>
             </roles>
         </developer>
         <developer>
             <name>Sergiy Shyrkov</name>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
             </roles>
         </developer>
         <developer>
             <name>Kevan Jahanshahi</name>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
+                <role>PMC</role>
             </roles>
         </developer>
         <developer>
             <name>Cédric Mailleux</name>
             <roles>
-                <role>committer</role>
-                <role>PPMC</role>
+                <role>Retired(committer)</role>
+                <role>Retired(PPMC)</role>
             </roles>
         </developer>
         <developer>
             <name>Régis Mora</name>
             <roles>
-                <role>committer</role>
-                <role>PPMC</role>
+                <role>Retired(committer)</role>
+                <role>Retired(PPMC)</role>
             </roles>
         </developer>
         <developer>
             <name>Quentin Lamerand</name>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
             </roles>
         </developer>
         <developer>
@@ -223,16 +222,15 @@
             <timezone>+1</timezone>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
             </roles>
-            <organization>Jahia</organization>
-            <organizationUrl>http://www.jahia.com</organizationUrl>
+            <organization>RedHat</organization>
+            <organizationUrl>https://www.redhat.com</organizationUrl>
         </developer>
         <developer>
             <name>David Griffon</name>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
+                <role>PMC</role>
             </roles>
         </developer>
         <developer>
@@ -260,7 +258,7 @@
             <timezone>+4</timezone>
             <roles>
                 <role>committer</role>
-                <role>PPMC</role>
+                <role>PMC</role>
             </roles>
             <organization>Yupiik</organization>
             <organizationUrl>https://www.yupiik.com</organizationUrl>
@@ -279,17 +277,13 @@
         <repository>
             <id>smx.m2</id>
             <name>Apache ServiceMix M2</name>
-            <url>http://svn.apache.org/repos/asf/servicemix/m2-repo/</url>
-        </repository>
-        <repository>
-            <id>jahia.3rdparty</id>
-            <url>https://devtools.jahia.com/nexus/content/repositories/thirdparty-releases/</url>
+            <url>https://svn.apache.org/repos/asf/servicemix/m2-repo/</url>
         </repository>
         <!-- Apache snapshots -->
         <repository>
             <id>apache-snapshots</id>
             <name>Apache Snapshots Repository</name>
-            <url>http://repository.apache.org/content/groups/snapshots-group</url>
+            <url>https://repository.apache.org/content/groups/snapshots-group</url>
             <releases>
                 <enabled>false</enabled>
             </releases>
@@ -320,6 +314,35 @@
             <modules>
                 <module>itests</module>
             </modules>
+        </profile>
+
+        <profile>
+            <id>ci-build-itests</id>
+            <activation>
+                <property>
+                    <name>maven.repo.local</name>
+                </property>
+            </activation>
+            <modules>
+                <module>itests</module>
+            </modules>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>MavenTest</exclude>
+                            </excludes>
+                            <systemPropertyVariables>
+                                <org.ops4j.pax.url.mvn.localRepository>${maven.repo.local}</org.ops4j.pax.url.mvn.localRepository>
+                                <org.ops4j.pax.logging.DefaultServiceLog.level>INFO</org.ops4j.pax.logging.DefaultServiceLog.level>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
 
         <profile>
@@ -565,6 +588,45 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+        <profile>
+            <id>owasp</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.owasp</groupId>
+                        <artifactId>dependency-check-maven</artifactId>
+                        <inherited>false</inherited>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>aggregate</goal>
+                                </goals>
+                                <inherited>false</inherited>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+            <reporting>
+                <plugins>
+                    <plugin>
+                        <groupId>org.owasp</groupId>
+                        <artifactId>dependency-check-maven</artifactId>
+                        <inherited>false</inherited>
+                        <configuration>
+                            <name>OWASP Dependency Check</name>
+                        </configuration>
+                        <reportSets>
+                            <reportSet>
+                                <reports>
+                                    <report>aggregate</report>
+                                </reports>
+                            </reportSet>
+                        </reportSets>
+                    </plugin>
+                </plugins>
+            </reporting>
         </profile>
     </profiles>
 
@@ -1027,6 +1089,11 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-scm-publish-plugin</artifactId>
                     <version>3.0.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.owasp</groupId>
+                    <artifactId>dependency-check-maven</artifactId>
+                    <version>5.0.0</version>
                 </plugin>
             </plugins>
         </pluginManagement>

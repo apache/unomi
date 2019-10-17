@@ -98,8 +98,12 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                loadConditionTypesFromPersistence();
-                loadActionTypesFromPersistence();
+                try {
+                    loadConditionTypesFromPersistence();
+                    loadActionTypesFromPersistence();
+                } catch (Throwable t) {
+                    logger.error("Error loading definitions from persistence back-end", t);
+                }
             }
         };
         schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 10000, definitionsRefreshInterval, TimeUnit.MILLISECONDS);

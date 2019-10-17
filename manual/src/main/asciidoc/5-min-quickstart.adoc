@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-==== Five Minutes QuickStart
+=== Five Minutes QuickStart
 
 1) Install JDK 8 (http://www.oracle.com/technetwork/java/javase/downloads/index.html) and make sure you set the
 JAVA_HOME variable https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/
@@ -22,7 +22,7 @@ JAVA_HOME variable https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_ja
 
 4) Launch ElasticSearch using : `bin/elasticsearch`
 
-5) Download Apache Unomi here : http://unomi.incubator.apache.org/download.html
+5) Download Apache Unomi here : https://unomi.apache.org/download.html
 
 6) Start it using : `./bin/karaf`
 

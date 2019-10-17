@@ -80,59 +80,25 @@ public class BasicTest {
     @Configuration
     public Option[] config() {
         MavenArtifactUrlReference karafUrl = maven()
-                .groupId("org.apache.karaf")
-                .artifactId("apache-karaf")
-                .version("4.1.5")
-                .type("tar.gz");
-
-        MavenUrlReference karafStandardRepo = maven()
-                .groupId("org.apache.karaf.features")
-                .artifactId("standard")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        MavenUrlReference karafPaxWebRepo = maven()
-                .groupId("org.ops4j.pax.web")
-                .artifactId("pax-web-features")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        MavenUrlReference karafSpringRepo = maven()
-                .groupId("org.apache.karaf.features")
-                .artifactId("spring")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        MavenUrlReference karafCxfRepo = maven()
-                .groupId("org.apache.cxf.karaf")
-                .artifactId("apache-cxf")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        MavenUrlReference karafEnterpriseRepo = maven()
-                .groupId("org.apache.karaf.features")
-                .artifactId("enterprise")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        MavenUrlReference contextServerRepo = maven()
                 .groupId("org.apache.unomi")
-                .artifactId("unomi-kar")
-                .classifier("features")
-                .type("xml")
+                .artifactId("unomi")
+                .type("tar.gz")
                 .versionAsInProject();
+
+        String localRepository = System.getProperty("org.ops4j.pax.url.mvn.localRepository");
+        if (localRepository == null) {
+            localRepository = "";
+        }
 
         return new Option[]{
                 KarafDistributionOption.debugConfiguration("5005", false),
+                KarafDistributionOption.logLevel(LogLevel.INFO),
+                KarafDistributionOption.editConfigurationFilePut("etc/org.ops4j.pax.url.mvn.cfg", "org.ops4j.pax.url.mvn.localRepository", localRepository),
                 karafDistributionConfiguration()
                         .frameworkUrl(karafUrl)
                         .unpackDirectory(new File("target/exam"))
                         .useDeployFolder(false),
                 keepRuntimeFolder(),
-                KarafDistributionOption.features(karafStandardRepo, "wrap")
-                KarafDistributionOption.features(karafPaxWebRepo, "war"),
-                KarafDistributionOption.features(karafCxfRepo, "cxf"),
-                KarafDistributionOption.features(contextServerRepo, "unomi-kar"),
                 // we need to wrap the HttpComponents libraries ourselves since the OSGi bundles provided by the project are incorrect
                 wrappedBundle(mavenBundle("org.apache.httpcomponents",
                         "httpcore").versionAsInProject()),

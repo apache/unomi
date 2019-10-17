@@ -458,4 +458,5 @@ We have seen a simple example how to interact with Unomi using a combination of 
 === Annex
 
 Here is an overview of how Unomi processes incoming requests to the `ContextServlet`.
-image:../../images/unomi-request.png[Unomi request overview]
+
+image::unomi-request.png[Unomi request overview]

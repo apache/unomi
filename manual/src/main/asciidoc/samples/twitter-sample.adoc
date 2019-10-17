@@ -42,7 +42,7 @@ If you are using the packaged version of Unomi (as opposed to deploying it to yo
 
 [source]
 ----
-cp target/tweet-button-plugin-1.0.0-incubating-SNAPSHOT.jar ../../package/target/unomi-1.0.0-incubating-SNAPSHOT/deploy
+cp target/tweet-button-plugin-1.5.0-SNAPSHOT.jar ../../package/target/unomi-1.5.0-SNAPSHOT/deploy
 ----
 
 ===== Testing the samples
@@ -107,7 +107,7 @@ We will look at the details of the context request and response later.
 
 ==== HTML page
 
-The code for the HTML page with our Tweet button can be found at https://github.com/apache/incubator-unomi/blob/master/wab/src/main/webapp/index.html[https://github.com/apache/incubator-unomi/blob/master/wab/src/main/webapp/index.html].
+The code for the HTML page with our Tweet button can be found at https://github.com/apache/unomi/blob/master/wab/src/main/webapp/index.html[https://github.com/apache/unomi/blob/master/wab/src/main/webapp/index.html].
 
 This HTML page is fairly straightforward: we create a tweet button using the Twitter API while a Javascript script performs the actual logic.
 
@@ -265,15 +265,15 @@ The `tweetEvent` event type is not defined by default in Unomi. This is where ou
 
 In order to react to `tweetEvent` events, we will define a new Unomi rule since this is exactly what Unomi rules are supposed to do. Rules are guarded by conditions and if these
  conditions match, the associated set of actions will be executed. In our case, we want our new
- https://github.com/apache/incubator-unomi/blob/master/samples/tweet-button-plugin/src/main/resources/META-INF/cxs/rules/incrementTweetNumber.json[`incrementTweetNumber`] rule to only react to `tweetEvent` events and
+ https://github.com/apache/unomi/blob/master/samples/tweet-button-plugin/src/main/resources/META-INF/cxs/rules/incrementTweetNumber.json[`incrementTweetNumber`] rule to only react to `tweetEvent` events and
  we want it to perform the profile update accordingly: create the property types for our custom properties if they don't exist and update them. To do so, we will create a
  custom
- https://github.com/apache/incubator-unomi/blob/master/samples/tweet-button-plugin/src/main/resources/META-INF/cxs/actions/incrementTweetNumberAction.json[`incrementTweetNumberAction`] action that will be triggered any time our rule matches. An action is some custom code that is deployed in the context server and can access the
+ https://github.com/apache/unomi/blob/master/samples/tweet-button-plugin/src/main/resources/META-INF/cxs/actions/incrementTweetNumberAction.json[`incrementTweetNumberAction`] action that will be triggered any time our rule matches. An action is some custom code that is deployed in the context server and can access the
  Unomi API to perform what it is that it needs to do.
 
 ===== Rule definition
 
-Let's look at how our custom https://github.com/apache/incubator-unomi/blob/master/samples/tweet-button-plugin/src/main/resources/META-INF/cxs/rules/incrementTweetNumber.json[`incrementTweetNumber`] rule is defined:
+Let's look at how our custom https://github.com/apache/unomi/blob/master/samples/tweet-button-plugin/src/main/resources/META-INF/cxs/rules/incrementTweetNumber.json[`incrementTweetNumber`] rule is defined:
 
 [source,json]
 ----
@@ -311,7 +311,7 @@ Finally, we specify a list of actions that should be performed as consequences o
 
 ===== Action definition
 
-Let's now look at our custom https://github.com/apache/incubator-unomi/blob/master/samples/tweet-button-plugin/src/main/resources/META-INF/cxs/actions/incrementTweetNumberAction.json[`incrementTweetNumberAction`] action type definition:
+Let's now look at our custom https://github.com/apache/unomi/blob/master/samples/tweet-button-plugin/src/main/resources/META-INF/cxs/actions/incrementTweetNumberAction.json[`incrementTweetNumberAction`] action type definition:
 
 [source,json]
 ----
@@ -331,7 +331,7 @@ Finally, we provide a mysterious `actionExecutor` identifier: `incrementTweetNum
 
 ===== Action executor definition
 
-The action executor references the actual implementation of the action as defined in our https://github.com/apache/incubator-unomi/blob/master/samples/tweet-button-plugin/src/main/resources/OSGI-INF/blueprint/blueprint.xml[blueprint definition]:
+The action executor references the actual implementation of the action as defined in our https://github.com/apache/unomi/blob/master/samples/tweet-button-plugin/src/main/resources/OSGI-INF/blueprint/blueprint.xml[blueprint definition]:
 
 [source,xml]
 ----
@@ -357,7 +357,7 @@ In standard Blueprint fashion, we specify that we will need the `profileService`
 
 ===== Action executor implementation
 
-Our action executor definition specifies that the bean providing the service is implemented in the https://github.com/apache/incubator-unomi/blob/master/samples/tweet-button-plugin/src/main/java/org/apache/unomi/samples/tweet_button_plugin/actions/IncrementTweetNumberAction.java[`org.apache.unomi.samples.tweet_button_plugin.actions
+Our action executor definition specifies that the bean providing the service is implemented in the https://github.com/apache/unomi/blob/master/samples/tweet-button-plugin/src/main/java/org/apache/unomi/samples/tweet_button_plugin/actions/IncrementTweetNumberAction.java[`org.apache.unomi.samples.tweet_button_plugin.actions
 .IncrementTweetNumberAction`] class. This class implements the Unomi `ActionExecutor` interface which provides a single `int execute(Action action, Event event)` method: the executor gets the action instance to execute along with the event that triggered it, performs its work and returns an integer status corresponding to what happened as defined by public constants of the `EventService` interface of Unomi: `NO_CHANGE`, `SESSION_UPDATED` or `PROFILE_UPDATED`.
 
 Let's now look at the implementation of the method:
@@ -429,4 +429,5 @@ We have seen a simple example how to interact with Unomi using a combination of 
 === Annex
 
 Here is an overview of how Unomi processes incoming requests to the `ContextServlet`.
-image: images/unomi-request.png[Unomi request overview]
+
+image::unomi-request.png[Unomi request overview]

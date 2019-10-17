@@ -34,6 +34,9 @@ import static org.junit.Assert.assertNotEquals;
 
 public class MetricsServiceTest {
 
+    public static final int THREAD_POOL_SIZE = 100;
+    public static final int WORKER_COUNT = 100000;
+
     class Worker implements Callable<BigInteger> {
 
         MetricsService metricsService;
@@ -64,10 +67,10 @@ public class MetricsServiceTest {
 
     @Test
     public void testMetricsImpact() throws InterruptedException {
-        int workerCount = 100000;
+        int workerCount = WORKER_COUNT;
         System.out.println("Free memory=" + humanReadableByteCount(Runtime.getRuntime().freeMemory(), false));
         System.out.println("Testing with metrics deactivated...");
-        ExecutorService executorService = Executors.newFixedThreadPool(1000);
+        ExecutorService executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
         List<Callable<BigInteger>> todo = new ArrayList<Callable<BigInteger>>(workerCount);
         MetricsServiceImpl metricsService = new MetricsServiceImpl();
         metricsService.setActivated(false);

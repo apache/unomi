@@ -47,42 +47,13 @@ public abstract class BaseIT {
 
     @Configuration
     public Option[] config() throws InterruptedException {
-        MavenArtifactUrlReference karafUrl = maven()
-                .groupId("org.apache.karaf")
-                .artifactId("apache-karaf")
-                .version("4.1.5")
-                .type("tar.gz");
 
-        MavenUrlReference karafStandardRepo = maven()
-                .groupId("org.apache.karaf.features")
-                .artifactId("standard")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        MavenUrlReference karafCellarRepo = maven()
-                .groupId("org.apache.karaf.cellar")
-                .artifactId("apache-karaf-cellar")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        MavenUrlReference karafPaxWebRepo = maven()
-                .groupId("org.ops4j.pax.web")
-                .artifactId("pax-web-features")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        MavenUrlReference karafCxfRepo = maven()
-                .groupId("org.apache.cxf.karaf")
-                .artifactId("apache-cxf")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-        MavenUrlReference contextServerRepo = maven()
+        MavenArtifactUrlReference karafUrl = maven()
                 .groupId("org.apache.unomi")
-                .artifactId("unomi-kar")
-                .classifier("features")
-                .type("xml")
+                .artifactId("unomi")
+                .type("tar.gz")
                 .versionAsInProject();
+
         MavenUrlReference routerRepo = maven()
                 .groupId("org.apache.unomi")
                 .artifactId("unomi-router-karaf-feature")
@@ -132,9 +103,6 @@ public abstract class BaseIT {
                 systemProperty("org.apache.unomi.hazelcast.tcp-ip.members").value("127.0.0.1"),
                 systemProperty("org.apache.unomi.hazelcast.tcp-ip.interface").value("127.0.0.1"),
                 systemProperty("unomi.autoStart").value("true"),
-                features(karafCxfRepo, "cxf"),
-                features(karafCellarRepo, "cellar"),
-                features(contextServerRepo, "unomi-kar"),
                 features(routerRepo, "unomi-router-karaf-feature"),
                 CoreOptions.bundleStartLevel(100),
                 CoreOptions.frameworkStartLevel(100)

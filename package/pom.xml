@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
-        <version>1.4.0-incubating-SNAPSHOT</version>
+        <version>1.5.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>unomi</artifactId>
@@ -345,6 +345,7 @@
                         <library>mvn:org.apache.servicemix.specs/org.apache.servicemix.specs.stax-api-1.2/${servicemix.specs.version};type:=endorsed;export:=true</library>
                         <library>mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.xalan/${xalan.bundle.version};type:=endorsed;export:=true</library>
                         <library>mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.xalan-serializer/${xalan-serializer.bundle.version};type:=endorsed;export:=true</library>
+                        <library>mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jsr305/${jsr305.bundle.version};type:=endorsed;export:=true</library>
                         <library>mvn:javax.annotation/javax.annotation-api/1.2;type:=endorsed;export:=true</library>
 
                         <library>mvn:org.apache.servicemix.specs/org.apache.servicemix.specs.activator/${servicemix.specs.version};type:=default;export:=true</library>
@@ -360,18 +361,6 @@
     </build>
 
     <profiles>
-        <profile>
-            <id>integration-tests</id>
-            <dependencies>
-                <dependency>
-                    <groupId>org.apache.unomi</groupId>
-                    <artifactId>unomi-itests</artifactId>
-                    <version>${project.version}</version>
-                    <classifier>features</classifier>
-                    <scope>test</scope>
-                </dependency>
-            </dependencies>
-        </profile>
         <profile>
             <id>src</id>
             <build>

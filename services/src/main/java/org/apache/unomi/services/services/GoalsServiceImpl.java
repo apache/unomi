@@ -201,10 +201,13 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     public Set<Metadata> getGoalMetadatas(Query query) {
         definitionsService.resolveConditionType(query.getCondition());
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Goal definition : persistenceService.query(query.getCondition(), query.getSortby(), Goal.class, query.getOffset(), query.getLimit()).getList()) {
+        Set<Metadata> descriptions = new LinkedHashSet<>();
+
+        List<Goal> goals = persistenceService.query(query.getCondition(), query.getSortby(), Goal.class, query.getOffset(), query.getLimit()).getList();
+        for (Goal definition : goals) {
             descriptions.add(definition.getMetadata());
         }
+
         return descriptions;
     }
 

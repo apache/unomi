@@ -17,6 +17,8 @@
 
 package org.apache.unomi.services.services;
 
+import inet.ipaddr.IPAddress;
+import inet.ipaddr.IPAddressString;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.EventProperty;
@@ -34,8 +36,6 @@ import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.*;
 
 public class EventServiceImpl implements EventService {
@@ -80,15 +80,12 @@ public class EventServiceImpl implements EventService {
                 } else if (keys[2].equals("key")) {
                     thirdPartyServer.setKey(entry.getValue());
                 } else if (keys[2].equals("ipAddresses")) {
-                    Set<InetAddress> inetAddresses = new HashSet<>();
+                    Set<IPAddress> ipAddresses = new HashSet<>();
                     for (String ip : StringUtils.split(entry.getValue(), ',')) {
-                        try {
-                            inetAddresses.add(InetAddress.getByName(ip.trim()));
-                        } catch (UnknownHostException e) {
-                            logger.error("Cannot resolve address",e);
-                        }
+                        IPAddress ipAddress = new IPAddressString(ip.trim()).getAddress();
+                        ipAddresses.add(ipAddress);
                     }
-                    thirdPartyServer.setIpAddresses(inetAddresses);
+                    thirdPartyServer.setIpAddresses(ipAddresses);
                 }
             }
         }
@@ -126,12 +123,13 @@ public class EventServiceImpl implements EventService {
         if (key != null) {
             for (Map.Entry<String, ThirdPartyServer> entry : thirdPartyServers.entrySet()) {
                 ThirdPartyServer server = entry.getValue();
-                try {
-                    if (server.getKey().equals(key) && server.getIpAddresses().contains(InetAddress.getByName(ip))) {
-                        return server.getId();
+                if (server.getKey().equals(key)) {
+                    IPAddress ipAddress = new IPAddressString(ip).getAddress();
+                    for (IPAddress serverIpAddress : server.getIpAddresses()) {
+                        if (serverIpAddress.contains(ipAddress)) {
+                            return server.getId();
+                        }
                     }
-                } catch (UnknownHostException e) {
-                    logger.error("Cannot resolve address",e);
                 }
             }
             logger.debug("Could not authenticate any third party servers");
