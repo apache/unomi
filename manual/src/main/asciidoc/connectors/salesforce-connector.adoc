@@ -116,7 +116,7 @@ find more information about rules in the <<_concepts,Concepts>> and the <<_getti
 
 ==== Properties
 
-To define how Salesforce attributes will be mapped to Marketing Factory profile properties, edit the following entry using the pattern below :
+To define how Salesforce attributes will be mapped to Unomi profile properties, edit the following entry using the pattern below :
 
 [source]
 ----
@@ -124,7 +124,9 @@ org.apache.unomi.sfdc.fields.mappings=${env:UNOMI_SFDC_FIELDS_MAPPINGS:-email<=>
 ----
 
 Please note that Salesforce needs the company and the last name to be set, otherwise the lead won't be created.
-An identifier needs to be set as well. The identifier will be used to map the Marketing Factory profile to the Salesforce lead. By default, the email is set as the identifier, meaning that if a lead in Salesforce and a profile in Marketing Factory have the same email, they'll be considered as the same person.
+An identifier needs to be set as well. The identifier will be used to map the Unomi profile to the Salesforce lead. By
+default, the email is set as the identifier, meaning that if a lead in Salesforce and a profile in Unomi have the same
+email, they'll be considered as the same person.
 
 [source]
 ----
