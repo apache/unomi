@@ -19,6 +19,8 @@ package org.apache.unomi.services.actions.groovy;
 import groovy.util.ResourceConnector;
 import groovy.util.ResourceException;
 import org.osgi.framework.BundleContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,6 +34,8 @@ import java.util.Dictionary;
  * code folder if the corresponding header has been set in the bundle.
  */
 public class GroovyBundleResourceConnector implements ResourceConnector {
+
+    private static final Logger logger = LoggerFactory.getLogger(GroovyBundleResourceConnector.class.getName());
 
     private BundleContext bundleContext;
 
@@ -53,10 +57,10 @@ public class GroovyBundleResourceConnector implements ResourceConnector {
                     File resourceFile = new File(resourcesSourceFolder, resourcePath);
                     if (resourceFile.exists()) {
                         try {
-                            System.out.println("Loading file " + resourcePath + " from module source !");
+                            logger.info("Loading file {} from module source !", resourcePath);
                             resourceURL = resourceFile.toURI().toURL();
                         } catch (MalformedURLException e) {
-                            e.printStackTrace();
+                            logger.warn("Error loading file "+resourcePath+" from module source code", e);
                         }
                     }
                 }
