@@ -1,0 +1,15 @@
+{
+  "metadata": {
+    "id": "testGroovyAction",
+    "name": "testGroovyAction",
+    "description": "A sample test Groovy Action",
+    "systemTags": [
+      "profileTags",
+      "demographic"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "groovy:testGroovyAction",
+  "parameters": [
+  ]
+}

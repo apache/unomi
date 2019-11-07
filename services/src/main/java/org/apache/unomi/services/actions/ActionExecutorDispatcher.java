@@ -21,6 +21,7 @@ import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
+import org.apache.unomi.api.actions.ActionDispatcher;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.metrics.MetricAdapter;
@@ -28,6 +29,8 @@ import org.apache.unomi.metrics.MetricsService;
 import org.mvel2.MVEL;
 import org.mvel2.ParserConfiguration;
 import org.mvel2.ParserContext;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,9 +47,15 @@ public class ActionExecutorDispatcher {
     private final Map<String, ValueExtractor> valueExtractors = new HashMap<>(11);
     private Map<String, ActionExecutor> executors = new ConcurrentHashMap<>();
     private MetricsService metricsService;
+    private Map<String, ActionDispatcher> actionDispatchers = new ConcurrentHashMap<>();
+    private BundleContext bundleContext;
 
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
+    }
+
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
     }
 
     public ActionExecutorDispatcher() {
@@ -107,14 +116,6 @@ public class ActionExecutorDispatcher {
                 }
             }
         });
-    }
-
-    public void addExecutor(String name, ActionExecutor evaluator) {
-        executors.put(name, evaluator);
-    }
-
-    public void removeExecutor(String name) {
-        executors.remove(name);
     }
 
     public Action getContextualAction(Action action, Event event) {
@@ -182,7 +183,16 @@ public class ActionExecutorDispatcher {
             throw new UnsupportedOperationException("No service defined for : " + action.getActionType());
         }
 
-        if (executors.containsKey(actionKey)) {
+        int colonPos = actionKey.indexOf(":");
+        if (colonPos > 0) {
+            String actionPrefix = actionKey.substring(0, colonPos);
+            String actionName = actionKey.substring(colonPos+1);
+            ActionDispatcher actionDispatcher = actionDispatchers.get(actionPrefix);
+            if (actionDispatcher == null) {
+                logger.warn("Couldn't find any action dispatcher for prefix '{}', action {} won't execute !", actionPrefix, actionKey);
+            }
+            actionDispatcher.execute(action, event, actionName);
+        } else if (executors.containsKey(actionKey)) {
             ActionExecutor actionExecutor = executors.get(actionKey);
             try {
                 return new MetricAdapter<Integer>(metricsService, this.getClass().getName() + ".action." + actionKey) {
@@ -200,6 +210,33 @@ public class ActionExecutorDispatcher {
 
     private interface ValueExtractor {
         Object extract(String valueAsString, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException;
+    }
+
+    public void bindExecutor(ServiceReference<ActionExecutor> actionExecutorServiceReference) {
+        ActionExecutor actionExecutor = bundleContext.getService(actionExecutorServiceReference);
+        executors.put(actionExecutorServiceReference.getProperty("actionExecutorId").toString(), actionExecutor);
+    }
+
+    public void unbindExecutor(ServiceReference<ActionExecutor> actionExecutorServiceReference) {
+        if (actionExecutorServiceReference == null) {
+            return;
+        }
+        executors.remove(actionExecutorServiceReference.getProperty("actionExecutorId").toString());
+    }
+
+    public void bindDispatcher(ServiceReference<ActionDispatcher> actionDispatcherServiceReference) {
+        ActionDispatcher actionDispatcher = bundleContext.getService(actionDispatcherServiceReference);
+        actionDispatchers.put(actionDispatcher.getPrefix(), actionDispatcher);
+    }
+
+    public void unbindDispatcher(ServiceReference<ActionDispatcher> actionDispatcherServiceReference) {
+        if (actionDispatcherServiceReference == null) {
+            return;
+        }
+        ActionDispatcher actionDispatcher = bundleContext.getService(actionDispatcherServiceReference);
+        if (actionDispatcher != null) {
+            actionDispatchers.remove(actionDispatcher.getPrefix());
+        }
     }
 
 }

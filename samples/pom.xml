@@ -29,6 +29,7 @@
     <modules>
         <module>tweet-button-plugin</module>
         <module>login-integration</module>
+        <module>groovy-actions</module>
     </modules>
 
 </project>

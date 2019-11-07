@@ -1,0 +1,22 @@
+{
+  "metadata": {
+    "id": "testGroovyActionRule",
+    "name": "Test Groovy Action Rule",
+    "description": "A sample rule to test Groovy actions"
+  },
+  "condition": {
+      "type": "eventTypeCondition",
+      "parameterValues": {
+        "eventTypeId": "view"
+      }
+  },
+  "actions": [
+    {
+      "parameterValues": {
+        "parameter1": "eventProperty::target.properties(email)",
+        "parameter2": "parameter2value"
+      },
+      "type": "testGroovyAction"
+    }
+  ]
+}
