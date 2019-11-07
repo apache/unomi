@@ -31,7 +31,7 @@ GraphQL Endpoint
 
 You can then access the GraphQL endpoint at the following URL:
 
-    http://localhost:8181/sdlgraphql
+    http://localhost:8181/graphql
     
 Query example
 -------------
