@@ -43,6 +43,8 @@ public class UserAgentDetectorServiceImpl {
                     .withField(nl.basjes.parse.useragent.UserAgent.AGENT_NAME)
                     .withField(nl.basjes.parse.useragent.UserAgent.AGENT_VERSION)
                     .withField(nl.basjes.parse.useragent.UserAgent.DEVICE_CLASS)
+                    .withField(nl.basjes.parse.useragent.UserAgent.DEVICE_NAME)
+                    .withField(nl.basjes.parse.useragent.UserAgent.DEVICE_BRAND)
                     .build();
             this.userAgentAnalyzer.immediateInitialization();
             this.userAgentAnalyzer.initializeMatchers();
@@ -62,6 +64,8 @@ public class UserAgentDetectorServiceImpl {
 
         UserAgent userAgent = new UserAgent();
         userAgent.setDeviceCategory(yauaaAgent.getValue(nl.basjes.parse.useragent.UserAgent.DEVICE_CLASS));
+        userAgent.setDeviceName(yauaaAgent.getValue(nl.basjes.parse.useragent.UserAgent.DEVICE_NAME));
+        userAgent.setDeviceBrand(yauaaAgent.getValue(nl.basjes.parse.useragent.UserAgent.DEVICE_BRAND));
         userAgent.setOperatingSystemFamily(yauaaAgent.getValue(nl.basjes.parse.useragent.UserAgent.OPERATING_SYSTEM_CLASS));
         userAgent.setOperatingSystemName(yauaaAgent.getValue(nl.basjes.parse.useragent.UserAgent.OPERATING_SYSTEM_NAME));
         userAgent.setUserAgentName(yauaaAgent.getValue(nl.basjes.parse.useragent.UserAgent.AGENT_NAME));

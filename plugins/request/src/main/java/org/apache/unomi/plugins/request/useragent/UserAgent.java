@@ -27,6 +27,8 @@ public class UserAgent {
     private String userAgentName;
     private String userAgentVersion;
     private String deviceCategory;
+    private String deviceBrand;
+    private String deviceName;
 
     public String getOperatingSystemFamily() {
         return operatingSystemFamily;
@@ -68,6 +70,22 @@ public class UserAgent {
         this.deviceCategory = deviceCategory;
     }
 
+    public String getDeviceBrand() {
+        return deviceBrand;
+    }
+
+    public void setDeviceBrand(String deviceBrand) {
+        this.deviceBrand = deviceBrand;
+    }
+
+    public String getDeviceName() {
+        return deviceName;
+    }
+
+    public void setDeviceName(String deviceName) {
+        this.deviceCategory = deviceName;
+    }
+
     public String getUserAgentNameAndVersion() {
         return this.userAgentName + "@@" + this.userAgentVersion;
     }
@@ -81,6 +99,8 @@ public class UserAgent {
         sb.append("operatingsystem.family: " + this.getOperatingSystemFamily() + ",\n");
         sb.append("operatingsystem.name: " + this.getOperatingSystemName() + ",\n");
         sb.append("device.category: " + this.getDeviceCategory() + " \n}");
+        sb.append("device.brand: " + this.getDeviceBrand() + " \n}");
+        sb.append("device.name: " + this.getDeviceName() + " \n}");
         return super.toString();
     }
 }

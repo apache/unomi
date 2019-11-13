@@ -166,6 +166,8 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         session.setProperty("userAgentVersion", agent.getUserAgentVersion());
         session.setProperty("userAgentNameAndVersion", agent.getUserAgentNameAndVersion());
         session.setProperty("deviceCategory", agent.getDeviceCategory());
+        session.setProperty("deviceName", agent.getDeviceName());
+        session.setProperty("deviceBrand", agent.getDeviceBrand());
 
         return EventService.SESSION_UPDATED;
     }
