@@ -26,6 +26,11 @@ Document page = configure {
 
 String license = page.select('span.b.lic').collect { it.text() }.join(', ')
 
+println "Event type:${event.getEventType()}"
+println "Profile ID=${event.getProfile().getItemId()}"
+println "Action name=${action.actionType.metadata.name}"
+println "Action parameters=${action.parameterValues}"
+
 println "Groovy is licensed under: ${license}"
 
 EventService.NO_CHANGE

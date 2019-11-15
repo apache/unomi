@@ -52,7 +52,7 @@ public class GroovyBundleResourceConnector implements ResourceConnector {
         if (headers.get("Unomi-Source-Folders") != null) {
             File moduleSourceFolder = new File(headers.get("Unomi-Source-Folders"));
             if (moduleSourceFolder.exists()) {
-                File resourcesSourceFolder = new File(moduleSourceFolder, "src/main/resources/META-INF/cxs/actions");
+                File resourcesSourceFolder = new File(moduleSourceFolder, "src/main/resources");
                 if (resourcesSourceFolder.exists()) {
                     File resourceFile = new File(resourcesSourceFolder, resourcePath);
                     if (resourceFile.exists()) {
