@@ -70,7 +70,7 @@
         <version.karaf>4.1.7</version.karaf>
         <version.karaf.cellar>4.1.0</version.karaf.cellar>
         <version.pax.exam>4.11.0</version.pax.exam>
-        <elasticsearch.version>7.4.0</elasticsearch.version>
+        <elasticsearch.version>7.4.2</elasticsearch.version>
 
         <maven.compiler.source>1.7</maven.compiler.source>
         <maven.compiler.target>1.7</maven.compiler.target>
@@ -1010,7 +1010,7 @@
                 <plugin>
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-bundle-plugin</artifactId>
-                    <version>3.2.0</version>
+                    <version>4.2.1</version>
                     <extensions>true</extensions>
                     <configuration>
                         <instructions>
