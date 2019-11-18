@@ -31,7 +31,7 @@
                              update-strategy="reload" placeholder-prefix="${es.">
         <cm:default-properties>
             <cm:property name="cluster.name" value="contextElasticSearch"/>
-            <cm:property name="elasticSearchAddresses" value="localhost:9300"/>
+            <cm:property name="elasticSearchAddresses" value="localhost:9200"/>
             <cm:property name="index.name" value="context"/>
             <cm:property name="numberOfShards" value="5"/>
             <cm:property name="numberOfReplicas" value="0"/>
@@ -45,14 +45,10 @@
             <cm:property name="bulkProcessor.flushInterval" value="5s" />
             <cm:property name="bulkProcessor.backoffPolicy" value="exponential" />
 
-            <cm:property name="minimalElasticSearchVersion" value="5.0.0" />
-            <cm:property name="maximalElasticSearchVersion" value="5.7.0" />
+            <cm:property name="minimalElasticSearchVersion" value="7.0.0" />
+            <cm:property name="maximalElasticSearchVersion" value="8.0.0" />
 
             <cm:property name="aggregateQueryBucketSize" value="5000" />
-
-            <cm:property name="transportClientClassName" value="" />
-            <cm:property name="transportClientJarDirectory" value="" />
-            <cm:property name="transportClientProperties" value="" />
 
             <cm:property name="itemClassesToCache" value="" />
             <cm:property name="useBatchingForSave" value="false" />
@@ -119,9 +115,6 @@
         <property name="maximalElasticSearchVersion" value="${es.maximalElasticSearchVersion}" />
 
         <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}" />
-        <property name="transportClientClassName" value="${es.transportClientClassName}" />
-        <property name="transportClientJarDirectory" value="${es.transportClientJarDirectory}" />
-        <property name="transportClientProperties" value="${es.transportClientProperties}" />
 
         <property name="metricsService" ref="metricsService" />
         <property name="hazelcastInstance" ref="hazelcastInstance" />
