@@ -172,20 +172,20 @@
                     <instructions>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Import-Package>
-                            android.os;resolution:=optional,
                             COM.newmonics.PercClassLoader;resolution:=optional,
-                            jrockit.vm;resolution:=optional,
+                            android.os;resolution:=optional,
                             org.apache.avalon.framework.logger;resolution:=optional,
                             org.apache.log;resolution:=optional,
                             org.apache.log4j;resolution:=optional,
                             sun.misc;resolution:=optional,
                             sun.nio.ch;resolution:=optional,
-                            sun.reflect;resolution:=optional,
+                            jrockit.vm;resolution:=optional,
                             kotlin.reflect;resolution:=optional,
                             kotlin.reflect.jvm;resolution:=optional,
                             nl.basjes.shaded.com.google.errorprone.annotations;resolution:=optional,
                             nl.basjes.shaded.com.google.errorprone.annotations.concurrent;resolution:=optional,
                             org.checkerframework.checker.nullness.qual;resolution:=optional,
+                            sun.reflect;resolution:=optional,
                             *
                         </Import-Package>
                     </instructions>

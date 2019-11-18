@@ -17,10 +17,6 @@
 package org.apache.unomi.persistence.elasticsearch;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.UUID;
-import java.util.logging.Logger;
 import org.apache.http.HttpHost;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.index.IndexRequest;
@@ -47,6 +43,11 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.UUID;
+import java.util.logging.Logger;
+
 @RunWith(com.carrotsearch.randomizedtesting.RandomizedRunner.class)
 @ThreadLeakScope(value = ThreadLeakScope.Scope.NONE)
 public class ElasticsearchPersistenceTest {
@@ -56,10 +57,10 @@ public class ElasticsearchPersistenceTest {
     private static final String CLUSTER_NAME = "unomi-cluster-test";
     private static final String NODE_NAME = "unomi-node-test";
     private static final String HOST = "127.0.0.1";
-    private static final int HTTP_PORT_NODE_1 = 9200;
-    private static final int HTTP_PORT_NODE_2 = 9201;
-    private static final int TRANSPORT_PORT_NODE_1 = 9300;
-    private static final int TRANSPORT_PORT_NODE_2 = 9301;
+    private static final int HTTP_PORT_NODE_1 = 9200+10;
+    private static final int HTTP_PORT_NODE_2 = 9201+10;
+    private static final int TRANSPORT_PORT_NODE_1 = 9300+10;
+    private static final int TRANSPORT_PORT_NODE_2 = 9301+10;
 
     private static RestHighLevelClient restHighLevelClient;
 
