@@ -349,21 +349,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                 }
                 if (!indexExists) {
-                    logger.info("{} index doesn't exist yet, creating it...", indexName);
-                    Map<String, Object> indexMappings = new HashMap<>();
-                    indexMappings.put("_default_", mappings.get("_default_"));
-                    for (Map.Entry<String, String> entry : mappings.entrySet()) {
-                        if (!itemsMonthlyIndexed.contains(entry.getKey()) && !indexNames.containsKey(entry.getKey())) {
-                            indexMappings.put(entry.getKey(), entry.getValue());
-                        }
-                    }
-
-                    internalCreateIndex(indexName, indexMappings);
+                    logger.info("{} index doesn't exist yet, creating it...", getIndex("profile", null));
+                    internalCreateIndex(getIndex("profile", null), mappings.get("profile"));
                 } else {
-                    logger.info("Found index {}, ElasticSearch started successfully.", indexName);
-                    for (Map.Entry<String, String> entry : mappings.entrySet()) {
-                        createMapping(entry.getKey(), entry.getValue());
-                    }
+                    logger.info("Found index {}, ElasticSearch started successfully.", getIndex("profile", null));
+                    createMapping(getIndex("profile", null), mappings.get("profile"));
                 }
 
                 createMonthlyIndexTemplate();
@@ -915,8 +905,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public boolean createMonthlyIndexTemplate() {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createMonthlyIndexTemplate") {
             protected Boolean execute(Object... args) throws IOException {
-                PutIndexTemplateRequest putIndexTemplateRequest = new PutIndexTemplateRequest("context-monthly-indices")
-                        .patterns(Arrays.asList(indexName + "*" + INDEX_DATE_PREFIX + "*"))
+                PutIndexTemplateRequest putIndexTemplateRequest = new PutIndexTemplateRequest("context-event-monthly-indices")
+                        .patterns(Arrays.asList(indexName + "-event-" + INDEX_DATE_PREFIX + "*"))
                         .settings("{\n" +
                                 "    \"index\" : {\n" +
                                 "        \"number_of_shards\" : " + monthlyIndexNumberOfShards + ",\n" +
@@ -932,14 +922,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 "      }\n" +
                                 "    }\n" +
                                 "}\n", XContentType.JSON);
-                Map<String, Object> indexMappings = new HashMap<String, Object>();
-                indexMappings.put("_default_", mappings.get("_default_"));
-                for (Map.Entry<String, String> entry : mappings.entrySet()) {
-                    if (itemsMonthlyIndexed.contains(entry.getKey())) {
-                        indexMappings.put(entry.getKey(), entry.getValue());
-                    }
-                }
-                putIndexTemplateRequest.mapping(indexMappings);
+                putIndexTemplateRequest.mapping(mappings.get("event"), XContentType.JSON);
                 AcknowledgedResponse putIndexTemplateResponse = client.indices().putTemplate(putIndexTemplateRequest, RequestOptions.DEFAULT);
                 return putIndexTemplateResponse.isAcknowledged();
             }
@@ -957,14 +940,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 GetIndexRequest getIndexRequest = new GetIndexRequest(indexName);
                 boolean indexExists = client.indices().exists(getIndexRequest, RequestOptions.DEFAULT);
                 if (!indexExists) {
-                    Map<String, Object> indexMappings = new HashMap<String, Object>();
-                    indexMappings.put("_default_", mappings.get("_default_"));
-                    for (Map.Entry<String, String> entry : mappings.entrySet()) {
-                        if (indexNames.containsKey(entry.getKey()) && indexNames.get(entry.getKey()).equals(indexName)) {
-                            indexMappings.put(entry.getKey(), entry.getValue());
-                        }
-                    }
-                    internalCreateIndex(indexName, indexMappings);
+                    internalCreateIndex(indexName, mappings.get(indexName));
                 }
                 return !indexExists;
             }
@@ -995,7 +971,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    private void internalCreateIndex(String indexName, Map<String, Object> mappings) throws IOException {
+    private void internalCreateIndex(String indexName, String mappingSource) throws IOException {
         CreateIndexRequest createIndexRequest = new CreateIndexRequest(indexName);
         createIndexRequest.settings("{\n" +
                         "    \"index\" : {\n" +
@@ -1013,7 +989,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         "    }\n" +
                         "}\n", XContentType.JSON);
 
-        createIndexRequest.mapping(mappings);
+        createIndexRequest.mapping(mappingSource, XContentType.JSON);
         client.indices().create(createIndexRequest, RequestOptions.DEFAULT);
     }
 
@@ -1026,9 +1002,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void createMapping(String type, String source) {
-        if (type.equals("_default_")) {
-            return;
-        }
         try {
             if (itemsMonthlyIndexed.contains(type)) {
                 createMonthlyIndexTemplate();
