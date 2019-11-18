@@ -1,6 +1,23 @@
 {
-  "goal": {
-    "properties": {
+  "dynamic_templates": [
+    {
+      "all": {
+        "match": "*",
+        "match_mapping_type": "string",
+        "mapping": {
+          "type": "text",
+          "analyzer": "folding",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
 
       "metadata": {
         "properties": {
@@ -19,5 +36,4 @@
         }
       }
     }
-  }
 }
