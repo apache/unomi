@@ -18,44 +18,44 @@
     }
   ],
   "properties": {
-      "dateRanges": {
-        "properties": {
-        }
-      },
-      "metadata": {
-        "properties": {
-          "enabled": {
-            "type": "boolean"
-          },
-          "hidden": {
-            "type": "boolean"
-          },
-          "missingPlugins": {
-            "type": "boolean"
-          },
-          "readOnly": {
-            "type": "boolean"
-          }
-        }
-      },
-      "multivalued": {
-        "type": "boolean"
-      },
-      "numericRanges": {
-        "properties": {
-          "from": {
-            "type": "double"
-          },
-          "to": {
-            "type": "double"
-          }
-        }
-      },
-      "protected": {
-        "type": "boolean"
-      },
-      "rank": {
-        "type": "double"
+    "dateRanges": {
+      "properties": {
       }
+    },
+    "metadata": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "missingPlugins": {
+          "type": "boolean"
+        },
+        "readOnly": {
+          "type": "boolean"
+        }
+      }
+    },
+    "multivalued": {
+      "type": "boolean"
+    },
+    "numericRanges": {
+      "properties": {
+        "from": {
+          "type": "double"
+        },
+        "to": {
+          "type": "double"
+        }
+      }
+    },
+    "protected": {
+      "type": "boolean"
+    },
+    "rank": {
+      "type": "double"
     }
+  }
 }

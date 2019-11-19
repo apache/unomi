@@ -18,30 +18,30 @@
     }
   ],
   "properties": {
-      "metadata": {
-        "properties": {
-          "enabled": {
-            "type": "boolean"
-          },
-          "hidden": {
-            "type": "boolean"
-          },
-          "missingPlugins": {
-            "type": "boolean"
-          },
-          "readOnly": {
-            "type": "boolean"
-          }
+    "metadata": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "missingPlugins": {
+          "type": "boolean"
+        },
+        "readOnly": {
+          "type": "boolean"
         }
-      },
-      "priority": {
-        "type": "long"
-      },
-      "raiseEventOnlyOnceForProfile": {
-        "type": "boolean"
-      },
-      "raiseEventOnlyOnceForSession": {
-        "type": "boolean"
       }
+    },
+    "priority": {
+      "type": "long"
+    },
+    "raiseEventOnlyOnceForProfile": {
+      "type": "boolean"
+    },
+    "raiseEventOnlyOnceForSession": {
+      "type": "boolean"
     }
+  }
 }

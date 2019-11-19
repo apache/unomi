@@ -32,7 +32,7 @@
         <cm:default-properties>
             <cm:property name="cluster.name" value="contextElasticSearch"/>
             <cm:property name="elasticSearchAddresses" value="localhost:9200"/>
-            <cm:property name="index.name" value="context"/>
+            <cm:property name="index.prefix" value="context"/>
             <cm:property name="numberOfShards" value="5"/>
             <cm:property name="numberOfReplicas" value="0"/>
             <cm:property name="monthlyIndex.numberOfShards" value="3"/>
@@ -83,7 +83,7 @@
         <property name="conditionEvaluatorDispatcher" ref="conditionEvaluatorDispatcherImpl"/>
         <property name="conditionESQueryBuilderDispatcher" ref="conditionESQueryBuilderDispatcher"/>
         <property name="clusterName" value="${es.cluster.name}"/>
-        <property name="indexName" value="${es.index.name}"/>
+        <property name="indexPrefix" value="${es.index.prefix}"/>
         <property name="monthlyIndexNumberOfShards" value="${es.monthlyIndex.numberOfShards}"/>
         <property name="monthlyIndexNumberOfReplicas" value="${es.monthlyIndex.numberOfReplicas}"/>
         <property name="numberOfShards" value="${es.numberOfShards}"/>
@@ -98,11 +98,6 @@
         </property>
         <property name="routingByType">
             <map>
-            </map>
-        </property>
-        <property name="indexNames">
-            <map>
-                <entry key="geonameEntry" value="geonames"/>
             </map>
         </property>
         <property name="bulkProcessorConcurrentRequests" value="${es.bulkProcessor.concurrentRequests}" />
