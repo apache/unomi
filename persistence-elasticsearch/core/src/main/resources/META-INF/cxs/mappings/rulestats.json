@@ -16,23 +16,5 @@
         }
       }
     }
-  ],
-  "properties": {
-    "metadata": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "hidden": {
-          "type": "boolean"
-        },
-        "missingPlugins": {
-          "type": "boolean"
-        },
-        "readOnly": {
-          "type": "boolean"
-        }
-      }
-    }
-  }
+  ]
 }

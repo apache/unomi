@@ -80,10 +80,10 @@ public class GeonamesServiceImpl implements GeonamesService {
     }
 
     public void importDatabase() {
-        if (!persistenceService.createIndex("geonames")) {
+        if (!persistenceService.createIndex(GeonameEntry.ITEM_TYPE)) {
             if (forceDbImport) {
-                persistenceService.removeIndex("geonames");
-                persistenceService.createIndex("geonames");
+                persistenceService.removeIndex(GeonameEntry.ITEM_TYPE);
+                persistenceService.createIndex(GeonameEntry.ITEM_TYPE);
                 logger.info("Geonames index removed and recreated");
             } else if (persistenceService.getAllItemsCount(GeonameEntry.ITEM_TYPE) > 0) {
                 return;

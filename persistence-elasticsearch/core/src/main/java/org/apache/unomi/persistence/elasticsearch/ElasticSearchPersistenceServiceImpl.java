@@ -122,7 +122,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String elasticSearchAddresses;
     private List<String> elasticSearchAddressList = new ArrayList<>();
     private String clusterName;
-    private String indexName;
+    private String indexPrefix;
     private String monthlyIndexNumberOfShards;
     private String monthlyIndexNumberOfReplicas;
     private String numberOfShards;
@@ -132,7 +132,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
 
-    private Map<String, String> indexNames;
+    private Map<String, String> indexNames = new HashMap<>();
     private List<String> itemsMonthlyIndexed;
     private Map<String, String> routingByType;
 
@@ -174,8 +174,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    public void setIndexName(String indexName) {
-        this.indexName = indexName;
+    public void setIndexPrefix(String indexPrefix) {
+        this.indexPrefix = indexPrefix;
     }
 
     public void setMonthlyIndexNumberOfShards(String monthlyIndexNumberOfShards) {
@@ -288,9 +288,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 bulkProcessorBackoffPolicy = System.getProperty(BULK_PROCESSOR_BACKOFF_POLICY, bulkProcessorBackoffPolicy);
 
                 // this property is used for integration tests, to make sure we don't conflict with an already running ElasticSearch instance.
-                if (System.getProperty("org.apache.unomi.itests.elasticsearch.transport.port") != null) {
+                if (System.getProperty("org.apache.unomi.itests.elasticsearch.http.port") != null) {
                     elasticSearchAddressList.clear();
-                    elasticSearchAddressList.add("localhost:" + System.getProperty("org.apache.unomi.itests.elasticsearch.transport.port"));
+                    elasticSearchAddressList.add("localhost:" + System.getProperty("org.apache.unomi.itests.elasticsearch.http.port"));
                     logger.info("Overriding ElasticSearch address list from system property=" + elasticSearchAddressList);
                 }
                 // this property is used for integration tests, to make sure we don't conflict with an already running ElasticSearch instance.
@@ -310,7 +310,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     nodeList.add(new Node(new HttpHost(elasticSearchHostName, elasticSearchPort, "http")));
                 }
 
-                logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index name " + indexName + "...");
+                logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index name " + indexPrefix + "...");
                 client = new RestHighLevelClient(
                         RestClient.builder(nodeList.toArray(new Node[nodeList.size()])));
 
@@ -332,28 +332,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     if (existingBundle.getBundleContext() != null) {
                         loadPredefinedMappings(existingBundle.getBundleContext(), false);
                     }
-                }
-
-                // @todo is there a better way to detect index existence than to wait for it to startup ?
-                boolean indexExists = false;
-                int tries = 0;
-
-                while (!indexExists && tries < 20) {
-
-                    indexExists = client.indices().exists(new GetIndexRequest(indexName), RequestOptions.DEFAULT);
-                    tries++;
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        logger.error("Interrupted", e);
-                    }
-                }
-                if (!indexExists) {
-                    logger.info("{} index doesn't exist yet, creating it...", getIndex("profile", null));
-                    internalCreateIndex(getIndex("profile", null), mappings.get("profile"));
-                } else {
-                    logger.info("Found index {}, ElasticSearch started successfully.", getIndex("profile", null));
-                    createMapping(getIndex("profile", null), mappings.get("profile"));
                 }
 
                 createMonthlyIndexTemplate();
@@ -534,9 +512,23 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
                 String mappingSource = content.toString();
                 mappings.put(name, mappingSource);
-                if (createMapping) {
-                    createMapping(name, mappingSource);
+                boolean indexExists = false;
+
+                String itemIndexName = getIndex(name, new Date());
+                indexExists = client.indices().exists(new GetIndexRequest(itemIndexName), RequestOptions.DEFAULT);
+                if (!indexExists) {
+                    logger.info("{} index doesn't exist yet, creating it...", itemIndexName);
+                    internalCreateIndex(itemIndexName, mappingSource);
+                } else {
+                    logger.info("Found index {}", itemIndexName);
+                    if (createMapping) {
+                        logger.info("Updating mapping for {}", itemIndexName);
+                        createMapping(name, mappingSource);
+                    }
                 }
+                logger.info("Waiting for GREEN cluster status...");
+                client.cluster().health(new ClusterHealthRequest().waitForGreenStatus(), RequestOptions.DEFAULT);
+                logger.info("Cluster status is GREEN");
             } catch (Exception e) {
                 logger.error("Error while loading mapping definition " + predefinedMappingURL, e);
             }
@@ -633,9 +625,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     String itemType = item.getItemType();
                     String itemId = item.getItemId();
                     putInCache(itemId, item);
-                    String index = getIndex(itemType, ((TimestampedItem) item).getTimeStamp() );
+                    String index = getIndex(itemType, itemsMonthlyIndexed.contains(itemType) ? ((TimestampedItem) item).getTimeStamp() : null);
                     IndexRequest indexRequest = new IndexRequest(index);
                     indexRequest.id(itemId);
+                    indexRequest.source(source, XContentType.JSON);
                     if (routingByType.containsKey(itemType)) {
                         indexRequest.routing(routingByType.get(itemType));
                     }
@@ -817,7 +810,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     BulkRequest deleteByScopeBulkRequest = new BulkRequest();
 
                     final TimeValue keepAlive = TimeValue.timeValueHours(1);
-                    SearchRequest searchRequest = new SearchRequest(indexName + "*")
+                    SearchRequest searchRequest = new SearchRequest(indexPrefix + "*")
                             .indices(getIndexNameForQuery(itemType))
                             .scroll(keepAlive);
                     SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
@@ -906,7 +899,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createMonthlyIndexTemplate") {
             protected Boolean execute(Object... args) throws IOException {
                 PutIndexTemplateRequest putIndexTemplateRequest = new PutIndexTemplateRequest("context-event-monthly-indices")
-                        .patterns(Arrays.asList(indexName + "-event-" + INDEX_DATE_PREFIX + "*"))
+                        .patterns(Arrays.asList(indexPrefix + "-event-" + INDEX_DATE_PREFIX + "*"))
                         .settings("{\n" +
                                 "    \"index\" : {\n" +
                                 "        \"number_of_shards\" : " + monthlyIndexNumberOfShards + ",\n" +
@@ -937,10 +930,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public boolean createIndex(final String indexName) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createIndex") {
             protected Boolean execute(Object... args) throws IOException {
-                GetIndexRequest getIndexRequest = new GetIndexRequest(indexName);
+                GetIndexRequest getIndexRequest = new GetIndexRequest((indexPrefix + "-" + indexName).toLowerCase());
                 boolean indexExists = client.indices().exists(getIndexRequest, RequestOptions.DEFAULT);
                 if (!indexExists) {
-                    internalCreateIndex(indexName, mappings.get(indexName));
+                    internalCreateIndex((indexPrefix + "-" + indexName).toLowerCase(), mappings.get(indexName));
                 }
                 return !indexExists;
             }
@@ -955,10 +948,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public boolean removeIndex(final String indexName) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeIndex") {
             protected Boolean execute(Object... args) throws IOException {
-                GetIndexRequest getIndexRequest = new GetIndexRequest(indexName);
+                GetIndexRequest getIndexRequest = new GetIndexRequest(indexPrefix + "-" + indexName);
                 boolean indexExists = client.indices().exists(getIndexRequest, RequestOptions.DEFAULT);
                 if (indexExists) {
-                    DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(indexName);
+                    DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(indexPrefix + "-" + indexName);
                     client.indices().delete(deleteIndexRequest, RequestOptions.DEFAULT);
                 }
                 return indexExists;
@@ -1005,9 +998,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         try {
             if (itemsMonthlyIndexed.contains(type)) {
                 createMonthlyIndexTemplate();
-                GetIndexRequest getIndexRequest = new GetIndexRequest(indexName + "*" + INDEX_DATE_PREFIX + "*");
+                GetIndexRequest getIndexRequest = new GetIndexRequest(indexPrefix + "*" + INDEX_DATE_PREFIX + "*");
                 if (client.indices().exists(getIndexRequest, RequestOptions.DEFAULT)) {
-                    createMapping(type, source, indexName + "*" + INDEX_DATE_PREFIX + "*");
+                    createMapping(type, source, indexPrefix + "*" + INDEX_DATE_PREFIX + "*");
                 }
             } else if (indexNames.containsKey(type)) {
                 GetIndexRequest getIndexRequest = new GetIndexRequest(indexNames.get(type));
@@ -1015,7 +1008,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     createMapping(type, source, indexNames.get(type));
                 }
             } else {
-                createMapping(type, source, indexName);
+                createMapping(type, source, getIndex(type, new Date()));
             }
         } catch (IOException ioe) {
             logger.error("Error while creating mapping for type " + type + " and source " + source, ioe);
@@ -1306,7 +1299,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                             .fetchSource(true)
                             .query(query)
-                            .size(size)
+                            .size(size < 0 ? defaultQueryLimit : size)
                             .from(offset);
                     if (scrollTimeValidity != null) {
                         keepAlive = TimeValue.parseTimeValue(scrollTimeValidity, TimeValue.timeValueHours(1), "scrollTimeValidity");
@@ -1680,7 +1673,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 BulkRequest deleteByScopeBulkRequest = new BulkRequest();
 
                 final TimeValue keepAlive = TimeValue.timeValueHours(1);
-                SearchRequest searchRequest = new SearchRequest(indexName + "*").scroll(keepAlive);
+                SearchRequest searchRequest = new SearchRequest(indexPrefix + "*").scroll(keepAlive);
                 SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                         .query(query)
                         .size(100);
@@ -1782,7 +1775,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private String getIndexNameForQuery(String itemType) {
         return indexNames.containsKey(itemType) ? indexNames.get(itemType) :
-                (itemsMonthlyIndexed.contains(itemType) ? indexName + "*" + INDEX_DATE_PREFIX + "*" : indexName);
+                (itemsMonthlyIndexed.contains(itemType) ? indexPrefix + "*" + INDEX_DATE_PREFIX + "*" : getIndex(itemType, null));
     }
 
     private String getConfig(Map<String, String> settings, String key,
@@ -1873,11 +1866,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         String indexItemTypePart = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
                 (itemsMonthlyIndexed.contains(itemType) && dateHint != null ? itemType + "-" + getMonthlyIndexPart(dateHint) : itemType);
 
-        return indexName + "-" + indexItemTypePart;
+        return (indexPrefix + "-" + indexItemTypePart).toLowerCase();
     }
 
     private String getMonthlyIndexPart(Date date) {
-        String d = new SimpleDateFormat("-yyyy-MM").format(date);
+        String d = new SimpleDateFormat("yyyy-MM").format(date);
         return INDEX_DATE_PREFIX + d;
     }
 

@@ -18,27 +18,24 @@
     }
   ],
   "properties": {
-      "duration": {
-        "type": "long"
-      },
-
-      "lastEventDate": {
-        "type": "date"
-      },
-
+    "duration": {
+      "type": "long"
+    },
+    "lastEventDate": {
+      "type": "date"
+    },
+    "properties": {
       "properties": {
-        "properties": {
-          "location": {
-            "type": "geo_point"
-          }
+        "location": {
+          "type": "geo_point"
         }
-      },
-
-      "size": {
-        "type": "long"
-      },
-      "timeStamp": {
-        "type": "date"
       }
+    },
+    "size": {
+      "type": "long"
+    },
+    "timeStamp": {
+      "type": "date"
     }
+  }
 }

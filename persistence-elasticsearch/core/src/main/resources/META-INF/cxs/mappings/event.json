@@ -17,10 +17,10 @@
       }
     }
   ],
-    "properties": {
-      "timeStamp": {
-        "type": "date"
-      }
+  "properties": {
+    "timeStamp": {
+      "type": "date"
     }
+  }
 }
 
