@@ -503,20 +503,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             try {
                 final String path = predefinedMappingURL.getPath();
                 String name = path.substring(path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
-                BufferedReader reader = new BufferedReader(new InputStreamReader(predefinedMappingURL.openStream()));
+                String mappingSource = loadMappingFile(predefinedMappingURL);
 
-                StringBuilder content = new StringBuilder();
-                String l;
-                while ((l = reader.readLine()) != null) {
-                    content.append(l);
-                }
-                String mappingSource = content.toString();
                 mappings.put(name, mappingSource);
-                boolean indexExists = false;
 
                 String itemIndexName = getIndex(name, new Date());
-                indexExists = client.indices().exists(new GetIndexRequest(itemIndexName), RequestOptions.DEFAULT);
-                if (!indexExists) {
+                if (!client.indices().exists(new GetIndexRequest(itemIndexName), RequestOptions.DEFAULT)) {
                     logger.info("{} index doesn't exist yet, creating it...", itemIndexName);
                     internalCreateIndex(itemIndexName, mappingSource);
                 } else {
@@ -526,15 +518,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         createMapping(name, mappingSource);
                     }
                 }
-                logger.info("Waiting for GREEN cluster status...");
-                client.cluster().health(new ClusterHealthRequest().waitForGreenStatus(), RequestOptions.DEFAULT);
-                logger.info("Cluster status is GREEN");
             } catch (Exception e) {
                 logger.error("Error while loading mapping definition " + predefinedMappingURL, e);
             }
         }
     }
 
+    private String loadMappingFile(URL predefinedMappingURL) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(predefinedMappingURL.openStream()));
+
+        StringBuilder content = new StringBuilder();
+        String l;
+        while ((l = reader.readLine()) != null) {
+            content.append(l);
+        }
+        return content.toString();
+    }
 
     @Override
     public <T extends Item> List<T> getAllItems(final Class<T> clazz) {
@@ -987,14 +986,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         "}\n", XContentType.JSON);
 
         createIndexRequest.mapping(mappingSource, XContentType.JSON);
-        client.indices().create(createIndexRequest, RequestOptions.DEFAULT);
-    }
-
-
-    private void createMapping(final String type, final String source, final String indexName) throws IOException {
-        PutMappingRequest putMappingRequest = new PutMappingRequest(indexName);
-        putMappingRequest.source(source, XContentType.JSON);
-        client.indices().putMapping(putMappingRequest, RequestOptions.DEFAULT);
+        CreateIndexResponse createIndexResponse = client.indices().create(createIndexRequest, RequestOptions.DEFAULT);
+        logger.info("Index created: [{}], acknowledge: [{}], shards acknowledge: [{}]", createIndexResponse.index(),
+                createIndexResponse.isAcknowledged(), createIndexResponse.isShardsAcknowledged());
     }
 
     @Override
@@ -1005,20 +999,27 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 String indexName = getIndex(type, new Date());
                 GetIndexRequest getIndexRequest = new GetIndexRequest(indexName);
                 if (client.indices().exists(getIndexRequest, RequestOptions.DEFAULT)) {
-                    createMapping(type, source, indexName);
+                    putMapping(source, indexName);
                 }
             } else if (indexNames.containsKey(type)) {
                 GetIndexRequest getIndexRequest = new GetIndexRequest(indexNames.get(type));
                 if (client.indices().exists(getIndexRequest, RequestOptions.DEFAULT)) {
-                    createMapping(type, source, indexNames.get(type));
+                    putMapping(source, indexNames.get(type));
                 }
             } else {
-                createMapping(type, source, getIndex(type, new Date()));
+                putMapping(source, getIndex(type, new Date()));
             }
         } catch (IOException ioe) {
             logger.error("Error while creating mapping for type " + type + " and source " + source, ioe);
         }
     }
+
+    private void putMapping(final String source, final String indexName) throws IOException {
+        PutMappingRequest putMappingRequest = new PutMappingRequest(indexName);
+        putMappingRequest.source(source, XContentType.JSON);
+        client.indices().putMapping(putMappingRequest, RequestOptions.DEFAULT);
+    }
+
 
     @Override
     public Map<String, Map<String, Object>> getPropertiesMapping(final String itemType) {
