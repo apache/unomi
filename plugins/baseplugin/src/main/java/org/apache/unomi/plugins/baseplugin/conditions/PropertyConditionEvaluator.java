@@ -30,6 +30,9 @@ import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHel
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.PropertyHelper;
+import org.elasticsearch.ElasticsearchParseException;
+import org.elasticsearch.common.joda.Joda;
+import org.elasticsearch.common.joda.JodaDateMathParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -384,18 +387,12 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         if (value instanceof Date) {
             return ((Date) value);
         } else {
-            /* ES7
-            DateMathParser parser = new DateMathParser(DateFieldMapper.DEFAULT_DATE_TIME_FORMATTER);
+            JodaDateMathParser parser = new JodaDateMathParser(Joda.forPattern("strictDateOptionalTime||epoch_millis"));
             try {
-                return new Date(parser.parse(value.toString(), new LongSupplier() {
-                    public long getAsLong() {
-                        return System.currentTimeMillis();
-                    }
-                }));
+                return new Date(parser.parse(value.toString(), System::currentTimeMillis).getEpochSecond());
             } catch (ElasticsearchParseException e) {
                 logger.warn("unable to parse date " + value.toString(), e);
             }
-            */
         }
         return null;
     }
