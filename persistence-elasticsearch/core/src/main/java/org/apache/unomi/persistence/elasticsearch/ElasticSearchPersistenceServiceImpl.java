@@ -84,6 +84,7 @@ import org.elasticsearch.search.aggregations.bucket.range.RangeAggregationBuilde
 import org.elasticsearch.search.aggregations.bucket.terms.IncludeExclude;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.InternalNumericMetricsAggregation;
+import org.elasticsearch.search.aggregations.metrics.NumericMetricsAggregation;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.GeoDistanceSortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
@@ -1770,7 +1771,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     if (metricsResults instanceof HasAggregations) {
                         aggregations = ((HasAggregations) metricsResults).getAggregations();
                         for (Aggregation aggregation : aggregations) {
-                            InternalNumericMetricsAggregation.SingleValue singleValue = (InternalNumericMetricsAggregation.SingleValue) aggregation;
+                            NumericMetricsAggregation.SingleValue singleValue = (NumericMetricsAggregation.SingleValue) aggregation;
                             results.put("_" + singleValue.getName(), singleValue.value());
                         }
                     }
