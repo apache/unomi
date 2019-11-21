@@ -168,6 +168,10 @@
                 <configuration>
                     <instructions>
                         <Import-Package>
+                            android.app;resolution:=optional,
+                            com.carrotsearch.randomizedtesting;resolution:=optional,
+                            com.google.appengine.api;resolution:=optional,
+                            com.google.apphosting.api;resolution:=optional,
                             com.google.protobuf;resolution:=optional,
                             com.twitter.util;resolution:=optional,
                             com.vividsolutions.jts.*;resolution:=optional,
@@ -185,6 +189,7 @@
                             javax.xml.transform.dom;resolution:=optional,
                             javax.xml.transform.stream;resolution:=optional,
                             org.apache.commons.logging;resolution:=optional,
+                            org.apache.log;resolution:=optional,
                             org.apache.regexp;resolution:=optional,
                             org.apache.tomcat.jni;resolution:=optional,
                             org.bouncycastle.*;resolution:=optional,
@@ -201,6 +206,7 @@
                             com.ning.compress;resolution:=optional,
                             com.ning.compress.lzf;resolution:=optional,
                             com.ning.compress.lzf.util;resolution:=optional,
+                            com.sun.management;resolution:=optional,
                             javassist;resolution:=optional,
                             lzma.sdk;resolution:=optional,
                             lzma.sdk.lzma;resolution:=optional,

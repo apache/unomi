@@ -50,7 +50,6 @@
 MY_DIRNAME=`dirname $0`
 MY_KARAF_HOME=`cd "$MY_DIRNAME/.."; pwd`
 
-export JAVA_MAX_MEM=3G
 # In order to activate the Yourkit Profiler agent, uncomment one of the following lines depending on the operating
 # system and adjust the path to the location of the installation directory.
 # On MacOS:
