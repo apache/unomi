@@ -1,26 +1,41 @@
 {
-  "personaSession": {
-    "properties": {
-      "duration" : {
-        "type" : "long"
-      },
-
-      "timeStamp": {
-        "type": "date"
-      },
-      "lastEventDate": {
-        "type": "date"
-      },
-      "properties" : {
-        "properties" : {
-          "location" : {
-            "type" : "geo_point"
+  "dynamic_templates": [
+    {
+      "all": {
+        "match": "*",
+        "match_mapping_type": "string",
+        "mapping": {
+          "type": "text",
+          "analyzer": "folding",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
           }
         }
-      },
-      "size" : {
-        "type" : "long"
       }
+    }
+  ],
+  "properties": {
+    "duration": {
+      "type": "long"
+    },
+    "timeStamp": {
+      "type": "date"
+    },
+    "lastEventDate": {
+      "type": "date"
+    },
+    "properties": {
+      "properties": {
+        "location": {
+          "type": "geo_point"
+        }
+      }
+    },
+    "size": {
+      "type": "long"
     }
   }
 }

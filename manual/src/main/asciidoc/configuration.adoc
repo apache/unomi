@@ -79,9 +79,9 @@ You can use the following properties for the ElasticSearch configuration
 ----
 org.apache.unomi.elasticsearch.cluster.name=contextElasticSearch
 # The elasticsearch.adresses may be a comma seperated list of host names and ports such as
-# hostA:9300,hostB:9300
+# hostA:9200,hostB:9200
 # Note: the port number must be repeated for each host.
-org.apache.unomi.elasticsearch.addresses=localhost:9300
+org.apache.unomi.elasticsearch.addresses=localhost:9200
 ----
 
 ==== Secured events configuration

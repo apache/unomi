@@ -26,7 +26,6 @@ import java.util.Map;
 
 public class GeonameEntry extends Item {
     public static final String ITEM_TYPE = "geonameEntry";
-    public static final String INDEX_NAME = "geonames";
     private static final long serialVersionUID = 1L;
     protected String name;
     protected String asciiname;

@@ -1,28 +1,41 @@
 {
-  "session": {
-    "properties": {
-      "duration": {
-        "type": "long"
-      },
-
-      "lastEventDate": {
-        "type": "date"
-      },
-
-      "properties": {
-        "properties": {
-          "location": {
-            "type": "geo_point"
+  "dynamic_templates": [
+    {
+      "all": {
+        "match": "*",
+        "match_mapping_type": "string",
+        "mapping": {
+          "type": "text",
+          "analyzer": "folding",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
           }
         }
-      },
-
-      "size": {
-        "type": "long"
-      },
-      "timeStamp": {
-        "type": "date"
       }
+    }
+  ],
+  "properties": {
+    "duration": {
+      "type": "long"
+    },
+    "lastEventDate": {
+      "type": "date"
+    },
+    "properties": {
+      "properties": {
+        "location": {
+          "type": "geo_point"
+        }
+      }
+    },
+    "size": {
+      "type": "long"
+    },
+    "timeStamp": {
+      "type": "date"
     }
   }
 }

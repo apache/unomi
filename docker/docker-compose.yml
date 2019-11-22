@@ -27,7 +27,6 @@ services:
       - xpack.security.enabled=false
       - cluster.name=contextElasticSearch
     ports: # Expose Elasticsearch ports
-      - "9300:9300"
       - "9200:9200"
 
   unomi:

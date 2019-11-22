@@ -515,19 +515,17 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         persistenceService.save(scoring);
 
         persistenceService.createMapping(Profile.ITEM_TYPE, String.format(
-            "{\n" +
-            "    \"profile\": {\n" +
-            "        \"properties\" : {\n" +
-            "            \"scores\": {\n" +
-            "                \"properties\": {\n" +
-            "                    \"%s\": {\n" +
-            "                        \"type\": \"long\"\n" +
-            "                    }\n" +
-            "                }\n" +
-            "            }\n" +
-            "        }\n" +
-            "    }\n" +
-            "}\n", scoring.getItemId()));
+                    "{\n" +
+                    "  \"properties\": {\n" +
+                    "    \"scores\": {\n" +
+                    "      \"properties\": {\n" +
+                    "        \"%s\": {\n" +
+                    "          \"type\":\"long\"\n" +
+                    "        }\n" +
+                    "      }\n" +
+                    "    }\n" +
+                    "  }\n" +
+                    "}", scoring.getItemId()));
 
         updateExistingProfilesForScoring(scoring);
     }

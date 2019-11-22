@@ -19,6 +19,7 @@ package org.apache.unomi.persistence.elasticsearch;
 
 import com.hazelcast.core.HazelcastInstance;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpHost;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.TimestampedItem;
@@ -31,30 +32,26 @@ import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.persistence.elasticsearch.conditions.*;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
-import org.elasticsearch.action.admin.cluster.node.info.NodeInfo;
-import org.elasticsearch.action.admin.cluster.node.info.NodesInfoResponse;
-import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
-import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
-import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
-import org.elasticsearch.action.admin.indices.stats.IndicesStatsResponse;
+import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
+import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
+import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequest;
-import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateResponse;
-import org.elasticsearch.action.admin.indices.template.get.GetIndexTemplatesResponse;
-import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequest;
-import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateResponse;
 import org.elasticsearch.action.bulk.*;
+import org.elasticsearch.action.delete.DeleteRequest;
+import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
-import org.elasticsearch.action.index.IndexRequestBuilder;
-import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.search.ClearScrollRequest;
+import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.action.support.WriteRequest;
+import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.action.update.UpdateRequest;
-import org.elasticsearch.client.Requests;
-import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.client.*;
+import org.elasticsearch.client.core.MainResponse;
+import org.elasticsearch.client.indices.*;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
-import org.elasticsearch.common.collect.ImmutableOpenMap;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.DistanceUnit;
@@ -66,8 +63,7 @@ import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
-import org.elasticsearch.index.reindex.UpdateByQueryAction;
-import org.elasticsearch.index.reindex.UpdateByQueryRequestBuilder;
+import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptException;
 import org.elasticsearch.script.ScriptType;
@@ -81,34 +77,27 @@ import org.elasticsearch.search.aggregations.bucket.global.Global;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramInterval;
 import org.elasticsearch.search.aggregations.bucket.missing.MissingAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.range.DateRangeAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.range.IpRangeAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.range.RangeAggregationBuilder;
-import org.elasticsearch.search.aggregations.bucket.range.date.DateRangeAggregationBuilder;
-import org.elasticsearch.search.aggregations.bucket.range.ip.IpRangeAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.terms.IncludeExclude;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
-import org.elasticsearch.search.aggregations.bucket.terms.support.IncludeExclude;
-import org.elasticsearch.search.aggregations.metrics.InternalNumericMetricsAggregation;
+import org.elasticsearch.search.aggregations.metrics.NumericMetricsAggregation;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.GeoDistanceSortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
-import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.net.InetAddress;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
@@ -125,13 +114,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public static final String BULK_PROCESSOR_BULK_SIZE = "bulkProcessor.bulkSize";
     public static final String BULK_PROCESSOR_FLUSH_INTERVAL = "bulkProcessor.flushInterval";
     public static final String BULK_PROCESSOR_BACKOFF_POLICY = "bulkProcessor.backoffPolicy";
+    public static final String INDEX_DATE_PREFIX = "date-";
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
-    private TransportClient client;
+    private RestHighLevelClient client;
     private BulkProcessor bulkProcessor;
     private String elasticSearchAddresses;
     private List<String> elasticSearchAddressList = new ArrayList<>();
     private String clusterName;
-    private String indexName;
+    private String indexPrefix;
     private String monthlyIndexNumberOfShards;
     private String monthlyIndexNumberOfReplicas;
     private String numberOfShards;
@@ -141,7 +131,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
 
-    private Map<String, String> indexNames;
     private List<String> itemsMonthlyIndexed;
     private Map<String, String> routingByType;
 
@@ -153,14 +142,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String bulkProcessorFlushInterval = "5s";
     private String bulkProcessorBackoffPolicy = "exponential";
 
-    private String minimalElasticSearchVersion = "5.0.0";
-    private String maximalElasticSearchVersion = "5.7.0";
+    private String minimalElasticSearchVersion = "7.0.0";
+    private String maximalElasticSearchVersion = "8.0.0";
 
     private int aggregateQueryBucketSize = 5000;
-
-    private String transportClientClassName = null;
-    private String transportClientProperties = null;
-    private String transportClientJarDirectory = null;
 
     private MetricsService metricsService;
     private HazelcastInstance hazelcastInstance;
@@ -187,8 +172,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    public void setIndexName(String indexName) {
-        this.indexName = indexName;
+    public void setIndexPrefix(String indexPrefix) {
+        this.indexPrefix = indexPrefix;
     }
 
     public void setMonthlyIndexNumberOfShards(String monthlyIndexNumberOfShards) {
@@ -213,10 +198,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setItemsMonthlyIndexed(List<String> itemsMonthlyIndexed) {
         this.itemsMonthlyIndexed = itemsMonthlyIndexed;
-    }
-
-    public void setIndexNames(Map<String, String> indexNames) {
-        this.indexNames = indexNames;
     }
 
     public void setRoutingByType(Map<String, String> routingByType) {
@@ -263,18 +244,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.aggregateQueryBucketSize = aggregateQueryBucketSize;
     }
 
-    public void setTransportClientClassName(String transportClientClassName) {
-        this.transportClientClassName = transportClientClassName;
-    }
-
-    public void setTransportClientProperties(String transportClientProperties) {
-        this.transportClientProperties = transportClientProperties;
-    }
-
-    public void setTransportClientJarDirectory(String transportClientJarDirectory) {
-        this.transportClientJarDirectory = transportClientJarDirectory;
-    }
-
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
     }
@@ -313,9 +282,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 bulkProcessorBackoffPolicy = System.getProperty(BULK_PROCESSOR_BACKOFF_POLICY, bulkProcessorBackoffPolicy);
 
                 // this property is used for integration tests, to make sure we don't conflict with an already running ElasticSearch instance.
-                if (System.getProperty("org.apache.unomi.itests.elasticsearch.transport.port") != null) {
+                if (System.getProperty("org.apache.unomi.itests.elasticsearch.http.port") != null) {
                     elasticSearchAddressList.clear();
-                    elasticSearchAddressList.add("localhost:" + System.getProperty("org.apache.unomi.itests.elasticsearch.transport.port"));
+                    elasticSearchAddressList.add("localhost:" + System.getProperty("org.apache.unomi.itests.elasticsearch.http.port"));
                     logger.info("Overriding ElasticSearch address list from system property=" + elasticSearchAddressList);
                 }
                 // this property is used for integration tests, to make sure we don't conflict with an already running ElasticSearch instance.
@@ -324,50 +293,28 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     logger.info("Overriding cluster name from system property=" + clusterName);
                 }
 
-                Settings.Builder transportSettings = Settings.builder()
-                        .put(CLUSTER_NAME, clusterName);
-
-                if (StringUtils.isNotBlank(transportClientClassName) && StringUtils.isNotBlank(transportClientJarDirectory)) {
-                    logger.info("Connecting to ElasticSearch persistence backend using transport class " + transportClientClassName +
-                            " with JAR directory "+transportClientJarDirectory +
-                            " using cluster name " + clusterName + " and index name " + indexName + "...");
-                    client = newTransportClient(transportSettings, transportClientClassName, transportClientJarDirectory, transportClientProperties);
-                } else {
-                    logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index name " + indexName + "...");
-                    client = new PreBuiltTransportClient(transportSettings.build());
-                }
+                List<Node> nodeList = new ArrayList<>();
                 for (String elasticSearchAddress : elasticSearchAddressList) {
                     String[] elasticSearchAddressParts = elasticSearchAddress.split(":");
                     String elasticSearchHostName = elasticSearchAddressParts[0];
                     int elasticSearchPort = Integer.parseInt(elasticSearchAddressParts[1]);
-                    try {
-                        client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(elasticSearchHostName), elasticSearchPort));
-                    } catch (UnknownHostException e) {
-                        String message = "Error resolving address " + elasticSearchAddress + " ElasticSearch transport client not connected";
-                        throw new Exception(message, e);
-                    }
+                    nodeList.add(new Node(new HttpHost(elasticSearchHostName, elasticSearchPort, "http")));
                 }
 
-                // let's now check the versions of all the nodes in the cluster, to make sure they are as expected.
-                try {
-                    NodesInfoResponse nodesInfoResponse = client.admin().cluster().prepareNodesInfo()
-                            .all().execute().get();
+                logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index prefix " + indexPrefix + "...");
+                client = new RestHighLevelClient(
+                        RestClient.builder(nodeList.toArray(new Node[nodeList.size()])));
 
-                    org.elasticsearch.Version minimalVersion = org.elasticsearch.Version.fromString(minimalElasticSearchVersion);
-                    org.elasticsearch.Version maximalVersion = org.elasticsearch.Version.fromString(maximalElasticSearchVersion);
-                    for (NodeInfo nodeInfo : nodesInfoResponse.getNodes()) {
-                        org.elasticsearch.Version version = nodeInfo.getVersion();
-                        if (version.before(minimalVersion) ||
-                                version.equals(maximalVersion) ||
-                                version.after(maximalVersion)) {
-                            throw new Exception("ElasticSearch version on node " + nodeInfo.getHostname() + " is not within [" + minimalVersion + "," + maximalVersion + "), aborting startup !");
-                        }
+                MainResponse response = client.info(RequestOptions.DEFAULT);
+                org.elasticsearch.client.core.MainResponse.Version version = response.getVersion();
+                org.elasticsearch.Version clusterVersion = org.elasticsearch.Version.fromString(version.getNumber());
+                org.elasticsearch.Version minimalVersion = org.elasticsearch.Version.fromString(minimalElasticSearchVersion);
+                org.elasticsearch.Version maximalVersion = org.elasticsearch.Version.fromString(maximalElasticSearchVersion);
+                    if (clusterVersion.before(minimalVersion) ||
+                            clusterVersion.equals(maximalVersion) ||
+                            clusterVersion.after(maximalVersion)) {
+                        throw new Exception("ElasticSearch version is not within [" + minimalVersion + "," + maximalVersion + "), aborting startup !");
                     }
-                } catch (InterruptedException e) {
-                    throw new Exception("Error checking ElasticSearch versions", e);
-                } catch (ExecutionException e) {
-                    throw new Exception("Error checking ElasticSearch versions", e);
-                }
 
                 loadPredefinedMappings(bundleContext, false);
 
@@ -375,39 +322,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 for (Bundle existingBundle : bundleContext.getBundles()) {
                     if (existingBundle.getBundleContext() != null) {
                         loadPredefinedMappings(existingBundle.getBundleContext(), false);
-                    }
-                }
-
-                // @todo is there a better way to detect index existence than to wait for it to startup ?
-                boolean indexExists = false;
-                int tries = 0;
-
-                while (!indexExists && tries < 20) {
-
-                    IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(indexName).execute().actionGet();
-                    indexExists = indicesExistsResponse.isExists();
-                    tries++;
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        logger.error("Interrupted", e);
-                    }
-                }
-                if (!indexExists) {
-                    logger.info("{} index doesn't exist yet, creating it...", indexName);
-                    Map<String, String> indexMappings = new HashMap<String, String>();
-                    indexMappings.put("_default_", mappings.get("_default_"));
-                    for (Map.Entry<String, String> entry : mappings.entrySet()) {
-                        if (!itemsMonthlyIndexed.contains(entry.getKey()) && !indexNames.containsKey(entry.getKey())) {
-                            indexMappings.put(entry.getKey(), entry.getValue());
-                        }
-                    }
-
-                    internalCreateIndex(indexName, indexMappings);
-                } else {
-                    logger.info("Found index {}, ElasticSearch started successfully.", indexName);
-                    for (Map.Entry<String, String> entry : mappings.entrySet()) {
-                        createMapping(entry.getKey(), entry.getValue());
                     }
                 }
 
@@ -419,9 +333,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 logger.info("Waiting for GREEN cluster status...");
 
-                client.admin().cluster().prepareHealth()
-                        .setWaitForGreenStatus()
-                        .get();
+                client.cluster().health(new ClusterHealthRequest().waitForGreenStatus(), RequestOptions.DEFAULT);
 
                 logger.info("Cluster status is GREEN");
 
@@ -438,29 +350,32 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if (bulkProcessor != null) {
             return bulkProcessor;
         }
+        BulkProcessor.Listener bulkProcessorListener = new BulkProcessor.Listener() {
+            @Override
+            public void beforeBulk(long executionId,
+                                   BulkRequest request) {
+                logger.debug("Before Bulk");
+            }
+
+            @Override
+            public void afterBulk(long executionId,
+                                  BulkRequest request,
+                                  BulkResponse response) {
+                logger.debug("After Bulk");
+            }
+
+            @Override
+            public void afterBulk(long executionId,
+                                  BulkRequest request,
+                                  Throwable failure) {
+                logger.error("After Bulk (failure)", failure);
+            }
+        };
         BulkProcessor.Builder bulkProcessorBuilder = BulkProcessor.builder(
-                client,
-                new BulkProcessor.Listener() {
-                    @Override
-                    public void beforeBulk(long executionId,
-                                           BulkRequest request) {
-                        logger.debug("Before Bulk");
-                    }
+                (request, bulkListener) ->
+                        client.bulkAsync(request, RequestOptions.DEFAULT, bulkListener),
+                bulkProcessorListener);
 
-                    @Override
-                    public void afterBulk(long executionId,
-                                          BulkRequest request,
-                                          BulkResponse response) {
-                        logger.debug("After Bulk");
-                    }
-
-                    @Override
-                    public void afterBulk(long executionId,
-                                          BulkRequest request,
-                                          Throwable failure) {
-                        logger.error("After Bulk (failure)", failure);
-                    }
-                });
         if (bulkProcessorConcurrentRequests != null) {
             int concurrentRequests = Integer.parseInt(bulkProcessorConcurrentRequests);
             if (concurrentRequests > 1) {
@@ -516,7 +431,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public void stop() {
 
         new InClassLoaderExecute<Object>(null, null) {
-            protected Object execute(Object... args) {
+            protected Object execute(Object... args) throws IOException {
                 logger.info("Closing ElasticSearch persistence backend...");
                 if (bulkProcessor != null) {
                     try {
@@ -568,12 +483,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    private String getMonthlyIndexName(Date date) {
-        String d = new SimpleDateFormat("-yyyy-MM").format(date);
-        String monthlyIndexName = indexName + d;
-        return monthlyIndexName;
-    }
-
     private void loadPredefinedMappings(BundleContext bundleContext, boolean createMapping) {
         Enumeration<URL> predefinedMappings = bundleContext.getBundle().findEntries("META-INF/cxs/mappings", "*.json", true);
         if (predefinedMappings == null) {
@@ -585,17 +494,20 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             try {
                 final String path = predefinedMappingURL.getPath();
                 String name = path.substring(path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
-                BufferedReader reader = new BufferedReader(new InputStreamReader(predefinedMappingURL.openStream()));
+                String mappingSource = loadMappingFile(predefinedMappingURL);
 
-                StringBuilder content = new StringBuilder();
-                String l;
-                while ((l = reader.readLine()) != null) {
-                    content.append(l);
-                }
-                String mappingSource = content.toString();
                 mappings.put(name, mappingSource);
-                if (createMapping) {
-                    createMapping(name, mappingSource);
+
+                String itemIndexName = getIndex(name, new Date());
+                if (!client.indices().exists(new GetIndexRequest(itemIndexName), RequestOptions.DEFAULT)) {
+                    logger.info("{} index doesn't exist yet, creating it...", itemIndexName);
+                    internalCreateIndex(itemIndexName, mappingSource);
+                } else {
+                    logger.info("Found index {}", itemIndexName);
+                    if (createMapping) {
+                        logger.info("Updating mapping for {}", itemIndexName);
+                        createMapping(name, mappingSource);
+                    }
                 }
             } catch (Exception e) {
                 logger.error("Error while loading mapping definition " + predefinedMappingURL, e);
@@ -603,6 +515,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
+    private String loadMappingFile(URL predefinedMappingURL) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(predefinedMappingURL.openStream()));
+
+        StringBuilder content = new StringBuilder();
+        String l;
+        while ((l = reader.readLine()) != null) {
+            content.append(l);
+        }
+        return content.toString();
+    }
 
     @Override
     public <T extends Item> List<T> getAllItems(final Class<T> clazz) {
@@ -655,12 +577,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             }
                         }.execute();
                     } else {
-                        String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
-                                (itemsMonthlyIndexed.contains(itemType) ? getMonthlyIndexName(dateHint) : indexName);
-
-                        GetResponse response = client.prepareGet(index, itemType, itemId)
-                                .execute()
-                                .actionGet();
+                        GetRequest getRequest = new GetRequest(getIndex(itemType, dateHint), itemId);
+                        GetResponse response = client.get(getRequest, RequestOptions.DEFAULT);
                         if (response.isExists()) {
                             String sourceAsString = response.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
@@ -697,19 +615,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     String itemType = item.getItemType();
                     String itemId = item.getItemId();
                     putInCache(itemId, item);
-                    String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
-                            (itemsMonthlyIndexed.contains(itemType) ? getMonthlyIndexName(((TimestampedItem) item).getTimeStamp()) : indexName);
-                    IndexRequestBuilder indexBuilder = client.prepareIndex(index, itemType, itemId)
-                            .setSource(source, XContentType.JSON);
+                    String index = getIndex(itemType, itemsMonthlyIndexed.contains(itemType) ? ((TimestampedItem) item).getTimeStamp() : null);
+                    IndexRequest indexRequest = new IndexRequest(index);
+                    indexRequest.id(itemId);
+                    indexRequest.source(source, XContentType.JSON);
                     if (routingByType.containsKey(itemType)) {
-                        indexBuilder = indexBuilder.setRouting(routingByType.get(itemType));
+                        indexRequest.routing(routingByType.get(itemType));
                     }
 
                     try {
                         if (bulkProcessor == null || !useBatching) {
-                            indexBuilder.execute().actionGet();
+                            client.index(indexRequest, RequestOptions.DEFAULT);
                         } else {
-                            bulkProcessor.add(indexBuilder.request());
+                            bulkProcessor.add(indexRequest);
                         }
                     } catch (IndexNotFoundException e) {
                         logger.error("Could not find index {}, could not register item type {} with id {} ",
@@ -740,16 +658,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
-
-                    String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
-                            (itemsMonthlyIndexed.contains(itemType) && dateHint != null ? getMonthlyIndexName(dateHint) : indexName);
-
+                    UpdateRequest updateRequest = new UpdateRequest(getIndex(itemType, dateHint), itemId);
+                    updateRequest.doc(source);
                     if (bulkProcessor == null) {
-                        client.prepareUpdate(index, itemType, itemId).setDoc(source)
-                                .execute()
-                                .actionGet();
+                        client.update(updateRequest, RequestOptions.DEFAULT);
                     } else {
-                        UpdateRequest updateRequest = client.prepareUpdate(index, itemType, itemId).setDoc(source).request();
                         bulkProcessor.add(updateRequest);
                     }
                     return true;
@@ -772,19 +685,23 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String itemType = Item.getItemType(clazz);
 
-                    String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
-                            (itemsMonthlyIndexed.contains(itemType) && dateHint != null ? getMonthlyIndexName(dateHint) : indexName);
+                    String index = getIndex(itemType, dateHint);
 
                     for (int i = 0; i < scripts.length; i++) {
                         Script actualScript = new Script(ScriptType.INLINE, "painless", scripts[i], scriptParams[i]);
 
-                        client.admin().indices().prepareRefresh(index).get();
+                        RefreshRequest refreshRequest = new RefreshRequest(index);
+                        client.indices().refresh(refreshRequest, RequestOptions.DEFAULT);
 
-                        UpdateByQueryRequestBuilder ubqrb = UpdateByQueryAction.INSTANCE.newRequestBuilder(client);
-                        ubqrb.source(index).source().setTypes(itemType);
-                        BulkByScrollResponse response = ubqrb.setSlices(2)
-                                .setMaxRetries(1000).abortOnVersionConflict(false).script(actualScript)
-                                .filter(conditionESQueryBuilderDispatcher.buildFilter(conditions[i])).get();
+                        UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(index);
+                        updateByQueryRequest.setConflicts("proceed");
+                        updateByQueryRequest.setMaxRetries(1000);
+                        updateByQueryRequest.setSlices(2);
+                        updateByQueryRequest.setScript(actualScript);
+                        updateByQueryRequest.setQuery(conditionESQueryBuilderDispatcher.buildFilter(conditions[i]));
+
+                        BulkByScrollResponse response = client.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+
                         if (response.getBulkFailures().size() > 0) {
                             for (BulkItemResponse.Failure failure : response.getBulkFailures()) {
                                 logger.error("Failure : cause={} , message={}", failure.getCause(), failure.getMessage());
@@ -827,19 +744,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String itemType = Item.getItemType(clazz);
 
-                    String index = indexNames.containsKey(itemType) ? indexNames.get(itemType) :
-                            (itemsMonthlyIndexed.contains(itemType) && dateHint != null ? getMonthlyIndexName(dateHint) : indexName);
+                    String index = getIndex(itemType, dateHint);
 
                     Script actualScript = new Script(ScriptType.INLINE, "painless", script, scriptParams);
 
+                    UpdateRequest updateRequest = new UpdateRequest(index, itemId);
+                    updateRequest.script(actualScript);
                     if (bulkProcessor == null) {
-                        client.prepareUpdate(index, itemType, itemId).setScript(actualScript)
-                                .execute()
-                                .actionGet();
+                        client.update(updateRequest, RequestOptions.DEFAULT);
                     } else {
-                        UpdateRequest updateRequest = client.prepareUpdate(index, itemType, itemId).setScript(actualScript).request();
                         bulkProcessor.add(updateRequest);
                     }
+
                     return true;
                 } catch (IndexNotFoundException e) {
                     throw new Exception("No index found for itemType=" + clazz.getName() + "itemId=" + itemId, e);
@@ -860,8 +776,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String itemType = Item.getItemType(clazz);
 
-                    client.prepareDelete(getIndexNameForQuery(itemType), itemType, itemId)
-                            .execute().actionGet();
+                    DeleteRequest deleteRequest = new DeleteRequest(getIndexNameForQuery(itemType), itemId);
+                    client.delete(deleteRequest, RequestOptions.DEFAULT);
                     return true;
                 } catch (Exception e) {
                     throw new Exception("Cannot remove", e);
@@ -881,15 +797,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String itemType = Item.getItemType(clazz);
 
-                    BulkRequestBuilder deleteByScope = client.prepareBulk();
+                    BulkRequest deleteByScopeBulkRequest = new BulkRequest();
 
                     final TimeValue keepAlive = TimeValue.timeValueHours(1);
-                    SearchResponse response = client.prepareSearch(indexName + "*")
-                            .setIndices(getIndexNameForQuery(itemType))
-                            .setTypes(itemType)
-                            .setScroll(keepAlive)
-                            .setQuery(conditionESQueryBuilderDispatcher.getQueryBuilder(query))
-                            .setSize(100).execute().actionGet();
+                    SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery())
+                            .indices(getIndexNameForQuery(itemType))
+                            .scroll(keepAlive);
+                    SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                            .query(conditionESQueryBuilderDispatcher.getQueryBuilder(query))
+                            .size(100);
+                    searchRequest.source(searchSourceBuilder);
+
+                    SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
 
                     // Scroll until no more hits are returned
                     while (true) {
@@ -897,21 +816,26 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         for (SearchHit hit : response.getHits().getHits()) {
                             // add hit to bulk delete
                             deleteFromCache(hit.getId(), clazz);
-                            deleteByScope.add(Requests.deleteRequest(hit.getIndex()).type(hit.getType()).id(hit.getId()));
+                            deleteByScopeBulkRequest.add(Requests.deleteRequest(hit.getIndex()).type(hit.getType()).id(hit.getId()));
                         }
 
-                        response = client.prepareSearchScroll(response.getScrollId()).setScroll(keepAlive).execute().actionGet();
+                        SearchScrollRequest searchScrollRequest = new SearchScrollRequest(response.getScrollId());
+                        searchScrollRequest.scroll(keepAlive);
+                        response = client.scroll(searchScrollRequest, RequestOptions.DEFAULT);
 
                         // If we have no more hits, exit
                         if (response.getHits().getHits().length == 0) {
                             break;
                         }
                     }
-                    client.prepareClearScroll().addScrollId(response.getScrollId()).execute().actionGet();
+
+                    ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
+                    clearScrollRequest.addScrollId(response.getScrollId());
+                    client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
 
                     // we're done with the scrolling, delete now
-                    if (deleteByScope.numberOfActions() > 0) {
-                        final BulkResponse deleteResponse = deleteByScope.get();
+                    if (deleteByScopeBulkRequest.numberOfActions() > 0) {
+                        final BulkResponse deleteResponse = client.bulk(deleteByScopeBulkRequest, RequestOptions.DEFAULT);
                         if (deleteResponse.hasFailures()) {
                             // do something
                             logger.debug("Couldn't remove by query " + query + ":\n{}", deleteResponse.buildFailureMessage());
@@ -934,9 +858,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public boolean indexTemplateExists(final String templateName) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".indexTemplateExists") {
-            protected Boolean execute(Object... args) {
-                GetIndexTemplatesResponse getIndexTemplatesResponse = client.admin().indices().prepareGetTemplates(templateName).execute().actionGet();
-                return getIndexTemplatesResponse.getIndexTemplates().size() == 1;
+            protected Boolean execute(Object... args) throws IOException {
+                IndexTemplatesExistRequest indexTemplatesExistRequest = new IndexTemplatesExistRequest(templateName);
+                return client.indices().existsTemplate(indexTemplatesExistRequest, RequestOptions.DEFAULT);
             }
         }.catchingExecuteInClassLoader(true);
         if (result == null) {
@@ -948,8 +872,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public boolean removeIndexTemplate(final String templateName) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeIndexTemplate") {
-            protected Boolean execute(Object... args) {
-                DeleteIndexTemplateResponse deleteIndexTemplateResponse = client.admin().indices().deleteTemplate(new DeleteIndexTemplateRequest(templateName)).actionGet();
+            protected Boolean execute(Object... args) throws IOException {
+                DeleteIndexTemplateRequest deleteIndexTemplateRequest = new DeleteIndexTemplateRequest(templateName);
+                AcknowledgedResponse deleteIndexTemplateResponse = client.indices().deleteTemplate(deleteIndexTemplateRequest, RequestOptions.DEFAULT);
                 return deleteIndexTemplateResponse.isAcknowledged();
             }
         }.catchingExecuteInClassLoader(true);
@@ -962,34 +887,31 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public boolean createMonthlyIndexTemplate() {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createMonthlyIndexTemplate") {
-            protected Boolean execute(Object... args) {
-                PutIndexTemplateRequest putIndexTemplateRequest = new PutIndexTemplateRequest("context-monthly-indices")
-                        .template(indexName + "-*")
-                        .settings("{\n" +
-                                "    \"index\" : {\n" +
-                                "        \"number_of_shards\" : " + monthlyIndexNumberOfShards + ",\n" +
-                                "        \"number_of_replicas\" : " + monthlyIndexNumberOfReplicas + "\n" +
-                                "    },\n" +
-                                "    \"analysis\": {\n" +
-                                "      \"analyzer\": {\n" +
-                                "        \"folding\": {\n" +
-                                "          \"type\":\"custom\",\n" +
-                                "          \"tokenizer\": \"keyword\",\n" +
-                                "          \"filter\":  [ \"lowercase\", \"asciifolding\" ]\n" +
-                                "        }\n" +
-                                "      }\n" +
-                                "    }\n" +
-                                "}\n", XContentType.JSON);
-                Map<String, String> indexMappings = new HashMap<String, String>();
-                indexMappings.put("_default_", mappings.get("_default_"));
-                for (Map.Entry<String, String> entry : mappings.entrySet()) {
-                    if (itemsMonthlyIndexed.contains(entry.getKey())) {
-                        indexMappings.put(entry.getKey(), entry.getValue());
-                    }
+            protected Boolean execute(Object... args) throws IOException {
+                boolean executedSuccessfully = true;
+                for (String itemName : itemsMonthlyIndexed) {
+                    PutIndexTemplateRequest putIndexTemplateRequest = new PutIndexTemplateRequest("context-"+itemName+"-date-template")
+                            .patterns(Collections.singletonList(getMonthlyIndexForQuery(itemName)))
+                            .settings("{\n" +
+                                    "    \"index\" : {\n" +
+                                    "        \"number_of_shards\" : " + monthlyIndexNumberOfShards + ",\n" +
+                                    "        \"number_of_replicas\" : " + monthlyIndexNumberOfReplicas + "\n" +
+                                    "    },\n" +
+                                    "    \"analysis\": {\n" +
+                                    "      \"analyzer\": {\n" +
+                                    "        \"folding\": {\n" +
+                                    "          \"type\":\"custom\",\n" +
+                                    "          \"tokenizer\": \"keyword\",\n" +
+                                    "          \"filter\":  [ \"lowercase\", \"asciifolding\" ]\n" +
+                                    "        }\n" +
+                                    "      }\n" +
+                                    "    }\n" +
+                                    "}\n", XContentType.JSON);
+                    putIndexTemplateRequest.mapping(mappings.get(itemName), XContentType.JSON);
+                    AcknowledgedResponse putIndexTemplateResponse = client.indices().putTemplate(putIndexTemplateRequest, RequestOptions.DEFAULT);
+                    executedSuccessfully &= putIndexTemplateResponse.isAcknowledged();
                 }
-                putIndexTemplateRequest.mappings().putAll(indexMappings);
-                PutIndexTemplateResponse putIndexTemplateResponse = client.admin().indices().putTemplate(putIndexTemplateRequest).actionGet();
-                return putIndexTemplateResponse.isAcknowledged();
+                return executedSuccessfully;
             }
         }.catchingExecuteInClassLoader(true);
         if (result == null) {
@@ -999,24 +921,20 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    public boolean createIndex(final String indexName) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createItem") {
-            protected Boolean execute(Object... args) {
-                IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(indexName).execute().actionGet();
-                boolean indexExists = indicesExistsResponse.isExists();
+    public boolean createIndex(final String itemType) {
+        String index = getIndex(itemType);
+
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createIndex") {
+            protected Boolean execute(Object... args) throws IOException {
+                GetIndexRequest getIndexRequest = new GetIndexRequest(index);
+                boolean indexExists = client.indices().exists(getIndexRequest, RequestOptions.DEFAULT);
                 if (!indexExists) {
-                    Map<String, String> indexMappings = new HashMap<String, String>();
-                    indexMappings.put("_default_", mappings.get("_default_"));
-                    for (Map.Entry<String, String> entry : mappings.entrySet()) {
-                        if (indexNames.containsKey(entry.getKey()) && indexNames.get(entry.getKey()).equals(indexName)) {
-                            indexMappings.put(entry.getKey(), entry.getValue());
-                        }
-                    }
-                    internalCreateIndex(indexName, indexMappings);
+                    internalCreateIndex(index, mappings.get(itemType));
                 }
                 return !indexExists;
             }
         }.catchingExecuteInClassLoader(true);
+
         if (result == null) {
             return false;
         } else {
@@ -1024,17 +942,21 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    public boolean removeIndex(final String indexName) {
+    public boolean removeIndex(final String itemType) {
+        String index = getIndex(itemType);
+
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeIndex") {
-            protected Boolean execute(Object... args) {
-                IndicesExistsResponse indicesExistsResponse = client.admin().indices().prepareExists(indexName).execute().actionGet();
-                boolean indexExists = indicesExistsResponse.isExists();
+            protected Boolean execute(Object... args) throws IOException {
+                GetIndexRequest getIndexRequest = new GetIndexRequest(index);
+                boolean indexExists = client.indices().exists(getIndexRequest, RequestOptions.DEFAULT);
                 if (indexExists) {
-                    client.admin().indices().prepareDelete(indexName).execute().actionGet();
+                    DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(index);
+                    client.indices().delete(deleteIndexRequest, RequestOptions.DEFAULT);
                 }
                 return indexExists;
             }
         }.catchingExecuteInClassLoader(true);
+
         if (result == null) {
             return false;
         } else {
@@ -1042,9 +964,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    private void internalCreateIndex(String indexName, Map<String, String> mappings) {
-        CreateIndexRequestBuilder builder = client.admin().indices().prepareCreate(indexName)
-                .setSettings("{\n" +
+    private void internalCreateIndex(String indexName, String mappingSource) throws IOException {
+        CreateIndexRequest createIndexRequest = new CreateIndexRequest(indexName);
+        createIndexRequest.settings("{\n" +
                         "    \"index\" : {\n" +
                         "        \"number_of_shards\" : " + numberOfShards + ",\n" +
                         "        \"number_of_replicas\" : " + numberOfReplicas + "\n" +
@@ -1060,40 +982,34 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         "    }\n" +
                         "}\n", XContentType.JSON);
 
-        for (Map.Entry<String, String> entry : mappings.entrySet()) {
-            builder.addMapping(entry.getKey(), entry.getValue(), XContentType.JSON);
-        }
-
-        builder.execute().actionGet();
-
-    }
-
-
-    private void createMapping(final String type, final String source, final String indexName) {
-        client.admin().indices()
-                .preparePutMapping(indexName)
-                .setType(type)
-                .setSource(source, XContentType.JSON)
-                .execute().actionGet();
+        createIndexRequest.mapping(mappingSource, XContentType.JSON);
+        CreateIndexResponse createIndexResponse = client.indices().create(createIndexRequest, RequestOptions.DEFAULT);
+        logger.info("Index created: [{}], acknowledge: [{}], shards acknowledge: [{}]", createIndexResponse.index(),
+                createIndexResponse.isAcknowledged(), createIndexResponse.isShardsAcknowledged());
     }
 
     @Override
     public void createMapping(String type, String source) {
-        if (type.equals("_default_")) {
-            return;
-        }
-        if (itemsMonthlyIndexed.contains(type)) {
-            createMonthlyIndexTemplate();
-            if (client.admin().indices().prepareExists(indexName + "-*").execute().actionGet().isExists()) {
-                createMapping(type, source, indexName + "-*");
+        try {
+            if (itemsMonthlyIndexed.contains(type)) {
+                createMonthlyIndexTemplate();
+                String indexName = getIndex(type, new Date());
+                GetIndexRequest getIndexRequest = new GetIndexRequest(indexName);
+                if (client.indices().exists(getIndexRequest, RequestOptions.DEFAULT)) {
+                    putMapping(source, indexName);
+                }
+            } else {
+                putMapping(source, getIndex(type));
             }
-        } else if (indexNames.containsKey(type)) {
-            if (client.admin().indices().prepareExists(indexNames.get(type)).execute().actionGet().isExists()) {
-                createMapping(type, source, indexNames.get(type));
-            }
-        } else {
-            createMapping(type, source, indexName);
+        } catch (IOException ioe) {
+            logger.error("Error while creating mapping for type " + type + " and source " + source, ioe);
         }
+    }
+
+    private void putMapping(final String source, final String indexName) throws IOException {
+        PutMappingRequest putMappingRequest = new PutMappingRequest(indexName);
+        putMappingRequest.source(source, XContentType.JSON);
+        client.indices().putMapping(putMappingRequest, RequestOptions.DEFAULT);
     }
 
     @Override
@@ -1102,20 +1018,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             @SuppressWarnings("unchecked")
             protected Map<String, Map<String, Object>> execute(Object... args) throws Exception {
                 // Get all mapping for current itemType
-                GetMappingsResponse getMappingsResponse = client.admin().indices().prepareGetMappings().setTypes(itemType).execute().actionGet();
-                ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> mappings = getMappingsResponse.getMappings();
+                GetMappingsRequest getMappingsRequest = new GetMappingsRequest();
+                getMappingsRequest.indices(getIndexNameForQuery(itemType));
+                GetMappingsResponse getMappingsResponse = client.indices().getMapping(getMappingsRequest, RequestOptions.DEFAULT);
+                Map<String, MappingMetaData> mappings = getMappingsResponse.mappings();
 
                 // create a list of Keys to get the mappings in chronological order
                 // in case there is monthly context then the mapping will be added from the oldest to the most recent one
-                Set<String> orderedKeys = new TreeSet<>(Arrays.asList(mappings.keys().toArray(String.class)));
-
+                Set<String> orderedKeys = new TreeSet<>(mappings.keySet());
                 Map<String, Map<String, Object>> result = new HashMap<>();
                 try {
                     for (String key : orderedKeys) {
                         if (mappings.containsKey(key)) {
-                            ImmutableOpenMap<String, MappingMetaData> next = mappings.get(key);
-
-                            Map<String, Map<String, Object>> properties = (Map<String, Map<String, Object>>) next.get(itemType).getSourceAsMap().get("properties");
+                            Map<String, Map<String, Object>> properties = (Map<String, Map<String, Object>>) mappings.get(key).getSourceAsMap().get("properties");
                             for (Map.Entry<String, Map<String, Object>> entry : properties.entrySet()) {
                                 if (result.containsKey(entry.getKey())) {
                                     Map<String, Object> subResult = result.get(entry.getKey());
@@ -1201,10 +1116,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 //Index the query = register it in the percolator
                 try {
                     logger.info("Saving query : " + queryName);
-                    client.prepareIndex(indexName, ".percolator", queryName)
-                            .setSource(query, XContentType.JSON)
-                            .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                            .execute().actionGet();
+                    String index = getIndex(".percolator", null);
+                    IndexRequest indexRequest = new IndexRequest(index);
+                    indexRequest.id(queryName);
+                    indexRequest.source(query, XContentType.JSON);
+                    indexRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                    client.index(indexRequest, RequestOptions.DEFAULT);
                     return true;
                 } catch (Exception e) {
                     throw new Exception("Cannot save query", e);
@@ -1233,9 +1150,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) throws Exception {
                 //Index the query = register it in the percolator
                 try {
-                    client.prepareDelete(indexName, ".percolator", queryName)
-                            .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                            .execute().actionGet();
+                    String index = getIndex(".percolator", null);
+                    DeleteRequest deleteRequest = new DeleteRequest(index);
+                    deleteRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                    client.delete(deleteRequest, RequestOptions.DEFAULT);
                     return true;
                 } catch (Exception e) {
                     throw new Exception("Cannot delete query", e);
@@ -1294,7 +1212,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> PartialList<T> queryFullText(final String fulltext, final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size) {
-        return query(QueryBuilders.boolQuery().must(QueryBuilders.queryStringQuery(fulltext).defaultField("_all")).must(conditionESQueryBuilderDispatcher.getQueryBuilder(query)), sortBy, clazz, offset, size, null, null);
+        return query(QueryBuilders.boolQuery().must(QueryBuilders.queryStringQuery(fulltext)).must(conditionESQueryBuilderDispatcher.getQueryBuilder(query)), sortBy, clazz, offset, size, null, null);
     }
 
     @Override
@@ -1314,12 +1232,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> PartialList<T> queryFullText(String fieldName, String fieldValue, String fulltext, String sortBy, Class<T> clazz, int offset, int size) {
-        return query(QueryBuilders.boolQuery().must(QueryBuilders.queryStringQuery(fulltext).defaultField("_all")).must(termQuery(fieldName, fieldValue)), sortBy, clazz, offset, size, getRouting(fieldName, new String[]{fieldValue}, clazz), null);
+        return query(QueryBuilders.boolQuery().must(QueryBuilders.queryStringQuery(fulltext)).must(termQuery(fieldName, fieldValue)), sortBy, clazz, offset, size, getRouting(fieldName, new String[]{fieldValue}, clazz), null);
     }
 
     @Override
     public <T extends Item> PartialList<T> queryFullText(String fulltext, String sortBy, Class<T> clazz, int offset, int size) {
-        return query(QueryBuilders.queryStringQuery(fulltext).defaultField("_all"), sortBy, clazz, offset, size, getRouting("_all", new String[]{fulltext}, clazz), null);
+        return query(QueryBuilders.queryStringQuery(fulltext), sortBy, clazz, offset, size, null, null);
     }
 
     @Override
@@ -1351,14 +1269,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return new InClassLoaderExecute<Long>(metricsService, this.getClass().getName() + ".queryCount") {
 
             @Override
-            protected Long execute(Object... args) {
-                SearchResponse response = client.prepareSearch(getIndexNameForQuery(itemType))
-                        .setTypes(itemType)
-                        .setSize(0)
-                        .setQuery(filter)
-                        .execute()
-                        .actionGet();
-                return response.getHits().getTotalHits();
+            protected Long execute(Object... args) throws IOException {
+                SearchRequest searchRequest = new SearchRequest(getIndexNameForQuery(itemType));
+                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+                searchSourceBuilder.query(filter);
+                searchSourceBuilder.size(0);
+                searchRequest.source(searchSourceBuilder);
+                SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
+                return response.getHits().getTotalHits().value;
             }
         }.catchingExecuteInClassLoader(true);
     }
@@ -1374,40 +1292,27 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String itemType = Item.getItemType(clazz);
                     TimeValue keepAlive = TimeValue.timeValueHours(1);
-                    SearchRequestBuilder requestBuilder = null;
+                    SearchRequest searchRequest = new SearchRequest(getIndexNameForQuery(itemType));
+                    SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                            .fetchSource(true)
+                            .query(query)
+                            .size(size < 0 ? defaultQueryLimit : size)
+                            .from(offset);
                     if (scrollTimeValidity != null) {
                         keepAlive = TimeValue.parseTimeValue(scrollTimeValidity, TimeValue.timeValueHours(1), "scrollTimeValidity");
-                        requestBuilder = client.prepareSearch(getIndexNameForQuery(itemType))
-                                .setTypes(itemType)
-                                .setFetchSource(true)
-                                .setScroll(keepAlive)
-                                .setFrom(offset)
-                                .setQuery(query)
-                                .setSize(size);
-                    } else {
-                        requestBuilder = client.prepareSearch(getIndexNameForQuery(itemType))
-                                .setTypes(itemType)
-                                .setFetchSource(true)
-                                .setQuery(query)
-                                .setFrom(offset);
+                        searchRequest.scroll(keepAlive);
                     }
 
                     if (size == Integer.MIN_VALUE) {
-                        requestBuilder.setSize(defaultQueryLimit);
+                        searchSourceBuilder.size(defaultQueryLimit);
                     } else if (size != -1) {
-                        requestBuilder.setSize(size);
+                        searchSourceBuilder.size(size);
                     } else {
                         // size == -1, use scroll query to retrieve all the results
-                        requestBuilder = client.prepareSearch(getIndexNameForQuery(itemType))
-                                .setTypes(itemType)
-                                .setFetchSource(true)
-                                .setScroll(keepAlive)
-                                .setFrom(offset)
-                                .setQuery(query)
-                                .setSize(100);
+                        searchRequest.scroll(keepAlive);
                     }
                     if (routing != null) {
-                        requestBuilder.setRouting(routing);
+                        searchRequest.routing(routing);
                     }
                     if (sortBy != null) {
                         String[] sortByArray = sortBy.split(",");
@@ -1416,17 +1321,17 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 String[] elements = sortByElement.split(":");
                                 GeoDistanceSortBuilder distanceSortBuilder = SortBuilders.geoDistanceSort(elements[1], Double.parseDouble(elements[2]), Double.parseDouble(elements[3])).unit(DistanceUnit.KILOMETERS);
                                 if (elements.length > 4 && elements[4].equals("desc")) {
-                                    requestBuilder = requestBuilder.addSort(distanceSortBuilder.order(SortOrder.DESC));
+                                    searchSourceBuilder.sort(distanceSortBuilder.order(SortOrder.DESC));
                                 } else {
-                                    requestBuilder = requestBuilder.addSort(distanceSortBuilder.order(SortOrder.ASC));
+                                    searchSourceBuilder.sort(distanceSortBuilder.order(SortOrder.ASC));
                                 }
                             } else {
                                 String name = getPropertyNameWithData(StringUtils.substringBeforeLast(sortByElement, ":"), itemType);
                                 if (name != null) {
                                     if (sortByElement.endsWith(":desc")) {
-                                        requestBuilder = requestBuilder.addSort(name, SortOrder.DESC);
+                                        searchSourceBuilder.sort(name, SortOrder.DESC);
                                     } else {
-                                        requestBuilder = requestBuilder.addSort(name, SortOrder.ASC);
+                                        searchSourceBuilder.sort(name, SortOrder.ASC);
                                     }
                                 } else {
                                     // in the case of no data existing for the property, we will not add the sorting to the request.
@@ -1435,10 +1340,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             }
                         }
                     }
-                    SearchResponse response = requestBuilder
-                            .setVersion(true)
-                            .execute()
-                            .actionGet();
+                    searchSourceBuilder.version(true);
+                    searchRequest.source(searchSourceBuilder);
+                    SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
                     if (size == -1) {
                         // Scroll until no more hits are returned
                         while (true) {
@@ -1452,18 +1356,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 results.add(value);
                             }
 
-                            response = client.prepareSearchScroll(response.getScrollId()).setScroll(keepAlive).execute().actionGet();
+                            SearchScrollRequest searchScrollRequest = new SearchScrollRequest(response.getScrollId());
+                            searchScrollRequest.scroll(keepAlive);
+                            response = client.scroll(searchScrollRequest, RequestOptions.DEFAULT);
 
                             // If we have no more hits, exit
                             if (response.getHits().getHits().length == 0) {
                                 break;
                             }
                         }
-                        client.prepareClearScroll().addScrollId(response.getScrollId()).execute().actionGet();
+                        ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
+                        clearScrollRequest.addScrollId(response.getScrollId());
+                        client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
                     } else {
                         SearchHits searchHits = response.getHits();
                         scrollIdentifier = response.getScrollId();
-                        totalHits = searchHits.getTotalHits();
+                        totalHits = searchHits.getTotalHits().value;
                         for (SearchHit searchHit : searchHits) {
                             String sourceAsString = searchHit.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
@@ -1496,10 +1404,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 long totalHits = 0;
                 try {
                     TimeValue keepAlive = TimeValue.parseTimeValue(scrollTimeValidity, TimeValue.timeValueMinutes(10), "scrollTimeValidity");
-                    SearchResponse response = client.prepareSearchScroll(scrollIdentifier).setScroll(keepAlive).execute().actionGet();
+
+                    SearchScrollRequest searchScrollRequest = new SearchScrollRequest(scrollIdentifier);
+                    searchScrollRequest.scroll(keepAlive);
+                    SearchResponse response = client.scroll(searchScrollRequest, RequestOptions.DEFAULT);
 
                     if (response.getHits().getHits().length == 0) {
-                        client.prepareClearScroll().addScrollId(response.getScrollId()).execute().actionGet();
+                        ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
+                        clearScrollRequest.addScrollId(response.getScrollId());
+                        client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
                     } else {
                         for (SearchHit searchHit : response.getHits().getHits()) {
                             // add hit to results
@@ -1510,7 +1423,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             results.add(value);
                         }
                     }
-                    PartialList<T> result = new PartialList<T>(results, 0, response.getHits().getHits().length, response.getHits().getTotalHits());
+                    PartialList<T> result = new PartialList<T>(results, 0, response.getHits().getHits().length, response.getHits().getTotalHits().value);
                     if (scrollIdentifier != null) {
                         result.setScrollIdentifier(scrollIdentifier);
                         result.setScrollTimeValidity(scrollTimeValidity);
@@ -1542,14 +1455,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery") {
 
             @Override
-            protected Map<String, Long> execute(Object... args) {
+            protected Map<String, Long> execute(Object... args) throws IOException {
                 Map<String, Long> results = new LinkedHashMap<String, Long>();
 
-                SearchRequestBuilder builder = client.prepareSearch(getIndexNameForQuery(itemType))
-                        .setTypes(itemType)
-                        .setSize(0)
-                        .setQuery(QueryBuilders.matchAllQuery());
-
+                SearchRequest searchRequest = new SearchRequest(getIndexNameForQuery(itemType));
+                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+                searchSourceBuilder.size(0);
+                searchSourceBuilder.query(QueryBuilders.matchAllQuery());
                 List<AggregationBuilder> lastAggregation = new ArrayList<AggregationBuilder>();
 
                 if (aggregate != null) {
@@ -1557,7 +1469,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     String fieldName = aggregate.getField();
                     if (aggregate instanceof DateAggregate) {
                         DateAggregate dateAggregate = (DateAggregate) aggregate;
-                        DateHistogramAggregationBuilder dateHistogramBuilder = AggregationBuilders.dateHistogram("buckets").field(fieldName).dateHistogramInterval(new DateHistogramInterval((dateAggregate.getInterval())));
+                        DateHistogramAggregationBuilder dateHistogramBuilder = AggregationBuilders.dateHistogram("buckets").field(fieldName).calendarInterval(new DateHistogramInterval((dateAggregate.getInterval())));
                         if (dateAggregate.getFormat() != null) {
                             dateHistogramBuilder.format(dateAggregate.getFormat());
                         }
@@ -1626,11 +1538,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 // filter on range items in the query block so we don't retrieve all the document before filtering the whole
                 if (optimizedQuery) {
                     for (AggregationBuilder aggregationBuilder : lastAggregation) {
-                        builder.addAggregation(aggregationBuilder);
+                        searchSourceBuilder.aggregation(aggregationBuilder);
                     }
 
                     if (filter != null) {
-                        builder.setQuery(conditionESQueryBuilderDispatcher.buildFilter(filter));
+                        searchSourceBuilder.query(conditionESQueryBuilderDispatcher.buildFilter(filter));
                     }
                 } else {
                     if (filter != null) {
@@ -1646,15 +1558,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         globalAggregation.subAggregation(aggregationBuilder);
                     }
 
-                    builder.addAggregation(globalAggregation);
+                    searchSourceBuilder.aggregation(globalAggregation);
                 }
 
-                SearchResponse response = builder.execute().actionGet();
+                searchRequest.source(searchSourceBuilder);
+                SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
                 Aggregations aggregations = response.getAggregations();
                 if (aggregations != null) {
                     if (optimizedQuery) {
                         if (response.getHits() != null) {
-                            results.put("_filtered", response.getHits().getTotalHits());
+                            results.put("_filtered", response.getHits().getTotalHits().value);
                         }
                     } else {
                         Global globalAgg = aggregations.get("global");
@@ -1678,7 +1591,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                     }
                 }
-
                 return results;
             }
         }.catchingExecuteInClassLoader(true);
@@ -1701,7 +1613,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 if (bulkProcessor != null) {
                     bulkProcessor.flush();
                 }
-                client.admin().indices().refresh(Requests.refreshRequest()).actionGet();
+                try {
+                    client.indices().refresh(Requests.refreshRequest(), RequestOptions.DEFAULT);
+                } catch (IOException e) {
+                    e.printStackTrace();//TODO manage ES7
+                }
                 return true;
             }
         }.catchingExecuteInClassLoader(true);
@@ -1714,26 +1630,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         new InClassLoaderExecute<Object>(metricsService, this.getClass().getName() + ".purgeWithDate") {
             @Override
             protected Object execute(Object... args) throws Exception {
-                IndicesStatsResponse statsResponse = client.admin().indices().prepareStats(indexName + "-*")
-                        .setIndexing(false)
-                        .setGet(false)
-                        .setSearch(false)
-                        .setWarmer(false)
-                        .setMerge(false)
-                        .setFieldData(false)
-                        .setFlush(false)
-                        .setCompletion(false)
-                        .setRefresh(false)
-                        .execute()
-                        .actionGet();
+
+                GetIndexRequest getIndexRequest = new GetIndexRequest(getAllIndexForQuery());
+                GetIndexResponse getIndexResponse = client.indices().get(getIndexRequest, RequestOptions.DEFAULT);
+                String[] indices = getIndexResponse.getIndices();
 
                 SimpleDateFormat d = new SimpleDateFormat("yyyy-MM");
 
                 List<String> toDelete = new ArrayList<String>();
-                for (String currentIndexName : statsResponse.getIndices().keySet()) {
-                    if (currentIndexName.startsWith(indexName + "-")) {
+                for (String currentIndexName : indices) {
+                    int indexDatePrefixPos = currentIndexName.indexOf(INDEX_DATE_PREFIX);
+                    if (indexDatePrefixPos > -1) {
                         try {
-                            Date indexDate = d.parse(currentIndexName.substring(indexName.length() + 1));
+                            Date indexDate = d.parse(currentIndexName.substring(indexDatePrefixPos + INDEX_DATE_PREFIX.length()));
 
                             if (indexDate.before(date)) {
                                 toDelete.add(currentIndexName);
@@ -1744,7 +1653,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                 }
                 if (!toDelete.isEmpty()) {
-                    client.admin().indices().prepareDelete(toDelete.toArray(new String[toDelete.size()])).execute().actionGet();
+                    DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(toDelete.toArray(new String[toDelete.size()]));
+                    client.indices().delete(deleteIndexRequest, RequestOptions.DEFAULT);
                 }
                 return null;
             }
@@ -1755,42 +1665,49 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public void purge(final String scope) {
         new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope") {
             @Override
-            protected Void execute(Object... args) {
+            protected Void execute(Object... args) throws IOException {
                 QueryBuilder query = termQuery("scope", scope);
 
-                BulkRequestBuilder deleteByScope = client.prepareBulk();
+                BulkRequest deleteByScopeBulkRequest = new BulkRequest();
 
                 final TimeValue keepAlive = TimeValue.timeValueHours(1);
-                SearchResponse response = client.prepareSearch(indexName + "*")
-                        .setScroll(keepAlive)
-                        .setQuery(query)
-                        .setSize(100).execute().actionGet();
+                SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery()).scroll(keepAlive);
+                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                        .query(query)
+                        .size(100);
+                searchRequest.source(searchSourceBuilder);
+                SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
 
                 // Scroll until no more hits are returned
                 while (true) {
 
                     for (SearchHit hit : response.getHits().getHits()) {
                         // add hit to bulk delete
-                        deleteByScope.add(Requests.deleteRequest(hit.index()).type(hit.type()).id(hit.id()));
+                        DeleteRequest deleteRequest = new DeleteRequest(hit.getIndex(), hit.getId());
+                        deleteByScopeBulkRequest.add(deleteRequest);
                     }
 
-                    response = client.prepareSearchScroll(response.getScrollId()).setScroll(keepAlive).execute().actionGet();
+                    SearchScrollRequest searchScrollRequest = new SearchScrollRequest(response.getScrollId());
+                    searchScrollRequest.scroll(keepAlive);
+                    response = client.scroll(searchScrollRequest, RequestOptions.DEFAULT);
 
                     // If we have no more hits, exit
                     if (response.getHits().getHits().length == 0) {
+                        ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
+                        clearScrollRequest.addScrollId(response.getScrollId());
+                        client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
                         break;
                     }
                 }
 
                 // we're done with the scrolling, delete now
-                if (deleteByScope.numberOfActions() > 0) {
-                    final BulkResponse deleteResponse = deleteByScope.get();
+                if (deleteByScopeBulkRequest.numberOfActions() > 0) {
+                    final BulkResponse deleteResponse = client.bulk(deleteByScopeBulkRequest, RequestOptions.DEFAULT);
                     if (deleteResponse.hasFailures()) {
                         // do something
-                        logger.debug("Couldn't delete from scope " + scope + ":\n{}", deleteResponse.buildFailureMessage());
+                        logger.warn("Couldn't delete from scope " + scope + ":\n{}", deleteResponse.buildFailureMessage());
                     }
                 }
-
                 return null;
             }
         }.catchingExecuteInClassLoader(true);
@@ -1801,13 +1718,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return new InClassLoaderExecute<Map<String, Double>>(metricsService, this.getClass().getName() + ".getSingleValuesMetrics") {
 
             @Override
-            protected Map<String, Double> execute(Object... args) {
+            protected Map<String, Double> execute(Object... args) throws IOException {
                 Map<String, Double> results = new LinkedHashMap<String, Double>();
 
-                SearchRequestBuilder builder = client.prepareSearch(getIndexNameForQuery(itemType))
-                        .setTypes(itemType)
-                        .setSize(0)
-                        .setQuery(QueryBuilders.matchAllQuery());
+                SearchRequest searchRequest = new SearchRequest(getIndexNameForQuery(itemType));
+                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                        .size(0)
+                        .query(QueryBuilders.matchAllQuery());
                 AggregationBuilder filterAggregation = AggregationBuilders.filter("metrics", conditionESQueryBuilderDispatcher.buildFilter(condition));
 
                 if (metrics != null) {
@@ -1834,8 +1751,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                     }
                 }
-                builder.addAggregation(filterAggregation);
-                SearchResponse response = builder.execute().actionGet();
+                searchSourceBuilder.aggregation(filterAggregation);
+                searchRequest.source(searchSourceBuilder);
+                SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
 
                 Aggregations aggregations = response.getAggregations();
                 if (aggregations != null) {
@@ -1843,7 +1761,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     if (metricsResults instanceof HasAggregations) {
                         aggregations = ((HasAggregations) metricsResults).getAggregations();
                         for (Aggregation aggregation : aggregations) {
-                            InternalNumericMetricsAggregation.SingleValue singleValue = (InternalNumericMetricsAggregation.SingleValue) aggregation;
+                            NumericMetricsAggregation.SingleValue singleValue = (NumericMetricsAggregation.SingleValue) aggregation;
                             results.put("_" + singleValue.getName(), singleValue.value());
                         }
                     }
@@ -1853,10 +1771,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.catchingExecuteInClassLoader(true);
     }
 
-    private String getIndexNameForQuery(String itemType) {
-        return indexNames.containsKey(itemType) ? indexNames.get(itemType) :
-                (itemsMonthlyIndexed.contains(itemType) ? indexName + "-*" : indexName);
-    }
+
 
     private String getConfig(Map<String, String> settings, String key,
                              String defaultValue) {
@@ -1905,55 +1820,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    public TransportClient newTransportClient(Settings.Builder settingsBuilder,
-                                              String transportClientClassName,
-                                              String transportClientJarDirectory,
-                                              String transportClientProperties) {
-
-        ArrayList<URL> urls = new ArrayList<>();
-        File pluginLocationFile = new File(transportClientJarDirectory);
-
-        File[] pluginLocationFiles = pluginLocationFile.listFiles();
-        for (File pluginFile : pluginLocationFiles) {
-            if (pluginFile.getName().toLowerCase().endsWith(".jar")) {
-                try {
-                    urls.add(pluginFile.toURI().toURL());
-                } catch (MalformedURLException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
-        ChildFirstClassLoader childFirstClassLoader = new ChildFirstClassLoader(this.getClass().getClassLoader(), urls.toArray(new URL[urls.size()]));
-
-        if (StringUtils.isNotBlank(transportClientProperties)) {
-            String[] clientProperties = transportClientProperties.split(",");
-            if (clientProperties.length > 0) {
-                for (String clientProperty : clientProperties) {
-                    String[] clientPropertyParts = clientProperty.split("=");
-                    settingsBuilder.put(clientPropertyParts[0], clientPropertyParts[1]);
-                }
-            }
-        }
-
-        try {
-            Class<?> transportClientClass = childFirstClassLoader.loadClass(transportClientClassName);
-            Constructor<?> transportClientConstructor = transportClientClass.getConstructor(Settings.class, Class[].class);
-            return (TransportClient) transportClientConstructor.newInstance(settingsBuilder.build(), new Class[0]);
-        } catch (ClassNotFoundException e) {
-            logger.error("Couldn't find class " + transportClientClassName, e);
-        } catch (NoSuchMethodException e) {
-            logger.error("Error creating transport client with class" + transportClientClassName, e);
-        } catch (IllegalAccessException e) {
-            logger.error("Error creating transport client with class" + transportClientClassName, e);
-        } catch (InstantiationException e) {
-            logger.error("Error creating transport client with class" + transportClientClassName, e);
-        } catch (InvocationTargetException e) {
-            logger.error("Error creating transport client with class" + transportClientClassName, e);
-        }
-        return null;
-    }
-
     private <T extends Item> boolean isCacheActiveForClass(String className) {
         if (itemClassesToCacheSet.contains("*")) {
             return true;
@@ -1989,6 +1855,32 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
         Map<String,T> itemCache = hazelcastInstance.getMap(className);
         return itemCache.remove(itemId);
+    }
+
+    private String getAllIndexForQuery() {
+        return indexPrefix + "*";
+    }
+
+    private String getIndexNameForQuery(String itemType) {
+        return itemsMonthlyIndexed.contains(itemType) ? getMonthlyIndexForQuery(itemType) : getIndex(itemType, null);
+    }
+
+    private String getMonthlyIndexForQuery(String itemType) {
+        return indexPrefix + "-" + itemType.toLowerCase() + "-" + INDEX_DATE_PREFIX + "*";
+    }
+
+    private String getIndex(String itemType, Date dateHint) {
+        String indexItemTypePart = itemsMonthlyIndexed.contains(itemType) && dateHint != null ? itemType + "-" + getMonthlyIndexPart(dateHint) : itemType;
+        return getIndex(indexItemTypePart);
+    }
+
+    private String getIndex(String indexItemTypePart) {
+        return (indexPrefix + "-" + indexItemTypePart).toLowerCase();
+    }
+
+    private String getMonthlyIndexPart(Date date) {
+        String d = new SimpleDateFormat("yyyy-MM").format(date);
+        return INDEX_DATE_PREFIX + d;
     }
 
 }

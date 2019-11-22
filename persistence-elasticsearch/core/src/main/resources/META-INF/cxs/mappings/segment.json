@@ -1,22 +1,36 @@
 {
-  "segment": {
-    "properties": {
-
-      "metadata": {
-        "properties": {
-          "enabled": {
-            "type": "boolean"
-          },
-          "hidden": {
-            "type": "boolean"
-          },
-
-          "missingPlugins": {
-            "type": "boolean"
-          },
-          "readOnly": {
-            "type": "boolean"
+  "dynamic_templates": [
+    {
+      "all": {
+        "match": "*",
+        "match_mapping_type": "string",
+        "mapping": {
+          "type": "text",
+          "analyzer": "folding",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
           }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "metadata": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "missingPlugins": {
+          "type": "boolean"
+        },
+        "readOnly": {
+          "type": "boolean"
         }
       }
     }
