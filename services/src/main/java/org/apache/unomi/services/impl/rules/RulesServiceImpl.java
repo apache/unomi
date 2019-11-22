@@ -22,7 +22,6 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.actions.Action;
-import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
@@ -94,18 +93,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public void setRulesStatisticsRefreshInterval(Integer rulesStatisticsRefreshInterval) {
         this.rulesStatisticsRefreshInterval = rulesStatisticsRefreshInterval;
-    }
-
-    public void bindExecutor(ServiceReference<ActionExecutor> actionExecutorServiceReference) {
-        ActionExecutor actionExecutor = bundleContext.getService(actionExecutorServiceReference);
-        actionExecutorDispatcher.addExecutor(actionExecutorServiceReference.getProperty("actionExecutorId").toString(), actionExecutor);
-    }
-
-    public void unbindExecutor(ServiceReference<ActionExecutor> actionExecutorServiceReference) {
-        if (actionExecutorServiceReference == null) {
-            return;
-        }
-        actionExecutorDispatcher.removeExecutor(actionExecutorServiceReference.getProperty("actionExecutorId").toString());
     }
 
     public void postConstruct() {

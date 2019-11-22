@@ -136,6 +136,7 @@
     <bean id="actionExecutorDispatcherImpl"
           class="org.apache.unomi.services.actions.ActionExecutorDispatcher">
         <property name="metricsService" ref="metricsService" />
+        <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
 
     <bean id="rulesServiceImpl" class="org.apache.unomi.services.impl.rules.RulesServiceImpl"
@@ -272,7 +273,14 @@
                     interface="org.apache.unomi.api.actions.ActionExecutor"
                     availability="optional">
         <reference-listener
-                bind-method="bindExecutor" unbind-method="unbindExecutor" ref="rulesServiceImpl"/>
+                bind-method="bindExecutor" unbind-method="unbindExecutor" ref="actionExecutorDispatcherImpl"/>
+    </reference-list>
+
+    <reference-list id="actionDispatchers"
+                    interface="org.apache.unomi.api.actions.ActionDispatcher"
+                    availability="optional">
+        <reference-listener
+                bind-method="bindDispatcher" unbind-method="unbindDispatcher" ref="actionExecutorDispatcherImpl"/>
     </reference-list>
 
     <reference-list id="personalizationStrategies"
