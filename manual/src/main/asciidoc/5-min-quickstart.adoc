@@ -16,7 +16,7 @@
 1) Install JDK 8 (http://www.oracle.com/technetwork/java/javase/downloads/index.html) and make sure you set the
 JAVA_HOME variable https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/
 
-2) Download ElasticSearch here : https://www.elastic.co/downloads/past-releases/elasticsearch-5-6-3 (please <strong>make sure</strong> you use the proper version : 5.6.3)
+2) Download ElasticSearch here : https://www.elastic.co/downloads/past-releases/elasticsearch-7-4-2 (please <strong>make sure</strong> you use the proper version : 7.4.2)
 
 3) Uncompress it and change the `config/elasticsearch.yml` to include the following config : <code>cluster.name: contextElasticSearch</code>
 

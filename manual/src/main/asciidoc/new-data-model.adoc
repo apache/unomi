@@ -1,0 +1,52 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+=== Data Model changes for Apache Unomi 1.5.0
+
+==== Data model and ElasticSearch 7
+
+Since Apache Unomi version 1.5.0 we decided to upgrade the supported ElasticSearch version to the latest 7.4.2.
+
+To be able to do so, we had to rework the way the data was stored inside ElasticSearch.
+
+Previously every items was stored inside the same ElasticSearch index but this is not allowed anymore in recent ElasticSearch versions.
+
+Since Apache Unomi version 1.5.0 every type of items (see section: link:#_items_and_types[Items and types]) is now stored in a dedicated separated index.
+
+
+==== API changes
+
+To be able to handle the multiple indices the Persistence API implementation
+(https://github.com/apache/unomi/blob/9f1bab437fd93826dc54d318ed00d3b2e3161437/persistence-elasticsearch/core/src/main/java/org/apache/unomi/persistence/elasticsearch/ElasticSearchPersistenceServiceImpl.java[ElasticSearchPersistenceServiceImpl])
+have been adapted and simplified.
+
+The good news is that there is no API changes, the persistence API interface didn't changed.
+
+Any custom Apache Unomi plugins or extensions should continue to work on Apache Unomi 1.5.0.
+
+The only notable changes are located at the
+https://github.com/apache/unomi/blob/9f1bab437fd93826dc54d318ed00d3b2e3161437/persistence-elasticsearch/core/src/main/java/org/apache/unomi/persistence/elasticsearch/ElasticSearchPersistenceServiceImpl.java[ElasticSearchPersistenceServiceImpl Java class].
+This class should not be use directly, instead you should use OSGI service dependency injection using the interface https://github.com/apache/unomi/blob/9f1bab437fd93826dc54d318ed00d3b2e3161437/persistence-spi/src/main/java/org/apache/unomi/persistence/spi/PersistenceService.java[PersistenceService].
+
+But if you are interested in the implementation changes:
+
+. The property `index.name` have been renamed to `index.prefix`.
+Previously used for the single one index name, now every index is prefixed using this property. (`context-` by default)
+. We removed the property `index.names` originally used to create additional indices (used by the geonames DB for exemple).
+This property is not needed anymore because the index is automatically created by the peristence service when the mapping configuration is loaded.
+Example of mapping configuration file: (https://github.com/apache/unomi/blob/9f1bab437fd93826dc54d318ed00d3b2e3161437/extensions/geonames/services/src/main/resources/META-INF/cxs/mappings/geonameEntry.json[geoname index mapping])
+
+Because of this changes the geonames DB index name is now respecting the index naming with prefix like any other item type.
+Previously named: `geonames` is now using the index name `context-geonameentry`
+(see: link:#_installing_geonames_database[Documentation about geonames extension]).
