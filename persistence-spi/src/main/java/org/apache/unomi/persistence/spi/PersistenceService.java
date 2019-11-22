@@ -480,24 +480,24 @@ public interface PersistenceService {
     Map<String, Double> getSingleValuesMetrics(Condition condition, String[] metrics, String field, String type);
 
     /**
-     * Creates an index with the specified name in the persistence engine.
+     * Creates an index with for the specified item type in the persistence engine.
      *
      * TODO: remove from API?
      *
-     * @param indexName the index name
+     * @param itemType the item type
      * @return {@code true} if the operation was successful, {@code false} otherwise
      */
-    boolean createIndex(final String indexName);
+    boolean createIndex(final String itemType);
 
     /**
-     * Removes the index with the specified name.
+     * Removes the index for the specified item type.
      *
      * TODO: remove from API?
      *
-     * @param indexName the index name
+     * @param itemType the item type
      * @return {@code true} if the operation was successful, {@code false} otherwise
      */
-    boolean removeIndex(final String indexName);
+    boolean removeIndex(final String itemType);
 
     /**
      * Removes all data associated with the provided scope.
