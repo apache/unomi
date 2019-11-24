@@ -103,3 +103,5 @@ include::extending-plugins.adoc[]
 include::custom-extensions.adoc[]
 
 include::patches.adoc[]
+
+include::new-data-model.adoc[]
