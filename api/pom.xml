@@ -30,15 +30,6 @@
     <description>Main API of the Apache Unomi Context server</description>
     <packaging>bundle</packaging>
 
-    <dependencies>
-        <dependency>
-            <groupId>javax.xml.bind</groupId>
-            <artifactId>jaxb-api</artifactId>
-            <version>2.3.0</version>
-            <scope>provided</scope>
-        </dependency>
-    </dependencies>
-
     <reporting>
         <plugins>
             <plugin>
