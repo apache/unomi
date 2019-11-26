@@ -75,12 +75,12 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         // store the profile id in case the merge change it to a previous one
         String profileId = profile.getItemId();
 
-        Condition propertyCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        Condition propertyCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
         propertyCondition.setParameter("comparisonOperator", "equals");
         propertyCondition.setParameter("propertyName", "systemProperties." + mergeProfilePropertyName);
         propertyCondition.setParameter("propertyValue", mergeProfilePropertyValue);
 
-        Condition excludeMergedProfilesCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        Condition excludeMergedProfilesCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
         excludeMergedProfilesCondition.setParameter("comparisonOperator", "missing");
         excludeMergedProfilesCondition.setParameter("propertyName", "mergedWith");
 
