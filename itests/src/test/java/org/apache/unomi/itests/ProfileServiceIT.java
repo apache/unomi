@@ -39,7 +39,7 @@ public class ProfileServiceIT extends BaseIT {
 
     private final static String TEST_PROFILE_ID = "test-profile-id";
 
-    @Inject @Filter(timeout = 60000)
+    @Inject @Filter(timeout = 600000)
     protected ProfileService profileService;
 
     @Test

@@ -43,9 +43,9 @@ import java.util.*;
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileImportActorsIT extends BaseIT {
 
-    @Inject @Filter(value="(configDiscriminator=IMPORT)", timeout = 60000)
+    @Inject @Filter(value="(configDiscriminator=IMPORT)", timeout = 600000)
     protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
-    @Inject @Filter(timeout = 60000)
+    @Inject @Filter(timeout = 600000)
     protected ProfileService profileService;
 
     @Test

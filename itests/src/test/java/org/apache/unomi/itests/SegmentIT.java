@@ -37,7 +37,7 @@ import java.util.List;
 public class SegmentIT extends BaseIT {
     private final static Logger LOGGER = LoggerFactory.getLogger(SegmentIT.class);
 
-    @Inject @Filter(timeout = 60000)
+    @Inject @Filter(timeout = 600000)
     protected SegmentService segmentService;
 
     @Test

@@ -48,9 +48,9 @@ public class ConditionEvaluatorIT extends BaseIT {
     protected Item item;
     protected Date lastVisit;
 
-    @Inject @Filter(timeout = 60000)
+    @Inject @Filter(timeout = 600000)
     protected PersistenceService persistenceService;
-    @Inject @Filter(timeout = 60000)
+    @Inject @Filter(timeout = 600000)
     private DefinitionsService definitionsService;
 
     protected boolean eval(Condition c) {

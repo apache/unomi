@@ -36,7 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import java.io.File;
 import java.io.IOException;
 
 @RunWith(PaxExam.class)
@@ -45,15 +44,15 @@ public class PatchIT extends BaseIT {
     private Logger logger = LoggerFactory.getLogger(PatchIT.class);
 
     @Inject
-    @Filter(timeout = 60000)
+    @Filter(timeout = 600000)
     protected PatchService patchService;
 
     @Inject
-    @Filter(timeout = 60000)
+    @Filter(timeout = 600000)
     protected ProfileService profileService;
 
     @Inject
-    @Filter(timeout = 60000)
+    @Filter(timeout = 600000)
     protected DefinitionsService definitionsService;
 
     @Inject

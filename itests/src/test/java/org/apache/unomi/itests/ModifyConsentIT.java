@@ -48,9 +48,9 @@ public class ModifyConsentIT extends BaseIT {
 
     private final static String PROFILE_TEST_ID = "profile-consent";
 
-    @Inject @Filter(timeout = 60000)
+    @Inject @Filter(timeout = 600000)
     protected ProfileService profileService;
-    @Inject @Filter(timeout = 60000)
+    @Inject @Filter(timeout = 600000)
     protected EventService eventService;
 
     @Before

@@ -16,7 +16,6 @@
  */
 package org.apache.unomi.itests;
 
-import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.router.api.ExportConfiguration;
@@ -44,9 +43,9 @@ import java.util.*;
 public class ProfileExportIT extends BaseIT {
     private Logger logger = LoggerFactory.getLogger(ProfileExportIT.class);
 
-    @Inject @Filter(value="(configDiscriminator=EXPORT)", timeout = 60000)
+    @Inject @Filter(value="(configDiscriminator=EXPORT)", timeout = 600000)
     protected ImportExportConfigurationService<ExportConfiguration> exportConfigurationService;
-    @Inject @Filter(timeout = 60000)
+    @Inject @Filter(timeout = 600000)
     protected ProfileService profileService;
 
     @Test
