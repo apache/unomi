@@ -79,7 +79,7 @@ public class ProfileExportIT extends BaseIT {
         profile3.setSegments(segments);
         profileService.save(profile3);
 
-        keepTrying(()->  profileService.findProfilesByPropertyValue("segments", "exportItSeg", 0, 10, null), (p)->p.getTotalSize() == 3, 1000, 40);
+        keepTrying("Failed waiting for the creation of the profiles for the export test", ()->  profileService.findProfilesByPropertyValue("segments", "exportItSeg", 0, 10, null), (p)->p.getTotalSize() == 3, 1000, 100);
 
         /*** Export Test ***/
         String itemId = "export-test";
@@ -105,7 +105,7 @@ public class ProfileExportIT extends BaseIT {
         exportConfigurationService.save(exportConfiguration, true);
 
         final File exportResult = new File("data/tmp/profiles-export.csv");
-        keepTrying(()-> exportResult, File::exists, 1000, 40);
+        keepTrying("Failed waiting for export file to be created", ()-> exportResult, File::exists, 1000, 100);
 
         logger.info("PATH : {}", exportResult.getAbsolutePath());
         Assert.assertTrue(exportResult.exists());

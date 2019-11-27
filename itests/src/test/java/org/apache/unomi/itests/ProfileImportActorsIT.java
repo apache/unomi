@@ -101,7 +101,7 @@ public class ProfileImportActorsIT extends BaseIT {
         importConfigurationService.save(importConfigActors, true);
 
         //Wait for data to be processed
-        keepTrying(()-> profileService.findProfilesByPropertyValue("properties.city", "hollywood", 0, 10, null), (p)->p.getTotalSize() == 6, 1000, 200);
+        keepTrying("Failed waiting for actors initial import to complete", ()-> profileService.findProfilesByPropertyValue("properties.city", "hollywood", 0, 10, null), (p)->p.getTotalSize() == 6, 1000, 200);
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(1, importConfigurations.size());

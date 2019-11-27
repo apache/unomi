@@ -109,12 +109,12 @@ public abstract class BaseIT {
         };
     }
 
-    protected <T> T keepTrying(Supplier<T> call, Predicate<T> predicate, int timeout, int retries) throws InterruptedException {
+    protected <T> T keepTrying(String failMessage, Supplier<T> call, Predicate<T> predicate, int timeout, int retries) throws InterruptedException {
         int count = 0;
         T value = null;
         while (value == null || !predicate.test(value)) {
             if (count++ > retries) {
-                Assert.fail();
+                Assert.fail(failMessage);
             }
             Thread.sleep(timeout);
             value = call.get();
