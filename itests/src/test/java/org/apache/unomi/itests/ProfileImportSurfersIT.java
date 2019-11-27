@@ -105,7 +105,7 @@ public class ProfileImportSurfersIT extends BaseIT {
         logger.info("ProfileImportSurfersIT setup successfully.");
 
         //Wait for data to be processed
-        keepTrying(()->profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null), (p)->p.getTotalSize() == 34, 1000, 20);
+        keepTrying(()->profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null), (p)->p.getTotalSize() == 34, 1000, 40);
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(1, importConfigurations.size());
@@ -150,7 +150,7 @@ public class ProfileImportSurfersIT extends BaseIT {
         logger.info("ProfileImportSurfersOverwriteIT setup successfully.");
 
         //Wait for data to be processed
-        keepTrying(()->profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null), (p)->p.getTotalSize() == 36, 1000, 20);
+        keepTrying(()->profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null), (p)->p.getTotalSize() == 36, 1000, 40);
 
         importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(1, importConfigurations.size());
@@ -189,7 +189,7 @@ public class ProfileImportSurfersIT extends BaseIT {
         logger.info("ProfileImportSurfersDeleteIT setup successfully.");
 
         //Wait for data to be processed
-        keepTrying(()->profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null), (p)->p.getTotalSize() == 0, 1000, 20);
+        keepTrying(()->profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null), (p)->p.getTotalSize() == 0, 1000, 40);
 
         importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(1, importConfigurations.size());

@@ -91,24 +91,31 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         }
 
         bundleContext.addBundleListener(this);
-        scheduleConditionTypeLoad();
+        scheduleTypeReloads();
         logger.info("Definitions service initialized.");
     }
 
-    private void scheduleConditionTypeLoad() {
+    private void scheduleTypeReloads() {
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                try {
-                    loadConditionTypesFromPersistence();
-                    loadActionTypesFromPersistence();
-                } catch (Throwable t) {
-                    logger.error("Error loading definitions from persistence back-end", t);
-                }
+                reloadTypes(false);
             }
         };
         schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 10000, definitionsRefreshInterval, TimeUnit.MILLISECONDS);
         logger.info("Scheduled task for condition type loading each 10s");
+    }
+
+    public void reloadTypes(boolean refresh) {
+        try {
+            if (refresh) {
+                persistenceService.refresh();
+            }
+            loadConditionTypesFromPersistence();
+            loadActionTypesFromPersistence();
+        } catch (Throwable t) {
+            logger.error("Error loading definitions from persistence back-end", t);
+        }
     }
 
     private void loadConditionTypesFromPersistence() {
@@ -510,5 +517,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     @Override
     public boolean resolveConditionType(Condition rootCondition) {
         return ParserHelper.resolveConditionType(this, rootCondition);
+    }
+
+    @Override
+    public void refresh() {
+        reloadTypes(true);
     }
 }

@@ -354,5 +354,10 @@ public interface ProfileService {
      */
     Set<PropertyType> getExistingProperties(String tag, String itemType, boolean systemTag);
 
-
+    /**
+     * Forces a refresh of the profile service, to load data from persistence immediately instead of waiting for
+     * scheduled tasks to execute. Warning : this may have serious impacts on performance so it should only be used
+     * in specific scenarios such as integration tests.
+     */
+    void refresh();
 }

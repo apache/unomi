@@ -259,15 +259,22 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                try {
-                    loadPropertyTypesFromPersistence();
-                } catch (Throwable t) {
-                    logger.error("Error loading property types from persistence back-end", t);
-                }
+                reloadPropertyTypes(false);
             }
         };
         schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 10000, propertiesRefreshInterval, TimeUnit.MILLISECONDS);
         logger.info("Scheduled task for property type loading each 10s");
+    }
+
+    public void reloadPropertyTypes(boolean refresh) {
+        try {
+            if (refresh) {
+                persistenceService.refresh();
+            }
+            loadPropertyTypesFromPersistence();
+        } catch (Throwable t) {
+            logger.error("Error loading property types from persistence back-end", t);
+        }
     }
 
     private void loadPropertyTypesFromPersistence() {
@@ -1078,5 +1085,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
 
         return changed;
+    }
+
+    public void refresh() {
+        reloadPropertyTypes(true);
     }
 }

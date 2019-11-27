@@ -99,6 +99,7 @@ public class BasicIT extends BaseIT {
     @Before
     public void setUp() throws InterruptedException {
         while (!bundleWatcher.isStartupComplete()) {
+            LOGGER.info("Waiting for startup to complete...");
             Thread.sleep(1000);
         }
     }

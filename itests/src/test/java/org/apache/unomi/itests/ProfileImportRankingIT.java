@@ -106,7 +106,7 @@ public class ProfileImportRankingIT extends BaseIT {
 
 
         //Wait for data to be processed
-        keepTrying(()->profileService.findProfilesByPropertyValue("properties.city", "rankingCity", 0, 50, null), (p)->p.getTotalSize() == 25, 1000, 100);
+        keepTrying(()->profileService.findProfilesByPropertyValue("properties.city", "rankingCity", 0, 50, null), (p)->p.getTotalSize() == 25, 1000, 200);
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(1, importConfigurations.size());

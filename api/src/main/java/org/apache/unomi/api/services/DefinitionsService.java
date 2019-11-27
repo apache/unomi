@@ -204,4 +204,10 @@ public interface DefinitionsService {
      * @return {@code true}
      */
     boolean resolveConditionType(Condition rootCondition);
+
+    /**
+     * Forces a refresh of the definitions from the persistence service. Warning: this may seriously impact performance
+     * so it is recommended to use this in specific cases such as for example in integration tests.
+     */
+    void refresh();
 }

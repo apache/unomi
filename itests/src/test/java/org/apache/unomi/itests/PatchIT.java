@@ -24,6 +24,7 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.PatchService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -56,6 +57,10 @@ public class PatchIT extends BaseIT {
     protected DefinitionsService definitionsService;
 
     @Inject
+    @Filter(timeout = 600000)
+    protected PersistenceService persistenceService;
+
+    @Inject
     protected BundleContext bundleContext;
 
     @Test
@@ -68,7 +73,7 @@ public class PatchIT extends BaseIT {
 
             Assert.assertEquals("foo", newCompany.getDefaultValue());
 
-            Thread.sleep(10000);
+            profileService.refresh();
 
             newCompany = profileService.getPropertyType("company");
             Assert.assertEquals("foo", newCompany.getDefaultValue());
@@ -87,7 +92,7 @@ public class PatchIT extends BaseIT {
 
             Assert.assertEquals("foo", newGender.getDefaultValue());
 
-            Thread.sleep(10000);
+            profileService.refresh();
 
             newGender = profileService.getPropertyType("gender");
             Assert.assertEquals("foo", newGender.getDefaultValue());
@@ -105,7 +110,7 @@ public class PatchIT extends BaseIT {
 
             patchService.patch(patch);
 
-            Thread.sleep(10000);
+            profileService.refresh();
 
             PropertyType newIncome = profileService.getPropertyType("income");
             Assert.assertNull(newIncome);
@@ -124,7 +129,7 @@ public class PatchIT extends BaseIT {
 
             patchService.patch(patch);
 
-            Thread.sleep(10000);
+            definitionsService.refresh();
 
             ConditionType newFormCondition = definitionsService.getConditionType("formEventCondition");
             Assert.assertFalse(newFormCondition.getMetadata().getSystemTags().contains("usableInPastEventCondition"));
@@ -143,7 +148,7 @@ public class PatchIT extends BaseIT {
 
             patchService.patch(patch);
 
-            Thread.sleep(10000);
+            definitionsService.refresh();
 
             ActionType newMailAction = definitionsService.getActionType("sendMailAction");
             Assert.assertFalse(newMailAction.getMetadata().getSystemTags().contains("availableToEndUser"));
