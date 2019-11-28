@@ -12684,7 +12684,9 @@ Unomi.prototype.processReferrer = function() {
 Unomi.prototype.onidentify = function(identify) {
     console.log('onidentify');
     console.log(identify);
-    // this.collectEvent(identify.json());
+    this.collectEvent(this.buildEvent("identify",
+        this.buildTarget(identify.userId(), "analyticsUser", identify.traits()),
+        this.buildSource(this.options.scope, 'site', identify.context())));
 };
 
 /**
@@ -12701,6 +12703,13 @@ Unomi.prototype.ontrack = function(track) {
         var formEvent = this.buildFormEvent(form.name);
         formEvent.properties = this.extractFormData(form);
         this.collectEvent(formEvent);
+    } else {
+        console.log("Generic event track", track);
+        this.collectEvent(this.buildEvent(track.event(),
+            this.buildTargetPage(),
+            this.buildSource(this.options.scope, 'site', track.context()),
+            track.properties()
+        ));
     }
 };
 
@@ -12787,9 +12796,10 @@ Unomi.prototype.onpersonalize = function (msg) {
  * @param {string} eventType The name of your event
  * @param {object} [target] The target object for your event can be build with this.buildTarget(targetId, targetType, targetProperties)
  * @param {object} [source] The source object for your event can be build with this.buildSource(sourceId, sourceType, sourceProperties)
+ * @param {object} [properties] a map of properties for the event
  * @returns {{eventType: *, scope}}
  */
-Unomi.prototype.buildEvent = function (eventType, target, source) {
+Unomi.prototype.buildEvent = function (eventType, target, source, properties) {
     var event = {
         eventType: eventType,
         scope: window.digitalData.scope
@@ -12801,6 +12811,10 @@ Unomi.prototype.buildEvent = function (eventType, target, source) {
 
     if (source) {
         event.source = source;
+    }
+
+    if (properties) {
+        event.properties = properties;
     }
 
     return event;
