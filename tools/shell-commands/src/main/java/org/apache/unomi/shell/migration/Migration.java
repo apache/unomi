@@ -18,6 +18,7 @@ package org.apache.unomi.shell.migration;
 
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.karaf.shell.api.console.Session;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.Version;
 
 import java.io.IOException;
@@ -52,5 +53,5 @@ public interface Migration {
      * @param httpClient    CloseableHttpClient
      * @throws IOException
      */
-    void execute(Session session, CloseableHttpClient httpClient, String esAddress) throws IOException;
+    void execute(Session session, CloseableHttpClient httpClient, String esAddress, BundleContext bundleContext) throws IOException;
 }

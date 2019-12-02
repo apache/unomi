@@ -50,3 +50,39 @@ Example of mapping configuration file: (https://github.com/apache/unomi/blob/9f1
 Because of this changes the geonames DB index name is now respecting the index naming with prefix like any other item type.
 Previously named: `geonames` is now using the index name `context-geonameentry`
 (see: link:#_installing_geonames_database[Documentation about geonames extension]).
+
+===== Migration
+
+In order to migrate the data from ElasticSearch 5 to 7, Unomi provides a migration tool that is directly integrated.
+
+Note that it is possible to do the migration procedure on a single machine, but you will need to change the ports on one
+of the ElasticSearch cluster. In the following example we have changed the ports on the `source` cluster.
+
+So in the `config/elasticsearch.yml` file we have modified the default ports to:
+
+    transport.tcp.port: 9310
+    http.port: 9210
+
+Make SURE you change the ports out of the default 9200-9205 and 9300-9305 range (or whatever your cluster uses) otherwise
+both clusters will attempt to merge!
+
+On the destination ElasticSearch cluster configuration you will need to add the following setting in the `config/elasticsearch.yml`:
+
+    reindex.remote.whitelist: "localhost:9210"
+
+Replace "localhost:9210" which whatever location your `source` cluster is available at.
+
+Important: Make sure you haven't started Apache Unomi before (using the `unomi:start` command) otherwise you will need to
+restart your Apache Unomi installation from scratch.
+
+You can then start both instances of ElasticSearch 5 and ElasticSearch 7 and finally start Apache Unomi using:
+
+    ./karaf
+
+Once in the console launch the migration using the following command:
+
+    migrate 1.5.0
+
+Follow the instructions and answer the prompts. If you used the above configuration as an example you can simply use the
+default values. Note that it is also possible to change the index prefix to be different from the default `context` value
+so that you could host multiple Apache Unomi instances on the same ElasticSearch cluster.

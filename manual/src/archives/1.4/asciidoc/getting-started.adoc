@@ -1,0 +1,48 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+=== Getting started with Unomi
+
+We will first get you up and running with an example. We will then lift the corner of the cover somewhat and explain
+in greater details what just happened.
+
+==== Prerequisites
+
+This document assumes that you are already familiar with Unomi's <<_concepts,concepts>>. On the technical side, we
+also assume working knowledge of https://git-scm.com/[git] to be able to retrieve the code for Unomi and the example.
+Additionally, you will require a working Java 7 or above install. Refer to http://www.oracle.com/technetwork/java/javase/[http://www.oracle.com/technetwork/java/javase/] for details on how to download and install Java SE 7 or greater.
+
+==== Running Unomi
+
+===== Start Unomi
+
+Start Unomi according to the <<_5-min-quickstart,5 minute quick start>> or by compiling using the building link:building-and-deploying.html#Deploying_the_generated_package[instructions]. Once you have Karaf running,
+ you should wait until you see the following messages on the Karaf console:
+
+[source]
+----
+Initializing user list service endpoint...
+Initializing geonames service endpoint...
+Initializing segment service endpoint...
+Initializing scoring service endpoint...
+Initializing campaigns service endpoint...
+Initializing rule service endpoint...
+Initializing profile service endpoint...
+Initializing cluster service endpoint...
+----
+
+This indicates that all the Unomi services are started and ready to react to requests. You can then open a browser and go to `http://localhost:8181/cxs` to see the list of
+available RESTful services or retrieve an initial context at `http://localhost:8181/context.json` (which isn't very useful at this point).
+
+Now that your service is up and running you can go look at the <<_request-examples,request examples>> to learn basic
+requests you can do once your server is up and running.

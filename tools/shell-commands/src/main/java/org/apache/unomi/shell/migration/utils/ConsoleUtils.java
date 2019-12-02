@@ -90,4 +90,16 @@ public class ConsoleUtils {
         PrintStream writer = session.getConsole();
         writer.println(msg);
     }
+
+    /**
+     * Print an exception along with a message in the console.
+     * @param session the shell's session
+     * @param msg the message to print out with a newline
+     * @param t the exception to dump in the shell console after the message
+     */
+    public static void printException(Session session, String msg, Throwable t) {
+        PrintStream writer = session.getConsole();
+        writer.println(msg);
+        t.printStackTrace(writer);
+    }
 }

@@ -1,0 +1,159 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+=== Request examples
+
+==== Retrieving your first context
+
+You can retrieve a context using curl like this :
+
+[source]
+----
+curl http://localhost:8181/context.js?sessionId=1234
+----
+
+This will retrieve a JavaScript script that contains a `cxs` object that contains the context with the current user
+profile, segments, scores as well as functions that makes it easier to perform further requests (such as collecting
+events using the cxs.collectEvents() function).
+
+==== Retrieving a context as a JSON object.
+
+If you prefer to retrieve a pure JSON object, you can simply use a request formed like this:
+
+[source]
+----
+curl http://localhost:8181/context.json?sessionId=1234
+----
+
+==== Accessing profile properties in a context
+
+By default, in order to optimize the amount of data sent over the network, Apache Unomi will not send the content of
+the profile or session properties. If you need this data, you must send a JSON object to configure the resulting output
+of the context.js(on) servlet.
+
+Here is an example that will retrieve all the session and profile properties.
+
+[source]
+----
+curl -X POST http://localhost:8181/context.json?sessionId=1234 \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+    "source": {
+        "itemId":"homepage",
+        "itemType":"page",
+        "scope":"example"
+    },
+    "requiredProfileProperties":["*"],
+    "requiredSessionProperties":["*"],
+    "requireSegments":true
+}
+EOF
+----
+
+The `requiredProfileProperties` and `requiredSessionProperties` are properties that take an array of property names
+that should be retrieved. In this case we use the wildcard character '*' to say we want to retrieve all the available
+properties. The structure of the JSON object that you should send is a JSON-serialized version of the http://unomi.apache.org/unomi-api/apidocs/org/apache/unomi/api/ContextRequest.html[ContextRequest]
+Java class.
+
+==== Sending events using the context servlet
+
+At the same time as you are retrieving the context, you can also directly send events in the ContextRequest object as
+illustrated in the following example:
+
+[source]
+----
+curl -X POST http://localhost:8181/context.json?sessionId=1234 \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+    "source":{
+        "itemId":"homepage",
+        "itemType":"page",
+        "scope":"example"
+    },
+    "events":[
+        {
+            "eventType":"view",
+            "scope": "example",
+            "source":{
+                "itemType": "site",
+                "scope":"example",
+                "itemId": "mysite"
+            },
+            "target":{
+                "itemType":"page",
+                "scope":"example",
+                "itemId":"homepage",
+                "properties":{
+                    "pageInfo":{
+                        "referringURL":""
+                    }
+                }
+            }
+        }
+    ]
+}
+EOF
+----
+
+Upon received events, Apache Unomi will execute all the rules that match the current context, and return an updated context.
+This way of sending events is usually used upon first loading of a page. If you want to send events after the page has
+finished loading you could either do a second call and get an updating context, or if you don't need the context and want
+to send events in a network optimal way you can use the eventcollector servlet (see below).
+
+==== Sending events using the eventcollector servlet
+
+If you only need to send events without retrieving a context, you should use the eventcollector servlet that is optimized
+respond quickly and minimize network traffic. Here is an example of using this servlet:
+
+[source]
+----
+curl -X POST http://localhost:8181/eventcollector \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+    "sessionId" : "1234",
+    "events":[
+        {
+            "eventType":"view",
+            "scope": "example",
+            "source":{
+                "itemType": "site",
+                "scope":"example",
+                "itemId": "mysite"
+            },
+            "target":{
+                "itemType":"page",
+                "scope":"example",
+                "itemId":"homepage",
+                "properties":{
+                    "pageInfo":{
+                        "referringURL":""
+                    }
+                }
+            }
+        }
+    ]
+}
+EOF
+----
+
+Note that the eventcollector executes the rules but does not return a context. If is generally used after a page is loaded
+to send additional events.
+
+==== Where to go from here
+
+* You can find more <<_useful_apache_unomi_urls,useful Apache Unomi URLs>> that can be used in the same way as the above examples.
+* You may want to know integrate the provided <<_web_tracker,web tracker>> into your web site.
+* Read the <<_twitter_sample,Twitter sample>> documentation that contains a detailed example of how to integrate with Apache Unomi.

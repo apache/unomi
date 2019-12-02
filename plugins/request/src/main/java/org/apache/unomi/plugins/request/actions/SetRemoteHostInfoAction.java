@@ -20,16 +20,6 @@ package org.apache.unomi.plugins.request.actions;
 import com.maxmind.geoip2.DatabaseReader;
 import com.maxmind.geoip2.exception.GeoIp2Exception;
 import com.maxmind.geoip2.model.CityResponse;
-import java.io.File;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.util.HashMap;
-import java.util.Map;
-import javax.annotation.PostConstruct;
-import javax.servlet.http.HttpServletRequest;
 import org.apache.http.conn.util.InetAddressUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Session;
@@ -40,6 +30,17 @@ import org.apache.unomi.plugins.request.useragent.UserAgent;
 import org.apache.unomi.plugins.request.useragent.UserAgentDetectorServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.PostConstruct;
+import javax.servlet.http.HttpServletRequest;
+import java.io.File;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class SetRemoteHostInfoAction implements ActionExecutor {
     private static final Logger logger = LoggerFactory.getLogger(SetRemoteHostInfoAction.class.getName());
@@ -52,8 +53,8 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
     private String defaultSessionCountryCode = "CH";
     private String defaultSessionCountryName = "Switzerland";
     private String defaultSessionCity = "Geneva";
-    private String defaultSessionAdminSubDiv1 = "2660645";
-    private String defaultSessionAdminSubDiv2 = "6458783";
+    private int defaultSessionAdminSubDiv1 = 2660645;
+    private int defaultSessionAdminSubDiv2 = 6458783;
     private String defaultSessionIsp = "Cablecom";
     private double defaultLatitude = 46.1884341;
     private double defaultLongitude = 6.1282508;
@@ -82,11 +83,11 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         this.defaultSessionCity = defaultSessionCity;
     }
 
-    public void setDefaultSessionAdminSubDiv1(String defaultSessionAdminSubDiv1) {
+    public void setDefaultSessionAdminSubDiv1(Integer defaultSessionAdminSubDiv1) {
         this.defaultSessionAdminSubDiv1 = defaultSessionAdminSubDiv1;
     }
 
-    public void setDefaultSessionAdminSubDiv2(String defaultSessionAdminSubDiv2) {
+    public void setDefaultSessionAdminSubDiv2(Integer defaultSessionAdminSubDiv2) {
         this.defaultSessionAdminSubDiv2 = defaultSessionAdminSubDiv2;
     }
 
