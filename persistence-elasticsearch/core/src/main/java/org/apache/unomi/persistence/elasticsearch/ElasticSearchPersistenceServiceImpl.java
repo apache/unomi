@@ -20,6 +20,10 @@ package org.apache.unomi.persistence.elasticsearch;
 import com.hazelcast.core.HazelcastInstance;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.TimestampedItem;
@@ -145,6 +149,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String minimalElasticSearchVersion = "7.0.0";
     private String maximalElasticSearchVersion = "8.0.0";
 
+    // authentication props
+    private AuthenticationType authenticationType = AuthenticationType.NONE;
+    private String basicAuthUsername;
+    private String basicAuthPassword;
+    private boolean sslAuthTrustAllCertificates = false;
+
+    public enum AuthenticationType {
+        NONE,
+        BASIC,
+        SSL
+    }
+
     private int aggregateQueryBucketSize = 5000;
 
     private MetricsService metricsService;
@@ -269,6 +285,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.useBatchingForSave = useBatchingForSave;
     }
 
+    public void setAuthenticationType(AuthenticationType authenticationType) {
+        this.authenticationType = authenticationType;
+    }
+
+    public void setBasicAuthUsername(String basicAuthUsername) {
+        this.basicAuthUsername = basicAuthUsername;
+    }
+
+    public void setBasicAuthPassword(String basicAuthPassword) {
+        this.basicAuthPassword = basicAuthPassword;
+    }
+
+    public void setSslAuthTrustAllCertificates(boolean sslAuthTrustAllCertificates) {
+        this.sslAuthTrustAllCertificates = sslAuthTrustAllCertificates;
+    }
+
     public void start() throws Exception {
 
         // on startup
@@ -293,17 +325,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     logger.info("Overriding cluster name from system property=" + clusterName);
                 }
 
-                List<Node> nodeList = new ArrayList<>();
-                for (String elasticSearchAddress : elasticSearchAddressList) {
-                    String[] elasticSearchAddressParts = elasticSearchAddress.split(":");
-                    String elasticSearchHostName = elasticSearchAddressParts[0];
-                    int elasticSearchPort = Integer.parseInt(elasticSearchAddressParts[1]);
-                    nodeList.add(new Node(new HttpHost(elasticSearchHostName, elasticSearchPort, "http")));
-                }
-
-                logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index prefix " + indexPrefix + "...");
-                client = new RestHighLevelClient(
-                        RestClient.builder(nodeList.toArray(new Node[nodeList.size()])));
+                buildClient();
 
                 MainResponse response = client.info(RequestOptions.DEFAULT);
                 org.elasticsearch.client.core.MainResponse.Version version = response.getVersion();
@@ -344,6 +366,35 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         bundleContext.addBundleListener(this);
 
         logger.info(this.getClass().getName() + " service started successfully.");
+    }
+
+    private void buildClient() {
+        boolean isSslConfigured = authenticationType.equals(AuthenticationType.SSL);
+
+        List<Node> nodeList = new ArrayList<>();
+        for (String elasticSearchAddress : elasticSearchAddressList) {
+            String[] elasticSearchAddressParts = elasticSearchAddress.split(":");
+            String elasticSearchHostName = elasticSearchAddressParts[0];
+            int elasticSearchPort = Integer.parseInt(elasticSearchAddressParts[1]);
+
+            // configure authentication
+            nodeList.add(new Node(new HttpHost(elasticSearchHostName, elasticSearchPort, isSslConfigured ? "https" : "http")));
+        }
+
+        RestClientBuilder clientBuilder = RestClient.builder(nodeList.toArray(new Node[nodeList.size()]));
+
+        if (isSslConfigured) {
+           // TODO
+        } else if (authenticationType.equals(AuthenticationType.BASIC)) {
+            final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+            credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(basicAuthUsername, basicAuthPassword));
+
+            clientBuilder.setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder
+                    .setDefaultCredentialsProvider(credentialsProvider));
+        }
+
+        logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index prefix " + indexPrefix + "...");
+        client = new RestHighLevelClient(clientBuilder);
     }
 
     public BulkProcessor getBulkProcessor() {
