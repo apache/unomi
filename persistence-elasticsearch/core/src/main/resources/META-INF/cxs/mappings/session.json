@@ -28,6 +28,12 @@
       "properties": {
         "location": {
           "type": "geo_point"
+        },
+        "sessionAdminSubDiv1" : {
+          "type": "long"
+        },
+        "sessionAdminSubDiv2" : {
+          "type": "long"
         }
       }
     },

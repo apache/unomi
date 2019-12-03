@@ -81,7 +81,7 @@ public class Migrate implements Action {
                         System.out.println("Migration process aborted");
                         break;
                     }
-                    migration.execute(session, httpClient, esAddress);
+                    migration.execute(session, httpClient, esAddress, bundleContext);
                     System.out.println("Migration to version " + migration.getToVersion() + " done successfully");
                 }
             }

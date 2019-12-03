@@ -24,6 +24,7 @@ import org.apache.unomi.shell.migration.utils.ConsoleUtils;
 import org.apache.unomi.shell.migration.utils.MigrationUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.Version;
 import org.osgi.service.component.annotations.Component;
 
@@ -58,7 +59,7 @@ public class MigrationTo121 implements Migration {
     }
 
     @Override
-    public void execute(Session session, CloseableHttpClient httpClient, String esAddress) throws IOException {
+    public void execute(Session session, CloseableHttpClient httpClient, String esAddress, BundleContext bundleContext) throws IOException {
         this.httpClient = httpClient;
         this.session = session;
         this.esAddress = esAddress;

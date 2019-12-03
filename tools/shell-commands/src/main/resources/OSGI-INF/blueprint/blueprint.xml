@@ -22,8 +22,10 @@
 
     <bean id="migrateTo121" class="org.apache.unomi.shell.migration.impl.MigrationTo121"/>
     <bean id="migrateTo122" class="org.apache.unomi.shell.migration.impl.MigrationTo122"/>
+    <bean id="migrateTo150" class="org.apache.unomi.shell.migration.impl.MigrationTo150"/>
     <service ref="migrateTo121" interface="org.apache.unomi.shell.migration.Migration" />
     <service ref="migrateTo122" interface="org.apache.unomi.shell.migration.Migration" />
+    <service ref="migrateTo150" interface="org.apache.unomi.shell.migration.Migration" />
 
     <bean id="unomiManagementServiceImpl" class="org.apache.unomi.shell.services.internal.UnomiManagementServiceImpl" init-method="init">
         <property name="bundleSymbolicNames">

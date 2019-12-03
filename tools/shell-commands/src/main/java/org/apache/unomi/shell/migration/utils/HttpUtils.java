@@ -130,6 +130,19 @@ public class HttpUtils {
         return getResponse(httpClient, url, headers, httpPost);
     }
 
+    public static String executePutRequest(CloseableHttpClient httpClient, String url, String jsonData, Map<String, String> headers) throws IOException {
+        HttpPut httpPut = new HttpPut(url);
+        httpPut.addHeader("accept", "application/json");
+
+        if (jsonData != null) {
+            StringEntity input = new StringEntity(jsonData);
+            input.setContentType("application/json");
+            httpPut.setEntity(input);
+        }
+
+        return getResponse(httpClient, url, headers, httpPut);
+    }
+
     private static String getResponse(CloseableHttpClient httpClient, String url, Map<String, String> headers, HttpRequestBase httpRequestBase) throws IOException {
         long requestStartTime = System.currentTimeMillis();
         if (headers != null) {
