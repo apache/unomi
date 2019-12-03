@@ -26,6 +26,7 @@ import org.apache.http.client.CredentialsProvider;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
+import org.apache.lucene.search.TotalHits;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.TimestampedItem;
@@ -55,6 +56,8 @@ import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.*;
+import org.elasticsearch.client.core.CountRequest;
+import org.elasticsearch.client.core.CountResponse;
 import org.elasticsearch.client.core.MainResponse;
 import org.elasticsearch.client.indices.*;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
@@ -1346,6 +1349,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
             @Override
             protected Long execute(Object... args) throws IOException {
+
+                CountRequest countRequest = new CountRequest(getIndexNameForQuery(itemType));
+                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+                searchSourceBuilder.query(filter);
+                countRequest.source(searchSourceBuilder);
+                CountResponse response = client.count(countRequest, RequestOptions.DEFAULT);
+                return response.getCount();
+                /*
                 SearchRequest searchRequest = new SearchRequest(getIndexNameForQuery(itemType));
                 SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
                 searchSourceBuilder.query(filter);
@@ -1353,6 +1364,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 searchRequest.source(searchSourceBuilder);
                 SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
                 return response.getHits().getTotalHits().value;
+                 */
             }
         }.catchingExecuteInClassLoader(true);
     }
@@ -1365,6 +1377,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 List<T> results = new ArrayList<T>();
                 String scrollIdentifier = null;
                 long totalHits = 0;
+                PartialList.Relation totalHitsRelation = PartialList.Relation.EQUAL;
                 try {
                     String itemType = Item.getItemType(clazz);
                     TimeValue keepAlive = TimeValue.timeValueHours(1);
@@ -1448,6 +1461,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         SearchHits searchHits = response.getHits();
                         scrollIdentifier = response.getScrollId();
                         totalHits = searchHits.getTotalHits().value;
+                        totalHitsRelation = getTotalHitsRelation(searchHits.getTotalHits());
                         for (SearchHit searchHit : searchHits) {
                             String sourceAsString = searchHit.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
@@ -1460,7 +1474,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     throw new Exception("Error loading itemType=" + clazz.getName() + " query=" + query + " sortBy=" + sortBy, t);
                 }
 
-                PartialList<T> result = new PartialList<T>(results, offset, size, totalHits);
+                PartialList<T> result = new PartialList<T>(results, offset, size, totalHits, totalHitsRelation);
                 if (scrollIdentifier != null && totalHits != 0) {
                     result.setScrollIdentifier(scrollIdentifier);
                     result.setScrollTimeValidity(scrollTimeValidity);
@@ -1468,6 +1482,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return result;
             }
         }.catchingExecuteInClassLoader(true);
+    }
+
+    private PartialList.Relation getTotalHitsRelation(TotalHits totalHits) {
+        return TotalHits.Relation.GREATER_THAN_OR_EQUAL_TO.equals(totalHits.relation) ? PartialList.Relation.GREATER_THAN_OR_EQUAL_TO : PartialList.Relation.EQUAL;
     }
 
     @Override
@@ -1499,7 +1517,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             results.add(value);
                         }
                     }
-                    PartialList<T> result = new PartialList<T>(results, 0, response.getHits().getHits().length, response.getHits().getTotalHits().value);
+                    PartialList<T> result = new PartialList<T>(results, 0, response.getHits().getHits().length, response.getHits().getTotalHits().value, getTotalHitsRelation(response.getHits().getTotalHits()));
                     if (scrollIdentifier != null) {
                         result.setScrollIdentifier(scrollIdentifier);
                         result.setScrollTimeValidity(scrollTimeValidity);
@@ -1657,13 +1675,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                     }
                     if (aggregations.get("buckets") != null) {
+                        long totalDocCount = 0;
                         MultiBucketsAggregation terms = aggregations.get("buckets");
                         for (MultiBucketsAggregation.Bucket bucket : terms.getBuckets()) {
                             results.put(bucket.getKeyAsString(), bucket.getDocCount());
+                            totalDocCount += bucket.getDocCount();
                         }
                         SingleBucketAggregation missing = aggregations.get("missing");
                         if (missing.getDocCount() > 0) {
                             results.put("_missing", missing.getDocCount());
+                            totalDocCount += missing.getDocCount();
+                        }
+                        if (response.getHits() != null && TotalHits.Relation.GREATER_THAN_OR_EQUAL_TO.equals(response.getHits().getTotalHits().relation)) {
+                            results.put("_filtered", totalDocCount);
                         }
                     }
                 }
