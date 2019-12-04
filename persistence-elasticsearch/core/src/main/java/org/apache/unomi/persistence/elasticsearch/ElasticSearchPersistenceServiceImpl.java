@@ -23,7 +23,9 @@ import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.TimestampedItem;
@@ -95,10 +97,17 @@ import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -150,16 +159,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String maximalElasticSearchVersion = "8.0.0";
 
     // authentication props
-    private AuthenticationType authenticationType = AuthenticationType.NONE;
-    private String basicAuthUsername;
-    private String basicAuthPassword;
-    private boolean sslAuthTrustAllCertificates = false;
-
-    public enum AuthenticationType {
-        NONE,
-        BASIC,
-        SSL
-    }
+    private String username;
+    private String password;
+    private boolean sslEnable = false;
+    private boolean sslTrustAllCertificates = false;
 
     private int aggregateQueryBucketSize = 5000;
 
@@ -285,20 +288,20 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.useBatchingForSave = useBatchingForSave;
     }
 
-    public void setAuthenticationType(AuthenticationType authenticationType) {
-        this.authenticationType = authenticationType;
+    public void setUsername(String username) {
+        this.username = username;
     }
 
-    public void setBasicAuthUsername(String basicAuthUsername) {
-        this.basicAuthUsername = basicAuthUsername;
+    public void setPassword(String password) {
+        this.password = password;
     }
 
-    public void setBasicAuthPassword(String basicAuthPassword) {
-        this.basicAuthPassword = basicAuthPassword;
+    public void setSslEnable(boolean sslEnable) {
+        this.sslEnable = sslEnable;
     }
 
-    public void setSslAuthTrustAllCertificates(boolean sslAuthTrustAllCertificates) {
-        this.sslAuthTrustAllCertificates = sslAuthTrustAllCertificates;
+    public void setSslTrustAllCertificates(boolean sslTrustAllCertificates) {
+        this.sslTrustAllCertificates = sslTrustAllCertificates;
     }
 
     public void start() throws Exception {
@@ -369,8 +372,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private void buildClient() {
-        boolean isSslConfigured = authenticationType.equals(AuthenticationType.SSL);
-
         List<Node> nodeList = new ArrayList<>();
         for (String elasticSearchAddress : elasticSearchAddressList) {
             String[] elasticSearchAddressParts = elasticSearchAddress.split(":");
@@ -378,20 +379,44 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             int elasticSearchPort = Integer.parseInt(elasticSearchAddressParts[1]);
 
             // configure authentication
-            nodeList.add(new Node(new HttpHost(elasticSearchHostName, elasticSearchPort, isSslConfigured ? "https" : "http")));
+            nodeList.add(new Node(new HttpHost(elasticSearchHostName, elasticSearchPort, sslEnable ? "https" : "http")));
         }
 
         RestClientBuilder clientBuilder = RestClient.builder(nodeList.toArray(new Node[nodeList.size()]));
 
-        if (isSslConfigured) {
-           // TODO
-        } else if (authenticationType.equals(AuthenticationType.BASIC)) {
-            final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-            credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(basicAuthUsername, basicAuthPassword));
+        clientBuilder.setHttpClientConfigCallback(httpClientBuilder -> {
+            if (sslTrustAllCertificates) {
+                try {
+                    final SSLContext sslContext = SSLContext.getInstance("SSL");
+                    sslContext.init(null, new TrustManager[]{new X509TrustManager() {
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return null;
+                        }
 
-            clientBuilder.setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder
-                    .setDefaultCredentialsProvider(credentialsProvider));
-        }
+                        public void checkClientTrusted(X509Certificate[] certs,
+                                                       String authType) {
+                        }
+
+                        public void checkServerTrusted(X509Certificate[] certs,
+                                                       String authType) {
+                        }
+                    }}, new SecureRandom());
+
+                    httpClientBuilder.setSSLContext(sslContext).setSSLHostnameVerifier(new NoopHostnameVerifier());
+                } catch (NoSuchAlgorithmException | KeyManagementException e) {
+                    logger.error("Error creating SSL Context for trust all certificates", e);
+                }
+            }
+
+            if (StringUtils.isNotBlank(username)) {
+                final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+                credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
+
+                httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
+            }
+
+            return httpClientBuilder;
+        });
 
         logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index prefix " + indexPrefix + "...");
         client = new RestHighLevelClient(clientBuilder);
