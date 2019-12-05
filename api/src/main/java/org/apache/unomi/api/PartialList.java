@@ -35,8 +35,19 @@ public class PartialList<T> implements Serializable {
     private long offset;
     private long pageSize;
     private long totalSize;
+    private Relation totalSizeRelation;
     private String scrollIdentifier = null;
     private String scrollTimeValidity = null;
+
+    /**
+     * This enum exists to replicate Lucene's total hits relation in a back-end agnostic way. Basically Lucene will
+     * by default not report accurate total hit counts above a certain threshold for performance reasons. Using the
+     * relation we can understand if we are in the case of an accurate hit or not.
+     */
+    public enum Relation {
+        EQUAL,
+        GREATER_THAN_OR_EQUAL_TO
+    }
 
     /**
      * Instantiates a new PartialList.
@@ -46,6 +57,7 @@ public class PartialList<T> implements Serializable {
         offset = 0;
         pageSize = 0;
         totalSize = 0;
+        totalSizeRelation = Relation.EQUAL;
     }
 
     /**
@@ -56,11 +68,12 @@ public class PartialList<T> implements Serializable {
      * @param pageSize  the number of elements this PartialList contains
      * @param totalSize the total size of elements in the original List
      */
-    public PartialList(List<T> list, long offset, long pageSize, long totalSize) {
+    public PartialList(List<T> list, long offset, long pageSize, long totalSize, Relation totalSizeRelation) {
         this.list = list;
         this.offset = offset;
         this.pageSize = pageSize;
         this.totalSize = totalSize;
+        this.totalSizeRelation = totalSizeRelation;
     }
 
     /**
@@ -163,5 +176,18 @@ public class PartialList<T> implements Serializable {
 
     public void setScrollTimeValidity(String scrollTimeValidity) {
         this.scrollTimeValidity = scrollTimeValidity;
+    }
+
+    /**
+     * Retrieve the relation to the total site, wether it is equal to or greater than the value stored in the
+     * totalSize property.
+     * @return a Relation enum value that describes the type of total size we have in this object.
+     */
+    public Relation getTotalSizeRelation() {
+        return totalSizeRelation;
+    }
+
+    public void setTotalSizeRelation(Relation totalSizeRelation) {
+        this.totalSizeRelation = totalSizeRelation;
     }
 }

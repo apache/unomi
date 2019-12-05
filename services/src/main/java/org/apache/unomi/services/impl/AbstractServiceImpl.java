@@ -50,7 +50,7 @@ public abstract class AbstractServiceImpl {
         for (T definition : items.getList()) {
             details.add(definition.getMetadata());
         }
-        return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize());
+        return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize(), items.getTotalSizeRelation());
     }
 
     protected <T extends MetadataItem> PartialList<Metadata> getMetadatas(Query query, Class<T> clazz) {
@@ -63,6 +63,6 @@ public abstract class AbstractServiceImpl {
         for (T definition : items.getList()) {
             details.add(definition.getMetadata());
         }
-        return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize());
+        return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize(), items.getTotalSizeRelation());
     }
 }

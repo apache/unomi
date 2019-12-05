@@ -314,7 +314,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         for (Rule definition : rules.getList()) {
             descriptions.add(definition.getMetadata());
         }
-        return new PartialList<>(descriptions, rules.getOffset(), rules.getPageSize(), rules.getTotalSize());
+        return new PartialList<>(descriptions, rules.getOffset(), rules.getPageSize(), rules.getTotalSize(), rules.getTotalSizeRelation());
     }
 
     public PartialList<Rule> getRuleDetails(Query query) {
@@ -325,7 +325,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         PartialList<Rule> rules = persistenceService.query(query.getCondition(), query.getSortby(), Rule.class, query.getOffset(), query.getLimit());
         List<Rule> details = new LinkedList<>();
         details.addAll(rules.getList());
-        return new PartialList<>(details, rules.getOffset(), rules.getPageSize(), rules.getTotalSize());
+        return new PartialList<>(details, rules.getOffset(), rules.getPageSize(), rules.getTotalSize(), rules.getTotalSizeRelation());
     }
 
     public Rule getRule(String ruleId) {

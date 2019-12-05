@@ -198,7 +198,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         for (Segment definition : segments.getList()) {
             details.add(definition.getMetadata());
         }
-        return new PartialList<>(details, segments.getOffset(), segments.getPageSize(), segments.getTotalSize());
+        return new PartialList<>(details, segments.getOffset(), segments.getPageSize(), segments.getTotalSize(), segments.getTotalSizeRelation());
     }
 
     public PartialList<Metadata> getSegmentMetadatas(Query query) {

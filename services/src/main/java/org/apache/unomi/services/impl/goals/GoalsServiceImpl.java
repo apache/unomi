@@ -360,7 +360,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
                 details.add(campaignDetail);
             }
         }
-        return new PartialList<>(details, campaigns.getOffset(), campaigns.getPageSize(), campaigns.getTotalSize());
+        return new PartialList<>(details, campaigns.getOffset(), campaigns.getPageSize(), campaigns.getTotalSize(), campaigns.getTotalSizeRelation());
     }
 
     public CampaignDetail getCampaignDetail(String id) {

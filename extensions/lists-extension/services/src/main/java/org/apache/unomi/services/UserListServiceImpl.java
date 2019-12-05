@@ -51,7 +51,7 @@ public class UserListServiceImpl implements UserListService {
         for (UserList definition : userLists.getList()) {
             metadata.add(definition.getMetadata());
         }
-        return new PartialList<>(metadata, userLists.getOffset(), userLists.getPageSize(), userLists.getTotalSize());
+        return new PartialList<>(metadata, userLists.getOffset(), userLists.getPageSize(), userLists.getTotalSize(), userLists.getTotalSizeRelation());
     }
 
     public PartialList<Metadata> getListMetadatas(Query query) {
@@ -64,7 +64,7 @@ public class UserListServiceImpl implements UserListService {
         for (UserList definition : userLists.getList()) {
             metadata.add(definition.getMetadata());
         }
-        return new PartialList<>(metadata, userLists.getOffset(), userLists.getPageSize(), userLists.getTotalSize());
+        return new PartialList<>(metadata, userLists.getOffset(), userLists.getPageSize(), userLists.getTotalSize(), userLists.getTotalSizeRelation());
     }
 
     @Override
