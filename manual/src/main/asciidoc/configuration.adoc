@@ -440,7 +440,7 @@ Just edit `etc/org.apache.unomi.persistence.elasticsearch.cfg` to add the follow
 sslEnable=true
 ----
 
-By default, certificates will need to be configured on Unomi server to be able to trust the ElasticSearch server(s) identity
+By default, certificates will have to be configured on the Apache Unomi server to be able to trust the identity
 But in case you need to trust all certificates automatically you can use this setting:
 
 [source]
