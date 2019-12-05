@@ -441,7 +441,7 @@ sslEnable=true
 ----
 
 By default, certificates will have to be configured on the Apache Unomi server to be able to trust the identity
-But in case you need to trust all certificates automatically you can use this setting:
+of the ElasticSearch server(s). But if you need to trust all certificates automatically, you can use this setting:
 
 [source]
 ----
