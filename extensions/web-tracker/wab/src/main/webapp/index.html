@@ -43,7 +43,7 @@
     <script type="text/javascript">
         var path = location.pathname + location.hash;
         var unomiOption = {
-            scope: 'realEstateManager',
+            scope: 'myScope',
             url: '', // we use an empty URL to make it relative to this page.
             initialPageProperties: {
                 path: path,
@@ -128,6 +128,18 @@
             document.addEventListener('DOMContentLoaded', unomiTracker.load);
 
             unomiTracker.page(unomiOption.initialPageProperties);
+
+            // these examples come from the Analytics.JS documentation:
+            unomiTracker.identify({
+                nickname: 'Amazing Grace',
+                favoriteCompiler: 'A-0',
+                industry: 'Computer Science'
+            });
+
+            unomiTracker.track('articleCompleted', {
+                title: 'How to Create a Tracking Plan',
+                course: 'Intro to Analytics'
+            });
         })();
     </script>
 </head>
