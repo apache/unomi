@@ -25,7 +25,6 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.apache.lucene.search.TotalHits;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.PartialList;
@@ -1356,15 +1355,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 countRequest.source(searchSourceBuilder);
                 CountResponse response = client.count(countRequest, RequestOptions.DEFAULT);
                 return response.getCount();
-                /*
-                SearchRequest searchRequest = new SearchRequest(getIndexNameForQuery(itemType));
-                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-                searchSourceBuilder.query(filter);
-                searchSourceBuilder.size(0);
-                searchRequest.source(searchSourceBuilder);
-                SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
-                return response.getHits().getTotalHits().value;
-                 */
             }
         }.catchingExecuteInClassLoader(true);
     }
