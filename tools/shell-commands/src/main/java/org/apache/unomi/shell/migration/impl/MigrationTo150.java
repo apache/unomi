@@ -88,21 +88,34 @@ public class MigrationTo150 implements Migration {
                 final String path = predefinedMappingURL.getPath();
                 String itemType = path.substring(path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
                 String mappingDefinition = loadMappingFile(predefinedMappingURL);
-                JSONObject indexBody = new JSONObject();
-                indexBody.put("mappings", new JSONObject(mappingDefinition));
+                JSONObject newTypeMapping = new JSONObject(mappingDefinition);
                 if (!monthlyIndexTypes.contains(itemType)) {
-                    createESIndex(httpClient, esAddress, destIndexPrefix, itemType.toLowerCase(), numberOfShards, numberOfReplicas, indexBody);
-                    if ("geonameEntry".equals(itemType)) {
-                        reIndex(session, httpClient, esAddress, es5Address, "geonames", destIndexPrefix + "-" + itemType.toLowerCase(), itemType);
+                    JSONObject es5TypeMapping = getES5TypeMapping(session, httpClient, es5Address, "geonameEntry".equals(itemType) ? "geonames" : sourceIndexPrefix, itemType);
+                    int es5MappingsTotalFieldsLimit = getES5MappingsTotalFieldsLimit(httpClient, es5Address, "geonameEntry".equals(itemType) ? "geonames" : sourceIndexPrefix);
+                    String destIndexName = itemType.toLowerCase();
+                    if (!indexExists(httpClient, esAddress, destIndexPrefix, destIndexName)) {
+                        createESIndex(httpClient, esAddress, destIndexPrefix, destIndexName, numberOfShards, numberOfReplicas, es5MappingsTotalFieldsLimit, getMergedTypeMapping(es5TypeMapping, newTypeMapping));
+                        if ("geonameEntry".equals(itemType)) {
+                            reIndex(session, httpClient, esAddress, es5Address, "geonames", getIndexName(destIndexPrefix, destIndexName), itemType);
+                        } else {
+                            reIndex(session, httpClient, esAddress, es5Address, sourceIndexPrefix, getIndexName(destIndexPrefix, destIndexName), itemType);
+                        }
                     } else {
-                        reIndex(session, httpClient, esAddress, es5Address, sourceIndexPrefix, destIndexPrefix + "-" + itemType.toLowerCase(), itemType);
+                        ConsoleUtils.printMessage(session, "Index " + getIndexName(destIndexPrefix, itemType.toLowerCase()) + " already exists, skipping re-indexation...");
                     }
                 } else {
                     for (String indexName : monthlyIndexNames) {
                         // we need to extract the date part
                         String datePart = indexName.substring(sourceIndexPrefix.length() + 1);
-                        createESIndex(httpClient, esAddress, destIndexPrefix, itemType.toLowerCase() + "-" + INDEX_DATE_PREFIX + datePart, numberOfShards, numberOfReplicas, indexBody);
-                        reIndex(session, httpClient, esAddress, es5Address, indexName, destIndexPrefix + "-" + itemType.toLowerCase() + "-" + INDEX_DATE_PREFIX + datePart, itemType);
+                        String destIndexName = itemType.toLowerCase() + "-" + INDEX_DATE_PREFIX + datePart;
+                        JSONObject es5TypeMapping = getES5TypeMapping(session, httpClient, es5Address, indexName, itemType);
+                        int es5MappingsTotalFieldsLimit = getES5MappingsTotalFieldsLimit(httpClient, es5Address, indexName);
+                        if (!indexExists(httpClient, esAddress, destIndexPrefix, destIndexName)) {
+                            createESIndex(httpClient, esAddress, destIndexPrefix, destIndexName, numberOfShards, numberOfReplicas, es5MappingsTotalFieldsLimit, getMergedTypeMapping(es5TypeMapping, newTypeMapping));
+                            reIndex(session, httpClient, esAddress, es5Address, indexName, getIndexName(destIndexPrefix, destIndexName), itemType);
+                        } else {
+                            ConsoleUtils.printMessage(session, "Index " + getIndexName(destIndexPrefix, destIndexName) + " already exists, skipping re-indexation...");
+                        }
                     }
                 }
             }
@@ -122,7 +135,21 @@ public class MigrationTo150 implements Migration {
         return content.toString();
     }
 
-    private String createESIndex(CloseableHttpClient httpClient, String esAddress, String indexPrefix, String indexName, int numberOfShards, int numberOfReplicas, JSONObject indexBody) throws IOException {
+    private boolean indexExists(CloseableHttpClient httpClient, String esAddress, String indexPrefix, String indexName) {
+        try {
+            HttpUtils.executeHeadRequest(httpClient, esAddress + "/" + getIndexName(indexPrefix, indexName), null);
+        } catch (IOException e) {
+            // this simply means the index doesn't exist (normally)
+            return false;
+        }
+        return true;
+    }
+
+    private String getIndexName(String indexPrefix, String indexName) {
+        return indexPrefix + "-" + indexName;
+    }
+
+    private String createESIndex(CloseableHttpClient httpClient, String esAddress, String indexPrefix, String indexName, int numberOfShards, int numberOfReplicas, int mappingTotalFieldsLimit, JSONObject indexBody) throws IOException {
         indexBody.put("settings", new JSONObject()
                 .put("index", new JSONObject()
                         .put("number_of_shards", numberOfShards)
@@ -138,7 +165,15 @@ public class MigrationTo150 implements Migration {
                         )
                 )
         );
-        return HttpUtils.executePutRequest(httpClient, esAddress + "/" + indexPrefix + "-" + indexName, indexBody.toString(), null);
+        if (mappingTotalFieldsLimit != -1) {
+            indexBody.getJSONObject("settings").getJSONObject("index")
+                    .put("mapping", new JSONObject()
+                            .put("total_fields", new JSONObject()
+                                    .put("limit", mappingTotalFieldsLimit)
+                            )
+                    );
+        }
+        return HttpUtils.executePutRequest(httpClient, esAddress + "/" + getIndexName(indexPrefix, indexName), indexBody.toString(), null);
     }
 
     private String reIndex(Session session, CloseableHttpClient httpClient,
@@ -161,10 +196,98 @@ public class MigrationTo150 implements Migration {
                 );
         ConsoleUtils.printMessage(session, "Reindexing " + sourceIndexName + " to " + destIndexName + "...");
         long startTime = System.currentTimeMillis();
-        String response = HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reindexSettings.toString(), null);
-        long reindexationTime = System.currentTimeMillis() - startTime;
-        ConsoleUtils.printMessage(session, "Reindexing completed in " + reindexationTime + "ms. Result=" + response);
-        return response;
+        try {
+            String response = HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reindexSettings.toString(), null);
+            long reindexationTime = System.currentTimeMillis() - startTime;
+            ConsoleUtils.printMessage(session, "Reindexing completed in " + reindexationTime + "ms. Result=" + response);
+            return response;
+        } catch (IOException ioe) {
+            ConsoleUtils.printException(session, "Error executing reindexing", ioe);
+            ConsoleUtils.printMessage(session, "Attempting to delete index " + destIndexName + " so that we can restart from this point...");
+            deleteIndex(session, httpClient, esAddress, destIndexName);
+            throw ioe;
+        }
     }
 
+    private String deleteIndex(Session session, CloseableHttpClient httpClient,
+                        String esAddress,
+                        String indexName) {
+        try {
+            return HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexName, null);
+        } catch (IOException ioe) {
+            ConsoleUtils.printException(session, "Error attempting to delete index" + indexName, ioe);
+        }
+        return null;
+    }
+
+    private JSONObject getES5TypeMapping(Session session, CloseableHttpClient httpClient, String es5Address, String indexName, String typeName) throws IOException {
+        String response = HttpUtils.executeGetRequest(httpClient, es5Address + "/" + indexName, null);
+        if (response != null) {
+            JSONObject indexInfo = new JSONObject(response).getJSONObject(indexName);
+            JSONObject allTypeMappings = indexInfo.getJSONObject("mappings");
+            if (allTypeMappings.has(typeName)) {
+                return allTypeMappings.getJSONObject(typeName);
+            } else {
+                return new JSONObject();
+            }
+        } else {
+            return new JSONObject();
+        }
+    }
+
+    private int getES5MappingsTotalFieldsLimit(CloseableHttpClient httpClient, String es5Address, String indexName) throws IOException {
+        String response = HttpUtils.executeGetRequest(httpClient, es5Address + "/" + indexName, null);
+        if (response != null) {
+            JSONObject indexInfo = new JSONObject(response).getJSONObject(indexName);
+            JSONObject settings = indexInfo.getJSONObject("settings");
+            if (settings.has("index")) {
+                JSONObject indexSettings = settings.getJSONObject("index");
+                if (indexSettings.has("mapping")) {
+                    JSONObject mappingIndexSettings = indexSettings.getJSONObject("mapping");
+                    if (mappingIndexSettings.has("total_fields")) {
+                        JSONObject totalFieldsMappingIndexSettings = mappingIndexSettings.getJSONObject("total_fields");
+                        if (totalFieldsMappingIndexSettings.has("limit")) {
+                            return totalFieldsMappingIndexSettings.getInt("limit");
+                        }
+                    }
+                }
+            }
+        }
+        return -1;
+    }
+
+    private JSONObject getMergedTypeMapping(JSONObject oldTypeMappings, JSONObject newTypeMappings) {
+        JSONObject mappings = new JSONObject(oldTypeMappings.toString());
+        if (newTypeMappings.has("dynamic_templates")) {
+            mappings.put("dynamic_templates", newTypeMappings.getJSONArray("dynamic_templates"));
+        }
+        if (!newTypeMappings.has("properties")) {
+            return new JSONObject().put("mappings", mappings);
+        }
+        mappings.put("properties", getMergedPropertyMappings(mappings.getJSONObject("properties"), newTypeMappings.getJSONObject("properties")));
+        return new JSONObject().put("mappings", mappings);
+    }
+
+    private JSONObject getMergedPropertyMappings(JSONObject oldProperties, JSONObject newProperties) {
+        JSONObject result = new JSONObject();
+        for (String oldPropertyName : oldProperties.keySet()) {
+            if (!newProperties.has(oldPropertyName)) {
+                // we copy the old value over to the result
+                result.put(oldPropertyName, oldProperties.get(oldPropertyName));
+                continue;
+            }
+            if (oldProperties.get(oldPropertyName) instanceof JSONObject && newProperties.get(oldPropertyName) instanceof JSONObject) {
+                result.put(oldPropertyName, getMergedPropertyMappings(oldProperties.getJSONObject(oldPropertyName), newProperties.getJSONObject(oldPropertyName)));
+            } else {
+                // in all other cases we copy the new value.
+                result.put(oldPropertyName, newProperties.get(oldPropertyName));
+            }
+        }
+        for (String newPropertyName : newProperties.keySet()) {
+            if (!oldProperties.has(newPropertyName)) {
+                result.putOnce(newPropertyName, newProperties.get(newPropertyName));
+            }
+        }
+        return result;
+    }
 }
