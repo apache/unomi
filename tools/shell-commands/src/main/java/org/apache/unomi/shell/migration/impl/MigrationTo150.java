@@ -276,8 +276,13 @@ public class MigrationTo150 implements Migration {
                 result.put(oldPropertyName, oldProperties.get(oldPropertyName));
                 continue;
             }
-            if (oldProperties.get(oldPropertyName) instanceof JSONObject && newProperties.get(oldPropertyName) instanceof JSONObject) {
-                result.put(oldPropertyName, getMergedPropertyMappings(oldProperties.getJSONObject(oldPropertyName), newProperties.getJSONObject(oldPropertyName)));
+            JSONObject oldProperty = oldProperties.getJSONObject(oldPropertyName);
+            JSONObject newProperty = newProperties.getJSONObject(oldPropertyName);
+            if (oldProperty.has("properties") && newProperty.has("properties")) {
+                // we are in the case of an object, we merge merge deeper
+                JSONObject newObjectMapping = new JSONObject(newProperty.toString());
+                newObjectMapping.put("properties", getMergedPropertyMappings(oldProperty.getJSONObject("properties"), newProperty.getJSONObject("properties")));
+                result.put(oldPropertyName, newObjectMapping);
             } else {
                 // in all other cases we copy the new value.
                 result.put(oldPropertyName, newProperties.get(oldPropertyName));
