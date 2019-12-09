@@ -90,16 +90,14 @@ public class MigrationTo150 implements Migration {
                 String mappingDefinition = loadMappingFile(predefinedMappingURL);
                 JSONObject newTypeMapping = new JSONObject(mappingDefinition);
                 if (!monthlyIndexTypes.contains(itemType)) {
-                    JSONObject es5TypeMapping = getES5TypeMapping(session, httpClient, es5Address, "geonameEntry".equals(itemType) ? "geonames" : sourceIndexPrefix, itemType);
-                    int es5MappingsTotalFieldsLimit = getES5MappingsTotalFieldsLimit(httpClient, es5Address, "geonameEntry".equals(itemType) ? "geonames" : sourceIndexPrefix);
+                    String indexName = "geonameEntry".equals(itemType) ? "geonames" : sourceIndexPrefix;
+
+                    JSONObject es5TypeMapping = getES5TypeMapping(session, httpClient, es5Address, indexName, itemType);
+                    int es5MappingsTotalFieldsLimit = getES5MappingsTotalFieldsLimit(httpClient, es5Address, indexName);
                     String destIndexName = itemType.toLowerCase();
                     if (!indexExists(httpClient, esAddress, destIndexPrefix, destIndexName)) {
                         createESIndex(httpClient, esAddress, destIndexPrefix, destIndexName, numberOfShards, numberOfReplicas, es5MappingsTotalFieldsLimit, getMergedTypeMapping(es5TypeMapping, newTypeMapping));
-                        if ("geonameEntry".equals(itemType)) {
-                            reIndex(session, httpClient, esAddress, es5Address, "geonames", getIndexName(destIndexPrefix, destIndexName), itemType);
-                        } else {
-                            reIndex(session, httpClient, esAddress, es5Address, sourceIndexPrefix, getIndexName(destIndexPrefix, destIndexName), itemType);
-                        }
+                        reIndex(session, httpClient, esAddress, es5Address, indexName, getIndexName(destIndexPrefix, destIndexName), itemType);
                     } else {
                         ConsoleUtils.printMessage(session, "Index " + getIndexName(destIndexPrefix, itemType.toLowerCase()) + " already exists, skipping re-indexation...");
                     }
@@ -149,7 +147,7 @@ public class MigrationTo150 implements Migration {
         return indexPrefix + "-" + indexName;
     }
 
-    private String createESIndex(CloseableHttpClient httpClient, String esAddress, String indexPrefix, String indexName, int numberOfShards, int numberOfReplicas, int mappingTotalFieldsLimit, JSONObject indexBody) throws IOException {
+    private void createESIndex(CloseableHttpClient httpClient, String esAddress, String indexPrefix, String indexName, int numberOfShards, int numberOfReplicas, int mappingTotalFieldsLimit, JSONObject indexBody) throws IOException {
         indexBody.put("settings", new JSONObject()
                 .put("index", new JSONObject()
                         .put("number_of_shards", numberOfShards)
@@ -173,10 +171,10 @@ public class MigrationTo150 implements Migration {
                             )
                     );
         }
-        return HttpUtils.executePutRequest(httpClient, esAddress + "/" + getIndexName(indexPrefix, indexName), indexBody.toString(), null);
+        HttpUtils.executePutRequest(httpClient, esAddress + "/" + getIndexName(indexPrefix, indexName), indexBody.toString(), null);
     }
 
-    private String reIndex(Session session, CloseableHttpClient httpClient,
+    private void reIndex(Session session, CloseableHttpClient httpClient,
                            String esAddress,
                            String es5Address,
                            String sourceIndexName,
@@ -200,7 +198,6 @@ public class MigrationTo150 implements Migration {
             String response = HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reindexSettings.toString(), null);
             long reindexationTime = System.currentTimeMillis() - startTime;
             ConsoleUtils.printMessage(session, "Reindexing completed in " + reindexationTime + "ms. Result=" + response);
-            return response;
         } catch (IOException ioe) {
             ConsoleUtils.printException(session, "Error executing reindexing", ioe);
             ConsoleUtils.printMessage(session, "Attempting to delete index " + destIndexName + " so that we can restart from this point...");
@@ -209,15 +206,14 @@ public class MigrationTo150 implements Migration {
         }
     }
 
-    private String deleteIndex(Session session, CloseableHttpClient httpClient,
+    private void deleteIndex(Session session, CloseableHttpClient httpClient,
                         String esAddress,
                         String indexName) {
         try {
-            return HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexName, null);
+            HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexName, null);
         } catch (IOException ioe) {
             ConsoleUtils.printException(session, "Error attempting to delete index" + indexName, ioe);
         }
-        return null;
     }
 
     private JSONObject getES5TypeMapping(Session session, CloseableHttpClient httpClient, String es5Address, String indexName, String typeName) throws IOException {
@@ -261,10 +257,9 @@ public class MigrationTo150 implements Migration {
         if (newTypeMappings.has("dynamic_templates")) {
             mappings.put("dynamic_templates", newTypeMappings.getJSONArray("dynamic_templates"));
         }
-        if (!newTypeMappings.has("properties")) {
-            return new JSONObject().put("mappings", mappings);
+        if (newTypeMappings.has("properties")) {
+            mappings.put("properties", getMergedPropertyMappings(mappings.getJSONObject("properties"), newTypeMappings.getJSONObject("properties")));
         }
-        mappings.put("properties", getMergedPropertyMappings(mappings.getJSONObject("properties"), newTypeMappings.getJSONObject("properties")));
         return new JSONObject().put("mappings", mappings);
     }
 
@@ -279,7 +274,7 @@ public class MigrationTo150 implements Migration {
             JSONObject oldProperty = oldProperties.getJSONObject(oldPropertyName);
             JSONObject newProperty = newProperties.getJSONObject(oldPropertyName);
             if (oldProperty.has("properties") && newProperty.has("properties")) {
-                // we are in the case of an object, we merge merge deeper
+                // we are in the case of an object, we merge deeper
                 JSONObject newObjectMapping = new JSONObject(newProperty.toString());
                 newObjectMapping.put("properties", getMergedPropertyMappings(oldProperty.getJSONObject("properties"), newProperty.getJSONObject("properties")));
                 result.put(oldPropertyName, newObjectMapping);
