@@ -72,7 +72,7 @@ public class Migrate implements Action {
         try {
             httpClient = HttpUtils.initHttpClient(session);
 
-            String esAddress = ConsoleUtils.askUserWithDefaultAnswer(session, "Elasticsearch address (default = http://localhost:9200): ", "http://localhost:9200");
+            String esAddress = ConsoleUtils.askUserWithDefaultAnswer(session, "Enter ElasticSearch 7 TARGET address (default = http://localhost:9200): ", "http://localhost:9200");
 
             for (Migration migration : getMigrations()) {
                 if (fromVersion.compareTo(migration.getToVersion()) < 0) {

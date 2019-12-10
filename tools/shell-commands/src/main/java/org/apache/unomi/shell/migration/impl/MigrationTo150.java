@@ -57,11 +57,11 @@ public class MigrationTo150 implements Migration {
 
     @Override
     public void execute(Session session, CloseableHttpClient httpClient, String esAddress, BundleContext bundleContext) throws IOException {
-        String es5Address = ConsoleUtils.askUserWithDefaultAnswer(session, "Source Elasticsearch 5.6 cluster address (default: http://localhost:9210) : ", "http://localhost:9210");
-        String sourceIndexPrefix = ConsoleUtils.askUserWithDefaultAnswer(session, "Source index name (default: context) : ", "context");
-        String destIndexPrefix = ConsoleUtils.askUserWithDefaultAnswer(session, "Destination index prefix (default: context) : ", "context");
-        int numberOfShards = Integer.parseInt(ConsoleUtils.askUserWithDefaultAnswer(session, "Number of shards (default: 5) : ", "5"));
-        int numberOfReplicas = Integer.parseInt(ConsoleUtils.askUserWithDefaultAnswer(session, "Number of replicas (default: 1) : ", "1"));
+        String es5Address = ConsoleUtils.askUserWithDefaultAnswer(session, "SOURCE Elasticsearch 5.6 cluster address (default: http://localhost:9210) : ", "http://localhost:9210");
+        String sourceIndexPrefix = ConsoleUtils.askUserWithDefaultAnswer(session, "SOURCE index name (default: context) : ", "context");
+        String destIndexPrefix = ConsoleUtils.askUserWithDefaultAnswer(session, "TARGET index prefix (default: context) : ", "context");
+        int numberOfShards = Integer.parseInt(ConsoleUtils.askUserWithDefaultAnswer(session, "Number of shards for TARGET (default: 5) : ", "5"));
+        int numberOfReplicas = Integer.parseInt(ConsoleUtils.askUserWithDefaultAnswer(session, "Number of replicas for TARGET (default: 1) : ", "1"));
         Set<String> monthlyIndexTypes = new HashSet<>();
         monthlyIndexTypes.add("event");
         monthlyIndexTypes.add("session");
