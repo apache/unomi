@@ -64,7 +64,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <cxf.version>3.3.2</cxf.version>
+        <cxf.version>3.3.4</cxf.version>
         <version.jackson.core>2.9.10</version.jackson.core>
         <version.jackson.databind>2.9.10.1</version.jackson.databind>
         <version.jackson.jaxb>2.9.10</version.jackson.jaxb>
@@ -73,8 +73,10 @@
         <version.pax.exam>4.13.1</version.pax.exam>
         <elasticsearch.version>7.4.2</elasticsearch.version>
 
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <java.version>11</java.version>
+
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
         <scala.version>2.11.4</scala.version>
         <encoding>UTF-8</encoding>
 
@@ -426,7 +428,7 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>license-maven-plugin</artifactId>
-                        <version>1.8</version>
+                        <version>${java.version}</version>
                         <configuration>
                             <verbose>false</verbose>
                             <addSvnKeyWords>true</addSvnKeyWords>
@@ -933,9 +935,9 @@
                 <version>3.0.11</version>
             </dependency>
             <dependency>
-                <groupId>javassist</groupId>
+                <groupId>org.javassist</groupId>
                 <artifactId>javassist</artifactId>
-                <version>3.11.0.GA</version>
+                <version>3.23.1-GA</version>
             </dependency>
             <dependency>
                 <groupId>org.antlr</groupId>
@@ -1104,10 +1106,9 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.2</version>
+                <version>3.7.0</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <release>${java.version}</release>
                 </configuration>
             </plugin>
             <plugin>
