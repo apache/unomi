@@ -20,6 +20,9 @@
   "properties": {
     "properties": {
       "properties": {
+        "age" : {
+          "type" : "long"
+        },
         "firstVisit": {
           "type": "date"
         },

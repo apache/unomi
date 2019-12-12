@@ -110,6 +110,13 @@ public class HttpUtils {
         return getResponse(httpClient, url, headers, httpGet);
     }
 
+    public static String executeHeadRequest(CloseableHttpClient httpClient, String url, Map<String, String> headers) throws IOException {
+        HttpHead httpHead = new HttpHead(url);
+        httpHead.addHeader("accept", "application/json");
+
+        return getResponse(httpClient, url, headers, httpHead);
+    }
+
     public static String executeDeleteRequest(CloseableHttpClient httpClient, String url, Map<String, String> headers) throws IOException {
         HttpDelete httpDelete = new HttpDelete(url);
         httpDelete.addHeader("accept", "application/json");
@@ -153,19 +160,23 @@ public class HttpUtils {
 
         CloseableHttpResponse response = httpClient.execute(httpRequestBase);
         final int statusCode = response.getStatusLine().getStatusCode();
+        HttpEntity entity = response.getEntity();
         if (statusCode >= 400) {
-            throw new HttpRequestException("Couldn't execute " + httpRequestBase + " response: " + EntityUtils.toString(response.getEntity()), statusCode);
+            throw new HttpRequestException("Couldn't execute " + httpRequestBase + " response: " + ((entity != null) ? EntityUtils.toString(entity) : "n/a"), statusCode);
         }
 
-        HttpEntity entity = response.getEntity();
         if (logger.isDebugEnabled()) {
             if (entity !=null) {
                 entity = new BufferedHttpEntity(response.getEntity());
             }
-            logger.debug("POST request " + httpRequestBase + " executed with code: " + statusCode + " and message: " + (entity!=null?EntityUtils.toString(entity):null));
+            logger.debug("Request " + httpRequestBase + " executed with code: " + statusCode + " and message: " + (entity!=null?EntityUtils.toString(entity):null));
 
             long totalRequestTime = System.currentTimeMillis() - requestStartTime;
             logger.debug("Request to Apache Unomi url: " + url + " executed in " + totalRequestTime + "ms");
+        }
+
+        if (entity == null) {
+            return null;
         }
 
         String stringResponse = EntityUtils.toString(entity);

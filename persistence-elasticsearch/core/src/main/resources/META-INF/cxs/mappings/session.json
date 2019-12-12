@@ -24,6 +24,32 @@
     "lastEventDate": {
       "type": "date"
     },
+    "profile" : {
+      "properties" : {
+        "properties" : {
+          "properties" : {
+            "age" : {
+              "type" : "long"
+            },
+            "birthDate" : {
+              "type" : "date"
+            },
+            "firstDate" : {
+              "type" : "date"
+            },
+            "lastVisit" : {
+              "type" : "date"
+            },
+            "previousVisit" : {
+              "type" : "date"
+            },
+            "notificationsRefreshDate" : {
+              "type" : "date"
+            }
+          }
+        }
+      }
+    },
     "properties": {
       "properties": {
         "location": {

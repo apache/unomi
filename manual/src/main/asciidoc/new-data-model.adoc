@@ -99,3 +99,6 @@ ES 5 one.
 
 Note that it is also possible to change the index prefix to be different from the default `context` value
 so that you could host multiple Apache Unomi instances on the same ElasticSearch cluster.
+
+Important note: only the data that Apache Unomi manages will be migrate. If you have any other data (for example Kibana
+or ElasticSearch monitoring indices) they will not be migrated by this migration tool.

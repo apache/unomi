@@ -20,6 +20,41 @@
   "properties": {
     "timeStamp": {
       "type": "date"
+    },
+    "target" : {
+      "properties" : {
+        "lastEventDate" : {
+          "type" : "date"
+        },
+        "profile" : {
+          "properties" : {
+            "properties" : {
+              "properties" : {
+                "birthDate" : {
+                  "type" : "date"
+                },
+                "firstVisit" : {
+                  "type" : "date"
+                },
+                "lastVisit" : {
+                  "type" : "date"
+                },
+                "notificationRefreshDate" : {
+                  "type" : "date"
+                },
+                "previousVisit" : {
+                  "type" : "date"
+                }
+              }
+            },
+            "systemProperties" : {
+              "properties" : {
+
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
