@@ -17,10 +17,7 @@
 
 package org.apache.unomi.plugins.baseplugin.conditions;
 
-import ognl.Node;
-import ognl.Ognl;
-import ognl.OgnlContext;
-import ognl.OgnlException;
+import ognl.*;
 import ognl.enhance.ExpressionAccessor;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -36,6 +33,8 @@ import org.elasticsearch.common.joda.JodaDateMathParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Member;
+import java.lang.reflect.Modifier;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -327,7 +326,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
 
     protected Object getOGNLPropertyValue(Item item, String expression) throws Exception {
         ExpressionAccessor accessor = getPropertyAccessor(item, expression);
-        return accessor != null ? accessor.get((OgnlContext) Ognl.createDefaultContext(null), item) : null;
+        return accessor != null ? accessor.get(getOgnlContext(), item) : null;
     }
 
     private Object getNestedPropertyValue(String expressionPart, Map<String, Object> properties) {
@@ -343,6 +342,27 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else {
             return properties.get(expressionPart);
         }
+    }
+
+    private OgnlContext getOgnlContext() {
+        return (OgnlContext) Ognl.createDefaultContext(null, new MemberAccess() {
+            @Override
+            public Object setup(Map context, Object target, Member member, String propertyName) {
+                return null;
+            }
+
+            @Override
+            public void restore(Map context, Object target, Member member, String propertyName, Object state) {
+
+            }
+
+            @Override
+            public boolean isAccessible(Map context, Object target, Member member, String propertyName) {
+                int modifiers = member.getModifiers();
+                boolean result = Modifier.isPublic(modifiers);
+                return result;
+            }
+        });
     }
 
     private ExpressionAccessor getPropertyAccessor(Item item, String expression) throws Exception {
@@ -361,7 +381,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             ClassLoader contextCL = current.getContextClassLoader();
             try {
                 current.setContextClassLoader(PropertyConditionEvaluator.class.getClassLoader());
-                Node node = Ognl.compileExpression((OgnlContext) Ognl.createDefaultContext(null), item, expression);
+                Node node = Ognl.compileExpression(getOgnlContext() , item, expression);
                 accessor = node.getAccessor();
             } finally {
                 current.setContextClassLoader(contextCL);
