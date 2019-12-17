@@ -18,21 +18,23 @@
 
 <blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
            xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
-           xmlns:cxf="http://cxf.apache.org/blueprint/core" xmlns:jaxrs="http://cxf.apache.org/blueprint/jaxrs"
+           xmlns:jaxrs="http://cxf.apache.org/blueprint/jaxrs"
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
   http://cxf.apache.org/blueprint/jaxrs http://cxf.apache.org/schemas/blueprint/jaxrs.xsd
-  http://cxf.apache.org/blueprint/core http://cxf.apache.org/schemas/blueprint/core.xsd
+
   http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
     <cm:property-placeholder persistent-id="org.apache.unomi.rest.segmentserviceendpoint"
                              update-strategy="reload">
     </cm:property-placeholder>
 
+    <!--
     <cxf:bus>
         <cxf:features>
             <cxf:logging/>
         </cxf:features>
     </cxf:bus>
+    -->
 
     <bean id="cors-filter" class="org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter"/>
     <bean id="jacksonMapper" class="org.apache.unomi.persistence.spi.CustomObjectMapper"/>
