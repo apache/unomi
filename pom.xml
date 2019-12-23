@@ -77,11 +77,11 @@
 
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
-        <scala.version>2.11.4</scala.version>
+        <scala.version>2.12.6</scala.version>
         <encoding>UTF-8</encoding>
 
         <gatling.version>2.1.2</gatling.version>
-        <scala-maven-plugin.version>3.2.0</scala-maven-plugin.version>
+        <scala-maven-plugin.version>4.3.0</scala-maven-plugin.version>
 
         <!-- Librairies for Karaf packaging -->
         <xerces.version>2.11.0_1</xerces.version>
