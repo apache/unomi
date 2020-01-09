@@ -17,12 +17,12 @@
 
 package org.apache.unomi.api.actions;
 
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.MetadataItem;
+import org.apache.unomi.api.Parameter;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlTransient;
-import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A type definition for {@link Action}s.

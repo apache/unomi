@@ -21,11 +21,16 @@ import org.junit.Assert;
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.CoreOptions;
 import org.ops4j.pax.exam.Option;
+import org.ops4j.pax.exam.karaf.container.internal.JavaVersionUtil;
 import org.ops4j.pax.exam.karaf.options.LogLevelOption.LogLevel;
 import org.ops4j.pax.exam.options.MavenArtifactUrlReference;
 import org.ops4j.pax.exam.options.MavenUrlReference;
+import org.ops4j.pax.exam.options.extra.VMOption;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -61,7 +66,9 @@ public abstract class BaseIT {
                 .type("xml")
                 .versionAsInProject();
 
-        return new Option[]{
+        List<Option> options = new ArrayList<>();
+
+        Option[] commonOptions = new Option[]{
                 debugConfiguration("5006", false),
                 karafDistributionConfiguration()
                         .frameworkUrl(karafUrl)
@@ -86,7 +93,7 @@ public abstract class BaseIT {
                 replaceConfigurationFile("data/tmp/testLoginEventCondition.json", new File(
                         "src/test/resources/testLoginEventCondition.json")),
                 keepRuntimeFolder(),
-                configureConsole().ignoreLocalConsole(),
+                // configureConsole().ignoreLocalConsole(),
                 logLevel(LogLevel.INFO),
                 editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.rootLogger.level", "INFO"),
                 editConfigurationFilePut("etc/org.apache.karaf.features.cfg", "serviceRequirements", "disable"),
@@ -107,6 +114,42 @@ public abstract class BaseIT {
                 CoreOptions.bundleStartLevel(100),
                 CoreOptions.frameworkStartLevel(100)
         };
+
+        options.addAll(Arrays.asList(commonOptions));
+
+        if (JavaVersionUtil.getMajorVersion() >= 9) {
+            Option[] jdk9PlusOptions = new Option[]{
+                    new VMOption("--add-reads=java.xml=java.logging"),
+                    new VMOption("--add-exports=java.base/org.apache.karaf.specs.locator=java.xml,ALL-UNNAMED"),
+                    new VMOption("--patch-module"),
+                    new VMOption("java.base=lib/endorsed/org.apache.karaf.specs.locator-"
+                            + System.getProperty("karaf.version") + ".jar"),
+                    new VMOption("--patch-module"), new VMOption("java.xml=lib/endorsed/org.apache.karaf.specs.java.xml-"
+                    + System.getProperty("karaf.version") + ".jar"),
+                    new VMOption("--add-opens"),
+                    new VMOption("java.base/java.security=ALL-UNNAMED"),
+                    new VMOption("--add-opens"),
+                    new VMOption("java.base/java.net=ALL-UNNAMED"),
+                    new VMOption("--add-opens"),
+                    new VMOption("java.base/java.lang=ALL-UNNAMED"),
+                    new VMOption("--add-opens"),
+                    new VMOption("java.base/java.util=ALL-UNNAMED"),
+                    new VMOption("--add-opens"),
+                    new VMOption("java.naming/javax.naming.spi=ALL-UNNAMED"),
+                    new VMOption("--add-opens"),
+                    new VMOption("java.rmi/sun.rmi.transport.tcp=ALL-UNNAMED"),
+                    new VMOption("--add-exports=java.base/sun.net.www.protocol.http=ALL-UNNAMED"),
+                    new VMOption("--add-exports=java.base/sun.net.www.protocol.https=ALL-UNNAMED"),
+                    new VMOption("--add-exports=java.base/sun.net.www.protocol.jar=ALL-UNNAMED"),
+                    new VMOption("--add-exports=jdk.naming.rmi/com.sun.jndi.url.rmi=ALL-UNNAMED"),
+                    new VMOption("-classpath"),
+                    new VMOption("lib/jdk9plus/*" + File.pathSeparator + "lib/boot/*")
+
+            };
+            options.addAll(Arrays.asList(jdk9PlusOptions));
+        }
+
+        return options.toArray(new Option[0]);
     }
 
     protected <T> T keepTrying(String failMessage, Supplier<T> call, Predicate<T> predicate, int timeout, int retries) throws InterruptedException {

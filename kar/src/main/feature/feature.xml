@@ -24,7 +24,7 @@
     <feature description="unomi-kar" version="${project.version}" name="unomi-kar"
              start-level="70">
         <feature>war</feature>
-        <feature>cxf</feature>
+        <feature>cxf-jaxrs</feature>
         <feature>cellar</feature>
         <feature>eventadmin</feature>
         <feature>shell-compat</feature>
@@ -52,6 +52,9 @@
         <bundle start-level="75">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider/${version.jackson.core}</bundle>
         <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jakarta-regexp/1.4_1</bundle>
         <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.joda-time/2.3_1</bundle>
+        <bundle start-level="75">mvn:org.apache.servicemix.specs/org.apache.servicemix.specs.jaxws-api-2.2/2.9.0</bundle>
+        <bundle start-level="75">mvn:javax.annotation/javax.annotation-api/1.3.2</bundle>
+        <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jsr305/${jsr305.bundle.version}</bundle>
 
         <bundle start-level="70" start="false">mvn:org.apache.unomi/unomi-lifecycle-watcher/${project.version}</bundle>
         <bundle start-level="75" start="false">mvn:org.apache.unomi/unomi-api/${project.version}</bundle>

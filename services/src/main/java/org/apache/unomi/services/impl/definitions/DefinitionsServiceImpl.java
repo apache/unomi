@@ -241,7 +241,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
         while (predefinedPropertiesEntries.hasMoreElements()) {
             URL predefinedPropertyURL = predefinedPropertiesEntries.nextElement();
-            logger.debug("Found predefined property type at " + predefinedPropertyURL + ", loading... ");
+            logger.debug("Found predefined value type at " + predefinedPropertyURL + ", loading... ");
 
             try {
                 ValueType valueType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyURL, ValueType.class);

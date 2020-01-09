@@ -30,6 +30,16 @@
     <description>Main API of the Apache Unomi Context server</description>
     <packaging>bundle</packaging>
 
+    <dependencies>
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.2.11</version>
+            <scope>provided</scope>
+        </dependency>
+
+    </dependencies>
+
     <reporting>
         <plugins>
             <plugin>
@@ -67,4 +77,27 @@
             </plugin>
         </plugins>
     </reporting>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <version>4.2.1</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
+                        <Import-Package>
+                            org.jvnet.staxex;resolution:=optional,
+                            org.glassfish.hk2.osgiresourcelocator;resolution:=optional,
+                            javax.activation;resolution:=optional,
+                            com.sun.xml.*;resolution:=optional,
+                            *
+                        </Import-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

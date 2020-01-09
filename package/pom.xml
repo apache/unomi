@@ -327,7 +327,7 @@
                         <feature>service</feature>
                         <feature>system</feature>
                         <feature>war</feature>
-                        <feature>cxf</feature>
+                        <feature>cxf-jaxrs</feature>
                         <feature>cellar</feature>
                         <feature>aries-blueprint</feature>
                         <feature>shell-compat</feature>
@@ -335,6 +335,7 @@
                         <feature>unomi-router-karaf-feature</feature>
                         <feature>unomi-web-tracker-karaf-kar</feature>
                     </bootFeatures>
+                    <!--
                     <libraries>
                         <library>mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.xerces/${xerces.version};type:=endorsed;export:=true;delegate:=true</library>
                         <library>mvn:org.apache.servicemix.specs/org.apache.servicemix.specs.jaxp-api-1.4/${servicemix.specs.version};type:=endorsed;export:=true</library>
@@ -354,6 +355,7 @@
                         <library>mvn:net.java.dev.jna/jna/${jna.version};type:=boot;export:=false</library>
                         <library>mvn:net.java.dev.jna/jna-platform/${jna.version};type:=boot;export:=false</library>
                     </libraries>
+                    -->
                     <javase>1.8</javase>
                 </configuration>
             </plugin>
