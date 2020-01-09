@@ -20,13 +20,33 @@ in greater details what just happened.
 
 This document assumes that you are already familiar with Unomi's <<_concepts,concepts>>. On the technical side, we
 also assume working knowledge of https://git-scm.com/[git] to be able to retrieve the code for Unomi and the example.
-Additionally, you will require a working Java 7 or above install. Refer to http://www.oracle.com/technetwork/java/javase/[http://www.oracle.com/technetwork/java/javase/] for details on how to download and install Java SE 7 or greater.
+Additionally, you will require a working Java 8 or above install. Refer to http://www.oracle.com/technetwork/java/javase/[http://www.oracle.com/technetwork/java/javase/] for details on how to download and install Java SE 8 or greater.
+
+===== JDK compatibility
+
+Starting with Java 9, Oracle made some big changes to the Java platform releases. This is why Apache Unomi is focused on
+supporting the Long Term Supported versions of the JDK, currently versions 8 and 11. We do not test with intermediate
+versions so they may or may not work properly. Currently the most tested version is version 8 and version 11 is also
+supported.
+
+Also, as there are new licensing restrictions on JDKs provided by Oracle for production usages, Apache Unomi has also
+added support for OpenJDK builds. Other JDK distributions might also work but are not regularly tested so you should use
+them at your own risks.
+
+===== ElasticSearch compatibility
+
+Starting with version 1.5.0 Apache Unomi adds compatibility with ElasticSearch 7.4 . It is highly recommended to use the
+ElasticSearch version provided by the documentation when possible. However minor versions (7.4.x) should also work, and
+one version higher (7.5) will usually work. Going higher than that is risky given the way that ElasticSearch is developed
+and breaking changes are introduced quite often. If in doubt, don't hesitate to check with the Apache Unomi community
+to get the latest information about ElasticSearch version compatibility.
 
 ==== Running Unomi
 
 ===== Start Unomi
 
-Start Unomi according to the <<_5-min-quickstart,5 minute quick start>> or by compiling using the building link:building-and-deploying.html#Deploying_the_generated_package[instructions]. Once you have Karaf running,
+Start Unomi according to the <<_five_minutes_quickstart,five minutes quick start>> or by compiling using the
+<<_building,building instructions>>. Once you have Karaf running,
  you should wait until you see the following messages on the Karaf console:
 
 [source]
@@ -44,5 +64,7 @@ Initializing cluster service endpoint...
 This indicates that all the Unomi services are started and ready to react to requests. You can then open a browser and go to `http://localhost:8181/cxs` to see the list of
 available RESTful services or retrieve an initial context at `http://localhost:8181/context.json` (which isn't very useful at this point).
 
-Now that your service is up and running you can go look at the <<_request-examples,request examples>> to learn basic
+You can now find an introduction page at the following location: http://localhost:8181
+
+Also now that your service is up and running you can go look at the <<_request-examples,request examples>> to learn basic
 requests you can do once your server is up and running.

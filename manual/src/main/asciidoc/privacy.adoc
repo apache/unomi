@@ -14,7 +14,7 @@
 Apache Unomi provides an endpoint to manage visitor privacy. You will find in this section information about what it
 includes as well as how to use it.
 
-==== Setting up access to the privacy endpoint
+=== Setting up access to the privacy endpoint
 
 The privacy endpoint is a bit special, because despite being protected by basic authentication as the rest of the REST
 API is is actually designed to be available to end-users.
@@ -29,7 +29,7 @@ that the profile ID cookie seems authentic (for example by checking that it is o
 geographic location)
 2. proxy to /cxs/privacy
 
-==== Anonymizing a profile
+=== Anonymizing a profile
 
 It is possible to anonymize a profile, meaning it will remove all "identifying" property values from the profile.
 Basically all properties with the tag `personalIdentifierProperties` will be purged from the profile.
@@ -44,7 +44,7 @@ curl -X POST http://localhost:8181/cxs/profiles/{profileID}/anonymize?scope=ASCO
 where `{profileID}` must be replaced by the actual identifier of a profile
 and `ASCOPE` must be replaced by a scope identifier.
 
-==== Downloading profile data
+=== Downloading profile data
 
 It is possible to download the profile data of a user. This will only download the profile for a user using the
 specified ID as a cookie value.
@@ -61,7 +61,7 @@ curl -X GET http://localhost:8181/client/myprofile.[json,csv,yaml,text] \
 
 where `PROFILE-ID` is the profile identifier for which to download the profile.
 
-==== Deleting a profile
+=== Deleting a profile
 
 It is possible to delete a profile, but this works a little differently than you might expect. In all cases the data
 contained in the profile will be completely erased. If the `withData` optional flag is set to true, all past event and
@@ -75,6 +75,6 @@ curl -X DELETE http://localhost:8181/cxs/profiles/{profileID}?withData=false --u
 where `{profileID}` must be replaced by the actual identifier of a profile
 and the `withData` specifies whether the data associated with the profile must be anonymized or not
 
-==== Related
+=== Related
 
 You might also be interested in the <<Consent API>> section that describe how to manage profile consents.

@@ -13,8 +13,8 @@
 //
 === Five Minutes QuickStart
 
-1) Install JDK 8 (http://www.oracle.com/technetwork/java/javase/downloads/index.html) and make sure you set the
-JAVA_HOME variable https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/
+1) Install JDK 8 (https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) and make sure you set the
+JAVA_HOME variable https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/ (see our <<_jdk_compatibility,Getting Started>> guide for more information on JDK compatibility)
 
 2) Download ElasticSearch here : https://www.elastic.co/downloads/past-releases/elasticsearch-7-4-2 (please <strong>make sure</strong> you use the proper version : 7.4.2)
 
@@ -36,3 +36,9 @@ JAVA_HOME variable https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_ja
 
 11) If something goes wrong, you should check the logs in `./data/log/karaf.log`. If you get errors on ElasticSearch,
 make sure you are using the proper version.
+
+Next steps:
+
+- Connect to http://localhost:8181 to try our some live examples (such as the web tracker)
+- Trying our integration <<_samples,samples page>>
+- Learning more about the <<_web_tracker,web tracker>>

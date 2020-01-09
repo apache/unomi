@@ -174,7 +174,7 @@ The interesting part, though, is the payload. This is where we provide Unomi wit
 
 Let's look at the context request structure:
 
-[source,json]
+[source]
 ----
 {
     source: <Item source of the context request>,

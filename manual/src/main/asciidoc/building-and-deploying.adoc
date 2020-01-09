@@ -118,7 +118,7 @@ This is only needed if you didn't use the generated package. Also, this is the p
 environment if you intend to re-deploy the context server KAR iteratively.
 
 Additional requirements:
-* Apache Karaf 3.x, http://karaf.apache.org[http://karaf.apache.org]
+* Apache Karaf 4.2.x, http://karaf.apache.org[http://karaf.apache.org]
 
 Before deploying, make sure that you have Apache Karaf properly installed. You will also have to increase the
 default maximum memory size and perm gen size by adjusting the following environment values in the bin/setenv(.bat)
@@ -136,8 +136,8 @@ Install the WAR support, CXF and Karaf Cellar into Karaf by doing the following 
 
 [source]
 ----
-   feature:repo-add cxf 3.0.2
-   feature:repo-add cellar 3.0.3
+   feature:repo-add cxf-jaxrs 3.3.4
+   feature:repo-add cellar 4.1.3
    feature:repo-add mvn:org.apache.unomi/unomi-kar/VERSION/xml/features
    feature:install unomi-kar
 ----
@@ -166,21 +166,19 @@ which will output something like this :
 
 [source]
 ----
-Matching Java Virtual Machines (7):
-    1.7.0_51, x86_64:   "Java SE 7"   /Library/Java/JavaVirtualMachines/jdk1.7.0_51.jdk/Contents/Home
-    1.7.0_45, x86_64:   "Java SE 7"   /Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home
-    1.7.0_25, x86_64:   "Java SE 7"   /Library/Java/JavaVirtualMachines/jdk1.7.0_25.jdk/Contents/Home
-    1.6.0_65-b14-462, x86_64:   "Java SE 6"   /Library/Java/JavaVirtualMachines/1.6.0_65-b14-462.jdk/Contents/Home
-    1.6.0_65-b14-462, i386: "Java SE 6" /Library/Java/JavaVirtualMachines/1.6.0_65-b14-462.jdk/Contents/Home
-    1.6.0_65-b14-462, x86_64:   "Java SE 6"   /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home
-    1.6.0_65-b14-462, i386: "Java SE 6" /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home
+Matching Java Virtual Machines (3):
+    11.0.5, x86_64:	"OpenJDK 11.0.5"	/Library/Java/JavaVirtualMachines/openjdk-11.jdk/Contents/Home
+    1.8.0_181, x86_64:	"Java SE 8"	/Library/Java/JavaVirtualMachines/jdk1.8.0_181.jdk/Contents/Home
+    1.7.0_80, x86_64:	"Java SE 7"	/Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home
+
+/Library/Java/JavaVirtualMachines/openjdk-11.jdk/Contents/Home
 ----
 
 You can then select the one you want using : 
 
 [source]
 ----
-export JAVA_HOME=`/usr/libexec/java_home -v 1.7.0_51`
+export JAVA_HOME=`/usr/libexec/java_home -v 1.8.0_181`
 ----
 
 and then check that it was correctly referenced using: 
@@ -194,9 +192,9 @@ which should give you a result such as this:
 
 [source]
 ----
-java version "1.7.0_51"
-Java(TM) SE Runtime Environment (build 1.7.0_51-b13)
-Java HotSpot(TM) 64-Bit Server VM (build 24.51-b03, mixed mode)
+openjdk version "11.0.5" 2019-10-15
+OpenJDK Runtime Environment (build 11.0.5+10)
+OpenJDK 64-Bit Server VM (build 11.0.5+10, mixed mode)
 ----
 
 ==== Running the integration tests
@@ -206,7 +204,7 @@ integration tests at least once before using the server to make sure that everyt
 to use these tests is to run them from a continuous integration server such as Jenkins, Apache Gump, Atlassian Bamboo or
  others. 
 
-Note : the integration tests require a JDK 7 or more recent !
+Note : the integration tests require a JDK 8 or more recent !
 
 To run the tests simply activate the following profile : 
 
