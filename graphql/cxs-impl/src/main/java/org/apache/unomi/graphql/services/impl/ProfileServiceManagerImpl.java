@@ -14,38 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types;
+package org.apache.unomi.graphql.services.impl;
 
-import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
-import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLNonNull;
+import org.apache.unomi.graphql.services.ProfileServiceManager;
+import org.apache.unomi.graphql.types.CDP_Profile;
+import org.apache.unomi.graphql.types.CDP_ProfileIDInput;
+import org.osgi.service.component.annotations.Component;
 
-@GraphQLName("CDP_ProfileID")
-public class CDP_ProfileIDInput {
+@Component
+public class ProfileServiceManagerImpl implements ProfileServiceManager {
 
-    @GraphQLID
-    @GraphQLField
-    @GraphQLNonNull
-    private String id;
-
-    @GraphQLField
-    @GraphQLNonNull
-    private CDP_Client client;
-
-    public String getId() {
-        return id;
+    @Override
+    public CDP_Profile getProfile(CDP_ProfileIDInput profileID, Boolean createIfMissing) {
+        return new CDP_Profile();
     }
 
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public CDP_Client getClient() {
-        return client;
-    }
-
-    public void setClient(CDP_Client client) {
-        this.client = client;
-    }
 }

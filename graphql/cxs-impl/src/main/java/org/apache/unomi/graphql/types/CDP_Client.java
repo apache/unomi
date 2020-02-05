@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.graphql.types;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
@@ -28,6 +29,7 @@ public class CDP_Client {
     @GraphQLName("ID")
     @GraphQLNonNull
     @GraphQLField
+    @JsonProperty(value = "ID")
     private String id;
 
     @GraphQLField

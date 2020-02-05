@@ -16,18 +16,20 @@
  */
 package org.apache.unomi.graphql;
 
-import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLName;
+import org.apache.unomi.graphql.services.ProfileServiceManager;
 
-@GraphQLName("CDP_RootQuery")
-@GraphQLDescription("Brief description")
 public class RootQuery {
 
+    private ProfileServiceManager profileServiceManager;
+
+    public RootQuery(ProfileServiceManager profileServiceManager) {
+        this.profileServiceManager = profileServiceManager;
+    }
+
     @GraphQLField
-    @GraphQLName("cdp")
-    public static MyCDPQuery myCDPQuery() {
-        return new MyCDPQuery();
+    public MyCDPQuery cdp() {
+        return new MyCDPQuery(profileServiceManager);
     }
 
 }

@@ -14,17 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.datafetcher;
+package org.apache.unomi.graphql.services;
 
-import graphql.schema.DataFetcher;
-import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.graphql.types.CDP_Profile;
+import org.apache.unomi.graphql.types.CDP_ProfileIDInput;
 
-public class GetProfileDataFetcher implements DataFetcher<CDP_Profile> {
+public interface ProfileServiceManager {
 
-    @Override
-    public CDP_Profile get(DataFetchingEnvironment dataFetchingEnvironment) throws Exception {
-        return new CDP_Profile();
-    }
+    CDP_Profile getProfile(CDP_ProfileIDInput profileID, Boolean createIfMissing);
 
 }

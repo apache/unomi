@@ -16,22 +16,29 @@
  */
 package org.apache.unomi.graphql;
 
-import graphql.annotations.annotationTypes.GraphQLDataFetcher;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
-import org.apache.unomi.graphql.datafetcher.GetProfileDataFetcher;
+import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.services.ProfileServiceManager;
 import org.apache.unomi.graphql.types.CDP_Profile;
 import org.apache.unomi.graphql.types.CDP_ProfileIDInput;
 
 @GraphQLName("MyCDP_Query")
 public class MyCDPQuery {
 
+    private ProfileServiceManager profileServiceManager;
+
+    public MyCDPQuery(ProfileServiceManager profileServiceManager) {
+        this.profileServiceManager = profileServiceManager;
+    }
+
     @GraphQLField
-    @GraphQLDataFetcher(GetProfileDataFetcher.class)
     public CDP_Profile getProfile(
             final @GraphQLName("profileID") CDP_ProfileIDInput profileID,
-            final @GraphQLName("createIfMissing") Boolean createIfMissing) {
-        return null;
+            final @GraphQLName("createIfMissing") Boolean createIfMissing,
+            final DataFetchingEnvironment environment) {
+        // TODO
+        return profileServiceManager.getProfile(null, createIfMissing);
     }
 
 }
