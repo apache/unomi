@@ -18,27 +18,38 @@ package org.apache.unomi.graphql.types;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.graphql.commands.GetCdpProfileIdsCommand;
+import org.apache.unomi.graphql.types.output.CDPSegment;
 
-import java.util.Collections;
+import java.util.Collection;
 import java.util.List;
-import java.util.UUID;
 
 @GraphQLName("CDP_Profile")
 public class CDP_Profile implements CDP_ProfileInterface {
 
+    private final ProfileService profileService;
+    private final CDP_ProfileIDInput profileIDInput;
+    private final Boolean createIfMissing;
+
+    public CDP_Profile(ProfileService profileService, CDP_ProfileIDInput profileIDInput, Boolean createIfMissing) {
+        this.profileService = profileService;
+        this.profileIDInput = profileIDInput;
+        this.createIfMissing = createIfMissing;
+    }
+
     @Override
     @GraphQLField
     public List<CDP_ProfileID> cdp_profileIDs() {
-        final CDP_Client client = new CDP_Client();
-        client.setId(UUID.randomUUID().toString());
-        client.setTitle("Coca-Cola");
+        return GetCdpProfileIdsCommand.create(profileIDInput, createIfMissing)
+                .setProfileService(profileService)
+                .build()
+                .execute();
+    }
 
-        final CDP_ProfileID profileID = new CDP_ProfileID();
-        profileID.setId(UUID.randomUUID().toString());
-        profileID.setClient(client);
-
-
-        return Collections.singletonList(profileID);
+    @Override
+    public List<CDPSegment> cdp_segments(Collection<String> viewIds) {
+        return null;
     }
 
 }

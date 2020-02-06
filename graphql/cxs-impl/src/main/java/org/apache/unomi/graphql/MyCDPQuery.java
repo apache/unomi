@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.graphql;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
@@ -25,6 +26,8 @@ import org.apache.unomi.graphql.types.CDP_ProfileIDInput;
 
 @GraphQLName("MyCDP_Query")
 public class MyCDPQuery {
+
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     private ProfileServiceManager profileServiceManager;
 
@@ -37,8 +40,10 @@ public class MyCDPQuery {
             final @GraphQLName("profileID") CDP_ProfileIDInput profileID,
             final @GraphQLName("createIfMissing") Boolean createIfMissing,
             final DataFetchingEnvironment environment) {
-        // TODO
-        return profileServiceManager.getProfile(null, createIfMissing);
+        final CDP_ProfileIDInput profileIDInput =
+                objectMapper.convertValue(environment.getArgument("profileID"), CDP_ProfileIDInput.class);
+        
+        return profileServiceManager.getProfile(profileIDInput, createIfMissing);
     }
 
 }

@@ -14,18 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types;
+package org.apache.unomi.graphql.commands;
 
-import org.apache.unomi.graphql.types.output.CDPSegment;
+import org.apache.unomi.api.services.ProfileService;
 
-import java.util.Collection;
-import java.util.List;
+public abstract class CdpCommandBase {
 
-public interface CDP_ProfileInterface {
+    final ProfileService profileService;
 
-    List<CDP_ProfileID> cdp_profileIDs();
+    public CdpCommandBase(final Builder builder) {
+        this.profileService = builder.profileService;
+    }
 
-    List<CDPSegment> cdp_segments(Collection<String> viewIds);
+    public static abstract class Builder<B extends Builder> {
 
+        ProfileService profileService;
+
+        @SuppressWarnings("unchecked")
+        public B setProfileService(ProfileService profileService) {
+            this.profileService = profileService;
+            return (B) this;
+        }
+
+    }
 
 }

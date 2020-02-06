@@ -16,17 +16,26 @@
  */
 package org.apache.unomi.graphql.services.impl;
 
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.services.ProfileServiceManager;
 import org.apache.unomi.graphql.types.CDP_Profile;
 import org.apache.unomi.graphql.types.CDP_ProfileIDInput;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 @Component
 public class ProfileServiceManagerImpl implements ProfileServiceManager {
 
+    private ProfileService profileService;
+
+    @Reference
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
+    }
+
     @Override
     public CDP_Profile getProfile(CDP_ProfileIDInput profileID, Boolean createIfMissing) {
-        return new CDP_Profile();
+        return new CDP_Profile(profileService, profileID, createIfMissing);
     }
 
 }

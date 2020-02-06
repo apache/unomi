@@ -1,0 +1,23 @@
+###
+POST http://{{host}}:{{port}}/cxs/profiles/
+Authorization: Basic a2FyYWY6a2FyYWY=
+Content-Type: application/json
+
+{
+  "itemId": "12",
+  "itemType": "profile",
+  "version": null,
+  "properties": {
+    "firstName": "John",
+    "lastName": "Smith",
+    "phoneNumber": null,
+    "birthDay": null
+  },
+  "systemProperties": {},
+  "segments": [],
+  "scores": {},
+  "mergedWith": null,
+  "consents": {}
+}
+
+###
