@@ -647,7 +647,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         return new MetricAdapter<T>(metricsService, ".loadItemWithQuery") {
                             @Override
                             public T execute(Object... args) throws Exception {
-                                PartialList<T> r = query(QueryBuilders.idsQuery(itemType).addIds(itemId), null, clazz, 0, 1, null, null);
+                                PartialList<T> r = query(QueryBuilders.idsQuery().addIds(itemId), null, clazz, 0, 1, null, null);
                                 if (r.size() > 0) {
                                     return r.get(0);
                                 }
@@ -1263,7 +1263,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             String itemType = Item.getItemType(clazz);
 
             QueryBuilder builder = QueryBuilders.boolQuery()
-                    .must(QueryBuilders.idsQuery(itemType).addIds(item.getItemId()))
+                    .must(QueryBuilders.idsQuery().addIds(item.getItemId()))
                     .must(conditionESQueryBuilderDispatcher.buildFilter(query));
             return queryCount(builder, itemType) > 0;
         } finally {
