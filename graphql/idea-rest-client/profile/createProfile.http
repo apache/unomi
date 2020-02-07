@@ -1,10 +1,10 @@
 ###
 POST http://{{host}}:{{port}}/cxs/profiles/
-Authorization: Basic a2FyYWY6a2FyYWY=
+Authorization: Basic {{authToken}}
 Content-Type: application/json
 
 {
-  "itemId": "12",
+  "itemId": "{{profileId}}",
   "itemType": "profile",
   "version": null,
   "properties": {

@@ -1,0 +1,6 @@
+###
+GET http://{{host}}:{{port}}/cxs/profiles/{{profileId}}
+Authorization: Basic {{authToken}}
+Content-Type: application/json
+
+###

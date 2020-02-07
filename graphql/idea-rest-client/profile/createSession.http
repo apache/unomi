@@ -1,0 +1,33 @@
+###
+POST http://{{host}}:{{port}}/cxs/profiles/sessions/{{sessionId}}
+Authorization: Basic {{authToken}}
+Content-Type: application/json
+
+{
+    "itemId": "{{sessionId}}",
+    "itemType":"session",
+    "scope": null,
+    "version":1,
+    "profileId": "{{profileId}}",
+    "profile": {
+       "itemId": "{{profileId}}",
+       "itemType": "profile",
+       "version": null,
+       "properties": {
+         "firstName": "John",
+         "lastName": "Smith",
+         "phoneNumber": null,
+         "birthDay": null
+    },
+    "systemProperties": {},
+    "segments": [],
+    "scores": {},
+    "mergedWith": null,
+    "consents": {}
+   },
+   "properties":{},
+   "systemProperties":{},
+   "timeStamp": "2020-01-01T10:00:00Z"
+}
+
+###
