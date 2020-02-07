@@ -114,7 +114,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
                 }
             }
 
-            return QueryBuilders.idsQuery(Profile.ITEM_TYPE).addIds(ids.toArray(new String[0]));
+            return QueryBuilders.idsQuery().addIds(ids.toArray(new String[0]));
         }
     }
 
