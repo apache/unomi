@@ -42,7 +42,7 @@ public class GetCdpProfileIdsCommand extends CdpCommandBase {
             return Collections.singletonList(createProfileId(persistedEntity));
         }
 
-        if (createIfMissing) {
+        if (createIfMissing != null && createIfMissing) {
             persistedEntity = new Profile();
             persistedEntity.setItemId(profileIDInput.getId());
             persistedEntity.setItemType("profile");

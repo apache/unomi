@@ -19,12 +19,48 @@ package org.apache.unomi.graphql.types.output;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_View")
-public class CDPView {
+@GraphQLName("CDP_List")
+public class CDPList {
 
     @GraphQLID
     @GraphQLField
-    public String name;
+    @GraphQLNonNull
+    public String id() {
+        return null;
+    }
+
+    @GraphQLField
+    @GraphQLNonNull
+    public CDPView view() {
+        return new CDPView();
+    }
+
+    @GraphQLField
+    @GraphQLNonNull
+    public String name() {
+        return null;
+    }
+
+    @GraphQLField
+    public CDPProfileConnection active(
+            @GraphQLName("first") Integer first,
+            @GraphQLName("after") String after,
+            @GraphQLName("last") Integer last,
+            @GraphQLName("before") String before
+    ) {
+        return new CDPProfileConnection();
+    }
+
+    @GraphQLField
+    public CDPProfileConnection inactive(
+            @GraphQLName("first") Integer first,
+            @GraphQLName("after") String after,
+            @GraphQLName("last") Integer last,
+            @GraphQLName("before") String before
+    ) {
+        return new CDPProfileConnection();
+    }
 
 }

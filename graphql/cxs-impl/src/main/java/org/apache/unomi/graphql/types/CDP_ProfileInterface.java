@@ -16,6 +16,9 @@
  */
 package org.apache.unomi.graphql.types;
 
+import org.apache.unomi.graphql.types.output.CDPConsent;
+import org.apache.unomi.graphql.types.output.CDPInterest;
+import org.apache.unomi.graphql.types.output.CDPList;
 import org.apache.unomi.graphql.types.output.CDPSegment;
 
 import java.util.Collection;
@@ -25,7 +28,12 @@ public interface CDP_ProfileInterface {
 
     List<CDP_ProfileID> cdp_profileIDs();
 
-    List<CDPSegment> cdp_segments(Collection<String> viewIds);
+    List<CDPSegment> cdp_segments(List<String> viewIds);
 
+    List<CDPInterest> cdp_interests(List<String> viewIds);
+
+    List<CDPConsent> cdp_consents();
+
+    List<CDPList> cdp_lists(List<String> viewIds);
 
 }

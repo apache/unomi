@@ -19,12 +19,14 @@ package org.apache.unomi.graphql.types.output;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_View")
-public class CDPView {
+@GraphQLName("CDP_Consent")
+public class CDPConsent {
 
     @GraphQLID
     @GraphQLField
-    public String name;
+    @GraphQLNonNull
+    public String token;
 
 }

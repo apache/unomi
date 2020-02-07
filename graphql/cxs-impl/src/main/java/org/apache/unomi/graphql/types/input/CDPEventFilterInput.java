@@ -14,17 +14,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
+package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CDP_View")
-public class CDPView {
+import java.util.ArrayList;
+import java.util.List;
 
-    @GraphQLID
+@GraphQLName("CDP_EventFilter")
+public class CDPEventFilterInput {
+
     @GraphQLField
-    public String name;
+    public List<CDPEventFilterInput> and = new ArrayList<>();
+
+    @GraphQLField
+    public List<CDPEventFilterInput> or = new ArrayList<>();
+
+    @GraphQLField
+    public String id_equals;
+
+    @GraphQLField
+    public String cdp_clientID_equals;
+
+    @GraphQLField
+    public String cdp_sourceID_equals;
+
+    @GraphQLField
+    public String cdp_profileID_equals;
 
 }

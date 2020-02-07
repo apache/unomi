@@ -17,7 +17,13 @@
 package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
 
+@GraphQLName("CDP_PageInfo")
+// TODO clarify what name should be used. we catch the following exception:
+// graphql.AssertException: All types within a GraphQL schema must have unique names. No two provided types may have the same name.
+//        No provided type may have a name which conflicts with any built in types (including Scalar and Introspection types).
+//        You have redefined the type 'PageInfo' from being a 'GraphQLObjectType' to a 'GraphQLObjectType'
 public class PageInfo {
 
     @GraphQLField

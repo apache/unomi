@@ -20,11 +20,19 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CDP_View")
-public class CDPView {
+@GraphQLName("CDP_Interest")
+public class CDPInterest {
 
     @GraphQLID
     @GraphQLField
-    public String name;
+    private String topic;
+
+    public String getTopic() {
+        return topic;
+    }
+
+    public void setTopic(String topic) {
+        this.topic = topic;
+    }
 
 }

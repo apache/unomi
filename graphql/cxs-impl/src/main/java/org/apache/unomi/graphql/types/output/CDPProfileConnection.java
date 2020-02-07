@@ -17,13 +17,11 @@
 package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CDP_View")
-public class CDPView {
+@GraphQLName("CDP_ProfileConnection")
+public class CDPProfileConnection {
 
-    @GraphQLID
     @GraphQLField
     public String name;
 

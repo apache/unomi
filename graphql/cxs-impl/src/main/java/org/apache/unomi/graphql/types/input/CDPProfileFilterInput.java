@@ -14,17 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
+package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CDP_View")
-public class CDPView {
+import java.util.ArrayList;
+import java.util.List;
 
-    @GraphQLID
+@GraphQLName("CDP_ProfileFilter")
+public class CDPProfileFilterInput {
+
     @GraphQLField
-    public String name;
+    public List<String> profileIDs_contains = new ArrayList<>();
 
 }
