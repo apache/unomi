@@ -35,6 +35,7 @@ services:
     environment:
       - ELASTICSEARCH_HOST=elasticsearch
       - ELASTICSEARCH_PORT=9300
+      - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9300
     ports:
       - 8181:8181
       - 9443:9443
