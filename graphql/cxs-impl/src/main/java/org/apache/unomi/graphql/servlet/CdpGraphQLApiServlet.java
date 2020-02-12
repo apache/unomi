@@ -26,10 +26,9 @@ import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.introspection.IntrospectionQuery;
 import graphql.schema.GraphQLSchema;
+import org.apache.unomi.graphql.RootMutation;
 import org.apache.unomi.graphql.RootQuery;
-import org.apache.unomi.graphql.services.ProfileServiceManager;
 import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -43,40 +42,35 @@ import java.util.Map;
 
 @Component(
         service = {javax.servlet.http.HttpServlet.class, javax.servlet.Servlet.class},
-        property = {"alias=/cdp_graphql_api"}
+        property = {"alias=/cdpgraphql"}
 )
 public class CdpGraphQLApiServlet extends HttpServlet {
-
-    private ProfileServiceManager profileServiceManager;
 
     private ObjectMapper objectMapper;
 
     private GraphQL graphQL;
 
-    @Reference
-    public void setProfileServiceManager(ProfileServiceManager profileServiceManager) {
-        this.profileServiceManager = profileServiceManager;
-    }
+    private GraphQLAnnotations graphQLAnnotations = new GraphQLAnnotations();
 
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
 
-        final GraphQLAnnotations graphQLAnnotations = new GraphQLAnnotations();
+        this.objectMapper = new ObjectMapper();
 
         final ProcessingElementsContainer container = graphQLAnnotations.getContainer();
 
         container.setInputPrefix("");
         container.setInputSuffix("Input");
 
-
-        GraphQLSchema graphQLSchema = AnnotationsSchemaCreator.newAnnotationsSchema()
+        final AnnotationsSchemaCreator.Builder builder = AnnotationsSchemaCreator.newAnnotationsSchema()
                 .query(RootQuery.class)
-                .setAnnotationsProcessor(graphQLAnnotations)
-                .build();
+                .mutation(RootMutation.class)
+                .setAnnotationsProcessor(graphQLAnnotations);
+
+        GraphQLSchema graphQLSchema = builder.build();
 
         this.graphQL = GraphQL.newGraphQL(graphQLSchema).build();
-        this.objectMapper = new ObjectMapper();
     }
 
     @Override
@@ -134,7 +128,6 @@ public class CdpGraphQLApiServlet extends HttpServlet {
                 .query(query)
                 .variables(variables)
                 .operationName(operationName)
-                .root(new RootQuery(profileServiceManager))
                 .build();
 
         final ExecutionResult executionResult = graphQL.execute(executionInput);

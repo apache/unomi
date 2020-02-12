@@ -17,19 +17,14 @@
 package org.apache.unomi.graphql;
 
 import graphql.annotations.annotationTypes.GraphQLField;
-import org.apache.unomi.graphql.services.ProfileServiceManager;
+import graphql.annotations.annotationTypes.GraphQLInvokeDetached;
 
 public class RootQuery {
 
-    private ProfileServiceManager profileServiceManager;
-
-    public RootQuery(ProfileServiceManager profileServiceManager) {
-        this.profileServiceManager = profileServiceManager;
-    }
-
     @GraphQLField
+    @GraphQLInvokeDetached
     public MyCDPQuery cdp() {
-        return new MyCDPQuery(profileServiceManager);
+        return new MyCDPQuery();
     }
 
 }

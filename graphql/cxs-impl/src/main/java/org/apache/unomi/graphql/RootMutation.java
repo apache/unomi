@@ -14,13 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.services;
+package org.apache.unomi.graphql;
 
-import org.apache.unomi.graphql.types.CDP_Profile;
-import org.apache.unomi.graphql.types.CDP_ProfileIDInput;
+import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLInvokeDetached;
+import graphql.annotations.annotationTypes.GraphQLMutation;
 
-public interface ProfileServiceManager {
+@GraphQLMutation
+public class RootMutation {
 
-    CDP_Profile getProfile(CDP_ProfileIDInput profileID, Boolean createIfMissing);
+    @GraphQLField
+    @GraphQLInvokeDetached
+    public MyCDPMutation cdp() {
+        return new MyCDPMutation();
+    }
 
 }

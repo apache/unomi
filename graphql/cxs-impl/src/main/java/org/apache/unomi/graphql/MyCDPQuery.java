@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.graphql.services.ProfileServiceManager;
+import org.apache.unomi.graphql.services.impl.CDPServiceManager;
 import org.apache.unomi.graphql.types.CDP_Profile;
 import org.apache.unomi.graphql.types.CDP_ProfileIDInput;
 
@@ -29,10 +29,10 @@ public class MyCDPQuery {
 
     private ObjectMapper objectMapper = new ObjectMapper();
 
-    private ProfileServiceManager profileServiceManager;
+    private CDPServiceManager cdpServiceManager;
 
-    public MyCDPQuery(ProfileServiceManager profileServiceManager) {
-        this.profileServiceManager = profileServiceManager;
+    public MyCDPQuery() {
+        this.cdpServiceManager = CDPServiceManager.getInstance();
     }
 
     @GraphQLField
@@ -42,8 +42,8 @@ public class MyCDPQuery {
             final DataFetchingEnvironment environment) {
         final CDP_ProfileIDInput profileIDInput =
                 objectMapper.convertValue(environment.getArgument("profileID"), CDP_ProfileIDInput.class);
-        
-        return profileServiceManager.getProfile(profileIDInput, createIfMissing);
+
+        return new CDP_Profile(cdpServiceManager.getProfileService(), profileIDInput, createIfMissing);
     }
 
 }

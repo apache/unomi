@@ -18,6 +18,7 @@ package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
 import org.apache.unomi.graphql.propertytypes.CDPPropertyType;
 
 import java.util.List;
@@ -40,6 +41,7 @@ public class CDPSetPropertyTypeInput extends CDPPropertyType {
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public List<CDPPropertyTypeInput> getProperties() {
         return properties;
     }

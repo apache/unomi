@@ -18,6 +18,7 @@ package org.apache.unomi.graphql.propertytypes;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
 
 import java.util.List;
 
@@ -59,36 +60,43 @@ public class CDPPropertyType {
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public String getId() {
         return id;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public String getName() {
         return name;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public Integer getMinOccurrences() {
         return minOccurrences;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public Integer getMaxOccurrences() {
         return maxOccurrences;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public List<String> getTags() {
         return tags;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public List<String> getSystemTags() {
         return systemTags;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public Boolean isPersonalData() {
         return personalData;
     }

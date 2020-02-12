@@ -17,14 +17,14 @@
 package org.apache.unomi.graphql.services.impl;
 
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.graphql.services.ProfileServiceManager;
-import org.apache.unomi.graphql.types.CDP_Profile;
-import org.apache.unomi.graphql.types.CDP_ProfileIDInput;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
-@Component
-public class ProfileServiceManagerImpl implements ProfileServiceManager {
+@Component(service = CDPServiceManager.class)
+public class CDPServiceManager {
 
     private ProfileService profileService;
 
@@ -33,9 +33,15 @@ public class ProfileServiceManagerImpl implements ProfileServiceManager {
         this.profileService = profileService;
     }
 
-    @Override
-    public CDP_Profile getProfile(CDP_ProfileIDInput profileID, Boolean createIfMissing) {
-        return new CDP_Profile(profileService, profileID, createIfMissing);
+    public ProfileService getProfileService() {
+        return profileService;
+    }
+
+    public static CDPServiceManager getInstance() {
+        BundleContext bundleContext = FrameworkUtil.getBundle(CDPServiceManager.class).getBundleContext();
+        ServiceReference<CDPServiceManager> serviceReference = bundleContext.getServiceReference(CDPServiceManager.class);
+
+        return bundleContext.getService(serviceReference);
     }
 
 }
