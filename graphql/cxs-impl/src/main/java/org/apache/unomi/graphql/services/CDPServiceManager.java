@@ -48,11 +48,4 @@ public class CDPServiceManager {
         return segmentService;
     }
 
-    public static CDPServiceManager getInstance() {
-        BundleContext bundleContext = FrameworkUtil.getBundle(CDPServiceManager.class).getBundleContext();
-        ServiceReference<CDPServiceManager> serviceReference = bundleContext.getServiceReference(CDPServiceManager.class);
-
-        return bundleContext.getService(serviceReference);
-    }
-
 }
