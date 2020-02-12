@@ -14,26 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.commands;
 
-import graphql.annotations.annotationTypes.GraphQLDataFetcher;
-import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLTypeResolver;
-import org.apache.unomi.graphql.fetchers.ProfileDataFetcher;
-import org.apache.unomi.graphql.types.CDP_Profile;
-import org.apache.unomi.graphql.types.CDP_ProfileIDInput;
+import org.apache.unomi.graphql.services.CDPServiceManager;
 
-@GraphQLName("MyCDP_Query")
-public class MyCDPQuery {
+public abstract class CdpBaseCommand<T> {
 
-    @GraphQLField
-    @GraphQLDataFetcher(ProfileDataFetcher.class)
-    public CDP_Profile getProfile(
-            final @GraphQLName("profileID") CDP_ProfileIDInput profileID,
-            final @GraphQLName("createIfMissing") Boolean createIfMissing) {
+    final CDPServiceManager cdpServiceManager;
 
-        return null;
+    public abstract T execute();
+
+    public CdpBaseCommand(final Builder builder) {
+        this.cdpServiceManager = builder.cdpServiceManager;
+    }
+
+    public static abstract class Builder<B extends Builder> {
+
+        CDPServiceManager cdpServiceManager;
+
+        @SuppressWarnings("unchecked")
+        public B setCdpServiceService(CDPServiceManager cdpServiceManager) {
+            this.cdpServiceManager = cdpServiceManager;
+            return (B) this;
+        }
+
     }
 
 }

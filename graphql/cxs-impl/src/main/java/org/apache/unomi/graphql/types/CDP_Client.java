@@ -35,6 +35,9 @@ public class CDP_Client {
     @GraphQLField
     private String title;
 
+    public CDP_Client() {
+    }
+
     public String getId() {
         return id;
     }

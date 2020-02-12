@@ -76,7 +76,7 @@ public class CDPQuery {
         if (segment == null) {
             return null;
         }
-        CDPSegment cdpSegment = new CDPSegment();
+        CDPSegment cdpSegment = CDPSegment.create().build();
         cdpSegment.id = segment.getItemId();
         cdpSegment.name = segment.getMetadata().getName();
         CDPView cdpView = new CDPView();

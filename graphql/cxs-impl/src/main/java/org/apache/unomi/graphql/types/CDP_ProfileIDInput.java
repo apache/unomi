@@ -31,7 +31,7 @@ public class CDP_ProfileIDInput {
 
     @GraphQLField
     @GraphQLNonNull
-    private CDP_Client client;
+    private CDP_ClientInput client;
 
     public String getId() {
         return id;
@@ -41,11 +41,11 @@ public class CDP_ProfileIDInput {
         this.id = id;
     }
 
-    public CDP_Client getClient() {
+    public CDP_ClientInput getClient() {
         return client;
     }
 
-    public void setClient(CDP_Client client) {
+    public void setClient(CDP_ClientInput client) {
         this.client = client;
     }
 }

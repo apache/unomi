@@ -14,28 +14,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.commands;
+package org.apache.unomi.graphql.types;
 
-import org.apache.unomi.api.services.ProfileService;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLID;
+import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-public abstract class CdpCommandBase {
+@GraphQLName("CDP_Client")
+public class CDP_ClientInput {
 
-    final ProfileService profileService;
+    @GraphQLID
+    @GraphQLName("ID")
+    @GraphQLNonNull
+    @GraphQLField
+    @JsonProperty(value = "ID")
+    private String id;
 
-    public CdpCommandBase(final Builder builder) {
-        this.profileService = builder.profileService;
+    @GraphQLField
+    private String title;
+
+    public String getId() {
+        return id;
     }
 
-    public static abstract class Builder<B extends Builder> {
+    public void setId(String id) {
+        this.id = id;
+    }
 
-        ProfileService profileService;
+    public String getTitle() {
+        return title;
+    }
 
-        @SuppressWarnings("unchecked")
-        public B setProfileService(ProfileService profileService) {
-            this.profileService = profileService;
-            return (B) this;
-        }
-
+    public void setTitle(String title) {
+        this.title = title;
     }
 
 }

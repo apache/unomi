@@ -24,8 +24,7 @@ import graphql.annotations.annotationTypes.GraphQLMutation;
 public class RootMutation {
 
     @GraphQLField
-    @GraphQLInvokeDetached
-    public MyCDPMutation cdp() {
+    public static MyCDPMutation cdp() {
         return new MyCDPMutation();
     }
 

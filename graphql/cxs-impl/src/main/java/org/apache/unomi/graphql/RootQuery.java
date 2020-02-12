@@ -22,8 +22,7 @@ import graphql.annotations.annotationTypes.GraphQLInvokeDetached;
 public class RootQuery {
 
     @GraphQLField
-    @GraphQLInvokeDetached
-    public MyCDPQuery cdp() {
+    public static MyCDPQuery cdp() {
         return new MyCDPQuery();
     }
 

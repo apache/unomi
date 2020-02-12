@@ -21,14 +21,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
+import graphql.GraphQLContext;
 import graphql.annotations.AnnotationsSchemaCreator;
 import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.introspection.IntrospectionQuery;
 import graphql.schema.GraphQLSchema;
+import graphql.servlet.context.DefaultGraphQLContext;
+import graphql.servlet.context.DefaultGraphQLContextBuilder;
 import org.apache.unomi.graphql.RootMutation;
 import org.apache.unomi.graphql.RootQuery;
+import org.apache.unomi.graphql.services.CDPServiceManager;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -51,6 +56,13 @@ public class CdpGraphQLApiServlet extends HttpServlet {
     private GraphQL graphQL;
 
     private GraphQLAnnotations graphQLAnnotations = new GraphQLAnnotations();
+
+    private CDPServiceManager cdpServiceManager;
+
+    @Reference
+    public void setCDPServiceManager(CDPServiceManager cdpServiceManager) {
+        this.cdpServiceManager = cdpServiceManager;
+    }
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -128,6 +140,7 @@ public class CdpGraphQLApiServlet extends HttpServlet {
                 .query(query)
                 .variables(variables)
                 .operationName(operationName)
+                .context(cdpServiceManager)
                 .build();
 
         final ExecutionResult executionResult = graphQL.execute(executionInput);

@@ -29,4 +29,47 @@ public class CDPSegment {
     public String name;
     @GraphQLField
     public CDPSegmentCondition condition;
+
+    private CDPSegment(Builder builder) {
+        this.id = builder.id;
+        this.view = builder.view;
+        this.name = builder.name;
+        this.condition = builder.condition;
+    }
+
+    public static Builder create() {
+        return new Builder();
+    }
+
+    public static class Builder {
+
+        private String id;
+        private CDPView view;
+        private String name;
+        private CDPSegmentCondition condition;
+
+        public Builder id(String id) {
+            this.id = id;
+            return this;
+        }
+
+        public Builder view(CDPView view) {
+            this.view = view;
+            return this;
+        }
+
+        public Builder name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public Builder condition(CDPSegmentCondition condition) {
+            this.condition = condition;
+            return this;
+        }
+
+        public CDPSegment build() {
+            return new CDPSegment(this);
+        }
+    }
 }

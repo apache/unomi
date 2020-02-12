@@ -18,8 +18,9 @@ package org.apache.unomi.graphql.types;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
-import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.graphql.commands.GetCdpProfileIdsCommand;
+import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.graphql.commands.GetCdpSegmentsByProfileCommand;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPNamedFilterInput;
 import org.apache.unomi.graphql.types.input.CDPOptimizationInput;
@@ -33,46 +34,57 @@ import java.util.List;
 @GraphQLName("CDP_Profile")
 public class CDP_Profile implements CDP_ProfileInterface {
 
-    private final ProfileService profileService;
-    private final CDP_ProfileIDInput profileIDInput;
-    private final Boolean createIfMissing;
+    private Profile profile;
 
-    public CDP_Profile(ProfileService profileService, CDP_ProfileIDInput profileIDInput, Boolean createIfMissing) {
-        this.profileService = profileService;
-        this.profileIDInput = profileIDInput;
-        this.createIfMissing = createIfMissing;
+    public CDP_Profile(Profile profile) {
+        this.profile = profile;
     }
 
     @Override
     @GraphQLField
-    public List<CDP_ProfileID> cdp_profileIDs() {
-        return GetCdpProfileIdsCommand.create(profileIDInput, createIfMissing)
-                .setProfileService(profileService)
-                .build()
-                .execute();
+    public List<CDP_ProfileID> cdp_profileIDs(DataFetchingEnvironment environment) {
+        return Collections.singletonList(createProfileId(profile));
+    }
+
+    private CDP_ProfileID createProfileId(Profile profile) {
+        final CDP_ProfileID profileID = new CDP_ProfileID();
+
+        profileID.setId(profile.getItemId());
+        profileID.setClient(getDefaultClient());
+
+        return profileID;
+    }
+
+    private CDP_Client getDefaultClient() {
+        final CDP_Client client = new CDP_Client();
+
+        client.setId("defaultClientId");
+        client.setTitle("Default ClientName");
+
+        return client;
     }
 
     @Override
     @GraphQLField
-    public List<CDPSegment> cdp_segments(final @GraphQLName("views") List<String> viewIds) {
+    public List<CDPSegment> cdp_segments(final @GraphQLName("views") List<String> viewIds, DataFetchingEnvironment environment) {
+        return GetCdpSegmentsByProfileCommand.create(profile).setCdpServiceService(environment.getContext()).build().execute();
+    }
+
+    @Override
+    @GraphQLField
+    public List<CDPInterest> cdp_interests(final @GraphQLName("views") List<String> viewIds, DataFetchingEnvironment environment) {
         return Collections.emptyList();
     }
 
     @Override
     @GraphQLField
-    public List<CDPInterest> cdp_interests(final @GraphQLName("views") List<String> viewIds) {
+    public List<CDPConsent> cdp_consents(DataFetchingEnvironment environment) {
         return Collections.emptyList();
     }
 
     @Override
     @GraphQLField
-    public List<CDPConsent> cdp_consents() {
-        return Collections.emptyList();
-    }
-
-    @Override
-    @GraphQLField
-    public List<CDPList> cdp_lists(final @GraphQLName("views") List<String> viewIds) {
+    public List<CDPList> cdp_lists(final @GraphQLName("views") List<String> viewIds, DataFetchingEnvironment environment) {
         return Collections.emptyList();
     }
 

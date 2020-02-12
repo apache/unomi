@@ -17,67 +17,42 @@
 package org.apache.unomi.graphql.commands;
 
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.graphql.types.CDP_Client;
-import org.apache.unomi.graphql.types.CDP_ProfileID;
 import org.apache.unomi.graphql.types.CDP_ProfileIDInput;
 
-import java.util.Collections;
-import java.util.List;
-
-public class GetCdpProfileIdsCommand extends CdpCommandBase {
+public class GetCdpProfileCommand extends CdpBaseCommand<Profile> {
 
     private final CDP_ProfileIDInput profileIDInput;
     private final Boolean createIfMissing;
 
-    private GetCdpProfileIdsCommand(final Builder builder) {
+    private GetCdpProfileCommand(final Builder builder) {
         super(builder);
         this.profileIDInput = builder.profileIDInput;
         this.createIfMissing = builder.createIfMissing;
     }
 
-    public List<CDP_ProfileID> execute() {
-        Profile persistedEntity = profileService.load(profileIDInput.getId());
+    public Profile execute() {
+        Profile profile = cdpServiceManager.getProfileService().load(profileIDInput.getId());
 
-        if (persistedEntity != null) {
-            return Collections.singletonList(createProfileId(persistedEntity));
+        if (profile != null) {
+            return profile;
         }
 
         if (createIfMissing != null && createIfMissing) {
-            persistedEntity = new Profile();
-            persistedEntity.setItemId(profileIDInput.getId());
-            persistedEntity.setItemType("profile");
+            profile = new Profile();
+            profile.setItemId(profileIDInput.getId());
+            profile.setItemType("profile");
 
-            persistedEntity = profileService.save(persistedEntity);
-
-            return Collections.singletonList(createProfileId(persistedEntity));
+            profile = cdpServiceManager.getProfileService().save(profile);
         }
 
-        return null;
-    }
-
-    private CDP_ProfileID createProfileId(Profile profile) {
-        final CDP_ProfileID profileID = new CDP_ProfileID();
-
-        profileID.setId(profile.getItemId());
-        profileID.setClient(getDefaultClient());
-
-        return profileID;
-    }
-
-    private CDP_Client getDefaultClient() {
-        final CDP_Client client = new CDP_Client();
-
-        client.setId("defaultClientId");
-        client.setTitle("Default ClientName");
-
-        return client;
+        return profile;
     }
 
     public static Builder create(CDP_ProfileIDInput profileIDInput, Boolean createIfMissing) {
         return new Builder(profileIDInput, createIfMissing);
     }
 
-    public static class Builder extends CdpCommandBase.Builder<Builder> {
+    public static class Builder extends CdpBaseCommand.Builder<Builder> {
 
         final CDP_ProfileIDInput profileIDInput;
         final Boolean createIfMissing;
@@ -93,10 +68,10 @@ public class GetCdpProfileIdsCommand extends CdpCommandBase {
             }
         }
 
-        public GetCdpProfileIdsCommand build() {
+        public GetCdpProfileCommand build() {
             validate();
 
-            return new GetCdpProfileIdsCommand(this);
+            return new GetCdpProfileCommand(this);
         }
     }
 
