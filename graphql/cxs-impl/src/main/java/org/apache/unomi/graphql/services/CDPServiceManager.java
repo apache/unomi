@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.services.impl;
+package org.apache.unomi.graphql.services;
 
 import org.apache.unomi.api.services.ProfileService;
 import org.osgi.framework.BundleContext;

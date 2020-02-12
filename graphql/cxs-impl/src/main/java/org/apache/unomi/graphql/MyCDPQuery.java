@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.graphql.services.impl.CDPServiceManager;
+import org.apache.unomi.graphql.services.CDPServiceManager;
 import org.apache.unomi.graphql.types.CDP_Profile;
 import org.apache.unomi.graphql.types.CDP_ProfileIDInput;
 
