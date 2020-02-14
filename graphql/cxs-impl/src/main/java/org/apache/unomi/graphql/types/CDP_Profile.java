@@ -122,4 +122,8 @@ public class CDP_Profile implements CDP_ProfileInterface {
         return Collections.emptyList();
     }
 
+    public Profile getProfile() {
+        return profile;
+    }
+
 }

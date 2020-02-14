@@ -18,9 +18,7 @@ package org.apache.unomi.graphql.services;
 
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SegmentService;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.FrameworkUtil;
-import org.osgi.framework.ServiceReference;
+import org.apache.unomi.graphql.GraphQLSchemaUpdater;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -29,6 +27,7 @@ public class CDPServiceManager {
 
     private ProfileService profileService;
     private SegmentService segmentService;
+    private GraphQLSchemaUpdater graphQLSchemaUpdater;
 
     @Reference
     public void setProfileService(ProfileService profileService) {
@@ -40,12 +39,21 @@ public class CDPServiceManager {
         this.segmentService = segmentService;
     }
 
+    @Reference
+    public void setGraphQLSchemaUpdater(GraphQLSchemaUpdater graphQLSchemaUpdater) {
+        this.graphQLSchemaUpdater = graphQLSchemaUpdater;
+    }
+
     public ProfileService getProfileService() {
         return profileService;
     }
 
     public SegmentService getSegmentService() {
         return segmentService;
+    }
+
+    public GraphQLSchemaUpdater getGraphQLSchemaUpdater() {
+        return graphQLSchemaUpdater;
     }
 
 }
