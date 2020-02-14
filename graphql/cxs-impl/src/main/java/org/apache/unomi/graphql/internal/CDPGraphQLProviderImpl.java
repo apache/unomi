@@ -23,9 +23,9 @@ import graphql.servlet.config.GraphQLMutationProvider;
 import graphql.servlet.config.GraphQLQueryProvider;
 import graphql.servlet.config.GraphQLTypesProvider;
 import org.apache.unomi.graphql.CDPGraphQLProvider;
-import org.apache.unomi.graphql.CDPMutation;
+import org.apache.unomi.graphql.OldCDPMutation;
 import org.apache.unomi.graphql.CDPProviderManager;
-import org.apache.unomi.graphql.CDPQuery;
+import org.apache.unomi.graphql.OldCDPQuery;
 import org.apache.unomi.graphql.builders.CDPEventBuilders;
 import org.apache.unomi.graphql.propertytypes.CDPSetPropertyType;
 import org.apache.unomi.graphql.types.input.CDPDateFilter;
@@ -92,8 +92,8 @@ public class CDPGraphQLProviderImpl implements CDPGraphQLProvider, GraphQLQueryP
 
         cdpEventBuilders.updateTypes();
 
-        typeRegistry.put("CDP_Query", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CDPQuery.class, container));
-        typeRegistry.put("CDP_Mutation", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CDPMutation.class, container));
+        typeRegistry.put("CDP_Query", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(OldCDPQuery.class, container));
+        typeRegistry.put("CDP_Mutation", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(OldCDPMutation.class, container));
 
     }
 

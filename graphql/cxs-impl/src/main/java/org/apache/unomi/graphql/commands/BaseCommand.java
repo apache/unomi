@@ -14,26 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types;
+package org.apache.unomi.graphql.commands;
 
-import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.graphql.types.output.CDPConsent;
-import org.apache.unomi.graphql.types.output.CDPInterest;
-import org.apache.unomi.graphql.types.output.CDPList;
-import org.apache.unomi.graphql.types.output.CDPSegment;
+import org.apache.unomi.graphql.services.ServiceManager;
 
-import java.util.List;
+public abstract class BaseCommand<T> {
 
-public interface CDP_ProfileInterface {
+    final ServiceManager serviceManager;
 
-    List<CDP_ProfileID> cdp_profileIDs(DataFetchingEnvironment environment);
+    public abstract T execute();
 
-    List<CDPSegment> cdp_segments(List<String> viewIds, DataFetchingEnvironment environment);
+    public BaseCommand(final Builder builder) {
+        this.serviceManager = builder.serviceManager;
+    }
 
-    List<CDPInterest> cdp_interests(List<String> viewIds, DataFetchingEnvironment environment);
+    public static abstract class Builder<B extends Builder> {
 
-    List<CDPConsent> cdp_consents(DataFetchingEnvironment environment);
+        ServiceManager serviceManager;
 
-    List<CDPList> cdp_lists(List<String> viewIds, DataFetchingEnvironment environment);
+        @SuppressWarnings("unchecked")
+        public B setServiceManager(ServiceManager serviceManager) {
+            this.serviceManager = serviceManager;
+            return (B) this;
+        }
+
+    }
 
 }

@@ -18,41 +18,33 @@
 package org.apache.unomi.graphql.commands;
 
 import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.conditions.ConditionType;
-import org.apache.unomi.api.query.Query;
 import org.apache.unomi.graphql.types.output.CDPSegment;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class GetCdpSegmentsByProfileCommand extends CdpBaseCommand<List<CDPSegment>> {
+public class GetSegmentsByProfileCommand extends BaseCommand<List<CDPSegment>> {
 
     private final Profile profile;
 
-    private GetCdpSegmentsByProfileCommand(Builder builder) {
+    private GetSegmentsByProfileCommand(Builder builder) {
         super(builder);
         this.profile = builder.profile;
     }
 
     @Override
     public List<CDPSegment> execute() {
-        final Query query = new Query();
-        final ConditionType cType = new ConditionType();
-        query.setCondition(new Condition(cType));
+        final List<Metadata> metadata = serviceManager.getSegmentService().getSegmentMetadatasForProfile(profile);
 
-        final PartialList<Metadata> metadata = cdpServiceManager.getSegmentService().getSegmentMetadatas(query);
-
-        return metadata.getList().stream().map(m -> CDPSegment.create().id(m.getId()).name(m.getName()).build()).collect(Collectors.toList());
+        return metadata.stream().map(m -> CDPSegment.create().id(m.getId()).name(m.getName()).build()).collect(Collectors.toList());
     }
 
     public static Builder create(Profile profile) {
         return new Builder(profile);
     }
 
-    public static class Builder extends CdpBaseCommand.Builder<Builder> {
+    public static class Builder extends BaseCommand.Builder<Builder> {
 
         private Profile profile;
 
@@ -60,8 +52,8 @@ public class GetCdpSegmentsByProfileCommand extends CdpBaseCommand<List<CDPSegme
             this.profile = profile;
         }
 
-        public GetCdpSegmentsByProfileCommand build() {
-            return new GetCdpSegmentsByProfileCommand(this);
+        public GetSegmentsByProfileCommand build() {
+            return new GetSegmentsByProfileCommand(this);
         }
     }
 }

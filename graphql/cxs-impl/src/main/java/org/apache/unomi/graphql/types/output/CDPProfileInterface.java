@@ -14,16 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.output;
 
-import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLInvokeDetached;
+import graphql.schema.DataFetchingEnvironment;
 
-public class RootQuery {
+import java.util.List;
 
-    @GraphQLField
-    public static MyCDPQuery cdp() {
-        return new MyCDPQuery();
-    }
+public interface CDPProfileInterface {
+
+    List<CDPProfileID> cdp_profileIDs(DataFetchingEnvironment environment);
+
+    List<CDPSegment> cdp_segments(List<String> viewIds, DataFetchingEnvironment environment);
+
+    List<CDPInterest> cdp_interests(List<String> viewIds, DataFetchingEnvironment environment);
+
+    List<CDPConsent> cdp_consents(DataFetchingEnvironment environment);
+
+    List<CDPList> cdp_lists(List<String> viewIds, DataFetchingEnvironment environment);
 
 }

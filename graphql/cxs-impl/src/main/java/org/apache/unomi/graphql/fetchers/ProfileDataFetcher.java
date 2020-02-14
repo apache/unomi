@@ -21,27 +21,27 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.graphql.commands.GetCdpProfileCommand;
-import org.apache.unomi.graphql.services.CDPServiceManager;
-import org.apache.unomi.graphql.types.CDP_Profile;
-import org.apache.unomi.graphql.types.CDP_ProfileIDInput;
+import org.apache.unomi.graphql.commands.GetProfileCommand;
+import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.types.output.CDPProfile;
+import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 
-public class ProfileDataFetcher implements DataFetcher<CDP_Profile> {
+public class ProfileDataFetcher implements DataFetcher<CDPProfile> {
 
     private ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public CDP_Profile get(DataFetchingEnvironment environment) throws Exception {
+    public CDPProfile get(DataFetchingEnvironment environment) throws Exception {
 
         Boolean createIfMissing = environment.getArgument("createIfMissing");
 
-        final CDP_ProfileIDInput profileIDInput =
-                objectMapper.convertValue(environment.getArgument("profileID"), CDP_ProfileIDInput.class);
+        final CDPProfileIDInput profileIDInput =
+                objectMapper.convertValue(environment.getArgument("profileID"), CDPProfileIDInput.class);
 
-        CDPServiceManager cdpServiceManager = environment.getContext();
+        ServiceManager serviceManager = environment.getContext();
 
-        Profile profile = GetCdpProfileCommand.create(profileIDInput, createIfMissing).setCdpServiceService(cdpServiceManager).build().execute();
+        Profile profile = GetProfileCommand.create(profileIDInput, createIfMissing).setServiceManager(serviceManager).build().execute();
 
-        return new CDP_Profile(profile);
+        return new CDPProfile(profile);
     }
 }

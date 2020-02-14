@@ -17,21 +17,21 @@
 package org.apache.unomi.graphql.commands;
 
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.graphql.types.CDP_ProfileIDInput;
+import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 
-public class GetCdpProfileCommand extends CdpBaseCommand<Profile> {
+public class GetProfileCommand extends BaseCommand<Profile> {
 
-    private final CDP_ProfileIDInput profileIDInput;
+    private final CDPProfileIDInput profileIDInput;
     private final Boolean createIfMissing;
 
-    private GetCdpProfileCommand(final Builder builder) {
+    private GetProfileCommand(final Builder builder) {
         super(builder);
         this.profileIDInput = builder.profileIDInput;
         this.createIfMissing = builder.createIfMissing;
     }
 
     public Profile execute() {
-        Profile profile = cdpServiceManager.getProfileService().load(profileIDInput.getId());
+        Profile profile = serviceManager.getProfileService().load(profileIDInput.getId());
 
         if (profile != null) {
             return profile;
@@ -42,22 +42,22 @@ public class GetCdpProfileCommand extends CdpBaseCommand<Profile> {
             profile.setItemId(profileIDInput.getId());
             profile.setItemType("profile");
 
-            profile = cdpServiceManager.getProfileService().save(profile);
+            profile = serviceManager.getProfileService().save(profile);
         }
 
         return profile;
     }
 
-    public static Builder create(CDP_ProfileIDInput profileIDInput, Boolean createIfMissing) {
+    public static Builder create(CDPProfileIDInput profileIDInput, Boolean createIfMissing) {
         return new Builder(profileIDInput, createIfMissing);
     }
 
-    public static class Builder extends CdpBaseCommand.Builder<Builder> {
+    public static class Builder extends BaseCommand.Builder<Builder> {
 
-        final CDP_ProfileIDInput profileIDInput;
+        final CDPProfileIDInput profileIDInput;
         final Boolean createIfMissing;
 
-        Builder(CDP_ProfileIDInput profileIDInput, Boolean createIfMissing) {
+        Builder(CDPProfileIDInput profileIDInput, Boolean createIfMissing) {
             this.profileIDInput = profileIDInput;
             this.createIfMissing = createIfMissing;
         }
@@ -68,10 +68,10 @@ public class GetCdpProfileCommand extends CdpBaseCommand<Profile> {
             }
         }
 
-        public GetCdpProfileCommand build() {
+        public GetProfileCommand build() {
             validate();
 
-            return new GetCdpProfileCommand(this);
+            return new GetProfileCommand(this);
         }
     }
 

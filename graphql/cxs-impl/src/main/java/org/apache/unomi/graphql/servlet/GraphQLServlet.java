@@ -21,17 +21,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
-import graphql.GraphQLContext;
 import graphql.annotations.AnnotationsSchemaCreator;
 import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.introspection.IntrospectionQuery;
 import graphql.schema.GraphQLSchema;
-import graphql.servlet.context.DefaultGraphQLContext;
-import graphql.servlet.context.DefaultGraphQLContextBuilder;
-import org.apache.unomi.graphql.RootMutation;
-import org.apache.unomi.graphql.RootQuery;
-import org.apache.unomi.graphql.services.CDPServiceManager;
+import org.apache.unomi.graphql.types.RootMutation;
+import org.apache.unomi.graphql.types.RootQuery;
+import org.apache.unomi.graphql.services.ServiceManager;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -49,7 +46,7 @@ import java.util.Map;
         service = {javax.servlet.http.HttpServlet.class, javax.servlet.Servlet.class},
         property = {"alias=/cdpgraphql"}
 )
-public class CdpGraphQLApiServlet extends HttpServlet {
+public class GraphQLServlet extends HttpServlet {
 
     private ObjectMapper objectMapper;
 
@@ -57,11 +54,11 @@ public class CdpGraphQLApiServlet extends HttpServlet {
 
     private GraphQLAnnotations graphQLAnnotations = new GraphQLAnnotations();
 
-    private CDPServiceManager cdpServiceManager;
+    private ServiceManager serviceManager;
 
     @Reference
-    public void setCDPServiceManager(CDPServiceManager cdpServiceManager) {
-        this.cdpServiceManager = cdpServiceManager;
+    public void setServiceManager(ServiceManager serviceManager) {
+        this.serviceManager = serviceManager;
     }
 
     @Override
@@ -140,7 +137,7 @@ public class CdpGraphQLApiServlet extends HttpServlet {
                 .query(query)
                 .variables(variables)
                 .operationName(operationName)
-                .context(cdpServiceManager)
+                .context(serviceManager)
                 .build();
 
         final ExecutionResult executionResult = graphQL.execute(executionInput);

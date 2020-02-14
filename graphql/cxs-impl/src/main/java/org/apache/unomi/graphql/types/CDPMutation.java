@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types;
 
 import graphql.Scalars;
 import graphql.annotations.annotationTypes.GraphQLField;
@@ -22,13 +22,13 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLObjectType;
-import org.apache.unomi.graphql.types.CDP_Profile;
+import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.input.CDPPropertyTypeInput;
 
 import java.util.List;
 
-@GraphQLName("MyCDP_Mutation")
-public class MyCDPMutation {
+@GraphQLName("CDP_Mutation")
+public class CDPMutation {
 
     @GraphQLField
     public boolean createOrUpdateProfileProperties(
@@ -45,7 +45,7 @@ public class MyCDPMutation {
                 .type(Scalars.GraphQLString)
                 .build();
 
-        final GraphQLObjectType cdpProfileType = graphQLAnnotations.object(CDP_Profile.class).transform(builder -> builder.field(newField));
+        final GraphQLObjectType cdpProfileType = graphQLAnnotations.object(CDPProfile.class).transform(builder -> builder.field(newField));
 
         graphQLAnnotations.getContainer().getTypeRegistry().put("CDP_Profile", cdpProfileType);
 

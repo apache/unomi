@@ -17,39 +17,12 @@
 package org.apache.unomi.graphql.types;
 
 import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
-import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_ProfileID")
-public class CDP_ProfileID {
-
-    @GraphQLID
-    @GraphQLField
-    @GraphQLNonNull
-    private String id;
+public class RootQuery {
 
     @GraphQLField
-    @GraphQLNonNull
-    private CDP_Client client;
-
-    public CDP_ProfileID() {
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public CDP_Client getClient() {
-        return client;
-    }
-
-    public void setClient(CDP_Client client) {
-        this.client = client;
+    public static CDPQuery cdp() {
+        return new CDPQuery();
     }
 
 }

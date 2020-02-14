@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types;
+package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
@@ -22,7 +22,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
 @GraphQLName("CDP_ProfileID")
-public class CDP_ProfileIDInput {
+public class CDPProfileIDInput {
 
     @GraphQLID
     @GraphQLField
@@ -31,7 +31,7 @@ public class CDP_ProfileIDInput {
 
     @GraphQLField
     @GraphQLNonNull
-    private CDP_ClientInput client;
+    private CDPClientInput client;
 
     public String getId() {
         return id;
@@ -41,11 +41,11 @@ public class CDP_ProfileIDInput {
         this.id = id;
     }
 
-    public CDP_ClientInput getClient() {
+    public CDPClientInput getClient() {
         return client;
     }
 
-    public void setClient(CDP_ClientInput client) {
+    public void setClient(CDPClientInput client) {
         this.client = client;
     }
 }

@@ -14,18 +14,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.output;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLInvokeDetached;
-import graphql.annotations.annotationTypes.GraphQLMutation;
+import graphql.annotations.annotationTypes.GraphQLID;
+import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLMutation
-public class RootMutation {
+@GraphQLName("CDP_Client")
+public class CDPClient {
+
+    @GraphQLID
+    @GraphQLName("ID")
+    @GraphQLNonNull
+    @GraphQLField
+    @JsonProperty(value = "ID")
+    private String id;
 
     @GraphQLField
-    public static MyCDPMutation cdp() {
-        return new MyCDPMutation();
+    private String title;
+
+    public CDPClient() {
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 
 }
