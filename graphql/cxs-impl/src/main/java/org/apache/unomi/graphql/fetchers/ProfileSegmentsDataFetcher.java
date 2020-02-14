@@ -17,41 +17,25 @@
 
 package org.apache.unomi.graphql.fetchers;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Metadata;
 import org.apache.unomi.graphql.services.ServiceManager;
-import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.output.CDPProfile;
+import org.apache.unomi.graphql.types.output.CDPSegment;
 
-public class ProfileDataFetcher implements DataFetcher<CDPProfile> {
+import java.util.List;
+import java.util.stream.Collectors;
 
-    private ObjectMapper objectMapper = new ObjectMapper();
+public class ProfileSegmentsDataFetcher implements DataFetcher<List<CDPSegment>> {
 
     @Override
-    public CDPProfile get(DataFetchingEnvironment environment) throws Exception {
-        final Boolean createIfMissing = environment.getArgument("createIfMissing");
-        final CDPProfileIDInput profileIDInput =
-                objectMapper.convertValue(environment.getArgument("profileID"), CDPProfileIDInput.class);
-
+    public List<CDPSegment> get(DataFetchingEnvironment environment) throws Exception {
+        CDPProfile cdpProfile = environment.getSource();
         ServiceManager serviceManager = environment.getContext();
 
-        Profile profile = serviceManager.getProfileService().load(profileIDInput.getId());
+        final List<Metadata> metadata = serviceManager.getSegmentService().getSegmentMetadatasForProfile(cdpProfile.getProfile());
 
-        if (profile != null) {
-            return new CDPProfile(profile);
-        }
-
-        if (createIfMissing != null && createIfMissing) {
-            profile = new Profile();
-            profile.setItemId(profileIDInput.getId());
-            profile.setItemType("profile");
-
-            profile = serviceManager.getProfileService().save(profile);
-            return new CDPProfile(profile);
-        }
-
-        return null;
+        return metadata.stream().map(m -> CDPSegment.create().id(m.getId()).name(m.getName()).build()).collect(Collectors.toList());
     }
 }

@@ -16,16 +16,14 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDataFetcher;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.graphql.commands.GetSegmentsByProfileCommand;
-import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
-import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
-import org.apache.unomi.graphql.types.input.CDPNamedFilterInput;
-import org.apache.unomi.graphql.types.input.CDPOptimizationInput;
-import org.apache.unomi.graphql.types.input.CDPRecommendationInput;
+import org.apache.unomi.graphql.fetchers.ProfileIdsDataFetcher;
+import org.apache.unomi.graphql.fetchers.ProfileSegmentsDataFetcher;
+import org.apache.unomi.graphql.types.input.*;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -42,32 +40,16 @@ public class CDPProfile implements CDPProfileInterface {
 
     @Override
     @GraphQLField
+    @GraphQLDataFetcher(ProfileIdsDataFetcher.class)
     public List<CDPProfileID> cdp_profileIDs(DataFetchingEnvironment environment) {
-        return Collections.singletonList(createProfileId(profile));
-    }
-
-    private CDPProfileID createProfileId(Profile profile) {
-        final CDPProfileID profileID = new CDPProfileID();
-
-        profileID.setId(profile.getItemId());
-        profileID.setClient(getDefaultClient());
-
-        return profileID;
-    }
-
-    private CDPClient getDefaultClient() {
-        final CDPClient client = new CDPClient();
-
-        client.setId("defaultClientId");
-        client.setTitle("Default ClientName");
-
-        return client;
+        return null;
     }
 
     @Override
     @GraphQLField
+    @GraphQLDataFetcher(ProfileSegmentsDataFetcher.class)
     public List<CDPSegment> cdp_segments(final @GraphQLName("views") List<String> viewIds, DataFetchingEnvironment environment) {
-        return GetSegmentsByProfileCommand.create(profile).setServiceManager(environment.getContext()).build().execute();
+        return null;
     }
 
     @Override
@@ -122,4 +104,7 @@ public class CDPProfile implements CDPProfileInterface {
         return Collections.emptyList();
     }
 
+    public Profile getProfile() {
+        return profile;
+    }
 }
