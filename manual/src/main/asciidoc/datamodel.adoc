@@ -555,7 +555,7 @@ Inherits all the fields from: MetadataItem
 |===
 | *Field name* | *Type* | *Description*
 
-| condition | Condition | The root condition for the segment. Conditions may be composed by using built-in conditions such as `booleanCondition` that can accept sub-conditions.
+| condition | Condition | The root condition for the segment. Conditions may be composed by using built-in condition types such as `booleanCondition` that can accept sub-conditions.
 
 |===
 
@@ -658,7 +658,7 @@ The result of a condition is always a boolean value of true or false.
 Apache Unomi provides quite a lot of built-in condition types, including boolean types that make it possible to compose conditions using operators such as `and`, `or` or `not`.
 Composition is an essential element of building more complex conditions.
 
-For a more complete list of available conditions, see the <<Built-in conditions>> reference section.
+For a more complete list of available condition types, see the <<Built-in condition types>> reference section.
 
 ==== Structure definition
 
@@ -737,7 +737,7 @@ Inherits all the fields from: MetadataItem
 |===
 | *Field name* | *Type* | *Description*
 
-| condition | Condition | The root condition for the rule. Conditions may be composed by using built-in conditions such as `booleanCondition` that can accept sub-conditions.
+| condition | Condition | The root condition for the rule. Conditions may be composed by using built-in condition types such as `booleanCondition` that can accept sub-conditions.
 
 | action | Action array | A list of <<Action>> object that will be executed if the condition is true.
 
@@ -801,7 +801,7 @@ calling web hooks, setting profile properties, extracting data from the incoming
 an IP address),  or even pulling and/or pushing data to third-party systems such as a CRM server.
 
 Apache Unomi also comes with built-in actions.
-You may find the list of built-in actions in the <<Built-in actions>> section.
+You may find the list of built-in actions in the <<Built-in action types>> section.
 
 ==== Structure definition
 

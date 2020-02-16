@@ -74,9 +74,9 @@ include::new-data-model.adoc[]
 
 include::builtin-event-types.adoc[]
 
-include::conditions.adoc[]
+include::builtin-condition-types.adoc[]
 
-include::action-types.adoc[]
+include::builtin-action-types.adoc[]
 
 == Integration samples
 

@@ -135,8 +135,8 @@ Definition for values that can be assigned to properties ("primitive" types).
 === Custom plugins
 
 Apache Unomi is a pluggeable server that may be extended in many ways. This document assumes you are familiar with the
-<<_concepts,Apache Unomi concepts>> . This document is mostly a reference document on the different things that may
-be used inside an extension. If you are looking for complete samples, please see the <<_samples,samples page>>.
+<<Data Model Overview,Apache Unomi Data Model>> . This document is mostly a reference document on the different things that may
+be used inside an extension. If you are looking for complete samples, please see the <<Samples,samples page>>.
 
 ==== Creating a plugin
 
