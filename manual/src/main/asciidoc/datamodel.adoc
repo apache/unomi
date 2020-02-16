@@ -25,7 +25,7 @@ image::data-model-overview.png[]
 
 We will detail many of these classes in the document below.
 
-=== Scopes
+=== Scope
 
 Scopes are not actually an object in the system, but simply unique strings that are used to "classify" objects.
 For example, when using scopes with a web content management system, a scope could be associated with a site identifier or even a host name.
@@ -48,7 +48,7 @@ In the following example, the scope uses the unique identifier of a web site cal
 }
 ----
 
-=== Items
+=== Item
 
 Unomi structures the information it collects using the concept of `Item` which provides the base information (an identifier and a type) the context server needs to process and store the data.
 Items are persisted according to their type (structure) and identifier (identity).
@@ -142,7 +142,7 @@ See the MetadataItem to understand how the two fit together.
 
 ==== Structure definition
 
-Inherits all the fields from: Item
+Inherits all the fields from: <<Item>>
 
 |===
 | *Field* | *Type* | *Description*
@@ -153,7 +153,7 @@ Inherits all the fields from: Item
 
 ==== Example
 
-The following example is actually the definition of a List object, which is simply a MetadataItem sub-type with no additional fields.
+The following example is actually the definition of a <<List>> object, which is simply a <<MetadataItem>> sub-type with no additional fields.
 We can see here the “itemId” and “itemType” fields that come from the Item parent class and the “metadata” field that contains the object structure coming from the Metadata object type.
 
 [source,json]
@@ -176,7 +176,7 @@ We can see here the “itemId” and “itemType” fields that come from the It
 }
 ----
 
-=== Events
+=== Event
 
 Events represent something that is happening at a specific time (they are timestamped).
 They can be used to track visitor behavior, or even for back-channel system-to-system (as for example for a login) communication.
@@ -189,7 +189,7 @@ when a rule is triggered.
 
 ==== Fields
 
-Inherits all the fields from: Item
+Inherits all the fields from: <<Item>>
 
 |===
 | *Field* | *Type* | *Description*
@@ -204,9 +204,9 @@ Inherits all the fields from: Item
 
 | scope | String | (Optional, event type specific) An identifier for a scope
 
-| source | Item | An Item that is the source of the event. For example a web site, an application name, a web page
+| source | <<Item>> | An Item that is the source of the event. For example a web site, an application name, a web page
 
-| target | Item | An Item that is the target of the event. For example a button, a link, a file or a page
+| target | <<Item>> | An Item that is the target of the event. For example a button, a link, a file or a page
 
 | properties | Map<String,Object> | Properties for the event. These will change depending on the event type.
 
@@ -216,7 +216,7 @@ Inherits all the fields from: Item
 
 Event types are completely open, and any new event type will be accepted by Apache Unomi.
 
-Apache Unomi also comes with an extensive list of built-in event types you can find in the reference section of this manual.
+Apache Unomi also comes with an extensive list of <<Built-in Event types,built-in event types>> you can find in the reference section of this manual.
 
 === Profile
 
@@ -240,7 +240,7 @@ action in a context where the user hadn’t already been positively identified.
 
 ==== Structure definition
 
-Inherits all the fields from: Item
+Inherits all the fields from: <<Item>>
 
 |===
 | *Field name* | *Type* | *Description*
@@ -255,7 +255,7 @@ Inherits all the fields from: Item
 
 | mergedWith | String | If merged with another profile, the profile identifier to the master profile is stored here
 
-| consents | Map<String,Consent> | The consents for the profile, as a map with the consent identifier as a key and the Consent object type as a value.
+| consents | Map<String,<<Consent>>> | The consents for the profile, as a map with the consent identifier as a key and the Consent object type as a value.
 
 |===
 
@@ -364,13 +364,40 @@ image::profile.png[]
 }
 ----
 
-=== Personas
+=== Persona
 
-TODO
+A persona is a specialized version of a <<Profile>> object. It basically represents a "typical" profile and can be used
+notably to simulate personalized for a type of profiles. Usually personas are created from Profile data and then edited
+to represent a specific marketing persona.
 
 ==== Structure definition
 
+Inherits all the fields from: <<Profile>>
+
+There are no fields specific to a Persona.
+
 ==== Example
+
+In the following example a Persona represents a visitor from Europe, that can be used to match by location.
+
+[source,json]
+----
+{
+    "itemId": "europeanVisitor",
+    "itemType": "persona",
+    "properties": {
+        "description": "Represents a visitor browsing from Europe",
+        "firstName": "European",
+        "lastName": "Visitor",
+        "continent": "Europe"
+    },
+    "systemProperties": {},
+    "segments": [],
+    "scores": null,
+    "mergedWith": null,
+    "consents": {}
+}
+----
 
 === Consent
 
@@ -378,6 +405,8 @@ A consent represents a single instance of a consent granted/refused or revoked b
 A profile will contain multiple instances of consent identified by unique identifiers.
 
 ==== Structure definition
+
+Inherits all the fields from: n/a
 
 |===
 | *Field name* | *Type* | *Description*
@@ -416,7 +445,7 @@ It makes it possible to gather data and then use it for reporting and further an
 
 ==== Structure definition
 
-Inherits all the fields from: Item
+Inherits all the fields from: <<Item>>
 
 |===
 | *Field name* | *Type* | *Description*
@@ -425,7 +454,9 @@ Inherits all the fields from: Item
 
 | systemProperties | Map<String,Object> | Not used (empty)
 
-| profile | Profile | A copy of the profile associated with the session
+| profileId | String | The identifier of the profile that generated the session
+
+| profile | <<Profile>> | A copy of the profile associated with the session
 
 | size | Integer | The number of view event types received during this session
 
@@ -550,12 +581,12 @@ highly dynamic concept.
 
 ==== Structure definition
 
-Inherits all the fields from: MetadataItem
+Inherits all the fields from: <<MetadataItem>>
 
 |===
 | *Field name* | *Type* | *Description*
 
-| condition | Condition | The root condition for the segment. Conditions may be composed by using built-in condition types such as `booleanCondition` that can accept sub-conditions.
+| condition | <<Condition>> | The root condition for the segment. Conditions may be composed by using built-in condition types such as `booleanCondition` that can accept sub-conditions.
 
 |===
 
@@ -651,7 +682,7 @@ Conditions may be used as parts of:
 - Queries
 - Campaigns
 - Goals
-- Profile filters
+- Profile filters (using to search for profiles)
 
 The result of a condition is always a boolean value of true or false.
 
@@ -732,14 +763,14 @@ For example the Salesforce CRM connector is simply a set of actions that pull an
 
 ==== Structure definition
 
-Inherits all the fields from: MetadataItem
+Inherits all the fields from: <<MetadataItem>>
 
 |===
 | *Field name* | *Type* | *Description*
 
-| condition | Condition | The root condition for the rule. Conditions may be composed by using built-in condition types such as `booleanCondition` that can accept sub-conditions.
+| condition | <<Condition>> | The root condition for the rule. Conditions may be composed by using built-in condition types such as `booleanCondition` that can accept sub-conditions.
 
-| action | Action array | A list of <<Action>> object that will be executed if the condition is true.
+| action | <<Action>> array | A list of <<Action>> object that will be executed if the condition is true.
 
 | linkedItems | String array | A list of references to objects that may have generated this rule. Goals and segments dynamically generate rules to react to incoming events. It is not recommend to manipulate rules that have linkedItems as it may break functionality.
 
@@ -800,8 +831,8 @@ Action use Action types that are implemented as Java classes, and as such may pe
 calling web hooks, setting profile properties, extracting data from the incoming request (such as resolving location from
 an IP address),  or even pulling and/or pushing data to third-party systems such as a CRM server.
 
-Apache Unomi also comes with built-in actions.
-You may find the list of built-in actions in the <<Built-in action types>> section.
+Apache Unomi also comes with built-in action types.
+You may find the list of built-in action types in the <<Built-in action types>> section.
 
 ==== Structure definition
 
@@ -835,7 +866,7 @@ overridden or not.
     }
 ----
 
-=== Lists
+=== List
 
 Lists are a “manual” way to organize profiles, whereas Segments are a dynamic way to regroup them.
 List objects actually only define the list in terms of name, description and other metadata but the list of members is actually not represented in the object.
@@ -844,7 +875,7 @@ This property is an array of list identifiers so in order to retrieve all the li
 
 ==== Structure definition
 
-Inherits all the fields from: MetadataItem
+Inherits all the fields from: <<MetadataItem>>
 
 |===
 | *Field name* | *Description*
@@ -878,7 +909,7 @@ Note that the List does not contain Profiles, it is Profiles that reference the 
 }
 ----
 
-=== Goals
+=== Goal
 
 A goal can be defined with two conditions: a start event condition and an target event condition.
 Basically the goal will be “active” when its start event condition is satisfied, and “reached” when the target event condition is true.
@@ -887,7 +918,7 @@ Once a goal is “reached”, a “goal” event triggered and the profile that 
 
 ==== Structure definition
 
-Inherits all the fields from: MetadataItem
+Inherits all the fields from: <<MetadataItem>>
 
 |===
 | *Field name* | *Type* | *Description*
@@ -937,13 +968,13 @@ In the following example, a goal called “downloadGoalExample” is started whe
 }
 ----
 
-=== Campaigns
+=== Campaign
 
 A Campaign object represents a digital marketing campaign, along with conditions to enter the campaign and a specific duration, target and costs.
 
 ==== Structure definition
 
-Inherits all the fields from: MetadataItem
+Inherits all the fields from: <<MetadataItem>>
 
 |===
 | *Field name* | *Type* | *Description*
@@ -952,7 +983,7 @@ Inherits all the fields from: MetadataItem
 
 | endDate | Date | The end date of the Campaign (in ISO 8601 format)
 
-| entryCondition | Condition | The condition that must be satisfied for a profile to become a participant in the campaign
+| entryCondition | <<Condition>> | The condition that must be satisfied for a profile to become a participant in the campaign
 
 | cost | Double | An indicative cost for the campaign
 
@@ -1021,14 +1052,14 @@ The primary goal for the campaign is the goal we should as an example in the Goa
 }
 ----
 
-=== Scoring plans
+=== Scoring plan
 
 Scoring plans make it possible to define scores that will be tracked for profiles and use conditions to increment a score when the conditions are met.
 This makes it possible to then use threshold conditions on profiles when they reach a certain score.
 
 ==== Structure definition
 
-Inherits all the fields from: MetadataItem
+Inherits all the fields from: <<MetadataItem>>
 
 |===
 | *Field name* | *Type* | *Description*

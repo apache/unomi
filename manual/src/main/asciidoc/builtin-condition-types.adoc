@@ -90,9 +90,9 @@ order to use condition types, but this might be interesting to know if you're in
 type implementations. For more details on building your own custom plugins/extensions, please refer to the corresponding
 sections.
 
-==== Existing condition descriptors
+==== Existing condition type descriptors
 
-Here is a non-exhaustive list of conditions built into Apache Unomi. Feel free to browse the source code if you want to
+Here is a non-exhaustive list of condition types built into Apache Unomi. Feel free to browse the source code if you want to
 discover more. But the list below should get you started with the most useful conditions:
 
 - https://github.com/apache/unomi/tree/master/plugins/baseplugin/src/main/resources/META-INF/cxs/conditions

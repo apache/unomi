@@ -13,7 +13,7 @@
 //
 === Built-in action types
 
-Unomi comes with quite a lot of built-in action typess. Instead of detailing them one by one you will find here an overview of
+Unomi comes with quite a lot of built-in action types. Instead of detailing them one by one you will find here an overview of
 what an action type descriptor looks like:
 
 [source,json]
@@ -57,7 +57,7 @@ From https://github.com/apache/unomi/blob/master/plugins/mail/src/main/resources
 
 In the above example the ACTION_EXECUTOR_ID is `sendMail`
 
-==== Existing actions descriptors
+==== Existing action types descriptors
 
 Here is a non-exhaustive list of actions built into Apache Unomi. Feel free to browse the source code if you want to
 discover more. But the list below should get you started with the most useful actions:
