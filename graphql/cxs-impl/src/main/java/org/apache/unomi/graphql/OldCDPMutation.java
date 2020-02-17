@@ -33,11 +33,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @GraphQLName("CDP_Mutation")
-public class CDPMutation {
+public class OldCDPMutation {
 
     CDPGraphQLProvider cdpGraphQLProvider;
 
-    public CDPMutation(CDPGraphQLProvider cdpGraphQLProvider) {
+    public OldCDPMutation(CDPGraphQLProvider cdpGraphQLProvider) {
         this.cdpGraphQLProvider = cdpGraphQLProvider;
     }
 

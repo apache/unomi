@@ -14,26 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types;
 
+package org.apache.unomi.graphql.fetchers;
+
+import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.graphql.types.output.CDPConsent;
-import org.apache.unomi.graphql.types.output.CDPInterest;
-import org.apache.unomi.graphql.types.output.CDPList;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.CDPSegment;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
-public interface CDP_ProfileInterface {
+public class ProfileSegmentsDataFetcher implements DataFetcher<List<CDPSegment>> {
 
-    List<CDP_ProfileID> cdp_profileIDs(DataFetchingEnvironment environment);
+    @Override
+    public List<CDPSegment> get(DataFetchingEnvironment environment) throws Exception {
+        CDPProfile cdpProfile = environment.getSource();
+        ServiceManager serviceManager = environment.getContext();
 
-    List<CDPSegment> cdp_segments(List<String> viewIds, DataFetchingEnvironment environment);
+        final List<Metadata> metadata = serviceManager.getSegmentService().getSegmentMetadatasForProfile(cdpProfile.getProfile());
 
-    List<CDPInterest> cdp_interests(List<String> viewIds, DataFetchingEnvironment environment);
-
-    List<CDPConsent> cdp_consents(DataFetchingEnvironment environment);
-
-    List<CDPList> cdp_lists(List<String> viewIds, DataFetchingEnvironment environment);
-
+        return metadata.stream().map(m -> CDPSegment.create().id(m.getId()).name(m.getName()).build()).collect(Collectors.toList());
+    }
 }

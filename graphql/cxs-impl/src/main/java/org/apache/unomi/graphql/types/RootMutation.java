@@ -14,30 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.commands;
+package org.apache.unomi.graphql.types;
 
-import org.apache.unomi.graphql.services.CDPServiceManager;
+import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLMutation;
 
-public abstract class CdpBaseCommand<T> {
+@GraphQLMutation
+public class RootMutation {
 
-    final CDPServiceManager cdpServiceManager;
-
-    public abstract T execute();
-
-    public CdpBaseCommand(final Builder builder) {
-        this.cdpServiceManager = builder.cdpServiceManager;
-    }
-
-    public static abstract class Builder<B extends Builder> {
-
-        CDPServiceManager cdpServiceManager;
-
-        @SuppressWarnings("unchecked")
-        public B setCdpServiceService(CDPServiceManager cdpServiceManager) {
-            this.cdpServiceManager = cdpServiceManager;
-            return (B) this;
-        }
-
+    @GraphQLField
+    public static CDPMutation cdp() {
+        return new CDPMutation();
     }
 
 }

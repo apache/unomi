@@ -20,7 +20,15 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
+import graphql.GraphQL;
+import graphql.annotations.AnnotationsSchemaCreator;
+import graphql.annotations.processor.GraphQLAnnotations;
+import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.introspection.IntrospectionQuery;
+import graphql.schema.GraphQLSchema;
+import org.apache.unomi.graphql.types.RootMutation;
+import org.apache.unomi.graphql.types.RootQuery;
+import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.GraphQLSchemaUpdater;
 import org.apache.unomi.graphql.services.CDPServiceManager;
 import org.osgi.service.component.annotations.Component;
@@ -40,17 +48,17 @@ import java.util.Map;
         service = {javax.servlet.http.HttpServlet.class, javax.servlet.Servlet.class},
         property = {"alias=/cdpgraphql"}
 )
-public class CdpGraphQLApiServlet extends HttpServlet {
+public class GraphQLServlet extends HttpServlet {
 
     private ObjectMapper objectMapper;
 
     private GraphQLSchemaUpdater graphQLSchemaUpdater;
 
-    private CDPServiceManager cdpServiceManager;
+    private ServiceManager serviceManager;
 
     @Reference
-    public void setCDPServiceManager(CDPServiceManager cdpServiceManager) {
-        this.cdpServiceManager = cdpServiceManager;
+    public void setServiceManager(ServiceManager serviceManager) {
+        this.serviceManager = serviceManager;
     }
 
     @Reference
@@ -120,7 +128,7 @@ public class CdpGraphQLApiServlet extends HttpServlet {
                 .query(query)
                 .variables(variables)
                 .operationName(operationName)
-                .context(cdpServiceManager)
+                .context(serviceManager)
                 .build();
 
         final ExecutionResult executionResult = graphQLSchemaUpdater.getGraphQL().execute(executionInput);

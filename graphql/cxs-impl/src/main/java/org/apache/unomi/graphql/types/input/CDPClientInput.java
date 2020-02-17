@@ -14,22 +14,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.input;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-import java.util.List;
+@GraphQLName("CDP_Client")
+public class CDPClientInput {
 
-@GraphQLName("CDP_ProfilePropertiesFilter")
-public class CDPProfilePropertiesFilter {
+    @GraphQLID
+    @GraphQLName("ID")
+    @GraphQLNonNull
+    @GraphQLField
+    @JsonProperty(value = "ID")
+    private String id;
 
     @GraphQLField
-    @GraphQLName("and")
-    public List<CDPProfilePropertiesFilter> andFilters;
+    private String title;
 
-    @GraphQLField
-    @GraphQLName("or")
-    public List<CDPProfilePropertiesFilter> orFilters;
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
 }

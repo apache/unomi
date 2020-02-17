@@ -18,7 +18,6 @@ package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
-import org.apache.unomi.graphql.CDPProfilePropertiesFilter;
 
 import java.util.List;
 

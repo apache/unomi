@@ -14,18 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.graphql.services.CDPServiceManager;
+import graphql.annotations.processor.GraphQLAnnotations;
+import graphql.schema.GraphQLFieldDefinition;
+import graphql.schema.GraphQLObjectType;
+import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.input.CDPPropertyTypeInput;
 
 import java.util.List;
 
-@GraphQLName("MyCDP_Mutation")
-public class MyCDPMutation {
+@GraphQLName("CDP_Mutation")
+public class CDPMutation {
 
     @GraphQLField
     public boolean createOrUpdateProfileProperties(

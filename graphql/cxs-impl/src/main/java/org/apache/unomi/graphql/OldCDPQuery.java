@@ -32,11 +32,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @GraphQLName("CDP_Query")
-public class CDPQuery {
+public class OldCDPQuery {
 
     CDPGraphQLProvider cdpGraphQLProvider;
 
-    public CDPQuery(CDPGraphQLProvider cdpGraphQLProvider) {
+    public OldCDPQuery(CDPGraphQLProvider cdpGraphQLProvider) {
         this.cdpGraphQLProvider = cdpGraphQLProvider;
     }
 

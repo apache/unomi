@@ -14,60 +14,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types;
+package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDataFetcher;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.graphql.commands.GetCdpSegmentsByProfileCommand;
-import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
-import org.apache.unomi.graphql.types.input.CDPNamedFilterInput;
-import org.apache.unomi.graphql.types.input.CDPOptimizationInput;
-import org.apache.unomi.graphql.types.input.CDPRecommendationInput;
-import org.apache.unomi.graphql.types.output.*;
+import org.apache.unomi.graphql.fetchers.ProfileIdsDataFetcher;
+import org.apache.unomi.graphql.fetchers.ProfileSegmentsDataFetcher;
+import org.apache.unomi.graphql.types.input.*;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 @GraphQLName("CDP_Profile")
-public class CDP_Profile implements CDP_ProfileInterface {
+public class CDPProfile implements CDPProfileInterface {
 
     private Profile profile;
 
-    public CDP_Profile(Profile profile) {
+    public CDPProfile(Profile profile) {
         this.profile = profile;
     }
 
     @Override
     @GraphQLField
-    public List<CDP_ProfileID> cdp_profileIDs(DataFetchingEnvironment environment) {
-        return Collections.singletonList(createProfileId(profile));
-    }
-
-    private CDP_ProfileID createProfileId(Profile profile) {
-        final CDP_ProfileID profileID = new CDP_ProfileID();
-
-        profileID.setId(profile.getItemId());
-        profileID.setClient(getDefaultClient());
-
-        return profileID;
-    }
-
-    private CDP_Client getDefaultClient() {
-        final CDP_Client client = new CDP_Client();
-
-        client.setId("defaultClientId");
-        client.setTitle("Default ClientName");
-
-        return client;
+    @GraphQLDataFetcher(ProfileIdsDataFetcher.class)
+    public List<CDPProfileID> cdp_profileIDs(DataFetchingEnvironment environment) {
+        return null;
     }
 
     @Override
     @GraphQLField
+    @GraphQLDataFetcher(ProfileSegmentsDataFetcher.class)
     public List<CDPSegment> cdp_segments(final @GraphQLName("views") List<String> viewIds, DataFetchingEnvironment environment) {
-        return GetCdpSegmentsByProfileCommand.create(profile).setCdpServiceService(environment.getContext()).build().execute();
+        return null;
     }
 
     @Override
@@ -101,7 +83,7 @@ public class CDP_Profile implements CDP_ProfileInterface {
 
     @GraphQLField
     public CDPEventConnection cdp_lastEvents(
-            @GraphQLName("profileID") CDP_ProfileIDInput profileID,
+            @GraphQLName("profileID") CDPProfileIDInput profileID,
             @GraphQLName("count") Integer count
     ) {
         return new CDPEventConnection();
@@ -125,5 +107,4 @@ public class CDP_Profile implements CDP_ProfileInterface {
     public Profile getProfile() {
         return profile;
     }
-
 }

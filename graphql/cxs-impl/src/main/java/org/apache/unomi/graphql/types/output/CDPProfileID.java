@@ -14,28 +14,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types;
+package org.apache.unomi.graphql.types.output;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_Client")
-public class CDP_Client {
+@GraphQLName("CDP_ProfileID")
+public class CDPProfileID {
 
     @GraphQLID
-    @GraphQLName("ID")
-    @GraphQLNonNull
     @GraphQLField
-    @JsonProperty(value = "ID")
+    @GraphQLNonNull
     private String id;
 
     @GraphQLField
-    private String title;
+    @GraphQLNonNull
+    private CDPClient client;
 
-    public CDP_Client() {
+    public CDPProfileID() {
     }
 
     public String getId() {
@@ -46,12 +44,12 @@ public class CDP_Client {
         this.id = id;
     }
 
-    public String getTitle() {
-        return title;
+    public CDPClient getClient() {
+        return client;
     }
 
-    public void setTitle(String title) {
-        this.title = title;
+    public void setClient(CDPClient client) {
+        this.client = client;
     }
 
 }

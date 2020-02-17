@@ -22,8 +22,8 @@ import org.apache.unomi.graphql.GraphQLSchemaUpdater;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
-@Component(service = CDPServiceManager.class)
-public class CDPServiceManager {
+@Component(service = ServiceManager.class)
+public class ServiceManager {
 
     private ProfileService profileService;
     private SegmentService segmentService;

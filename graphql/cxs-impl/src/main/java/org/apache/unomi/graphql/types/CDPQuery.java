@@ -14,23 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types;
 
 import graphql.annotations.annotationTypes.GraphQLDataFetcher;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLTypeResolver;
 import org.apache.unomi.graphql.fetchers.ProfileDataFetcher;
-import org.apache.unomi.graphql.types.CDP_Profile;
-import org.apache.unomi.graphql.types.CDP_ProfileIDInput;
+import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
+import org.apache.unomi.graphql.types.output.CDPProfile;
 
-@GraphQLName("MyCDP_Query")
-public class MyCDPQuery {
+@GraphQLName("CDP_Query")
+public class CDPQuery {
 
     @GraphQLField
     @GraphQLDataFetcher(ProfileDataFetcher.class)
-    public CDP_Profile getProfile(
-            final @GraphQLName("profileID") CDP_ProfileIDInput profileID,
+    public CDPProfile getProfile(
+            final @GraphQLName("profileID") CDPProfileIDInput profileID,
             final @GraphQLName("createIfMissing") Boolean createIfMissing) {
 
         return null;
