@@ -99,5 +99,5 @@ discover more. But the list below should get you started with the most useful co
 
 Of course it is also possible to build your own custom condition types by developing custom Unomi plugins/extensions.
 
-You will also note that some condition typess can re-use a `parentCondition`. This is a way to inherit from another condition
+You will also note that some condition types can re-use a `parentCondition`. This is a way to inherit from another condition
 type to make them more specific.
