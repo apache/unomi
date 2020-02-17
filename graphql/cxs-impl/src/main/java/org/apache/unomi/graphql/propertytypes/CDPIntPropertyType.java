@@ -18,10 +18,11 @@ package org.apache.unomi.graphql.propertytypes;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
 
 import java.util.List;
 
-@GraphQLName("CDP_IntPropertyType")
+@GraphQLName("CDP_IntProperty")
 public class CDPIntPropertyType extends CDPPropertyType {
 
     private Integer minValue;
@@ -45,17 +46,26 @@ public class CDPIntPropertyType extends CDPPropertyType {
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public Integer getMinValue() {
         return minValue;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public Integer getMaxValue() {
         return maxValue;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public Integer getDefaultValue() {
         return defaultValue;
     }
+
+    @Override
+    public String getCDPPropertyType() {
+        return "integer";
+    }
+
 }

@@ -19,12 +19,8 @@ package org.apache.unomi.graphql.types;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.graphql.services.CDPServiceManager;
-import graphql.annotations.processor.GraphQLAnnotations;
-import graphql.schema.GraphQLFieldDefinition;
-import graphql.schema.GraphQLObjectType;
-import org.apache.unomi.graphql.types.output.CDPProfile;
-import org.apache.unomi.graphql.types.input.CDPPropertyTypeInput;
+import org.apache.unomi.graphql.commands.CreateOrUpdateProfilePropertiesCommand;
+import org.apache.unomi.graphql.types.input.CDPPropertyInput;
 
 import java.util.List;
 
@@ -33,18 +29,13 @@ public class CDPMutation {
 
     @GraphQLField
     public boolean createOrUpdateProfileProperties(
-            final @GraphQLName("properties") List<CDPPropertyTypeInput> properties,
-            final DataFetchingEnvironment environment) {
+            final @GraphQLName("properties") List<CDPPropertyInput> properties,
+            final DataFetchingEnvironment environment) throws Exception {
 
-        if (properties == null || properties.isEmpty()) {
-            return false;
-        }
-
-        final CDPServiceManager cdpServiceManager = environment.getContext();
-        cdpServiceManager.getGraphQLSchemaUpdater().updateSchema(properties);
-
-        return true;
+        return CreateOrUpdateProfilePropertiesCommand.create(properties)
+                .setServiceManager(environment.getContext())
+                .build()
+                .execute();
     }
-
 
 }

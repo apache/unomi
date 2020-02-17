@@ -23,10 +23,10 @@ import org.apache.unomi.graphql.propertytypes.CDPPropertyType;
 
 import java.util.List;
 
-@GraphQLName("CDP_SetPropertyType")
+@GraphQLName("CDP_SetProperty")
 public class CDPSetPropertyTypeInput extends CDPPropertyType {
 
-    private List<CDPPropertyTypeInput> properties;
+    private List<CDPPropertyInput> properties;
 
     public CDPSetPropertyTypeInput(@GraphQLName("id") String id,
                                    @GraphQLName("name") String name,
@@ -35,14 +35,14 @@ public class CDPSetPropertyTypeInput extends CDPPropertyType {
                                    @GraphQLName("tags") List<String> tags,
                                    @GraphQLName("systemTags") List<String> systemTags,
                                    @GraphQLName("personalData") Boolean personalData,
-                                   @GraphQLName("properties") List<CDPPropertyTypeInput> properties) {
+                                   @GraphQLName("properties") List<CDPPropertyInput> properties) {
         super(id, name, minOccurrences, maxOccurrences, tags, systemTags, personalData);
         this.properties = properties;
     }
 
     @GraphQLField
     @GraphQLPrettify
-    public List<CDPPropertyTypeInput> getProperties() {
+    public List<CDPPropertyInput> getProperties() {
         return properties;
     }
 }

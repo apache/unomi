@@ -25,7 +25,7 @@ import org.apache.unomi.graphql.propertytypes.CDPSetPropertyType;
 import org.apache.unomi.graphql.propertytypes.CDPStringPropertyType;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPEventTypeInput;
-import org.apache.unomi.graphql.types.input.CDPPropertyTypeInput;
+import org.apache.unomi.graphql.types.input.CDPPropertyInput;
 import org.apache.unomi.graphql.types.input.CDPSetPropertyTypeInput;
 import org.apache.unomi.graphql.types.output.CDPEventType;
 
@@ -45,7 +45,7 @@ public class OldCDPMutation {
     public CDPEventType createOrUpdateEventType(DataFetchingEnvironment env, @GraphQLName("eventType") CDPEventTypeInput cdpEventTypeInput) {
 
         CDPEventType cdpEventType = new CDPEventType(cdpEventTypeInput.getId(), cdpEventTypeInput.getScope(), cdpEventTypeInput.getTypeName(), new ArrayList<>());
-        for (CDPPropertyTypeInput propertyTypeInput : cdpEventTypeInput.getProperties()) {
+        for (CDPPropertyInput propertyTypeInput : cdpEventTypeInput.getProperties()) {
             CDPPropertyType propertyType = getPropertyType(propertyTypeInput);
             cdpEventType.getProperties().add(propertyType);
         }
@@ -63,7 +63,7 @@ public class OldCDPMutation {
         return 0;
     }
 
-    private CDPPropertyType getPropertyType(CDPPropertyTypeInput cdpPropertyTypeInput) {
+    private CDPPropertyType getPropertyType(CDPPropertyInput cdpPropertyTypeInput) {
         CDPPropertyType propertyType = null;
         if (cdpPropertyTypeInput.identifierPropertyTypeInput != null) {
             propertyType = getIdentifierPropertyType(cdpPropertyTypeInput.identifierPropertyTypeInput);
@@ -79,7 +79,7 @@ public class OldCDPMutation {
         List<CDPPropertyType> setProperties = null;
         if (cdpSetPropertyTypeInput.getProperties() != null) {
             setProperties = new ArrayList<>();
-            for (CDPPropertyTypeInput setProperty : cdpSetPropertyTypeInput.getProperties()) {
+            for (CDPPropertyInput setProperty : cdpSetPropertyTypeInput.getProperties()) {
                 CDPPropertyType subPropertyType = getPropertyType(setProperty);
                 if (subPropertyType != null) {
                     setProperties.add(subPropertyType);

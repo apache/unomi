@@ -18,10 +18,11 @@ package org.apache.unomi.graphql.propertytypes;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
 
 import java.util.List;
 
-@GraphQLName("CDP_DatePropertyType")
+@GraphQLName("CDP_DateProperty")
 public class CDPDatePropertyType extends CDPPropertyType {
 
     private String defaultValue;
@@ -39,7 +40,13 @@ public class CDPDatePropertyType extends CDPPropertyType {
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public String getDefaultValue() {
         return defaultValue;
+    }
+
+    @Override
+    public String getCDPPropertyType() {
+        return "date";
     }
 }

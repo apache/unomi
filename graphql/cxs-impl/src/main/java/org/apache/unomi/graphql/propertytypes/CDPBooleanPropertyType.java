@@ -18,10 +18,11 @@ package org.apache.unomi.graphql.propertytypes;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
 
 import java.util.List;
 
-@GraphQLName("CDP_BooleanPropertyType")
+@GraphQLName("CDP_BooleanProperty")
 public class CDPBooleanPropertyType extends CDPPropertyType {
 
     private Boolean defaultValue;
@@ -44,8 +45,14 @@ public class CDPBooleanPropertyType extends CDPPropertyType {
     }
 
     @GraphQLField
-    @GraphQLName("defaultValue")
+    @GraphQLPrettify
     public Boolean isDefaultValue() {
         return defaultValue;
     }
+
+    @Override
+    public String getCDPPropertyType() {
+        return "boolean";
+    }
+
 }

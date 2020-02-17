@@ -18,12 +18,24 @@ package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
-import org.apache.unomi.graphql.propertytypes.*;
+import org.apache.unomi.graphql.propertytypes.CDPBooleanPropertyType;
+import org.apache.unomi.graphql.propertytypes.CDPDatePropertyType;
+import org.apache.unomi.graphql.propertytypes.CDPFloatPropertyType;
+import org.apache.unomi.graphql.propertytypes.CDPGeoPointPropertyType;
+import org.apache.unomi.graphql.propertytypes.CDPIdentifierPropertyType;
+import org.apache.unomi.graphql.propertytypes.CDPIntPropertyType;
+import org.apache.unomi.graphql.propertytypes.CDPPropertyType;
+import org.apache.unomi.graphql.propertytypes.CDPStringPropertyType;
 
-@GraphQLName("CDP_PropertyType")
-public class CDPPropertyTypeInput {
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
-    public CDPPropertyTypeInput(
+@GraphQLName("CDP_Property")
+public class CDPPropertyInput {
+
+    public CDPPropertyInput(
             @GraphQLName("identifier") CDPIdentifierPropertyType identifierPropertyTypeInput,
             @GraphQLName("string") CDPStringPropertyType stringPropertyTypeInput,
             @GraphQLName("int") CDPIntPropertyType integerPropertyTypeInput,
@@ -73,4 +85,19 @@ public class CDPPropertyTypeInput {
     @GraphQLField
     @GraphQLName("set")
     public CDPSetPropertyTypeInput setPropertyTypeInput;
+
+    public CDPPropertyType getProperty() {
+        final List<CDPPropertyType> properties = Arrays.asList(
+                identifierPropertyTypeInput,
+                stringPropertyTypeInput,
+                integerPropertyTypeInput,
+                floatPropertyTypeInput,
+                datePropertyTypeInput,
+                booleanPropertyTypeInput,
+                geoPointPropertyTypeInput,
+                setPropertyTypeInput);
+
+        return properties.stream().filter(Objects::nonNull).findFirst().orElse(null);
+    }
+
 }

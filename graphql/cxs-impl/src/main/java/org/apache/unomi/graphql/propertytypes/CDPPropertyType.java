@@ -22,7 +22,7 @@ import graphql.annotations.annotationTypes.GraphQLPrettify;
 
 import java.util.List;
 
-@GraphQLName("CDP_PropertyType")
+@GraphQLName("CDP_PropertyInterface")
 public class CDPPropertyType {
 
     private String id;
@@ -100,4 +100,9 @@ public class CDPPropertyType {
     public Boolean isPersonalData() {
         return personalData;
     }
+
+    public String getCDPPropertyType() {
+        return "string";
+    }
+
 }

@@ -18,10 +18,11 @@ package org.apache.unomi.graphql.propertytypes;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
 
 import java.util.List;
 
-@GraphQLName("CDP_SetPropertyType")
+@GraphQLName("CDP_SetProperty")
 public class CDPSetPropertyType extends CDPPropertyType {
 
     private List<CDPPropertyType> properties;
@@ -39,7 +40,14 @@ public class CDPSetPropertyType extends CDPPropertyType {
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public List<CDPPropertyType> getProperties() {
         return properties;
     }
+
+    @Override
+    public String getCDPPropertyType() {
+        return "set";
+    }
+
 }

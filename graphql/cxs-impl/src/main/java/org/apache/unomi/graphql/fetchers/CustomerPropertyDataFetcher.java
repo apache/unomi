@@ -18,8 +18,8 @@ package org.apache.unomi.graphql.fetchers;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.graphql.types.CDP_Profile;
 import org.apache.unomi.graphql.types.output.CDPEvent;
+import org.apache.unomi.graphql.types.output.CDPProfile;
 
 public class CustomerPropertyDataFetcher implements DataFetcher<Object> {
 
@@ -33,8 +33,8 @@ public class CustomerPropertyDataFetcher implements DataFetcher<Object> {
     public Object get(final DataFetchingEnvironment environment) {
         final Object source = environment.getSource();
 
-        if (source instanceof CDP_Profile) {
-            return ((CDP_Profile) environment.getSource()).getProfile().getProperty(propertyName);
+        if (source instanceof CDPProfile) {
+            return ((CDPProfile) environment.getSource()).getProfile().getProperty(propertyName);
         } else if (source instanceof CDPEvent) {
             return ((CDPEvent) environment.getSource()).getProperties().getProperties().get(propertyName);
         } else {

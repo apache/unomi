@@ -20,17 +20,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
-import graphql.GraphQL;
-import graphql.annotations.AnnotationsSchemaCreator;
-import graphql.annotations.processor.GraphQLAnnotations;
-import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.introspection.IntrospectionQuery;
-import graphql.schema.GraphQLSchema;
-import org.apache.unomi.graphql.types.RootMutation;
-import org.apache.unomi.graphql.types.RootQuery;
-import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.GraphQLSchemaUpdater;
-import org.apache.unomi.graphql.services.CDPServiceManager;
+import org.apache.unomi.graphql.services.ServiceManager;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 

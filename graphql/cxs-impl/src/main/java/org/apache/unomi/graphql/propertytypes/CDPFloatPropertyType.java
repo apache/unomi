@@ -18,10 +18,11 @@ package org.apache.unomi.graphql.propertytypes;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
 
 import java.util.List;
 
-@GraphQLName("CDP_FloatPropertyType")
+@GraphQLName("CDP_FloatProperty")
 public class CDPFloatPropertyType extends CDPPropertyType {
 
     private Double minValue;
@@ -45,17 +46,26 @@ public class CDPFloatPropertyType extends CDPPropertyType {
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public Double getMinValue() {
         return minValue;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public Double getMaxValue() {
         return maxValue;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public Double getDefaultValue() {
         return defaultValue;
     }
+
+    @Override
+    public String getCDPPropertyType() {
+        return "float";
+    }
+
 }

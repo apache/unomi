@@ -22,7 +22,7 @@ import graphql.annotations.annotationTypes.GraphQLPrettify;
 
 import java.util.List;
 
-@GraphQLName("CDP_IdentifierPropertyType")
+@GraphQLName("CDP_IdentifierProperty")
 public class CDPIdentifierPropertyType extends CDPPropertyType {
 
     private String regexp;

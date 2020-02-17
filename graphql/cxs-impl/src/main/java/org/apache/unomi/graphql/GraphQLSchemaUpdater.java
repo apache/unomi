@@ -20,20 +20,30 @@ import graphql.GraphQL;
 import graphql.annotations.AnnotationsSchemaCreator;
 import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.annotations.processor.ProcessingElementsContainer;
-import graphql.schema.*;
-import org.apache.unomi.api.Metadata;
+import graphql.schema.FieldCoordinates;
+import graphql.schema.GraphQLCodeRegistry;
+import graphql.schema.GraphQLFieldDefinition;
+import graphql.schema.GraphQLObjectType;
+import graphql.schema.GraphQLOutputType;
+import graphql.schema.GraphQLSchema;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.fetchers.CustomerPropertyDataFetcher;
-import org.apache.unomi.graphql.types.CDP_Profile;
-import org.apache.unomi.graphql.types.input.CDPPropertyTypeInput;
+import org.apache.unomi.graphql.types.RootMutation;
+import org.apache.unomi.graphql.types.RootQuery;
+import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 
-import static graphql.Scalars.*;
+import static graphql.Scalars.GraphQLBoolean;
+import static graphql.Scalars.GraphQLFloat;
+import static graphql.Scalars.GraphQLInt;
+import static graphql.Scalars.GraphQLString;
 
 @Component(service = GraphQLSchemaUpdater.class)
 public class GraphQLSchemaUpdater {
@@ -49,39 +59,11 @@ public class GraphQLSchemaUpdater {
 
     @Activate
     public void activate() {
-        this.graphQL = GraphQL.newGraphQL(createGraphQLSchema(new GraphQLAnnotations())).build();
+        updateSchema();
     }
 
-    public void updateSchema(final List<CDPPropertyTypeInput> properties) {
-        if (properties == null || properties.isEmpty()) {
-            return;
-        }
-
+    public void updateSchema() {
         final GraphQLAnnotations graphQLAnnotations = new GraphQLAnnotations();
-
-        properties.forEach(property -> {
-            final PropertyType propertyType = new PropertyType();
-
-            propertyType.setTarget("profiles");
-            propertyType.setItemId(property.stringPropertyTypeInput.getName());
-            propertyType.setValueTypeId(convert(property));
-
-            final Metadata metadata = new Metadata();
-
-            metadata.setId(property.stringPropertyTypeInput.getName());
-            metadata.setName(property.stringPropertyTypeInput.getName());
-
-            final Set<String> systemTags = new HashSet<>();
-            systemTags.add("profileProperties");
-            systemTags.add("properties");
-            systemTags.add("systemProfileProperties");
-            metadata.setSystemTags(systemTags);
-
-            propertyType.setMetadata(metadata);
-
-
-            profileService.setPropertyType(propertyType);
-        });
 
         this.graphQL = GraphQL.newGraphQL(createGraphQLSchema(graphQLAnnotations)).build();
     }
@@ -96,7 +78,7 @@ public class GraphQLSchemaUpdater {
         container.setInputPrefix("");
         container.setInputSuffix("Input");
 
-        registerDynamicFields(graphQLAnnotations, "profiles", "CDP_Profile");
+        registerDynamicFields(graphQLAnnotations, "profiles", "CDP_Profile", CDPProfile.class);
 
         return AnnotationsSchemaCreator.newAnnotationsSchema()
                 .query(RootQuery.class)
@@ -105,34 +87,30 @@ public class GraphQLSchemaUpdater {
                 .build();
     }
 
-
     private void registerDynamicFields(
-            final GraphQLAnnotations graphQLAnnotations, final String target, final String graphQLTypeName) {
+            final GraphQLAnnotations graphQLAnnotations, final String target, final String graphQLTypeName, final Class<?> clazz) {
         final Collection<PropertyType> propertyTypes = profileService.getTargetPropertyTypes(target);
-
-        final List<GraphQLFieldDefinition> fieldDefinitions = new ArrayList<>();
 
         final GraphQLCodeRegistry.Builder codeRegisterBuilder = graphQLAnnotations.getContainer().getCodeRegistryBuilder();
 
-        propertyTypes.forEach(propertyType -> {
+        final List<GraphQLFieldDefinition> fieldDefinitions = propertyTypes.stream().map(propertyType -> {
             final GraphQLFieldDefinition.Builder fieldBuilder = GraphQLFieldDefinition.newFieldDefinition();
 
             fieldBuilder.type(convert(propertyType.getValueTypeId()));
             fieldBuilder.name(propertyType.getItemId());
 
-            fieldDefinitions.add(fieldBuilder.build());
-
             codeRegisterBuilder.dataFetcher(
                     FieldCoordinates.coordinates(graphQLTypeName, propertyType.getItemId()),
                     new CustomerPropertyDataFetcher(propertyType.getItemId()));
-        });
 
-        final GraphQLObjectType transformedCdpProfileType = graphQLAnnotations.object(CDP_Profile.class)
+            return fieldBuilder.build();
+        }).collect(Collectors.toList());
+
+        final GraphQLObjectType transformedObjectType = graphQLAnnotations.object(clazz)
                 .transform(builder -> fieldDefinitions.forEach(builder::field));
 
-        graphQLAnnotations.getContainer().getTypeRegistry().put(graphQLTypeName, transformedCdpProfileType);
+        graphQLAnnotations.getContainer().getTypeRegistry().put(graphQLTypeName, transformedObjectType);
     }
-
 
     private GraphQLOutputType convert(final String type) {
         switch (type) {
@@ -148,25 +126,6 @@ public class GraphQLSchemaUpdater {
                 return GraphQLString;
             }
         }
-    }
-
-    private String convert(final CDPPropertyTypeInput propertyTypeInput) {
-        if (propertyTypeInput.integerPropertyTypeInput != null) {
-            return "integer";
-        } else if (propertyTypeInput.identifierPropertyTypeInput != null) {
-            return "string"; // TODO
-        } else if (propertyTypeInput.booleanPropertyTypeInput != null) {
-            return "boolean";
-        } else if (propertyTypeInput.datePropertyTypeInput != null) {
-            return "date";
-        } else if (propertyTypeInput.floatPropertyTypeInput != null) {
-            return "float";
-        } else if (propertyTypeInput.setPropertyTypeInput != null) {
-            return "set";
-        } else {
-            return "string";
-        }
-
     }
 
 }
