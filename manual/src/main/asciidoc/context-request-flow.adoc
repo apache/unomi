@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-=== Context Request flow
+=== Context Request Flow
 
 Here is an overview of how Unomi processes incoming requests to the `ContextServlet`.
 
