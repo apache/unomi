@@ -17,7 +17,7 @@
 #    limitations under the License.
 #
 ################################################################################
-echo Generating documentation...
+echo Generating manual...
 mvn clean
 cd manual
 mvn -Phtml -Ddoc.source=src/archives/1.1/asciidoc -Ddoc.output.html=target/generated-html/1_1_x
@@ -26,16 +26,19 @@ mvn -Phtml -Ddoc.source=src/archives/1.2/asciidoc -Ddoc.output.html=target/gener
 mvn -Ppdf -Ddoc.source=src/archives/1.2/asciidoc -Ddoc.output.pdf=target/generated-pdf/1_2_x
 mvn -Phtml -Ddoc.source=src/archives/1.3/asciidoc -Ddoc.output.html=target/generated-html/1_3_x
 mvn -Ppdf -Ddoc.source=src/archives/1.3/asciidoc -Ddoc.output.pdf=target/generated-pdf/1_3_x
+mvn -Phtml -Ddoc.source=src/archives/1.4/asciidoc -Ddoc.output.html=target/generated-html/1_4_x
+mvn -Ppdf -Ddoc.source=src/archives/1.4/asciidoc -Ddoc.output.pdf=target/generated-pdf/1_4_x
 mvn -Phtml
 mvn -Ppdf
 cd ..
 echo Generating Javadoc...
 mvn javadoc:aggregate -P integration-tests
+echo Generating REST API...
 cd rest
 mvn package
 cd ..
-mkdir target/staging/unomi-api
-mkdir target/staging/manual
+mkdir -p target/staging/unomi-api
+mkdir -p target/staging/manual
 cp -R target/site/apidocs target/staging/unomi-api
 cp -Rf manual/target/generated-html/* target/staging/manual
 echo Documentation generation completed!
