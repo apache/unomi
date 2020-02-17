@@ -30,53 +30,64 @@
 
     <properties>
         <doc.source>src/main/asciidoc</doc.source>
-        <doc.output.html>target/generated-html/latest</doc.output.html>
-        <doc.output.pdf>target/generated-pdf/latest</doc.output.pdf>
+        <doc.output.html>target/generated-docs/html</doc.output.html>
+        <doc.output.pdf>target/generated-docs/pdf</doc.output.pdf>
     </properties>
 
+    <build>
+        <defaultGoal>process-resources</defaultGoal>
+        <plugins>
+            <plugin>
+                <groupId>org.asciidoctor</groupId>
+                <artifactId>asciidoctor-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <executions>
+                    <execution>
+                        <id>output-html</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>process-asciidoc</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDocumentName>index.adoc</sourceDocumentName>
+                            <sourceDirectory>${doc.source}</sourceDirectory>
+                            <outputDirectory>${doc.output.html}</outputDirectory>
+                            <preserveDirectories>true</preserveDirectories>
+                            <headerFooter>true</headerFooter>
+                            <imagesDir>${doc.source}/images</imagesDir>
+                            <backend>html5</backend>
+                            <doctype>article</doctype>
+                            <attributes>
+                                <toc />
+                                <linkcss>true</linkcss>
+                                <stylesheet>apache.css</stylesheet>
+                                <imagesdir>images</imagesdir>
+                            </attributes>
+                        </configuration>
+                    </execution>
+                </executions>
+                <configuration>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <inherited>true</inherited>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Web-ContextPath>/documentation</Web-ContextPath>
+                        <Import-Package>
+                            org.slf4j;resolution:=optional
+                        </Import-Package>
+                        <Include-Resource>target/generated-docs/html</Include-Resource>
+                    </instructions>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
     <profiles>
-        <profile>
-            <id>html</id>
-            <build>
-                <defaultGoal>process-resources</defaultGoal>
-                <plugins>
-                    <plugin>
-                        <groupId>org.asciidoctor</groupId>
-                        <artifactId>asciidoctor-maven-plugin</artifactId>
-                        <version>1.6.0</version>
-                        <executions>
-                            <execution>
-                                <id>output-html</id>
-                                <phase>generate-resources</phase>
-                                <goals>
-                                    <goal>process-asciidoc</goal>
-                                </goals>
-                                <configuration>
-                                    <sourceDocumentName>index.adoc</sourceDocumentName>
-                                    <sourceDirectory>${doc.source}</sourceDirectory>
-                                    <outputDirectory>${doc.output.html}</outputDirectory>
-                                    <preserveDirectories>true</preserveDirectories>
-                                    <headerFooter>true</headerFooter>
-                                    <imagesDir>${doc.source}/images</imagesDir>
-                                    <backend>html5</backend>
-                                    <doctype>article</doctype>
-                                    <attributes>
-                                        <toc />
-                                        <linkcss>true</linkcss>
-                                        <stylesheet>apache.css</stylesheet>
-                                        <imagesdir>images</imagesdir>
-                                    </attributes>
-                                </configuration>
-                            </execution>
-                        </executions>
-                        <configuration>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
         <profile>
             <id>pdf</id>
             <build>
