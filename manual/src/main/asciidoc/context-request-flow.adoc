@@ -11,15 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-=== Connectors
+=== Context Request Flow
 
-Apache Unomi provides the following connectors:
+Here is an overview of how Unomi processes incoming requests to the `ContextServlet`.
 
-* <<Salesforce Connector,Salesforce CRM connector>>
-
-* <<MailChimp Connector,Mailchimp connector>>
-
-==== Call for contributors
-
-We are looking for help with the development of additional connectors. Any contribution (large or small) is more than
-welcome. Feel free to discuss this in our link:http://unomi.apache.org/community.html[mailing list, window="_blank"].
+image::unomi-request.png[Unomi request overview]

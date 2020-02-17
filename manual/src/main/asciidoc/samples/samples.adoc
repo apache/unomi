@@ -15,5 +15,5 @@
 
 Apache Unomi provides the following samples:
 
-* <<_twitter_sample,Twitter integration>>
-* <<_login_sample,Login integration>>
+* <<Twitter sample,Twitter integration>>
+* <<Login sample,Login integration>>
