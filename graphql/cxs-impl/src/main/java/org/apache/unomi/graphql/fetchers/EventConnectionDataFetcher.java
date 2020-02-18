@@ -32,6 +32,9 @@ import org.apache.unomi.graphql.types.output.CDPEventConnection;
 import org.apache.unomi.graphql.types.output.CDPEventEdge;
 import org.apache.unomi.graphql.types.output.CDPPageInfo;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -80,8 +83,18 @@ public class EventConnectionDataFetcher implements DataFetcher<CDPEventConnectio
     private CDPEventConnection getAll(DataFetchingEnvironment environment, ServiceManager serviceManager) {
         final Integer first = environment.getArgument("first");
         final Integer last = environment.getArgument("last");
-        final String after = environment.getArgument("after");
-        final String before = environment.getArgument("before");
+        Date after = null;
+        try {
+            after = DateFormat.getInstance().parse(environment.getArgument("after"));
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        Date before = null;
+        try {
+            before = DateFormat.getInstance().parse(environment.getArgument("before"));
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
         final CDPEventFilterInput filterInput = objectMapper.convertValue(environment.getArgument("filter"), CDPEventFilterInput.class);
 
         final Condition condition = createAllEventsCondition(filterInput, after, before, serviceManager.getDefinitionsService());
@@ -110,9 +123,33 @@ public class EventConnectionDataFetcher implements DataFetcher<CDPEventConnectio
         return profileIdCondition;
     }
 
-    private Condition createAllEventsCondition(CDPEventFilterInput filterInput, String after, String before, DefinitionsService definitionsService) {
+    private Condition createEventPropertyDateCondition(final String propertyName, final String operator, final Date propertyValue, DefinitionsService definitionsService) {
+        final Condition profileIdCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+
+        profileIdCondition.setParameter("propertyName", propertyName);
+        profileIdCondition.setParameter("comparisonOperator", operator);
+        profileIdCondition.setParameter("propertyValueDate", propertyValue);
+
+        return profileIdCondition;
+    }
+
+    private Condition createAllEventsCondition(CDPEventFilterInput filterInput, Date after, Date before, DefinitionsService definitionsService) {
+        return createFilterInputCondition(filterInput, after, before, definitionsService);
+    }
+
+    private Condition createFilterInputCondition(CDPEventFilterInput filterInput, Date after, Date before, DefinitionsService definitionsService) {
         final Condition rootCondition = createBoolCondition("and", definitionsService);
         final List<Condition> rootSubConditions = newArrayList();
+
+        if (after != null) {
+            final Condition afterCondition = createEventPropertyDateCondition("timeStamp", "greaterThan", after, definitionsService);
+            rootSubConditions.add(afterCondition);
+        }
+
+        if (before != null) {
+            final Condition afterCondition = createEventPropertyDateCondition("timeStamp", "lessThanOrEqual", before, definitionsService);
+            rootSubConditions.add(afterCondition);
+        }
 
         if (filterInput.id_equals != null) {
             final Condition idCondition = createEventPropertyCondition("id", filterInput.id_equals, definitionsService);
@@ -136,13 +173,13 @@ public class EventConnectionDataFetcher implements DataFetcher<CDPEventConnectio
 
         if (filterInput.and != null && filterInput.and.size() > 0) {
             final Condition filterAndCondition = createBoolCondition("and", definitionsService);
-            final List<Condition> filterAndSubConditions = filterInput.and.stream().map(andInput -> createAllEventsCondition(andInput, after, before, definitionsService)).collect(Collectors.toList());
+            final List<Condition> filterAndSubConditions = filterInput.and.stream().map(andInput -> createFilterInputCondition(andInput, null, null, definitionsService)).collect(Collectors.toList());
             filterAndCondition.setParameter("subConditions", filterAndSubConditions);
         }
 
         if (filterInput.or != null && filterInput.or.size() > 0) {
             final Condition filterOrCondition = createBoolCondition("or", definitionsService);
-            final List<Condition> filterOrSubConditions = filterInput.or.stream().map(orInput -> createAllEventsCondition(orInput, after, before, definitionsService)).collect(Collectors.toList());
+            final List<Condition> filterOrSubConditions = filterInput.or.stream().map(orInput -> createFilterInputCondition(orInput, null, null, definitionsService)).collect(Collectors.toList());
             filterOrCondition.setParameter("subConditions", filterOrSubConditions);
         }
 
