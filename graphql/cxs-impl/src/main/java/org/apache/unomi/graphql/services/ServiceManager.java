@@ -16,6 +16,8 @@
  */
 package org.apache.unomi.graphql.services;
 
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SegmentService;
 import org.osgi.service.component.annotations.Component;
@@ -26,6 +28,18 @@ public class ServiceManager {
 
     private ProfileService profileService;
     private SegmentService segmentService;
+    private EventService eventService;
+    private DefinitionsService definitionsService;
+
+    @Reference
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
+    }
+
+    @Reference
+    public void setEventService(EventService eventService) {
+        this.eventService = eventService;
+    }
 
     @Reference
     public void setProfileService(ProfileService profileService) {
@@ -35,6 +49,14 @@ public class ServiceManager {
     @Reference
     public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
+    }
+
+    public DefinitionsService getDefinitionsService() {
+        return definitionsService;
+    }
+
+    public EventService getEventService() {
+        return eventService;
     }
 
     public ProfileService getProfileService() {

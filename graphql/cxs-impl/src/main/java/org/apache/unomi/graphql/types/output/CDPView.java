@@ -27,4 +27,7 @@ public class CDPView {
     @GraphQLField
     public String name;
 
+    public CDPView(@GraphQLID String name) {
+        this.name = name;
+    }
 }

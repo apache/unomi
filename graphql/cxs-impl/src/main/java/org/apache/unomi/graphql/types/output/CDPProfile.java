@@ -21,6 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.graphql.fetchers.EventConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.ProfileIdsDataFetcher;
 import org.apache.unomi.graphql.fetchers.ProfileSegmentsDataFetcher;
 import org.apache.unomi.graphql.types.input.*;
@@ -71,6 +72,7 @@ public class CDPProfile implements CDPProfileInterface {
     }
 
     @GraphQLField
+    @GraphQLDataFetcher(value = EventConnectionDataFetcher.class, args = {EventConnectionDataFetcher.TYPE_ALL})
     public CDPEventConnection cdp_events(
             @GraphQLName("filter") CDPEventFilterInput filterInput,
             @GraphQLName("first") Integer first,
@@ -78,15 +80,16 @@ public class CDPProfile implements CDPProfileInterface {
             @GraphQLName("before") String before,
             @GraphQLName("after") String after
     ) {
-        return new CDPEventConnection();
+        return null;
     }
 
     @GraphQLField
+    @GraphQLDataFetcher(value = EventConnectionDataFetcher.class, args = {EventConnectionDataFetcher.TYPE_LATEST})
     public CDPEventConnection cdp_lastEvents(
             @GraphQLName("profileID") CDPProfileIDInput profileID,
             @GraphQLName("count") Integer count
     ) {
-        return new CDPEventConnection();
+        return null;
     }
 
     @GraphQLField

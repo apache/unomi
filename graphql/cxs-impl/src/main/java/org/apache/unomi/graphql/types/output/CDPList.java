@@ -34,7 +34,7 @@ public class CDPList {
     @GraphQLField
     @GraphQLNonNull
     public CDPView view() {
-        return new CDPView();
+        return new CDPView("empty");
     }
 
     @GraphQLField

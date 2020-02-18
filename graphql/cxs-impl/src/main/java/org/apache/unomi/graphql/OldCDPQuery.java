@@ -76,14 +76,7 @@ public class OldCDPQuery {
         if (segment == null) {
             return null;
         }
-        CDPSegment cdpSegment = CDPSegment.create().build();
-        cdpSegment.id = segment.getItemId();
-        cdpSegment.name = segment.getMetadata().getName();
-        CDPView cdpView = new CDPView();
-        cdpView.name = segment.getScope();
-        cdpSegment.view = cdpView;
-        cdpSegment.condition = getSegmentCondition(segment.getCondition());
-        return cdpSegment;
+        return new CDPSegment(segment);
     }
 
     private CDPSegmentCondition getSegmentCondition(Condition segmentRootCondition) {

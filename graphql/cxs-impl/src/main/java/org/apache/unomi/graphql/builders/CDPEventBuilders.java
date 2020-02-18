@@ -25,7 +25,7 @@ import org.apache.unomi.graphql.types.input.CDPEventOccurrenceFilterInput;
 import org.apache.unomi.graphql.types.output.CDPEvent;
 import org.apache.unomi.graphql.types.output.CDPEventProperties;
 import org.apache.unomi.graphql.types.output.CDPEventType;
-import org.apache.unomi.graphql.types.output.PageInfo;
+import org.apache.unomi.graphql.types.output.CDPPageInfo;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -91,7 +91,7 @@ public class CDPEventBuilders implements CDPBuilder {
                 )
                 .field(newFieldDefinition()
                         .name("pageInfo")
-                        .type(new GraphQLList(typeRegistry.get(PageInfo.class.getName())))
+                        .type(new GraphQLList(typeRegistry.get(CDPPageInfo.class.getName())))
                 )
                 .build();
     }
@@ -403,7 +403,7 @@ public class CDPEventBuilders implements CDPBuilder {
                         .dataFetcher(new DataFetcher() {
                             public Object get(DataFetchingEnvironment environment) {
                                 CDPEvent cdpEvent = environment.getSource();
-                                return new ArrayList<Map.Entry<Object,Object>>(cdpEvent.getProperties().getProperties().entrySet());
+                                return new ArrayList<>(cdpEvent.getProperties().getProperties().entrySet());
                             }
                         })
                 )

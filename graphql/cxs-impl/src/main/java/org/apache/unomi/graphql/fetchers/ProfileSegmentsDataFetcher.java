@@ -20,6 +20,8 @@ package org.apache.unomi.graphql.fetchers;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.CDPSegment;
@@ -31,11 +33,19 @@ public class ProfileSegmentsDataFetcher implements DataFetcher<List<CDPSegment>>
 
     @Override
     public List<CDPSegment> get(DataFetchingEnvironment environment) throws Exception {
-        CDPProfile cdpProfile = environment.getSource();
-        ServiceManager serviceManager = environment.getContext();
+        final CDPProfile cdpProfile = environment.getSource();
+        final ServiceManager serviceManager = environment.getContext();
+        final SegmentService segmentService = serviceManager.getSegmentService();
 
-        final List<Metadata> metadata = serviceManager.getSegmentService().getSegmentMetadatasForProfile(cdpProfile.getProfile());
+        final List<Metadata> metadata = segmentService.getSegmentMetadatasForProfile(cdpProfile.getProfile());
 
-        return metadata.stream().map(m -> CDPSegment.create().id(m.getId()).name(m.getName()).build()).collect(Collectors.toList());
+        return metadata.stream().map(s -> createCDPSegment(s, segmentService)).collect(Collectors.toList());
+    }
+
+
+    private CDPSegment createCDPSegment(Metadata segmentMetadata, SegmentService segmentService) {
+        Segment segment = segmentService.getSegmentDefinition(segmentMetadata.getId());
+
+        return new CDPSegment(segment);
     }
 }

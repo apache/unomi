@@ -24,11 +24,15 @@ import graphql.annotations.annotationTypes.GraphQLName;
 // graphql.AssertException: All types within a GraphQL schema must have unique names. No two provided types may have the same name.
 //        No provided type may have a name which conflicts with any built in types (including Scalar and Introspection types).
 //        You have redefined the type 'PageInfo' from being a 'GraphQLObjectType' to a 'GraphQLObjectType'
-public class PageInfo {
+public class CDPPageInfo {
 
     @GraphQLField
     public boolean hasPreviousPage;
     @GraphQLField
     public boolean hasNextPage;
 
+    public CDPPageInfo(boolean hasPreviousPage, boolean hasNextPage) {
+        this.hasPreviousPage = hasPreviousPage;
+        this.hasNextPage = hasNextPage;
+    }
 }
