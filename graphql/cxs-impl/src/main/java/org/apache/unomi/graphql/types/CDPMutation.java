@@ -24,8 +24,12 @@ import org.apache.unomi.graphql.types.input.CDPPropertyInput;
 
 import java.util.List;
 
-@GraphQLName("CDP_Mutation")
+import static org.apache.unomi.graphql.types.CDPMutation.TYPE_NAME;
+
+@GraphQLName(TYPE_NAME)
 public class CDPMutation {
+
+    public static final String TYPE_NAME = "CDP_Mutation";
 
     @GraphQLField
     public boolean createOrUpdateProfileProperties(

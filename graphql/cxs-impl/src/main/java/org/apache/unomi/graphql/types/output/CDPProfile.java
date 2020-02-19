@@ -29,8 +29,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-@GraphQLName("CDP_Profile")
+import static org.apache.unomi.graphql.types.output.CDPProfile.TYPE_NAME;
+
+@GraphQLName(TYPE_NAME)
 public class CDPProfile implements CDPProfileInterface {
+
+    public static final String TYPE_NAME = "CDP_Profile";
 
     private Profile profile;
 
