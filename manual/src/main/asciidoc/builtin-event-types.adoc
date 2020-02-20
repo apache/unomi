@@ -275,9 +275,9 @@ image::update-properties-event-type.png[]
     "profileId": "bc1e1238-a9ac-4b3a-8f63-5eec205cfcd5",
     "timeStamp": "2020-01-31T08:51:15Z",
     "properties": {
-        " *targetId* ": "f7d1f1b9-4415-4ff1-8fee-407b109364f7",
-        " *targetType* ": "profile",
-        " *add* ": {
+        "targetId": "f7d1f1b9-4415-4ff1-8fee-407b109364f7",
+        "targetType": "profile",
+        "add": {
             "properties.phoneNumber": "+1-123-555-12345",
             "properties.countryName": "US",
             "properties.city": "Las Vegas",
