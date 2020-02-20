@@ -182,7 +182,7 @@ public class GraphQLSchemaUpdater {
                 final GraphQLSchema graphQLSchema = createGraphQLSchema();
 
                 this.graphQL = GraphQL.newGraphQL(graphQLSchema).build();
-            }, 10, 10, TimeUnit.SECONDS);
+            }, 0, 60, TimeUnit.SECONDS); // TODO should be configurable
         } catch (Exception e) {
             executorService.shutdown();
             throw e;
@@ -280,9 +280,9 @@ public class GraphQLSchemaUpdater {
                 final Set<GraphQLFieldDefinition> queries = queryProvider.getQueries(graphQLAnnotations);
 
                 if (queries != null) {
-                    final GraphQLObjectType transformedCdpQueryType = graphQLAnnotations.object(CDPQuery.class)
+                    final GraphQLObjectType transformedCdpQueryType = graphQLAnnotations.object(RootQuery.class)
                             .transform(builder -> queries.forEach(builder::field));
-                    typeRegistry.put(CDPQuery.TYPE_NAME, transformedCdpQueryType);
+                    typeRegistry.put(RootQuery.TYPE_NAME, transformedCdpQueryType);
                 }
             }
         }
@@ -294,9 +294,9 @@ public class GraphQLSchemaUpdater {
                 final Set<GraphQLFieldDefinition> mutations = mutationProvider.getMutations(graphQLAnnotations);
 
                 if (mutations != null) {
-                    final GraphQLObjectType transformedMutationType = graphQLAnnotations.object(CDPMutation.class)
+                    final GraphQLObjectType transformedMutationType = graphQLAnnotations.object(RootMutation.class)
                             .transform(builder -> mutations.forEach(builder::field));
-                    typeRegistry.put(CDPMutation.TYPE_NAME, transformedMutationType);
+                    typeRegistry.put(RootMutation.TYPE_NAME, transformedMutationType);
                 }
             }
         }

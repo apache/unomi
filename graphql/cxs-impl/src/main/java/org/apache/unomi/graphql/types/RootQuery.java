@@ -20,6 +20,8 @@ import graphql.annotations.annotationTypes.GraphQLField;
 
 public class RootQuery {
 
+    public static final String TYPE_NAME = "RootQuery";
+
     @GraphQLField
     public static CDPQuery cdp() {
         return new CDPQuery();
