@@ -46,9 +46,23 @@ public class CreateOrUpdateProfilePropertiesCommand extends BaseCommand<Boolean>
     public Boolean execute() {
         final ProfileService profileService = serviceManager.getProfileService();
 
-        properties.forEach(property -> {
-            final PropertyType propertyType = createPropertyType(property);
-            profileService.setPropertyType(propertyType);
+        // TODO handle properties for SET
+        properties.forEach(propertyInput -> {
+            final CDPPropertyType cdpPropertyType = propertyInput.getProperty();
+
+            PropertyType propertyType = profileService.getPropertyType(cdpPropertyType.getName());
+
+            if (propertyType == null) {
+                propertyType = createPropertyType(cdpPropertyType);
+                profileService.setPropertyType(propertyType);
+            }
+
+            if (!propertyType.getValueTypeId().equals(cdpPropertyType.getCDPPropertyType())) {
+                profileService.deletePropertyType(cdpPropertyType.getName());
+
+                propertyType = createPropertyType(cdpPropertyType);
+                profileService.setPropertyType(propertyType);
+            }
         });
 
         serviceManager.getGraphQLSchemaUpdater().updateSchema();
@@ -56,16 +70,14 @@ public class CreateOrUpdateProfilePropertiesCommand extends BaseCommand<Boolean>
         return true;
     }
 
-    private PropertyType createPropertyType(final CDPPropertyInput propertyInput) {
-        final CDPPropertyType property = propertyInput.getProperty();
-
+    private PropertyType createPropertyType(final CDPPropertyType cdpPropertyType) {
         final PropertyType propertyType = new PropertyType();
 
         propertyType.setTarget("profiles");
-        propertyType.setItemId(property.getName());
-        propertyType.setValueTypeId(propertyInput.getProperty().getCDPPropertyType());
+        propertyType.setItemId(cdpPropertyType.getName());
+        propertyType.setValueTypeId(cdpPropertyType.getCDPPropertyType());
 
-        final Metadata metadata = createMetadata(property);
+        final Metadata metadata = createMetadata(cdpPropertyType);
         propertyType.setMetadata(metadata);
 
         return propertyType;
