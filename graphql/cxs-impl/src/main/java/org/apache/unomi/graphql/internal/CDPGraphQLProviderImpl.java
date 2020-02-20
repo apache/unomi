@@ -34,7 +34,7 @@ import org.apache.unomi.graphql.types.input.CDPGeoDistanceInput;
 import org.apache.unomi.graphql.types.input.CDPOrderByInput;
 import org.apache.unomi.graphql.types.output.CDPEventType;
 import org.apache.unomi.graphql.types.output.CDPGeoPoint;
-import org.apache.unomi.graphql.types.output.PageInfo;
+import org.apache.unomi.graphql.types.output.CDPPageInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,7 +79,7 @@ public class CDPGraphQLProviderImpl implements CDPGraphQLProvider, GraphQLQueryP
 
     public void updateGraphQLTypes() {
         typeRegistry.clear();
-        typeRegistry.put(PageInfo.class.getName(), annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(PageInfo.class, container));
+        typeRegistry.put(CDPPageInfo.class.getName(), annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CDPPageInfo.class, container));
 
         typeRegistry.put("CDP_GeoPoint", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CDPGeoPoint.class, container));
         typeRegistry.put("CDP_SetPropertyType",annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CDPSetPropertyType.class, container));

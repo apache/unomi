@@ -16,6 +16,8 @@
  */
 package org.apache.unomi.graphql.services;
 
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.graphql.GraphQLSchemaUpdater;
@@ -27,6 +29,8 @@ public class ServiceManager {
 
     private ProfileService profileService;
     private SegmentService segmentService;
+    private EventService eventService;
+    private DefinitionsService definitionsService;
     private GraphQLSchemaUpdater graphQLSchemaUpdater;
 
     @Reference
@@ -40,6 +44,16 @@ public class ServiceManager {
     }
 
     @Reference
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
+    }
+
+    @Reference
+    public void setEventService(EventService eventService) {
+        this.eventService = eventService;
+    }
+
+    @Reference
     public void setGraphQLSchemaUpdater(GraphQLSchemaUpdater graphQLSchemaUpdater) {
         this.graphQLSchemaUpdater = graphQLSchemaUpdater;
     }
@@ -50,6 +64,14 @@ public class ServiceManager {
 
     public SegmentService getSegmentService() {
         return segmentService;
+    }
+
+    public DefinitionsService getDefinitionsService() {
+        return definitionsService;
+    }
+
+    public EventService getEventService() {
+        return eventService;
     }
 
     public GraphQLSchemaUpdater getGraphQLSchemaUpdater() {

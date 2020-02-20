@@ -18,6 +18,7 @@ package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import org.apache.unomi.api.conditions.Condition;
 
 import java.util.List;
 
@@ -29,4 +30,10 @@ public class CDPSegmentCondition {
     public List<String> grantedConsents;
     @GraphQLField
     public CDPEventOccurrenceFilter eventOccurrenceFilter;
+
+    private Condition condition;
+
+    public CDPSegmentCondition(Condition condition) {
+        this.condition = condition;
+    }
 }

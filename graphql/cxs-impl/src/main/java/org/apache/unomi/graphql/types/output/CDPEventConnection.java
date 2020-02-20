@@ -27,6 +27,13 @@ public class CDPEventConnection {
     @GraphQLField
     public List<CDPEventEdge> edges;
     @GraphQLField
-    public PageInfo pageInfo;
+    public CDPPageInfo pageInfo;
 
+    public CDPEventConnection() {
+    }
+
+    public CDPEventConnection(List<CDPEventEdge> edges, CDPPageInfo pageInfo) {
+        this.edges = edges;
+        this.pageInfo = pageInfo;
+    }
 }

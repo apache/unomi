@@ -27,9 +27,18 @@ public class CDPEventProperties {
     @GraphQLField
     public int nbProperties;
 
-    Map<Object,Object> properties = new LinkedHashMap<>();
+    Map<String, Object> properties;
 
-    public Map<Object, Object> getProperties() {
+    public Map<String, Object> getProperties() {
         return properties;
+    }
+
+    public CDPEventProperties() {
+        this(new LinkedHashMap<>());
+    }
+
+    public CDPEventProperties(Map<String, Object> properties) {
+        this.properties = properties;
+        nbProperties = properties != null ? properties.size() : 0;
     }
 }

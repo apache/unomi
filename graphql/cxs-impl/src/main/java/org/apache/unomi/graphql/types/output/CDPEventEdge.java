@@ -27,4 +27,8 @@ public class CDPEventEdge {
     @GraphQLField
     public String cursor;
 
+    public CDPEventEdge(CDPEvent node, String cursor) {
+        this.node = node;
+        this.cursor = cursor;
+    }
 }

@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.output.CDPProfile;
@@ -35,9 +36,10 @@ public class ProfileDataFetcher implements DataFetcher<CDPProfile> {
         final CDPProfileIDInput profileIDInput =
                 objectMapper.convertValue(environment.getArgument("profileID"), CDPProfileIDInput.class);
 
-        ServiceManager serviceManager = environment.getContext();
+        final ServiceManager serviceManager = environment.getContext();
+        final ProfileService profileService = serviceManager.getProfileService();
 
-        Profile profile = serviceManager.getProfileService().load(profileIDInput.getId());
+        Profile profile = profileService.load(profileIDInput.getId());
 
         if (profile != null) {
             return new CDPProfile(profile);
@@ -48,7 +50,7 @@ public class ProfileDataFetcher implements DataFetcher<CDPProfile> {
             profile.setItemId(profileIDInput.getId());
             profile.setItemType("profile");
 
-            profile = serviceManager.getProfileService().save(profile);
+            profile = profileService.save(profile);
             return new CDPProfile(profile);
         }
 

@@ -18,6 +18,8 @@ package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
+import org.apache.unomi.api.Event;
 
 @GraphQLName("CDP_Event")
 public class CDPEvent {
@@ -30,37 +32,56 @@ public class CDPEvent {
     private CDPEventProperties properties = new CDPEventProperties();
     private CDPGeoPoint location;
 
+    public CDPEvent() {
+    }
+
+    public CDPEvent(Event event) {
+        id = event.getItemId();
+        eventType = event.getEventType();
+        timeStamp = event.getTimeStamp() != null ? event.getTimeStamp().getTime() : 0;
+        subject = event.getScope(); //TODO: ?
+//        object = event.getObject();
+        properties = new CDPEventProperties(event.getProperties());
+    }
+
     @GraphQLField
+    @GraphQLPrettify
     public String getId() {
         return id;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public String getEventType() {
         return eventType;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public long getTimeStamp() {
         return timeStamp;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public String getSubject() {
         return subject;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public String getObject() {
         return object;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public CDPEventProperties getProperties() {
         return properties;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public CDPGeoPoint getLocation() {
         return location;
     }
