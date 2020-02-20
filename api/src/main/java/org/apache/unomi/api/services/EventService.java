@@ -142,6 +142,13 @@ public interface EventService {
      * @return {@code true} if the event has already been raised, {@code false} otherwise
      */
     boolean hasEventAlreadyBeenRaised(Event event, boolean session);
+    /**
+     * Checks whether the specified event has already been raised with the same itemId.
+     *
+     * @param event   the event we want to check
+     * @return {@code true} if the event has already been raised, {@code false} otherwise
+     */
+    boolean hasEventAlreadyBeenRaised(Event event);
 
     /**
      * Removes all events of the specified profile
