@@ -41,7 +41,6 @@ import org.apache.unomi.graphql.types.CDPQuery;
 import org.apache.unomi.graphql.types.RootMutation;
 import org.apache.unomi.graphql.types.RootQuery;
 import org.apache.unomi.graphql.types.output.CDPProfile;
-import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
@@ -201,7 +200,7 @@ public class GraphQLSchemaUpdater {
 
         setUpContainer(graphQLAnnotations);
         setUpTypes(schemaBuilder);
-        setUpExtensions(schemaBuilder, graphQLAnnotations);
+        setUpExtensions(graphQLAnnotations);
         setUpCodeRegister(graphQLAnnotations);
         setUpDynamicFields(graphQLAnnotations);
 
@@ -252,15 +251,11 @@ public class GraphQLSchemaUpdater {
         }
     }
 
-    private void setUpExtensions(
-            final AnnotationsSchemaCreator.Builder schemaBuilder, final GraphQLAnnotations graphQLAnnotations) {
+    private void setUpExtensions(final GraphQLAnnotations graphQLAnnotations) {
         if (!extensionsProviders.isEmpty()) {
             for (GraphQLExtensionsProvider extensionsProvider : extensionsProviders) {
                 if (extensionsProvider.getExtensions() != null) {
-                    extensionsProvider.getExtensions().forEach(ext -> {
-                        schemaBuilder.typeExtension(ext);
-                        graphQLAnnotations.registerTypeExtension(ext);
-                    });
+                    extensionsProvider.getExtensions().forEach(graphQLAnnotations::registerTypeExtension);
                 }
             }
         }
