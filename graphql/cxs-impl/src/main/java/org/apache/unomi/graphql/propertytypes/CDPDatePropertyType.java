@@ -27,15 +27,12 @@ public class CDPDatePropertyType extends CDPPropertyType {
 
     private String defaultValue;
 
-    public CDPDatePropertyType(@GraphQLName("id") String id,
-                               @GraphQLName("name") String name,
+    public CDPDatePropertyType(@GraphQLName("name") String name,
                                @GraphQLName("minOccurrences") Integer minOccurrences,
                                @GraphQLName("maxOccurrences") Integer maxOccurrences,
                                @GraphQLName("tags") List<String> tags,
-                               @GraphQLName("systemTags") List<String> systemTags,
-                               @GraphQLName("personalData") Boolean personalData,
                                @GraphQLName("defaultValue") String defaultValue) {
-        super(id, name, minOccurrences, maxOccurrences, tags, systemTags, personalData);
+        super(name, minOccurrences, maxOccurrences, tags);
         this.defaultValue = defaultValue;
     }
 

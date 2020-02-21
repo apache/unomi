@@ -28,15 +28,12 @@ public class CDPSetPropertyTypeInput extends CDPPropertyType {
 
     private List<CDPPropertyInput> properties;
 
-    public CDPSetPropertyTypeInput(@GraphQLName("id") String id,
-                                   @GraphQLName("name") String name,
+    public CDPSetPropertyTypeInput(@GraphQLName("name") String name,
                                    @GraphQLName("minOccurrences") Integer minOccurrences,
                                    @GraphQLName("maxOccurrences") Integer maxOccurrences,
                                    @GraphQLName("tags") List<String> tags,
-                                   @GraphQLName("systemTags") List<String> systemTags,
-                                   @GraphQLName("personalData") Boolean personalData,
                                    @GraphQLName("properties") List<CDPPropertyInput> properties) {
-        super(id, name, minOccurrences, maxOccurrences, tags, systemTags, personalData);
+        super(name, minOccurrences, maxOccurrences, tags);
         this.properties = properties;
     }
 

@@ -29,17 +29,14 @@ public class CDPIntPropertyType extends CDPPropertyType {
     private Integer maxValue;
     private Integer defaultValue;
 
-    public CDPIntPropertyType(@GraphQLName("id") String id,
-                              @GraphQLName("name") String name,
+    public CDPIntPropertyType(@GraphQLName("name") String name,
                               @GraphQLName("minOccurrences") Integer minOccurrences,
                               @GraphQLName("maxOccurrences") Integer maxOccurrences,
                               @GraphQLName("tags") List<String> tags,
-                              @GraphQLName("systemTags") List<String> systemTags,
-                              @GraphQLName("personalData") Boolean personalData,
                               @GraphQLName("minValue") Integer minValue,
                               @GraphQLName("maxValue") Integer maxValue,
                               @GraphQLName("defaultValue") Integer defaultValue) {
-        super(id, name, minOccurrences, maxOccurrences, tags, systemTags, personalData);
+        super(name, minOccurrences, maxOccurrences, tags);
         this.minValue = minValue;
         this.maxValue = maxValue;
         this.defaultValue = defaultValue;

@@ -29,17 +29,14 @@ public class CDPFloatPropertyType extends CDPPropertyType {
     private Double maxValue;
     private Double defaultValue;
 
-    public CDPFloatPropertyType(@GraphQLName("id") String id,
-                                @GraphQLName("name") String name,
+    public CDPFloatPropertyType(@GraphQLName("name") String name,
                                 @GraphQLName("minOccurrences") Integer minOccurrences,
                                 @GraphQLName("maxOccurrences") Integer maxOccurrences,
                                 @GraphQLName("tags") List<String> tags,
-                                @GraphQLName("systemTags") List<String> systemTags,
-                                @GraphQLName("personalData") Boolean personalData,
                                 @GraphQLName("minValue") Double minValue,
                                 @GraphQLName("maxValue") Double maxValue,
                                 @GraphQLName("defaultValue") Double defaultValue) {
-        super(id, name, minOccurrences, maxOccurrences, tags, systemTags, personalData);
+        super(name, minOccurrences, maxOccurrences, tags);
         this.minValue = minValue;
         this.maxValue = maxValue;
         this.defaultValue = defaultValue;

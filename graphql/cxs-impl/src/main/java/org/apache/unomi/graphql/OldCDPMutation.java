@@ -87,39 +87,30 @@ public class OldCDPMutation {
             }
         }
         return new CDPSetPropertyType(
-                cdpSetPropertyTypeInput.getId(),
                 cdpSetPropertyTypeInput.getName(),
                 cdpSetPropertyTypeInput.getMinOccurrences(),
                 cdpSetPropertyTypeInput.getMaxOccurrences(),
                 cdpSetPropertyTypeInput.getTags(),
-                cdpSetPropertyTypeInput.getSystemTags(),
-                cdpSetPropertyTypeInput.isPersonalData(),
                 setProperties);
     }
 
     private CDPPropertyType getStringPropertyType(CDPStringPropertyType stringPropertyType) {
         return new CDPStringPropertyType(
-                stringPropertyType.getId(),
                 stringPropertyType.getName(),
                 stringPropertyType.getMinOccurrences(),
                 stringPropertyType.getMaxOccurrences(),
                 stringPropertyType.getTags(),
-                stringPropertyType.getSystemTags(),
-                stringPropertyType.isPersonalData(),
                 stringPropertyType.getRegexp(),
                 stringPropertyType.getDefaultValue()
-                );
+        );
     }
 
     private CDPPropertyType getIdentifierPropertyType(CDPIdentifierPropertyType identifierPropertyType) {
         return new CDPIdentifierPropertyType(
-                identifierPropertyType.getId(),
                 identifierPropertyType.getName(),
                 identifierPropertyType.getMinOccurrences(),
                 identifierPropertyType.getMaxOccurrences(),
                 identifierPropertyType.getTags(),
-                identifierPropertyType.getSystemTags(),
-                identifierPropertyType.isPersonalData(),
                 identifierPropertyType.getRegexp(),
                 identifierPropertyType.getDefaultValue()
         );
