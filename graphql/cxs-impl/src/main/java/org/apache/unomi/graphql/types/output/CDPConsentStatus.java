@@ -14,29 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.unomi.graphql.types.output;
 
-import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
-import graphql.annotations.annotationTypes.GraphQLName;
+import org.apache.unomi.api.ConsentStatus;
 
-@GraphQLName("CDP_Interest")
-public class CDPInterest {
+public enum CDPConsentStatus {
+    GRANTED,
+    DENIED,
+    REVOKED;
 
-    @GraphQLID
-    @GraphQLField
-    private String topic;
-
-    public CDPInterest(@GraphQLID String topic) {
-        this.topic = topic;
+    public static CDPConsentStatus from(final ConsentStatus status) {
+        return CDPConsentStatus.valueOf(status.name());
     }
-
-    public String getTopic() {
-        return topic;
-    }
-
-    public void setTopic(String topic) {
-        this.topic = topic;
-    }
-
 }

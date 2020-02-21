@@ -14,26 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types;
 
-import graphql.annotations.annotationTypes.GraphQLDataFetcher;
-import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLNonNull;
-import org.apache.unomi.graphql.fetchers.profile.ProfileDataFetcher;
-import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
+package org.apache.unomi.graphql.fetchers.profile;
+
+import graphql.schema.DataFetcher;
+import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.types.output.CDPConsent;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 
-@GraphQLName("CDP_Query")
-public class CDPQuery {
+import java.util.List;
+import java.util.stream.Collectors;
 
-    @GraphQLField
-    @GraphQLDataFetcher(ProfileDataFetcher.class)
-    public CDPProfile getProfile(
-            final @GraphQLName("profileID") @GraphQLNonNull CDPProfileIDInput profileID,
-            final @GraphQLName("createIfMissing") Boolean createIfMissing) {
+public class ProfileConsentsDataFetcher implements DataFetcher<List<CDPConsent>> {
 
-        return null;
+    @Override
+    public List<CDPConsent> get(DataFetchingEnvironment environment) throws Exception {
+        final CDPProfile cdpProfile = environment.getSource();
+
+        return cdpProfile.getProfile().getConsents().entrySet().stream().map(entry -> new CDPConsent(entry.getKey(), entry.getValue())).collect(Collectors.toList());
     }
-
 }

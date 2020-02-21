@@ -16,10 +16,12 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDataFetcher;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
+import org.apache.unomi.graphql.fetchers.list.ListProfileConnectionDataFetcher;
 
 @GraphQLName("CDP_List")
 public class CDPList {
@@ -27,40 +29,53 @@ public class CDPList {
     @GraphQLID
     @GraphQLField
     @GraphQLNonNull
-    public String id() {
-        return null;
-    }
+    @GraphQLName("ID")
+    private String id;
 
     @GraphQLField
     @GraphQLNonNull
-    public CDPView view() {
-        return new CDPView("empty");
-    }
+    private CDPView view;
 
     @GraphQLField
     @GraphQLNonNull
+    private String name;
+
+    public CDPList(final String id) {
+        this.id = id;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public CDPView getView() {
+        return view;
+    }
+
     public String name() {
-        return null;
+        return name;
     }
 
     @GraphQLField
+    @GraphQLDataFetcher(value = ListProfileConnectionDataFetcher.class, args = {ListProfileConnectionDataFetcher.ACTIVE})
     public CDPProfileConnection active(
             @GraphQLName("first") Integer first,
             @GraphQLName("after") String after,
             @GraphQLName("last") Integer last,
             @GraphQLName("before") String before
     ) {
-        return new CDPProfileConnection();
+        return null;
     }
 
     @GraphQLField
+    @GraphQLDataFetcher(value = ListProfileConnectionDataFetcher.class, args = {ListProfileConnectionDataFetcher.INACTIVE})
     public CDPProfileConnection inactive(
             @GraphQLName("first") Integer first,
             @GraphQLName("after") String after,
             @GraphQLName("last") Integer last,
             @GraphQLName("before") String before
     ) {
-        return new CDPProfileConnection();
+        return null;
     }
 
 }

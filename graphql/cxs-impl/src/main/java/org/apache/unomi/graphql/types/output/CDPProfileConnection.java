@@ -19,10 +19,21 @@ package org.apache.unomi.graphql.types.output;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
+import java.util.List;
+
 @GraphQLName("CDP_ProfileConnection")
 public class CDPProfileConnection {
 
     @GraphQLField
-    public String name;
+    public List<CDPProfileEdge> edges;
+    @GraphQLField
+    public CDPPageInfo pageInfo;
 
+    public CDPProfileConnection() {
+    }
+
+    public CDPProfileConnection(List<CDPProfileEdge> edges, CDPPageInfo pageInfo) {
+        this.edges = edges;
+        this.pageInfo = pageInfo;
+    }
 }
