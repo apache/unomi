@@ -15,37 +15,29 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.graphql.fetchers;
+package org.apache.unomi.graphql.fetchers.profile;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.api.services.SegmentService;
-import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.types.output.CDPConsent;
+import org.apache.unomi.graphql.types.output.CDPInterest;
 import org.apache.unomi.graphql.types.output.CDPProfile;
-import org.apache.unomi.graphql.types.output.CDPSegment;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
-public class ProfileSegmentsDataFetcher implements DataFetcher<List<CDPSegment>> {
+public class ProfileInterestsDataFetcher implements DataFetcher<List<CDPInterest>> {
 
     @Override
-    public List<CDPSegment> get(DataFetchingEnvironment environment) throws Exception {
+    public List<CDPInterest> get(DataFetchingEnvironment environment) throws Exception {
         final CDPProfile cdpProfile = environment.getSource();
-        final ServiceManager serviceManager = environment.getContext();
-        final SegmentService segmentService = serviceManager.getSegmentService();
+        final Map<String, Integer> interests = (Map<String, Integer>) cdpProfile.getProfile().getProperties().get("interests");
+        if (interests == null) {
+            return Collections.emptyList();
+        }
 
-        final List<Metadata> metadata = segmentService.getSegmentMetadatasForProfile(cdpProfile.getProfile());
-
-        return metadata.stream().map(s -> createCDPSegment(s, segmentService)).collect(Collectors.toList());
-    }
-
-
-    private CDPSegment createCDPSegment(Metadata segmentMetadata, SegmentService segmentService) {
-        Segment segment = segmentService.getSegmentDefinition(segmentMetadata.getId());
-
-        return new CDPSegment(segment);
+        return interests.keySet().stream().map(CDPInterest::new).collect(Collectors.toList());
     }
 }

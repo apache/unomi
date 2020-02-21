@@ -15,12 +15,11 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.graphql.fetchers;
+package org.apache.unomi.graphql.fetchers.profile;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.graphql.types.output.CDPClient;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.CDPProfileID;
 
@@ -36,20 +35,6 @@ public class ProfileIdsDataFetcher implements DataFetcher<List<CDPProfileID>> {
     }
 
     private CDPProfileID createProfileId(Profile profile) {
-        final CDPProfileID profileID = new CDPProfileID();
-
-        profileID.setId(profile.getItemId());
-        profileID.setClient(getDefaultClient());
-
-        return profileID;
-    }
-
-    private CDPClient getDefaultClient() {
-        final CDPClient client = new CDPClient();
-
-        client.setId("defaultClientId");
-        client.setTitle("Default ClientName");
-
-        return client;
+        return new CDPProfileID(profile.getItemId());
     }
 }

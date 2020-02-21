@@ -19,7 +19,8 @@ package org.apache.unomi.graphql.types;
 import graphql.annotations.annotationTypes.GraphQLDataFetcher;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
-import org.apache.unomi.graphql.fetchers.ProfileDataFetcher;
+import graphql.annotations.annotationTypes.GraphQLNonNull;
+import org.apache.unomi.graphql.fetchers.profile.ProfileDataFetcher;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 
@@ -33,7 +34,7 @@ public class CDPQuery {
     @GraphQLField
     @GraphQLDataFetcher(ProfileDataFetcher.class)
     public CDPProfile getProfile(
-            final @GraphQLName("profileID") CDPProfileIDInput profileID,
+            final @GraphQLName("profileID") @GraphQLNonNull CDPProfileIDInput profileID,
             final @GraphQLName("createIfMissing") Boolean createIfMissing) {
 
         return null;
