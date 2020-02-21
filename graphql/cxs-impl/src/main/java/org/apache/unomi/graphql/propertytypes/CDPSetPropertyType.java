@@ -18,28 +18,33 @@ package org.apache.unomi.graphql.propertytypes;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
 
 import java.util.List;
 
-@GraphQLName("CDP_SetPropertyType")
+@GraphQLName("CDP_SetProperty")
 public class CDPSetPropertyType extends CDPPropertyType {
 
     private List<CDPPropertyType> properties;
 
-    public CDPSetPropertyType(@GraphQLName("id") String id,
-                              @GraphQLName("name") String name,
+    public CDPSetPropertyType(@GraphQLName("name") String name,
                               @GraphQLName("minOccurrences") Integer minOccurrences,
                               @GraphQLName("maxOccurrences") Integer maxOccurrences,
                               @GraphQLName("tags") List<String> tags,
-                              @GraphQLName("systemTags") List<String> systemTags,
-                              @GraphQLName("personalData") Boolean personalData,
                               @GraphQLName("properties") List<CDPPropertyType> properties) {
-        super(id, name, minOccurrences, maxOccurrences, tags, systemTags, personalData);
+        super(name, minOccurrences, maxOccurrences, tags);
         this.properties = properties;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public List<CDPPropertyType> getProperties() {
         return properties;
     }
+
+    @Override
+    public String getCDPPropertyType() {
+        return "set";
+    }
+
 }

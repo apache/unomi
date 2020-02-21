@@ -17,79 +17,66 @@
 package org.apache.unomi.graphql.propertytypes;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLNonNull;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
 
 import java.util.List;
 
-@GraphQLName("CDP_PropertyType")
+@GraphQLName("CDP_PropertyInterface")
 public class CDPPropertyType {
 
-    private String id;
     private String name;
     private Integer minOccurrences;
     private Integer maxOccurrences;
     private List<String> tags;
-    private List<String> systemTags;
-    private Boolean personalData;
 
-    public CDPPropertyType(@GraphQLName("id") String id,
-                           @GraphQLName("name") String name,
+    public CDPPropertyType(@GraphQLName("name") String name,
                            @GraphQLName("minOccurrences") Integer minOccurrences,
                            @GraphQLName("maxOccurrences") Integer maxOccurrences,
-                           @GraphQLName("tags") List<String> tags,
-                           @GraphQLName("systemTags") List<String> systemTags,
-                           @GraphQLName("personalData") Boolean personalData) {
-        this.id = id;
+                           @GraphQLName("tags") List<String> tags) {
         this.name = name;
         this.minOccurrences = minOccurrences;
         this.maxOccurrences = maxOccurrences;
         this.tags = tags;
-        this.systemTags = systemTags;
-        this.personalData = personalData;
     }
 
     public CDPPropertyType(CDPPropertyType input) {
-        this.id = input.id;
         this.name = input.name;
         this.minOccurrences = input.minOccurrences;
         this.maxOccurrences = input.maxOccurrences;
         this.tags = input.tags;
-        this.systemTags = input.systemTags;
-        this.personalData = input.personalData;
     }
 
+    @GraphQLID
+    @GraphQLNonNull
     @GraphQLField
-    public String getId() {
-        return id;
-    }
-
-    @GraphQLField
+    @GraphQLPrettify
     public String getName() {
         return name;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public Integer getMinOccurrences() {
         return minOccurrences;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public Integer getMaxOccurrences() {
         return maxOccurrences;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public List<String> getTags() {
         return tags;
     }
 
-    @GraphQLField
-    public List<String> getSystemTags() {
-        return systemTags;
+    public String getCDPPropertyType() {
+        return "string";
     }
 
-    @GraphQLField
-    public Boolean isPersonalData() {
-        return personalData;
-    }
 }

@@ -18,35 +18,35 @@ package org.apache.unomi.graphql.propertytypes;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
 
 import java.util.List;
 
-@GraphQLName("CDP_IdentifierPropertyType")
+@GraphQLName("CDP_IdentifierProperty")
 public class CDPIdentifierPropertyType extends CDPPropertyType {
 
     private String regexp;
     private String defaultValue;
 
-    public CDPIdentifierPropertyType(@GraphQLName("id") String id,
-                                     @GraphQLName("name") String name,
+    public CDPIdentifierPropertyType(@GraphQLName("name") String name,
                                      @GraphQLName("minOccurrences") Integer minOccurrences,
                                      @GraphQLName("maxOccurrences") Integer maxOccurrences,
                                      @GraphQLName("tags") List<String> tags,
-                                     @GraphQLName("systemTags") List<String> systemTags,
-                                     @GraphQLName("personalData") Boolean personalData,
                                      @GraphQLName("regexp") String regexp,
                                      @GraphQLName("defaultValue") String defaultValue) {
-        super(id, name, minOccurrences, maxOccurrences, tags, systemTags, personalData);
+        super(name, minOccurrences, maxOccurrences, tags);
         this.regexp = regexp;
         this.defaultValue = defaultValue;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public String getRegexp() {
         return regexp;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public String getDefaultValue() {
         return defaultValue;
     }

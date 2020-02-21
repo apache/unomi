@@ -32,11 +32,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @GraphQLName("CDP_Query")
-public class CDPQuery {
+public class OldCDPQuery {
 
     CDPGraphQLProvider cdpGraphQLProvider;
 
-    public CDPQuery(CDPGraphQLProvider cdpGraphQLProvider) {
+    public OldCDPQuery(CDPGraphQLProvider cdpGraphQLProvider) {
         this.cdpGraphQLProvider = cdpGraphQLProvider;
     }
 
@@ -76,14 +76,7 @@ public class CDPQuery {
         if (segment == null) {
             return null;
         }
-        CDPSegment cdpSegment = new CDPSegment();
-        cdpSegment.id = segment.getItemId();
-        cdpSegment.name = segment.getMetadata().getName();
-        CDPView cdpView = new CDPView();
-        cdpView.name = segment.getScope();
-        cdpSegment.view = cdpView;
-        cdpSegment.condition = getSegmentCondition(segment.getCondition());
-        return cdpSegment;
+        return new CDPSegment(segment);
     }
 
     private CDPSegmentCondition getSegmentCondition(Condition segmentRootCondition) {

@@ -14,22 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types;
 
 import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLName;
 
-import java.util.List;
+public class RootQuery {
 
-@GraphQLName("CDP_ProfilePropertiesFilter")
-public class CDPProfilePropertiesFilter {
+    public static final String TYPE_NAME = "RootQuery";
 
     @GraphQLField
-    @GraphQLName("and")
-    public List<CDPProfilePropertiesFilter> andFilters;
-
-    @GraphQLField
-    @GraphQLName("or")
-    public List<CDPProfilePropertiesFilter> orFilters;
+    public static CDPQuery cdp() {
+        return new CDPQuery();
+    }
 
 }

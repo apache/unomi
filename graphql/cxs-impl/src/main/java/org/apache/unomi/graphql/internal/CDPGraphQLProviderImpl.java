@@ -19,13 +19,13 @@ package org.apache.unomi.graphql.internal;
 import graphql.annotations.processor.GraphQLAnnotationsComponent;
 import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.schema.*;
-import graphql.servlet.GraphQLMutationProvider;
-import graphql.servlet.GraphQLQueryProvider;
-import graphql.servlet.GraphQLTypesProvider;
+import graphql.servlet.config.GraphQLMutationProvider;
+import graphql.servlet.config.GraphQLQueryProvider;
+import graphql.servlet.config.GraphQLTypesProvider;
 import org.apache.unomi.graphql.CDPGraphQLProvider;
-import org.apache.unomi.graphql.CDPMutation;
+import org.apache.unomi.graphql.OldCDPMutation;
 import org.apache.unomi.graphql.CDPProviderManager;
-import org.apache.unomi.graphql.CDPQuery;
+import org.apache.unomi.graphql.OldCDPQuery;
 import org.apache.unomi.graphql.builders.CDPEventBuilders;
 import org.apache.unomi.graphql.propertytypes.CDPSetPropertyType;
 import org.apache.unomi.graphql.types.input.CDPDateFilter;
@@ -34,7 +34,7 @@ import org.apache.unomi.graphql.types.input.CDPGeoDistanceInput;
 import org.apache.unomi.graphql.types.input.CDPOrderByInput;
 import org.apache.unomi.graphql.types.output.CDPEventType;
 import org.apache.unomi.graphql.types.output.CDPGeoPoint;
-import org.apache.unomi.graphql.types.output.PageInfo;
+import org.apache.unomi.graphql.types.output.CDPPageInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,7 +79,7 @@ public class CDPGraphQLProviderImpl implements CDPGraphQLProvider, GraphQLQueryP
 
     public void updateGraphQLTypes() {
         typeRegistry.clear();
-        typeRegistry.put(PageInfo.class.getName(), annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(PageInfo.class, container));
+        typeRegistry.put(CDPPageInfo.class.getName(), annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CDPPageInfo.class, container));
 
         typeRegistry.put("CDP_GeoPoint", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CDPGeoPoint.class, container));
         typeRegistry.put("CDP_SetPropertyType",annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CDPSetPropertyType.class, container));
@@ -92,8 +92,8 @@ public class CDPGraphQLProviderImpl implements CDPGraphQLProvider, GraphQLQueryP
 
         cdpEventBuilders.updateTypes();
 
-        typeRegistry.put("CDP_Query", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CDPQuery.class, container));
-        typeRegistry.put("CDP_Mutation", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(CDPMutation.class, container));
+        typeRegistry.put("CDP_Query", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(OldCDPQuery.class, container));
+        typeRegistry.put("CDP_Mutation", annotationsComponent.getOutputTypeProcessor().getOutputTypeOrRef(OldCDPMutation.class, container));
 
     }
 

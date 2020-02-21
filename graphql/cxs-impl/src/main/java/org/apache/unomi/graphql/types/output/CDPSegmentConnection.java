@@ -26,6 +26,6 @@ public class CDPSegmentConnection {
     @GraphQLField
     public List<CDPSegmentEdge> edges;
     @GraphQLField
-    public PageInfo pageInfo;
+    public CDPPageInfo CDPPageInfo;
 
 }

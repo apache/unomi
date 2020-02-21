@@ -28,12 +28,12 @@ public class CDPEventTypeInput {
     private String id;
     private String scope;
     private String typeName;
-    private List<CDPPropertyTypeInput> properties = new ArrayList<>();
+    private List<CDPPropertyInput> properties = new ArrayList<>();
 
     public CDPEventTypeInput(@GraphQLName("id") String id,
                              @GraphQLName("scope") String scope,
                              @GraphQLName("typeName") String typeName,
-                             @GraphQLName("properties") List<CDPPropertyTypeInput> properties) {
+                             @GraphQLName("properties") List<CDPPropertyInput> properties) {
         this.id = id;
         this.scope = scope;
         this.typeName = typeName;
@@ -56,7 +56,7 @@ public class CDPEventTypeInput {
     }
 
     @GraphQLField
-    public List<CDPPropertyTypeInput> getProperties() {
+    public List<CDPPropertyInput> getProperties() {
         return properties;
     }
 }

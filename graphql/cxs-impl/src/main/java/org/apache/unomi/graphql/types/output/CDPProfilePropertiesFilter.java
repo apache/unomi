@@ -17,12 +17,19 @@
 package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
 
-public class PageInfo {
+import java.util.List;
+
+@GraphQLName("CDP_ProfilePropertiesFilter")
+public class CDPProfilePropertiesFilter {
 
     @GraphQLField
-    public boolean hasPreviousPage;
+    @GraphQLName("and")
+    public List<CDPProfilePropertiesFilter> andFilters;
+
     @GraphQLField
-    public boolean hasNextPage;
+    @GraphQLName("or")
+    public List<CDPProfilePropertiesFilter> orFilters;
 
 }
