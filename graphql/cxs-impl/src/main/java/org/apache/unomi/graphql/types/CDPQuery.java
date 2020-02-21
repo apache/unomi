@@ -24,8 +24,12 @@ import org.apache.unomi.graphql.fetchers.profile.ProfileDataFetcher;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 
-@GraphQLName("CDP_Query")
+import static org.apache.unomi.graphql.types.CDPQuery.TYPE_NAME;
+
+@GraphQLName(TYPE_NAME)
 public class CDPQuery {
+
+    public static final String TYPE_NAME = "CDP_Query";
 
     @GraphQLField
     @GraphQLDataFetcher(ProfileDataFetcher.class)

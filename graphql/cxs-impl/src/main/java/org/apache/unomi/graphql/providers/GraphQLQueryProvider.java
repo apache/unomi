@@ -14,17 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types;
+package org.apache.unomi.graphql.providers;
 
-import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.processor.GraphQLAnnotations;
+import graphql.schema.GraphQLFieldDefinition;
 
-public class RootQuery {
+import java.util.Set;
 
-    public static final String TYPE_NAME = "RootQuery";
+public interface GraphQLQueryProvider extends GraphQLProvider {
 
-    @GraphQLField
-    public static CDPQuery cdp() {
-        return new CDPQuery();
-    }
+    Set<GraphQLFieldDefinition> getQueries(GraphQLAnnotations graphQLAnnotations);
 
 }

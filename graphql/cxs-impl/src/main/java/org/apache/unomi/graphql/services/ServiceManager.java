@@ -20,6 +20,7 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.graphql.GraphQLSchemaUpdater;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -30,6 +31,17 @@ public class ServiceManager {
     private SegmentService segmentService;
     private EventService eventService;
     private DefinitionsService definitionsService;
+    private GraphQLSchemaUpdater graphQLSchemaUpdater;
+
+    @Reference
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
+    }
+
+    @Reference
+    public void setSegmentService(SegmentService segmentService) {
+        this.segmentService = segmentService;
+    }
 
     @Reference
     public void setDefinitionsService(DefinitionsService definitionsService) {
@@ -42,13 +54,16 @@ public class ServiceManager {
     }
 
     @Reference
-    public void setProfileService(ProfileService profileService) {
-        this.profileService = profileService;
+    public void setGraphQLSchemaUpdater(GraphQLSchemaUpdater graphQLSchemaUpdater) {
+        this.graphQLSchemaUpdater = graphQLSchemaUpdater;
     }
 
-    @Reference
-    public void setSegmentService(SegmentService segmentService) {
-        this.segmentService = segmentService;
+    public ProfileService getProfileService() {
+        return profileService;
+    }
+
+    public SegmentService getSegmentService() {
+        return segmentService;
     }
 
     public DefinitionsService getDefinitionsService() {
@@ -59,12 +74,8 @@ public class ServiceManager {
         return eventService;
     }
 
-    public ProfileService getProfileService() {
-        return profileService;
-    }
-
-    public SegmentService getSegmentService() {
-        return segmentService;
+    public GraphQLSchemaUpdater getGraphQLSchemaUpdater() {
+        return graphQLSchemaUpdater;
     }
 
 }

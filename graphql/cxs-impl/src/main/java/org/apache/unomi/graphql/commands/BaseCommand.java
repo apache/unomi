@@ -14,17 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types;
+package org.apache.unomi.graphql.commands;
 
-import graphql.annotations.annotationTypes.GraphQLField;
+import org.apache.unomi.graphql.services.ServiceManager;
 
-public class RootQuery {
+public abstract class BaseCommand<T> {
 
-    public static final String TYPE_NAME = "RootQuery";
+    final ServiceManager serviceManager;
 
-    @GraphQLField
-    public static CDPQuery cdp() {
-        return new CDPQuery();
+    public abstract T execute();
+
+    public BaseCommand(final Builder builder) {
+        this.serviceManager = builder.serviceManager;
+    }
+
+    public static abstract class Builder<B extends Builder> {
+
+        ServiceManager serviceManager;
+
+        @SuppressWarnings("unchecked")
+        public B setServiceManager(ServiceManager serviceManager) {
+            this.serviceManager = serviceManager;
+            return (B) this;
+        }
+
     }
 
 }

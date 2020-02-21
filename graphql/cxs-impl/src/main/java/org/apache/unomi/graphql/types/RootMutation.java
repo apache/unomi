@@ -22,6 +22,8 @@ import graphql.annotations.annotationTypes.GraphQLMutation;
 @GraphQLMutation
 public class RootMutation {
 
+    public static final String TYPE_NAME = "RootMutation";
+
     @GraphQLField
     public static CDPMutation cdp() {
         return new CDPMutation();

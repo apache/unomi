@@ -18,28 +18,33 @@ package org.apache.unomi.graphql.propertytypes;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
 
 import java.util.List;
 
-@GraphQLName("CDP_GeoPointPropertyType")
+@GraphQLName("CDP_GeoPointProperty")
 public class CDPGeoPointPropertyType extends CDPPropertyType {
 
     private String defaultValue;
 
-    public CDPGeoPointPropertyType(@GraphQLName("id") String id,
-                                   @GraphQLName("name") String name,
+    public CDPGeoPointPropertyType(@GraphQLName("name") String name,
                                    @GraphQLName("minOccurrences") Integer minOccurrences,
                                    @GraphQLName("maxOccurrences") Integer maxOccurrences,
                                    @GraphQLName("tags") List<String> tags,
-                                   @GraphQLName("systemTags") List<String> systemTags,
-                                   @GraphQLName("personalData") Boolean personalData,
                                    @GraphQLName("defaultValue") String defaultValue) {
-        super(id, name, minOccurrences, maxOccurrences, tags, systemTags, personalData);
+        super(name, minOccurrences, maxOccurrences, tags);
         this.defaultValue = defaultValue;
     }
 
     @GraphQLField
+    @GraphQLPrettify
     public String getDefaultValue() {
         return defaultValue;
     }
+
+    @Override
+    public String getCDPPropertyType() {
+        return "string";
+    }
+
 }

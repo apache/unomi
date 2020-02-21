@@ -14,17 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types;
+package org.apache.unomi.graphql.providers.sample;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 
-public class RootQuery {
-
-    public static final String TYPE_NAME = "RootQuery";
+public class SampleType {
 
     @GraphQLField
-    public static CDPQuery cdp() {
-        return new CDPQuery();
-    }
+    public String field;
 
 }

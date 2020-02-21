@@ -20,14 +20,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
-import graphql.GraphQL;
-import graphql.annotations.AnnotationsSchemaCreator;
-import graphql.annotations.processor.GraphQLAnnotations;
-import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.introspection.IntrospectionQuery;
-import graphql.schema.GraphQLSchema;
-import org.apache.unomi.graphql.types.RootMutation;
-import org.apache.unomi.graphql.types.RootQuery;
+import org.apache.unomi.graphql.GraphQLSchemaUpdater;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -50,9 +44,7 @@ public class GraphQLServlet extends HttpServlet {
 
     private ObjectMapper objectMapper;
 
-    private GraphQL graphQL;
-
-    private GraphQLAnnotations graphQLAnnotations = new GraphQLAnnotations();
+    private GraphQLSchemaUpdater graphQLSchemaUpdater;
 
     private ServiceManager serviceManager;
 
@@ -61,25 +53,16 @@ public class GraphQLServlet extends HttpServlet {
         this.serviceManager = serviceManager;
     }
 
+    @Reference
+    public void setGraphQLSchemaUpdater(GraphQLSchemaUpdater graphQLSchemaUpdater) {
+        this.graphQLSchemaUpdater = graphQLSchemaUpdater;
+    }
+
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
 
         this.objectMapper = new ObjectMapper();
-
-        final ProcessingElementsContainer container = graphQLAnnotations.getContainer();
-
-        container.setInputPrefix("");
-        container.setInputSuffix("Input");
-
-        final AnnotationsSchemaCreator.Builder builder = AnnotationsSchemaCreator.newAnnotationsSchema()
-                .query(RootQuery.class)
-                .mutation(RootMutation.class)
-                .setAnnotationsProcessor(graphQLAnnotations);
-
-        GraphQLSchema graphQLSchema = builder.build();
-
-        this.graphQL = GraphQL.newGraphQL(graphQLSchema).build();
     }
 
     @Override
@@ -140,7 +123,7 @@ public class GraphQLServlet extends HttpServlet {
                 .context(serviceManager)
                 .build();
 
-        final ExecutionResult executionResult = graphQL.execute(executionInput);
+        final ExecutionResult executionResult = graphQLSchemaUpdater.getGraphQL().execute(executionInput);
 
         final Map<String, Object> specificationResult = executionResult.toSpecification();
 

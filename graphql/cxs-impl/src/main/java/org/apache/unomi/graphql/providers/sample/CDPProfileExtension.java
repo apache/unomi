@@ -14,17 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types;
+package org.apache.unomi.graphql.providers.sample;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLTypeExtension;
+import org.apache.unomi.graphql.types.output.CDPProfile;
 
-public class RootQuery {
+@GraphQLTypeExtension(CDPProfile.class)
+public class CDPProfileExtension {
 
-    public static final String TYPE_NAME = "RootQuery";
+    private CDPProfile cdpProfile;
+
+    public CDPProfileExtension(CDPProfile cdpProfile) {
+        this.cdpProfile = cdpProfile;
+    }
 
     @GraphQLField
-    public static CDPQuery cdp() {
-        return new CDPQuery();
-    }
+    public String extensionField;
 
 }
