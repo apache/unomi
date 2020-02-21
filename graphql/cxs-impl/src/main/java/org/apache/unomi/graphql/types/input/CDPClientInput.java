@@ -16,7 +16,6 @@
  */
 package org.apache.unomi.graphql.types.input;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
@@ -26,29 +25,26 @@ import graphql.annotations.annotationTypes.GraphQLNonNull;
 public class CDPClientInput {
 
     @GraphQLID
-    @GraphQLName("ID")
     @GraphQLNonNull
     @GraphQLField
-    @JsonProperty(value = "ID")
     private String id;
 
     @GraphQLField
     private String title;
 
+    public CDPClientInput(
+            final @GraphQLID @GraphQLNonNull @GraphQLName("id") String id,
+            final @GraphQLName("title") String title) {
+        this.id = id;
+        this.title = title;
+    }
+
     public String getId() {
         return id;
     }
 
-    public void setId(String id) {
-        this.id = id;
-    }
-
     public String getTitle() {
         return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
     }
 
 }

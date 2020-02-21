@@ -23,13 +23,13 @@ import org.apache.unomi.api.segments.Segment;
 @GraphQLName("CDP_Segment")
 public class CDPSegment {
     @GraphQLField
-    public String id;
+    private String id;
     @GraphQLField
-    public CDPView view;
+    private CDPView view;
     @GraphQLField
-    public String name;
+    private String name;
     @GraphQLField
-    public CDPSegmentCondition condition;
+    private CDPSegmentCondition condition;
 
     public CDPSegment(Segment segment) {
         id = segment.getItemId();
@@ -38,5 +38,21 @@ public class CDPSegment {
             name = segment.getMetadata().getName();
         }
         condition = new CDPSegmentCondition(segment.getCondition());
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public CDPView getView() {
+        return view;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public CDPSegmentCondition getCondition() {
+        return condition;
     }
 }

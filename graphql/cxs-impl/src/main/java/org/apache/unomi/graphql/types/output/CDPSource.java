@@ -16,41 +16,39 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_ProfileID")
-public class CDPProfileID {
+@GraphQLName("CDP_Source")
+public class CDPSource {
 
     @GraphQLID
-    @GraphQLField
+    @GraphQLName("ID")
     @GraphQLNonNull
+    @GraphQLField
+    @JsonProperty(value = "ID")
     private String id;
 
     @GraphQLField
-    @GraphQLNonNull
-    private CDPClient client;
+    private Boolean thirdParty;
 
-    public CDPProfileID(@GraphQLID @GraphQLNonNull String id) {
+    public CDPSource(@GraphQLID @GraphQLNonNull String id) {
+        this(id, false);
+    }
+
+    public CDPSource(@GraphQLID @GraphQLNonNull String id, Boolean thirdParty) {
         this.id = id;
-        this.client = CDPClient.DEFAULT;
+        this.thirdParty = thirdParty;
     }
 
     public String getId() {
         return id;
     }
 
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public CDPClient getClient() {
-        return client;
-    }
-
-    public void setClient(CDPClient client) {
-        this.client = client;
+    public Boolean getThirdParty() {
+        return thirdParty;
     }
 }

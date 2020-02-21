@@ -17,40 +17,18 @@
 package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_ProfileID")
-public class CDPProfileID {
-
-    @GraphQLID
-    @GraphQLField
-    @GraphQLNonNull
-    private String id;
+@GraphQLName("CDP_ProfileEdge")
+public class CDPProfileEdge {
 
     @GraphQLField
-    @GraphQLNonNull
-    private CDPClient client;
+    public CDPProfile node;
+    @GraphQLField
+    public String cursor;
 
-    public CDPProfileID(@GraphQLID @GraphQLNonNull String id) {
-        this.id = id;
-        this.client = CDPClient.DEFAULT;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public CDPClient getClient() {
-        return client;
-    }
-
-    public void setClient(CDPClient client) {
-        this.client = client;
+    public CDPProfileEdge(CDPProfile node, String cursor) {
+        this.node = node;
+        this.cursor = cursor;
     }
 }

@@ -18,8 +18,10 @@ package org.apache.unomi.graphql.types;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.graphql.commands.CreateOrUpdateProfilePropertiesCommand;
+import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPPropertyInput;
 
 import java.util.List;

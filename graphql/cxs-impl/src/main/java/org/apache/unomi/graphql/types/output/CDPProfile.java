@@ -21,10 +21,18 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.graphql.fetchers.EventConnectionDataFetcher;
-import org.apache.unomi.graphql.fetchers.ProfileIdsDataFetcher;
-import org.apache.unomi.graphql.fetchers.ProfileSegmentsDataFetcher;
-import org.apache.unomi.graphql.types.input.*;
+import org.apache.unomi.graphql.fetchers.profile.ProfileAllEventsConnectionDataFetcher;
+import org.apache.unomi.graphql.fetchers.profile.ProfileConsentsDataFetcher;
+import org.apache.unomi.graphql.fetchers.profile.ProfileIdsDataFetcher;
+import org.apache.unomi.graphql.fetchers.profile.ProfileInterestsDataFetcher;
+import org.apache.unomi.graphql.fetchers.profile.ProfileLastEventsConnectionDataFetcher;
+import org.apache.unomi.graphql.fetchers.profile.ProfileListsDataFetcher;
+import org.apache.unomi.graphql.fetchers.profile.ProfileSegmentsDataFetcher;
+import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
+import org.apache.unomi.graphql.types.input.CDPNamedFilterInput;
+import org.apache.unomi.graphql.types.input.CDPOptimizationInput;
+import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
+import org.apache.unomi.graphql.types.input.CDPRecommendationInput;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -59,24 +67,27 @@ public class CDPProfile implements CDPProfileInterface {
 
     @Override
     @GraphQLField
+    @GraphQLDataFetcher(ProfileInterestsDataFetcher.class)
     public List<CDPInterest> cdp_interests(final @GraphQLName("views") List<String> viewIds, DataFetchingEnvironment environment) {
-        return Collections.emptyList();
+        return null;
     }
 
     @Override
     @GraphQLField
+    @GraphQLDataFetcher(ProfileConsentsDataFetcher.class)
     public List<CDPConsent> cdp_consents(DataFetchingEnvironment environment) {
-        return Collections.emptyList();
+        return null;
     }
 
     @Override
     @GraphQLField
+    @GraphQLDataFetcher(ProfileListsDataFetcher.class)
     public List<CDPList> cdp_lists(final @GraphQLName("views") List<String> viewIds, DataFetchingEnvironment environment) {
-        return Collections.emptyList();
+        return null;
     }
 
     @GraphQLField
-    @GraphQLDataFetcher(value = EventConnectionDataFetcher.class, args = {EventConnectionDataFetcher.TYPE_ALL})
+    @GraphQLDataFetcher(ProfileAllEventsConnectionDataFetcher.class)
     public CDPEventConnection cdp_events(
             @GraphQLName("filter") CDPEventFilterInput filterInput,
             @GraphQLName("first") Integer first,
@@ -88,7 +99,7 @@ public class CDPProfile implements CDPProfileInterface {
     }
 
     @GraphQLField
-    @GraphQLDataFetcher(value = EventConnectionDataFetcher.class, args = {EventConnectionDataFetcher.TYPE_LATEST})
+    @GraphQLDataFetcher(ProfileLastEventsConnectionDataFetcher.class)
     public CDPEventConnection cdp_lastEvents(
             @GraphQLName("profileID") CDPProfileIDInput profileID,
             @GraphQLName("count") Integer count

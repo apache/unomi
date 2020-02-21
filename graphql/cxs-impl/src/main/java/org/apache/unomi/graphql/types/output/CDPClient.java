@@ -25,6 +25,12 @@ import graphql.annotations.annotationTypes.GraphQLNonNull;
 @GraphQLName("CDP_Client")
 public class CDPClient {
 
+    public static String DEFAULT_NAME = "Default Client";
+
+    public static String DEFAULT_ID = "defaultClientId";
+
+    public static CDPClient DEFAULT = new CDPClient(DEFAULT_ID, DEFAULT_NAME);
+
     @GraphQLID
     @GraphQLName("ID")
     @GraphQLNonNull
@@ -35,7 +41,9 @@ public class CDPClient {
     @GraphQLField
     private String title;
 
-    public CDPClient() {
+    public CDPClient(@GraphQLID @GraphQLNonNull String id, String title) {
+        this.id = id;
+        this.title = title;
     }
 
     public String getId() {

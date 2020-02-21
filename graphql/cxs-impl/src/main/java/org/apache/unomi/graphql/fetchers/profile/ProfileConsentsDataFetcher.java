@@ -14,29 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
 
-import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
-import graphql.annotations.annotationTypes.GraphQLName;
+package org.apache.unomi.graphql.fetchers.profile;
 
-@GraphQLName("CDP_Interest")
-public class CDPInterest {
+import graphql.schema.DataFetcher;
+import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.types.output.CDPConsent;
+import org.apache.unomi.graphql.types.output.CDPProfile;
 
-    @GraphQLID
-    @GraphQLField
-    private String topic;
+import java.util.List;
+import java.util.stream.Collectors;
 
-    public CDPInterest(@GraphQLID String topic) {
-        this.topic = topic;
+public class ProfileConsentsDataFetcher implements DataFetcher<List<CDPConsent>> {
+
+    @Override
+    public List<CDPConsent> get(DataFetchingEnvironment environment) throws Exception {
+        final CDPProfile cdpProfile = environment.getSource();
+
+        return cdpProfile.getProfile().getConsents().entrySet().stream().map(entry -> new CDPConsent(entry.getKey(), entry.getValue())).collect(Collectors.toList());
     }
-
-    public String getTopic() {
-        return topic;
-    }
-
-    public void setTopic(String topic) {
-        this.topic = topic;
-    }
-
 }

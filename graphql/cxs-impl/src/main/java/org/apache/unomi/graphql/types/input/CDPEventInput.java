@@ -17,6 +17,7 @@
 package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 
 import java.util.LinkedHashMap;

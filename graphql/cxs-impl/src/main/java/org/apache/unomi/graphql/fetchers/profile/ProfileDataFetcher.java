@@ -15,26 +15,25 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.graphql.fetchers;
+package org.apache.unomi.graphql.fetchers.profile;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.graphql.fetchers.BaseDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 
-public class ProfileDataFetcher implements DataFetcher<CDPProfile> {
+public class ProfileDataFetcher extends BaseDataFetcher<CDPProfile> {
 
     private ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public CDPProfile get(DataFetchingEnvironment environment) throws Exception {
         final Boolean createIfMissing = environment.getArgument("createIfMissing");
-        final CDPProfileIDInput profileIDInput =
-                objectMapper.convertValue(environment.getArgument("profileID"), CDPProfileIDInput.class);
+        final CDPProfileIDInput profileIDInput = parseObjectParam("profileID", CDPProfileIDInput.class, environment);
 
         final ServiceManager serviceManager = environment.getContext();
         final ProfileService profileService = serviceManager.getProfileService();
