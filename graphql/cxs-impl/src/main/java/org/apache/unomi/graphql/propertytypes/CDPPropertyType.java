@@ -17,7 +17,9 @@
 package org.apache.unomi.graphql.propertytypes;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.annotations.annotationTypes.GraphQLPrettify;
 
 import java.util.List;
@@ -47,6 +49,8 @@ public class CDPPropertyType {
         this.tags = input.tags;
     }
 
+    @GraphQLID
+    @GraphQLNonNull
     @GraphQLField
     @GraphQLPrettify
     public String getName() {
