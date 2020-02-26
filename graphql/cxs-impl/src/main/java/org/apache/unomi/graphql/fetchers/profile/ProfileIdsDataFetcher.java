@@ -20,13 +20,14 @@ package org.apache.unomi.graphql.fetchers.profile;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.graphql.fetchers.BaseDataFetcher;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.CDPProfileID;
 
 import java.util.Collections;
 import java.util.List;
 
-public class ProfileIdsDataFetcher implements DataFetcher<List<CDPProfileID>> {
+public class ProfileIdsDataFetcher extends BaseDataFetcher<List<CDPProfileID>> {
 
     @Override
     public List<CDPProfileID> get(DataFetchingEnvironment environment) throws Exception {

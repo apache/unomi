@@ -19,13 +19,14 @@ package org.apache.unomi.graphql.fetchers.profile;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.fetchers.BaseDataFetcher;
 import org.apache.unomi.graphql.types.output.CDPConsent;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ProfileConsentsDataFetcher implements DataFetcher<List<CDPConsent>> {
+public class ProfileConsentsDataFetcher extends BaseDataFetcher<List<CDPConsent>> {
 
     @Override
     public List<CDPConsent> get(DataFetchingEnvironment environment) throws Exception {

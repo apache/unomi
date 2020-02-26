@@ -29,7 +29,7 @@ public class ProfileDataFetcher extends BaseDataFetcher<CDPProfile> {
 
     @Override
     public CDPProfile get(DataFetchingEnvironment environment) throws Exception {
-        final Boolean createIfMissing = environment.getArgument("createIfMissing");
+        final boolean createIfMissing = parseParam("createIfMissing", false, environment);
         final CDPProfileIDInput profileIDInput = parseObjectParam("profileID", CDPProfileIDInput.class, environment);
 
         final ServiceManager serviceManager = environment.getContext();
@@ -41,7 +41,7 @@ public class ProfileDataFetcher extends BaseDataFetcher<CDPProfile> {
             return new CDPProfile(profile);
         }
 
-        if (createIfMissing != null && createIfMissing) {
+        if (createIfMissing) {
             profile = new Profile();
             profile.setItemId(profileIDInput.getId());
             profile.setItemType("profile");

@@ -19,7 +19,6 @@ package org.apache.unomi.graphql.fetchers.profile;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.graphql.types.output.CDPConsent;
 import org.apache.unomi.graphql.types.output.CDPInterest;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 

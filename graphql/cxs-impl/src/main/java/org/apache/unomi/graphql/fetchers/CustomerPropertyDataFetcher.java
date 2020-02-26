@@ -16,12 +16,11 @@
  */
 package org.apache.unomi.graphql.fetchers;
 
-import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.graphql.types.output.CDPEvent;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 
-public class CustomerPropertyDataFetcher implements DataFetcher<Object> {
+public class CustomerPropertyDataFetcher extends BaseDataFetcher<Object> {
 
     private final String propertyName;
 

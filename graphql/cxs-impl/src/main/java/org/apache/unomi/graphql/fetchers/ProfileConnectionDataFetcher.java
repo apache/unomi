@@ -29,18 +29,16 @@ import org.apache.unomi.graphql.types.output.CDPProfileEdge;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public abstract class ProfileConnectionDataFetcher extends BaseDataFetcher<CDPProfileConnection> {
+public abstract class ProfileConnectionDataFetcher extends BaseConnectionDataFetcher<CDPProfileConnection> {
 
-    protected Condition createProfileCondition(final String propertyName, final String propertyValue, final DefinitionsService definitionsService) {
-        Condition condition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
-        condition.setParameter("propertyName", "systemProperties.lists");
-        condition.setParameter("comparisonOperator", "equals");
-        condition.setParameter("propertyValue", propertyValue);
-        return condition;
+    public ProfileConnectionDataFetcher() {
+        super("profile");
     }
 
     protected CDPProfileConnection createProfileConnection(PartialList<Profile> profiles) {
-        final List<CDPProfileEdge> eventEdges = profiles.getList().stream().map(profile -> new CDPProfileEdge(new CDPProfile(profile), profile.getItemId())).collect(Collectors.toList());
+        final List<CDPProfileEdge> eventEdges = profiles.getList().stream()
+                .map(profile -> new CDPProfileEdge(new CDPProfile(profile), profile.getItemId()))
+                .collect(Collectors.toList());
         final CDPPageInfo cdpPageInfo = new CDPPageInfo(profiles.getOffset() > 0, profiles.getTotalSize() > profiles.getList().size());
 
         return new CDPProfileConnection(eventEdges, cdpPageInfo);

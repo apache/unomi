@@ -22,6 +22,7 @@ import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.graphql.fetchers.BaseDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.CDPSegment;
@@ -29,7 +30,7 @@ import org.apache.unomi.graphql.types.output.CDPSegment;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ProfileSegmentsDataFetcher implements DataFetcher<List<CDPSegment>> {
+public class ProfileSegmentsDataFetcher extends BaseDataFetcher<List<CDPSegment>> {
 
     @Override
     public List<CDPSegment> get(DataFetchingEnvironment environment) throws Exception {

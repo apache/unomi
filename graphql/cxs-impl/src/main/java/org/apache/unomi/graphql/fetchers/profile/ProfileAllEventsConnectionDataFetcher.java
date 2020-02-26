@@ -21,6 +21,7 @@ import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.graphql.fetchers.ConnectionParams;
 import org.apache.unomi.graphql.fetchers.EventConnectionDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
@@ -34,14 +35,11 @@ public class ProfileAllEventsConnectionDataFetcher extends EventConnectionDataFe
     @Override
     public CDPEventConnection get(DataFetchingEnvironment environment) throws Exception {
         final ServiceManager serviceManager = environment.getContext();
-        final Integer first = parseIntParam("first", 0, environment);
-        final Integer last = parseIntParam("last", DEFAULT_PAGE_SIZE, environment);
-        final Date after = parseDateParam("after", environment);
-        final Date before = parseDateParam("before", environment);
+        final ConnectionParams params = parseConnectionParams(environment);
         final CDPEventFilterInput filterInput = parseObjectParam("filter", CDPEventFilterInput.class, environment);
 
-        final Condition condition = createFilterInputCondition(filterInput, after, before, serviceManager.getDefinitionsService());
-        final PartialList<Event> events = serviceManager.getEventService().searchEvents(condition, first, last - first);
+        final Condition condition = createFilterInputCondition(filterInput, params.getAfter(), params.getBefore(), serviceManager.getDefinitionsService());
+        final PartialList<Event> events = serviceManager.getEventService().searchEvents(condition, params.getFirst(), params.getSize());
 
         return createEventConnection(events);
     }
