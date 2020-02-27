@@ -20,7 +20,7 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SegmentService;
-import org.apache.unomi.graphql.GraphQLSchemaUpdater;
+import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 

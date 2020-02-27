@@ -14,57 +14,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.input;
+package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
 
-@GraphQLName("CDP_Event")
-public class CDPEventInput {
+import static org.apache.unomi.graphql.types.output.CDPTopic.TYPE_NAME;
 
-    @GraphQLID
-    @GraphQLField
+@GraphQLName(TYPE_NAME)
+public class CDPTopic {
+
+    public static final String TYPE_NAME = "CDP_Topic";
+
     private String id;
 
-    @GraphQLField
-    private String cdp_sourceID;
+    private String name;
+
+    private CDPView view;
 
     @GraphQLField
     @GraphQLNonNull
-    private CDPProfileIDInput cdp_profileID;
-
-    @GraphQLID
-    @GraphQLField
-    @GraphQLNonNull
-    private String cdp_objectID;
-
-    public CDPEventInput(
-            @GraphQLID @GraphQLName("id") String id,
-            @GraphQLName("cdp_sourceID") String cdp_sourceID,
-            @GraphQLNonNull @GraphQLName("cdp_profileID") CDPProfileIDInput cdp_profileID,
-            @GraphQLID @GraphQLNonNull @GraphQLName("cdp_objectID") String cdp_objectID) {
-        this.id = id;
-        this.cdp_sourceID = cdp_sourceID;
-        this.cdp_profileID = cdp_profileID;
-        this.cdp_objectID = cdp_objectID;
-    }
-
+    @GraphQLPrettify
     public String getId() {
         return id;
     }
 
-    public String getCdp_sourceID() {
-        return cdp_sourceID;
+    @GraphQLField
+    @GraphQLNonNull
+    @GraphQLPrettify
+    public String getName() {
+        return name;
     }
 
-    public CDPProfileIDInput getCdp_profileID() {
-        return cdp_profileID;
-    }
-
-    public String getCdp_objectID() {
-        return cdp_objectID;
+    @GraphQLField
+    @GraphQLNonNull
+    @GraphQLPrettify
+    public CDPView getView() {
+        return view;
     }
 
 }

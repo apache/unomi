@@ -14,16 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.schema;
 
 import graphql.GraphQL;
 import graphql.Scalars;
 import graphql.annotations.AnnotationsSchemaCreator;
 import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.annotations.processor.ProcessingElementsContainer;
+import graphql.annotations.processor.retrievers.GraphQLTypeRetriever;
 import graphql.schema.FieldCoordinates;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLFieldDefinition;
+import graphql.schema.GraphQLInputObjectField;
+import graphql.schema.GraphQLInputObjectType;
+import graphql.schema.GraphQLInputType;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLSchema;
@@ -36,10 +40,10 @@ import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
 import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
 import org.apache.unomi.graphql.providers.GraphQLTypesProvider;
-import org.apache.unomi.graphql.types.CDPMutation;
-import org.apache.unomi.graphql.types.CDPQuery;
 import org.apache.unomi.graphql.types.RootMutation;
 import org.apache.unomi.graphql.types.RootQuery;
+import org.apache.unomi.graphql.types.input.CDPEventInput;
+import org.apache.unomi.graphql.types.input.CDPProfileUpdateEventInput;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -93,6 +97,8 @@ public class GraphQLSchemaUpdater {
 
     @Deactivate
     public void deactivate() {
+        this.isActivated = false;
+
         if (executorService != null) {
             executorService.shutdown();
         }
@@ -204,6 +210,8 @@ public class GraphQLSchemaUpdater {
         setUpCodeRegister(graphQLAnnotations);
         setUpDynamicFields(graphQLAnnotations);
 
+        createEventInputTypes(graphQLAnnotations);
+
         final Map<String, GraphQLType> typeRegistry = graphQLAnnotations.getContainer().getTypeRegistry();
 
         setUpQueries(typeRegistry, graphQLAnnotations);
@@ -225,7 +233,7 @@ public class GraphQLSchemaUpdater {
         final List<GraphQLFieldDefinition> fieldDefinitions = propertyTypes.stream().map(propertyType -> {
             final GraphQLFieldDefinition.Builder fieldBuilder = GraphQLFieldDefinition.newFieldDefinition();
 
-            fieldBuilder.type(convert(propertyType.getValueTypeId()));
+            fieldBuilder.type((GraphQLOutputType) convert(propertyType.getValueTypeId()));
             fieldBuilder.name(propertyType.getItemId());
 
             codeRegisterBuilder.dataFetcher(
@@ -309,7 +317,7 @@ public class GraphQLSchemaUpdater {
         container.setInputSuffix("Input");
     }
 
-    private GraphQLOutputType convert(final String type) {
+    private GraphQLType convert(final String type) {
         switch (type) {
             case "integer":
                 return Scalars.GraphQLInt;
@@ -323,6 +331,44 @@ public class GraphQLSchemaUpdater {
                 return Scalars.GraphQLString;
             }
         }
+    }
+
+    private void createEventInputTypes(final GraphQLAnnotations graphQLAnnotations) {
+        final Collection<PropertyType> propertyTypes = profileService.getTargetPropertyTypes("profiles");
+
+        if (propertyTypes == null) {
+            return;
+        }
+
+        final GraphQLInputObjectType.Builder profileUpdateEventInput = GraphQLInputObjectType.newInputObject()
+                .name(CDPProfileUpdateEventInput.TYPE_NAME)
+                .fields(getInputObjectType(graphQLAnnotations, CDPProfileUpdateEventInput.class).getFieldDefinitions());
+
+        propertyTypes.forEach(propertyType ->
+                profileUpdateEventInput.field(GraphQLInputObjectField.newInputObjectField()
+                        .type((GraphQLInputType) convert(propertyType.getValueTypeId()))
+                        .name(propertyType.getItemId())
+                        .build()));
+
+        final Map<String, GraphQLType> typeRegistry = graphQLAnnotations.getTypeRegistry();
+
+        typeRegistry.put(CDPProfileUpdateEventInput.TYPE_NAME, profileUpdateEventInput.build());
+
+        final GraphQLInputObjectType.Builder builder = GraphQLInputObjectType.newInputObject()
+                .name("CDP_EventInput")
+                .fields(getInputObjectType(graphQLAnnotations, CDPEventInput.class).getFieldDefinitions());
+
+        builder.field(GraphQLInputObjectField.newInputObjectField()
+                .name("cdp_profileUpdateEvent")
+                .type(profileUpdateEventInput)
+                .build());
+
+        typeRegistry.put("CDP_EventInput", builder.build());
+    }
+
+    private GraphQLInputObjectType getInputObjectType(final GraphQLAnnotations graphQLAnnotations, final Class<?> annotatedClass) {
+        return (GraphQLInputObjectType) graphQLAnnotations.getObjectHandler().getTypeRetriever()
+                .getGraphQLType(annotatedClass, graphQLAnnotations.getContainer(), true);
     }
 
 }

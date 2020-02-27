@@ -36,12 +36,20 @@ public class CDPMutation {
     @GraphQLField
     public boolean createOrUpdateProfileProperties(
             final @GraphQLName("properties") List<CDPPropertyInput> properties,
-            final DataFetchingEnvironment environment) throws Exception {
+            final DataFetchingEnvironment environment) {
 
         return CreateOrUpdateProfilePropertiesCommand.create(properties)
                 .setServiceManager(environment.getContext())
                 .build()
                 .execute();
+    }
+
+    @GraphQLField
+    public int processEvents(
+            final @GraphQLNonNull @GraphQLName("events") List<CDPEventInput> eventInputs,
+            final DataFetchingEnvironment environment
+    ) {
+        return 0;
     }
 
 }

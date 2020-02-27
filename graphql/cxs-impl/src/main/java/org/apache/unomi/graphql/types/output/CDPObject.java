@@ -14,57 +14,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.input;
+package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
 
-@GraphQLName("CDP_Event")
-public class CDPEventInput {
+import java.util.List;
+
+@GraphQLName("CDP_Object")
+public class CDPObject {
+
+    private String uri;
+
+    private String scheme;
+
+    private String path;
+
+    private List<CDPTopic> topics;
 
     @GraphQLID
     @GraphQLField
-    private String id;
-
-    @GraphQLField
-    private String cdp_sourceID;
-
-    @GraphQLField
     @GraphQLNonNull
-    private CDPProfileIDInput cdp_profileID;
+    @GraphQLPrettify
+    public String getUri() {
+        return uri;
+    }
 
-    @GraphQLID
     @GraphQLField
-    @GraphQLNonNull
-    private String cdp_objectID;
-
-    public CDPEventInput(
-            @GraphQLID @GraphQLName("id") String id,
-            @GraphQLName("cdp_sourceID") String cdp_sourceID,
-            @GraphQLNonNull @GraphQLName("cdp_profileID") CDPProfileIDInput cdp_profileID,
-            @GraphQLID @GraphQLNonNull @GraphQLName("cdp_objectID") String cdp_objectID) {
-        this.id = id;
-        this.cdp_sourceID = cdp_sourceID;
-        this.cdp_profileID = cdp_profileID;
-        this.cdp_objectID = cdp_objectID;
+    @GraphQLPrettify
+    public String getScheme() {
+        return scheme;
     }
 
-    public String getId() {
-        return id;
+    @GraphQLField
+    @GraphQLPrettify
+    public String getPath() {
+        return path;
     }
 
-    public String getCdp_sourceID() {
-        return cdp_sourceID;
-    }
-
-    public CDPProfileIDInput getCdp_profileID() {
-        return cdp_profileID;
-    }
-
-    public String getCdp_objectID() {
-        return cdp_objectID;
+    @GraphQLField
+    @GraphQLPrettify
+    public List<CDPTopic> getTopics() {
+        return topics;
     }
 
 }
