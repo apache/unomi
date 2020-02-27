@@ -16,36 +16,15 @@
  */
 package org.apache.unomi.graphql.types.input;
 
-import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_ProfileID")
-public class CDPProfileIDInput {
+import static org.apache.unomi.graphql.types.input.CDPProfileUpdateEventInput.TYPE_NAME;
 
-    @GraphQLID
-    @GraphQLField
-    @GraphQLNonNull
-    private String id;
+@GraphQLName(TYPE_NAME)
+public class CDPProfileUpdateEventInput {
 
-    @GraphQLField
-    @GraphQLNonNull
-    private CDPClientInput client;
+    private static final String TYPE_NAME_INTERNAL = "CDP_ProfileUpdateEvent";
 
-    public CDPProfileIDInput(
-            final @GraphQLID @GraphQLNonNull @GraphQLName("id") String id,
-            final @GraphQLNonNull @GraphQLName("client") CDPClientInput client) {
-        this.id = id;
-        this.client = client;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public CDPClientInput getClient() {
-        return client;
-    }
+    public static final String TYPE_NAME = TYPE_NAME_INTERNAL + "Input";
 
 }

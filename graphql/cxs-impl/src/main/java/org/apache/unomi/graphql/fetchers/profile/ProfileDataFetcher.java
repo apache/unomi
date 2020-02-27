@@ -17,7 +17,6 @@
 
 package org.apache.unomi.graphql.fetchers.profile;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.ProfileService;
@@ -27,8 +26,6 @@ import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 
 public class ProfileDataFetcher extends BaseDataFetcher<CDPProfile> {
-
-    private ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public CDPProfile get(DataFetchingEnvironment environment) throws Exception {

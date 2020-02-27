@@ -14,38 +14,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.input;
+package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
 
-@GraphQLName("CDP_ProfileID")
-public class CDPProfileIDInput {
+import static org.apache.unomi.graphql.types.output.CDPTopic.TYPE_NAME;
 
-    @GraphQLID
-    @GraphQLField
-    @GraphQLNonNull
+@GraphQLName(TYPE_NAME)
+public class CDPTopic {
+
+    public static final String TYPE_NAME = "CDP_Topic";
+
     private String id;
 
+    private String name;
+
+    private CDPView view;
+
     @GraphQLField
     @GraphQLNonNull
-    private CDPClientInput client;
-
-    public CDPProfileIDInput(
-            final @GraphQLID @GraphQLNonNull @GraphQLName("id") String id,
-            final @GraphQLNonNull @GraphQLName("client") CDPClientInput client) {
-        this.id = id;
-        this.client = client;
-    }
-
+    @GraphQLPrettify
     public String getId() {
         return id;
     }
 
-    public CDPClientInput getClient() {
-        return client;
+    @GraphQLField
+    @GraphQLNonNull
+    @GraphQLPrettify
+    public String getName() {
+        return name;
+    }
+
+    @GraphQLField
+    @GraphQLNonNull
+    @GraphQLPrettify
+    public CDPView getView() {
+        return view;
     }
 
 }

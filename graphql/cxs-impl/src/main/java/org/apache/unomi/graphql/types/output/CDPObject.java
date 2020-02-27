@@ -14,38 +14,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.input;
+package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
 
-@GraphQLName("CDP_ProfileID")
-public class CDPProfileIDInput {
+import java.util.List;
+
+@GraphQLName("CDP_Object")
+public class CDPObject {
+
+    private String uri;
+
+    private String scheme;
+
+    private String path;
+
+    private List<CDPTopic> topics;
 
     @GraphQLID
     @GraphQLField
     @GraphQLNonNull
-    private String id;
+    @GraphQLPrettify
+    public String getUri() {
+        return uri;
+    }
 
     @GraphQLField
-    @GraphQLNonNull
-    private CDPClientInput client;
-
-    public CDPProfileIDInput(
-            final @GraphQLID @GraphQLNonNull @GraphQLName("id") String id,
-            final @GraphQLNonNull @GraphQLName("client") CDPClientInput client) {
-        this.id = id;
-        this.client = client;
+    @GraphQLPrettify
+    public String getScheme() {
+        return scheme;
     }
 
-    public String getId() {
-        return id;
+    @GraphQLField
+    @GraphQLPrettify
+    public String getPath() {
+        return path;
     }
 
-    public CDPClientInput getClient() {
-        return client;
+    @GraphQLField
+    @GraphQLPrettify
+    public List<CDPTopic> getTopics() {
+        return topics;
     }
 
 }
