@@ -20,9 +20,15 @@ import graphql.annotations.annotationTypes.GraphQLDataFetcher;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
+import org.apache.unomi.graphql.fetchers.profile.FindProfileConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.ProfileDataFetcher;
+import org.apache.unomi.graphql.types.input.CDPOrderByInput;
+import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.output.CDPProfile;
+import org.apache.unomi.graphql.types.output.CDPProfileConnection;
+
+import java.util.List;
 
 import static org.apache.unomi.graphql.types.CDPQuery.TYPE_NAME;
 
@@ -40,4 +46,14 @@ public class CDPQuery {
         return null;
     }
 
+    @GraphQLField
+    @GraphQLDataFetcher(FindProfileConnectionDataFetcher.class)
+    public CDPProfileConnection findProfile(final @GraphQLName("filter") CDPProfileFilterInput filter,
+                                            @GraphQLName("orderBy") List<CDPOrderByInput> orderBy,
+                                            @GraphQLName("first") Integer first,
+                                            @GraphQLName("after") String after,
+                                            @GraphQLName("last") Integer last,
+                                            @GraphQLName("before") String before) {
+        return null;
+    }
 }

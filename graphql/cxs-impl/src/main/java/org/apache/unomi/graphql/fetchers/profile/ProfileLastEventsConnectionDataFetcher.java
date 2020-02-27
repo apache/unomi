@@ -46,7 +46,7 @@ public class ProfileLastEventsConnectionDataFetcher extends EventConnectionDataF
 
         final ServiceManager serviceManager = environment.getContext();
 
-        final Condition condition = createEventPropertyCondition("profileId", profileId, serviceManager.getDefinitionsService());
+        final Condition condition = createPropertyCondition("profileId", profileIDInput.getId(), serviceManager.getDefinitionsService());
         final PartialList<Event> events = serviceManager.getEventService().searchEvents(condition, 0, count);
 
         return createEventConnection(events);

@@ -22,6 +22,7 @@ import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.graphql.fetchers.BaseDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.output.CDPInterest;
 import org.apache.unomi.graphql.types.output.CDPList;
@@ -32,7 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class ProfileListsDataFetcher implements DataFetcher<List<CDPList>> {
+public class ProfileListsDataFetcher extends BaseDataFetcher<List<CDPList>> {
 
     @Override
     public List<CDPList> get(DataFetchingEnvironment environment) throws Exception {

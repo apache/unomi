@@ -37,8 +37,8 @@ public class ConsentEventConnectionDataFetcher extends EventConnectionDataFetche
         final CDPConsent consent = environment.getSource();
 
         final Condition andCondition = createBoolCondition("and", serviceManager.getDefinitionsService());
-        final Condition eventCondition = createEventPropertyCondition("eventType", "modifyConsent", serviceManager.getDefinitionsService());
-        final Condition consentCondition = createEventPropertyCondition("target.token", consent.getToken(), serviceManager.getDefinitionsService());
+        final Condition eventCondition = createPropertyCondition("eventType", "modifyConsent", serviceManager.getDefinitionsService());
+        final Condition consentCondition = createPropertyCondition("target.token", consent.getToken(), serviceManager.getDefinitionsService());
 
         andCondition.setParameter("subConditions", Arrays.asList(eventCondition, consentCondition));
         final PartialList<Event> events = serviceManager.getEventService().searchEvents(andCondition, 0, DEFAULT_PAGE_SIZE);

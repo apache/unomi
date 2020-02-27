@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.graphql.fetchers.list;
+package org.apache.unomi.graphql.fetchers.profile;
 
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.PartialList;
@@ -25,36 +25,28 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.graphql.fetchers.ConnectionParams;
 import org.apache.unomi.graphql.fetchers.ProfileConnectionDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
-import org.apache.unomi.graphql.types.output.CDPList;
+import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
+import org.apache.unomi.graphql.types.input.CDPOrderByInput;
 import org.apache.unomi.graphql.types.output.CDPProfileConnection;
 
-public class ListProfileConnectionDataFetcher extends ProfileConnectionDataFetcher {
-
-    public static final String ACTIVE = "Active";
-    public static final String INACTIVE = "Inctive";
-
-    private String type;
-
-    public ListProfileConnectionDataFetcher(final String type) {
-        this.type = type;
-    }
+public class FindProfileConnectionDataFetcher extends ProfileConnectionDataFetcher {
 
     @Override
     public CDPProfileConnection get(DataFetchingEnvironment environment) throws Exception {
-        final CDPList cdpList = environment.getSource();
         final ServiceManager serviceManager = environment.getContext();
         final ConnectionParams params = parseConnectionParams(environment);
+        final CDPEventFilterInput filterInput = parseObjectParam("filter", CDPEventFilterInput.class, environment);
+        final CDPOrderByInput orderByInput = parseObjectParam("orderBy", CDPOrderByInput.class, environment);
 
-        Condition listIdCondition = createPropertyCondition("systemProperties.lists", "contains", cdpList.getId(), serviceManager.getDefinitionsService());
-
+        final Condition filterCondition = createFilterInputCondition(filterInput, params.getAfter(), params.getBefore(), serviceManager.getDefinitionsService());
         final Query query = new Query();
+        query.setSortby(orderByInput.toString());
         query.setOffset(params.getFirst());
         query.setLimit(params.getSize());
-        query.setCondition(listIdCondition);
+        query.setCondition(filterCondition);
 
         PartialList<Profile> profiles = serviceManager.getProfileService().search(query, Profile.class);
 
         return createProfileConnection(profiles);
     }
-
 }
