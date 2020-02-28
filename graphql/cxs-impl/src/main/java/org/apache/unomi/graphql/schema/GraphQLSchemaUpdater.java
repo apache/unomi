@@ -21,7 +21,6 @@ import graphql.Scalars;
 import graphql.annotations.AnnotationsSchemaCreator;
 import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.annotations.processor.ProcessingElementsContainer;
-import graphql.annotations.processor.retrievers.GraphQLTypeRetriever;
 import graphql.schema.FieldCoordinates;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLFieldDefinition;
@@ -230,7 +229,8 @@ public class GraphQLSchemaUpdater {
 
         final GraphQLCodeRegistry.Builder codeRegisterBuilder = graphQLAnnotations.getContainer().getCodeRegistryBuilder();
 
-        final List<GraphQLFieldDefinition> fieldDefinitions = propertyTypes.stream().map(propertyType -> {
+        final List<GraphQLFieldDefinition> fieldDefinitions = propertyTypes.stream().filter(propertyType -> propertyType != null && propertyType.getItemId().matches("[_A-Za-z][_0-9A-Za-z]*")).map(propertyType -> {
+
             final GraphQLFieldDefinition.Builder fieldBuilder = GraphQLFieldDefinition.newFieldDefinition();
 
             fieldBuilder.type((GraphQLOutputType) convert(propertyType.getValueTypeId()));
@@ -344,11 +344,12 @@ public class GraphQLSchemaUpdater {
                 .name(CDPProfileUpdateEventInput.TYPE_NAME)
                 .fields(getInputObjectType(graphQLAnnotations, CDPProfileUpdateEventInput.class).getFieldDefinitions());
 
-        propertyTypes.forEach(propertyType ->
-                profileUpdateEventInput.field(GraphQLInputObjectField.newInputObjectField()
-                        .type((GraphQLInputType) convert(propertyType.getValueTypeId()))
-                        .name(propertyType.getItemId())
-                        .build()));
+        propertyTypes.stream().filter(propertyType -> propertyType != null && propertyType.getItemId().matches("[_A-Za-z][_0-9A-Za-z]*"))
+                .forEach(propertyType -> profileUpdateEventInput.field(
+                        GraphQLInputObjectField.newInputObjectField()
+                                .type((GraphQLInputType) convert(propertyType.getValueTypeId()))
+                                .name(propertyType.getItemId())
+                                .build()));
 
         final Map<String, GraphQLType> typeRegistry = graphQLAnnotations.getTypeRegistry();
 

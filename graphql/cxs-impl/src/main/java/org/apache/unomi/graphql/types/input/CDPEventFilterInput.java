@@ -43,4 +43,6 @@ public class CDPEventFilterInput {
     @GraphQLField
     public String cdp_profileID_equals;
 
+    public CDPEventFilterInput() {
+    }
 }

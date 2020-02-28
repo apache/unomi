@@ -30,10 +30,14 @@ public class CDPOrderByInput {
     @GraphQLField
     public CDPSortOrder sortOrder;
 
-    @Override
-    public String toString() {
-        if (Strings.isNullOrEmpty(fieldName) || sortOrder == CDPSortOrder.UNSPECIFIED) {
+    public CDPOrderByInput() {
+    }
+
+    public String asString() {
+        if (Strings.isNullOrEmpty(fieldName)) {
             return null;
+        } else if (sortOrder == null || CDPSortOrder.UNSPECIFIED == sortOrder) {
+            return fieldName;
         }
         return String.format("%s %s", fieldName, sortOrder.toString());
     }

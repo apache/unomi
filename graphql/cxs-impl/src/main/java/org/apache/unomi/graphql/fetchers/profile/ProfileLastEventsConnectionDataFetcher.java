@@ -34,7 +34,7 @@ public class ProfileLastEventsConnectionDataFetcher extends EventConnectionDataF
     @Override
     public CDPEventConnection get(DataFetchingEnvironment environment) throws Exception {
         Integer count = environment.getArgument("count");
-        CDPProfileIDInput cdpProfileIDInput = environment.getArgument("profileID");
+        CDPProfileIDInput cdpProfileIDInput = parseObjectParam("profileID", CDPProfileIDInput.class, environment);
 
         if (count == null) {
             count = DEFAULT_SIZE;
@@ -46,7 +46,7 @@ public class ProfileLastEventsConnectionDataFetcher extends EventConnectionDataF
 
         final ServiceManager serviceManager = environment.getContext();
 
-        final Condition condition = createPropertyCondition("profileId", profileIDInput.getId(), serviceManager.getDefinitionsService());
+        final Condition condition = createPropertyCondition("profileId", profileId, serviceManager.getDefinitionsService());
         final PartialList<Event> events = serviceManager.getEventService().searchEvents(condition, 0, count);
 
         return createEventConnection(events);

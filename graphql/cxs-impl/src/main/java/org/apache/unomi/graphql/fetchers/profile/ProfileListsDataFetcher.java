@@ -17,20 +17,13 @@
 
 package org.apache.unomi.graphql.fetchers.profile;
 
-import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.graphql.fetchers.BaseDataFetcher;
-import org.apache.unomi.graphql.services.ServiceManager;
-import org.apache.unomi.graphql.types.output.CDPInterest;
 import org.apache.unomi.graphql.types.output.CDPList;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ProfileListsDataFetcher extends BaseDataFetcher<List<CDPList>> {
