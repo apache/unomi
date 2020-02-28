@@ -23,23 +23,27 @@ import graphql.schema.FieldCoordinates;
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLFieldDefinition;
+import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
 import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
 import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
+import org.apache.unomi.graphql.providers.GraphQLProcessEventsProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
 import org.apache.unomi.graphql.providers.GraphQLTypesProvider;
 import org.apache.unomi.graphql.types.RootMutation;
 import org.apache.unomi.graphql.types.RootQuery;
+import org.apache.unomi.graphql.types.input.CDPEventProcessor;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.osgi.service.component.annotations.Component;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
 @Component(enabled = false)
 public class CDPProviderSample
-        implements GraphQLExtensionsProvider, GraphQLMutationProvider, GraphQLQueryProvider, GraphQLTypesProvider, GraphQLCodeRegistryProvider {
+        implements GraphQLExtensionsProvider, GraphQLMutationProvider, GraphQLQueryProvider, GraphQLTypesProvider, GraphQLCodeRegistryProvider, GraphQLProcessEventsProvider, GraphQLAdditionalTypesProvider {
 
     @Override
     public Set<Class<?>> getExtensions() {
@@ -102,7 +106,17 @@ public class CDPProviderSample
                 .dataFetcher(FieldCoordinates.coordinates(RootMutation.TYPE_NAME, "mutation1"),
                         (DataFetcher<Boolean>) environment -> true)
                 .dataFetcher(FieldCoordinates.coordinates(CDPProfile.TYPE_NAME, "extensionField"),
-                        (DataFetcher<String>) environment -> "Hello " + ((CDPProfile)environment.getSource()).getProfile().getItemId() + " :)");
+                        (DataFetcher<String>) environment -> "Hello " + ((CDPProfile) environment.getSource()).getProfile().getItemId() + " :)");
+    }
+
+    @Override
+    public Collection<Class<? extends CDPEventProcessor>> getProcessEvents() {
+        return Collections.singletonList(VENDOR_PageViewEventInput.class);
+    }
+
+    @Override
+    public Set<Class<?>> getAdditionalTypes() {
+        return Collections.emptySet();
     }
 
 }
