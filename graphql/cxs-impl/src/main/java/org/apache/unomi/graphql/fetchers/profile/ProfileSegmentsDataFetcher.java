@@ -17,7 +17,6 @@
 
 package org.apache.unomi.graphql.fetchers.profile;
 
-import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.segments.Segment;

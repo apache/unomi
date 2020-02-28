@@ -40,7 +40,7 @@ public class FindProfileConnectionDataFetcher extends ProfileConnectionDataFetch
 
         final Condition filterCondition = createFilterInputCondition(filterInput, params.getAfter(), params.getBefore(), serviceManager.getDefinitionsService());
         final Query query = new Query();
-        query.setSortby(orderByInput.toString());
+        query.setSortby(orderByInput.asString());
         query.setOffset(params.getFirst());
         query.setLimit(params.getSize());
         query.setCondition(filterCondition);

@@ -33,6 +33,9 @@ public class CDPProfileIDInput {
     @GraphQLNonNull
     private CDPClientInput client;
 
+    public CDPProfileIDInput() {
+    }
+
     public CDPProfileIDInput(
             final @GraphQLID @GraphQLNonNull @GraphQLName("id") String id,
             final @GraphQLNonNull @GraphQLName("client") CDPClientInput client) {
