@@ -521,6 +521,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         if (profile.getItemId() == null) {
             return null;
         }
+        profile.setSystemProperty("lastUpdated", new Date());
         if (persistenceService.save(profile)) {
             if (forceRefresh) {
                 // triggering a load will force an in-place refresh, that may be expensive in performance but will make data immediately available.
@@ -534,6 +535,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     public Profile saveOrMerge(Profile profile) {
         Profile previousProfile = persistenceService.load(profile.getItemId(), Profile.class);
+        profile.setSystemProperty("lastUpdated", new Date());
         if (previousProfile == null) {
             if (persistenceService.save(profile)) {
                 return profile;
@@ -551,6 +553,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Persona savePersona(Persona profile) {
+        profile.setSystemProperty("lastUpdated", new Date());
         if (persistenceService.load(profile.getItemId(), Persona.class) == null) {
             Session session = new PersonaSession(UUID.randomUUID().toString(), profile, new Date());
             persistenceService.save(profile);

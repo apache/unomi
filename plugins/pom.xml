@@ -38,6 +38,7 @@
         <module>hover-event</module>
         <module>past-event</module>
         <module>tracked-event</module>
+        <module>kafka-injector</module>
     </modules>
 
     <dependencies>
