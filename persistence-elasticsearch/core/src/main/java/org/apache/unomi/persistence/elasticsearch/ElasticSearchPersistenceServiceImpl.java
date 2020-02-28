@@ -785,16 +785,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 logger.error("Failure : cause={} , message={}", failure.getCause(), failure.getMessage());
                             }
                         } else {
-                            logger.info("Update By Query has processed {} in {}.", response.getUpdated(), response.getTook().toString());
+                            logger.info("Update with query and script processed {} entries in {}.", response.getUpdated(), response.getTook().toString());
                         }
                         if (response.isTimedOut()) {
-                            logger.error("Update By Query ended with timeout!");
+                            logger.error("Update with query and script ended with timeout!");
                         }
                         if (response.getVersionConflicts() > 0) {
-                            logger.warn("Update By Query ended with {} Version Conflicts!", response.getVersionConflicts());
+                            logger.warn("Update with query and script ended with {} version conflicts!", response.getVersionConflicts());
                         }
                         if (response.getNoops() > 0) {
-                            logger.warn("Update By Query ended with {} noops!", response.getNoops());
+                            logger.warn("Update Bwith query and script ended with {} noops!", response.getNoops());
                         }
                     }
                     return true;
@@ -803,8 +803,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 } catch (ScriptException e) {
                     logger.error("Error in the update script : {}\n{}\n{}", e.getScript(), e.getDetailedMessage(), e.getScriptStack());
                     throw new Exception("Error in the update script");
-                } finally {
-                    return false;
                 }
             }
         }.catchingExecuteInClassLoader(true);
@@ -1901,9 +1899,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         public T catchingExecuteInClassLoader(boolean logError, Object... args) {
             try {
                 return executeInClassLoader(timerName, args);
-            } catch (Exception e) {
+            } catch (Throwable t) {
                 if (logError) {
-                    logger.error("Error while executing in class loader", e);
+                    logger.error("Error while executing in class loader", t);
                 }
             }
             return null;

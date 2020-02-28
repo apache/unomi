@@ -51,14 +51,15 @@ public class ProfileList extends ListCommandSupport {
                 "Scope",
                 "Segments",
                 "Consents",
-                "Last modification",
+                "Last visit",
+                "Last update"
         };
     }
 
     @java.lang.Override
     protected DataTable buildDataTable() {
         Query query = new Query();
-        query.setSortby("properties.lastVisit:desc");
+        query.setSortby("systemProperties.lastUpdated:desc,properties.lastVisit:desc");
         query.setLimit(maxEntries);
         Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
         query.setCondition(matchAllCondition);
@@ -71,6 +72,11 @@ public class ProfileList extends ListCommandSupport {
             rowData.add(StringUtils.join(profile.getSegments(), ","));
             rowData.add(StringUtils.join(profile.getConsents().keySet(), ","));
             rowData.add((String) profile.getProperty("lastVisit"));
+            if (profile.getSystemProperties() != null && profile.getSystemProperties().get("lastUpdated") != null) {
+                rowData.add((String) profile.getSystemProperties().get("lastUpdated"));
+            } else {
+                rowData.add("");
+            }
             dataTable.addRow(rowData.toArray(new Comparable[rowData.size()]));
         }
         return dataTable;

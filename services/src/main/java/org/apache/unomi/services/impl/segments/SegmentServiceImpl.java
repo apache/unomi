@@ -346,10 +346,18 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             segmentCondition.setParameter("propertyValue", segmentId);
 
             List<Profile> previousProfiles = persistenceService.query(segmentCondition, null, Profile.class);
+            long updatedProfileCount = 0;
+            long profileRemovalStartTime = System.currentTimeMillis();
             for (Profile profileToRemove : previousProfiles) {
                 profileToRemove.getSegments().remove(segmentId);
-                persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
+                Map<String,Object> sourceMap = new HashMap<>();
+                sourceMap.put("segments", profileToRemove.getSegments());
+                profileToRemove.setSystemProperty("lastUpdated", new Date());
+                sourceMap.put("systemProperties", profileToRemove.getSystemProperties());
+                persistenceService.update(profileToRemove.getItemId(), null, Profile.class, sourceMap);
+                updatedProfileCount++;
             }
+            logger.info("Removed segment from {} profiles in {} ms", updatedProfileCount, System.currentTimeMillis() - profileRemovalStartTime);
 
             // update impacted segments
             for (Segment segment : impactedSegments) {
@@ -786,6 +794,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     Map<String, Object> systemProperties = new HashMap<>();
                     systemProperties.put("pastEvents", pastEventCounts);
                     try {
+                        systemProperties.put("lastUpdated", new Date());
                         persistenceService.update(profileId, null, Profile.class, "systemProperties", systemProperties);
                     } catch (Exception e) {
                         logger.error("Error updating profile {} past event system properties", profileId, e);
@@ -825,7 +834,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     private void updateExistingProfilesForSegment(Segment segment) {
-        long t = System.currentTimeMillis();
+        long updateProfilesForSegmentStartTime = System.currentTimeMillis();
         Condition segmentCondition = new Condition();
 
         long updatedProfileCount = 0;
@@ -862,32 +871,40 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             PartialList<Profile> profilesToAdd = persistenceService.query(profilesToAddCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
 
             while (profilesToAdd.getList().size() > 0) {
-                long t2= System.currentTimeMillis();
+                long profilesToAddStartTime = System.currentTimeMillis();
                 for (Profile profileToAdd : profilesToAdd.getList()) {
                     profileToAdd.getSegments().add(segment.getItemId());
-                    persistenceService.update(profileToAdd.getItemId(), null, Profile.class, "segments", profileToAdd.getSegments());
+                    Map<String,Object> sourceMap = new HashMap<>();
+                    sourceMap.put("segments", profileToAdd.getSegments());
+                    profileToAdd.setSystemProperty("lastUpdated", new Date());
+                    sourceMap.put("systemProperties", profileToAdd.getSystemProperties());
+                    persistenceService.update(profileToAdd.getItemId(), null, Profile.class, sourceMap);
                     Event profileUpdated = new Event("profileUpdated", null, profileToAdd, null, null, profileToAdd, new Date());
                     profileUpdated.setPersistent(false);
                     eventService.send(profileUpdated);
                     updatedProfileCount++;
                 }
-                logger.info("{} profiles added in segment in {}ms", profilesToAdd.size(), System.currentTimeMillis() - t2);
+                logger.info("{} profiles added to segment in {}ms", profilesToAdd.size(), System.currentTimeMillis() - profilesToAddStartTime);
                 profilesToAdd = persistenceService.continueScrollQuery(Profile.class, profilesToAdd.getScrollIdentifier(), profilesToAdd.getScrollTimeValidity());
                 if (profilesToAdd == null || profilesToAdd.getList().size() == 0) {
                     break;
                 }
             }
             while (profilesToRemove.getList().size() > 0) {
-                long t2= System.currentTimeMillis();
+                long profilesToRemoveStartTime = System.currentTimeMillis();
                 for (Profile profileToRemove : profilesToRemove.getList()) {
                     profileToRemove.getSegments().remove(segment.getItemId());
-                    persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
+                    Map<String,Object> sourceMap = new HashMap<>();
+                    sourceMap.put("segments", profileToRemove.getSegments());
+                    profileToRemove.setSystemProperty("lastUpdated", new Date());
+                    sourceMap.put("systemProperties", profileToRemove.getSystemProperties());
+                    persistenceService.update(profileToRemove.getItemId(), null, Profile.class, sourceMap);
                     Event profileUpdated = new Event("profileUpdated", null, profileToRemove, null, null, profileToRemove, new Date());
                     profileUpdated.setPersistent(false);
                     eventService.send(profileUpdated);
                     updatedProfileCount++;
                 }
-                logger.info("{} profiles removed from segment in {}ms", profilesToRemove.size(), System.currentTimeMillis() - t2);
+                logger.info("{} profiles removed from segment in {}ms", profilesToRemove.size(), System.currentTimeMillis() - profilesToRemoveStartTime );
                 profilesToRemove = persistenceService.continueScrollQuery(Profile.class, profilesToRemove.getScrollIdentifier(), profilesToRemove.getScrollTimeValidity());
                 if (profilesToRemove == null || profilesToRemove.getList().size() == 0) {
                     break;
@@ -897,22 +914,31 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         } else {
             PartialList<Profile> profilesToRemove = persistenceService.query(segmentCondition, null, Profile.class, 0, 200, "10m");
             while (profilesToRemove.getList().size() > 0) {
+                long profilesToRemoveStartTime = System.currentTimeMillis();
                 for (Profile profileToRemove : profilesToRemove.getList()) {
                     profileToRemove.getSegments().remove(segment.getItemId());
-                    persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
+                    Map<String,Object> sourceMap = new HashMap<>();
+                    sourceMap.put("segments", profileToRemove.getSegments());
+                    profileToRemove.setSystemProperty("lastUpdated", new Date());
+                    sourceMap.put("systemProperties", profileToRemove.getSystemProperties());
+                    persistenceService.update(profileToRemove.getItemId(), null, Profile.class, sourceMap);
+                    Event profileUpdated = new Event("profileUpdated", null, profileToRemove, null, null, profileToRemove, new Date());
+                    profileUpdated.setPersistent(false);
+                    eventService.send(profileUpdated);
                     updatedProfileCount++;
                 }
+                logger.info("{} profiles removed from segment in {}ms", profilesToRemove.size(), System.currentTimeMillis() - profilesToRemoveStartTime);
                 profilesToRemove = persistenceService.continueScrollQuery(Profile.class, profilesToRemove.getScrollIdentifier(), profilesToRemove.getScrollTimeValidity());
                 if (profilesToRemove == null || profilesToRemove.getList().size() == 0) {
                     break;
                 }
             }
         }
-        logger.info("{} profiles updated in {}ms", updatedProfileCount, System.currentTimeMillis() - t);
+        logger.info("{} profiles updated in {}ms", updatedProfileCount, System.currentTimeMillis() - updateProfilesForSegmentStartTime);
     }
 
     private void updateExistingProfilesForScoring(Scoring scoring) {
-        long t = System.currentTimeMillis();
+        long startTime = System.currentTimeMillis();
         Condition scoringCondition = new Condition();
         scoringCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
         scoringCondition.setParameter("propertyName", "scores." + scoring.getItemId());
@@ -922,13 +948,17 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         HashMap<String, Object>[] scriptParams = new HashMap[scoring.getElements().size() + 1];
         Condition[] conditions = new Condition[scoring.getElements().size() + 1];
 
+        String lastUpdatedScriptPart = " if (!ctx._source.containsKey(\"systemProperties\")) { ctx._source.put(\"systemProperties\", [:]) } ctx._source.systemProperties.put(\"lastUpdated\", ZonedDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.of(\"Z\")))";
+
         scriptParams[0] = new HashMap<String, Object>();
         scriptParams[0].put("scoringId", scoring.getItemId());
-        scripts[0] = "if( ctx._source.containsKey(\"systemProperties\") && ctx._source.systemProperties.containsKey(\"scoreModifiers\") && ctx._source.systemProperties.scoreModifiers.containsKey(params.scoringId) ) { ctx._source.scores.put(params.scoringId, ctx._source.systemProperties.scoreModifiers.get(params.scoringId)) } else { ctx._source.scores.remove(params.scoringId) }";
+        scripts[0] = "if (ctx._source.containsKey(\"systemProperties\") && ctx._source.systemProperties.containsKey(\"scoreModifiers\") && ctx._source.systemProperties.scoreModifiers.containsKey(params.scoringId) ) { ctx._source.scores.put(params.scoringId, ctx._source.systemProperties.scoreModifiers.get(params.scoringId)) } else { ctx._source.scores.remove(params.scoringId) } " +
+                lastUpdatedScriptPart;
         conditions[0] = scoringCondition;
 
         if (scoring.getMetadata().isEnabled()) {
-            String scriptToAdd = "if( !ctx._source.containsKey(\"scores\") ){ ctx._source.put(\"scores\", [:])} if( ctx._source.scores.containsKey(params.scoringId) ) { ctx._source.scores.put(params.scoringId, ctx._source.scores.get(params.scoringId)+params.scoringValue) } else { ctx._source.scores.put(params.scoringId, params.scoringValue) }";
+            String scriptToAdd = "if (!ctx._source.containsKey(\"scores\")) { ctx._source.put(\"scores\", [:])} if (ctx._source.scores.containsKey(params.scoringId) ) { ctx._source.scores.put(params.scoringId, ctx._source.scores.get(params.scoringId)+params.scoringValue) } else { ctx._source.scores.put(params.scoringId, params.scoringValue) } " +
+                    lastUpdatedScriptPart;
             int idx = 1;
             for (ScoringElement element : scoring.getElements()) {
                 scriptParams[idx] = new HashMap<>();
@@ -939,13 +969,12 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 idx++;
             }
         }
-
         persistenceService.updateWithQueryAndScript(null, Profile.class, scripts, scriptParams, conditions);
-        logger.info("Profiles updated in {}ms", System.currentTimeMillis() - t);
+        logger.info("Updated scoring for profiles in {}ms", System.currentTimeMillis() - startTime);
     }
 
     private void updateExistingProfilesForRemovedScoring(String scoringId) {
-        long t = System.currentTimeMillis();
+        long startTime = System.currentTimeMillis();
         Condition scoringCondition = new Condition();
         scoringCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
         scoringCondition.setParameter("propertyName", "scores." + scoringId);
@@ -958,11 +987,11 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         scriptParams[0].put("scoringId", scoringId);
 
         String[] script = new String[1];
-        script[0] = "ctx._source.scores.remove(params.scoringId)";
+        script[0] = "ctx._source.scores.remove(params.scoringId); if (!ctx._source.containsKey(\"systemProperties\")) { ctx._source.put(\"systemProperties\", [:]) } ctx._source.systemProperties.put(\"lastUpdated\", ZonedDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.of(\"Z\")))";
 
         persistenceService.updateWithQueryAndScript(null, Profile.class, script, scriptParams, conditions);
 
-        logger.info("Profiles updated in {}ms", System.currentTimeMillis() - t);
+        logger.info("Removed scoring from profiles in {}ms", System.currentTimeMillis() - startTime);
     }
 
     public void bundleChanged(BundleEvent event) {
