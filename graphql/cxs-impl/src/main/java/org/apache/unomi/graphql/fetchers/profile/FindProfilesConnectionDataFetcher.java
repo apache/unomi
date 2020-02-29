@@ -25,22 +25,24 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.graphql.fetchers.ConnectionParams;
 import org.apache.unomi.graphql.fetchers.ProfileConnectionDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
-import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPOrderByInput;
+import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;
 import org.apache.unomi.graphql.types.output.CDPProfileConnection;
 
-public class FindProfileConnectionDataFetcher extends ProfileConnectionDataFetcher {
+public class FindProfilesConnectionDataFetcher extends ProfileConnectionDataFetcher {
 
     @Override
     public CDPProfileConnection get(DataFetchingEnvironment environment) throws Exception {
         final ServiceManager serviceManager = environment.getContext();
         final ConnectionParams params = parseConnectionParams(environment);
-        final CDPEventFilterInput filterInput = parseObjectParam("filter", CDPEventFilterInput.class, environment);
+        final CDPProfileFilterInput filterInput = parseObjectParam("filter", CDPProfileFilterInput.class, environment);
         final CDPOrderByInput orderByInput = parseObjectParam("orderBy", CDPOrderByInput.class, environment);
 
-        final Condition filterCondition = createFilterInputCondition(filterInput, params.getAfter(), params.getBefore(), serviceManager.getDefinitionsService());
+        final Condition filterCondition = createProfileFilterInputCondition(filterInput, params.getAfter(), params.getBefore(), serviceManager.getDefinitionsService());
         final Query query = new Query();
-        query.setSortby(orderByInput.asString());
+        if (orderByInput != null) {
+            query.setSortby(orderByInput.asString());
+        }
         query.setOffset(params.getFirst());
         query.setLimit(params.getSize());
         query.setCondition(filterCondition);

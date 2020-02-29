@@ -22,7 +22,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -49,70 +49,80 @@ public abstract class BaseConnectionDataFetcher<T> extends BaseDataFetcher<T> {
     }
 
     protected Condition createPropertyCondition(final String propertyName, final String operator, final Object propertyValue, DefinitionsService definitionsService) {
-        final Condition profileIdCondition = new Condition(definitionsService.getConditionType(entityName + "PropertyCondition"));
+        return createPropertyCondition(propertyName, operator, "propertyValue", propertyValue, definitionsService);
+    }
 
-        profileIdCondition.setParameter("propertyName", propertyName);
-        profileIdCondition.setParameter("comparisonOperator", operator);
-        profileIdCondition.setParameter("propertyValue", propertyValue);
+    protected Condition createIntegerPropertyCondition(final String propertyName, final Object propertyValue, DefinitionsService definitionsService) {
+        return createIntegerPropertyCondition(propertyName, "equals", propertyValue, definitionsService);
+    }
 
-        return profileIdCondition;
+    protected Condition createIntegerPropertyCondition(final String propertyName, final String operator, final Object propertyValue, DefinitionsService definitionsService) {
+        return createPropertyCondition(propertyName, operator, "propertyValueInteger", propertyValue, definitionsService);
     }
 
     protected Condition createDatePropertyCondition(final String propertyName, final String operator, final Object propertyValue, DefinitionsService definitionsService) {
+        return createPropertyCondition(propertyName, operator, "propertyValueDate", propertyValue, definitionsService);
+    }
+
+    protected Condition createPropertiesCondition(final String propertyName, final String operator, final Object propertyValue, DefinitionsService definitionsService) {
+        return createPropertyCondition(propertyName, operator, "propertyValues", propertyValue, definitionsService);
+    }
+
+    protected Condition createPropertyCondition(final String propertyName, final String operator, final String propertyValueName, final Object propertyValue, DefinitionsService definitionsService) {
         final Condition profileIdCondition = new Condition(definitionsService.getConditionType(entityName + "PropertyCondition"));
 
         profileIdCondition.setParameter("propertyName", propertyName);
         profileIdCondition.setParameter("comparisonOperator", operator);
-        profileIdCondition.setParameter("propertyValueDate", propertyValue);
+        profileIdCondition.setParameter(propertyValueName, propertyValue);
 
         return profileIdCondition;
     }
 
-    protected Condition createFilterInputCondition(CDPEventFilterInput filterInput, Date after, Date before, DefinitionsService definitionsService) {
+    protected Condition createEventFilterInputCondition(CDPEventFilterInput filterInput, Date after, Date before, DefinitionsService definitionsService) {
         final Condition rootCondition = createBoolCondition("and", definitionsService);
-        final List<Condition> rootSubConditions = Collections.emptyList();
+        final List<Condition> rootSubConditions = new ArrayList<>();
 
         if (after != null) {
-            final Condition afterCondition = createDatePropertyCondition("timeStamp", "greaterThan", after, definitionsService);
-            rootSubConditions.add(afterCondition);
+            rootSubConditions.add(createDatePropertyCondition("timeStamp", "greaterThan", after, definitionsService));
         }
 
         if (before != null) {
-            final Condition afterCondition = createDatePropertyCondition("timeStamp", "lessThanOrEqual", before, definitionsService);
-            rootSubConditions.add(afterCondition);
+            rootSubConditions.add(createDatePropertyCondition("timeStamp", "lessThanOrEqual", before, definitionsService));
         }
 
         if (filterInput != null) {
             if (filterInput.id_equals != null) {
-                final Condition idCondition = createPropertyCondition("id", filterInput.id_equals, definitionsService);
-                rootSubConditions.add(idCondition);
+                rootSubConditions.add(createPropertyCondition("_id", filterInput.id_equals, definitionsService));
             }
 
             if (filterInput.cdp_clientID_equals != null) {
-                final Condition clientIdCondition = createPropertyCondition("clientId", filterInput.cdp_clientID_equals, definitionsService);
-                rootSubConditions.add(clientIdCondition);
+                rootSubConditions.add(createPropertyCondition("clientId", filterInput.cdp_clientID_equals, definitionsService));
             }
 
             if (filterInput.cdp_profileID_equals != null) {
-                final Condition profileIdCondition = createPropertyCondition("profileId", filterInput.cdp_profileID_equals, definitionsService);
-                rootSubConditions.add(profileIdCondition);
+                rootSubConditions.add(createPropertyCondition("profileId", filterInput.cdp_profileID_equals, definitionsService));
             }
 
             if (filterInput.cdp_sourceID_equals != null) {
-                final Condition sourceIdCondition = createPropertyCondition("sourceId", filterInput.cdp_sourceID_equals, definitionsService);
-                rootSubConditions.add(sourceIdCondition);
+                rootSubConditions.add(createPropertyCondition("itemId", filterInput.cdp_sourceID_equals, definitionsService));
             }
 
             if (filterInput.and != null && filterInput.and.size() > 0) {
                 final Condition filterAndCondition = createBoolCondition("and", definitionsService);
-                final List<Condition> filterAndSubConditions = filterInput.and.stream().map(andInput -> createFilterInputCondition(andInput, null, null, definitionsService)).collect(Collectors.toList());
+                final List<Condition> filterAndSubConditions = filterInput.and.stream()
+                        .map(andInput -> createEventFilterInputCondition(andInput, null, null, definitionsService))
+                        .collect(Collectors.toList());
                 filterAndCondition.setParameter("subConditions", filterAndSubConditions);
+                rootSubConditions.add(filterAndCondition);
             }
 
             if (filterInput.or != null && filterInput.or.size() > 0) {
                 final Condition filterOrCondition = createBoolCondition("or", definitionsService);
-                final List<Condition> filterOrSubConditions = filterInput.or.stream().map(orInput -> createFilterInputCondition(orInput, null, null, definitionsService)).collect(Collectors.toList());
+                final List<Condition> filterOrSubConditions = filterInput.or.stream()
+                        .map(orInput -> createEventFilterInputCondition(orInput, null, null, definitionsService))
+                        .collect(Collectors.toList());
                 filterOrCondition.setParameter("subConditions", filterOrSubConditions);
+                rootSubConditions.add(filterOrCondition);
             }
         }
 

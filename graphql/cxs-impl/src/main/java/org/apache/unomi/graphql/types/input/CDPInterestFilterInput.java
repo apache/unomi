@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLField;
@@ -22,30 +23,33 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import java.util.ArrayList;
 import java.util.List;
 
-@GraphQLName("CDP_ProfileFilter")
-public class CDPProfileFilterInput {
+@GraphQLName("CDP_InterestFilterInput")
+public class CDPInterestFilterInput {
 
     @GraphQLField
-    public List<String> profileIDs_contains = new ArrayList<>();
+    public List<CDPInterestFilterInput> and = new ArrayList<>();
 
     @GraphQLField
-    public List<String> segments_contains = new ArrayList<>();
+    public List<CDPInterestFilterInput> or = new ArrayList<>();
 
     @GraphQLField
-    public List<String> consents_contains = new ArrayList<>();
+    public String topic_equals;
 
     @GraphQLField
-    public List<String> lists_contains = new ArrayList<>();
+    public Float score_equals;
 
     @GraphQLField
-    public CDPProfilePropertiesFilterInput properties;
+    public Float score_lt;
 
     @GraphQLField
-    public CDPInterestFilterInput interests;
+    public Float score_lte;
 
     @GraphQLField
-    public CDPProfileEventsFilterInput events;
+    public Float score_gt;
 
-    public CDPProfileFilterInput() {
+    @GraphQLField
+    public Float score_gte;
+
+    public CDPInterestFilterInput() {
     }
 }

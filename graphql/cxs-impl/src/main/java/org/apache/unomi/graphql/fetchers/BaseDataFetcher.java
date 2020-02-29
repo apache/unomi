@@ -23,18 +23,13 @@ import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Date;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
-
-import static com.google.common.collect.Lists.newArrayList;
 
 public abstract class BaseDataFetcher<T> implements DataFetcher<T> {
 
@@ -53,7 +48,7 @@ public abstract class BaseDataFetcher<T> implements DataFetcher<T> {
     }
 
     protected <K> K parseParam(final String name, K defaultValue, final DataFetchingEnvironment environment) {
-        return (K) Optional.of(environment.getArgument(name)).orElse(defaultValue);
+        return (K) Optional.ofNullable(environment.getArgument(name)).orElse(defaultValue);
     }
 
     protected Date parseDateParam(final String name, final DataFetchingEnvironment environment) {
