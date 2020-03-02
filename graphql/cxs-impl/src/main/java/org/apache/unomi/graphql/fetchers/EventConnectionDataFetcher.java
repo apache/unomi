@@ -19,19 +19,13 @@ package org.apache.unomi.graphql.fetchers;
 
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.output.CDPEvent;
 import org.apache.unomi.graphql.types.output.CDPEventConnection;
 import org.apache.unomi.graphql.types.output.CDPEventEdge;
 import org.apache.unomi.graphql.types.output.CDPPageInfo;
 
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static com.google.common.collect.Lists.newArrayList;
 
 public abstract class EventConnectionDataFetcher extends BaseConnectionDataFetcher<CDPEventConnection> {
 

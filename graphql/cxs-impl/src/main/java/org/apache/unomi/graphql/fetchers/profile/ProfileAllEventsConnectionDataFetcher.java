@@ -27,8 +27,6 @@ import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.output.CDPEventConnection;
 
-import java.util.Date;
-
 public class ProfileAllEventsConnectionDataFetcher extends EventConnectionDataFetcher {
 
 
@@ -38,7 +36,7 @@ public class ProfileAllEventsConnectionDataFetcher extends EventConnectionDataFe
         final ConnectionParams params = parseConnectionParams(environment);
         final CDPEventFilterInput filterInput = parseObjectParam("filter", CDPEventFilterInput.class, environment);
 
-        final Condition condition = createFilterInputCondition(filterInput, params.getAfter(), params.getBefore(), serviceManager.getDefinitionsService());
+        final Condition condition = createEventFilterInputCondition(filterInput, params.getAfter(), params.getBefore(), serviceManager.getDefinitionsService());
         final PartialList<Event> events = serviceManager.getEventService().searchEvents(condition, params.getFirst(), params.getSize());
 
         return createEventConnection(events);
