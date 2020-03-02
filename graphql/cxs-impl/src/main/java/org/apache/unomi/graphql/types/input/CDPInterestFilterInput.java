@@ -27,29 +27,119 @@ import java.util.List;
 public class CDPInterestFilterInput {
 
     @GraphQLField
-    public List<CDPInterestFilterInput> and = new ArrayList<>();
+    private List<CDPInterestFilterInput> and = new ArrayList<>();
 
     @GraphQLField
-    public List<CDPInterestFilterInput> or = new ArrayList<>();
+    private List<CDPInterestFilterInput> or = new ArrayList<>();
 
     @GraphQLField
-    public String topic_equals;
+    private String topic_equals;
 
     @GraphQLField
-    public Float score_equals;
+    private Float score_equals;
 
     @GraphQLField
-    public Float score_lt;
+    private Float score_lt;
 
     @GraphQLField
-    public Float score_lte;
+    private Float score_lte;
 
     @GraphQLField
-    public Float score_gt;
+    private Float score_gt;
 
     @GraphQLField
-    public Float score_gte;
+    private Float score_gte;
 
     public CDPInterestFilterInput() {
+    }
+
+    public CDPInterestFilterInput(@GraphQLName("and") List<CDPInterestFilterInput> and,
+                                  @GraphQLName("or") List<CDPInterestFilterInput> or,
+                                  @GraphQLName("topic_equals") String topic_equals,
+                                  @GraphQLName("score_equals") Float score_equals,
+                                  @GraphQLName("score_lt") Float score_lt,
+                                  @GraphQLName("score_lte") Float score_lte,
+                                  @GraphQLName("score_gt") Float score_gt,
+                                  @GraphQLName("score_gte") Float score_gte) {
+        this.and = and;
+        this.or = or;
+        this.topic_equals = topic_equals;
+        this.score_equals = score_equals;
+        this.score_lt = score_lt;
+        this.score_lte = score_lte;
+        this.score_gt = score_gt;
+        this.score_gte = score_gte;
+    }
+
+    public List<CDPInterestFilterInput> getAnd() {
+        return and;
+    }
+
+    public CDPInterestFilterInput setAnd(List<CDPInterestFilterInput> and) {
+        this.and = and;
+        return this;
+    }
+
+    public List<CDPInterestFilterInput> getOr() {
+        return or;
+    }
+
+    public CDPInterestFilterInput setOr(List<CDPInterestFilterInput> or) {
+        this.or = or;
+        return this;
+    }
+
+    public String getTopic_equals() {
+        return topic_equals;
+    }
+
+    public CDPInterestFilterInput setTopic_equals(String topic_equals) {
+        this.topic_equals = topic_equals;
+        return this;
+    }
+
+    public Float getScore_equals() {
+        return score_equals;
+    }
+
+    public CDPInterestFilterInput setScore_equals(Float score_equals) {
+        this.score_equals = score_equals;
+        return this;
+    }
+
+    public Float getScore_lt() {
+        return score_lt;
+    }
+
+    public CDPInterestFilterInput setScore_lt(Float score_lt) {
+        this.score_lt = score_lt;
+        return this;
+    }
+
+    public Float getScore_lte() {
+        return score_lte;
+    }
+
+    public CDPInterestFilterInput setScore_lte(Float score_lte) {
+        this.score_lte = score_lte;
+        return this;
+    }
+
+    public Float getScore_gt() {
+        return score_gt;
+    }
+
+    public CDPInterestFilterInput setScore_gt(Float score_gt) {
+        this.score_gt = score_gt;
+        return this;
+    }
+
+    public Float getScore_gte() {
+        return score_gte;
+    }
+
+    public CDPInterestFilterInput setScore_gte(Float score_gte) {
+        this.score_gte = score_gte;
+        return this;
     }
 }

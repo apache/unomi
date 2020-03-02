@@ -68,32 +68,32 @@ public abstract class ProfileConnectionDataFetcher extends BaseConnectionDataFet
         }
 
         if (filterInput != null) {
-            if (filterInput.profileIDs_contains != null && filterInput.profileIDs_contains.size() > 0) {
-                rootSubConditions.add(createPropertiesCondition("_id", "hasSomeOf", filterInput.profileIDs_contains, definitionsService));
+            if (filterInput.getProfileIDs_contains() != null && filterInput.getProfileIDs_contains().size() > 0) {
+                rootSubConditions.add(createPropertiesCondition("_id", "hasSomeOf", filterInput.getProfileIDs_contains(), definitionsService));
             }
 
-            if (filterInput.consents_contains != null && filterInput.consents_contains.size() > 0) {
-                rootSubConditions.add(createPropertiesCondition("consents", "hasSomeOf", filterInput.consents_contains, definitionsService));
+            if (filterInput.getConsents_contains() != null && filterInput.getConsents_contains().size() > 0) {
+                rootSubConditions.add(createPropertiesCondition("consents", "hasSomeOf", filterInput.getConsents_contains(), definitionsService));
             }
 
-            if (filterInput.segments_contains != null && filterInput.segments_contains.size() > 0) {
-                rootSubConditions.add(createPropertiesCondition("segments", "hasSomeOf", filterInput.segments_contains, definitionsService));
+            if (filterInput.getSegments_contains() != null && filterInput.getSegments_contains().size() > 0) {
+                rootSubConditions.add(createPropertiesCondition("segments", "hasSomeOf", filterInput.getSegments_contains(), definitionsService));
             }
 
-            if (filterInput.lists_contains != null && filterInput.lists_contains.size() > 0) {
-                rootSubConditions.add(createPropertiesCondition("lists", "hasSomeOf", filterInput.lists_contains, definitionsService));
+            if (filterInput.getLists_contains() != null && filterInput.getLists_contains().size() > 0) {
+                rootSubConditions.add(createPropertiesCondition("lists", "hasSomeOf", filterInput.getLists_contains(), definitionsService));
             }
 
-            if (filterInput.properties != null) {
-                rootSubConditions.add(createProfilePropertiesFilterInputCondition(filterInput.properties, definitionsService));
+            if (filterInput.getProperties() != null) {
+                rootSubConditions.add(createProfilePropertiesFilterInputCondition(filterInput.getProperties(), definitionsService));
             }
 
-            if (filterInput.events != null) {
-                rootSubConditions.add(createProfileEventsFilterInputCondition(filterInput.events, definitionsService));
+            if (filterInput.getEvents() != null) {
+                rootSubConditions.add(createProfileEventsFilterInputCondition(filterInput.getEvents(), definitionsService));
             }
 
-            if (filterInput.interests != null) {
-                rootSubConditions.add(createInterestFilterInputCondition(filterInput.interests, definitionsService));
+            if (filterInput.getInterests() != null) {
+                rootSubConditions.add(createInterestFilterInputCondition(filterInput.getInterests(), definitionsService));
             }
         }
 
@@ -105,42 +105,42 @@ public abstract class ProfileConnectionDataFetcher extends BaseConnectionDataFet
         final Condition rootCondition = createBoolCondition("and", definitionsService);
         final List<Condition> rootSubConditions = new ArrayList<>();
 
-        if (filterInput.topic_equals != null) {
-            rootSubConditions.add(createPropertyCondition("topic", filterInput.topic_equals, definitionsService));
+        if (filterInput.getTopic_equals() != null) {
+            rootSubConditions.add(createPropertyCondition("topic", filterInput.getTopic_equals(), definitionsService));
         }
 
-        if (filterInput.score_equals != null) {
-            rootSubConditions.add(createIntegerPropertyCondition("score", filterInput.score_equals, definitionsService));
+        if (filterInput.getScore_equals() != null) {
+            rootSubConditions.add(createIntegerPropertyCondition("score", filterInput.getScore_equals(), definitionsService));
         }
 
-        if (filterInput.score_gt != null) {
-            rootSubConditions.add(createIntegerPropertyCondition("score", "greaterThan", filterInput.score_gt, definitionsService));
+        if (filterInput.getScore_gt() != null) {
+            rootSubConditions.add(createIntegerPropertyCondition("score", "greaterThan", filterInput.getScore_gt(), definitionsService));
         }
 
-        if (filterInput.score_gte != null) {
-            rootSubConditions.add(createIntegerPropertyCondition("score", "greaterThanOrEqualTo", filterInput.score_gte, definitionsService));
+        if (filterInput.getScore_gte() != null) {
+            rootSubConditions.add(createIntegerPropertyCondition("score", "greaterThanOrEqualTo", filterInput.getScore_gte(), definitionsService));
         }
 
-        if (filterInput.score_lt != null) {
-            rootSubConditions.add(createIntegerPropertyCondition("score", "lessThan", filterInput.score_lt, definitionsService));
+        if (filterInput.getScore_lt() != null) {
+            rootSubConditions.add(createIntegerPropertyCondition("score", "lessThan", filterInput.getScore_lt(), definitionsService));
         }
 
-        if (filterInput.score_lte != null) {
-            rootSubConditions.add(createIntegerPropertyCondition("score", "lessThanOrEqualTo", filterInput.score_lte, definitionsService));
+        if (filterInput.getScore_lte() != null) {
+            rootSubConditions.add(createIntegerPropertyCondition("score", "lessThanOrEqualTo", filterInput.getScore_lte(), definitionsService));
         }
 
-        if (filterInput.and != null && filterInput.and.size() > 0) {
+        if (filterInput.getAnd() != null && filterInput.getAnd().size() > 0) {
             final Condition filterAndCondition = createBoolCondition("and", definitionsService);
-            final List<Condition> filterAndSubConditions = filterInput.and.stream()
+            final List<Condition> filterAndSubConditions = filterInput.getAnd().stream()
                     .map(andInput -> createInterestFilterInputCondition(andInput, definitionsService))
                     .collect(Collectors.toList());
             filterAndCondition.setParameter("subConditions", filterAndSubConditions);
             rootSubConditions.add(filterAndCondition);
         }
 
-        if (filterInput.or != null && filterInput.or.size() > 0) {
+        if (filterInput.getOr() != null && filterInput.getOr().size() > 0) {
             final Condition filterOrCondition = createBoolCondition("or", definitionsService);
-            final List<Condition> filterOrSubConditions = filterInput.or.stream()
+            final List<Condition> filterOrSubConditions = filterInput.getOr().stream()
                     .map(orInput -> createInterestFilterInputCondition(orInput, definitionsService))
                     .collect(Collectors.toList());
             filterOrCondition.setParameter("subConditions", filterOrSubConditions);
@@ -155,34 +155,34 @@ public abstract class ProfileConnectionDataFetcher extends BaseConnectionDataFet
         final Condition rootCondition = createBoolCondition("and", definitionsService);
         final List<Condition> rootSubConditions = new ArrayList<>();
 
-        if (filterInput.maximalCount != null) {
-            rootSubConditions.add(createIntegerPropertyCondition("count", "lessThanOrEqualTo", filterInput.maximalCount, definitionsService));
+        if (filterInput.getMaximalCount() != null) {
+            rootSubConditions.add(createIntegerPropertyCondition("count", "lessThanOrEqualTo", filterInput.getMaximalCount(), definitionsService));
         }
 
-        if (filterInput.minimalCount != null) {
-            rootSubConditions.add(createIntegerPropertyCondition("count", "greaterThanOrEqualTo", filterInput.minimalCount, definitionsService));
+        if (filterInput.getMinimalCount() != null) {
+            rootSubConditions.add(createIntegerPropertyCondition("count", "greaterThanOrEqualTo", filterInput.getMinimalCount(), definitionsService));
         }
 
-        if (filterInput.not != null) {
-            rootSubConditions.add(createProfileEventsFilterInputCondition(filterInput.not, definitionsService));
+        if (filterInput.getNot() != null) {
+            rootSubConditions.add(createProfileEventsFilterInputCondition(filterInput.getNot(), definitionsService));
         }
 
-        if (filterInput.eventFilter != null) {
-            rootSubConditions.add(createEventFilterInputCondition(filterInput.eventFilter, null, null, definitionsService));
+        if (filterInput.getEventFilter() != null) {
+            rootSubConditions.add(createEventFilterInputCondition(filterInput.getEventFilter(), null, null, definitionsService));
         }
 
-        if (filterInput.and != null && filterInput.and.size() > 0) {
+        if (filterInput.getAnd() != null && filterInput.getAnd().size() > 0) {
             final Condition filterAndCondition = createBoolCondition("and", definitionsService);
-            final List<Condition> filterAndSubConditions = filterInput.and.stream()
+            final List<Condition> filterAndSubConditions = filterInput.getAnd().stream()
                     .map(andInput -> createProfileEventsFilterInputCondition(andInput, definitionsService))
                     .collect(Collectors.toList());
             filterAndCondition.setParameter("subConditions", filterAndSubConditions);
             rootSubConditions.add(filterAndCondition);
         }
 
-        if (filterInput.or != null && filterInput.or.size() > 0) {
+        if (filterInput.getOr() != null && filterInput.getOr().size() > 0) {
             final Condition filterOrCondition = createBoolCondition("or", definitionsService);
-            final List<Condition> filterOrSubConditions = filterInput.or.stream()
+            final List<Condition> filterOrSubConditions = filterInput.getOr().stream()
                     .map(orInput -> createProfileEventsFilterInputCondition(orInput, definitionsService))
                     .collect(Collectors.toList());
             filterOrCondition.setParameter("subConditions", filterOrSubConditions);
@@ -197,18 +197,18 @@ public abstract class ProfileConnectionDataFetcher extends BaseConnectionDataFet
         final Condition rootCondition = createBoolCondition("and", definitionsService);
         final List<Condition> rootSubConditions = new ArrayList<>();
 
-        if (filterInput.and != null && filterInput.and.size() > 0) {
+        if (filterInput.getAnd() != null && filterInput.getAnd().size() > 0) {
             final Condition filterAndCondition = createBoolCondition("and", definitionsService);
-            final List<Condition> filterAndSubConditions = filterInput.and.stream()
+            final List<Condition> filterAndSubConditions = filterInput.getAnd().stream()
                     .map(andInput -> createProfilePropertiesFilterInputCondition(andInput, definitionsService))
                     .collect(Collectors.toList());
             filterAndCondition.setParameter("subConditions", filterAndSubConditions);
             rootSubConditions.add(filterAndCondition);
         }
 
-        if (filterInput.or != null && filterInput.or.size() > 0) {
+        if (filterInput.getOr() != null && filterInput.getOr().size() > 0) {
             final Condition filterOrCondition = createBoolCondition("or", definitionsService);
-            final List<Condition> filterOrSubConditions = filterInput.or.stream()
+            final List<Condition> filterOrSubConditions = filterInput.getOr().stream()
                     .map(orInput -> createProfilePropertiesFilterInputCondition(orInput, definitionsService))
                     .collect(Collectors.toList());
             filterOrCondition.setParameter("subConditions", filterOrSubConditions);

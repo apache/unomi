@@ -26,26 +26,105 @@ import java.util.List;
 public class CDPProfileFilterInput {
 
     @GraphQLField
-    public List<String> profileIDs_contains = new ArrayList<>();
+    private List<String> profileIDs_contains = new ArrayList<>();
 
     @GraphQLField
-    public List<String> segments_contains = new ArrayList<>();
+    private List<String> segments_contains = new ArrayList<>();
 
     @GraphQLField
-    public List<String> consents_contains = new ArrayList<>();
+    private List<String> consents_contains = new ArrayList<>();
 
     @GraphQLField
-    public List<String> lists_contains = new ArrayList<>();
+    private List<String> lists_contains = new ArrayList<>();
 
     @GraphQLField
-    public CDPProfilePropertiesFilterInput properties;
+    private CDPProfilePropertiesFilterInput properties;
 
     @GraphQLField
-    public CDPInterestFilterInput interests;
+    private CDPInterestFilterInput interests;
 
     @GraphQLField
-    public CDPProfileEventsFilterInput events;
+    private CDPProfileEventsFilterInput events;
 
     public CDPProfileFilterInput() {
+    }
+
+    public CDPProfileFilterInput(@GraphQLName("profileIDs_contains") List<String> profileIDs_contains,
+                                 @GraphQLName("segments_contains") List<String> segments_contains,
+                                 @GraphQLName("consents_contains") List<String> consents_contains,
+                                 @GraphQLName("lists_contains") List<String> lists_contains,
+                                 @GraphQLName("properties") CDPProfilePropertiesFilterInput properties,
+                                 @GraphQLName("interests") CDPInterestFilterInput interests,
+                                 @GraphQLName("events") CDPProfileEventsFilterInput events) {
+        this.profileIDs_contains = profileIDs_contains;
+        this.segments_contains = segments_contains;
+        this.consents_contains = consents_contains;
+        this.lists_contains = lists_contains;
+        this.properties = properties;
+        this.interests = interests;
+        this.events = events;
+    }
+
+    public List<String> getProfileIDs_contains() {
+        return profileIDs_contains;
+    }
+
+    public CDPProfileFilterInput setProfileIDs_contains(List<String> profileIDs_contains) {
+        this.profileIDs_contains = profileIDs_contains;
+        return this;
+    }
+
+    public List<String> getSegments_contains() {
+        return segments_contains;
+    }
+
+    public CDPProfileFilterInput setSegments_contains(List<String> segments_contains) {
+        this.segments_contains = segments_contains;
+        return this;
+    }
+
+    public List<String> getConsents_contains() {
+        return consents_contains;
+    }
+
+    public CDPProfileFilterInput setConsents_contains(List<String> consents_contains) {
+        this.consents_contains = consents_contains;
+        return this;
+    }
+
+    public List<String> getLists_contains() {
+        return lists_contains;
+    }
+
+    public CDPProfileFilterInput setLists_contains(List<String> lists_contains) {
+        this.lists_contains = lists_contains;
+        return this;
+    }
+
+    public CDPProfilePropertiesFilterInput getProperties() {
+        return properties;
+    }
+
+    public CDPProfileFilterInput setProperties(CDPProfilePropertiesFilterInput properties) {
+        this.properties = properties;
+        return this;
+    }
+
+    public CDPInterestFilterInput getInterests() {
+        return interests;
+    }
+
+    public CDPProfileFilterInput setInterests(CDPInterestFilterInput interests) {
+        this.interests = interests;
+        return this;
+    }
+
+    public CDPProfileEventsFilterInput getEvents() {
+        return events;
+    }
+
+    public CDPProfileFilterInput setEvents(CDPProfileEventsFilterInput events) {
+        this.events = events;
+        return this;
     }
 }

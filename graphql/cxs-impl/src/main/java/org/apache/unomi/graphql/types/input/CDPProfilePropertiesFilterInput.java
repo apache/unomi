@@ -27,11 +27,35 @@ import java.util.List;
 public class CDPProfilePropertiesFilterInput {
 
     @GraphQLField
-    public List<CDPProfilePropertiesFilterInput> and = new ArrayList<>();
+    private List<CDPProfilePropertiesFilterInput> and = new ArrayList<>();
 
     @GraphQLField
-    public List<CDPProfilePropertiesFilterInput> or = new ArrayList<>();
+    private List<CDPProfilePropertiesFilterInput> or = new ArrayList<>();
 
     public CDPProfilePropertiesFilterInput() {
+    }
+
+    public CDPProfilePropertiesFilterInput(@GraphQLName("and") List<CDPProfilePropertiesFilterInput> and,
+                                           @GraphQLName("or") List<CDPProfilePropertiesFilterInput> or) {
+        this.and = and;
+        this.or = or;
+    }
+
+    public List<CDPProfilePropertiesFilterInput> getAnd() {
+        return and;
+    }
+
+    public CDPProfilePropertiesFilterInput setAnd(List<CDPProfilePropertiesFilterInput> and) {
+        this.and = and;
+        return this;
+    }
+
+    public List<CDPProfilePropertiesFilterInput> getOr() {
+        return or;
+    }
+
+    public CDPProfilePropertiesFilterInput setOr(List<CDPProfilePropertiesFilterInput> or) {
+        this.or = or;
+        return this;
     }
 }

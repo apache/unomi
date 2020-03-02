@@ -27,23 +27,91 @@ import java.util.List;
 public class CDPProfileEventsFilterInput {
 
     @GraphQLField
-    public List<CDPProfileEventsFilterInput> and = new ArrayList<>();
+    private List<CDPProfileEventsFilterInput> and = new ArrayList<>();
 
     @GraphQLField
-    public List<CDPProfileEventsFilterInput> or = new ArrayList<>();
+    private List<CDPProfileEventsFilterInput> or = new ArrayList<>();
 
     @GraphQLField
-    public CDPProfileEventsFilterInput not;
+    private CDPProfileEventsFilterInput not;
 
     @GraphQLField
-    public Integer minimalCount;
+    private Integer minimalCount;
 
     @GraphQLField
-    public Integer maximalCount;
+    private Integer maximalCount;
 
     @GraphQLField
-    public CDPEventFilterInput eventFilter;
+    private CDPEventFilterInput eventFilter;
 
     public CDPProfileEventsFilterInput() {
+    }
+
+    public CDPProfileEventsFilterInput(@GraphQLName("and") List<CDPProfileEventsFilterInput> and,
+                                       @GraphQLName("or") List<CDPProfileEventsFilterInput> or,
+                                       @GraphQLName("not") CDPProfileEventsFilterInput not,
+                                       @GraphQLName("minimalCount") Integer minimalCount,
+                                       @GraphQLName("maximalCount") Integer maximalCount,
+                                       @GraphQLName("eventFilter") CDPEventFilterInput eventFilter) {
+        this.and = and;
+        this.or = or;
+        this.not = not;
+        this.minimalCount = minimalCount;
+        this.maximalCount = maximalCount;
+        this.eventFilter = eventFilter;
+    }
+
+    public List<CDPProfileEventsFilterInput> getAnd() {
+        return and;
+    }
+
+    public CDPProfileEventsFilterInput setAnd(List<CDPProfileEventsFilterInput> and) {
+        this.and = and;
+        return this;
+    }
+
+    public List<CDPProfileEventsFilterInput> getOr() {
+        return or;
+    }
+
+    public CDPProfileEventsFilterInput setOr(List<CDPProfileEventsFilterInput> or) {
+        this.or = or;
+        return this;
+    }
+
+    public CDPProfileEventsFilterInput getNot() {
+        return not;
+    }
+
+    public CDPProfileEventsFilterInput setNot(CDPProfileEventsFilterInput not) {
+        this.not = not;
+        return this;
+    }
+
+    public Integer getMinimalCount() {
+        return minimalCount;
+    }
+
+    public CDPProfileEventsFilterInput setMinimalCount(Integer minimalCount) {
+        this.minimalCount = minimalCount;
+        return this;
+    }
+
+    public Integer getMaximalCount() {
+        return maximalCount;
+    }
+
+    public CDPProfileEventsFilterInput setMaximalCount(Integer maximalCount) {
+        this.maximalCount = maximalCount;
+        return this;
+    }
+
+    public CDPEventFilterInput getEventFilter() {
+        return eventFilter;
+    }
+
+    public CDPProfileEventsFilterInput setEventFilter(CDPEventFilterInput eventFilter) {
+        this.eventFilter = eventFilter;
+        return this;
     }
 }
