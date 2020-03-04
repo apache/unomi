@@ -28,6 +28,7 @@ import org.apache.unomi.graphql.types.output.CDPPageInfo;
 import org.apache.unomi.graphql.types.output.CDPPropertyConnection;
 import org.apache.unomi.graphql.types.output.CDPPropertyEdge;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -48,12 +49,17 @@ public class PropertiesConnectionDataFetcher extends BaseConnectionDataFetcher<C
     }
 
     protected CDPPropertyConnection createPropertiesConnection(Collection<PropertyType> properties, ConnectionParams params) {
-        if (properties == null || properties.size() == 0) {
+        if (properties == null || properties.size() == 0 || properties.size() < params.getFirst() || params.getFirst() > params.getLast()) {
             return new CDPPropertyConnection();
         }
+        final int startIndex = Math.max(params.getFirst(), 0);
+        final int lastIndex = Math.min(params.getLast(), properties.size());
 
-        final CDPPageInfo cdpPageInfo = new CDPPageInfo(params.getFirst() > 0, params.getLast() < properties.size());
-        final List<CDPPropertyEdge> edges = properties.stream()
+        final CDPPageInfo cdpPageInfo = new CDPPageInfo(startIndex > 0, lastIndex < properties.size());
+
+        final List<CDPPropertyEdge> edges = new ArrayList<>(properties)
+                .subList(startIndex, lastIndex)
+                .stream()
                 .map(entry -> new CDPPropertyEdge(new CDPPropertyType(entry), entry.getItemId()))
                 .collect(Collectors.toList());
         return new CDPPropertyConnection(edges, cdpPageInfo);
