@@ -21,6 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.graphql.commands.CreateOrUpdateProfilePropertiesCommand;
+import org.apache.unomi.graphql.commands.ProcessEventsCommand;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPPropertyInput;
 
@@ -49,7 +50,10 @@ public class CDPMutation {
             final @GraphQLNonNull @GraphQLName("events") List<CDPEventInput> eventInputs,
             final DataFetchingEnvironment environment
     ) {
-        return 0;
+        return ProcessEventsCommand.create(environment)
+                .setServiceManager(environment.getContext())
+                .build()
+                .execute();
     }
 
 }

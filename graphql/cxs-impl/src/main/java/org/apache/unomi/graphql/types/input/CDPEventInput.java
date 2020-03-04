@@ -24,6 +24,8 @@ import graphql.annotations.annotationTypes.GraphQLNonNull;
 @GraphQLName("CDP_Event")
 public class CDPEventInput {
 
+    public static final String TYPE_NAME = "CDP_EventInput";
+
     @GraphQLID
     @GraphQLField
     private String id;
