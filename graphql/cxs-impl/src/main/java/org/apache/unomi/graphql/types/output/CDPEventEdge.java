@@ -18,12 +18,15 @@ package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLNonNull;
 
 @GraphQLName("CDP_EventEdge")
 public class CDPEventEdge {
 
     @GraphQLField
     public CDPEvent node;
+
+    @GraphQLNonNull
     @GraphQLField
     public String cursor;
 

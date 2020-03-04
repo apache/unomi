@@ -22,11 +22,13 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 import org.apache.unomi.graphql.fetchers.profile.FindProfilesConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.ProfileDataFetcher;
+import org.apache.unomi.graphql.fetchers.profile.PropertiesConnectionDataFetcher;
 import org.apache.unomi.graphql.types.input.CDPOrderByInput;
 import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.CDPProfileConnection;
+import org.apache.unomi.graphql.types.output.CDPPropertyConnection;
 
 import java.util.List;
 
@@ -49,11 +51,19 @@ public class CDPQuery {
     @GraphQLField
     @GraphQLDataFetcher(FindProfilesConnectionDataFetcher.class)
     public CDPProfileConnection findProfiles(final @GraphQLName("filter") CDPProfileFilterInput filter,
-                                            @GraphQLName("orderBy") List<CDPOrderByInput> orderBy,
-                                            @GraphQLName("first") Integer first,
-                                            @GraphQLName("after") String after,
-                                            @GraphQLName("last") Integer last,
-                                            @GraphQLName("before") String before) {
+                                             final @GraphQLName("orderBy") List<CDPOrderByInput> orderBy,
+                                             final @GraphQLName("first") Integer first,
+                                             final @GraphQLName("after") String after,
+                                             final @GraphQLName("last") Integer last,
+                                             final @GraphQLName("before") String before) {
         return null;
     }
+
+    @GraphQLField
+    @GraphQLDataFetcher(PropertiesConnectionDataFetcher.class)
+    public CDPPropertyConnection getProfileProperties(final @GraphQLName("first") Integer first,
+                                                      final @GraphQLName("last") Integer last) {
+        return null;
+    }
+
 }

@@ -21,7 +21,9 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.annotations.annotationTypes.GraphQLPrettify;
+import org.apache.unomi.api.PropertyType;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @GraphQLName("CDP_PropertyInterface")
@@ -40,6 +42,13 @@ public class CDPPropertyType {
         this.minOccurrences = minOccurrences;
         this.maxOccurrences = maxOccurrences;
         this.tags = tags;
+    }
+
+    public CDPPropertyType(PropertyType propertyType) {
+        this.name = propertyType.getItemId();
+        // this.minOccurrences;
+        // this.maxOccurrences;
+        this.tags = new ArrayList<>(propertyType.getMetadata().getTags());
     }
 
     public CDPPropertyType(CDPPropertyType input) {

@@ -18,14 +18,28 @@ package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLNonNull;
 
 @GraphQLName("CDP_SegmentEdge")
 public class CDPSegmentEdge {
 
     @GraphQLField
-    public CDPSegment edge;
+    private CDPSegment edge;
 
+    @GraphQLNonNull
     @GraphQLField
-    public String cursor;
+    private String cursor;
 
+    public CDPSegmentEdge(CDPSegment edge, @GraphQLNonNull String cursor) {
+        this.edge = edge;
+        this.cursor = cursor;
+    }
+
+    public CDPSegment getEdge() {
+        return edge;
+    }
+
+    public String getCursor() {
+        return cursor;
+    }
 }
