@@ -21,8 +21,9 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.graphql.commands.CreateOrUpdateProfilePropertiesCommand;
-import org.apache.unomi.graphql.commands.ProcessEventsCommand;
 import org.apache.unomi.graphql.commands.DeleteProfileCommand;
+import org.apache.unomi.graphql.commands.DeleteProfilePropertiesCommand;
+import org.apache.unomi.graphql.commands.ProcessEventsCommand;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.input.CDPPropertyInput;
@@ -63,6 +64,16 @@ public class CDPMutation {
             final @GraphQLNonNull @GraphQLName("profileID") CDPProfileIDInput profileIDInput,
             final DataFetchingEnvironment environment) {
         return DeleteProfileCommand.create(environment)
+                .setServiceManager(environment.getContext())
+                .build()
+                .execute();
+    }
+
+    @GraphQLField
+    public boolean deleteProfileProperties(
+            final @GraphQLNonNull @GraphQLName("propertyNames") List<String> propertyNames,
+            final DataFetchingEnvironment environment) {
+        return DeleteProfilePropertiesCommand.create(propertyNames)
                 .setServiceManager(environment.getContext())
                 .build()
                 .execute();
