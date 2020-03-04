@@ -19,19 +19,28 @@ package org.apache.unomi.graphql.types.output;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
+import org.apache.unomi.graphql.propertytypes.CDPPropertyType;
 
-@GraphQLName("CDP_ProfileEdge")
-public class CDPProfileEdge {
+@GraphQLName("CDP_ProfilePropertyEdge")
+public class CDPPropertyEdge {
 
     @GraphQLField
-    public CDPProfile node;
+    private CDPPropertyType node;
 
     @GraphQLNonNull
     @GraphQLField
-    public String cursor;
+    private String cursor;
 
-    public CDPProfileEdge(CDPProfile node, String cursor) {
+    public CDPPropertyEdge(CDPPropertyType node, String cursor) {
         this.node = node;
         this.cursor = cursor;
+    }
+
+    public CDPPropertyType getNode() {
+        return node;
+    }
+
+    public String getCursor() {
+        return cursor;
     }
 }

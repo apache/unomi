@@ -27,12 +27,35 @@ import graphql.annotations.annotationTypes.GraphQLName;
 public class CDPPageInfo {
 
     @GraphQLField
-    public boolean hasPreviousPage;
+    private boolean hasPreviousPage;
+
     @GraphQLField
-    public boolean hasNextPage;
+    private boolean hasNextPage;
+
+    public CDPPageInfo() {
+        this(false, false);
+    }
 
     public CDPPageInfo(boolean hasPreviousPage, boolean hasNextPage) {
         this.hasPreviousPage = hasPreviousPage;
         this.hasNextPage = hasNextPage;
+    }
+
+    public boolean isHasPreviousPage() {
+        return hasPreviousPage;
+    }
+
+    public CDPPageInfo setHasPreviousPage(boolean hasPreviousPage) {
+        this.hasPreviousPage = hasPreviousPage;
+        return this;
+    }
+
+    public boolean isHasNextPage() {
+        return hasNextPage;
+    }
+
+    public CDPPageInfo setHasNextPage(boolean hasNextPage) {
+        this.hasNextPage = hasNextPage;
+        return this;
     }
 }

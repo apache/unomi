@@ -19,13 +19,32 @@ package org.apache.unomi.graphql.types.output;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @GraphQLName("CDP_SegmentConnection")
 public class CDPSegmentConnection {
-    @GraphQLField
-    public List<CDPSegmentEdge> edges;
-    @GraphQLField
-    public CDPPageInfo CDPPageInfo;
 
+    @GraphQLField
+    private List<CDPEventEdge> edges;
+
+    @GraphQLField
+    private CDPPageInfo pageInfo;
+
+    public CDPSegmentConnection() {
+        this(new ArrayList<>(), new CDPPageInfo());
+    }
+
+    public CDPSegmentConnection(List<CDPEventEdge> edges, CDPPageInfo pageInfo) {
+        this.edges = edges;
+        this.pageInfo = pageInfo;
+    }
+
+    public List<CDPEventEdge> getEdges() {
+        return edges;
+    }
+
+    public CDPPageInfo getPageInfo() {
+        return pageInfo;
+    }
 }

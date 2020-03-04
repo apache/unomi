@@ -19,21 +19,32 @@ package org.apache.unomi.graphql.types.output;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @GraphQLName("CDP_EventConnection")
 public class CDPEventConnection {
 
     @GraphQLField
-    public List<CDPEventEdge> edges;
+    private List<CDPEventEdge> edges;
+
     @GraphQLField
-    public CDPPageInfo pageInfo;
+    private CDPPageInfo pageInfo;
 
     public CDPEventConnection() {
+        this(new ArrayList<>(), new CDPPageInfo());
     }
 
     public CDPEventConnection(List<CDPEventEdge> edges, CDPPageInfo pageInfo) {
         this.edges = edges;
         this.pageInfo = pageInfo;
+    }
+
+    public List<CDPEventEdge> getEdges() {
+        return edges;
+    }
+
+    public CDPPageInfo getPageInfo() {
+        return pageInfo;
     }
 }
