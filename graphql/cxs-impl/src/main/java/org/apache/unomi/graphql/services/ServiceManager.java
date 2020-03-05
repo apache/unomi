@@ -18,6 +18,7 @@ package org.apache.unomi.graphql.services;
 
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
@@ -32,6 +33,7 @@ public class ServiceManager {
     private EventService eventService;
     private DefinitionsService definitionsService;
     private GraphQLSchemaUpdater graphQLSchemaUpdater;
+    private PrivacyService privacyService;
 
     @Reference
     public void setProfileService(ProfileService profileService) {
@@ -58,6 +60,11 @@ public class ServiceManager {
         this.graphQLSchemaUpdater = graphQLSchemaUpdater;
     }
 
+    @Reference
+    public void setPrivacyService(PrivacyService privacyService) {
+        this.privacyService = privacyService;
+    }
+
     public ProfileService getProfileService() {
         return profileService;
     }
@@ -76,6 +83,10 @@ public class ServiceManager {
 
     public GraphQLSchemaUpdater getGraphQLSchemaUpdater() {
         return graphQLSchemaUpdater;
+    }
+
+    public PrivacyService getPrivacyService() {
+        return privacyService;
     }
 
 }
