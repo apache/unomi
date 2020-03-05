@@ -18,7 +18,7 @@ package org.apache.unomi.graphql.commands;
 
 import com.google.common.base.Strings;
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.api.Persona;
+import org.apache.unomi.api.Profile;
 import org.apache.unomi.graphql.services.ServiceManager;
 
 import java.util.Map;
@@ -40,17 +40,15 @@ public class DeleteAllPersonalDataCommand extends BaseCommand<Boolean> {
 
         final Map<String, Object> cdpProfileIdInput = environment.getArgument("profileID");
 
-        final String personaId = (String) cdpProfileIdInput.get("id");
+        final String profileId = (String) cdpProfileIdInput.get("id");
 
-        final Persona persona = serviceManager.getProfileService().loadPersona(personaId);
+        final Profile profile = serviceManager.getProfileService().load(profileId);
 
-        if (persona == null) {
-            throw new IllegalStateException(String.format("The persona with id \"%s\" not found", personaId));
+        if (profile == null) {
+            return false;
         }
 
-        serviceManager.getProfileService().delete(personaId, true);
-
-        return true;
+        return serviceManager.getPrivacyService().deleteProfileData(profileId);
     }
 
     public static Builder create(final DataFetchingEnvironment environment) {
