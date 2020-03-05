@@ -46,8 +46,12 @@ public class CDPPropertyType {
 
     public CDPPropertyType(PropertyType propertyType) {
         this.name = propertyType.getItemId();
-        // this.minOccurrences;
-        // this.maxOccurrences;
+        // Using 0-1 for regular field
+        // And 0-1000 for multivalued
+        // TODO: fix min/max occurrences after unomi supports it
+        this.minOccurrences = 0;
+        final boolean multi = propertyType.isMultivalued() != null && propertyType.isMultivalued();
+        this.maxOccurrences = multi ? 1000 : 1;
         this.tags = new ArrayList<>(propertyType.getMetadata().getTags());
     }
 

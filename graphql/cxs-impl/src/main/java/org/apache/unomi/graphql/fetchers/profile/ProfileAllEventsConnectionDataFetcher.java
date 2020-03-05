@@ -26,15 +26,24 @@ import org.apache.unomi.graphql.fetchers.EventConnectionDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.output.CDPEventConnection;
+import org.apache.unomi.graphql.types.output.CDPProfile;
 
 public class ProfileAllEventsConnectionDataFetcher extends EventConnectionDataFetcher {
 
 
     @Override
     public CDPEventConnection get(DataFetchingEnvironment environment) throws Exception {
-        final ServiceManager serviceManager = environment.getContext();
         final ConnectionParams params = parseConnectionParams(environment);
-        final CDPEventFilterInput filterInput = parseObjectParam("filter", CDPEventFilterInput.class, environment);
+        CDPEventFilterInput filterInput = parseObjectParam("filter", CDPEventFilterInput.class, environment);
+
+        final CDPProfile cdpProfile = environment.getSource();
+        final ServiceManager serviceManager = environment.getContext();
+
+        // force searching events belonging to current profile only
+        if (filterInput == null) {
+            filterInput = new CDPEventFilterInput();
+        }
+        filterInput.cdp_profileID_equals = cdpProfile.getProfile().getItemId();
 
         final Condition condition = createEventFilterInputCondition(filterInput, params.getAfter(), params.getBefore(), serviceManager.getDefinitionsService());
         final PartialList<Event> events = serviceManager.getEventService().searchEvents(condition, params.getFirst(), params.getSize());

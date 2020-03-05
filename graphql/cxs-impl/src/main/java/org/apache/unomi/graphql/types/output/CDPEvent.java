@@ -17,72 +17,111 @@
 package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLPrettify;
+import graphql.annotations.annotationTypes.GraphQLNonNull;
 import org.apache.unomi.api.Event;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 @GraphQLName("CDP_Event")
 public class CDPEvent {
 
+    @GraphQLID
+    @GraphQLField
+    @GraphQLNonNull
     private String id;
-    private String eventType;
-    private long timeStamp;
-    private String subject;
-    private String object;
-    private CDPEventProperties properties = new CDPEventProperties();
+
+    @GraphQLField
+    private CDPSource source;
+
+    @GraphQLField
+    private CDPClient client;
+
+    @GraphQLField
+    @GraphQLNonNull
+    private CDPProfileID profileID;
+
+    @GraphQLField
+    @GraphQLNonNull
+    private CDPProfile profile;
+
+    @GraphQLField
+    @GraphQLNonNull
+    private CDPObject object;
+
+    @GraphQLField
     private CDPGeoPoint location;
+
+    @GraphQLField
+    private Date timeStamp;
+
+    @GraphQLField
+    private List<CDPTopic> topics = new ArrayList<CDPTopic>();
+
+    // TODO: properties is not part of the spec
+    private CDPEventProperties properties;
 
     public CDPEvent() {
     }
 
     public CDPEvent(Event event) {
         id = event.getItemId();
-        eventType = event.getEventType();
-        timeStamp = event.getTimeStamp() != null ? event.getTimeStamp().getTime() : 0;
-        subject = event.getScope(); //TODO: ?
-//        object = event.getObject();
+        source = new CDPSource(event.getSource() != null ? event.getSource().getItemId() : "");
+        client = CDPClient.DEFAULT;
+        profileID = new CDPProfileID(event.getProfileId());
+        profile = new CDPProfile(event.getProfile());
+        final String uri = String.format("%s:%s", event.getItemType(), event.getItemId());
+        object = new CDPObject(uri, event.getItemType(), event.getItemId(), null);
+        timeStamp = event.getTimeStamp();
+//        TODO: implement after unomi supports it
+//        location
+//        topics
+
         properties = new CDPEventProperties(event.getProperties());
     }
 
-    @GraphQLField
-    @GraphQLPrettify
     public String getId() {
         return id;
     }
 
-    @GraphQLField
-    @GraphQLPrettify
-    public String getEventType() {
-        return eventType;
+    public CDPSource getSource() {
+        return source;
     }
 
-    @GraphQLField
-    @GraphQLPrettify
-    public long getTimeStamp() {
-        return timeStamp;
+    public CDPClient getClient() {
+        return client;
     }
 
-    @GraphQLField
-    @GraphQLPrettify
-    public String getSubject() {
-        return subject;
+    public CDPProfileID getProfileID() {
+        return profileID;
     }
 
-    @GraphQLField
-    @GraphQLPrettify
-    public String getObject() {
+    public CDPProfile getProfile() {
+        return profile;
+    }
+
+    public CDPObject getObject() {
         return object;
     }
 
-    @GraphQLField
-    @GraphQLPrettify
-    public CDPEventProperties getProperties() {
-        return properties;
-    }
-
-    @GraphQLField
-    @GraphQLPrettify
     public CDPGeoPoint getLocation() {
         return location;
+    }
+
+    public Date getTimeStamp() {
+        return timeStamp;
+    }
+
+    public List<CDPTopic> getTopics() {
+        return topics;
+    }
+
+    public CDPEventProperties getProperties() {
+        return properties;
     }
 }

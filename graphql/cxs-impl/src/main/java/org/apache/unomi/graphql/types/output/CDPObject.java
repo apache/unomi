@@ -20,43 +20,45 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
-import graphql.annotations.annotationTypes.GraphQLPrettify;
 
 import java.util.List;
 
 @GraphQLName("CDP_Object")
 public class CDPObject {
 
-    private String uri;
-
-    private String scheme;
-
-    private String path;
-
-    private List<CDPTopic> topics;
-
     @GraphQLID
     @GraphQLField
     @GraphQLNonNull
-    @GraphQLPrettify
+    private String uri;
+
+    @GraphQLField
+    private String scheme;
+
+    @GraphQLField
+    private String path;
+
+    @GraphQLField
+    private List<CDPTopic> topics;
+
+    public CDPObject(@GraphQLID @GraphQLNonNull String uri, String scheme, String path, List<CDPTopic> topics) {
+        this.uri = uri;
+        this.scheme = scheme;
+        this.path = path;
+        this.topics = topics;
+    }
+
     public String getUri() {
         return uri;
     }
 
-    @GraphQLField
-    @GraphQLPrettify
     public String getScheme() {
         return scheme;
     }
 
-    @GraphQLField
-    @GraphQLPrettify
     public String getPath() {
         return path;
     }
 
-    @GraphQLField
-    @GraphQLPrettify
     public List<CDPTopic> getTopics() {
         return topics;
     }
