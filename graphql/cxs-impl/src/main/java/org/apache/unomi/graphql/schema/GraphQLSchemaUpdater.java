@@ -45,6 +45,7 @@ import org.apache.unomi.graphql.providers.GraphQLTypesProvider;
 import org.apache.unomi.graphql.types.RootMutation;
 import org.apache.unomi.graphql.types.RootQuery;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
+import org.apache.unomi.graphql.types.input.CDPProfilePropertiesFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileUpdateEventInput;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.osgi.service.component.annotations.Activate;
@@ -63,7 +64,6 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Component(service = GraphQLSchemaUpdater.class)
@@ -213,20 +213,24 @@ public class GraphQLSchemaUpdater {
             return;
         }
 
-        try {
-            if (updateFuture != null) {
-                updateFuture.cancel(true);
-            }
+        final GraphQLSchema graphQLSchema = createGraphQLSchema();
 
-            updateFuture = executorService.scheduleWithFixedDelay(() -> {
-                final GraphQLSchema graphQLSchema = createGraphQLSchema();
+        this.graphQL = GraphQL.newGraphQL(graphQLSchema).build();
 
-                this.graphQL = GraphQL.newGraphQL(graphQLSchema).build();
-            }, 0, 60, TimeUnit.SECONDS); // TODO should be configurable
-        } catch (Exception e) {
-            executorService.shutdown();
-            throw e;
-        }
+//        try {
+//            if (updateFuture != null) {
+//                updateFuture.cancel(true);
+//            }
+//
+//            updateFuture = executorService.scheduleWithFixedDelay(() -> {
+//                final GraphQLSchema graphQLSchema = createGraphQLSchema();
+//
+//                this.graphQL = GraphQL.newGraphQL(graphQLSchema).build();
+//            }, 0, 60, TimeUnit.SECONDS); // TODO should be configurable
+//        } catch (Exception e) {
+//            executorService.shutdown();
+//            throw e;
+//        }
     }
 
     public GraphQL getGraphQL() {
@@ -321,6 +325,7 @@ public class GraphQLSchemaUpdater {
 
     private void setUpDynamicFields() {
         registerDynamicFields(graphQLAnnotations, "profiles", CDPProfile.TYPE_NAME, CDPProfile.class);
+        registerDynamicFields(graphQLAnnotations, "profiles", CDPProfilePropertiesFilterInput.TYPE_NAME, CDPProfilePropertiesFilterInput.class);
     }
 
     private void setUpQueries(final Map<String, GraphQLType> typeRegistry) {

@@ -25,9 +25,12 @@ import org.apache.unomi.graphql.commands.DeleteAllPersonalDataCommand;
 import org.apache.unomi.graphql.commands.DeleteProfileCommand;
 import org.apache.unomi.graphql.commands.DeleteProfilePropertiesCommand;
 import org.apache.unomi.graphql.commands.ProcessEventsCommand;
+import org.apache.unomi.graphql.commands.CreateOrUpdateSegmentCommand;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.input.CDPPropertyInput;
+import org.apache.unomi.graphql.types.input.CDPSegmentInput;
+import org.apache.unomi.graphql.types.output.CDPSegment;
 
 import java.util.List;
 
@@ -85,6 +88,17 @@ public class CDPMutation {
             final @GraphQLNonNull @GraphQLName("profileID") CDPProfileIDInput profileIDInput,
             final DataFetchingEnvironment environment) {
         return DeleteAllPersonalDataCommand.create(environment)
+                .setServiceManager(environment.getContext())
+                .build()
+                .execute();
+    }
+
+    @GraphQLField
+    public CDPSegment createOrUpdateSegment(
+            final @GraphQLName("segment") CDPSegmentInput segmentInput,
+            final DataFetchingEnvironment environment
+    ) {
+        return CreateOrUpdateSegmentCommand.create(segmentInput, environment)
                 .setServiceManager(environment.getContext())
                 .build()
                 .execute();
