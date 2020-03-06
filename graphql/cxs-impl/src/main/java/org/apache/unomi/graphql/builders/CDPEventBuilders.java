@@ -344,17 +344,6 @@ public class CDPEventBuilders implements CDPBuilder {
                         })
                 )
                 .field(newFieldDefinition()
-                        .type(GraphQLString)
-                        .name("eventType")
-                        .description("An identifier for the event type")
-                        .dataFetcher(new DataFetcher() {
-                            public Object get(DataFetchingEnvironment environment) {
-                                CDPEvent cdpEvent = environment.getSource();
-                                return cdpEvent.getEventType();
-                            }
-                        })
-                )
-                .field(newFieldDefinition()
                         .type(GraphQLLong)
                         .name("timestamp")
                         .description("The difference, measured in milliseconds, between the current time and midnight, January 1, 1970 UTC.")
@@ -362,16 +351,6 @@ public class CDPEventBuilders implements CDPBuilder {
                             public Object get(DataFetchingEnvironment environment) {
                                 CDPEvent cdpEvent = environment.getSource();
                                 return cdpEvent.getTimeStamp();
-                            }
-                        }))
-                .field(newFieldDefinition()
-                        .type(GraphQLString)
-                        .name("subject")
-                        .description("The entity that has fired the event (using the profile)")
-                        .dataFetcher(new DataFetcher() {
-                            public Object get(DataFetchingEnvironment environment) {
-                                CDPEvent cdpEvent = environment.getSource();
-                                return cdpEvent.getSubject();
                             }
                         }))
                 .field(newFieldDefinition()
@@ -393,17 +372,6 @@ public class CDPEventBuilders implements CDPBuilder {
                             public Object get(DataFetchingEnvironment environment) {
                                 CDPEvent cdpEvent = environment.getSource();
                                 return cdpEvent.getLocation();
-                            }
-                        })
-                )
-                .field(newFieldDefinition()
-                        .type(new GraphQLList(typeRegistry.get("CDP_EventProperties")))
-                        .name("properties")
-                        .description("Generic properties for the event")
-                        .dataFetcher(new DataFetcher() {
-                            public Object get(DataFetchingEnvironment environment) {
-                                CDPEvent cdpEvent = environment.getSource();
-                                return new ArrayList<>(cdpEvent.getProperties().getProperties().entrySet());
                             }
                         })
                 )
