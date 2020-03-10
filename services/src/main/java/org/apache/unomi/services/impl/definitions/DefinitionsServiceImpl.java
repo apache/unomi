@@ -59,7 +59,17 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     private BundleContext bundleContext;
     public DefinitionsServiceImpl() {
-
+        // let's add the built-in value types
+        ValueType setValueType = new ValueType();
+        setValueType.setId("set");
+        setValueType.setNameKey("set");
+        setValueType.setTags(new HashSet<>());
+        valueTypeById.put(setValueType.getId(), setValueType);
+        ValueType unknownValueType = new ValueType();
+        setValueType.setId("unknown");
+        setValueType.setNameKey("unknown");
+        setValueType.setTags(new HashSet<>());
+        valueTypeById.put(setValueType.getId(), setValueType);
     }
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -160,7 +170,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         if (bundleContext == null) {
             return;
         }
-        List<PluginType> types = pluginTypes.get(bundleContext.getBundle().getBundleId());
+        List<PluginType> types = pluginTypes.remove(bundleContext.getBundle().getBundleId());
         if (types != null) {
             for (PluginType type : types) {
                 if (type instanceof ValueType) {

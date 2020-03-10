@@ -18,16 +18,18 @@ package org.apache.unomi.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.EventType;
 import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.EventService;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.util.List;
+import java.util.Set;
 
 /**
  * A JAX-RS endpoint to access information about the context server's events.
@@ -57,6 +59,26 @@ public class EventServiceEndpoint {
     @Path("/search")
     public PartialList<Event> searchEvents(Query query) {
         return eventService.searchEvents(query.getCondition(), query.getOffset(), query.getLimit());
+    }
+
+    /**
+     * Retrieves the list of event types identifiers that the server has processed.
+     * @return a Set of strings that contain event type identifiers.
+     */
+    @GET
+    @Path("types")
+    public Set<String> getEventTypeNames() {
+        return eventService.getEventTypeIds();
+    }
+
+    /**
+     * Returns the list of event properties
+     * @return a List of EventProperty objects that make up the properties that the server has seen.
+     */
+    @GET
+    @Path("types/{typeName}")
+    public EventType getEventType(@PathParam("typeName") String typeName) {
+        return eventService.getEventType(typeName);
     }
 
 }

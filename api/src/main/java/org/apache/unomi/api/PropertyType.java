@@ -49,6 +49,8 @@ public class PropertyType extends MetadataItem {
     private Boolean multivalued;
     private Boolean protekted;
 
+    private Set<PropertyType> childPropertyTypes = new LinkedHashSet<>();
+
     /**
      * Instantiates a new Property type.
      */
@@ -293,4 +295,11 @@ public class PropertyType extends MetadataItem {
         this.protekted = protekted;
     }
 
+    public Set<PropertyType> getChildPropertyTypes() {
+        return childPropertyTypes;
+    }
+
+    public void setChildPropertyTypes(Set<PropertyType> childPropertyTypes) {
+        this.childPropertyTypes = childPropertyTypes;
+    }
 }
