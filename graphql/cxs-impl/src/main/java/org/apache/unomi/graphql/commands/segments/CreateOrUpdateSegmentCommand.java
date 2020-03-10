@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.commands;
+package org.apache.unomi.graphql.commands.segments;
 
 import com.google.common.base.Strings;
 import graphql.schema.DataFetchingEnvironment;
@@ -22,6 +22,7 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.graphql.commands.BaseCommand;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;
 import org.apache.unomi.graphql.types.input.CDPSegmentInput;
@@ -100,8 +101,11 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
         final List<Condition> conditions = new ArrayList<>();
 
         if (filterInput.getSegments_contains() != null && !filterInput.getSegments_contains().isEmpty()) {
-            final Condition segmentsContainsCondition =
-                    createContainsCondition(filterInput.getSegments_contains(), "profileSegmentCondition", "segments");
+            final Condition segmentsContainsCondition = new Condition();
+
+            segmentsContainsCondition.setConditionType(serviceManager.getDefinitionsService().getConditionType("profileSegmentCondition"));
+            segmentsContainsCondition.setParameter("segments", filterInput.getSegments_contains());
+            segmentsContainsCondition.setParameter("matchType", "in");
 
             conditions.add(segmentsContainsCondition);
         }
@@ -114,8 +118,11 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
         }
 
         if (filterInput.getLists_contains() != null && !filterInput.getLists_contains().isEmpty()) {
-            final Condition listsContainsCondition =
-                    createContainsCondition(filterInput.getLists_contains(), "profileUserListCondition", "lists");
+            final Condition listsContainsCondition = new Condition();
+
+            listsContainsCondition.setConditionType(serviceManager.getDefinitionsService().getConditionType("profileUserListCondition"));
+            listsContainsCondition.setParameter("lists", filterInput.getLists_contains());
+            listsContainsCondition.setParameter("matchType", "in");
 
             conditions.add(listsContainsCondition);
         }
