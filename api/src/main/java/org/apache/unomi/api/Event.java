@@ -25,7 +25,7 @@ import java.util.*;
 /**
  * An event that can be processed and evaluated by the context server. Events can be triggered by clients following user actions or can also be issued internally in the context
  * server in response to another event. Conceptually, an event can be seen as a sentence, the event's type being the verb, the source the subject and the target the object.
- *
+ * <p>
  * Source and target can be any unomi item but are not limited to them. In particular, as long as they can be described using properties and unomi’s type mechanism and can be
  * processed either natively or via extension plugins, source and target can represent just about anything.
  */
@@ -133,6 +133,14 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
+     * Set the session id
+     * @param sessionId the session id
+     */
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
+    }
+
+    /**
      * Retrieves the profile identifier of the Profile associated with this event
      *
      * @return the profile id
@@ -159,8 +167,28 @@ public class Event extends Item implements TimestampedItem {
         return eventType;
     }
 
+    /**
+     * Sets the event type
+     * @param eventType the event type
+     */
+    public void setEventType(String eventType) {
+        this.eventType = eventType;
+    }
+
+    /**
+     * Retrieves the event time stamp
+     *
+     * @return the event time stamp
+     */
     public Date getTimeStamp() {
         return timeStamp;
+    }
+
+    /**
+     * @param timeStamp set the time stamp
+     */
+    public void setTimeStamp(Date timeStamp) {
+        this.timeStamp = timeStamp;
     }
 
     /**
@@ -231,6 +259,14 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
+     * Sets the map of attribues
+     * @param attributes the attributes map
+     */
+    public void setAttributes(Map<String, Object> attributes) {
+        this.attributes = attributes;
+    }
+
+    /**
      * Sets the property identified by the provided name to the specified value.
      *
      * @param name  the name of the property to be set
@@ -259,6 +295,18 @@ public class Event extends Item implements TimestampedItem {
         return properties;
     }
 
+    /**
+     * Sets map of properties that will override existing field if it exists
+     *
+     * @param properties Map of new Properties
+     */
+    public void setProperties(Map<String, Object> properties) {
+        this.properties = properties;
+    }
+
+    /**
+     * @return the scope
+     */
     public String getScope() {
         return scope;
     }
