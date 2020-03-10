@@ -17,6 +17,7 @@
 package org.apache.unomi.graphql.types;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.schema.DataFetchingEnvironment;
@@ -25,7 +26,8 @@ import org.apache.unomi.graphql.commands.DeleteAllPersonalDataCommand;
 import org.apache.unomi.graphql.commands.DeleteProfileCommand;
 import org.apache.unomi.graphql.commands.DeleteProfilePropertiesCommand;
 import org.apache.unomi.graphql.commands.ProcessEventsCommand;
-import org.apache.unomi.graphql.commands.CreateOrUpdateSegmentCommand;
+import org.apache.unomi.graphql.commands.segments.CreateOrUpdateSegmentCommand;
+import org.apache.unomi.graphql.commands.segments.DeleteSegmentCommand;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.input.CDPPropertyInput;
@@ -99,6 +101,17 @@ public class CDPMutation {
             final DataFetchingEnvironment environment
     ) {
         return CreateOrUpdateSegmentCommand.create(segmentInput, environment)
+                .setServiceManager(environment.getContext())
+                .build()
+                .execute();
+    }
+
+    @GraphQLField
+    public boolean deleteSegment(
+            final @GraphQLID @GraphQLName("segmentID") String segmentId,
+            final DataFetchingEnvironment environment
+    ) {
+        return DeleteSegmentCommand.create(segmentId)
                 .setServiceManager(environment.getContext())
                 .build()
                 .execute();

@@ -20,7 +20,7 @@ import org.apache.unomi.graphql.services.ServiceManager;
 
 public abstract class BaseCommand<T> {
 
-    final ServiceManager serviceManager;
+    protected final ServiceManager serviceManager;
 
     public abstract T execute();
 
