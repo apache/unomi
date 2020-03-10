@@ -44,8 +44,8 @@ public class CDPProfileEventsFilterInput {
     @GraphQLField
     private CDPEventFilterInput eventFilter;
 
-    public CDPProfileEventsFilterInput() {
-    }
+//    public CDPProfileEventsFilterInput() {
+//    }
 
     public CDPProfileEventsFilterInput(@GraphQLName("and") List<CDPProfileEventsFilterInput> and,
                                        @GraphQLName("or") List<CDPProfileEventsFilterInput> or,

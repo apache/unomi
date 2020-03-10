@@ -21,34 +21,50 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_ProfileID")
-public class CDPProfileIDInput {
+@GraphQLName("CDP_Segment")
+public class CDPSegmentInput {
+
+    @GraphQLID
+    @GraphQLField
+    private String id;
 
     @GraphQLID
     @GraphQLField
     @GraphQLNonNull
-    private String id;
+    private String view;
 
     @GraphQLField
     @GraphQLNonNull
-    private CDPClientInput client;
+    private String name;
 
-//    public CDPProfileIDInput() {
-//    }
+    @GraphQLField
+    private CDPProfileFilterInput profiles;
 
-    public CDPProfileIDInput(
-            final @GraphQLID @GraphQLNonNull @GraphQLName("id") String id,
-            final @GraphQLNonNull @GraphQLName("client") CDPClientInput client) {
+    public CDPSegmentInput(
+            final @GraphQLID @GraphQLName("id") String id,
+            final @GraphQLID @GraphQLNonNull @GraphQLName("view") String view,
+            final @GraphQLNonNull @GraphQLName("name") String name,
+            final @GraphQLName("profiles") CDPProfileFilterInput profiles) {
         this.id = id;
-        this.client = client;
+        this.view = view;
+        this.name = name;
+        this.profiles = profiles;
     }
 
     public String getId() {
         return id;
     }
 
-    public CDPClientInput getClient() {
-        return client;
+    public String getView() {
+        return view;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public CDPProfileFilterInput getProfiles() {
+        return profiles;
     }
 
 }

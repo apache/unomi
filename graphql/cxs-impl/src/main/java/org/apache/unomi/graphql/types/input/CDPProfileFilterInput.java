@@ -46,8 +46,8 @@ public class CDPProfileFilterInput {
     @GraphQLField
     private CDPProfileEventsFilterInput events;
 
-    public CDPProfileFilterInput() {
-    }
+//    public CDPProfileFilterInput() {
+//    }
 
     public CDPProfileFilterInput(@GraphQLName("profileIDs_contains") List<String> profileIDs_contains,
                                  @GraphQLName("segments_contains") List<String> segments_contains,

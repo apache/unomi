@@ -32,8 +32,8 @@ public class CDPClientInput {
     @GraphQLField
     private String title;
 
-    public CDPClientInput() {
-    }
+//    public CDPClientInput() {
+//    }
 
     public CDPClientInput(
             final @GraphQLID @GraphQLNonNull @GraphQLName("id") String id,

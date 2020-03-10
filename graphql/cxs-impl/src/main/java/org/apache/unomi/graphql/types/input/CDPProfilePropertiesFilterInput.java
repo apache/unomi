@@ -23,8 +23,14 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import java.util.ArrayList;
 import java.util.List;
 
-@GraphQLName("CDP_ProfilePropertiesFilterInput")
+import static org.apache.unomi.graphql.types.input.CDPProfilePropertiesFilterInput.TYPE_NAME_INTERNAL;
+
+@GraphQLName(TYPE_NAME_INTERNAL)
 public class CDPProfilePropertiesFilterInput {
+
+    public static final String TYPE_NAME_INTERNAL = "CDP_ProfilePropertiesFilter";
+
+    public static final String TYPE_NAME = TYPE_NAME_INTERNAL + "Input";
 
     @GraphQLField
     private List<CDPProfilePropertiesFilterInput> and = new ArrayList<>();
@@ -32,8 +38,8 @@ public class CDPProfilePropertiesFilterInput {
     @GraphQLField
     private List<CDPProfilePropertiesFilterInput> or = new ArrayList<>();
 
-    public CDPProfilePropertiesFilterInput() {
-    }
+//    public CDPProfilePropertiesFilterInput() {
+//    }
 
     public CDPProfilePropertiesFilterInput(@GraphQLName("and") List<CDPProfilePropertiesFilterInput> and,
                                            @GraphQLName("or") List<CDPProfilePropertiesFilterInput> or) {

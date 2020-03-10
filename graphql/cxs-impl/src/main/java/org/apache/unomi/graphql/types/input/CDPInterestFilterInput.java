@@ -50,8 +50,8 @@ public class CDPInterestFilterInput {
     @GraphQLField
     private Float score_gte;
 
-    public CDPInterestFilterInput() {
-    }
+//    public CDPInterestFilterInput() {
+//    }
 
     public CDPInterestFilterInput(@GraphQLName("and") List<CDPInterestFilterInput> and,
                                   @GraphQLName("or") List<CDPInterestFilterInput> or,
