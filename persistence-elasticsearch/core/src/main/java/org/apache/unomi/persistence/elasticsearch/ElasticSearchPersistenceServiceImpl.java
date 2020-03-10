@@ -981,7 +981,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             .settings("{\n" +
                                     "    \"index\" : {\n" +
                                     "        \"number_of_shards\" : " + monthlyIndexNumberOfShards + ",\n" +
-                                    "        \"number_of_replicas\" : " + monthlyIndexNumberOfReplicas + "\n" +
+                                    "        \"number_of_replicas\" : " + monthlyIndexNumberOfReplicas + ",\n" +
                                     "        \"index.mapping.total_fields.limit\" : " + monthlyIndexMappingTotalFieldsLimit + "\n" +
                                     "    },\n" +
                                     "    \"analysis\": {\n" +
@@ -1056,7 +1056,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         createIndexRequest.settings("{\n" +
                         "    \"index\" : {\n" +
                         "        \"number_of_shards\" : " + numberOfShards + ",\n" +
-                        "        \"number_of_replicas\" : " + numberOfReplicas + "\n" +
+                        "        \"number_of_replicas\" : " + numberOfReplicas + ",\n" +
+                        "        \"index.mapping.total_fields.limit\" : " + monthlyIndexMappingTotalFieldsLimit + "\n" +
                         "    },\n" +
                         "    \"analysis\": {\n" +
                         "      \"analyzer\": {\n" +
