@@ -1,0 +1,24 @@
+{
+  "propertyTypes" : [
+    {
+      "id": "timestamp",
+      "type" : "date"
+    },
+    {
+      "id": "sessionId",
+      "type" : "string"
+    },
+    {
+      "id": "profileId",
+      "type" : "string"
+    },
+    {
+      "id" : "eventType",
+      "type" : "string"
+    },
+    {
+      "id" : "scope",
+      "type" : "string"
+    }
+  ]
+}

@@ -17,10 +17,7 @@
 
 package org.apache.unomi.api.services;
 
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.EventProperty;
-import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.Session;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
@@ -82,8 +79,18 @@ public interface EventService {
      * Retrieves the list of available event properties.
      *
      * @return a list of available event properties
+     * Retrieves an event type
+     * @return the EventType object corresponding to the name, or null if not found.
+     * @deprecated use event types instead
      */
     List<EventProperty> getEventProperties();
+
+    /**
+     * Retrieves an event type
+     * @param typeName the name identifier for the event type
+     * @return the EventType object corresponding to the name, or null if not found.
+     */
+    EventType getEventType(String typeName);
 
     /**
      * Retrieves the set of known event type identifiers.
