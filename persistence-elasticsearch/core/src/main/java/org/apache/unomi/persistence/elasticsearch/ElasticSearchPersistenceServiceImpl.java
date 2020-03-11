@@ -1057,7 +1057,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         "    \"index\" : {\n" +
                         "        \"number_of_shards\" : " + numberOfShards + ",\n" +
                         "        \"number_of_replicas\" : " + numberOfReplicas + ",\n" +
-                        "        \"index.mapping.total_fields.limit\" : " + monthlyIndexMappingTotalFieldsLimit + "\n" +
+                        "        \"index.mapping.total_fields.limit\" : " + indexMappingTotalFieldsLimit + "\n" +
                         "    },\n" +
                         "    \"analysis\": {\n" +
                         "      \"analyzer\": {\n" +
