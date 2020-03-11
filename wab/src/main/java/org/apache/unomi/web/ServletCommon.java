@@ -85,7 +85,7 @@ public class ServletCommon {
                     eventToSend.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     eventToSend.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                     logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session="
-                            + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
+                            + (session!= null?session.getItemId():null) + " target=" + event.getTarget() + " timestamp=" + timestamp);
                     changes = eventService.send(eventToSend);
                     // If the event execution changes the profile we need to update it so the next event use the right profile
                     if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {

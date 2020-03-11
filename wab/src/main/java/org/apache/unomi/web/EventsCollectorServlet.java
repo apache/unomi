@@ -112,16 +112,10 @@ public class EventsCollectorServlet extends HttpServlet {
         if (sessionId == null) {
             sessionId = request.getParameter("sessionId");
         }
-        if (sessionId == null) {
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
-            logger.error("No sessionId found in incoming request, aborting processing. See debug level for more information");
-            if (logger.isDebugEnabled()) {
-                logger.debug("Request dump:" + HttpUtils.dumpRequestInfo(request));
-            }
-            return;
+        Session session = null;
+        if (sessionId != null) {
+            session = profileService.loadSession(sessionId, timestamp);
         }
-
-        Session session = profileService.loadSession(sessionId, timestamp);
         Profile profile = null;
         if (session == null) {
             String scope = "systemscope";
@@ -137,9 +131,16 @@ public class EventsCollectorServlet extends HttpServlet {
                     }
                 }
             }
-            // Create non persisted profile to create the session
-            profile = new Profile("temp_" + UUID.randomUUID().toString());
-            profile.setProperty("firstVisit", timestamp);
+            String cookieProfileId = ServletCommon.getProfileIdCookieValue(request, profileIdCookieName);
+            if (StringUtils.isNotBlank(cookieProfileId)) {
+                profile = profileService.load(cookieProfileId);
+            }
+            if (profile == null) {
+                // Create non persisted profile to create the session
+                profile = new Profile("temp_" + UUID.randomUUID().toString());
+                profile.setProperty("firstVisit", timestamp);
+            }
+            /*
             // Create anonymous profile so we don't keep track of the temp profile anywhere
             Profile anonymousProfile = privacyService.getAnonymousProfile(profile);
             // Create new session which should not be persisted as well as the temp profile
@@ -147,6 +148,7 @@ public class EventsCollectorServlet extends HttpServlet {
             if (logger.isDebugEnabled()) {
                 logger.debug("No session found for sessionId={}, creating new session!", sessionId);
             }
+            */
         } else {
             Profile sessionProfile = session.getProfile();
             if (sessionProfile.getItemId() != null) {
@@ -181,7 +183,9 @@ public class EventsCollectorServlet extends HttpServlet {
             profileService.save(profile);
         }
         if ((changes & EventService.SESSION_UPDATED) == EventService.SESSION_UPDATED) {
-            profileService.saveSession(session);
+            if (session != null) {
+                profileService.saveSession(session);
+            }
         }
 
         response.setContentType("application/json");
