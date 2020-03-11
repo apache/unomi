@@ -139,8 +139,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String indexPrefix;
     private String monthlyIndexNumberOfShards;
     private String monthlyIndexNumberOfReplicas;
+    private String monthlyIndexMappingTotalFieldsLimit;
     private String numberOfShards;
     private String numberOfReplicas;
+    private String indexMappingTotalFieldsLimit;
     private BundleContext bundleContext;
     private Map<String, String> mappings = new HashMap<String, String>();
     private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
@@ -205,12 +207,20 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.monthlyIndexNumberOfReplicas = monthlyIndexNumberOfReplicas;
     }
 
+    public void setMonthlyIndexMappingTotalFieldsLimit(String monthlyIndexMappingTotalFieldsLimit) {
+        this.monthlyIndexMappingTotalFieldsLimit = monthlyIndexMappingTotalFieldsLimit;
+    }
+
     public void setNumberOfShards(String numberOfShards) {
         this.numberOfShards = numberOfShards;
     }
 
     public void setNumberOfReplicas(String numberOfReplicas) {
         this.numberOfReplicas = numberOfReplicas;
+    }
+
+    public void setIndexMappingTotalFieldsLimit(String indexMappingTotalFieldsLimit) {
+        this.indexMappingTotalFieldsLimit = indexMappingTotalFieldsLimit;
     }
 
     public void setDefaultQueryLimit(Integer defaultQueryLimit) {
@@ -971,7 +981,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             .settings("{\n" +
                                     "    \"index\" : {\n" +
                                     "        \"number_of_shards\" : " + monthlyIndexNumberOfShards + ",\n" +
-                                    "        \"number_of_replicas\" : " + monthlyIndexNumberOfReplicas + "\n" +
+                                    "        \"number_of_replicas\" : " + monthlyIndexNumberOfReplicas + ",\n" +
+                                    "        \"index.mapping.total_fields.limit\" : " + monthlyIndexMappingTotalFieldsLimit + "\n" +
                                     "    },\n" +
                                     "    \"analysis\": {\n" +
                                     "      \"analyzer\": {\n" +
@@ -1045,7 +1056,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         createIndexRequest.settings("{\n" +
                         "    \"index\" : {\n" +
                         "        \"number_of_shards\" : " + numberOfShards + ",\n" +
-                        "        \"number_of_replicas\" : " + numberOfReplicas + "\n" +
+                        "        \"number_of_replicas\" : " + numberOfReplicas + ",\n" +
+                        "        \"index.mapping.total_fields.limit\" : " + indexMappingTotalFieldsLimit + "\n" +
                         "    },\n" +
                         "    \"analysis\": {\n" +
                         "      \"analyzer\": {\n" +
