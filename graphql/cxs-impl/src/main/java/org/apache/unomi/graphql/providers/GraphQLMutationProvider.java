@@ -18,7 +18,6 @@ package org.apache.unomi.graphql.providers;
 
 import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.schema.GraphQLFieldDefinition;
-import graphql.servlet.config.GraphQLProvider;
 
 import java.util.Set;
 

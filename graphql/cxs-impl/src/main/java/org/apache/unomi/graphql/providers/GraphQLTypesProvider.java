@@ -16,8 +16,6 @@
  */
 package org.apache.unomi.graphql.providers;
 
-import graphql.servlet.config.GraphQLProvider;
-
 import java.util.Set;
 
 public interface GraphQLTypesProvider extends GraphQLProvider {
