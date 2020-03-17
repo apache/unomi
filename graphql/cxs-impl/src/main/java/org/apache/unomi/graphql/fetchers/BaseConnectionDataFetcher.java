@@ -91,34 +91,34 @@ public abstract class BaseConnectionDataFetcher<T> extends BaseDataFetcher<T> {
         }
 
         if (filterInput != null) {
-            if (filterInput.id_equals != null) {
-                rootSubConditions.add(createPropertyCondition("_id", filterInput.id_equals, definitionsService));
+            if (filterInput.getId_equals() != null) {
+                rootSubConditions.add(createPropertyCondition("_id", filterInput.getId_equals(), definitionsService));
             }
 
-            if (filterInput.cdp_clientID_equals != null) {
-                rootSubConditions.add(createPropertyCondition("clientId", filterInput.cdp_clientID_equals, definitionsService));
+            if (filterInput.getCdp_clientID_equals() != null) {
+                rootSubConditions.add(createPropertyCondition("clientId", filterInput.getCdp_clientID_equals(), definitionsService));
             }
 
-            if (filterInput.cdp_profileID_equals != null) {
-                rootSubConditions.add(createPropertyCondition("profileId", filterInput.cdp_profileID_equals, definitionsService));
+            if (filterInput.getCdp_profileID_equals() != null) {
+                rootSubConditions.add(createPropertyCondition("profileId", filterInput.getCdp_profileID_equals(), definitionsService));
             }
 
-            if (filterInput.cdp_sourceID_equals != null) {
-                rootSubConditions.add(createPropertyCondition("itemId", filterInput.cdp_sourceID_equals, definitionsService));
+            if (filterInput.getCdp_sourceID_equals() != null) {
+                rootSubConditions.add(createPropertyCondition("itemId", filterInput.getCdp_sourceID_equals(), definitionsService));
             }
 
-            if (filterInput.and != null && filterInput.and.size() > 0) {
+            if (filterInput.getAnd() != null && filterInput.getAnd().size() > 0) {
                 final Condition filterAndCondition = createBoolCondition("and", definitionsService);
-                final List<Condition> filterAndSubConditions = filterInput.and.stream()
+                final List<Condition> filterAndSubConditions = filterInput.getAnd().stream()
                         .map(andInput -> createEventFilterInputCondition(andInput, null, null, definitionsService))
                         .collect(Collectors.toList());
                 filterAndCondition.setParameter("subConditions", filterAndSubConditions);
                 rootSubConditions.add(filterAndCondition);
             }
 
-            if (filterInput.or != null && filterInput.or.size() > 0) {
+            if (filterInput.getOr() != null && filterInput.getOr().size() > 0) {
                 final Condition filterOrCondition = createBoolCondition("or", definitionsService);
-                final List<Condition> filterOrSubConditions = filterInput.or.stream()
+                final List<Condition> filterOrSubConditions = filterInput.getOr().stream()
                         .map(orInput -> createEventFilterInputCondition(orInput, null, null, definitionsService))
                         .collect(Collectors.toList());
                 filterOrCondition.setParameter("subConditions", filterOrSubConditions);

@@ -23,13 +23,71 @@ import graphql.annotations.annotationTypes.GraphQLName;
 public class CDPEventOccurrenceFilterInput {
 
     @GraphQLField
-    public String eventId;
+    private String eventId;
+
     @GraphQLField
-    public String beforeTime;
+    private String beforeTime;
+
     @GraphQLField
-    public String afterTime;
+    private String afterTime;
+
     @GraphQLField
-    public String betweenTime;
+    private String betweenTime;
+
     @GraphQLField
-    public int count;
+    private int count;
+
+    public CDPEventOccurrenceFilterInput(
+            final @GraphQLName("eventId") String eventId,
+            final @GraphQLName("beforeTime") String beforeTime,
+            final @GraphQLName("afterTime") String afterTime,
+            final @GraphQLName("betweenTime") String betweenTime,
+            final @GraphQLName("count") int count) {
+        this.eventId = eventId;
+        this.beforeTime = beforeTime;
+        this.afterTime = afterTime;
+        this.betweenTime = betweenTime;
+        this.count = count;
+    }
+
+    public String getEventId() {
+        return eventId;
+    }
+
+    public void setEventId(String eventId) {
+        this.eventId = eventId;
+    }
+
+    public String getBeforeTime() {
+        return beforeTime;
+    }
+
+    public void setBeforeTime(String beforeTime) {
+        this.beforeTime = beforeTime;
+    }
+
+    public String getAfterTime() {
+        return afterTime;
+    }
+
+    public void setAfterTime(String afterTime) {
+        this.afterTime = afterTime;
+    }
+
+    public String getBetweenTime() {
+        return betweenTime;
+    }
+
+    public void setBetweenTime(String betweenTime) {
+        this.betweenTime = betweenTime;
+    }
+
+    public int getCount() {
+        return count;
+    }
+
+    public void setCount(int count) {
+        this.count = count;
+    }
+
 }

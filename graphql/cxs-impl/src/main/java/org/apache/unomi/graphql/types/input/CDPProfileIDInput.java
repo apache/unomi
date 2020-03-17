@@ -33,9 +33,6 @@ public class CDPProfileIDInput {
     @GraphQLNonNull
     private CDPClientInput client;
 
-//    public CDPProfileIDInput() {
-//    }
-
     public CDPProfileIDInput(
             final @GraphQLID @GraphQLNonNull @GraphQLName("id") String id,
             final @GraphQLNonNull @GraphQLName("client") CDPClientInput client) {
@@ -43,12 +40,21 @@ public class CDPProfileIDInput {
         this.client = client;
     }
 
+
     public String getId() {
         return id;
     }
 
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public CDPClientInput getClient() {
         return client;
+    }
+
+    public void setClient(CDPClientInput client) {
+        this.client = client;
     }
 
 }

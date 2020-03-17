@@ -22,14 +22,14 @@ import java.util.List;
 
 public interface CDPProfileInterface {
 
-    List<CDPProfileID> cdp_profileIDs(DataFetchingEnvironment environment);
+    List<CDPProfileID> cdp_profileIDs(DataFetchingEnvironment environment) throws Exception;
 
-    List<CDPSegment> cdp_segments(List<String> viewIds, DataFetchingEnvironment environment);
+    List<CDPSegment> cdp_segments(List<String> viewIds, DataFetchingEnvironment environment) throws Exception;
 
-    List<CDPInterest> cdp_interests(List<String> viewIds, DataFetchingEnvironment environment);
+    List<CDPInterest> cdp_interests(List<String> viewIds, DataFetchingEnvironment environment) throws Exception;
 
-    List<CDPConsent> cdp_consents(DataFetchingEnvironment environment);
+    List<CDPConsent> cdp_consents(DataFetchingEnvironment environment) throws Exception;
 
-    List<CDPList> cdp_lists(List<String> viewIds, DataFetchingEnvironment environment);
+    List<CDPList> cdp_lists(List<String> viewIds, DataFetchingEnvironment environment) throws Exception;
 
 }

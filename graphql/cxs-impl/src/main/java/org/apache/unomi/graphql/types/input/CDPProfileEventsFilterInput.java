@@ -44,9 +44,6 @@ public class CDPProfileEventsFilterInput {
     @GraphQLField
     private CDPEventFilterInput eventFilter;
 
-//    public CDPProfileEventsFilterInput() {
-//    }
-
     public CDPProfileEventsFilterInput(@GraphQLName("and") List<CDPProfileEventsFilterInput> and,
                                        @GraphQLName("or") List<CDPProfileEventsFilterInput> or,
                                        @GraphQLName("not") CDPProfileEventsFilterInput not,
@@ -65,53 +62,48 @@ public class CDPProfileEventsFilterInput {
         return and;
     }
 
-    public CDPProfileEventsFilterInput setAnd(List<CDPProfileEventsFilterInput> and) {
+    public void setAnd(List<CDPProfileEventsFilterInput> and) {
         this.and = and;
-        return this;
     }
 
     public List<CDPProfileEventsFilterInput> getOr() {
         return or;
     }
 
-    public CDPProfileEventsFilterInput setOr(List<CDPProfileEventsFilterInput> or) {
+    public void setOr(List<CDPProfileEventsFilterInput> or) {
         this.or = or;
-        return this;
     }
 
     public CDPProfileEventsFilterInput getNot() {
         return not;
     }
 
-    public CDPProfileEventsFilterInput setNot(CDPProfileEventsFilterInput not) {
+    public void setNot(CDPProfileEventsFilterInput not) {
         this.not = not;
-        return this;
     }
 
     public Integer getMinimalCount() {
         return minimalCount;
     }
 
-    public CDPProfileEventsFilterInput setMinimalCount(Integer minimalCount) {
+    public void setMinimalCount(Integer minimalCount) {
         this.minimalCount = minimalCount;
-        return this;
     }
 
     public Integer getMaximalCount() {
         return maximalCount;
     }
 
-    public CDPProfileEventsFilterInput setMaximalCount(Integer maximalCount) {
+    public void setMaximalCount(Integer maximalCount) {
         this.maximalCount = maximalCount;
-        return this;
     }
 
     public CDPEventFilterInput getEventFilter() {
         return eventFilter;
     }
 
-    public CDPProfileEventsFilterInput setEventFilter(CDPEventFilterInput eventFilter) {
+    public void setEventFilter(CDPEventFilterInput eventFilter) {
         this.eventFilter = eventFilter;
-        return this;
     }
+
 }

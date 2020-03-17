@@ -26,10 +26,36 @@ public class CDPEventFilter {
 
     @GraphQLField
     @GraphQLName("and")
-    public List<CDPEventFilter> andFilters;
+    private List<CDPEventFilter> andFilters;
 
     @GraphQLField
     @GraphQLName("or")
-    public List<CDPEventFilter> orFilters;
+    private List<CDPEventFilter> orFilters;
+
+    public CDPEventFilter() {
+    }
+
+    public CDPEventFilter(
+            final @GraphQLName("and") List<CDPEventFilter> andFilters,
+            final @GraphQLName("or") List<CDPEventFilter> orFilters) {
+        this.andFilters = andFilters;
+        this.orFilters = orFilters;
+    }
+
+    public List<CDPEventFilter> getAndFilters() {
+        return andFilters;
+    }
+
+    public void setAndFilters(List<CDPEventFilter> andFilters) {
+        this.andFilters = andFilters;
+    }
+
+    public List<CDPEventFilter> getOrFilters() {
+        return orFilters;
+    }
+
+    public void setOrFilters(List<CDPEventFilter> orFilters) {
+        this.orFilters = orFilters;
+    }
 
 }

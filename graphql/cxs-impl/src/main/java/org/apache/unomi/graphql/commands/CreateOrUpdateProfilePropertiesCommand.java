@@ -115,14 +115,14 @@ public class CreateOrUpdateProfilePropertiesCommand extends BaseCommand<Boolean>
 
             properties.forEach(prop -> {
                 final List<CDPPropertyType> properties = Arrays.asList(
-                        prop.identifierPropertyTypeInput,
-                        prop.stringPropertyTypeInput,
-                        prop.integerPropertyTypeInput,
-                        prop.floatPropertyTypeInput,
-                        prop.datePropertyTypeInput,
-                        prop.booleanPropertyTypeInput,
-                        prop.geoPointPropertyTypeInput,
-                        prop.setPropertyTypeInput);
+                        prop.getIdentifierPropertyTypeInput(),
+                        prop.getStringPropertyTypeInput(),
+                        prop.getIntegerPropertyTypeInput(),
+                        prop.getFloatPropertyTypeInput(),
+                        prop.getDatePropertyTypeInput(),
+                        prop.getBooleanPropertyTypeInput(),
+                        prop.getGeoPointPropertyTypeInput(),
+                        prop.getSetPropertyTypeInput());
 
                 final List<CDPPropertyType> filteredProperties = properties.stream().filter(Objects::nonNull).collect(Collectors.toList());
 

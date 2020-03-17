@@ -25,12 +25,32 @@ import org.apache.unomi.graphql.types.output.CDPSortOrder;
 public class CDPOrderByInput {
 
     @GraphQLField
-    public String fieldName;
+    private String fieldName;
 
     @GraphQLField
-    public CDPSortOrder sortOrder;
+    private CDPSortOrder sortOrder;
 
-    public CDPOrderByInput() {
+    public CDPOrderByInput(
+            final @GraphQLName("fieldName") String fieldName,
+            final @GraphQLName("sortOrder") CDPSortOrder sortOrder) {
+        this.fieldName = fieldName;
+        this.sortOrder = sortOrder;
+    }
+
+    public String getFieldName() {
+        return fieldName;
+    }
+
+    public void setFieldName(String fieldName) {
+        this.fieldName = fieldName;
+    }
+
+    public CDPSortOrder getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(CDPSortOrder sortOrder) {
+        this.sortOrder = sortOrder;
     }
 
     public String asString() {
@@ -39,6 +59,6 @@ public class CDPOrderByInput {
         } else if (sortOrder == null || CDPSortOrder.UNSPECIFIED == sortOrder) {
             return fieldName;
         }
-        return String.format("%s %s", fieldName, sortOrder.toString());
+        return String.format("%s:%s", fieldName, sortOrder.toString());
     }
 }

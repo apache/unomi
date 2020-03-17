@@ -55,16 +55,32 @@ public class CDPSegmentInput {
         return id;
     }
 
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public String getView() {
         return view;
+    }
+
+    public void setView(String view) {
+        this.view = view;
     }
 
     public String getName() {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public CDPProfileFilterInput getProfiles() {
         return profiles;
+    }
+
+    public void setProfiles(CDPProfileFilterInput profiles) {
+        this.profiles = profiles;
     }
 
 }

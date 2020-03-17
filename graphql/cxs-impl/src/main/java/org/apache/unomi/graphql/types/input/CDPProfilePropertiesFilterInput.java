@@ -38,9 +38,6 @@ public class CDPProfilePropertiesFilterInput {
     @GraphQLField
     private List<CDPProfilePropertiesFilterInput> or = new ArrayList<>();
 
-//    public CDPProfilePropertiesFilterInput() {
-//    }
-
     public CDPProfilePropertiesFilterInput(@GraphQLName("and") List<CDPProfilePropertiesFilterInput> and,
                                            @GraphQLName("or") List<CDPProfilePropertiesFilterInput> or) {
         this.and = and;
@@ -51,17 +48,16 @@ public class CDPProfilePropertiesFilterInput {
         return and;
     }
 
-    public CDPProfilePropertiesFilterInput setAnd(List<CDPProfilePropertiesFilterInput> and) {
+    public void setAnd(List<CDPProfilePropertiesFilterInput> and) {
         this.and = and;
-        return this;
     }
 
     public List<CDPProfilePropertiesFilterInput> getOr() {
         return or;
     }
 
-    public CDPProfilePropertiesFilterInput setOr(List<CDPProfilePropertiesFilterInput> or) {
+    public void setOr(List<CDPProfilePropertiesFilterInput> or) {
         this.or = or;
-        return this;
     }
+
 }

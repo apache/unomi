@@ -20,7 +20,6 @@ package org.apache.unomi.graphql.fetchers.profile;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.graphql.fetchers.BaseDataFetcher;
-import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.CDPProfileID;
 
 import java.util.Collections;
@@ -28,13 +27,18 @@ import java.util.List;
 
 public class ProfileIdsDataFetcher extends BaseDataFetcher<List<CDPProfileID>> {
 
-    @Override
-    public List<CDPProfileID> get(DataFetchingEnvironment environment) throws Exception {
-        CDPProfile cdpProfile = environment.getSource();
-        return Collections.singletonList(createProfileId(cdpProfile.getProfile()));
+    private final Profile profile;
+
+    public ProfileIdsDataFetcher(Profile profile) {
+        this.profile = profile;
     }
 
-    private CDPProfileID createProfileId(Profile profile) {
+    @Override
+    public List<CDPProfileID> get(DataFetchingEnvironment environment) throws Exception {
+        return Collections.singletonList(createProfileId());
+    }
+
+    private CDPProfileID createProfileId() {
         return new CDPProfileID(profile.getItemId());
     }
 }

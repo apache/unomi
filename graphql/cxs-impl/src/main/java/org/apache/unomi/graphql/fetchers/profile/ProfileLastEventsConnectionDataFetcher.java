@@ -20,28 +20,29 @@ package org.apache.unomi.graphql.fetchers.profile;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.graphql.fetchers.EventConnectionDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
-import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.output.CDPEventConnection;
-import org.apache.unomi.graphql.types.output.CDPProfile;
 
 public class ProfileLastEventsConnectionDataFetcher extends EventConnectionDataFetcher {
 
-    public static final Integer DEFAULT_SIZE = 10;
+    private static final int DEFAULT_SIZE = 10;
+
+    private final Profile profile;
+    private final Integer count;
+
+    public ProfileLastEventsConnectionDataFetcher(Profile profile, Integer count) {
+        this.profile = profile;
+        this.count = count != null ? count : DEFAULT_SIZE;
+    }
 
     @Override
     public CDPEventConnection get(DataFetchingEnvironment environment) throws Exception {
-        Integer count = environment.getArgument("count");
-        if (count == null) {
-            count = DEFAULT_SIZE;
-        }
-
-        final CDPProfile cdpProfile = environment.getSource();
         final ServiceManager serviceManager = environment.getContext();
 
-        final Condition condition = createPropertyCondition("profileId", cdpProfile.getProfile().getItemId(), serviceManager.getDefinitionsService());
+        final Condition condition = createPropertyCondition("profileId", profile.getItemId(), serviceManager.getDefinitionsService());
         final PartialList<Event> events = serviceManager.getEventService().searchEvents(condition, 0, count);
 
         return createEventConnection(events);

@@ -26,23 +26,88 @@ import java.util.List;
 public class CDPEventFilterInput {
 
     @GraphQLField
-    public List<CDPEventFilterInput> and = new ArrayList<>();
+    private List<CDPEventFilterInput> and = new ArrayList<>();
 
     @GraphQLField
-    public List<CDPEventFilterInput> or = new ArrayList<>();
+    private List<CDPEventFilterInput> or = new ArrayList<>();
 
     @GraphQLField
-    public String id_equals;
+    private String id_equals;
 
     @GraphQLField
-    public String cdp_clientID_equals;
+    private String cdp_clientID_equals;
 
     @GraphQLField
-    public String cdp_sourceID_equals;
+    private String cdp_sourceID_equals;
 
     @GraphQLField
-    public String cdp_profileID_equals;
+    private String cdp_profileID_equals;
 
-    public CDPEventFilterInput() {
+    public CDPEventFilterInput(
+            final @GraphQLName("and") List<CDPEventFilterInput> and,
+            final @GraphQLName("or") List<CDPEventFilterInput> or,
+            final @GraphQLName("cdp_clientID_equals") String id_equals,
+            final @GraphQLName("cdp_clientID_equals") String cdp_clientID_equals,
+            final @GraphQLName("cdp_sourceID_equals") String cdp_sourceID_equals,
+            final @GraphQLName("cdp_profileID_equals") String cdp_profileID_equals) {
+        this.and = and;
+        this.or = or;
+        this.id_equals = id_equals;
+        this.cdp_clientID_equals = cdp_clientID_equals;
+        this.cdp_sourceID_equals = cdp_sourceID_equals;
+        this.cdp_profileID_equals = cdp_profileID_equals;
     }
+
+    public CDPEventFilterInput(String cdp_profileID_equals) {
+        this.cdp_profileID_equals = cdp_profileID_equals;
+    }
+
+    public List<CDPEventFilterInput> getAnd() {
+        return and;
+    }
+
+    public void setAnd(List<CDPEventFilterInput> and) {
+        this.and = and;
+    }
+
+    public List<CDPEventFilterInput> getOr() {
+        return or;
+    }
+
+    public void setOr(List<CDPEventFilterInput> or) {
+        this.or = or;
+    }
+
+    public String getId_equals() {
+        return id_equals;
+    }
+
+    public void setId_equals(String id_equals) {
+        this.id_equals = id_equals;
+    }
+
+    public String getCdp_clientID_equals() {
+        return cdp_clientID_equals;
+    }
+
+    public void setCdp_clientID_equals(String cdp_clientID_equals) {
+        this.cdp_clientID_equals = cdp_clientID_equals;
+    }
+
+    public String getCdp_sourceID_equals() {
+        return cdp_sourceID_equals;
+    }
+
+    public void setCdp_sourceID_equals(String cdp_sourceID_equals) {
+        this.cdp_sourceID_equals = cdp_sourceID_equals;
+    }
+
+    public String getCdp_profileID_equals() {
+        return cdp_profileID_equals;
+    }
+
+    public void setCdp_profileID_equals(String cdp_profileID_equals) {
+        this.cdp_profileID_equals = cdp_profileID_equals;
+    }
+
 }

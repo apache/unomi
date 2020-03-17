@@ -21,12 +21,60 @@ import graphql.annotations.annotationTypes.GraphQLName;
 
 @GraphQLName("CDP_DateFilter")
 public class CDPDateFilter {
+
     @GraphQLField
-    public long after;
+    private long after;
+
     @GraphQLField
-    public boolean includeAfter;
+    private boolean includeAfter;
+
     @GraphQLField
-    public long before;
+    private long before;
+
     @GraphQLField
-    public boolean includeBefore;
+    private boolean includeBefore;
+
+    public CDPDateFilter(
+            final @GraphQLName("after") long after,
+            final @GraphQLName("includeAfter") boolean includeAfter,
+            final @GraphQLName("before") long before,
+            final @GraphQLName("includeBefore") boolean includeBefore) {
+        this.after = after;
+        this.includeAfter = includeAfter;
+        this.before = before;
+        this.includeBefore = includeBefore;
+    }
+
+    public long getAfter() {
+        return after;
+    }
+
+    public void setAfter(long after) {
+        this.after = after;
+    }
+
+    public boolean isIncludeAfter() {
+        return includeAfter;
+    }
+
+    public void setIncludeAfter(boolean includeAfter) {
+        this.includeAfter = includeAfter;
+    }
+
+    public long getBefore() {
+        return before;
+    }
+
+    public void setBefore(long before) {
+        this.before = before;
+    }
+
+    public boolean isIncludeBefore() {
+        return includeBefore;
+    }
+
+    public void setIncludeBefore(boolean includeBefore) {
+        this.includeBefore = includeBefore;
+    }
+
 }

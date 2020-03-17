@@ -20,30 +20,34 @@ package org.apache.unomi.graphql.fetchers.profile;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.graphql.fetchers.ConnectionParams;
 import org.apache.unomi.graphql.fetchers.EventConnectionDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.output.CDPEventConnection;
-import org.apache.unomi.graphql.types.output.CDPProfile;
 
 public class ProfileAllEventsConnectionDataFetcher extends EventConnectionDataFetcher {
 
+    private final Profile profile;
+    private CDPEventFilterInput filterInput;
+
+    public ProfileAllEventsConnectionDataFetcher(Profile profile, CDPEventFilterInput filterInput) {
+        this.profile = profile;
+        this.filterInput = filterInput;
+    }
 
     @Override
     public CDPEventConnection get(DataFetchingEnvironment environment) throws Exception {
         final ConnectionParams params = parseConnectionParams(environment);
-        CDPEventFilterInput filterInput = parseObjectParam("filter", CDPEventFilterInput.class, environment);
-
-        final CDPProfile cdpProfile = environment.getSource();
         final ServiceManager serviceManager = environment.getContext();
 
         // force searching events belonging to current profile only
         if (filterInput == null) {
-            filterInput = new CDPEventFilterInput();
+            // workaround
+            filterInput = new CDPEventFilterInput(profile.getItemId());
         }
-        filterInput.cdp_profileID_equals = cdpProfile.getProfile().getItemId();
 
         final Condition condition = createEventFilterInputCondition(filterInput, params.getAfter(), params.getBefore(), serviceManager.getDefinitionsService());
         final PartialList<Event> events = serviceManager.getEventService().searchEvents(condition, params.getFirst(), params.getSize());

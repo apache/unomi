@@ -53,58 +53,53 @@ public class CDPProfile implements CDPProfileInterface {
 
     @Override
     @GraphQLField
-    @GraphQLDataFetcher(ProfileIdsDataFetcher.class)
-    public List<CDPProfileID> cdp_profileIDs(DataFetchingEnvironment environment) {
-        return null;
+    public List<CDPProfileID> cdp_profileIDs(final DataFetchingEnvironment environment) throws Exception {
+        return new ProfileIdsDataFetcher(profile).get(environment);
     }
 
     @Override
     @GraphQLField
-    @GraphQLDataFetcher(ProfileSegmentsDataFetcher.class)
-    public List<CDPSegment> cdp_segments(final @GraphQLName("views") List<String> viewIds, DataFetchingEnvironment environment) {
-        return null;
+    public List<CDPSegment> cdp_segments(final @GraphQLName("views") List<String> viewIds, final DataFetchingEnvironment environment) throws Exception {
+        return new ProfileSegmentsDataFetcher(profile, viewIds).get(environment);
     }
 
     @Override
     @GraphQLField
-    @GraphQLDataFetcher(ProfileInterestsDataFetcher.class)
-    public List<CDPInterest> cdp_interests(final @GraphQLName("views") List<String> viewIds, DataFetchingEnvironment environment) {
-        return null;
+    public List<CDPInterest> cdp_interests(final @GraphQLName("views") List<String> viewIds, final DataFetchingEnvironment environment) throws Exception {
+        return new ProfileInterestsDataFetcher(profile).get(environment);
     }
 
     @Override
     @GraphQLField
-    @GraphQLDataFetcher(ProfileConsentsDataFetcher.class)
-    public List<CDPConsent> cdp_consents(DataFetchingEnvironment environment) {
-        return null;
+    public List<CDPConsent> cdp_consents(final DataFetchingEnvironment environment) throws Exception {
+        return new ProfileConsentsDataFetcher(profile).get(environment);
     }
 
     @Override
     @GraphQLField
-    @GraphQLDataFetcher(ProfileListsDataFetcher.class)
-    public List<CDPList> cdp_lists(final @GraphQLName("views") List<String> viewIds, DataFetchingEnvironment environment) {
-        return null;
+    public List<CDPList> cdp_lists(final @GraphQLName("views") List<String> viewIds, final DataFetchingEnvironment environment) throws Exception {
+        return new ProfileListsDataFetcher(profile, viewIds).get(environment);
     }
 
     @GraphQLField
-    @GraphQLDataFetcher(ProfileAllEventsConnectionDataFetcher.class)
     public CDPEventConnection cdp_events(
-            @GraphQLName("filter") CDPEventFilterInput filterInput,
-            @GraphQLName("first") Integer first,
-            @GraphQLName("last") Integer last,
-            @GraphQLName("before") String before,
-            @GraphQLName("after") String after
-    ) {
-        return null;
+            final @GraphQLName("filter") CDPEventFilterInput filterInput,
+            final @GraphQLName("first") Integer first,
+            final @GraphQLName("last") Integer last,
+            final @GraphQLName("before") String before,
+            final @GraphQLName("after") String after,
+            final DataFetchingEnvironment environment
+    ) throws Exception {
+        return new ProfileAllEventsConnectionDataFetcher(profile, filterInput).get(environment);
     }
 
     @GraphQLField
-    @GraphQLDataFetcher(ProfileLastEventsConnectionDataFetcher.class)
     public CDPEventConnection cdp_lastEvents(
-            @GraphQLName("profileID") CDPProfileIDInput profileID,
-            @GraphQLName("count") Integer count
-    ) {
-        return null;
+            final @GraphQLName("profileID") CDPProfileIDInput profileID,
+            final @GraphQLName("count") Integer count,
+            final DataFetchingEnvironment environment
+    ) throws Exception {
+        return new ProfileLastEventsConnectionDataFetcher(profile, count).get(environment);
     }
 
     @GraphQLField

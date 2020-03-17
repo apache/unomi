@@ -19,8 +19,8 @@ package org.apache.unomi.graphql.fetchers.profile;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.Profile;
 import org.apache.unomi.graphql.types.output.CDPInterest;
-import org.apache.unomi.graphql.types.output.CDPProfile;
 
 import java.util.Collections;
 import java.util.List;
@@ -29,10 +29,16 @@ import java.util.stream.Collectors;
 
 public class ProfileInterestsDataFetcher implements DataFetcher<List<CDPInterest>> {
 
+    private final Profile profile;
+
+    public ProfileInterestsDataFetcher(Profile profile) {
+        this.profile = profile;
+    }
+
     @Override
+    @SuppressWarnings("unchecked")
     public List<CDPInterest> get(DataFetchingEnvironment environment) throws Exception {
-        final CDPProfile cdpProfile = environment.getSource();
-        final Map<String, Integer> interests = (Map<String, Integer>) cdpProfile.getProfile().getProperties().get("interests");
+        final Map<String, Integer> interests = (Map<String, Integer>) profile.getProperties().get("interests");
         if (interests == null) {
             return Collections.emptyList();
         }
