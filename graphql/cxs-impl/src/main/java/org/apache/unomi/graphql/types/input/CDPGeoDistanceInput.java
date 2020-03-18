@@ -23,10 +23,47 @@ import org.apache.unomi.graphql.types.output.CDPGeoPoint;
 
 @GraphQLName("CDP_GeoDistance")
 public class CDPGeoDistanceInput {
+
     @GraphQLField
-    public CDPGeoPoint center;
+    private CDPGeoPoint center;
+
     @GraphQLField
-    public CDPGeoDistanceUnit unit;
+    private CDPGeoDistanceUnit unit;
+
     @GraphQLField
-    public Double distance;
+    private Double distance;
+
+    public CDPGeoDistanceInput(
+            final @GraphQLName("center") CDPGeoPoint center,
+            final @GraphQLName("unit") CDPGeoDistanceUnit unit,
+            final @GraphQLName("distance") Double distance) {
+        this.center = center;
+        this.unit = unit;
+        this.distance = distance;
+    }
+
+    public CDPGeoPoint getCenter() {
+        return center;
+    }
+
+    public void setCenter(CDPGeoPoint center) {
+        this.center = center;
+    }
+
+    public CDPGeoDistanceUnit getUnit() {
+        return unit;
+    }
+
+    public void setUnit(CDPGeoDistanceUnit unit) {
+        this.unit = unit;
+    }
+
+    public Double getDistance() {
+        return distance;
+    }
+
+    public void setDistance(Double distance) {
+        this.distance = distance;
+    }
+
 }

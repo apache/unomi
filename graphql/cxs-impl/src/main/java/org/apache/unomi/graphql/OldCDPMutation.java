@@ -65,12 +65,12 @@ public class OldCDPMutation {
 
     private CDPPropertyType getPropertyType(CDPPropertyInput cdpPropertyTypeInput) {
         CDPPropertyType propertyType = null;
-        if (cdpPropertyTypeInput.identifierPropertyTypeInput != null) {
-            propertyType = getIdentifierPropertyType(cdpPropertyTypeInput.identifierPropertyTypeInput);
-        } else if (cdpPropertyTypeInput.stringPropertyTypeInput != null) {
-            propertyType = getStringPropertyType(cdpPropertyTypeInput.stringPropertyTypeInput);
-        } else if (cdpPropertyTypeInput.setPropertyTypeInput != null) {
-            propertyType = getSetPropertyType(cdpPropertyTypeInput.setPropertyTypeInput);
+        if (cdpPropertyTypeInput.getIdentifierPropertyTypeInput() != null) {
+            propertyType = getIdentifierPropertyType(cdpPropertyTypeInput.getIdentifierPropertyTypeInput());
+        } else if (cdpPropertyTypeInput.getStringPropertyTypeInput() != null) {
+            propertyType = getStringPropertyType(cdpPropertyTypeInput.getStringPropertyTypeInput());
+        } else if (cdpPropertyTypeInput.getSetPropertyTypeInput() != null) {
+            propertyType = getSetPropertyType(cdpPropertyTypeInput.getSetPropertyTypeInput());
         }
         return propertyType;
     }

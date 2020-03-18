@@ -19,27 +19,41 @@ package org.apache.unomi.graphql.fetchers.profile;
 
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.graphql.fetchers.BaseDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
-import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.CDPSegment;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ProfileSegmentsDataFetcher extends BaseDataFetcher<List<CDPSegment>> {
 
+    private final Profile profile;
+    private final List<String> viewIds;
+
+    public ProfileSegmentsDataFetcher(Profile profile, List<String> viewIds) {
+        this.profile = profile;
+        this.viewIds = viewIds;
+    }
+
     @Override
     public List<CDPSegment> get(DataFetchingEnvironment environment) throws Exception {
-        final CDPProfile cdpProfile = environment.getSource();
         final ServiceManager serviceManager = environment.getContext();
         final SegmentService segmentService = serviceManager.getSegmentService();
 
-        final List<Metadata> metadata = segmentService.getSegmentMetadatasForProfile(cdpProfile.getProfile());
+        final List<Metadata> metadata = segmentService.getSegmentMetadatasForProfile(profile);
 
-        return metadata.stream().map(s -> createCDPSegment(s, segmentService)).collect(Collectors.toList());
+        Stream<Metadata> stream = metadata.stream();
+
+        if (viewIds != null) {
+            stream = stream.filter(s -> viewIds.contains(s.getScope()));
+        }
+
+        return stream.map(s -> createCDPSegment(s, segmentService)).collect(Collectors.toList());
     }
 
 

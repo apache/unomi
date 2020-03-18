@@ -25,9 +25,16 @@ import java.util.List;
 @GraphQLName("CDP_EventType")
 public class CDPEventTypeInput {
 
+    @GraphQLField
     private String id;
+
+    @GraphQLField
     private String scope;
+
+    @GraphQLField
     private String typeName;
+
+    @GraphQLField
     private List<CDPPropertyInput> properties = new ArrayList<>();
 
     public CDPEventTypeInput(@GraphQLName("id") String id,
@@ -40,23 +47,36 @@ public class CDPEventTypeInput {
         this.properties = properties;
     }
 
-    @GraphQLField
     public String getId() {
         return id;
     }
 
-    @GraphQLField
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public String getScope() {
         return scope;
     }
 
-    @GraphQLField
+    public void setScope(String scope) {
+        this.scope = scope;
+    }
+
     public String getTypeName() {
         return typeName;
     }
 
-    @GraphQLField
+    public void setTypeName(String typeName) {
+        this.typeName = typeName;
+    }
+
     public List<CDPPropertyInput> getProperties() {
         return properties;
     }
+
+    public void setProperties(List<CDPPropertyInput> properties) {
+        this.properties = properties;
+    }
+
 }

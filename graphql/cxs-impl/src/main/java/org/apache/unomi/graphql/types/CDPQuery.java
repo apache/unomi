@@ -16,11 +16,10 @@
  */
 package org.apache.unomi.graphql.types;
 
-import graphql.annotations.annotationTypes.GraphQLDataFetcher;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
-import org.apache.unomi.graphql.fetchers.EventConnectionDataFetcher;
+import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.graphql.fetchers.event.FindEventsConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.FindProfilesConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.ProfileDataFetcher;
@@ -44,40 +43,40 @@ public class CDPQuery {
     public static final String TYPE_NAME = "CDP_Query";
 
     @GraphQLField
-    @GraphQLDataFetcher(ProfileDataFetcher.class)
     public CDPProfile getProfile(
             final @GraphQLName("profileID") @GraphQLNonNull CDPProfileIDInput profileID,
-            final @GraphQLName("createIfMissing") Boolean createIfMissing) {
+            final @GraphQLName("createIfMissing") Boolean createIfMissing,
+            final DataFetchingEnvironment environment) throws Exception {
 
-        return null;
+        return new ProfileDataFetcher(profileID, createIfMissing).get(environment);
     }
 
     @GraphQLField
-    @GraphQLDataFetcher(FindProfilesConnectionDataFetcher.class)
     public CDPProfileConnection findProfiles(final @GraphQLName("filter") CDPProfileFilterInput filter,
                                              final @GraphQLName("orderBy") List<CDPOrderByInput> orderBy,
                                              final @GraphQLName("first") Integer first,
                                              final @GraphQLName("after") String after,
                                              final @GraphQLName("last") Integer last,
-                                             final @GraphQLName("before") String before) {
-        return null;
+                                             final @GraphQLName("before") String before,
+                                             final DataFetchingEnvironment environment) throws Exception {
+        return new FindProfilesConnectionDataFetcher(filter, orderBy).get(environment);
     }
 
     @GraphQLField
-    @GraphQLDataFetcher(PropertiesConnectionDataFetcher.class)
     public CDPPropertyConnection getProfileProperties(final @GraphQLName("first") Integer first,
-                                                      final @GraphQLName("last") Integer last) {
-        return null;
+                                                      final @GraphQLName("last") Integer last,
+                                                      final DataFetchingEnvironment environment) throws Exception {
+        return new PropertiesConnectionDataFetcher().get(environment);
     }
 
     @GraphQLField
-    @GraphQLDataFetcher(FindEventsConnectionDataFetcher.class)
     public CDPEventConnection findEvents(final @GraphQLName("filter") CDPEventFilterInput filter,
                                          final @GraphQLName("orderBy") List<CDPOrderByInput> orderBy,
                                          final @GraphQLName("first") Integer first,
                                          final @GraphQLName("after") String after,
                                          final @GraphQLName("last") Integer last,
-                                         final @GraphQLName("before") String before) {
-        return null;
+                                         final @GraphQLName("before") String before,
+                                         final DataFetchingEnvironment environment) {
+        return new FindEventsConnectionDataFetcher(filter, orderBy).get(environment);
     }
 }

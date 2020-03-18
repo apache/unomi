@@ -48,7 +48,7 @@ public class PropertiesConnectionDataFetcher extends BaseConnectionDataFetcher<C
         return createPropertiesConnection(properties, params);
     }
 
-    protected CDPPropertyConnection createPropertiesConnection(Collection<PropertyType> properties, ConnectionParams params) {
+    private CDPPropertyConnection createPropertiesConnection(Collection<PropertyType> properties, ConnectionParams params) {
         if (properties == null || properties.size() == 0 || properties.size() < params.getFirst() || params.getFirst() > params.getLast()) {
             return new CDPPropertyConnection();
         }

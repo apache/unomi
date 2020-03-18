@@ -21,8 +21,34 @@ import graphql.annotations.annotationTypes.GraphQLName;
 
 @GraphQLName("CDP_GeoPoint")
 public class CDPGeoPointInput {
+
     @GraphQLField
-    public Double longitude;
+    private Double longitude;
+
     @GraphQLField
-    public Double latitude;
+    private Double latitude;
+
+    public CDPGeoPointInput(
+            final @GraphQLName("longitude") Double longitude,
+            final @GraphQLName("latitude") Double latitude) {
+        this.longitude = longitude;
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
 }

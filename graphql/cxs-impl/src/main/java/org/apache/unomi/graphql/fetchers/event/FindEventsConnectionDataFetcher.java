@@ -28,14 +28,23 @@ import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPOrderByInput;
 import org.apache.unomi.graphql.types.output.CDPEventConnection;
 
+import java.util.List;
+
 public class FindEventsConnectionDataFetcher extends EventConnectionDataFetcher {
+
+    private final CDPEventFilterInput filterInput;
+
+    private final List<CDPOrderByInput> orderByInput;
+
+    public FindEventsConnectionDataFetcher(CDPEventFilterInput filterInput, List<CDPOrderByInput> orderByInput) {
+        this.filterInput = filterInput;
+        this.orderByInput = orderByInput;
+    }
 
     @Override
     public CDPEventConnection get(DataFetchingEnvironment environment) {
         final ServiceManager serviceManager = environment.getContext();
         final ConnectionParams params = parseConnectionParams(environment);
-        final CDPEventFilterInput filterInput = parseObjectParam("filter", CDPEventFilterInput.class, environment);
-        final CDPOrderByInput orderByInput = parseObjectParam("orderBy", CDPOrderByInput.class, environment);
 
         final Condition condition = createEventFilterInputCondition(filterInput, params.getAfter(), params.getBefore(), serviceManager.getDefinitionsService());
         final PartialList<Event> events = serviceManager.getEventService().searchEvents(condition, params.getFirst(), params.getSize());

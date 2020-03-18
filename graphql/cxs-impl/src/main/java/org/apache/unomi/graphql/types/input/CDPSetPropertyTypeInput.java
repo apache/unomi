@@ -26,6 +26,7 @@ import java.util.List;
 @GraphQLName("CDP_SetProperty")
 public class CDPSetPropertyTypeInput extends CDPPropertyType {
 
+    @GraphQLField
     private List<CDPPropertyInput> properties;
 
     public CDPSetPropertyTypeInput(@GraphQLName("name") String name,
@@ -37,9 +38,12 @@ public class CDPSetPropertyTypeInput extends CDPPropertyType {
         this.properties = properties;
     }
 
-    @GraphQLField
-    @GraphQLPrettify
     public List<CDPPropertyInput> getProperties() {
         return properties;
     }
+
+    public void setProperties(List<CDPPropertyInput> properties) {
+        this.properties = properties;
+    }
+
 }

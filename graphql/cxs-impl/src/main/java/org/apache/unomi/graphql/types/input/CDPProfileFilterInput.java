@@ -46,9 +46,6 @@ public class CDPProfileFilterInput {
     @GraphQLField
     private CDPProfileEventsFilterInput events;
 
-//    public CDPProfileFilterInput() {
-//    }
-
     public CDPProfileFilterInput(@GraphQLName("profileIDs_contains") List<String> profileIDs_contains,
                                  @GraphQLName("segments_contains") List<String> segments_contains,
                                  @GraphQLName("consents_contains") List<String> consents_contains,
@@ -69,62 +66,55 @@ public class CDPProfileFilterInput {
         return profileIDs_contains;
     }
 
-    public CDPProfileFilterInput setProfileIDs_contains(List<String> profileIDs_contains) {
+    public void setProfileIDs_contains(List<String> profileIDs_contains) {
         this.profileIDs_contains = profileIDs_contains;
-        return this;
     }
 
     public List<String> getSegments_contains() {
         return segments_contains;
     }
 
-    public CDPProfileFilterInput setSegments_contains(List<String> segments_contains) {
+    public void setSegments_contains(List<String> segments_contains) {
         this.segments_contains = segments_contains;
-        return this;
     }
 
     public List<String> getConsents_contains() {
         return consents_contains;
     }
 
-    public CDPProfileFilterInput setConsents_contains(List<String> consents_contains) {
+    public void setConsents_contains(List<String> consents_contains) {
         this.consents_contains = consents_contains;
-        return this;
     }
 
     public List<String> getLists_contains() {
         return lists_contains;
     }
 
-    public CDPProfileFilterInput setLists_contains(List<String> lists_contains) {
+    public void setLists_contains(List<String> lists_contains) {
         this.lists_contains = lists_contains;
-        return this;
     }
 
     public CDPProfilePropertiesFilterInput getProperties() {
         return properties;
     }
 
-    public CDPProfileFilterInput setProperties(CDPProfilePropertiesFilterInput properties) {
+    public void setProperties(CDPProfilePropertiesFilterInput properties) {
         this.properties = properties;
-        return this;
     }
 
     public CDPInterestFilterInput getInterests() {
         return interests;
     }
 
-    public CDPProfileFilterInput setInterests(CDPInterestFilterInput interests) {
+    public void setInterests(CDPInterestFilterInput interests) {
         this.interests = interests;
-        return this;
     }
 
     public CDPProfileEventsFilterInput getEvents() {
         return events;
     }
 
-    public CDPProfileFilterInput setEvents(CDPProfileEventsFilterInput events) {
+    public void setEvents(CDPProfileEventsFilterInput events) {
         this.events = events;
-        return this;
     }
 }

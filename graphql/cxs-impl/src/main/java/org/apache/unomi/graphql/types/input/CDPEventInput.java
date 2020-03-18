@@ -57,16 +57,32 @@ public class CDPEventInput {
         return id;
     }
 
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public String getCdp_sourceID() {
         return cdp_sourceID;
+    }
+
+    public void setCdp_sourceID(String cdp_sourceID) {
+        this.cdp_sourceID = cdp_sourceID;
     }
 
     public CDPProfileIDInput getCdp_profileID() {
         return cdp_profileID;
     }
 
+    public void setCdp_profileID(CDPProfileIDInput cdp_profileID) {
+        this.cdp_profileID = cdp_profileID;
+    }
+
     public String getCdp_objectID() {
         return cdp_objectID;
+    }
+
+    public void setCdp_objectID(String cdp_objectID) {
+        this.cdp_objectID = cdp_objectID;
     }
 
 }
