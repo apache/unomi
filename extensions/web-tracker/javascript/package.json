@@ -20,8 +20,8 @@
     "clean:all": "yarn clean && rimraf node_modules"
   },
   "dependencies": {
-    "@segment/analytics.js-core": "^3.7.2",
-    "@segment/analytics.js-integration": "^2.1.1",
+    "@segment/analytics.js-core": "3.7.2",
+    "@segment/analytics.js-integration": "2.1.1",
     "extend": "^3.0.2"
   },
   "devDependencies": {

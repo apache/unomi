@@ -14,22 +14,26 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
+# Building Docker images
 
-[![Build Status](https://builds.apache.org/job/unomi-master/badge/icon)](https://builds.apache.org/job/unomi-master/)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.apache.unomi/unomi-root/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.apache.unomi/unomi-root)
+You can build the docker image provided in this directory by using the following command:
 
+```
+docker build -t unomi .
+```
 
-Apache Unomi
-============
+# Unomi Docker Image
 
-Apache Unomi stores user profile information and is mostly used to provide a backend server for A/B testing and 
-personalization. To do so it implements the currently under development OASIS Context Server specification. 
+## Running Unomi
+Unomi requires ElasticSearch so it is recommended to run Unomi and ElasticSearch using docker-compose:
+```
+docker-compose up
+```
+You will need to wait while Docker builds the containers and they boot up (ES will take a minute or two). Once they are up you can check that the Unomi services are available by visiting http://localhost:8181/cxs in a web browser.
 
-License
--------
-The source code is available under the Apache License V2
+## Environment variables
 
-Documentation
--------------
-You can find all the updated documentation, including building and deployment instructions, on the [Apache Unomi 
-web site](https://unomi.apache.org).
+When you start the `unomi` image, you can adjust the configuration of the Unomi instance by passing one or more environment variables on the `docker run` command line.
+
+- **`ELASTICSEARCH_HOST`** - The IP address of hostname for ElasticSearch
+- **`ELASTICSEARCH_PORT`** - The port for ElasticSearch

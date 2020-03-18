@@ -221,7 +221,7 @@ Unomi.prototype.loadContext = function (skipEvents, invalidate) {
 
     jsonData.sessionId = this.sessionId;
 
-    var contextUrl = this.options.url + '/context.json';
+    var contextUrl = this.options.url + '/context';
     if (invalidate) {
         contextUrl += '?invalidateSession=true&invalidateProfile=true';
     }
@@ -390,7 +390,7 @@ Unomi.prototype.collectEvents = function (events, successCallback, errorCallback
 
     var data = JSON.stringify(events);
     this.ajax({
-        url: this.options.url + '/eventcollector',
+        url: this.options.url + '/smile',
         type: 'POST',
         async: true,
         contentType: 'text/plain;charset=UTF-8', // Use text/plain to avoid CORS preflight

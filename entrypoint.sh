@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ################################################################################
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -14,37 +16,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-version: '2.2'
-services:
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:5.6.3
-    volumes: # Persist ES data in seperate "esdata" volume
-      - esdata1:/usr/share/elasticsearch/data
-    environment:
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - cluster.name=contextElasticSearch
-    ports: # Expose Elasticsearch ports
-      - "9200:9200"
+# Wait for heathy ElasticSearch
+# next wait for ES status to turn to Green
+health_check="$(curl -fsSL "$ELASTICSEARCH_HOST:9200/_cat/health?h=status")"
 
-  unomi:
-    build: .
-    container_name: unomi
-    environment:
-      - ELASTICSEARCH_HOST=elasticsearch
-      - ELASTICSEARCH_PORT=9300
-      - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9300
-    ports:
-      - 8181:8181
-      - 9443:9443
-    links:
-      - elasticsearch
-    depends_on:
-      - elasticsearch
+until ([ "$health_check" = 'yellow' ] || [ "$health_check" = 'green' ]); do
+    health_check="$(curl -fsSL "$ELASTICSEARCH_HOST:9200/_cat/health?h=status")"
+    >&2 echo "Elastic Search is unavailable - waiting"
+    sleep 1
+done
 
+cp -f $UNOMI_HOME/etc/custom.properties.template $UNOMI_HOME/etc/custom.properties
+echo org.apache.unomi.elasticsearch.addresses=$ELASTICSEARCH_HOST:$ELASTICSEARCH_PORT >> $UNOMI_HOME/etc/custom.properties
+cat $UNOMI_HOME/etc/custom.properties
+$UNOMI_HOME/bin/start
+$UNOMI_HOME/bin/status # Call to status delays while Karaf creates karaf.log
 
-volumes: # Define seperate volume for Elasticsearch data
-  esdata1:
-    driver: local
+tail -f $UNOMI_HOME/data/log/karaf.log
