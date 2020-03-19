@@ -28,10 +28,6 @@ image::asf_logo_url.png[pdfwidth=35%,align=center]
 
 include::5-min-quickstart.adoc[]
 
-== Concepts
-
-include::concepts.adoc[]
-
 == First steps with Apache Unomi
 
 include::getting-started.adoc[]
@@ -47,6 +43,8 @@ include::configuration.adoc[]
 include::useful-unomi-urls.adoc[]
 
 include::how-profile-tracking-works.adoc[]
+
+include::context-request-flow.adoc[]
 
 == Queries and aggregations
 
@@ -70,9 +68,15 @@ include::clustering.adoc[]
 
 == Reference
 
-include::conditions.adoc[]
+include::datamodel.adoc[]
 
-include::actions.adoc[]
+include::new-data-model.adoc[]
+
+include::builtin-event-types.adoc[]
+
+include::builtin-condition-types.adoc[]
+
+include::builtin-action-types.adoc[]
 
 == Integration samples
 
@@ -98,10 +102,6 @@ include::building-and-deploying.adoc[]
 
 include::shell-commands.adoc[]
 
-include::extending-plugins.adoc[]
-
-include::custom-extensions.adoc[]
+include::writing-plugins.adoc[]
 
 include::patches.adoc[]
-
-include::new-data-model.adoc[]

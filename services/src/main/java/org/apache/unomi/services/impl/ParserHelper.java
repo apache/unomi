@@ -27,9 +27,7 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 /**
  * Helper class to resolve condition, action and values types when loading definitions from JSON files
@@ -37,6 +35,9 @@ import java.util.List;
 public class ParserHelper {
 
     private static final Logger logger = LoggerFactory.getLogger(ParserHelper.class);
+
+    private static final Set<String> unresolvedActionTypes = new HashSet<>();
+    private static final Set<String> unresolvedConditionTypes = new HashSet<>();
 
     public static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition) {
         if (rootCondition == null) {
@@ -49,16 +50,18 @@ public class ParserHelper {
                 if (condition.getConditionType() == null) {
                     ConditionType conditionType = definitionsService.getConditionType(condition.getConditionTypeId());
                     if (conditionType != null) {
+                        unresolvedConditionTypes.remove(condition.getConditionTypeId());
                         condition.setConditionType(conditionType);
                     } else {
                         result.add(condition.getConditionTypeId());
+                        if (!unresolvedConditionTypes.contains(condition.getConditionTypeId())) {
+                            unresolvedConditionTypes.add(condition.getConditionTypeId());
+                            logger.warn("Couldn't resolve condition type: " + condition.getConditionTypeId());
+                        }
                     }
                 }
             }
         });
-        if (!result.isEmpty()) {
-            logger.warn("Couldn't resolve condition types : " + result);
-        }
         return result.isEmpty();
     }
 
@@ -105,9 +108,13 @@ public class ParserHelper {
         if (action.getActionType() == null) {
             ActionType actionType = definitionsService.getActionType(action.getActionTypeId());
             if (actionType != null) {
+                unresolvedActionTypes.remove(action.getActionTypeId());
                 action.setActionType(actionType);
             } else {
-                logger.warn("Couldn't resolve action types : " + action.getActionTypeId());
+                if (!unresolvedActionTypes.contains(action.getActionTypeId())) {
+                    logger.warn("Couldn't resolve action type : " + action.getActionTypeId());
+                    unresolvedActionTypes.add(action.getActionTypeId());
+                }
                 return false;
             }
         }

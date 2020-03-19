@@ -26,6 +26,7 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
@@ -247,6 +248,23 @@ public class EventServiceImpl implements EventService {
             return persistenceService.queryFullText(query, condition, sortBy, Event.class, offset, size);
         } else {
             return persistenceService.query(condition, sortBy, Event.class, offset, size);
+        }
+    }
+
+    @Override
+    public PartialList<Event> search(Query query) {
+        if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition())) {
+            if (StringUtils.isNotBlank(query.getText())) {
+                return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
+            } else {
+                return persistenceService.query(query.getCondition(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
+            }
+        } else {
+            if (StringUtils.isNotBlank(query.getText())) {
+                return persistenceService.queryFullText(query.getText(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
+            } else {
+                return persistenceService.getAllItems(Event.class, query.getOffset(), query.getLimit(), query.getSortby());
+            }
         }
     }
 

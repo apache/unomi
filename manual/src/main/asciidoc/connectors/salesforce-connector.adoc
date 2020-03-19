@@ -112,7 +112,7 @@ Both URLs are password protected by the Apache Unomi (Karaf) password. You can f
 in the etc/users.properties file.
 
 You can now use the connectors's defined actions in rules to push or pull data to/from the Salesforce CRM. You can
-find more information about rules in the <<_concepts,Concepts>> and the <<_getting_started_with_unomi,Getting Started>> pages.
+find more information about rules in the <<Data Model Overview,Data Model>> and the <<Getting started with Unomi,Getting Started>> pages.
 
 ==== Properties
 

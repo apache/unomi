@@ -35,8 +35,10 @@
             <cm:property name="index.prefix" value="context"/>
             <cm:property name="numberOfShards" value="5"/>
             <cm:property name="numberOfReplicas" value="0"/>
+            <cm:property name="indexMappingTotalFieldsLimit" value="1000"/>
             <cm:property name="monthlyIndex.numberOfShards" value="3"/>
             <cm:property name="monthlyIndex.numberOfReplicas" value="0"/>
+            <cm:property name="monthlyIndex.indexMappingTotalFieldsLimit" value="1000"/>
             <cm:property name="defaultQueryLimit" value="10"/>
 
             <cm:property name="bulkProcessor.concurrentRequests" value="1" />
@@ -90,8 +92,10 @@
         <property name="indexPrefix" value="${es.index.prefix}"/>
         <property name="monthlyIndexNumberOfShards" value="${es.monthlyIndex.numberOfShards}"/>
         <property name="monthlyIndexNumberOfReplicas" value="${es.monthlyIndex.numberOfReplicas}"/>
+        <property name="monthlyIndexMappingTotalFieldsLimit" value="${es.monthlyIndex.indexMappingTotalFieldsLimit}"/>
         <property name="numberOfShards" value="${es.numberOfShards}"/>
         <property name="numberOfReplicas" value="${es.numberOfReplicas}"/>
+        <property name="indexMappingTotalFieldsLimit" value="${es.indexMappingTotalFieldsLimit}"/>
         <property name="elasticSearchAddresses" value="${es.elasticSearchAddresses}"/>
         <property name="defaultQueryLimit" value="${es.defaultQueryLimit}"/>
         <property name="itemsMonthlyIndexed">

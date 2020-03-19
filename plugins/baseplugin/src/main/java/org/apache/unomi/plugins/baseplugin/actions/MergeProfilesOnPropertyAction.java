@@ -34,9 +34,7 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class MergeProfilesOnPropertyAction implements ActionExecutor {
     private static final Logger logger = LoggerFactory.getLogger(MergeProfilesOnPropertyAction.class.getName());
@@ -183,7 +181,11 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                                     // we must mark all the profiles that we merged into the master as merged with the master, and they will
                                     // be deleted upon next load
                                     profile.setMergedWith(masterProfileId);
-                                    persistenceService.update(profile.getItemId(), null, Profile.class, "mergedWith", masterProfileId);
+                                    Map<String,Object> sourceMap = new HashMap<>();
+                                    sourceMap.put("mergedWith", masterProfile);
+                                    profile.setSystemProperty("lastUpdated", new Date());
+                                    sourceMap.put("systemProperties", profile.getSystemProperties());
+                                    persistenceService.update(profile.getItemId(), null, Profile.class, sourceMap);
                                 }
                             }
                         } catch (Exception e) {

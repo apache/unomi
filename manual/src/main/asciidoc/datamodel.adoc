@@ -1,0 +1,1108 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+=== Data Model Overview
+
+Apache Unomi gathers information about users actions, information that is processed and stored by Unomi services.
+The collected information can then be used to personalize content, derive insights on user behavior, categorize the
+user profiles into segments along user-definable dimensions or acted upon by algorithms.
+
+The following data model only contains the classes and properties directly related to the most important objects of Apache Unomi.
+There are other classes that are less central to the functionality but all the major ones are represented in the diagram below:
+
+image::data-model-overview.png[]
+
+We will detail many of these classes in the document below.
+
+=== Scope
+
+Scopes are not actually an object in the system, but simply unique strings that are used to "classify" objects.
+For example, when using scopes with a web content management system, a scope could be associated with a site identifier or even a host name.
+
+____
+
+Unomi defines a built-in scope (called `systemscope`) that clients can use to share data across scopes.
+____
+
+==== Example
+
+In the following example, the scope uses the unique identifier of a web site called “digitall”.
+
+[source]
+----
+{
+    ... other fields of an object type ...
+    “scope”: “digitall”
+    ... other fields of an object type ...
+}
+----
+
+=== Item
+
+Unomi structures the information it collects using the concept of `Item` which provides the base information (an identifier and a type) the context server needs to process and store the data.
+Items are persisted according to their type (structure) and identifier (identity).
+This base structure can be extended, if needed, using properties in the form of key-value pairs.
+
+These properties are further defined by the `Item`’s type definition which explicits the `Item`’s structure and semantics.
+By defining new types, users specify which properties (including the type of values they accept) are available to items of that specific type.
+
+Unomi defines default value types: `date`, `email`, `integer` and `string`, all pretty self-explanatory.
+While you can think of these value types as "primitive" types, it is possible to extend Unomi by providing additional value types.
+
+Additionally, most items are also associated to a scope, which is a concept that Unomi uses to group together related items.
+A given scope is represented in Unomi by a simple string identifier and usually represents an application or set of applications from which Unomi gathers data, depending on the desired analysis granularity.
+In the context of web sites, a scope could, for example, represent a site or family of related sites being analyzed.
+Scopes allow clients accessing the context server to filter data to only see relevant data.
+
+Items are a generic object, that is common to many objects in the data model.
+It contains the following fields, that are inherited by other objects that inherit from it.
+
+==== Structure definition
+
+Inherits all the fields from: n/a
+
+|===
+| *Field* | *Type* | *Description*
+
+| itemId | String | This field contains a unique identifier (usually a UUID) that uniquely identifies the item in the whole system. It should be unique to a Unomi installation
+
+| itemType | String | A string containing the subtype of this item. Examples are : event, profile, session, … any class that inherits from the Item class will have a unique and different itemType value.
+
+| scope | String (optional) | If present, this will contain a scope identifier. A scope is just a way to regroup objects notably for administrative purposes. For example, when integrating with a CMS a scope could be mapped to a website. The “system” scope value is reserved for values that are used internally by Apache Unomi
+
+|===
+
+=== Metadata
+
+The Metadata object is an object that contains additional information about an object.
+It is usually associated with an Item object (see MetadataItem below).
+
+==== Structure definition
+
+Inherits all the fields from: n/a
+
+|===
+| *Field* | *Type* | *Description*
+
+| id | String | This field contains a unique identifier (UUID) for the object the metadata object is attached to. It is usually a copy of the itemId field on an Item object.
+
+| name | String | A name for the associated object. Usually, this name will be displayed on the user interface
+
+| description | String (optional) | A description of the associated object. Will also usually be used in user interfaces
+
+| scope | String | The scope for the associated object.
+
+| tags | String array | A list of tags for the associated object, this list may be edited through a UI.
+
+| systemTags | String array | A (reserved) list of tags for the associated object. This is usually populated through JSON descriptors and is not meant to be modified by end users. These tags may include values such as “profileProperties” that help classify associated objects.
+
+| enabled | Boolean | Indicates whether the associated is enabled or not. For example, a rule may be disabled using this field.
+
+| missingPlugins | Boolean | This is used for associated objects that require plugins to be deployed to work. If the plugin is not deployed, this object will not perform its function. For example if a rule is registered but the condition or actions it needs are not installed, the rule will not be used.
+
+| hidden | Boolean | Specifies whether the associated object should be visible in UIs or not
+
+| readOnly | Boolean | Specifies whether editing of the associated object should be allowed or not.
+
+|===
+
+==== Example
+
+This example of a Metadata object structure was taken from a List associated object.
+See the MetadataItem to understand how the two fit together.
+
+[source,json]
+----
+{
+        "id": "firstListId",
+        "name": "First list",
+        "description": "Description of the first list.",
+        "scope": "digitall",
+        "tags": [],
+        "systemTags": [],
+        "enabled": true,
+        "missingPlugins": false,
+        "hidden": false,
+        "readOnly": false
+}
+----
+
+=== MetadataItem
+
+==== Structure definition
+
+Inherits all the fields from: <<Item>>
+
+|===
+| *Field* | *Type* | *Description*
+
+| metadata | Metadata | This object contains just one field, of type Metadata as define just before this object type.
+
+|===
+
+==== Example
+
+The following example is actually the definition of a <<List>> object, which is simply a <<MetadataItem>> sub-type with no additional fields.
+We can see here the “itemId” and “itemType” fields that come from the Item parent class and the “metadata” field that contains the object structure coming from the Metadata object type.
+
+[source,json]
+----
+{
+    "itemId": "userListId",
+    "itemType": "userList",
+    "metadata": {
+        "id": "userListId",
+        "name": "First list",
+        "description": "Description of the first list.",
+        "scope": "digitall",
+        "tags": [],
+        "systemTags": [],
+        "enabled": true,
+        "missingPlugins": false,
+        "hidden": false,
+        "readOnly": false
+    }
+}
+----
+
+=== Event
+
+Events represent something that is happening at a specific time (they are timestamped).
+They can be used to track visitor behavior, or even for back-channel system-to-system (as for example for a login) communication.
+Examples of events may include a click on a link on a web page, a login, a form submission, a page view or any other time-stamped action that needs to be tracked.
+
+Events are persisted and immutable, and may be queried or aggregated to produce powerful reports.
+
+Events can also be triggered as part of Unomi’s internal processes for example
+when a rule is triggered.
+
+==== Fields
+
+Inherits all the fields from: <<Item>>
+
+|===
+| *Field* | *Type* | *Description*
+
+| eventType | String | Contains an identifier for the field type, which may be any value as Apache Unomi does not come with strict event type definitions and accepts custom events types. The system comes with built-in event types such as “view”, “form”, “login”, “updateProperties” but additional event types may of course be used by developers integrating with Apache Unomi.
+
+| sessionId | String | The unique identifier of a Session object
+
+| profileId | String | The unique identifier of a Profile object
+
+| timestamp | Date | The precise date at which the Event was received by Unomi. This date is in the https://en.wikipedia.org/wiki/ISO_8601[ISO 8601] format.
+
+| scope | String | (Optional, event type specific) An identifier for a scope
+
+| source | <<Item>> | An Item that is the source of the event. For example a web site, an application name, a web page
+
+| target | <<Item>> | An Item that is the target of the event. For example a button, a link, a file or a page
+
+| properties | Map<String,Object> | Properties for the event. These will change depending on the event type.
+
+|===
+
+==== Event types
+
+Event types are completely open, and any new event type will be accepted by Apache Unomi.
+
+Apache Unomi also comes with an extensive list of <<Built-in Event types,built-in event types>> you can find in the reference section of this manual.
+
+=== Profile
+
+By processing events, Unomi progressively builds a picture of who the user is and how they behave. This knowledge is
+embedded in `Profile` object. A profile is an `Item` with any number of properties and optional segments and scores.
+Unomi provides default properties to cover common data (name, last name, age, email, etc.) as well as default segments
+to categorize users. Unomi users are, however, free and even encouraged to create additional properties and segments to
+better suit their needs.
+
+Contrary to other Unomi items, profiles are not part of a scope since we want to be able to track the associated user
+across applications. For this reason, data collected for a given profile in a specific scope is still available to any
+scoped item that accesses the profile information.
+
+It is interesting to note that there is not necessarily a one to one mapping between users and profiles as users can be
+captured across applications and different observation contexts. As identifying information might not be available in
+all contexts in which data is collected, resolving profiles to a single physical user can become complex because
+physical users are not observed directly. Rather, their portrait is progressively patched together and made clearer as
+Unomi captures more and more traces of their actions. Unomi will merge related profiles as soon as collected data
+permits positive association between distinct profiles, usually as a result of the user performing some identifying
+action in a context where the user hadn’t already been positively identified.
+
+==== Structure definition
+
+Inherits all the fields from: <<Item>>
+
+|===
+| *Field name* | *Type* | *Description*
+
+| properties | Map<String,Object> | All the (user-facing) properties for the profile
+
+| systemProperties | Map<String,Object> | Internal properties used to track things such as goals reached, merges with other profiles, lists the profile belongs to.
+
+| segments | String set | A set of Segment identifiers that profile is (currently) associated with
+
+| scores | Map<String,Integer> | A map of scores with the score identifier as the key and the score total value as the value.
+
+| mergedWith | String | If merged with another profile, the profile identifier to the master profile is stored here
+
+| consents | Map<String,<<Consent>>> | The consents for the profile, as a map with the consent identifier as a key and the Consent object type as a value.
+
+|===
+
+==== Example
+
+In the example below, a profile for a visitor called “Bill Galileo” is detailed.
+A lot of user properties (such as first name, last name, gender, job title and more) were copied over from the CMS upon initial login.
+The profile is also part of 4 segments (leads, contacts, gender_male, age_60_70) and has a lot of different scores as well.
+It is also part of a list (systemProperties.lists), and has granted two consents for receiving newsletters.
+It has also been engaged in some goals (systemProperties.goals.*StartReached) and completed some goals (systemProperties.goals.*TargetReached)
+
+image::profile.png[]
+
+[source,json]
+----
+{
+    "itemId": "f7d1f1b9-4415-4ff1-8fee-407b109364f7",
+    "itemType": "profile",
+    "properties": {
+        "lastName": "Galileo",
+        "preferredLanguage": "en",
+        "nbOfVisits": 2,
+        "gender": "male",
+        "jobTitle": "Vice President",
+        "lastVisit": "2020-01-31T08:41:22Z",
+        "j:title": "mister",
+        "j:about": "<p> Lorem Ipsum dolor sit amet,consectetur adipisicing elit, sed doeiusmod tempor incididunt ut laboreet dolore magna aliqua. Ut enim adminim veniam, quis nostrudexercitation ullamco laboris nisi utaliquip ex ea commodo consequat.Duis aute irure dolor inreprehenderit in coluptate velit essecillum dolore eu fugiat nulla pariatur.Excepteur sint occaecat cupidatatnon proident, sunt in culpa quiofficia deserunt mollit anim id estlaborum.</p> ",
+        "firstName": "Bill",
+        "pageViewCount": {
+            "digitall": 19
+        },
+        "emailNotificationsDisabled": "true",
+        "company": "Acme Space",
+        "j:nodename": "bill",
+        "j:publicProperties": "j:about,j:firstName,j:function,j:gender,j:lastName,j:organization,j:picture,j:title",
+        "firstVisit": "2020-01-30T21:18:12Z",
+        "phoneNumber": "+1-123-555-12345",
+        "countryName": "US",
+        "city": "Las Vegas",
+        "address": "Hotel Flamingo",
+        "zipCode": "89109",
+        "email": "bill@acme.com",
+        "maritalStatus": "Married",
+        "birthDate": "1959-08-12T23:00:00.000Z",
+        "kids": 2,
+        "age": 60,
+        "income": 1000000,
+        "facebookId": "billgalileo",
+        "twitterId": "billgalileo",
+        "linkedInId": "billgalileo",
+        "leadAssignedTo": "Important Manager",
+        "nationality": "American"
+    },
+    "systemProperties": {
+        "mergeIdentifier": "bill",
+        "lists": [
+            "userListId"
+        ],
+"goals": {
+    "viewLanguagePageGoalTargetReached": "2020-02-10T19:30:31Z",
+    "downloadGoalExampleTargetReached": "2020-02-10T15:22:41Z",
+    "viewLandingPageGoalStartReached": "2020-02-10T19:30:27Z",
+    "downloadGoalExampleStartReached": "2020-02-10T19:30:27Z",
+    "optimizationTestGoalStartReached": "2020-02-10T19:30:27Z"
+}
+    },
+    "segments": [
+        "leads",
+        "age_60_70",
+        "gender_male",
+        "contacts"
+    ],
+    "scores": {
+        "scoring_9": 10,
+        "scoring_8": 0,
+        "scoring_1": 10,
+        "scoring_0": 10,
+        "_s02s6220m": 0,
+        "scoring_3": 10,
+        "_27ir92oa2": 0,
+        "scoring_2": 10,
+        "scoring_5": 10,
+        "scoring_4": 10,
+        "scoring_7": 10,
+        "scoring_6": 10,
+        "_86igp9j1f": 1,
+        "_ps8d573on": 0
+    },
+    "mergedWith": null,
+    "consents": {
+        "digitall/newsletter1": {
+            "scope": "digitall",
+            "typeIdentifier": "newsletter1",
+            "status": "GRANTED",
+            "statusDate": "2019-05-15T14:47:28Z",
+            "revokeDate": "2021-05-14T14:47:28Z"
+        },
+        "digitall/newsletter2": {
+            "scope": "digitall",
+            "typeIdentifier": "newsletter2",
+            "status": "GRANTED",
+            "statusDate": "2019-05-15T14:47:28Z",
+            "revokeDate": "2021-05-14T14:47:28Z"
+        }
+    }
+}
+----
+
+=== Persona
+
+A persona is a specialized version of a <<Profile>> object. It basically represents a "typical" profile and can be used
+notably to simulate personalized for a type of profiles. Usually personas are created from Profile data and then edited
+to represent a specific marketing persona.
+
+==== Structure definition
+
+Inherits all the fields from: <<Profile>>
+
+There are no fields specific to a Persona.
+
+==== Example
+
+In the following example a Persona represents a visitor from Europe, that can be used to match by location.
+
+[source,json]
+----
+{
+    "itemId": "europeanVisitor",
+    "itemType": "persona",
+    "properties": {
+        "description": "Represents a visitor browsing from Europe",
+        "firstName": "European",
+        "lastName": "Visitor",
+        "continent": "Europe"
+    },
+    "systemProperties": {},
+    "segments": [],
+    "scores": null,
+    "mergedWith": null,
+    "consents": {}
+}
+----
+
+=== Consent
+
+A consent represents a single instance of a consent granted/refused or revoked by a profile.
+A profile will contain multiple instances of consent identified by unique identifiers.
+
+==== Structure definition
+
+Inherits all the fields from: n/a
+
+|===
+| *Field name* | *Type* | *Description*
+
+| scope | String | The scope this consent is associated with. In the case of a website this might be the unique identifier for the site.
+
+| typeIdentifier | String | This is a unique consent type identifier, basically a unique name for the consent. Example of such types might include: “newsletter”, “personalization”, “tracking”.
+
+| status | GRANTED / DENIED / REVOKED | A copy of the profile associated with the session
+
+| statusDate | Date | The date (in ISO 8601 format) at which the current status was set
+
+| revokeDate | Date | The date (in ISO 8106 format) at which time the current status is automatically revoked.
+
+|===
+
+==== Example
+
+In this example, the consent called “newsletter” was given on the “digitall” website.
+
+[source,json]
+----
+{
+            "scope": "digitall",
+            "typeIdentifier": "newsletter",
+            "status": "GRANTED",
+            "statusDate": "2019-05-15T14:47:28Z",
+            "revokeDate": "2021-05-14T14:47:28Z"
+}
+----
+
+=== Session
+
+A session represents a period of time during which a visitor/profile has been active.
+It makes it possible to gather data and then use it for reporting and further analysis by regrouping all the events that occurred during the session.
+
+==== Structure definition
+
+Inherits all the fields from: <<Item>>
+
+|===
+| *Field name* | *Type* | *Description*
+
+| properties | Map<String,Object> | All the properties for the session. These contain information such as the browser, operating system and device used, as well as information about the location of the visitor.
+
+| systemProperties | Map<String,Object> | Not used (empty)
+
+| profileId | String | The identifier of the profile that generated the session
+
+| profile | <<Profile>> | A copy of the profile associated with the session
+
+| size | Integer | The number of view event types received during this session
+
+| duration | Integer | The duration of the session in milliseconds
+
+| lastEventDate | Date | The date of the last event that occurred in the session, in https://en.wikipedia.org/wiki/ISO_8601[ISO 8601] format.
+
+|===
+
+==== Example
+
+In this example the session contains a copy of the profile of the visitor.
+It is a visitor that has previously authentified in a CMS and who’se information was copied at the time of login from the CMS user account to the profile.
+You can also notice that the session contains the information coming from the browser’s user agent which contains the browser type, version as well as the operating system used.
+The visitor’s location is also resolve based on the IP address that was used to send events.
+
+[source,json]
+----
+{
+    "itemId": "4dcb5b74-6923-45ae-861a-6399ef88a209",
+    "itemType": "session",
+    "scope": "digitall",
+    "profileId": "f7d1f1b9-4415-4ff1-8fee-407b109364f7",
+    "profile": {
+        "itemId": "f7d1f1b9-4415-4ff1-8fee-407b109364f7",
+        "itemType": "profile",
+        "properties": {
+            "preferredLanguage": "en",
+            "nbOfVisits": 2,
+            "gender": "male",
+            "jobTitle": "Vice President",
+            "lastVisit": "2020-01-31T08:41:22Z",
+            "j:title": "mister",
+            "j:about": "<p> Lorem Ipsum dolor sit amet,consectetur adipisicing elit, sed doeiusmod tempor incididunt ut laboreet dolore magna aliqua. Ut enim adminim veniam, quis nostrudexercitation ullamco laboris nisi utaliquip ex ea commodo consequat.Duis aute irure dolor inreprehenderit in coluptate velit essecillum dolore eu fugiat nulla pariatur.Excepteur sint occaecat cupidatatnon proident, sunt in culpa quiofficia deserunt mollit anim id estlaborum.</p> ",
+            "pageViewCount": {
+                "digitall": 19
+            },
+            "emailNotificationsDisabled": "true",
+            "company": "Acme Space",
+            "j:publicProperties": "j:about,j:firstName,j:function,j:gender,j:lastName,j:organization,j:picture,j:title",
+            "firstVisit": "2020-01-30T21:18:12Z",
+            "countryName": "US",
+            "city": "Las Vegas",
+            "zipCode": "89109",
+            "maritalStatus": "Married",
+            "birthDate": "1959-08-12T23:00:00.000Z",
+            "kids": 25,
+            "age": 60,
+            "income": 1000000,
+            "leadAssignedTo": "Important Manager"
+        },
+        "systemProperties": {
+            "mergeIdentifier": "bill",
+            "lists": [
+                "_xb2bcm4wl"
+            ]
+        },
+        "segments": [
+            "leads",
+            "age_60_70",
+            "gender_male",
+            "contacts"
+        ],
+        "scores": {
+            "scoring_9": 10,
+            "scoring_8": 0,
+            "scoring_1": 10,
+            "scoring_0": 10,
+            "_s02s6220m": 0,
+            "scoring_3": 10,
+            "_27ir92oa2": 0,
+            "scoring_2": 10,
+            "scoring_5": 10,
+            "scoring_4": 10,
+            "scoring_7": 10,
+            "scoring_6": 10,
+            "_86igp9j1f": 1,
+            "_ps8d573on": 0
+        },
+        "mergedWith": null,
+        "consents": {}
+    },
+    "properties": {
+        "sessionCity": "Geneva",
+        "operatingSystemFamily": "Desktop",
+        "userAgentNameAndVersion": "Firefox@@72.0",
+        "countryAndCity": "Switzerland@@Geneva@@2660645@@6458783",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:72.0) Gecko/20100101 Firefox/72.0",
+        "userAgentName": "Firefox",
+        "sessionCountryCode": "CH",
+        "deviceName": null,
+        "sessionCountryName": "Switzerland",
+        "referringURL": "null",
+        "deviceCategory": "Apple Macintosh",
+        "pageReferringURL": "http://localhost:8080/sites/digitall/home/corporate-responsibility.html",
+        "userAgentVersion": "72.0",
+        "sessionAdminSubDiv2": 6458783,
+        "sessionAdminSubDiv1": 2660645,
+        "location": {
+            "lon": 6.1282508,
+            "lat": 46.1884341
+        },
+        "sessionIsp": "Cablecom",
+        "operatingSystemName": "Mac OS X",
+        "deviceBrand": "Apple"
+    },
+    "systemProperties": {},
+    "timeStamp": "2020-01-31T08:41:22Z",
+    "lastEventDate": "2020-01-31T08:53:32Z",
+    "size": 19,
+    "duration": 730317
+}
+----
+
+=== Segment
+
+Segments are used to group profiles together, and are based on conditions that are executed on profiles to determine
+if they are part of a segment or not.
+
+This also means that a profile may enter or leave a segment based on changes in their properties, making segments a
+highly dynamic concept.
+
+==== Structure definition
+
+Inherits all the fields from: <<MetadataItem>>
+
+|===
+| *Field name* | *Type* | *Description*
+
+| condition | <<Condition>> | The root condition for the segment. Conditions may be composed by using built-in condition types such as `booleanCondition` that can accept sub-conditions.
+
+|===
+
+==== Example
+
+[source,json]
+----
+{
+    "itemId": "age_20_30",
+    "itemType": "segment",
+    "condition": {
+        "parameterValues": {
+            "subConditions": [
+                {
+                    "parameterValues": {
+                        "propertyName": "properties.age",
+                        "comparisonOperator": "greaterThanOrEqualTo",
+                        "propertyValueInteger": 20
+                    },
+                    "type": "profilePropertyCondition"
+                },
+                {
+                    "parameterValues": {
+                        "propertyName": "properties.age",
+                        "comparisonOperator": "lessThan",
+                        "propertyValueInteger": 30
+                    },
+                    "type": "profilePropertyCondition"
+                }
+            ],
+            "operator": "and"
+        },
+        "type": "booleanCondition"
+    },
+    "metadata": {
+        "id": "age_20_30",
+        "name": "age_20_30",
+        "description": null,
+        "scope": "digitall",
+        "tags": [],
+        "enabled": true,
+        "missingPlugins": false,
+        "hidden": false,
+        "readOnly": false
+    }
+}
+----
+
+Here is an example of a simple segment definition registered using the REST API:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/segments \
+--user karaf:karaf \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+  "metadata": {
+    "id": "leads",
+    "name": "Leads",
+    "scope": "systemscope",
+    "description": "You can customize the list below by editing the leads segment.",
+    "readOnly":true
+  },
+  "condition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "operator" : "and",
+      "subConditions": [
+        {
+          "type": "profilePropertyCondition",
+          "parameterValues": {
+            "propertyName": "properties.leadAssignedTo",
+            "comparisonOperator": "exists"
+          }
+        }
+      ]
+    }
+  }
+}
+EOF
+----
+
+For more details on the conditions and how they are structured using conditions, see the next section.
+
+=== Condition
+
+Conditions are a very useful notion inside of Apache Unomi, as they are used as the basis for multiple other objects.
+Conditions may be used as parts of:
+
+- Segments
+- Rules
+- Queries
+- Campaigns
+- Goals
+- Profile filters (using to search for profiles)
+
+The result of a condition is always a boolean value of true or false.
+
+Apache Unomi provides quite a lot of built-in condition types, including boolean types that make it possible to compose conditions using operators such as `and`, `or` or `not`.
+Composition is an essential element of building more complex conditions.
+
+For a more complete list of available condition types, see the <<Built-in condition types>> reference section.
+
+==== Structure definition
+
+Inherits all the fields from: n/a
+
+|===
+| *Field name* | *Type* | *Description*
+
+| conditionTypeId | String | A condition type identifier is a string that contains a unique identifier for a condition
+type. Example condition types may include `booleanCondition`, `eventTypeCondition`, `eventPropertyCondition`, and so on.
+Plugins may implement new condition types that may implement any logic that may be needed.
+
+| parameterValues | Map<String,Object> | The parameter values are simply key-value paris that may be used to configure the condition.
+In the case of a `booleanCondition` for example one of the parameter values will be an `operator` that will contain values such as `and` or `or` and a second parameter value called `subConditions`
+that contains a list of conditions to evaluate with that operator.
+
+|===
+
+==== Example
+
+Here is an example of a complex condition:
+
+[source,json]
+----
+{
+  "condition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "operator":"or",
+      "subConditions":[
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "sessionCreated"
+          }
+        },
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "sessionReassigned"
+          }
+        }
+      ]
+    }
+  }
+}
+----
+
+As we can see in the above example we use the boolean `or` condition to check if the event type is of type `sessionCreated`
+or `sessionReassigned`.
+
+=== Rule
+
+image::unomi-rule-engine.png[Unomi Rule Engine]
+
+Apache Unomi has a built-in rule engine that is one of the most important components of its architecture.
+Every time an event is received by the server, it is evaluated against all the rules and the ones matching the incoming event will be executed.
+You can think of a rule as a structure that looks like this:
+
+    when
+        conditions
+    then
+        actions
+
+Basically when a rule is evaluated, all the conditions in the `when` part are evaluated and if the result matches (meaning it evaluates to `true`) then the actions will be executed in sequence.
+
+The real power of Apache Unomi comes from the fact that `conditions` and `actions` are fully pluggeable and that plugins may implement new conditions and/or actions to perform any task.
+You can imagine conditions checking incoming event data against third-party systems or even against authentication systesm, and actions actually pulling or pushing data to third-party systems.
+
+For example the Salesforce CRM connector is simply a set of actions that pull and push data into the CRM. It is then just a matter of setting up the proper rules with the proper conditions to determine when and how the data will be pulled or pushed into the third-party system.
+
+==== Structure definition
+
+Inherits all the fields from: <<MetadataItem>>
+
+|===
+| *Field name* | *Type* | *Description*
+
+| condition | <<Condition>> | The root condition for the rule. Conditions may be composed by using built-in condition types such as `booleanCondition` that can accept sub-conditions.
+
+| action | <<Action>> array | A list of <<Action>> object that will be executed if the condition is true.
+
+| linkedItems | String array | A list of references to objects that may have generated this rule. Goals and segments dynamically generate rules to react to incoming events. It is not recommend to manipulate rules that have linkedItems as it may break functionality.
+
+| raiseEventOnlyOnceForProfile | Boolean | If true, the rule will only be executed once for a given profile and a matching event. Warning: this functionality has a performance impact since it looks up past events.
+
+| raiseEventOnlyOnceForSession | Boolean | If true, the rule will only be executed once for a given session and a matching event. Warning: this functionality has a performance impact since it looks up past events.
+
+| priority | Integer | The priority for the rule. The lower the priority value the higher the effective priority (they are sorted by ascending order of priority)
+
+|===
+
+==== Example
+
+In this exmample we should the default `updateProperties` built-in rule that matches the `updateProperties` event and
+executes the built-in `updatePropertiesAction`
+
+[source,json]
+----
+{
+    "itemId": "updateProperties",
+    "itemType": "rule",
+    "condition": {
+        "parameterValues": {},
+        "type": "updatePropertiesEventCondition"
+    },
+    "actions": [
+        {
+            "parameterValues": {},
+            "type": "updatePropertiesAction"
+        }
+    ],
+    "linkedItems": null,
+    "raiseEventOnlyOnceForProfile": false,
+    "raiseEventOnlyOnceForSession": false,
+    "priority": 0,
+    "metadata": {
+        "id": "updateProperties",
+        "name": "Update profile/persona properties",
+        "description": "Update profile/persona properties",
+        "scope": "systemscope",
+        "tags": [],
+        "systemTags": [],
+        "enabled": true,
+        "missingPlugins": false,
+        "hidden": false,
+        "readOnly": true
+    }
+}
+----
+
+=== Action
+
+Actions are executed by rules in a sequence, and an action is only executed once the previous action has finished executing.
+If an action generates an exception, it will be logged and the execution sequence will continue unless in the case of a
+Runtime exception (such as a NullPointerException).
+
+Action use Action types that are implemented as Java classes, and as such may perform any kind of tasks that may include
+calling web hooks, setting profile properties, extracting data from the incoming request (such as resolving location from
+an IP address),  or even pulling and/or pushing data to third-party systems such as a CRM server.
+
+Apache Unomi also comes with built-in action types.
+You may find the list of built-in action types in the <<Built-in action types>> section.
+
+==== Structure definition
+
+Inherits all the fields from: n/a
+
+|===
+| *Field name* | *Type* | *Description*
+
+| actionTypeId | String | An action type identifier is a string that contains a unique identifier for a action type.
+
+| parameterValues | Map<String,Object> | The parameter values are simply key-value paris that may be used to configure the action.
+
+|===
+
+==== Example
+
+In this example of an action, taking from the `form-mapping-example.json` rule, the `setPropertyAction` action is used
+to set the `properties.firstName` profile property to a value read from the event properties called `properties.firstName`.
+The `setPropertyStrategy` is a parameter specific to this action that allows to define if existing values should be
+overridden or not.
+
+[source,json]
+----
+    {
+      "type": "setPropertyAction",
+      "parameterValues": {
+        "setPropertyName": "properties(firstName)",
+        "setPropertyValue": "eventProperty::properties(firstName)",
+        "setPropertyStrategy": "alwaysSet"
+      }
+    }
+----
+
+=== List
+
+Lists are a “manual” way to organize profiles, whereas Segments are a dynamic way to regroup them.
+List objects actually only define the list in terms of name, description and other metadata but the list of members is actually not represented in the object.
+The profiles contain references to the lists in their “systemProperties.lists” property.
+This property is an array of list identifiers so in order to retrieve all the list names for a given profile, a lookup of List objects is required using the identifiers.
+
+==== Structure definition
+
+Inherits all the fields from: <<MetadataItem>>
+
+|===
+| *Field name* | *Description*
+
+|  | No additional fields are present in this object type
+
+|===
+
+==== Example
+
+Here’s an example of a list called “First list”, along with its description, its scope, tags, etc.. . As a List object is basically a MetadataItem sub-class it simply has all the fields defined in that parent class.
+Note that the List does not contain Profiles, it is Profiles that reference the Lists, not the reverse.
+
+[source,json]
+----
+{
+    "itemId": "userListId",
+    "itemType": "userList",
+    "metadata": {
+        "id": "userListId",
+        "name": "First list",
+        "description": "Description of the first list.",
+        "scope": "digitall",
+        "tags": [],
+        "systemTags": [],
+        "enabled": true,
+        "missingPlugins": false,
+        "hidden": false,
+        "readOnly": false
+    }
+}
+----
+
+=== Goal
+
+A goal can be defined with two conditions: a start event condition and an target event condition.
+Basically the goal will be “active” when its start event condition is satisfied, and “reached” when the target event condition is true.
+Goals may also (optionally) be associated with Campaigns.
+Once a goal is “reached”, a “goal” event triggered and the profile that is currently interacting with the system will see its system properties updated to indicate which goal has been reached.
+
+==== Structure definition
+
+Inherits all the fields from: <<MetadataItem>>
+
+|===
+| *Field name* | *Type* | *Description*
+
+| startEvent | Condition | The condition that will be used to determine if this goal was activated by the current profile
+
+| targetEvent | Condition | The condition that will be used to determine if the current profile has reached the goal.
+
+| campaignId | String | If this goal was setup as part of a Campaign, the unique identifier for the campaign is stored in this field.
+
+|===
+
+==== Example
+
+In the following example, a goal called “downloadGoalExample” is started when a new session is created (we use the “sessionCreatedEventCondition” for that) and is reached when a profile downloads a file called “ACME_WP.pdf” (that’s what the “downloadEventCondition” means).
+
+[source,json]
+----
+{
+    "itemId": "downloadGoalExample",
+    "itemType": "goal",
+    "startEvent": {
+        "parameterValues": {},
+        "type": "sessionCreatedEventCondition"
+    },
+    "targetEvent": {
+        "parameterValues": {
+            "filePath": "/sites/digitall/files/PDF/Publications/ACME_WP.pdf"
+        },
+        "type": "downloadEventCondition"
+    },
+    "campaignId": "firstCampaignExample",
+    "metadata": {
+        "id": "downloadGoalExample",
+        "name": "downloadGoalExample",
+        "description": null,
+        "scope": "digitall",
+        "enabled": true,
+        "missingPlugins": false,
+        "hidden": false,
+        "readOnly": false,
+        "systemTags": [
+            "goal",
+            "downloadGoal"
+        ]
+    }
+}
+----
+
+=== Campaign
+
+A Campaign object represents a digital marketing campaign, along with conditions to enter the campaign and a specific duration, target and costs.
+
+==== Structure definition
+
+Inherits all the fields from: <<MetadataItem>>
+
+|===
+| *Field name* | *Type* | *Description*
+
+| startDate | Date | The start date of the Campaign (in ISO 8601 format)
+
+| endDate | Date | The end date of the Campaign (in ISO 8601 format)
+
+| entryCondition | <<Condition>> | The condition that must be satisfied for a profile to become a participant in the campaign
+
+| cost | Double | An indicative cost for the campaign
+
+| currency | String | The currency code (3-letter) for the cost of the campaign
+
+| primaryGoal | String | A unique identifier of the primary Goal for the campaign.
+
+| timezone | String | The timezone of the campaign identified by the TZ database name (see https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
+
+|===
+
+==== Example
+
+In the following example a campaign that starts January 1st 31, 2020 at 8:38am and finished on February 29th, 2020 at the same time has the following entry condition: the session duration must be less or equal to 3000 milliseconds (3 seconds) and the profile has viewed the “about” page on the “digitall” website.
+The cost of the campaign is USD 1’000’000 and the timezone is Europe/Zurich.
+The primary goal for the campaign is the goal we should as an example in the Goal section.
+
+[source,json]
+----
+{
+    "itemId": "firstCampaignExample",
+    "itemType": "campaign",
+    "startDate": "2020-01-31T08:38:00Z",
+    "endDate": "2020-02-29T08:38:00Z",
+    "entryCondition": {
+        "parameterValues": {
+            "subConditions": [
+                {
+                    "parameterValues": {
+                        "propertyName": "duration",
+                        "comparisonOperator": "lessThanOrEqualTo",
+                        "propertyValueInteger": 3000
+                    },
+                    "type": "sessionPropertyCondition"
+                },
+                {
+                    "parameterValues": {
+                        "pagePath": "/sites/digitall/home/about"
+                    },
+                    "type": "pageViewEventCondition"
+                }
+            ],
+            "operator": "and"
+        },
+        "type": "booleanCondition"
+    },
+    "cost": 1000000,
+    "currency": "USD",
+    "primaryGoal": "downloadGoalExample",
+    "timezone": "Europe/Zurich",
+    "metadata": {
+        "id": "firstCampaignExample",
+        "name": "firstCampaign",
+        "description": "Example of a campaign",
+        "scope": "digitall",
+        "tags": [],
+        "systemTags": [
+            "landing",
+            "campaign"
+        ],
+        "enabled": true,
+        "missingPlugins": false,
+        "hidden": false,
+        "readOnly": false
+    }
+}
+----
+
+=== Scoring plan
+
+Scoring plans make it possible to define scores that will be tracked for profiles and use conditions to increment a score when the conditions are met.
+This makes it possible to then use threshold conditions on profiles when they reach a certain score.
+
+==== Structure definition
+
+Inherits all the fields from: <<MetadataItem>>
+
+|===
+| *Field name* | *Type* | *Description*
+
+| elements | ScoringElement array | A ScoringElement is composed of:* A Condition* A Score increment valueEach element defines a separate condition (tree) that will increment the defined score for this scoring plan, making it possible to have completely different conditions to augment a score
+
+|===
+
+==== Example
+
+In this example a scoring plan contains a single element that will increment a score with an increment one 1 once the profile has viewed at least 3 pages (using the “hasSeenNPagesCondition” condition).
+
+[source,json]
+----
+{
+    "itemId": "viewMoreThan3PagesId",
+    "itemType": "scoring",
+    "elements": [
+        {
+            "condition": {
+                "parameterValues": {
+                    "value": 3,
+                    "scope": "digitall",
+                    "comparisonOperator": "greaterThanOrEqualTo"
+                },
+                "type": "hasSeenNPagesCondition"
+            },
+            "value": 1
+        }
+    ],
+    "metadata": {
+        "id": "viewMoreThan3PagesId",
+        "name": "Viewed more than 3 pages",
+        "description": null,
+        "scope": "digitall",
+        "tags": [],
+        "systemTags": [
+            "st:behavioral"
+        ],
+        "enabled": true,
+        "missingPlugins": false,
+        "hidden": false,
+        "readOnly": false
+    }
+}
+----

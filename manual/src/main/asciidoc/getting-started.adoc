@@ -18,8 +18,7 @@ in greater details what just happened.
 
 ==== Prerequisites
 
-This document assumes that you are already familiar with Unomi's <<_concepts,concepts>>. On the technical side, we
-also assume working knowledge of https://git-scm.com/[git] to be able to retrieve the code for Unomi and the example.
+This document assumes working knowledge of https://git-scm.com/[git] to be able to retrieve the code for Unomi and the example.
 Additionally, you will require a working Java 8 or above install. Refer to http://www.oracle.com/technetwork/java/javase/[http://www.oracle.com/technetwork/java/javase/] for details on how to download and install Java SE 8 or greater.
 
 ===== JDK compatibility
@@ -45,8 +44,8 @@ to get the latest information about ElasticSearch version compatibility.
 
 ===== Start Unomi
 
-Start Unomi according to the <<_five_minutes_quickstart,five minutes quick start>> or by compiling using the
-<<_building,building instructions>>. Once you have Karaf running,
+Start Unomi according to the <<Five Minutes QuickStart,five minutes quick start>> or by compiling using the
+<<Building,building instructions>>. Once you have Karaf running,
  you should wait until you see the following messages on the Karaf console:
 
 [source]
@@ -66,5 +65,6 @@ available RESTful services or retrieve an initial context at `http://localhost:8
 
 You can now find an introduction page at the following location: http://localhost:8181
 
-Also now that your service is up and running you can go look at the <<_request-examples,request examples>> to learn basic
+Also now that your service is up and running you can go look at the
+<<Request examples,request examples>> to learn basic
 requests you can do once your server is up and running.
