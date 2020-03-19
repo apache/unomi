@@ -16,20 +16,35 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLTypeResolver;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.types.resolvers.CDPProfileTypeResolver;
 
 import java.util.List;
 
+@GraphQLTypeResolver(CDPProfileTypeResolver.class)
 public interface CDPProfileInterface {
 
-    List<CDPProfileID> cdp_profileIDs(DataFetchingEnvironment environment) throws Exception;
+    @GraphQLField
+    List<CDPProfileID> cdp_profileIDs(final DataFetchingEnvironment environment) throws Exception;
 
-    List<CDPSegment> cdp_segments(List<String> viewIds, DataFetchingEnvironment environment) throws Exception;
+    @GraphQLField
+    List<CDPSegment> cdp_segments(
+            final @GraphQLName("views") List<String> viewIds,
+            final DataFetchingEnvironment environment) throws Exception;
 
-    List<CDPInterest> cdp_interests(List<String> viewIds, DataFetchingEnvironment environment) throws Exception;
+    @GraphQLField
+    List<CDPInterest> cdp_interests(
+            final @GraphQLName("views") List<String> viewIds,
+            final DataFetchingEnvironment environment) throws Exception;
 
-    List<CDPConsent> cdp_consents(DataFetchingEnvironment environment) throws Exception;
+    @GraphQLField
+    List<CDPConsent> cdp_consents(final DataFetchingEnvironment environment) throws Exception;
 
-    List<CDPList> cdp_lists(List<String> viewIds, DataFetchingEnvironment environment) throws Exception;
+    @GraphQLField
+    List<CDPList> cdp_lists(final @GraphQLName("views") List<String> viewIds,
+                            final DataFetchingEnvironment environment) throws Exception;
 
 }

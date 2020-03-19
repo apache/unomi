@@ -24,8 +24,9 @@ import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.annotations.annotationTypes.GraphQLPrettify;
 import org.apache.unomi.api.Consent;
 import org.apache.unomi.graphql.fetchers.consent.ConsentEventConnectionDataFetcher;
+import org.apache.unomi.graphql.utils.DateUtils;
 
-import java.util.Date;
+import java.time.OffsetDateTime;
 
 @GraphQLName("CDP_Consent")
 public class CDPConsent {
@@ -34,12 +35,26 @@ public class CDPConsent {
     @GraphQLField
     @GraphQLNonNull
     private String token;
+
+    @GraphQLField
     private CDPSource source;
+
+    @GraphQLField
     private CDPClient client = CDPClient.DEFAULT;
+
+    @GraphQLField
     private String type;
+
+    @GraphQLField
     private CDPConsentStatus status;
-    private Date lastUpdate;
-    private Date expiration;
+
+    @GraphQLField
+    private OffsetDateTime lastUpdate;
+
+    @GraphQLField
+    private OffsetDateTime expiration;
+
+    @GraphQLField
     private CDPProfileInterface profile;
 
     public CDPConsent(String token, Consent consent) {
@@ -47,8 +62,8 @@ public class CDPConsent {
         source = new CDPSource(consent.getScope());
         type = consent.getTypeIdentifier();
         status = CDPConsentStatus.from(consent.getStatus());
-        lastUpdate = consent.getStatusDate();
-        expiration = consent.getRevokeDate();
+        lastUpdate = DateUtils.toOffsetDateTime(consent.getStatusDate());
+        expiration = DateUtils.toOffsetDateTime(consent.getRevokeDate());
 //        TODO: CDPProfile contains list of CDPConsents, resulting a circular dependency
 //        profile = builder.profile;
     }
@@ -73,11 +88,11 @@ public class CDPConsent {
         return status;
     }
 
-    public Date getLastUpdate() {
+    public OffsetDateTime getLastUpdate() {
         return lastUpdate;
     }
 
-    public Date getExpiration() {
+    public OffsetDateTime getExpiration() {
         return expiration;
     }
 

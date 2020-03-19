@@ -35,6 +35,8 @@ import graphql.schema.GraphQLType;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.fetchers.CustomerPropertyDataFetcher;
+import org.apache.unomi.graphql.function.DateFunction;
+import org.apache.unomi.graphql.function.DateTimeFunction;
 import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
 import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
@@ -239,6 +241,9 @@ public class GraphQLSchemaUpdater {
 
     private GraphQLSchema createGraphQLSchema() {
         this.graphQLAnnotations = new GraphQLAnnotations();
+
+        this.graphQLAnnotations.registerTypeFunction(new DateTimeFunction());
+        this.graphQLAnnotations.registerTypeFunction(new DateFunction());
 
         final AnnotationsSchemaCreator.Builder schemaBuilder = AnnotationsSchemaCreator.newAnnotationsSchema();
 
