@@ -20,7 +20,7 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-import java.util.Date;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 import static org.apache.unomi.graphql.types.output.CDPProfileUpdateEvent.TYPE_NAME;
@@ -38,7 +38,7 @@ public class CDPProfileUpdateEvent extends CDPEventInterface {
             @GraphQLNonNull CDPProfile cdp_profile,
             @GraphQLNonNull CDPObject cdp_object,
             CDPGeoPoint cdp_location,
-            Date cdp_timestamp,
+            OffsetDateTime cdp_timestamp,
             List<CDPTopic> cdp_topics) {
         super(id, cdp_source, cdp_client, cdp_profileID, cdp_profile, cdp_object, cdp_location, cdp_timestamp, cdp_topics);
     }

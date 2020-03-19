@@ -21,9 +21,10 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 import org.apache.unomi.api.Event;
+import org.apache.unomi.graphql.utils.DateUtils;
 
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 @GraphQLName("CDP_Event")
@@ -56,7 +57,7 @@ public class CDPEvent {
     private CDPGeoPoint location;
 
     @GraphQLField
-    private Date timeStamp;
+    private OffsetDateTime timeStamp;
 
     @GraphQLField
     private List<CDPTopic> topics = new ArrayList<CDPTopic>();
@@ -75,7 +76,7 @@ public class CDPEvent {
         profile = new CDPProfile(event.getProfile());
         final String uri = String.format("%s:%s", event.getItemType(), event.getItemId());
         object = new CDPObject(uri, event.getItemType(), event.getItemId(), null);
-        timeStamp = event.getTimeStamp();
+        timeStamp = DateUtils.toOffsetDateTime(event.getTimeStamp());
 //        TODO: implement after unomi supports it
 //        location
 //        topics
@@ -111,7 +112,7 @@ public class CDPEvent {
         return location;
     }
 
-    public Date getTimeStamp() {
+    public OffsetDateTime getTimeStamp() {
         return timeStamp;
     }
 

@@ -22,7 +22,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.annotations.annotationTypes.GraphQLPrettify;
 
-import java.util.Date;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @GraphQLName("CDP_EventInterface")
@@ -35,7 +35,7 @@ public abstract class CDPEventInterface {
     private CDPProfile cdp_profile;
     private CDPObject cdp_object;
     private CDPGeoPoint cdp_location;
-    private Date cdp_timestamp;
+    private OffsetDateTime cdp_timestamp;
     private List<CDPTopic> cdp_topics;
 
     public CDPEventInterface(
@@ -46,7 +46,7 @@ public abstract class CDPEventInterface {
             @GraphQLNonNull @GraphQLName("cdp_profile") CDPProfile cdp_profile,
             @GraphQLNonNull @GraphQLName("cdp_object") CDPObject cdp_object,
             @GraphQLName("cdp_location") CDPGeoPoint cdp_location,
-            @GraphQLName("cdp_timestamp") Date cdp_timestamp,
+            @GraphQLName("cdp_timestamp") OffsetDateTime cdp_timestamp,
             @GraphQLName("cdp_topics") List<CDPTopic> cdp_topics) {
         this.id = id;
         this.cdp_source = cdp_source;
@@ -107,7 +107,7 @@ public abstract class CDPEventInterface {
 
     @GraphQLField
     @GraphQLPrettify
-    public Date getCdp_timestamp() {
+    public OffsetDateTime getCdp_timestamp() {
         return cdp_timestamp;
     }
 
