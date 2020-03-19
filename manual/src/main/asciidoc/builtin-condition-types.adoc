@@ -12,9 +12,9 @@
 // limitations under the License.
 //
 
-=== Built-in conditions
+=== Built-in condition types
 
-Apache Unomi comes with an extensive collection of built-in conditions. Instead of detailing them one by one you will
+Apache Unomi comes with an extensive collection of built-in condition types. Instead of detailing them one by one you will
 find here an overview of what a JSON condition descriptor looks like:
 
 [source,json]
@@ -53,14 +53,14 @@ find here an overview of what a JSON condition descriptor looks like:
 }
 ----
 
-Note that conditions have two important identifiers:
+Note that condition types have two important identifiers:
 
 - conditionEvaluator
 - queryBuilder
 
-This is because conditions can either be used to build queries or to evaluate a condition in real time. When implementing
+This is because condition types can either be used to build queries or to evaluate a condition in real time. When implementing
 a new condition type, both implementations much be provided. Here's an example an OSGi Blueprint registration for the
-above condition descriptor:
+above condition type descriptor:
 
 From https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/resources/OSGI-INF/blueprint/blueprint.xml
 
@@ -85,19 +85,19 @@ From https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/res
 ...
 ----
 
-As you can see two Java classes are used to build a single condition. You don't need to understand all these details in
-order to use conditions, but this might be interesting to know if you're interested in building your own condition
-implementations. For more details on building your own custom plugins/extensions, please refer to the corresponding
+As you can see two Java classes are used to build a single condition type. You don't need to understand all these details in
+order to use condition types, but this might be interesting to know if you're interested in building your own condition
+type implementations. For more details on building your own custom plugins/extensions, please refer to the corresponding
 sections.
 
-==== Existing condition descriptors
+==== Existing condition type descriptors
 
-Here is a non-exhaustive list of conditions built into Apache Unomi. Feel free to browse the source code if you want to
+Here is a non-exhaustive list of condition types built into Apache Unomi. Feel free to browse the source code if you want to
 discover more. But the list below should get you started with the most useful conditions:
 
 - https://github.com/apache/unomi/tree/master/plugins/baseplugin/src/main/resources/META-INF/cxs/conditions
 
-Of course it is also possible to build your own custom conditions by developing custom Unomi plugins/extensions.
+Of course it is also possible to build your own custom condition types by developing custom Unomi plugins/extensions.
 
-You will also note that some conditions can re-use a `parentCondition`. This is a way to inherit from another condition
+You will also note that some condition types can re-use a `parentCondition`. This is a way to inherit from another condition
 type to make them more specific.

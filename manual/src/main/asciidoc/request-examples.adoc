@@ -154,6 +154,6 @@ to send additional events.
 
 ==== Where to go from here
 
-* You can find more <<_useful_apache_unomi_urls,useful Apache Unomi URLs>> that can be used in the same way as the above examples.
-* You may want to know integrate the provided <<_web_tracker,web tracker>> into your web site.
-* Read the <<_twitter_sample,Twitter sample>> documentation that contains a detailed example of how to integrate with Apache Unomi.
+* You can find more <<Useful Apache Unomi URLs,useful Apache Unomi URLs>> that can be used in the same way as the above examples.
+* You may want to know integrate the provided <<Web Tracker,web tracker>> into your web site.
+* Read the <<Twitter sample,Twitter sample>> documentation that contains a detailed example of how to integrate with Apache Unomi.

@@ -23,6 +23,7 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.query.Query;
 
 import java.util.List;
 import java.util.Set;
@@ -57,7 +58,8 @@ public interface EventService {
 
     /**
      * Check if the sender is allowed to sent the speecified event. Restricted event must be explicitely allowed for a sender.
-     * @param event event to test
+     *
+     * @param event        event to test
      * @param thirdPartyId third party id
      * @return true if the event is allowed
      */
@@ -65,8 +67,9 @@ public interface EventService {
 
     /**
      * Get the third party server name, if the request is originated from a known peer
+     *
      * @param key the key
-     * @param ip the ip
+     * @param ip  the ip
      * @return server name
      */
     String authenticateThirdPartyServer(String key, String ip);
@@ -112,6 +115,14 @@ public interface EventService {
      * @return a {@link PartialList} of matching events
      */
     PartialList<Event> searchEvents(String sessionId, String[] eventTypes, String query, int offset, int size, String sortBy);
+
+    /**
+     * Retrieves {@link Event}s matching the specified {@link Query}.
+     *
+     * @param query a {@link Query} specifying which Events to retrieve
+     * @return a {@link PartialList} of {@code Event} instances matching the specified query
+     */
+    PartialList<Event> search(Query query);
 
     /**
      * Checks whether the specified event has already been raised either for the associated session or profile depending on the specified {@code session} parameter.

@@ -14,7 +14,7 @@
 === Five Minutes QuickStart
 
 1) Install JDK 8 (https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) and make sure you set the
-JAVA_HOME variable https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/ (see our <<_jdk_compatibility,Getting Started>> guide for more information on JDK compatibility)
+JAVA_HOME variable https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/ (see our <<JDK compatibility,Getting Started>> guide for more information on JDK compatibility)
 
 2) Download ElasticSearch here : https://www.elastic.co/downloads/past-releases/elasticsearch-7-4-2 (please <strong>make sure</strong> you use the proper version : 7.4.2)
 
@@ -40,5 +40,5 @@ make sure you are using the proper version.
 Next steps:
 
 - Connect to http://localhost:8181 to try our some live examples (such as the web tracker)
-- Trying our integration <<_samples,samples page>>
-- Learning more about the <<_web_tracker,web tracker>>
+- Trying our integration <<Samples,samples page>>
+- Learning more about the <<Web Tracker,web tracker>>

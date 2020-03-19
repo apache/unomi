@@ -139,8 +139,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String indexPrefix;
     private String monthlyIndexNumberOfShards;
     private String monthlyIndexNumberOfReplicas;
+    private String monthlyIndexMappingTotalFieldsLimit;
     private String numberOfShards;
     private String numberOfReplicas;
+    private String indexMappingTotalFieldsLimit;
     private BundleContext bundleContext;
     private Map<String, String> mappings = new HashMap<String, String>();
     private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
@@ -205,12 +207,20 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.monthlyIndexNumberOfReplicas = monthlyIndexNumberOfReplicas;
     }
 
+    public void setMonthlyIndexMappingTotalFieldsLimit(String monthlyIndexMappingTotalFieldsLimit) {
+        this.monthlyIndexMappingTotalFieldsLimit = monthlyIndexMappingTotalFieldsLimit;
+    }
+
     public void setNumberOfShards(String numberOfShards) {
         this.numberOfShards = numberOfShards;
     }
 
     public void setNumberOfReplicas(String numberOfReplicas) {
         this.numberOfReplicas = numberOfReplicas;
+    }
+
+    public void setIndexMappingTotalFieldsLimit(String indexMappingTotalFieldsLimit) {
+        this.indexMappingTotalFieldsLimit = indexMappingTotalFieldsLimit;
     }
 
     public void setDefaultQueryLimit(Integer defaultQueryLimit) {
@@ -647,7 +657,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         return new MetricAdapter<T>(metricsService, ".loadItemWithQuery") {
                             @Override
                             public T execute(Object... args) throws Exception {
-                                PartialList<T> r = query(QueryBuilders.idsQuery(itemType).addIds(itemId), null, clazz, 0, 1, null, null);
+                                PartialList<T> r = query(QueryBuilders.idsQuery().addIds(itemId), null, clazz, 0, 1, null, null);
                                 if (r.size() > 0) {
                                     return r.get(0);
                                 }
@@ -785,16 +795,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 logger.error("Failure : cause={} , message={}", failure.getCause(), failure.getMessage());
                             }
                         } else {
-                            logger.info("Update By Query has processed {} in {}.", response.getUpdated(), response.getTook().toString());
+                            logger.info("Update with query and script processed {} entries in {}.", response.getUpdated(), response.getTook().toString());
                         }
                         if (response.isTimedOut()) {
-                            logger.error("Update By Query ended with timeout!");
+                            logger.error("Update with query and script ended with timeout!");
                         }
                         if (response.getVersionConflicts() > 0) {
-                            logger.warn("Update By Query ended with {} Version Conflicts!", response.getVersionConflicts());
+                            logger.warn("Update with query and script ended with {} version conflicts!", response.getVersionConflicts());
                         }
                         if (response.getNoops() > 0) {
-                            logger.warn("Update By Query ended with {} noops!", response.getNoops());
+                            logger.warn("Update Bwith query and script ended with {} noops!", response.getNoops());
                         }
                     }
                     return true;
@@ -803,8 +813,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 } catch (ScriptException e) {
                     logger.error("Error in the update script : {}\n{}\n{}", e.getScript(), e.getDetailedMessage(), e.getScriptStack());
                     throw new Exception("Error in the update script");
-                } finally {
-                    return false;
                 }
             }
         }.catchingExecuteInClassLoader(true);
@@ -973,7 +981,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             .settings("{\n" +
                                     "    \"index\" : {\n" +
                                     "        \"number_of_shards\" : " + monthlyIndexNumberOfShards + ",\n" +
-                                    "        \"number_of_replicas\" : " + monthlyIndexNumberOfReplicas + "\n" +
+                                    "        \"number_of_replicas\" : " + monthlyIndexNumberOfReplicas + ",\n" +
+                                    "        \"mapping.total_fields.limit\" : " + monthlyIndexMappingTotalFieldsLimit + "\n" +
                                     "    },\n" +
                                     "    \"analysis\": {\n" +
                                     "      \"analyzer\": {\n" +
@@ -1047,7 +1056,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         createIndexRequest.settings("{\n" +
                         "    \"index\" : {\n" +
                         "        \"number_of_shards\" : " + numberOfShards + ",\n" +
-                        "        \"number_of_replicas\" : " + numberOfReplicas + "\n" +
+                        "        \"number_of_replicas\" : " + numberOfReplicas + ",\n" +
+                        "        \"mapping.total_fields.limit\" : " + indexMappingTotalFieldsLimit + "\n" +
                         "    },\n" +
                         "    \"analysis\": {\n" +
                         "      \"analyzer\": {\n" +
@@ -1263,7 +1273,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             String itemType = Item.getItemType(clazz);
 
             QueryBuilder builder = QueryBuilders.boolQuery()
-                    .must(QueryBuilders.idsQuery(itemType).addIds(item.getItemId()))
+                    .must(QueryBuilders.idsQuery().addIds(item.getItemId()))
                     .must(conditionESQueryBuilderDispatcher.buildFilter(query));
             return queryCount(builder, itemType) > 0;
         } finally {
@@ -1901,9 +1911,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         public T catchingExecuteInClassLoader(boolean logError, Object... args) {
             try {
                 return executeInClassLoader(timerName, args);
-            } catch (Exception e) {
+            } catch (Throwable t) {
                 if (logError) {
-                    logger.error("Error while executing in class loader", e);
+                    logger.error("Error while executing in class loader", t);
                 }
             }
             return null;

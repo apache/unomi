@@ -22,7 +22,7 @@ To be able to do so, we had to rework the way the data was stored inside Elastic
 
 Previously every items was stored inside the same ElasticSearch index but this is not allowed anymore in recent ElasticSearch versions.
 
-Since Apache Unomi version 1.5.0 every type of items (see section: link:#_items_and_types[Items and types]) is now stored in a dedicated separated index.
+Since Apache Unomi version 1.5.0 every type of items (see section: link:#_items[Items]) is now stored in a dedicated separated index.
 
 
 ==== API changes
@@ -54,6 +54,14 @@ Previously named: `geonames` is now using the index name `context-geonameentry`
 ===== Migration
 
 In order to migrate the data from ElasticSearch 5 to 7, Unomi provides a migration tool that is directly integrated.
+
+In these migration steps the following is assumed:
+
+- the ElasticSearch 5 installation is referred to as the `source`
+- the ElasticSearch 7 installation is referred to as the `target`
+- the Unomi 1.4 installation is completely stopped
+- the Unomi 1.5 installation has never been started (just uncompressed)
+- the Unomi 1.5 installation has been configured to connect to the `target` (ElasticSearch 7) cluster
 
 It is HIGHLY RECOMMENDED to perform a full cluster backup/snapshot of the `source` cluster, and ideally to perform the
 migration on a restore of the `source` cluster. For more information on ElasticSearch 5 snapshots and restore you can

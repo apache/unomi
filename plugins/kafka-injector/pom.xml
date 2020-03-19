@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one or more
   ~ contributor license agreements.  See the NOTICE file distributed with
@@ -15,40 +14,56 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>org.apache.unomi</groupId>
-        <artifactId>unomi-root</artifactId>
+        <artifactId>unomi-plugins</artifactId>
         <version>1.5.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>unomi-plugins</artifactId>
-    <name>Apache Unomi :: Plugins</name>
-    <description>Apache Unomi Context Server plugins</description>
-    <packaging>pom</packaging>
-
-    <modules>
-        <module>baseplugin</module>
-        <module>request</module>
-        <module>mail</module>
-        <module>optimization-test</module>
-        <module>hover-event</module>
-        <module>past-event</module>
-        <module>tracked-event</module>
-        <module>kafka-injector</module>
-    </modules>
+    <artifactId>kafka-extension</artifactId>
+    <name>Apache Unomi :: Plugins :: Kafka Injector</name>
+    <description>Apache Kafka injector for the Apache Unomi Context server</description>
+    <packaging>bundle</packaging>
 
     <dependencies>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>2.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.28</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
             <version>${project.version}</version>
-            <scope>provided</scope>
         </dependency>
-
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.9.8</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.9.8</version>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi.core</artifactId>
+            <version>6.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi.cmpn</artifactId>
+            <version>6.0.0</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -57,13 +72,17 @@
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
                 <extensions>true</extensions>
+                <inherited>true</inherited>
                 <configuration>
                     <instructions>
-                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
+                        <Export-Package>!*</Export-Package>
                         <Import-Package>
-                            sun.misc;resolution:=optional,
                             *
                         </Import-Package>
+                        <Private-Package>
+                            org.apache.unomi.kafka
+                        </Private-Package>
+                        <_dsannotations>*</_dsannotations>
                     </instructions>
                 </configuration>
             </plugin>
