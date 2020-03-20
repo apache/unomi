@@ -26,7 +26,7 @@ import java.time.OffsetDateTime;
 
 public class DateTimeFunction implements TypeFunction {
 
-    private static final DateTimeScalar DATE_TIME_SCALAR = new DateTimeScalar();
+    public static final DateTimeScalar DATE_TIME_SCALAR = new DateTimeScalar();
 
     @Override
     public String getTypeName(Class<?> aClass, AnnotatedType annotatedType) {

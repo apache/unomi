@@ -36,6 +36,7 @@ import org.apache.unomi.graphql.types.output.CDPSegment;
 
 import java.util.List;
 
+import static org.apache.unomi.graphql.CDPGraphQLConstants.SEGMENT_ARGUMENT_NAME;
 import static org.apache.unomi.graphql.types.CDPMutation.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
@@ -97,7 +98,7 @@ public class CDPMutation {
 
     @GraphQLField
     public CDPSegment createOrUpdateSegment(
-            final @GraphQLName("segment") CDPSegmentInput segmentInput,
+            final @GraphQLName(SEGMENT_ARGUMENT_NAME) CDPSegmentInput segmentInput,
             final DataFetchingEnvironment environment
     ) {
         return CreateOrUpdateSegmentCommand.create(segmentInput, environment)

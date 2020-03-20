@@ -14,40 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
+package org.apache.unomi.graphql;
 
-import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
-import graphql.annotations.annotationTypes.GraphQLName;
+public class CDPGraphQLConstants {
 
-@GraphQLName("CDP_Interest")
-public class CDPInterest {
-
-    @GraphQLID
-    @GraphQLField
-    private String topic;
-
-    @GraphQLField
-    private Double score;
-
-    public CDPInterest(@GraphQLID String topic) {
-        this.topic = topic;
-    }
-
-    public String getTopic() {
-        return topic;
-    }
-
-    public void setTopic(String topic) {
-        this.topic = topic;
-    }
-
-    public Double getScore() {
-        return score;
-    }
-
-    public void setScore(Double score) {
-        this.score = score;
-    }
+    public static final String SEGMENT_ARGUMENT_NAME = "segment";
 
 }

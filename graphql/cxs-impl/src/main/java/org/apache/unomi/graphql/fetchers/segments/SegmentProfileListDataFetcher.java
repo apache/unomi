@@ -14,40 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
+package org.apache.unomi.graphql.fetchers.segments;
 
-import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
-import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.schema.DataFetchingEnvironment;
 
-@GraphQLName("CDP_Interest")
-public class CDPInterest {
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
-    @GraphQLID
-    @GraphQLField
-    private String topic;
+public class SegmentProfileListDataFetcher extends BaseSegmentContainsDataFetcher<List<String>> {
 
-    @GraphQLField
-    private Double score;
-
-    public CDPInterest(@GraphQLID String topic) {
-        this.topic = topic;
-    }
-
-    public String getTopic() {
-        return topic;
-    }
-
-    public void setTopic(String topic) {
-        this.topic = topic;
-    }
-
-    public Double getScore() {
-        return score;
-    }
-
-    public void setScore(Double score) {
-        this.score = score;
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<String> get(DataFetchingEnvironment environment) throws Exception {
+        return getSubConditions(environment).stream()
+                .filter(condition -> "profileUserListCondition".equals(condition.getConditionTypeId()))
+                .flatMap(condition -> ((ArrayList<String>) condition.getParameter("lists")).stream())
+                .collect(Collectors.toList());
     }
 
 }
