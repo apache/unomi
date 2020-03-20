@@ -33,6 +33,7 @@ import org.stringtemplate.v4.ST;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -112,7 +113,9 @@ public class SendMailAction implements ActionExecutor {
             }
         }
 
-        event.getProfile().getSystemProperties().put("notificationAck", profileNotif);
+        event.getProfile().setSystemProperty("notificationAck", profileNotif);
+        event.getProfile().setSystemProperty("lastUpdated", new Date());
+
         persistenceService.update(event.getProfile().getItemId(), null, Profile.class, "systemProperties", event.getProfile().getSystemProperties());
 
         ST stringTemplate = new ST(template, '$', '$');

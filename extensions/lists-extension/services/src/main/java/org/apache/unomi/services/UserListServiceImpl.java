@@ -25,6 +25,7 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.lists.UserList;
 import org.apache.unomi.persistence.spi.PersistenceService;
 
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -85,14 +86,15 @@ public class UserListServiceImpl implements UserListService {
         query.setParameter("propertyValue", listId);
 
         List<Profile> profiles = persistenceService.query(query, null, Profile.class);
-        Map<String, Object> profileProps;
+        Map<String, Object> profileSystemProperties;
         for (Profile p : profiles) {
-            profileProps = p.getSystemProperties();
-            if(profileProps != null && profileProps.get("lists") != null) {
-                int index = ((List) profileProps.get("lists")).indexOf(listId);
+            profileSystemProperties = p.getSystemProperties();
+            if(profileSystemProperties != null && profileSystemProperties.get("lists") != null) {
+                int index = ((List) profileSystemProperties.get("lists")).indexOf(listId);
                 if(index != -1){
-                    ((List) profileProps.get("lists")).remove(index);
-                    persistenceService.update(p.getItemId(), null, Profile.class, "systemProperties", profileProps);
+                    ((List) profileSystemProperties.get("lists")).remove(index);
+                    profileSystemProperties.put("lastUpdated", new Date());
+                    persistenceService.update(p.getItemId(), null, Profile.class, "systemProperties", profileSystemProperties);
                 }
             }
         }

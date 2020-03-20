@@ -11,41 +11,162 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-=== Custom extensions
+=== Writing Plugins
+
+Unomi is architected so that users can provided extensions in the form of plugins.
+
+=== Types vs. instances
+
+Several extension points in Unomi rely on the concept of type: a plugin defines a prototype for what the actual
+items will be once parameterized with values known only at runtime. This is similar to the concept of classes in
+object-oriented programming: types define classes, providing the expected structure and which fields are expected to
+be provided at runtime, that are then instantiated when needed with actual values.
+
+So for example we have the following types vs instances:
+
+- ConditionTypes vs Conditions
+- ActionTypes vs Actions
+- PropertyTypes vs Properties (for profiles and sessions)
+
+=== Plugin structure
+
+Being built on top of Apache Karaf, Unomi leverages OSGi to support plugins. A Unomi plugin is, thus, an OSGi
+bundle specifying some specific metadata to tell Unomi the kind of entities it provides. A plugin can provide the
+following entities to extend Unomi, each with its associated definition (as a JSON file), located in a specific spot
+within the `META-INF/cxs/` directory of the bundle JAR file:
+
+|====
+|Entity |Location in `cxs` directory
+
+|ActionType |actions
+|ConditionType |conditions
+|Persona |personas
+|PropertyMergeStrategyType |mergers
+|PropertyType |properties then profiles or sessions subdirectory then `&lt;category name&gt;` directory
+|Rule |rules
+|Scoring |scorings
+|Segment |segments
+|ValueType |values
+|====
+
+http://aries.apache.org/modules/blueprint.html[Blueprint] is used to declare what the plugin provides and inject
+any required dependency. The Blueprint file is located, as usual, at `OSGI-INF/blueprint/blueprint.xml` in the bundle JAR file.
+
+The plugin otherwise follows a regular maven project layout and should depend on the Unomi API maven artifact:
+
+[source,xml]
+----
+<dependency>
+    <groupId>org.apache.unomi</groupId>
+    <artifactId>unomi-api</artifactId>
+    <version>...</version>
+</dependency>
+----
+
+Some plugins consists only of JSON definitions that are used to instantiate the appropriate structures at runtime
+while some more involved plugins provide code that extends Unomi in deeper ways.
+
+In both cases, plugins can provide more that one type of extension. For example, a plugin could provide both `ActionType`s and `ConditionType`s.
+
+=== Extension points
+
+In this section the value types that may be used as extension points are presented. Examples of these types will be
+given in the next section with more details.
+
+==== ActionType
+
+`ActionType`s define new actions that can be used as consequences of Rules being triggered. When a rule triggers, it
+creates new actions based on the event data and the rule internal processes, providing values for parameters defined
+in the associated `ActionType`. Example actions include: “Set user property x to value y” or “Send a message to service x”.
+
+==== ConditionType
+
+`ConditionType`s define new conditions that can be applied to items (for example to decide whether a rule needs to be
+triggered or if a profile is considered as taking part in a campaign) or to perform queries against the stored Unomi
+data. They may be implemented in Java when attempting to define a particularly complex test or one that can better be
+optimized by coding it. They may also be defined as combination of other conditions. A simple condition could be:
+“User is male”, while a more generic condition with parameters may test whether a given property has a specific value:
+“User property x has value y”.
+
+==== Persona
+
+A persona is a "virtual" profile used to represent categories of profiles, and may also be used to test how a
+personalized experience would look like using this virtual profile. A persona can define predefined properties and
+sessions. Persona definition make it possible to “emulate” a certain type of profile, e.g : US visitor, non-US visitor, etc.
+
+==== PropertyMergeStrategyType
+
+A strategy to resolve how to merge properties when merging profile together.
+
+==== PropertyType
+
+Definition for a profile or session property, specifying how possible values are constrained, if the value is
+multi-valued (a vector of values as opposed to a scalar value). `PropertyType`s can also be categorized using
+systemTags or file system structure, using sub-directories to organize definition files.
+
+==== Rule
+
+`Rule`s are conditional sets of actions to be executed in response to incoming events. Triggering of rules is guarded
+by a condition: the rule is only triggered if the associated condition is satisfied. That condition can test the
+event itself, but also the profile or the session. Once a rule triggers, a list of actions can be performed as
+consequences. Also, when rules trigger, a specific event is raised so that other parts of Unomi can react accordingly.
+
+==== Scoring
+
+`Scoring`s are set of conditions associated with a value to assign to profiles when matching so that the associated
+users can be scored along that dimension. Each scoring element is evaluated and matching profiles' scores are
+incremented with the associated value.
+
+==== Segments
+
+`Segment`s represent dynamically evaluated groups of similar profiles in order to categorize the associated users.
+To be considered part of a given segment, users must satisfies the segment’s condition. If they match, users are
+automatically added to the segment. Similarly, if at any given point during, they cease to satisfy the segment’s
+condition, they are automatically removed from it.
+
+==== Tag
+
+`Tag`s are simple labels that are used to classify all other objects inside Unomi.
+
+==== ValueType
+
+Definition for values that can be assigned to properties ("primitive" types).
+
+=== Custom plugins
 
 Apache Unomi is a pluggeable server that may be extended in many ways. This document assumes you are familiar with the
-<<_concepts,Apache Unomi concepts>> . This document is mostly a reference document on the different things that may
-be used inside an extension. If you are looking for complete samples, please see the <<_samples,samples page>>.
+<<Data Model Overview,Apache Unomi Data Model>> . This document is mostly a reference document on the different things that may
+be used inside an extension. If you are looking for complete samples, please see the <<Samples,samples page>>.
 
-==== Creating an extension
+==== Creating a plugin
 
-An extension is simply a Maven project, with a Maven pom that looks like this:
+An plugin is simply a Maven project, with a Maven pom that looks like this:
 
 [source]
 ----
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <groupId>org.apache.unomi</groupId>
-        <artifactId>unomi-extensions</artifactId>
+        <artifactId>unomi-plugins</artifactId>
         <version>${project.version}</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>unomi-extension-example</artifactId>
-    <name>Apache Unomi :: Extensions :: Example</name>
-    <description>Service implementation for the Apache Unomi Context Server extension that integrates with the Geonames database</description>
+    <artifactId>unomi-plugin-example</artifactId>
+    <name>Apache Unomi :: Plugins :: Example</name>
+    <description>A sample example of a Unomi plugin</description>
     <version>${project.version}</version>
     <packaging>bundle</packaging>
 
     <dependencies>
-        <!-- This dependency is not required but generally used in extensions -->
+        <!-- This dependency is not required but generally used in plugins -->
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
-        </dependency>    
+        </dependency>
     </dependencies>
 
     <build>
@@ -63,19 +184,21 @@ An extension is simply a Maven project, with a Maven pom that looks like this:
                         </Import-Package>
                     </instructions>
                 </configuration>
-            </plugin>    
+            </plugin>
         </plugins>
     </build>
 </project>
 ----
 
-An extension may contain many different kinds of Apache Unomi objects, as well as custom OSGi services or anything that
+A plugin may contain many different kinds of Apache Unomi objects, as well as custom OSGi services or anything that
 is needed to build your application.
 
 ==== Deployment and custom definition
 
-When you deploy a custom bundle with a custom definition (see "Predefined xxx" chapters under) for the first time, the definition will automatically be deployed at your bundle start event *if it does not exist*.
-After that if you redeploy the same bundle, the definition will not be redeployed, but you can redeploy it manually using the command `unomi:deploy-definition &lt;bundleId&gt; &lt;fileName&gt;` If you need to modify an existing
+When you deploy a custom bundle with a custom definition (see "Predefined xxx" chapters under) for the first time, the
+definition will automatically be deployed at your bundle start event *if it does not exist*.
+After that if you redeploy the same bundle, the definition will not be redeployed, but you can redeploy it manually
+using the command `unomi:deploy-definition &lt;bundleId&gt; &lt;fileName&gt;` If you need to modify an existing
 definition when deploying the module, see <<Migration patches>>.
 
 ==== Predefined segments
@@ -150,7 +273,7 @@ In this example we provide a rule that will execute when a predefined composed c
 "profileUpdatedEventCondition" is received. See below to see how predefined composed conditions are declared.
 Once the condition is matched, the actions will be executed in sequence. In this example there is only a single
 action of type "evaluateProfileSegmentsAction" that is defined so it will be executed by Apache Unomi's rule engine.
-You can also see below how custom actions may be defined. 
+You can also see below how custom actions may be defined.
 
 ==== Predefined properties
 
@@ -192,7 +315,7 @@ Here is an example of a property definition JSON file
 ==== Predefined child conditions
 
 You can define new predefined conditions that are actually conditions inheriting from a parent condition and setting
-pre-defined parameter values. You can do this by creating a JSON file in: 
+pre-defined parameter values. You can do this by creating a JSON file in:
 
 [source]
 ----
@@ -200,7 +323,7 @@ src/main/resources/META-INF/cxs/conditions
 ----
 
 Here is an example of a JSON file that defines a profileUpdateEventCondition that inherits from a parent condition of
-type eventTypeCondition. 
+type eventTypeCondition.
 
 [source]
 ----
@@ -236,7 +359,7 @@ Personas may also be pre-defined by creating JSON files in the following directo
 src/main/resources/META-INF/cxs/personas
 ----
 
-Here is an example of a persona definition JSON file: 
+Here is an example of a persona definition JSON file:
 
 [source]
 ----
@@ -278,10 +401,10 @@ Here is an example of a persona definition JSON file:
 
 You can see that it's also possible to define sessions for personas.
 
-==== Custom actions
+==== Custom action types
 
-Custom actions are a powerful way to integrate with external systems by being able to define custom logic that will
-be executed by an Apache Unomi rule. An action is defined by a JSON file created in the following directory:
+Custom action types are a powerful way to integrate with external systems by being able to define custom logic that will
+be executed by an Apache Unomi rule. An action type is defined by a JSON file created in the following directory:
 
 [source]
 ----
@@ -311,7 +434,7 @@ Here is an example of a JSON action definition:
       "multivalued": true
     }
   ]
-}    
+}
 ----
 
 The `actionExecutor` identifier refers to a service property that is defined in the OSGi Blueprint service registration.
@@ -347,17 +470,17 @@ You can note here the `actionExecutorId` that corresponds to the `actionExecutor
 
 The implementation of the action is available here : https://github.com/apache/unomi/blob/master/extensions/lists-extension/actions/src/main/java/org/apache/unomi/lists/actions/AddToListsAction.java[org.apache.unomi.lists.actions.AddToListsAction]
 
-==== Custom conditions
+==== Custom condition types
 
-Custom conditions are different from predefined child conditions because they implement their logic using Java classes.
-They are also declared by adding a JSON file into the conditions directory:
+Custom condition types are different from predefined child conditions because they implement their logic using Java classes.
+They are also declared by adding a JSON file into the `conditions` directory:
 
 [source]
 ----
 src/main/resources/META-INF/cxs/conditions
 ----
 
-Here is an example of JSON custom condition definition:
+Here is an example of JSON custom condition type definition:
 
 [source]
 ----
@@ -386,7 +509,7 @@ Here is an example of JSON custom condition definition:
 Note the `conditionEvaluator` and the `queryBuilder` values. These reference OSGi service properties that are declared
 in an OSGi Blueprint configuration file (other service definitions may also be used such as Declarative Services or even
 Java registered services). Here is an example of an OSGi Blueprint definition corresponding to the above JSON condition
-definition file.
+type definition file.
 
 [source]
 ----
@@ -413,7 +536,7 @@ src/main/resources/OSGI-INF/blueprint/blueprint.xml
 </blueprint>
 ----
 
-You can find the implementation of the two classes here : 
+You can find the implementation of the two classes here :
 
 * https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/conditions/MatchAllConditionESQueryBuilder.java[org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionESQueryBuilder]
 * https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/conditions/MatchAllConditionEvaluator.java[org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionEvaluator]

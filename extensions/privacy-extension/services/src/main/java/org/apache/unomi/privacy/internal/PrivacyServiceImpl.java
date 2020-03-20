@@ -88,6 +88,9 @@ public class PrivacyServiceImpl implements PrivacyService {
         if (profile == null) {
             return false;
         }
+        Event profileDeletedEvent = new Event("profileDeleted", null, profile, null, null, profile, new Date());
+        profileDeletedEvent.setPersistent(true);
+        eventService.send(profileDeletedEvent);
         // we simply overwrite the existing profile with an empty one.
         Profile emptyProfile = new Profile(profileId);
         profileService.save(emptyProfile);

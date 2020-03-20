@@ -132,6 +132,20 @@ public class Profile extends Item {
     }
 
     /**
+     * Sets a system property, overwriting an existing one if it existed. This call will also created the system
+     * properties hash map if it didn't exist.
+     * @param key the key for the system property hash map
+     * @param value the value for the system property hash map
+     * @return the previous value object if it existing.
+     */
+    public Object setSystemProperty(String key, Object value) {
+        if (this.systemProperties == null) {
+            this.systemProperties = new LinkedHashMap<>();
+        }
+        return this.systemProperties.put(key, value);
+    }
+
+    /**
      * {@inheritDoc}
      *
      * Note that Profiles are always in the shared system scope ({@link Metadata#SYSTEM_SCOPE}).
