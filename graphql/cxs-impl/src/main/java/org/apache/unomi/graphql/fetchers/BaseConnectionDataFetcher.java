@@ -17,10 +17,13 @@
 
 package org.apache.unomi.graphql.fetchers;
 
+import com.google.common.base.Strings;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
+import org.apache.unomi.graphql.types.input.CDPOrderByInput;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -69,7 +72,7 @@ public abstract class BaseConnectionDataFetcher<T> extends BaseDataFetcher<T> {
     }
 
     protected Condition createPropertyCondition(final String propertyName, final String operator, final String propertyValueName, final Object propertyValue, DefinitionsService definitionsService) {
-        final Condition profileIdCondition = new Condition(definitionsService.getConditionType(entityName + "PropertyCondition"));
+        final Condition profileIdCondition = new Condition(definitionsService.getConditionType(entityName));
 
         profileIdCondition.setParameter("propertyName", propertyName);
         profileIdCondition.setParameter("comparisonOperator", operator);
@@ -128,5 +131,27 @@ public abstract class BaseConnectionDataFetcher<T> extends BaseDataFetcher<T> {
 
         rootCondition.setParameter("subConditions", rootSubConditions);
         return rootCondition;
+    }
+
+    protected Query buildQuery(final Condition condition, final List<CDPOrderByInput> orderByInputs, final ConnectionParams params) {
+        final Query query = new Query();
+        query.setCondition(condition);
+
+        if (params != null) {
+            query.setOffset(params.getFirst());
+            query.setLimit(params.getSize());
+        }
+
+        if (orderByInputs != null) {
+            final String sortBy = orderByInputs.stream()
+                    .map(CDPOrderByInput::asString)
+                    .collect(Collectors.joining(","));
+
+            if (!Strings.isNullOrEmpty(sortBy)) {
+                query.setSortby(sortBy);
+            }
+        }
+
+        return query;
     }
 }

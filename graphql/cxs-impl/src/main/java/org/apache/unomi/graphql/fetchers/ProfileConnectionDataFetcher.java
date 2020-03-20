@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 public abstract class ProfileConnectionDataFetcher extends BaseConnectionDataFetcher<CDPProfileConnection> {
 
     public ProfileConnectionDataFetcher() {
-        super("profile");
+        super("profilePropertyCondition");
     }
 
     protected CDPProfileConnection createProfileConnection(PartialList<Profile> profiles) {

@@ -24,14 +24,17 @@ import org.apache.unomi.graphql.fetchers.event.FindEventsConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.FindProfilesConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.ProfileDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.PropertiesConnectionDataFetcher;
+import org.apache.unomi.graphql.fetchers.segment.FindSegmentsConnectionDataFetcher;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPOrderByInput;
 import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
+import org.apache.unomi.graphql.types.input.CDPSegmentFilterInput;
 import org.apache.unomi.graphql.types.output.CDPEventConnection;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.CDPProfileConnection;
 import org.apache.unomi.graphql.types.output.CDPPropertyConnection;
+import org.apache.unomi.graphql.types.output.CDPSegmentConnection;
 
 import java.util.List;
 
@@ -78,5 +81,16 @@ public class CDPQuery {
                                          final @GraphQLName("before") String before,
                                          final DataFetchingEnvironment environment) {
         return new FindEventsConnectionDataFetcher(filter, orderBy).get(environment);
+    }
+
+    @GraphQLField
+    public CDPSegmentConnection findSegments(final @GraphQLName("filter") CDPSegmentFilterInput filter,
+                                             final @GraphQLName("orderBy") List<CDPOrderByInput> orderBy,
+                                             final @GraphQLName("first") Integer first,
+                                             final @GraphQLName("after") String after,
+                                             final @GraphQLName("last") Integer last,
+                                             final @GraphQLName("before") String before,
+                                             final DataFetchingEnvironment environment) {
+        return new FindSegmentsConnectionDataFetcher(filter, orderBy).get(environment);
     }
 }

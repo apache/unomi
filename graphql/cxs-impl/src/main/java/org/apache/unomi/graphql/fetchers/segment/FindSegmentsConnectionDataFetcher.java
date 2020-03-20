@@ -15,43 +15,50 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.graphql.fetchers.profile;
+package org.apache.unomi.graphql.fetchers.segment;
 
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
+import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.graphql.fetchers.ConnectionParams;
-import org.apache.unomi.graphql.fetchers.ProfileConnectionDataFetcher;
+import org.apache.unomi.graphql.fetchers.SegmentConnectionDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.input.CDPOrderByInput;
-import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;
-import org.apache.unomi.graphql.types.output.CDPProfileConnection;
+import org.apache.unomi.graphql.types.input.CDPSegmentFilterInput;
+import org.apache.unomi.graphql.types.output.CDPSegmentConnection;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
-public class FindProfilesConnectionDataFetcher extends ProfileConnectionDataFetcher {
+public class FindSegmentsConnectionDataFetcher extends SegmentConnectionDataFetcher {
 
-    private final CDPProfileFilterInput filterInput;
+    private final CDPSegmentFilterInput filterInput;
+
     private final List<CDPOrderByInput> orderByInput;
 
-    public FindProfilesConnectionDataFetcher(CDPProfileFilterInput filterInput, List<CDPOrderByInput> orderByInput) {
+    public FindSegmentsConnectionDataFetcher(CDPSegmentFilterInput filterInput, List<CDPOrderByInput> orderByInput) {
         this.filterInput = filterInput;
         this.orderByInput = orderByInput;
     }
 
     @Override
-    public CDPProfileConnection get(DataFetchingEnvironment environment) throws Exception {
+    public CDPSegmentConnection get(DataFetchingEnvironment environment) {
         final ServiceManager serviceManager = environment.getContext();
         final ConnectionParams params = parseConnectionParams(environment);
 
-        final Condition condition = createProfileFilterInputCondition(
-                filterInput, params.getAfter(), params.getBefore(), serviceManager.getDefinitionsService());
+        final Condition condition = createSegmentFilterInputCondition(filterInput, params.getAfter(), params.getBefore(), serviceManager.getDefinitionsService());
         final Query query = buildQuery(condition, orderByInput, params);
+        final PartialList<Metadata> metas = serviceManager.getSegmentService().getSegmentMetadatas(query);
 
-        PartialList<Profile> profiles = serviceManager.getProfileService().search(query, Profile.class);
+        final List<Segment> segmentList = metas.getList().stream()
+                .map(meta -> serviceManager.getSegmentService().getSegmentDefinition(meta.getId()))
+                .collect(Collectors.toList());
 
-        return createProfileConnection(profiles);
+        PartialList<Segment> segments = new PartialList<>(segmentList, metas.getOffset(), metas.getPageSize(), metas.getTotalSize(), metas.getTotalSizeRelation());
+
+        return createSegmentConnection(segments);
     }
 }

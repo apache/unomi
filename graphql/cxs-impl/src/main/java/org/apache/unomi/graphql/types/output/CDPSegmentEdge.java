@@ -24,19 +24,19 @@ import graphql.annotations.annotationTypes.GraphQLNonNull;
 public class CDPSegmentEdge {
 
     @GraphQLField
-    private CDPSegment edge;
+    private CDPSegment node;
 
     @GraphQLNonNull
     @GraphQLField
     private String cursor;
 
-    public CDPSegmentEdge(CDPSegment edge, @GraphQLNonNull String cursor) {
-        this.edge = edge;
+    public CDPSegmentEdge(CDPSegment node, @GraphQLNonNull String cursor) {
+        this.node = node;
         this.cursor = cursor;
     }
 
-    public CDPSegment getEdge() {
-        return edge;
+    public CDPSegment getNode() {
+        return node;
     }
 
     public String getCursor() {

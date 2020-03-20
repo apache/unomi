@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public abstract class EventConnectionDataFetcher extends BaseConnectionDataFetcher<CDPEventConnection> {
 
     public EventConnectionDataFetcher() {
-        super("event");
+        super("eventPropertyCondition");
     }
 
     protected CDPEventConnection createEventConnection(PartialList<Event> events) {
