@@ -26,7 +26,7 @@ import java.util.List;
 public class CDPSegmentConnection {
 
     @GraphQLField
-    private List<CDPEventEdge> edges;
+    private List<CDPSegmentEdge> edges;
 
     @GraphQLField
     private CDPPageInfo pageInfo;
@@ -35,12 +35,12 @@ public class CDPSegmentConnection {
         this(new ArrayList<>(), new CDPPageInfo());
     }
 
-    public CDPSegmentConnection(List<CDPEventEdge> edges, CDPPageInfo pageInfo) {
+    public CDPSegmentConnection(List<CDPSegmentEdge> edges, CDPPageInfo pageInfo) {
         this.edges = edges;
         this.pageInfo = pageInfo;
     }
 
-    public List<CDPEventEdge> getEdges() {
+    public List<CDPSegmentEdge> getEdges() {
         return edges;
     }
 

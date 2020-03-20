@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 public class PropertiesConnectionDataFetcher extends BaseConnectionDataFetcher<CDPPropertyConnection> {
 
     public PropertiesConnectionDataFetcher() {
-        super("profile");
+        super("profilePropertyCondition");
     }
 
     @Override

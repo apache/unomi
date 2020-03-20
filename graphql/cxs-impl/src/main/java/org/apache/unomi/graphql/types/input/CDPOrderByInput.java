@@ -59,6 +59,6 @@ public class CDPOrderByInput {
         } else if (sortOrder == null || CDPSortOrder.UNSPECIFIED == sortOrder) {
             return fieldName;
         }
-        return String.format("%s:%s", fieldName, sortOrder.toString());
+        return String.format("%s:%s", fieldName, sortOrder.toString().toLowerCase());
     }
 }
