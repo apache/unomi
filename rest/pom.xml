@@ -30,14 +30,38 @@
     <description>Apache Unomi Context Server REST API</description>
     <packaging>bundle</packaging>
 
-    <pluginRepositories>
-        <pluginRepository>
-            <id>miredot</id>
-            <name>Miredot Releases</name>
-            <url>https://secure-nexus.miredot.com/content/repositories/miredot/</url>
-        </pluginRepository>
-    </pluginRepositories>
-
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId};blueprint.aries.xml-validation:=false</Bundle-SymbolicName>
+                        <Import-Package>
+                            javax.ws.rs,
+                            javax.ws.rs.core,
+                            javax.ws.rs.container,
+                            org.apache.cxf.jaxrs.provider,
+                            org.apache.cxf.jaxrs.swagger,
+                            org.osgi.service.blueprint,
+                            io.swagger.annotations,
+                            io.swagger.models,
+                            io.swagger.jaxrs.config,
+                            io.swagger.jaxrs.listing,
+                            com.fasterxml.jackson.jaxrs.base,
+                            com.fasterxml.jackson.jaxrs.json,
+                            javax.annotation;version="[1.2,2)",
+                            *
+                        </Import-Package>
+                        <Export-Package>
+                        </Export-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
     <dependencies>
         <dependency>
             <groupId>org.apache.unomi</groupId>
@@ -78,6 +102,16 @@
             <artifactId>cxf-rt-rs-security-cors</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.cxf</groupId>
+            <artifactId>cxf-rt-rs-service-description-swagger</artifactId>
+            <version>3.3.5</version>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.ws.rs</groupId>
+            <artifactId>jakarta.ws.rs-api</artifactId>
+            <version>2.1.6</version>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.jaxrs</groupId>
             <artifactId>jackson-jaxrs-json-provider</artifactId>
         </dependency>
@@ -106,253 +140,4 @@
         </dependency>-->
     </dependencies>
 
-    <profiles>
-        <profile>
-            <id>rest-doc-jdk8</id>
-            <activation>
-                <os>
-                    <family>!windows</family>
-                </os>
-                <jdk>
-                    [1.6,1.10)
-                </jdk>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>com.qmino</groupId>
-                        <artifactId>miredot-plugin</artifactId>
-                        <version>2.1.2</version>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>restdoc</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                        <configuration>
-                            <licence>cHJvamVjdHxvcmcuYXBhY2hlLnVub21pLnVub21pLXJlc3R8MjAyMC0wMi0yOHx0cnVlfC0xI01Dd0NGQ01pMDRxTFZ6LzJ4SG82MjAranZITnRLYWovQWhRcG4vS01jdTU2NXpOWkRpUzcwQXMrdC96bVdRPT0=</licence>
-                            <output>
-                                <title>Documentation for Apache Unomi's RESTful API ${project.version}</title>
-                                <html>
-                                    <!-- optional html configuration -->
-                                    <location>${project.parent.build.directory}/staging/rest-api-doc</location>
-                                </html>
-                                <raml />
-                            </output>
-                            <restModel>
-                                <restFramework>
-                                    <name>jax-rs</name>
-                                    <cxfServiceConfig>
-                                        <item>src/main/resources/OSGI-INF/blueprint/blueprint.xml</item>
-                                    </cxfServiceConfig>
-                                </restFramework>
-                                <httpStatusCodes>
-                                    <httpStatusCode>
-                                        <httpCode>200</httpCode>
-                                        <document>always</document>
-                                        <defaultMessage>The service call has completed successfully.</defaultMessage>
-                                    </httpStatusCode>
-                                    <httpStatusCode>
-                                        <httpCode>401</httpCode>
-                                        <document>explicit: com.acme.exceptions.AuthorizationException</document>
-                                        <defaultMessage>The user is not authorized to use this service.</defaultMessage>
-                                    </httpStatusCode>
-                                    <httpStatusCode>
-                                        <httpCode>412</httpCode>
-                                        <document>put,post</document>
-                                        <defaultMessage>Invalid JSON/XML input.</defaultMessage>
-                                    </httpStatusCode>
-                                    <httpStatusCode>
-                                        <httpCode>500</httpCode>
-                                        <document>always</document>
-                                        <defaultMessage>The service call has not succeeded.</defaultMessage>
-                                        <sticky>true</sticky> <!-- Document always, even if there is an @statuscode tag -->
-                                    </httpStatusCode>
-                                </httpStatusCodes>
-                                <externalSources>
-                                    <sourceDirs>
-                                        <sourceDir>../api/src/main/java</sourceDir>
-                                    </sourceDirs>
-                                </externalSources>
-                            </restModel>
-                            <analysis>
-                                <checks>
-                                    <JAVADOC_MISSING_SUMMARY>warn</JAVADOC_MISSING_SUMMARY>
-                                    <JAVADOC_MISSING_INTERFACEDOCUMENTATION>warn</JAVADOC_MISSING_INTERFACEDOCUMENTATION>
-                                    <JAVADOC_MISSING_PARAMETER_DOCUMENTATION>warn</JAVADOC_MISSING_PARAMETER_DOCUMENTATION>
-                                    <JAVADOC_MISSING_EXCEPTION_DOCUMENTATION>warn</JAVADOC_MISSING_EXCEPTION_DOCUMENTATION>
-                                    <JAVADOC_MISSING_AUTHORS>ignore</JAVADOC_MISSING_AUTHORS>
-                                    <JAXRS_MISSING_PRODUCES>warn</JAXRS_MISSING_PRODUCES>
-                                    <JAXRS_MISSING_CONSUMES>warn</JAXRS_MISSING_CONSUMES>
-                                    <JAXRS_MISSING_PATH_PARAM>warn</JAXRS_MISSING_PATH_PARAM>
-                                    <REST_UNMAPPED_EXCEPTION>warn</REST_UNMAPPED_EXCEPTION>
-                                    <UNREACHABLE_RESOURCE>warn</UNREACHABLE_RESOURCE>
-                                    <PARTIAL_RESOURCE_OVERLAP>warn</PARTIAL_RESOURCE_OVERLAP>
-                                </checks>
-                            </analysis>
-                        </configuration>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-javadoc-plugin</artifactId>
-                        <configuration>
-                            <tags>
-                                <tag>
-                                    <name>summary</name>
-                                    <placement>a</placement>
-                                    <head>MireDot summary (resource title)</head>
-                                </tag>
-                                <tag>
-                                    <name>title</name>
-                                    <placement>a</placement>
-                                    <head>MireDot title (resource title)</head>
-                                </tag>
-                                <tag>
-                                    <name>servicetag</name>
-                                    <placement>a</placement>
-                                    <head>MireDot resource tag (label)</head>
-                                </tag>
-                                <tag>
-                                    <name>statuscode</name>
-                                    <placement>a</placement>
-                                    <head>MireDot resource status code(s)</head>
-                                </tag>
-                                <tag>
-                                    <name>responseheader</name>
-                                    <placement>a</placement>
-                                    <head>MireDot response header</head>
-                                </tag>
-                            </tags>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>rest-doc-jdk10</id>
-            <activation>
-                <os>
-                    <family>!windows</family>
-                </os>
-                <jdk>
-                    1.10
-                </jdk>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>com.qmino</groupId>
-                        <artifactId>miredot-plugin</artifactId>
-                        <version>2.2.1-Java10</version>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>restdoc</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                        <configuration>
-                            <licence>cHJvamVjdHxvcmcuYXBhY2hlLnVub21pLnVub21pLXJlc3R8MjAyMC0wMi0yOHx0cnVlfC0xI01Dd0NGQ01pMDRxTFZ6LzJ4SG82MjAranZITnRLYWovQWhRcG4vS01jdTU2NXpOWkRpUzcwQXMrdC96bVdRPT0=</licence>
-                            <output>
-                                <title>Documentation for Apache Unomi's RESTful API ${project.version}</title>
-                                <html>
-                                    <!-- optional html configuration -->
-                                    <location>${project.parent.build.directory}/staging/rest-api-doc</location>
-                                </html>
-                                <raml />
-                            </output>
-                            <restModel>
-                                <restFramework>
-                                    <name>jax-rs</name>
-                                    <cxfServiceConfig>
-                                        <item>src/main/resources/OSGI-INF/blueprint/blueprint.xml</item>
-                                    </cxfServiceConfig>
-                                </restFramework>
-                                <httpStatusCodes>
-                                    <httpStatusCode>
-                                        <httpCode>200</httpCode>
-                                        <document>always</document>
-                                        <defaultMessage>The service call has completed successfully.</defaultMessage>
-                                    </httpStatusCode>
-                                    <httpStatusCode>
-                                        <httpCode>401</httpCode>
-                                        <document>explicit: com.acme.exceptions.AuthorizationException</document>
-                                        <defaultMessage>The user is not authorized to use this service.</defaultMessage>
-                                    </httpStatusCode>
-                                    <httpStatusCode>
-                                        <httpCode>412</httpCode>
-                                        <document>put,post</document>
-                                        <defaultMessage>Invalid JSON/XML input.</defaultMessage>
-                                    </httpStatusCode>
-                                    <httpStatusCode>
-                                        <httpCode>500</httpCode>
-                                        <document>always</document>
-                                        <defaultMessage>The service call has not succeeded.</defaultMessage>
-                                        <sticky>true</sticky> <!-- Document always, even if there is an @statuscode tag -->
-                                    </httpStatusCode>
-                                </httpStatusCodes>
-                                <externalSources>
-                                    <sourceDirs>
-                                        <sourceDir>../api/src/main/java</sourceDir>
-                                    </sourceDirs>
-                                </externalSources>
-                            </restModel>
-                            <analysis>
-                                <checks>
-                                    <JAVADOC_MISSING_SUMMARY>warn</JAVADOC_MISSING_SUMMARY>
-                                    <JAVADOC_MISSING_INTERFACEDOCUMENTATION>warn</JAVADOC_MISSING_INTERFACEDOCUMENTATION>
-                                    <JAVADOC_MISSING_PARAMETER_DOCUMENTATION>warn</JAVADOC_MISSING_PARAMETER_DOCUMENTATION>
-                                    <JAVADOC_MISSING_EXCEPTION_DOCUMENTATION>warn</JAVADOC_MISSING_EXCEPTION_DOCUMENTATION>
-                                    <JAVADOC_MISSING_AUTHORS>ignore</JAVADOC_MISSING_AUTHORS>
-                                    <JAXRS_MISSING_PRODUCES>warn</JAXRS_MISSING_PRODUCES>
-                                    <JAXRS_MISSING_CONSUMES>warn</JAXRS_MISSING_CONSUMES>
-                                    <JAXRS_MISSING_PATH_PARAM>warn</JAXRS_MISSING_PATH_PARAM>
-                                    <REST_UNMAPPED_EXCEPTION>warn</REST_UNMAPPED_EXCEPTION>
-                                    <UNREACHABLE_RESOURCE>warn</UNREACHABLE_RESOURCE>
-                                    <PARTIAL_RESOURCE_OVERLAP>warn</PARTIAL_RESOURCE_OVERLAP>
-                                </checks>
-                            </analysis>
-                        </configuration>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-javadoc-plugin</artifactId>
-                        <configuration>
-                            <tags>
-                                <tag>
-                                    <name>summary</name>
-                                    <placement>a</placement>
-                                    <head>MireDot summary (resource title)</head>
-                                </tag>
-                                <tag>
-                                    <name>title</name>
-                                    <placement>a</placement>
-                                    <head>MireDot title (resource title)</head>
-                                </tag>
-                                <tag>
-                                    <name>servicetag</name>
-                                    <placement>a</placement>
-                                    <head>MireDot resource tag (label)</head>
-                                </tag>
-                                <tag>
-                                    <name>statuscode</name>
-                                    <placement>a</placement>
-                                    <head>MireDot resource status code(s)</head>
-                                </tag>
-                                <tag>
-                                    <name>responseheader</name>
-                                    <placement>a</placement>
-                                    <head>MireDot response header</head>
-                                </tag>
-                            </tags>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
-
-    <build>
-    </build>
 </project>

@@ -21,9 +21,12 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 
+import javax.xml.bind.annotation.XmlRootElement;
+
 /**
  * Created by amidani on 24/03/2017.
  */
+@XmlRootElement
 public class UserList extends MetadataItem{
 
     /**

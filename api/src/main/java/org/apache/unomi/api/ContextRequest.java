@@ -25,6 +25,7 @@ import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
 
+import javax.xml.bind.annotation.XmlRootElement;
 import java.util.List;
 import java.util.Map;
 
@@ -48,6 +49,7 @@ import java.util.Map;
  * @see ContextResponse
  * @see Event
  */
+@XmlRootElement
 public class ContextRequest {
 
     private Item source;

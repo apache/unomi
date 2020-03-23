@@ -33,6 +33,7 @@ import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.List;
+import io.swagger.annotations.*;
 
 /**
  * A JAX-RS endpoint to manage {@link Segment}s.
@@ -44,6 +45,8 @@ import java.util.List;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/")
+@Api(value = "/segments")
 public class SegmentServiceEndPoint {
 
     private static final Logger logger = LoggerFactory.getLogger(SegmentServiceEndPoint.class.getName());
@@ -72,6 +75,8 @@ public class SegmentServiceEndPoint {
      *                  a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @return a {@link PartialList} of profiles matching the specified segment
      */
+
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/{segmentID}/match")
     public PartialList<Profile> getMatchingIndividuals(@PathParam("segmentID") String segmentId, @QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
@@ -97,6 +102,7 @@ public class SegmentServiceEndPoint {
      * @param segmentId the identifier of the segment against which we want to check the profile
      * @return {@code true} if the specified profile is in the specified segment, {@code false} otherwise
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/{segmentID}/match/{profile}")
     public Boolean isProfileInSegment(@PathParam("profile") Profile profile, @PathParam("segmentID") String segmentId) {
@@ -115,6 +121,8 @@ public class SegmentServiceEndPoint {
      *
      * @return a List of the 50 first segment metadata
      */
+
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/")
     public List<Metadata> getSegmentMetadatas(@QueryParam("offset") @DefaultValue("0") int offset, @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
@@ -128,6 +136,7 @@ public class SegmentServiceEndPoint {
      * @param segmentId the segment identifier
      * @return a list of Segment/Scoring Metadata depending on the specified segment
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/{segmentID}/impacted")
     public DependentMetadata getSegmentDependentMetadata(@PathParam("segmentID") String segmentId) {
@@ -151,6 +160,7 @@ public class SegmentServiceEndPoint {
      * @param query the query that the segments must match for their metadata to be retrieved
      * @return a {@link PartialList} of segment metadata
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @POST
     @Path("/query")
     public PartialList<Metadata> getListMetadatas(Query query) {
@@ -163,6 +173,7 @@ public class SegmentServiceEndPoint {
      * @param segmentId the identifier of the segment to be retrieved
      * @return the segment identified by the specified identifier or {@code null} if no such segment exists
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/{segmentID}")
     public Segment getSegmentDefinition(@PathParam("segmentID") String segmentId) {
@@ -179,6 +190,7 @@ public class SegmentServiceEndPoint {
      * @param validate  whether or not to perform validation
      * @return a list of impacted segment metadata if any or an empty list if none were found or validation was skipped
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @DELETE
     @Path("/{segmentID}")
     public DependentMetadata removeSegmentDefinition(@PathParam("segmentID") String segmentId, @QueryParam("validate") boolean validate) {

@@ -19,22 +19,22 @@
 <blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
            xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
            xmlns:jaxrs="http://cxf.apache.org/blueprint/jaxrs"
+           xmlns:cxf="http://cxf.apache.org/blueprint/core"
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
-  http://cxf.apache.org/blueprint/jaxrs http://cxf.apache.org/schemas/blueprint/jaxrs.xsd
+           http://cxf.apache.org/blueprint/core http://cxf.apache.org/schemas/blueprint/core.xsd http://cxf.apache.org/jaxrs
+            http://cxf.apache.org/blueprint/jaxrs http://cxf.apache.org/schemas/blueprint/jaxrs.xsd
 
   http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
     <cm:property-placeholder persistent-id="org.apache.unomi.rest.segmentserviceendpoint"
                              update-strategy="reload">
     </cm:property-placeholder>
 
-    <!--
     <cxf:bus>
         <cxf:features>
-            <cxf:logging/>
+            <cxf:logging />
         </cxf:features>
     </cxf:bus>
-    -->
 
     <bean id="cors-filter" class="org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter"/>
     <bean id="jacksonMapper" class="org.apache.unomi.persistence.spi.CustomObjectMapper"/>
@@ -60,6 +60,19 @@
         <!--property name="redirectURI" value="/login.jsp"/-->
     </bean>
 
+    <!-- CXF Swagger2Feature -->
+    <bean id="swagger2Feature" class="org.apache.cxf.jaxrs.swagger.Swagger2Feature">
+        <property name="basePath" value="/cxs"/>
+        <property name="version" value="1.5.0"/>
+        <property name="title" value="Apache Unomi Swagger API"/>
+        <property name="usePathBasedConfig" value="true"/>
+    </bean>
+
+    <cxf:bus>
+        <cxf:features>
+            <cxf:logging/>
+        </cxf:features>
+    </cxf:bus>
     <jaxrs:server address="/segments" id="restSegmentService">
         <jaxrs:providers>
             <ref component-id="jaxb-provider"/>
@@ -70,6 +83,9 @@
         <jaxrs:serviceBeans>
             <ref component-id="segmentServiceEndPoint"/>
         </jaxrs:serviceBeans>
+        <jaxrs:features>
+            <ref component-id="swagger2Feature"/>
+        </jaxrs:features>
     </jaxrs:server>
 
     <jaxrs:server address="/userList" id="restUserListService">
@@ -82,6 +98,9 @@
         <jaxrs:serviceBeans>
             <ref component-id="userListServiceEndPoint"/>
         </jaxrs:serviceBeans>
+        <jaxrs:features>
+            <ref component-id="swagger2Feature"/>
+        </jaxrs:features>
     </jaxrs:server>
 
     <jaxrs:server address="/scoring" id="restScoringService">
@@ -94,6 +113,9 @@
         <jaxrs:serviceBeans>
             <ref component-id="scoringServiceEndPoint"/>
         </jaxrs:serviceBeans>
+        <jaxrs:features>
+            <ref component-id="swagger2Feature"/>
+        </jaxrs:features>
     </jaxrs:server>
 
     <jaxrs:server address="/definitions" id="restDefinitionsService">
@@ -106,6 +128,9 @@
         <jaxrs:serviceBeans>
             <ref component-id="definitionsServiceEndPoint"/>
         </jaxrs:serviceBeans>
+        <jaxrs:features>
+            <ref component-id="swagger2Feature"/>
+        </jaxrs:features>
     </jaxrs:server>
 
     <jaxrs:server address="/goals" id="restGoalsService">
@@ -118,6 +143,9 @@
         <jaxrs:serviceBeans>
             <ref component-id="goalsServiceEndPoint"/>
         </jaxrs:serviceBeans>
+        <jaxrs:features>
+            <ref component-id="swagger2Feature"/>
+        </jaxrs:features>
     </jaxrs:server>
 
     <jaxrs:server address="/campaigns" id="restCampaignsService">
@@ -130,6 +158,9 @@
         <jaxrs:serviceBeans>
             <ref component-id="campaignServiceEndPoint"/>
         </jaxrs:serviceBeans>
+        <jaxrs:features>
+            <ref component-id="swagger2Feature"/>
+        </jaxrs:features>
     </jaxrs:server>
 
     <jaxrs:server address="/rules" id="restRulesService">
@@ -142,6 +173,9 @@
         <jaxrs:serviceBeans>
             <ref component-id="rulesServiceEndPoint"/>
         </jaxrs:serviceBeans>
+        <jaxrs:features>
+            <ref component-id="swagger2Feature"/>
+        </jaxrs:features>
     </jaxrs:server>
 
     <jaxrs:server address="/profiles" id="restProfileService">
@@ -154,6 +188,9 @@
         <jaxrs:serviceBeans>
             <ref component-id="profileServiceEndPoint"/>
         </jaxrs:serviceBeans>
+        <jaxrs:features>
+            <ref component-id="swagger2Feature"/>
+        </jaxrs:features>
     </jaxrs:server>
 
     <jaxrs:server address="/cluster" id="restClusterService">
@@ -166,6 +203,9 @@
         <jaxrs:serviceBeans>
             <ref component-id="clusterServiceEndPoint"/>
         </jaxrs:serviceBeans>
+        <jaxrs:features>
+            <ref component-id="swagger2Feature"/>
+        </jaxrs:features>
     </jaxrs:server>
 
     <jaxrs:server address="/query" id="restQueryService">
@@ -178,6 +218,9 @@
         <jaxrs:serviceBeans>
             <ref component-id="queryServiceEndPoint"/>
         </jaxrs:serviceBeans>
+        <jaxrs:features>
+            <ref component-id="swagger2Feature"/>
+        </jaxrs:features>
     </jaxrs:server>
 
     <jaxrs:server address="/patches" id="restPatchService">
@@ -190,6 +233,9 @@
         <jaxrs:serviceBeans>
             <ref component-id="patchServiceEndPoint"/>
         </jaxrs:serviceBeans>
+        <jaxrs:features>
+            <ref component-id="swagger2Feature"/>
+        </jaxrs:features>
     </jaxrs:server>
 
     <jaxrs:server address="/events" id="restEventService">
@@ -202,6 +248,9 @@
         <jaxrs:serviceBeans>
             <ref component-id="eventServiceEndPoint"/>
         </jaxrs:serviceBeans>
+        <jaxrs:features>
+            <ref component-id="swagger2Feature"/>
+        </jaxrs:features>
     </jaxrs:server>
 
     <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
@@ -273,8 +322,8 @@
     </bean>
 
     <bean id="localizationHelper" class="org.apache.unomi.rest.LocalizationHelper">
-    <property name="bundleContext" ref="blueprintBundleContext"/>
-    <property name="resourceBundleHelper" ref="resourceBundleHelper"/>
-  </bean>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="resourceBundleHelper" ref="resourceBundleHelper"/>
+    </bean>
 
 </blueprint>

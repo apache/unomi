@@ -17,6 +17,7 @@
 
 package org.apache.unomi.api;
 
+import javax.xml.bind.annotation.XmlRootElement;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,6 +26,7 @@ import java.util.Map;
  * A time-bounded interaction between a user (via their associated {@link Profile}) and a unomi-enabled application. A session represents a sequence of operations the user
  * performed during its duration. In the context of web applications, sessions are usually linked to HTTP sessions.
  */
+@XmlRootElement
 public class Session extends Item implements TimestampedItem {
 
     /**
