@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.api;
 
+import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 import java.text.DateFormat;
@@ -29,6 +30,7 @@ import java.util.Map;
  * consent type. For example a user might have agreed to receiving a newsletter but might have not agreed to being
  * tracked.
  */
+@XmlRootElement
 public class Consent implements Serializable {
 
     private String scope;

@@ -17,6 +17,7 @@
 
 package org.apache.unomi.api;
 
+import javax.xml.bind.annotation.XmlRootElement;
 import java.io.Serializable;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -26,6 +27,7 @@ import java.util.Set;
  *
  * @see MetadataItem
  */
+@XmlRootElement
 public class Metadata implements Comparable<Metadata>, Serializable {
 
     private static final long serialVersionUID = 7446061538573517071L;

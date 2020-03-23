@@ -19,11 +19,13 @@ package org.apache.unomi.api.segments;
 
 import org.apache.unomi.api.conditions.Condition;
 
+import javax.xml.bind.annotation.XmlRootElement;
 import java.io.Serializable;
 
 /**
  * A scoring dimension along profiles can be evaluated and associated value to be assigned.
  */
+@XmlRootElement
 public class ScoringElement implements Serializable {
     private Condition condition;
     private int value;
