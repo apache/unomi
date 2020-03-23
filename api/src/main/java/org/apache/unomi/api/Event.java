@@ -19,6 +19,7 @@ package org.apache.unomi.api;
 
 import org.apache.unomi.api.actions.ActionPostExecutor;
 
+import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.util.*;
 
@@ -29,6 +30,7 @@ import java.util.*;
  * Source and target can be any unomi item but are not limited to them. In particular, as long as they can be described using properties and unomi’s type mechanism and can be
  * processed either natively or via extension plugins, source and target can represent just about anything.
  */
+@XmlRootElement
 public class Event extends Item implements TimestampedItem {
 
     /**

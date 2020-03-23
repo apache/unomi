@@ -17,10 +17,13 @@
 
 package org.apache.unomi.api;
 
+import javax.xml.bind.annotation.XmlRootElement;
+
 /**
  * A persona is a "virtual" profile used to represent categories of profiles, and may also be used to test how a personalized experience would look like using this virtual profile.
  * A persona can define predefined properties and sessions. Persona definition make it possible to “emulate” a certain type of profile, e.g : US visitor, non-US visitor, etc.
  */
+@XmlRootElement
 public class Persona extends Profile {
 
     public static final String ITEM_TYPE = "persona";

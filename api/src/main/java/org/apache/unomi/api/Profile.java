@@ -20,6 +20,7 @@ package org.apache.unomi.api;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
 
+import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.util.*;
 
@@ -37,6 +38,7 @@ import java.util.*;
  *
  * @see Segment
  */
+@XmlRootElement
 public class Profile extends Item {
 
     /**

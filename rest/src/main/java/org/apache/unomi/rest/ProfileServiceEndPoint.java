@@ -17,6 +17,7 @@
 
 package org.apache.unomi.rest;
 
+import io.swagger.annotations.Api;
 import org.apache.commons.lang.StringUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.*;
@@ -51,6 +52,8 @@ import java.util.*;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/")
+@Api(value = "/profiles")
 public class ProfileServiceEndPoint {
 
     private static final Logger logger = LoggerFactory.getLogger(ProfileServiceEndPoint.class.getName());
@@ -92,6 +95,7 @@ public class ProfileServiceEndPoint {
      *
      * @return the number of unique profiles.
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/count")
     public long getAllProfilesCount() {
@@ -104,6 +108,7 @@ public class ProfileServiceEndPoint {
      * @param query a {@link Query} specifying which elements to retrieve
      * @return a {@link PartialList} of profiles instances matching the specified query
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @POST
     @Path("/search")
     public PartialList<Profile> getProfiles(Query query) {
@@ -181,6 +186,7 @@ public class ProfileServiceEndPoint {
      * @param profileId the identifier of the profile to retrieve
      * @return the profile identified by the specified identifier or {@code null} if no such profile exists
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/{profileId}")
     public Profile load(@PathParam("profileId") String profileId) {
@@ -193,6 +199,7 @@ public class ProfileServiceEndPoint {
      * @param profile the profile to be saved
      * @return the newly saved profile
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @POST
     @Path("/")
     public Profile save(Profile profile) {
@@ -236,6 +243,7 @@ public class ProfileServiceEndPoint {
      *                  a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @return a {@link PartialList} of matching sessions
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/{profileId}/sessions")
     public PartialList<Session> getProfileSessions(@PathParam("profileId") String profileId,
@@ -252,6 +260,7 @@ public class ProfileServiceEndPoint {
      * @param profileId the identifier of the profile for which we want to retrieve the segment metadata
      * @return the (possibly empty) list of segment metadata for the segments the specified profile is a member of
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/{profileId}/segments")
     public List<Metadata> getProfileSegments(@PathParam("profileId") String profileId) {
@@ -265,6 +274,7 @@ public class ProfileServiceEndPoint {
      * @param fromPropertyTypeId fromPropertyTypeId
      * @return property type mapping
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/properties/mappings/{fromPropertyTypeId}")
     public String getPropertyTypeMapping(@PathParam("fromPropertyTypeId") String fromPropertyTypeId) {
@@ -277,6 +287,7 @@ public class ProfileServiceEndPoint {
      * @param query a {@link Query} specifying which elements to retrieve
      * @return a {@link PartialList} of Persona instances matching the specified query
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @POST
     @Path("/personas/search")
     public PartialList<Persona> getPersonas(Query query) {
@@ -289,6 +300,7 @@ public class ProfileServiceEndPoint {
      * @param personaId the identifier of the persona to retrieve
      * @return the persona identified by the specified identifier or {@code null} if no such persona exists
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/personas/{personaId}")
     public Persona loadPersona(@PathParam("personaId") String personaId) {
@@ -301,6 +313,7 @@ public class ProfileServiceEndPoint {
      * @param personaId the identifier of the persona to retrieve
      * @return a {@link PersonaWithSessions} instance with the persona identified by the specified identifier and all its associated sessions
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/personasWithSessions/{personaId}")
     public PersonaWithSessions loadPersonaWithSessions(@PathParam("personaId") String personaId) {
@@ -313,6 +326,7 @@ public class ProfileServiceEndPoint {
      * @param personaWithSessions the persona to save with its sessions.
      * @return a {@link PersonaWithSessions} instance with the persona identified by the specified identifier and all its associated sessions
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @POST
     @Path("/personasWithSessions")
     public PersonaWithSessions savePersonaWithSessions(PersonaWithSessions personaWithSessions) {
@@ -325,6 +339,7 @@ public class ProfileServiceEndPoint {
      * @param persona the persona to persist
      * @return the newly persisted persona
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @POST
     @Path("/personas")
     public Persona savePersona(Persona persona) {
@@ -349,6 +364,7 @@ public class ProfileServiceEndPoint {
      * @param personaId the identifier to use for the new persona
      * @return the newly created persona
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @PUT
     @Path("/personas/{personaId}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -369,6 +385,7 @@ public class ProfileServiceEndPoint {
      *                  a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @return a {@link PartialList} of sessions for the persona identified by the specified identifier
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/personas/{personaId}/sessions")
     public PartialList<Session> getPersonaSessions(@PathParam("personaId") String personaId,
@@ -386,6 +403,7 @@ public class ProfileServiceEndPoint {
      * @return the session identified by the specified identifier
      * @throws ParseException if the date hint cannot be parsed as a proper {@link Date} object
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/sessions/{sessionId}")
     public Session loadSession(@PathParam("sessionId") String sessionId, @QueryParam("dateHint") String dateHint) throws ParseException {
@@ -398,9 +416,10 @@ public class ProfileServiceEndPoint {
      * @param session the session to be saved
      * @return the newly saved session
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @POST
     @Path("/sessions/{sessionId}")
-    public Session saveSession(Session session) {
+    public Session saveSession(@PathParam("sessionId") String sessionId, Session session) {
         return profileService.saveSession(session);
     }
 
@@ -420,6 +439,7 @@ public class ProfileServiceEndPoint {
      *                   a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @return a {@link PartialList} of matching events
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/sessions/{sessionId}/events")
     public PartialList<Event> getSessionEvents(@PathParam("sessionId") String sessionId,
@@ -452,6 +472,7 @@ public class ProfileServiceEndPoint {
      * @param language      the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
      * @return all property types defined for the specified item type and with the specified tag
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/existingProperties")
     public Collection<PropertyType> getExistingProperties(@QueryParam("tag") String tag, @QueryParam("isSystemTag") boolean isSystemTag, @QueryParam("itemType") String itemType, @HeaderParam("Accept-Language") String language, @Context final HttpServletResponse response) throws IOException {
@@ -476,6 +497,7 @@ public class ProfileServiceEndPoint {
      * @param language the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
      * @return a Map associating targets as keys to related {@link PropertyType}s
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/properties")
     public Map<String, Collection<PropertyType>> getPropertyTypes(@HeaderParam("Accept-Language") String language) {
@@ -491,6 +513,7 @@ public class ProfileServiceEndPoint {
      * @param language      the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
      * @return the property type associated with the specified ID
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/properties/{propertyId}")
     public PropertyType getPropertyType(@PathParam("propertyId") String propertyId, @HeaderParam("Accept-Language") String language) {
@@ -506,6 +529,7 @@ public class ProfileServiceEndPoint {
      * @param language the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
      * @return a collection of all the property types associated with the specified target
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/properties/targets/{target}")
     public Collection<PropertyType> getPropertyTypesByTarget(@PathParam("target") String target, @HeaderParam("Accept-Language") String language) {
@@ -522,6 +546,7 @@ public class ProfileServiceEndPoint {
      * @param language  the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
      * @return a Set of the property types with the specified tag
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/properties/tags/{tags}")
     public Collection<PropertyType> getPropertyTypeByTag(@PathParam("tags") String tags, @HeaderParam("Accept-Language") String language) {
@@ -543,6 +568,7 @@ public class ProfileServiceEndPoint {
      * @param language  the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
      * @return a Set of the property types with the specified tag
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @GET
     @Path("/properties/systemTags/{tags}")
     public Collection<PropertyType> getPropertyTypeBySystemTag(@PathParam("tags") String tags, @HeaderParam("Accept-Language") String language) {
@@ -562,6 +588,7 @@ public class ProfileServiceEndPoint {
      * @param property the property type to persist
      * @return {@code true} if the property type was properly created, {@code false} otherwise (for example, if the property type already existed
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @POST
     @Path("/properties")
     public boolean setPropertyType(PropertyType property) {
@@ -576,6 +603,7 @@ public class ProfileServiceEndPoint {
      * @param properties the properties type to persist
      * @return {@code true} if the property type was properly created, {@code false} otherwise (for example, if the property type already existed
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @POST
     @Path("/properties/bulk")
     public boolean setPropertyTypes(List<PropertyType> properties) {
@@ -594,6 +622,7 @@ public class ProfileServiceEndPoint {
      * @param propertyId the identifier of the property type to delete
      * @return {@code true} if the property type was properly deleted, {@code false} otherwise
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @DELETE
     @Path("/properties/{propertyId}")
     public boolean deleteProperty(@PathParam("propertyId") String propertyId) {
@@ -606,6 +635,7 @@ public class ProfileServiceEndPoint {
      * @param query a {@link Query} specifying which elements to retrieve
      * @return a {@link PartialList} of sessions matching the specified query
      */
+    @Produces({ MediaType.APPLICATION_JSON })
     @POST
     @Path("/search/sessions")
     public PartialList<Session> searchSession(Query query) {

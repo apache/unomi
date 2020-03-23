@@ -20,6 +20,7 @@ package org.apache.unomi.api;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.RulesService;
 
+import javax.xml.bind.annotation.XmlRootElement;
 import java.io.Serializable;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,6 +33,7 @@ import java.util.Set;
  *
  * @see ContextRequest
  */
+@XmlRootElement
 public class ContextResponse implements Serializable {
 
     private static final long serialVersionUID = -5638595408986826332L;

@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.api;
 
+import javax.xml.bind.annotation.XmlRootElement;
 import java.io.Serializable;
 
 /**
@@ -23,6 +24,7 @@ import java.io.Serializable;
  *
  * @author Sergiy Shyrkov
  */
+@XmlRootElement
 public class EventProperty implements Serializable {
 
     private static final long serialVersionUID = -6727761503135013816L;

@@ -30,6 +30,7 @@
         <feature>eventadmin</feature>
         <feature>shell-compat</feature>
         <feature prerequisite="true">wrap</feature>
+        <feature dependency="true">cxf-rs-description-swagger2</feature>
         <feature dependency="true">aries-blueprint</feature>
         <configfile finalname="/etc/org.apache.unomi.web.cfg">mvn:org.apache.unomi/unomi-wab/${project.version}/cfg/unomicfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
