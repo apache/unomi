@@ -268,6 +268,11 @@ public class EventServiceImpl implements EventService {
         }
     }
 
+    @Override
+    public Event getEvent(String id) {
+        return persistenceService.load(id, Event.class);
+    }
+
     public boolean hasEventAlreadyBeenRaised(Event event, boolean session) {
         List<Condition> conditions = new ArrayList<Condition>();
 
