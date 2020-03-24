@@ -20,6 +20,7 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.fetchers.event.EventDataFetcher;
 import org.apache.unomi.graphql.fetchers.event.FindEventsConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.FindProfilesConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.ProfileDataFetcher;
@@ -30,6 +31,7 @@ import org.apache.unomi.graphql.types.input.CDPOrderByInput;
 import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.input.CDPSegmentFilterInput;
+import org.apache.unomi.graphql.types.output.CDPEvent;
 import org.apache.unomi.graphql.types.output.CDPEventConnection;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.CDPProfileConnection;
@@ -81,6 +83,11 @@ public class CDPQuery {
                                          final @GraphQLName("before") String before,
                                          final DataFetchingEnvironment environment) {
         return new FindEventsConnectionDataFetcher(filter, orderBy).get(environment);
+    }
+
+    @GraphQLField
+    public CDPEvent getEvent(final @GraphQLNonNull @GraphQLName("id") String id, final DataFetchingEnvironment environment) throws Exception {
+        return new EventDataFetcher(id).get(environment);
     }
 
     @GraphQLField
