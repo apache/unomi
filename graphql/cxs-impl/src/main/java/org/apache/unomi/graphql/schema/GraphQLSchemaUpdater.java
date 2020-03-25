@@ -38,6 +38,7 @@ import org.apache.unomi.graphql.fetchers.CDPProfilePropertiesFilterDataFetcher;
 import org.apache.unomi.graphql.fetchers.CustomerPropertyDataFetcher;
 import org.apache.unomi.graphql.function.DateFunction;
 import org.apache.unomi.graphql.function.DateTimeFunction;
+import org.apache.unomi.graphql.function.JSONFunction;
 import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
 import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
@@ -246,6 +247,7 @@ public class GraphQLSchemaUpdater {
 
         this.graphQLAnnotations.registerTypeFunction(new DateTimeFunction());
         this.graphQLAnnotations.registerTypeFunction(new DateFunction());
+        this.graphQLAnnotations.registerTypeFunction(new JSONFunction());
 
         setUpContainer();
         setUpDynamicFields();

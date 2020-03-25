@@ -16,20 +16,17 @@
  */
 package org.apache.unomi.graphql.fetchers;
 
-import graphql.Scalars;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import graphql.schema.GraphQLObjectType;
-import graphql.schema.GraphQLOutputType;
-import graphql.schema.GraphQLScalarType;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.graphql.function.DateFunction;
-import org.apache.unomi.graphql.function.DateTimeFunction;
+import org.apache.unomi.graphql.schema.PropertyValueTypeHelper;
 import org.apache.unomi.graphql.types.output.CDPProfilePropertiesFilter;
+import org.apache.unomi.graphql.utils.DateUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -64,7 +61,15 @@ public class CDPProfilePropertiesFilterDataFetcher implements DataFetcher<Object
                         && condition.getParameter("comparisonOperator").toString().equals(comparisonOperator))
                 .findFirst();
 
-        return propertiesCondition.map(condition -> condition.getParameter(getPropertyValueParameter(environment))).orElse(null);
+        final String propertyValueType =
+                PropertyValueTypeHelper.getPropertyValueParameter(CDPProfilePropertiesFilter.TYPE_NAME, fieldName, environment);
+
+        return propertiesCondition.map(condition -> {
+            if (propertyValueType.equals("propertyValueDate")) {
+                return DateUtils.offsetDateTimeFromMap((Map<String, Object>) condition.getParameter(propertyValueType));
+            }
+            return condition.getParameter(propertyValueType);
+        }).orElse(null);
     }
 
     @SuppressWarnings("unchecked")
@@ -78,32 +83,6 @@ public class CDPProfilePropertiesFilterDataFetcher implements DataFetcher<Object
         }
 
         return subConditions;
-    }
-
-    private String getPropertyValueParameter(final DataFetchingEnvironment environment) {
-        final GraphQLObjectType objectType = environment.getGraphQLSchema().getObjectType(CDPProfilePropertiesFilter.TYPE_NAME);
-
-        final GraphQLOutputType fieldType = objectType.getFieldDefinition(fieldName).getType();
-
-        if (!(fieldType instanceof GraphQLScalarType)) {
-            return "propertyValue";
-        }
-
-        final GraphQLScalarType scalarType = (GraphQLScalarType) fieldType;
-
-        if (Scalars.GraphQLFloat.getName().equals(scalarType.getName())
-                || Scalars.GraphQLInt.getName().equals(scalarType.getName())
-                || Scalars.GraphQLLong.getName().equals(scalarType.getName())
-                || Scalars.GraphQLFloat.getName().equals(scalarType.getName())
-                || Scalars.GraphQLBigDecimal.getName().equals(scalarType.getName())
-                || Scalars.GraphQLBigInteger.getName().equals(scalarType.getName())) {
-            return "propertyValueInteger";
-        } else if (DateTimeFunction.DATE_TIME_SCALAR.getName().equals(scalarType.getName())
-                || DateFunction.DATE_SCALAR.getName().equals(scalarType.getName())) {
-            return "propertyValueDate";
-        } else {
-            return "propertyValue";
-        }
     }
 
 }

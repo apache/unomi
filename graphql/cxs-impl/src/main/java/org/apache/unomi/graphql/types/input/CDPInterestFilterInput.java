@@ -28,9 +28,9 @@ import static org.apache.unomi.graphql.types.input.CDPInterestFilterInput.TYPE_N
 @GraphQLName(TYPE_NAME_INTERNAL)
 public class CDPInterestFilterInput {
 
-    public static final String TYPE_NAME_INTERNAL = "CDPInterestFilter";
+    public static final String TYPE_NAME_INTERNAL = "CDP_InterestFilter";
 
-    public static final String TYPE_NAME = "CDPInterestFilterInput";
+    public static final String TYPE_NAME = TYPE_NAME_INTERNAL + "Input";
 
     @GraphQLField
     private List<CDPInterestFilterInput> and = new ArrayList<>();

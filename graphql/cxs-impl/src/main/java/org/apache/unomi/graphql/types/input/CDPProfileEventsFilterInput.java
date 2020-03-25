@@ -23,13 +23,15 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import java.util.ArrayList;
 import java.util.List;
 
-@GraphQLName("CDP_ProfileEventsFilterInput")
+@GraphQLName("CDP_ProfileEventsFilter")
 public class CDPProfileEventsFilterInput {
 
     @GraphQLField
+    @GraphQLName("and")
     private List<CDPProfileEventsFilterInput> and = new ArrayList<>();
 
     @GraphQLField
+    @GraphQLName("or")
     private List<CDPProfileEventsFilterInput> or = new ArrayList<>();
 
     @GraphQLField

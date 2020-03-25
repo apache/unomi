@@ -27,7 +27,12 @@ Content-Type: application/json
     "firstName": "John",
     "lastName": "Smith",
     "phoneNumber": null,
-    "birthDay": null
+    "birthDay": null,
+    "interests": {
+      "interestName1": 10,
+      "interestName2": 5,
+      "interestName3": 7
+    }
   },
   "systemProperties": {},
   "segments": [],

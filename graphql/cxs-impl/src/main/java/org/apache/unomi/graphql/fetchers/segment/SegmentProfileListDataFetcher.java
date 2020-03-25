@@ -14,31 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.fetchers.segments;
+package org.apache.unomi.graphql.fetchers.segment;
 
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.api.conditions.Condition;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class SegmentProfileIDsDataFetcher extends BaseSegmentContainsDataFetcher<List<String>> {
+public class SegmentProfileListDataFetcher extends BaseSegmentContainsDataFetcher {
 
     @Override
     @SuppressWarnings("unchecked")
     public List<String> get(DataFetchingEnvironment environment) throws Exception {
         return getSubConditions(environment).stream()
-                .filter(condition -> "booleanCondition".equals(condition.getConditionTypeId())
-                        && "or".equals(condition.getParameter("operator"))
-                        && Objects.nonNull(condition.getParameter("subConditions")))
-                .flatMap(condition -> ((ArrayList<Condition>) condition.getParameter("subConditions")).stream())
-                .filter(condition -> "profilePropertyCondition".equals(condition.getConditionTypeId())
-                        && "itemId".equals(condition.getParameter("propertyName"))
-                        && "contains".equals(condition.getParameter("comparisonOperator"))
-                        && Objects.nonNull(condition.getParameter("propertyValue")))
-                .map(condition -> condition.getParameter("propertyValue").toString())
+                .filter(condition -> "profileUserListCondition".equals(condition.getConditionTypeId()))
+                .flatMap(condition -> ((ArrayList<String>) condition.getParameter("lists")).stream())
                 .collect(Collectors.toList());
     }
 

@@ -19,6 +19,7 @@ package org.apache.unomi.graphql.types.output;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.graphql.conditionparsers.SegmentConditionParser;
 
 import static org.apache.unomi.graphql.types.output.CDPSegment.TYPE_NAME;
 
@@ -37,32 +38,30 @@ public class CDPSegment {
     private String name;
 
     @GraphQLField
-    private CDPProfileFilter profiles;
+    private Object filter;
+
+    private Segment segment;
 
     public CDPSegment(Segment segment) {
-        this.id = segment.getItemId();
-        this.view = new CDPView(segment.getScope());
-        this.profiles = new CDPProfileFilter(segment);
-
-        if (segment.getMetadata() != null) {
-            this.name = segment.getMetadata().getName();
-        }
+        this.segment = segment;
     }
 
     public String getId() {
-        return id;
+        return segment.getItemId();
     }
 
     public CDPView getView() {
-        return view;
+        return new CDPView(segment.getScope());
     }
 
     public String getName() {
+        if (segment.getMetadata() != null) {
+            this.name = segment.getMetadata().getName();
+        }
         return name;
     }
 
-    public CDPProfileFilter getProfiles() {
-        return profiles;
+    public Object getFilter() {
+        return new SegmentConditionParser(segment.getCondition()).parse();
     }
-
 }
