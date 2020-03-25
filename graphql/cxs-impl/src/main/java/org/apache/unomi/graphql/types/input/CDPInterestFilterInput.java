@@ -23,8 +23,14 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import java.util.ArrayList;
 import java.util.List;
 
-@GraphQLName("CDP_InterestFilterInput")
+import static org.apache.unomi.graphql.types.input.CDPInterestFilterInput.TYPE_NAME_INTERNAL;
+
+@GraphQLName(TYPE_NAME_INTERNAL)
 public class CDPInterestFilterInput {
+
+    public static final String TYPE_NAME_INTERNAL = "CDPInterestFilter";
+
+    public static final String TYPE_NAME = "CDPInterestFilterInput";
 
     @GraphQLField
     private List<CDPInterestFilterInput> and = new ArrayList<>();

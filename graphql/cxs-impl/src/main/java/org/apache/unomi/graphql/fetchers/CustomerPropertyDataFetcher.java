@@ -17,6 +17,7 @@
 package org.apache.unomi.graphql.fetchers;
 
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.schema.PropertyNameTranslator;
 import org.apache.unomi.graphql.types.output.CDPEvent;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 
@@ -25,7 +26,7 @@ public class CustomerPropertyDataFetcher extends BaseDataFetcher<Object> {
     private final String propertyName;
 
     public CustomerPropertyDataFetcher(String propertyName) {
-        this.propertyName = propertyName;
+        this.propertyName = PropertyNameTranslator.translateFromGraphQLToUnomi(propertyName);
     }
 
     @Override

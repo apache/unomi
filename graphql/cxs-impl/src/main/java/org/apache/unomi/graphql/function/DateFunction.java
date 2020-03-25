@@ -26,7 +26,7 @@ import java.time.LocalDate;
 
 public class DateFunction implements TypeFunction {
 
-    private static final DateScalar DATE_SCALAR = new DateScalar();
+    public static final DateScalar DATE_SCALAR = new DateScalar();
 
     public DateFunction() {
     }

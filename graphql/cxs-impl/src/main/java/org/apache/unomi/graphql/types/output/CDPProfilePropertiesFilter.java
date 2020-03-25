@@ -18,11 +18,23 @@ package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.schema.GraphQLOutputType;
+import graphql.schema.GraphQLSchemaElement;
+import graphql.schema.GraphQLTypeVisitor;
+import graphql.util.TraversalControl;
+import graphql.util.TraverserContext;
+import org.apache.unomi.api.conditions.Condition;
 
 import java.util.List;
 
-@GraphQLName("CDP_ProfilePropertiesFilter")
-public class CDPProfilePropertiesFilter {
+import static org.apache.unomi.graphql.types.output.CDPProfilePropertiesFilter.TYPE_NAME;
+
+@GraphQLName(TYPE_NAME)
+public class CDPProfilePropertiesFilter implements GraphQLOutputType {
+
+    public static final String TYPE_NAME = "CDP_ProfilePropertiesFilter";
+
+    private final Condition segmentCondition;
 
     @GraphQLField
     @GraphQLName("and")
@@ -32,4 +44,16 @@ public class CDPProfilePropertiesFilter {
     @GraphQLName("or")
     public List<CDPProfilePropertiesFilter> orFilters;
 
+    public CDPProfilePropertiesFilter(final Condition segmentCondition) {
+        this.segmentCondition = segmentCondition;
+    }
+
+    public Condition getSegmentCondition() {
+        return segmentCondition;
+    }
+
+    @Override
+    public TraversalControl accept(TraverserContext<GraphQLSchemaElement> context, GraphQLTypeVisitor visitor) {
+        return visitor.visitGraphQLOutputType(this, context);
+    }
 }

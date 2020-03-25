@@ -14,40 +14,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
+package org.apache.unomi.graphql.schema;
 
-import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
-import graphql.annotations.annotationTypes.GraphQLName;
+public class ComparisonConditionTranslator {
 
-@GraphQLName("CDP_Interest")
-public class CDPInterest {
-
-    @GraphQLID
-    @GraphQLField
-    private String topic;
-
-    @GraphQLField
-    private Double score;
-
-    public CDPInterest(@GraphQLID String topic) {
-        this.topic = topic;
-    }
-
-    public String getTopic() {
-        return topic;
-    }
-
-    public void setTopic(String topic) {
-        this.topic = topic;
-    }
-
-    public Double getScore() {
-        return score;
-    }
-
-    public void setScore(Double score) {
-        this.score = score;
+    public static String translateComparisonCondition(final String originalCondition) {
+        if ("lt".equals(originalCondition)) {
+            return "lessThan";
+        } else if ("lte".equals(originalCondition)) {
+            return "lessThanOrEqualTo";
+        } else if ("gt".equals(originalCondition)) {
+            return "greaterThan";
+        } else if ("gte".equals(originalCondition)) {
+            return "greaterThanOrEqualTo";
+        } else if ("regexp".equals(originalCondition)) {
+            return "matchesRegex";
+        } else if ("distance".equals(originalCondition)) {
+            return "between";
+        } else {
+            return originalCondition;
+        }
     }
 
 }
