@@ -25,12 +25,13 @@
              start-level="70">
         <feature>war</feature>
         <feature>cxf-jaxrs</feature>
+        <feature>cxf-rs-description-swagger2</feature>
         <feature>cxf-features-metrics</feature>
         <feature>cellar</feature>
         <feature>eventadmin</feature>
         <feature>shell-compat</feature>
         <feature prerequisite="true">wrap</feature>
-        <feature dependency="true">cxf-rs-description-swagger2</feature>
+        <feature prerequisite="true">cxf-rs-description-swagger2</feature>
         <feature dependency="true">aries-blueprint</feature>
         <configfile finalname="/etc/org.apache.unomi.web.cfg">mvn:org.apache.unomi/unomi-wab/${project.version}/cfg/unomicfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
@@ -71,7 +72,7 @@
         <bundle start-level="77" start="false">mvn:org.apache.unomi/cxs-geonames-rest/${project.version}</bundle>
         <bundle start-level="77" start="false">mvn:org.apache.unomi/cxs-privacy-extension-services/${project.version}</bundle>
         <bundle start-level="77" start="false">mvn:org.apache.unomi/cxs-privacy-extension-rest/${project.version}</bundle>
-        <bundle start-level="78" start="false">mvn:org.apache.unomi/unomi-rest/${project.version}</bundle>
+        <bundle start-level="78" start="true">mvn:org.apache.unomi/unomi-rest/${project.version}</bundle>
         <bundle start-level="85" start="false">mvn:org.apache.unomi/unomi-wab/${project.version}</bundle>
         <bundle start-level="85" start="false">mvn:org.apache.unomi/unomi-plugins-base/${project.version}</bundle>
         <bundle start-level="85" start="false">mvn:org.apache.unomi/unomi-plugins-request/${project.version}</bundle>
