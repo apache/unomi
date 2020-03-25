@@ -124,6 +124,15 @@ public interface EventService {
      */
     PartialList<Event> search(Query query);
 
+
+    /**
+     * Retrieves the {@link Event} by its identifier.
+     *
+     * @param id the identifier of the {@link Event} to retrieve
+     * @return the {@link Event} identified by the specified identifier or {@code null} if no such profile exists
+     */
+    Event getEvent(final String id);
+
     /**
      * Checks whether the specified event has already been raised either for the associated session or profile depending on the specified {@code session} parameter.
      *
