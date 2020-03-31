@@ -21,6 +21,8 @@ import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.graphql.condition.ConditionFactory;
+import org.apache.unomi.graphql.condition.EventConditionFactory;
 import org.apache.unomi.graphql.fetchers.EventConnectionDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.output.CDPConsent;
@@ -30,15 +32,15 @@ import java.util.Arrays;
 
 public class ConsentEventConnectionDataFetcher extends EventConnectionDataFetcher {
 
-
     @Override
     public CDPEventConnection get(DataFetchingEnvironment environment) throws Exception {
         final ServiceManager serviceManager = environment.getContext();
         final CDPConsent consent = environment.getSource();
 
-        final Condition andCondition = createBoolCondition("and", serviceManager.getDefinitionsService());
-        final Condition eventCondition = createPropertyCondition("eventType", "modifyConsent", serviceManager.getDefinitionsService());
-        final Condition consentCondition = createPropertyCondition("target.token", consent.getToken(), serviceManager.getDefinitionsService());
+        final EventConditionFactory factory = ConditionFactory.event();
+        final Condition andCondition = factory.createBoolCondition("and", serviceManager.getDefinitionsService());
+        final Condition eventCondition = factory.createPropertyCondition("eventType", "modifyConsent", serviceManager.getDefinitionsService());
+        final Condition consentCondition = factory.createPropertyCondition("target.token", consent.getToken(), serviceManager.getDefinitionsService());
 
         andCondition.setParameter("subConditions", Arrays.asList(eventCondition, consentCondition));
         final PartialList<Event> events = serviceManager.getEventService().searchEvents(andCondition, 0, DEFAULT_PAGE_SIZE);

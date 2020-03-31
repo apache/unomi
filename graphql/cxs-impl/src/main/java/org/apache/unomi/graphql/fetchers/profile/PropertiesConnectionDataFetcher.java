@@ -35,10 +35,6 @@ import java.util.stream.Collectors;
 
 public class PropertiesConnectionDataFetcher extends BaseConnectionDataFetcher<CDPPropertyConnection> {
 
-    public PropertiesConnectionDataFetcher() {
-        super("profilePropertyCondition");
-    }
-
     @Override
     public CDPPropertyConnection get(DataFetchingEnvironment environment) throws Exception {
         final ServiceManager serviceManager = environment.getContext();

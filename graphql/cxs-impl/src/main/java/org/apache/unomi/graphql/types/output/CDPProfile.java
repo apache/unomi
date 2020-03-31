@@ -26,6 +26,7 @@ import org.apache.unomi.graphql.fetchers.profile.ProfileIdsDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.ProfileInterestsDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.ProfileLastEventsConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.ProfileListsDataFetcher;
+import org.apache.unomi.graphql.fetchers.profile.ProfileMatchesDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.ProfileSegmentsDataFetcher;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPNamedFilterInput;
@@ -102,8 +103,9 @@ public class CDPProfile implements CDPProfileInterface {
     }
 
     @GraphQLField
-    public List<CDPFilterMatch> cdp_matches(@GraphQLName("namedFilters") Collection<CDPNamedFilterInput> namedFilters) {
-        return Collections.emptyList();
+    public List<CDPFilterMatch> cdp_matches(@GraphQLName("namedFilters") List<CDPNamedFilterInput> namedFilters,
+                                            final DataFetchingEnvironment environment) throws Exception {
+        return new ProfileMatchesDataFetcher(profile, namedFilters).get(environment);
     }
 
     @GraphQLField

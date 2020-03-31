@@ -29,10 +29,6 @@ import java.util.stream.Collectors;
 
 public abstract class EventConnectionDataFetcher extends BaseConnectionDataFetcher<CDPEventConnection> {
 
-    public EventConnectionDataFetcher() {
-        super("eventPropertyCondition");
-    }
-
     protected CDPEventConnection createEventConnection(PartialList<Event> events) {
         final List<CDPEventEdge> eventEdges = events.getList().stream().map(event -> new CDPEventEdge(new CDPEvent(event), event.getItemId())).collect(Collectors.toList());
         final CDPPageInfo cdpPageInfo = new CDPPageInfo(events.getOffset() > 0, events.getTotalSize() > events.getList().size());

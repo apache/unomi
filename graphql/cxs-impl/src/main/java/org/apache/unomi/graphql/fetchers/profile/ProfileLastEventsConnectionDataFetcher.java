@@ -22,6 +22,7 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.graphql.condition.ConditionFactory;
 import org.apache.unomi.graphql.fetchers.EventConnectionDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.output.CDPEventConnection;
@@ -42,7 +43,7 @@ public class ProfileLastEventsConnectionDataFetcher extends EventConnectionDataF
     public CDPEventConnection get(DataFetchingEnvironment environment) throws Exception {
         final ServiceManager serviceManager = environment.getContext();
 
-        final Condition condition = createPropertyCondition("profileId", profile.getItemId(), serviceManager.getDefinitionsService());
+        final Condition condition = ConditionFactory.event().createPropertyCondition("profileId", profile.getItemId(), serviceManager.getDefinitionsService());
         final PartialList<Event> events = serviceManager.getEventService().searchEvents(condition, 0, count);
 
         return createEventConnection(events);

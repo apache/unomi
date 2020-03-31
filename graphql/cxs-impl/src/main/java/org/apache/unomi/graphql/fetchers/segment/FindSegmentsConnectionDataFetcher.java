@@ -23,6 +23,7 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.graphql.condition.ConditionFactory;
 import org.apache.unomi.graphql.fetchers.ConnectionParams;
 import org.apache.unomi.graphql.fetchers.SegmentConnectionDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
@@ -49,7 +50,7 @@ public class FindSegmentsConnectionDataFetcher extends SegmentConnectionDataFetc
         final ServiceManager serviceManager = environment.getContext();
         final ConnectionParams params = parseConnectionParams(environment);
 
-        final Condition condition = createSegmentFilterInputCondition(filterInput, params.getAfter(), params.getBefore(), serviceManager.getDefinitionsService());
+        final Condition condition = ConditionFactory.profile().createSegmentFilterInputCondition(filterInput, params.getAfter(), params.getBefore(), serviceManager.getDefinitionsService());
         final Query query = buildQuery(condition, orderByInput, params);
         final PartialList<Metadata> metas = serviceManager.getSegmentService().getSegmentMetadatas(query);
 

@@ -21,8 +21,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.services.DefinitionsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,12 +60,6 @@ public abstract class BaseDataFetcher<T> implements DataFetcher<T> {
             }
         }
         return param;
-    }
-
-    protected Condition createBoolCondition(final String operator, DefinitionsService definitionsService) {
-        final Condition andCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-        andCondition.setParameter("operator", operator);
-        return andCondition;
     }
 
 }
