@@ -30,7 +30,7 @@ public class CDPNamedFilterInput {
     @GraphQLField
     private CDPProfileFilterInput filter;
 
-    public CDPNamedFilterInput(@GraphQLNonNull String name, CDPProfileFilterInput filter) {
+    public CDPNamedFilterInput(@GraphQLName("name") @GraphQLNonNull String name, @GraphQLName("filter") CDPProfileFilterInput filter) {
         this.name = name;
         this.filter = filter;
     }

@@ -23,12 +23,29 @@ import graphql.annotations.annotationTypes.GraphQLName;
 public class CDPFilterMatch {
 
     @GraphQLField
-    public String name;
+    private String name;
 
     @GraphQLField
-    public Boolean matched;
+    private Boolean matched;
 
     @GraphQLField
-    public Integer executionTimeMillis;
+    private Long executionTimeMillis;
 
+    public CDPFilterMatch(String name, Boolean matched, Long executionTimeMillis) {
+        this.name = name;
+        this.matched = matched;
+        this.executionTimeMillis = executionTimeMillis;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Boolean getMatched() {
+        return matched;
+    }
+
+    public Long getExecutionTimeMillis() {
+        return executionTimeMillis;
+    }
 }
