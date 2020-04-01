@@ -21,7 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.graphql.fetchers.segments.SegmentProfileInterestsDataFetcher;
+import org.apache.unomi.graphql.fetchers.segment.SegmentProfileInterestsDataFetcher;
 
 import static org.apache.unomi.graphql.types.output.CDPInterestFilter.TYPE_NAME;
 

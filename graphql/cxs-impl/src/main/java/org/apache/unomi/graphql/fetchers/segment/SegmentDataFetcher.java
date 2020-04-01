@@ -14,31 +14,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.fetchers.segments;
+package org.apache.unomi.graphql.fetchers.segment;
 
+import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.graphql.fetchers.BaseDataFetcher;
-import org.apache.unomi.graphql.types.output.CDPProfileFilter;
+import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.types.output.CDPSegment;
 
-import java.util.Collections;
-import java.util.List;
+public class SegmentDataFetcher implements DataFetcher<CDPSegment> {
 
-abstract class BaseSegmentContainsDataFetcher<T> extends BaseDataFetcher<T> {
+    private final String segmentId;
 
-    @SuppressWarnings("unchecked")
-    final List<Condition> getSubConditions(final DataFetchingEnvironment environment) {
-        final CDPProfileFilter source = environment.getSource();
+    public SegmentDataFetcher(String segmentId) {
+        this.segmentId = segmentId;
+    }
 
-        final Condition rootCondition = source.getSegment().getCondition();
+    @Override
+    public CDPSegment get(DataFetchingEnvironment environment) throws Exception {
+        final ServiceManager serviceManager = environment.getContext();
 
-        final List<Condition> subConditions = (List<Condition>) rootCondition.getParameter("subConditions");
+        final Segment segment = serviceManager.getSegmentService().getSegmentDefinition(segmentId);
 
-        if (subConditions == null || subConditions.isEmpty()) {
-            return Collections.emptyList();
+        if (segment != null) {
+            return new CDPSegment(segment);
         }
 
-        return subConditions;
+        return null;
     }
 
 }

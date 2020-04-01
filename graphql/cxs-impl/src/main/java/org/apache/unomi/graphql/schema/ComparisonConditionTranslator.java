@@ -18,7 +18,7 @@ package org.apache.unomi.graphql.schema;
 
 public class ComparisonConditionTranslator {
 
-    public static String translateComparisonCondition(final String originalCondition) {
+    public static String translateFromGraphQLToUnomi(final String originalCondition) {
         if ("lt".equals(originalCondition)) {
             return "lessThan";
         } else if ("lte".equals(originalCondition)) {
@@ -31,6 +31,24 @@ public class ComparisonConditionTranslator {
             return "matchesRegex";
         } else if ("distance".equals(originalCondition)) {
             return "between";
+        } else {
+            return originalCondition;
+        }
+    }
+
+    public static String translateFromUnomiToGraphQL(final String originalCondition) {
+        if ("lessThan".equals(originalCondition)) {
+            return "lt";
+        } else if ("lessThanOrEqualTo".equals(originalCondition)) {
+            return "lte";
+        } else if ("greaterThan".equals(originalCondition)) {
+            return "gt";
+        } else if ("greaterThanOrEqualTo".equals(originalCondition)) {
+            return "gte";
+        } else if ("matchesRegex".equals(originalCondition)) {
+            return "regexp";
+        } else if ("between".equals(originalCondition)) {
+            return "distance";
         } else {
             return originalCondition;
         }

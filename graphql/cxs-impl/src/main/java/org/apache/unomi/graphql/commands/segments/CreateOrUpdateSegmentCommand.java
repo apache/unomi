@@ -22,22 +22,27 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.graphql.commands.BaseCommand;
 import org.apache.unomi.graphql.schema.ComparisonConditionTranslator;
 import org.apache.unomi.graphql.schema.PropertyNameTranslator;
-import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.schema.PropertyValueTypeHelper;
+import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPInterestFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileEventsFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;
+import org.apache.unomi.graphql.types.input.CDPProfilePropertiesFilterInput;
 import org.apache.unomi.graphql.types.input.CDPSegmentInput;
 import org.apache.unomi.graphql.types.output.CDPSegment;
+import org.apache.unomi.graphql.utils.ConditionBuilder;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.apache.unomi.graphql.CDPGraphQLConstants.SEGMENT_ARGUMENT_NAME;
@@ -48,17 +53,39 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
 
     private final DataFetchingEnvironment environment;
 
+    private final ConditionType profileSegmentConditionType;
+
+    private final ConditionType profilePropertyConditionType;
+
+    private final ConditionType booleanConditionType;
+
+    private final ConditionType profileUserListConditionType;
+
+    private final ConditionType eventPropertyConditionType;
+
+    private final ConditionType pastEventConditionType;
+
+    private final ConditionType notConditionType;
+
     private CreateOrUpdateSegmentCommand(Builder builder) {
         super(builder);
 
         this.segmentInput = builder.segmentInput;
         this.environment = builder.environment;
+
+        final DefinitionsService definitionsService = serviceManager.getDefinitionsService();
+
+        this.profileSegmentConditionType = definitionsService.getConditionType("profileSegmentCondition");
+        this.profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
+        this.booleanConditionType = definitionsService.getConditionType("booleanCondition");
+        this.profileUserListConditionType = definitionsService.getConditionType("profileUserListCondition");
+        this.eventPropertyConditionType = definitionsService.getConditionType("eventPropertyCondition");
+        this.pastEventConditionType = definitionsService.getConditionType("pastEventCondition");
+        this.notConditionType = definitionsService.getConditionType("notCondition");
     }
 
     @Override
     public CDPSegment execute() {
-        final ServiceManager serviceManager = environment.getContext();
-
         final SegmentService segmentService = serviceManager.getSegmentService();
 
         final String segmentId = Strings.isNullOrEmpty(segmentInput.getId())
@@ -141,7 +168,7 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
         }
 
         final Condition profileEventsCondition = createProfileEventsCondition(filterInput.getEvents());
-        if (profileIDsContainsCondition != null) {
+        if (profileEventsCondition != null) {
             conditions.add(profileEventsCondition);
         }
 
@@ -153,13 +180,9 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
             return null;
         }
 
-        final Condition condition = new Condition();
-
-        condition.setConditionType(serviceManager.getDefinitionsService().getConditionType("profileSegmentCondition"));
-        condition.setParameter("segments", segmentsContains);
-        condition.setParameter("matchType", "in");
-
-        return condition;
+        return ConditionBuilder.builder(profileSegmentConditionType)
+                .setParameter("segments", segmentsContains)
+                .setParameter("matchType", "in").build();
     }
 
     private Condition createProfileIDsContainsCondition(final List<String> profileIDsContains) {
@@ -168,24 +191,14 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
         }
 
         final List<Condition> subConditions = profileIDsContains.stream()
-                .map(profileID -> {
-                    final Condition condition = new Condition();
+                .map(profileID -> ConditionBuilder.builder(profilePropertyConditionType)
+                        .setPropertyName("itemId")
+                        .setComparisonOperator("contains")
+                        .setPropertyValue(profileID)
+                        .build()
+                ).collect(Collectors.toList());
 
-                    condition.setConditionType(serviceManager.getDefinitionsService().getConditionType("profilePropertyCondition"));
-                    condition.setParameter("propertyName", "itemId");
-                    condition.setParameter("comparisonOperator", "contains");
-                    condition.setParameter("propertyValue", profileID);
-
-                    return condition;
-                }).collect(Collectors.toList());
-
-        final Condition condition = new Condition();
-
-        condition.setConditionType(serviceManager.getDefinitionsService().getConditionType("booleanCondition"));
-        condition.setParameter("operator", "or");
-        condition.setParameter("subConditions", subConditions);
-
-        return condition;
+        return ConditionBuilder.builder(booleanConditionType).buildBooleanCondition("or", subConditions);
     }
 
     private Condition createListsContains(final List<String> listsContains) {
@@ -193,13 +206,9 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
             return null;
         }
 
-        final Condition condition = new Condition();
-
-        condition.setConditionType(serviceManager.getDefinitionsService().getConditionType("profileUserListCondition"));
-        condition.setParameter("lists", listsContains);
-        condition.setParameter("matchType", "in");
-
-        return condition;
+        return ConditionBuilder.builder(profileUserListConditionType)
+                .setParameter("lists", listsContains)
+                .setParameter("matchType", "in").build();
     }
 
     private Condition createConsentsContains(final List<String> consentsContains) {
@@ -207,51 +216,31 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
             return null;
         }
 
-        final List<Condition> rootSubConditions = new ArrayList<>();
+        final List<Condition> subConditions = new ArrayList<>();
 
-        final ConditionType profilePropertyConditionType =
-                serviceManager.getDefinitionsService().getConditionType("profilePropertyCondition");
-
-        for (String value : consentsContains) {
+        for (final String value : consentsContains) {
             final String[] splittedValue = value.split("/", -1);
 
-            final Condition scopeCondition = new Condition();
+            final Condition scopeCondition = ConditionBuilder.builder(profilePropertyConditionType)
+                    .setPropertyName("consents." + value + ".scope")
+                    .setComparisonOperator("equals")
+                    .setPropertyValue(splittedValue[0]).build();
 
-            scopeCondition.setConditionType(profilePropertyConditionType);
-            scopeCondition.setParameter("propertyName", "consents." + value + ".scope");
-            scopeCondition.setParameter("comparisonOperator", "equals");
-            scopeCondition.setParameter("propertyValue", splittedValue[0]);
+            final Condition typeIdentifierCondition = ConditionBuilder.builder(profilePropertyConditionType)
+                    .setPropertyName("consents." + value + ".typeIdentifier")
+                    .setComparisonOperator("equals")
+                    .setPropertyValue(splittedValue[1]).build();
 
-            final Condition typeIdentifierCondition = new Condition();
+            final Condition statusCondition = ConditionBuilder.builder(profilePropertyConditionType)
+                    .setPropertyName("consents." + value + ".status")
+                    .setComparisonOperator("equals")
+                    .setPropertyValue("GRANTED").build();
 
-            typeIdentifierCondition.setConditionType(profilePropertyConditionType);
-            typeIdentifierCondition.setParameter("propertyName", "consents." + value + ".typeIdentifier");
-            typeIdentifierCondition.setParameter("comparisonOperator", "equals");
-            typeIdentifierCondition.setParameter("propertyValue", splittedValue[1]);
-
-            final Condition statusCondition = new Condition();
-
-            statusCondition.setConditionType(profilePropertyConditionType);
-            statusCondition.setParameter("propertyName", "consents." + value + ".status");
-            statusCondition.setParameter("comparisonOperator", "equals");
-            statusCondition.setParameter("propertyValue", "GRANTED");
-
-            final Condition consentSubCondition = new Condition();
-
-            consentSubCondition.setConditionType(profilePropertyConditionType);
-            consentSubCondition.setParameter("operator", "and");
-            consentSubCondition.setParameter("subConditions", Arrays.asList(scopeCondition, typeIdentifierCondition, statusCondition));
-
-            rootSubConditions.add(consentSubCondition);
+            subConditions.add(ConditionBuilder.builder(booleanConditionType)
+                    .buildBooleanCondition("and", Arrays.asList(scopeCondition, typeIdentifierCondition, statusCondition)));
         }
 
-        final Condition condition = new Condition();
-
-        condition.setConditionType(serviceManager.getDefinitionsService().getConditionType("booleanCondition"));
-        condition.setParameter("operator", "or");
-        condition.setParameter("subConditions", rootSubConditions);
-
-        return condition;
+        return ConditionBuilder.builder(booleanConditionType).buildBooleanCondition("or", subConditions);
     }
 
     @SuppressWarnings("unchecked")
@@ -270,35 +259,38 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
 
         final Map<String, Object> profileFilterPropertiesAsMap = (Map<String, Object>) profilesAsMap.get("properties");
 
-        if (profileFilterPropertiesAsMap == null || profileFilterPropertiesAsMap.isEmpty()) {
+        return createProfilePropertiesCondition(profileFilterPropertiesAsMap);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Condition createProfilePropertiesCondition(final Map<String, Object> profilePropertiesFilterInput) {
+        if (profilePropertiesFilterInput == null || profilePropertiesFilterInput.isEmpty()) {
             return null;
         }
 
-        final ConditionType conditionType = serviceManager.getDefinitionsService().getConditionType("profilePropertyCondition");
+        final List<Condition> subConditions = new ArrayList<>();
 
-        final List<Condition> subConditions = profileFilterPropertiesAsMap.entrySet().stream().map(entry -> {
-            final String[] propertyFilter = entry.getKey().split("_", -1);
+        profilePropertiesFilterInput.forEach((propertyName, value) -> {
+            if ("and".equals(propertyName) || "or".equals(propertyName)
+                    && profilePropertiesFilterInput.get(propertyName) != null) {
+                final List<Map<String, Object>> inputFilters = (List<Map<String, Object>>) profilePropertiesFilterInput.get(propertyName);
+                createConditionBasedOnFilterWithSubFilters(
+                        subConditions, inputFilters, this::createProfilePropertiesCondition, propertyName);
+            } else {
+                final String[] propertyFilter = propertyName.split("_", -1);
 
-            final Condition propertyFilterCondition = new Condition();
+                final String propertyValueType =
+                        PropertyValueTypeHelper.getPropertyValueParameterForInputType(
+                                CDPProfilePropertiesFilterInput.TYPE_NAME, propertyName, environment);
 
-            propertyFilterCondition.setConditionType(conditionType);
-            propertyFilterCondition.setParameter("propertyName",
-                    "properties." + PropertyNameTranslator.translateFromGraphQLToUnomi(propertyFilter[0]));
-            propertyFilterCondition.setParameter("comparisonOperator",
-                    ComparisonConditionTranslator.translateComparisonCondition(propertyFilter[1]));
-            propertyFilterCondition.setParameter("propertyValue", entry.getValue());
+                subConditions.add(ConditionBuilder.builder(profilePropertyConditionType)
+                        .setPropertyName("properties." + PropertyNameTranslator.translateFromGraphQLToUnomi(propertyFilter[0]))
+                        .setComparisonOperator(ComparisonConditionTranslator.translateFromGraphQLToUnomi(propertyFilter[1]))
+                        .setParameter(propertyValueType, value).build());
+            }
+        });
 
-            return propertyFilterCondition;
-        }).collect(Collectors.toList());
-
-
-        final Condition profilePropertiesCondition = new Condition();
-
-        profilePropertiesCondition.setConditionType(serviceManager.getDefinitionsService().getConditionType("booleanCondition"));
-        profilePropertiesCondition.setParameter("operator", "and");
-        profilePropertiesCondition.setParameter("subConditions", subConditions);
-
-        return profilePropertiesCondition;
+        return ConditionBuilder.builder(booleanConditionType).buildBooleanCondition("and", subConditions);
     }
 
     private Condition createProfileInterestCondition(final CDPInterestFilterInput interestFilterInput) {
@@ -306,91 +298,176 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
             return null;
         }
 
-        final ConditionType conditionType = serviceManager.getDefinitionsService().getConditionType("profilePropertyCondition");
-
         final String propertyName = "properties.interests." + interestFilterInput.getTopic_equals();
 
         final List<Condition> subConditions = new ArrayList<>();
 
         if (interestFilterInput.getScore_equals() != null) {
-            final Condition condition = new Condition();
-
-            condition.setConditionType(conditionType);
-
-            condition.setParameter("propertyName", propertyName);
-            condition.setParameter("comparisonOperator", "equals");
-            condition.setParameter("propertyValueInteger", interestFilterInput.getScore_equals());
-
-            subConditions.add(condition);
+            subConditions.add(ConditionBuilder.builder(profilePropertyConditionType)
+                    .setPropertyName(propertyName)
+                    .setComparisonOperator("equals")
+                    .setPropertyValueInteger(interestFilterInput.getScore_equals()).build());
         }
 
         if (interestFilterInput.getScore_gte() != null) {
-            final Condition condition = new Condition();
-
-            condition.setConditionType(conditionType);
-            condition.setParameter("propertyName", propertyName);
-            condition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
-            condition.setParameter("propertyValueInteger", interestFilterInput.getScore_gte());
-
-            subConditions.add(condition);
+            subConditions.add(ConditionBuilder.builder(profilePropertyConditionType)
+                    .setPropertyName(propertyName)
+                    .setComparisonOperator("greaterThanOrEqualTo")
+                    .setPropertyValueInteger(interestFilterInput.getScore_gte()).build());
         }
 
         if (interestFilterInput.getScore_gt() != null) {
-            final Condition condition = new Condition();
-
-            condition.setConditionType(conditionType);
-            condition.setParameter("propertyName", propertyName);
-            condition.setParameter("comparisonOperator", "greaterThan");
-            condition.setParameter("propertyValueInteger", interestFilterInput.getScore_gt());
-
-            subConditions.add(condition);
+            subConditions.add(ConditionBuilder.builder(profilePropertyConditionType)
+                    .setPropertyName(propertyName)
+                    .setComparisonOperator("greaterThan")
+                    .setPropertyValueInteger(interestFilterInput.getScore_gt()).build());
         }
 
         if (interestFilterInput.getScore_lte() != null) {
-            final Condition condition = new Condition();
-
-            condition.setConditionType(conditionType);
-            condition.setParameter("propertyName", propertyName);
-            condition.setParameter("comparisonOperator", "lessThanOrEqualTo");
-            condition.setParameter("propertyValueInteger", interestFilterInput.getScore_lte());
-
-            subConditions.add(condition);
+            subConditions.add(ConditionBuilder.builder(profilePropertyConditionType)
+                    .setPropertyName(propertyName)
+                    .setComparisonOperator("lessThanOrEqualTo")
+                    .setPropertyValueInteger(interestFilterInput.getScore_lte()).build());
         }
 
         if (interestFilterInput.getScore_lt() != null) {
-            final Condition condition = new Condition();
-
-            condition.setConditionType(conditionType);
-            condition.setParameter("propertyName", propertyName);
-            condition.setParameter("comparisonOperator", "lessThan");
-            condition.setParameter("propertyValueInteger", interestFilterInput.getScore_lt());
-
-            subConditions.add(condition);
+            subConditions.add(ConditionBuilder.builder(profilePropertyConditionType)
+                    .setPropertyName(propertyName)
+                    .setComparisonOperator("lessThan")
+                    .setPropertyValueInteger(interestFilterInput.getScore_lt()).build());
         }
 
-        final Condition condition = new Condition();
+        createConditionBasedOnFilterWithSubFilters(
+                subConditions, interestFilterInput.getAnd(), this::createProfileInterestCondition, "and");
 
-        condition.setConditionType(serviceManager.getDefinitionsService().getConditionType("booleanCondition"));
-        condition.setParameter("operator", "and");
-        condition.setParameter("subConditions", subConditions);
+        createConditionBasedOnFilterWithSubFilters(
+                subConditions, interestFilterInput.getOr(), this::createProfileInterestCondition, "or");
 
-        return condition;
+        return ConditionBuilder.builder(booleanConditionType).buildBooleanCondition("and", subConditions);
+    }
+
+
+    private Condition createEventPropertyCondition(final CDPEventFilterInput eventFilterInput) {
+        final List<Condition> subConditions = new ArrayList<>();
+
+        if (!Strings.isNullOrEmpty(eventFilterInput.getCdp_sourceID_equals())) {
+            subConditions.add(ConditionBuilder.builder(eventPropertyConditionType)
+                    .setPropertyName("source.itemId")
+                    .setComparisonOperator("equals")
+                    .setPropertyValue(eventFilterInput.getCdp_sourceID_equals()).build());
+        }
+
+        if (!Strings.isNullOrEmpty(eventFilterInput.getCdp_profileID_equals())) {
+            subConditions.add(ConditionBuilder.builder(eventPropertyConditionType)
+                    .setPropertyName("profileId")
+                    .setComparisonOperator("equals")
+                    .setPropertyValue(eventFilterInput.getCdp_profileID_equals()).build());
+        }
+
+        if (!Strings.isNullOrEmpty(eventFilterInput.getId_equals())) {
+            subConditions.add(ConditionBuilder.builder(eventPropertyConditionType)
+                    .setPropertyName("itemId")
+                    .setComparisonOperator("equals")
+                    .setPropertyValue(eventFilterInput.getId_equals())
+                    .build());
+        }
+
+        if (eventFilterInput.getCdp_timestamp_equals() != null) {
+            subConditions.add(ConditionBuilder.builder(eventPropertyConditionType)
+                    .setPropertyName("timeStamp")
+                    .setComparisonOperator("equals")
+                    .setPropertyValueDate(eventFilterInput.getCdp_timestamp_equals())
+                    .build());
+        }
+
+        if (eventFilterInput.getCdp_timestamp_gt() != null) {
+            subConditions.add(ConditionBuilder.builder(eventPropertyConditionType)
+                    .setPropertyName("timeStamp")
+                    .setComparisonOperator("greaterThan")
+                    .setPropertyValueDate(eventFilterInput.getCdp_timestamp_gt())
+                    .build());
+        }
+
+        if (eventFilterInput.getCdp_timestamp_gte() != null) {
+            subConditions.add(ConditionBuilder.builder(eventPropertyConditionType)
+                    .setPropertyName("timeStamp")
+                    .setComparisonOperator("greaterThanOrEqualTo")
+                    .setPropertyValueDate(eventFilterInput.getCdp_timestamp_gte())
+                    .build());
+        }
+
+        if (eventFilterInput.getCdp_timestamp_lt() != null) {
+            subConditions.add(ConditionBuilder.builder(eventPropertyConditionType)
+                    .setPropertyName("timeStamp")
+                    .setComparisonOperator("lessThan")
+                    .setPropertyValueDate(eventFilterInput.getCdp_timestamp_lt())
+                    .build());
+        }
+
+        if (eventFilterInput.getCdp_timestamp_lte() != null) {
+            subConditions.add(ConditionBuilder.builder(eventPropertyConditionType)
+                    .setPropertyName("timeStamp")
+                    .setComparisonOperator("lessThanOrEqualTo")
+                    .setPropertyValueDate(eventFilterInput.getCdp_timestamp_lte()).build());
+        }
+
+        createConditionBasedOnFilterWithSubFilters(
+                subConditions, eventFilterInput.getAnd(), this::createEventPropertyCondition, "and");
+
+        createConditionBasedOnFilterWithSubFilters(
+                subConditions, eventFilterInput.getOr(), this::createEventPropertyCondition, "or");
+
+        return ConditionBuilder.builder(booleanConditionType).buildBooleanCondition("and", subConditions);
     }
 
     private Condition createProfileEventsCondition(final CDPProfileEventsFilterInput eventsFilterInput) {
-        return null;
+        if (eventsFilterInput == null || eventsFilterInput.getEventFilter() == null) {
+            return null;
+        }
+
+        final List<Condition> subConditions = new ArrayList<>();
+
+        createConditionBasedOnFilterWithSubFilters(
+                subConditions, eventsFilterInput.getAnd(), this::createProfileEventsCondition, "and");
+
+        createConditionBasedOnFilterWithSubFilters(
+                subConditions, eventsFilterInput.getOr(), this::createProfileEventsCondition, "or");
+
+        if (eventsFilterInput.getNot() != null) {
+            subConditions.add(ConditionBuilder.builder(notConditionType)
+                    .setParameter("subCondition", createProfileEventsCondition(eventsFilterInput.getNot()))
+                    .build());
+        }
+
+        final Condition eventCondition = createEventPropertyCondition(eventsFilterInput.getEventFilter());
+
+        final Condition pastEventCondition = ConditionBuilder.builder(pastEventConditionType)
+                .setParameter("minimumEventCount", eventsFilterInput.getMinimalCount())
+                .setParameter("maximumEventCount", eventsFilterInput.getMaximalCount())
+                .setParameter("eventCondition", eventCondition).build();
+
+        subConditions.add(pastEventCondition);
+
+        return ConditionBuilder.builder(booleanConditionType).buildBooleanCondition("and", subConditions);
+    }
+
+    private <INPUT> void createConditionBasedOnFilterWithSubFilters(
+            final List<Condition> container, final List<INPUT> inputFilters, final Function<INPUT, Condition> function, final String operator) {
+        if (inputFilters == null || inputFilters.isEmpty()) {
+            return;
+        }
+
+        final List<Condition> subConditions = inputFilters.stream()
+                .map(function)
+                .collect(Collectors.toList());
+
+        container.add(ConditionBuilder.builder(booleanConditionType).buildBooleanCondition(operator, subConditions));
     }
 
     private Condition createSegmentCondition() {
-        final Condition condition = new Condition();
-
-        condition.setConditionType(serviceManager.getDefinitionsService().getConditionType("booleanCondition"));
-        condition.setParameter("operator", "and");
-
         final List<Condition> subConditions = createSubCondition();
-        condition.setParameter("subConditions", subConditions);
 
-        return condition;
+        return ConditionBuilder.builder(booleanConditionType).buildBooleanCondition("and", subConditions);
     }
 
     public static Builder create(final CDPSegmentInput segmentInput, final DataFetchingEnvironment environment) {

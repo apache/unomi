@@ -20,10 +20,10 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.graphql.fetchers.segments.SegmentProfileConsentsDataFetcher;
-import org.apache.unomi.graphql.fetchers.segments.SegmentProfileIDsDataFetcher;
-import org.apache.unomi.graphql.fetchers.segments.SegmentProfileListDataFetcher;
-import org.apache.unomi.graphql.fetchers.segments.SegmentProfileSegmentsDataFetcher;
+import org.apache.unomi.graphql.fetchers.segment.SegmentProfileConsentsDataFetcher;
+import org.apache.unomi.graphql.fetchers.segment.SegmentProfileIDsDataFetcher;
+import org.apache.unomi.graphql.fetchers.segment.SegmentProfileListDataFetcher;
+import org.apache.unomi.graphql.fetchers.segment.SegmentProfileSegmentsDataFetcher;
 
 import java.util.List;
 
@@ -70,6 +70,10 @@ public class CDPProfileFilter {
         return new CDPInterestFilter(segment.getCondition());
     }
 
+    @GraphQLField
+    public CDPProfileEventsFilter events(final DataFetchingEnvironment environment) throws Exception {
+        return new CDPProfileEventsFilter(segment.getCondition());
+    }
 
     public Segment getSegment() {
         return segment;

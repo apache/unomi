@@ -27,7 +27,7 @@ import org.apache.unomi.graphql.fetchers.profile.FindProfilesConnectionDataFetch
 import org.apache.unomi.graphql.fetchers.profile.ProfileDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.PropertiesConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.segment.FindSegmentsConnectionDataFetcher;
-import org.apache.unomi.graphql.fetchers.segments.SegmentDataFetcher;
+import org.apache.unomi.graphql.fetchers.segment.SegmentDataFetcher;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPOrderByInput;
 import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;

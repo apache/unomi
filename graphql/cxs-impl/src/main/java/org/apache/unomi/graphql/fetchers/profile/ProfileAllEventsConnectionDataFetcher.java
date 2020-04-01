@@ -47,7 +47,7 @@ public class ProfileAllEventsConnectionDataFetcher extends EventConnectionDataFe
         // force searching events belonging to current profile only
         if (filterInput == null) {
             // workaround
-            filterInput = new CDPEventFilterInput(profile.getItemId());
+            filterInput = CDPEventFilterInput.from(profile.getItemId());
         }
 
         final Condition condition = ConditionFactory.event().createEventFilterInputCondition(filterInput, params.getAfter(), params.getBefore(), serviceManager.getDefinitionsService());
