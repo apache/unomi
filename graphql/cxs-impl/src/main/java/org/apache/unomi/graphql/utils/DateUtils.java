@@ -45,6 +45,14 @@ public final class DateUtils {
         return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
     }
 
+    public static Date toDate(final OffsetDateTime offsetDateTime) {
+        if (offsetDateTime == null) {
+            return null;
+        }
+
+        return new Date(offsetDateTime.toInstant().toEpochMilli());
+    }
+
     @SuppressWarnings("unchecked")
     public static OffsetDateTime offsetDateTimeFromMap(final Map<String, Object> parameterValues) {
         if (parameterValues == null) {

@@ -42,15 +42,20 @@ public class CDPEventInput {
     @GraphQLNonNull
     private String cdp_objectID;
 
+    @GraphQLField
+    private CDPConsentUpdateEventInput cdp_consentUpdateEvent;
+
     public CDPEventInput(
-            @GraphQLID @GraphQLName("id") String id,
-            @GraphQLName("cdp_sourceID") String cdp_sourceID,
-            @GraphQLNonNull @GraphQLName("cdp_profileID") CDPProfileIDInput cdp_profileID,
-            @GraphQLID @GraphQLNonNull @GraphQLName("cdp_objectID") String cdp_objectID) {
+            final @GraphQLID @GraphQLName("id") String id,
+            final @GraphQLName("cdp_sourceID") String cdp_sourceID,
+            final @GraphQLNonNull @GraphQLName("cdp_profileID") CDPProfileIDInput cdp_profileID,
+            final @GraphQLID @GraphQLNonNull @GraphQLName("cdp_objectID") String cdp_objectID,
+            final @GraphQLName("cdp_consentUpdateEvent") CDPConsentUpdateEventInput cdp_consentUpdateEvent) {
         this.id = id;
         this.cdp_sourceID = cdp_sourceID;
         this.cdp_profileID = cdp_profileID;
         this.cdp_objectID = cdp_objectID;
+        this.cdp_consentUpdateEvent = cdp_consentUpdateEvent;
     }
 
     public String getId() {
@@ -85,4 +90,12 @@ public class CDPEventInput {
         this.cdp_objectID = cdp_objectID;
     }
 
+    public CDPConsentUpdateEventInput getCdp_consentUpdateEvent() {
+        return cdp_consentUpdateEvent;
+    }
+
+    public CDPEventInput setCdp_consentUpdateEvent(CDPConsentUpdateEventInput cdp_consentUpdateEvent) {
+        this.cdp_consentUpdateEvent = cdp_consentUpdateEvent;
+        return this;
+    }
 }

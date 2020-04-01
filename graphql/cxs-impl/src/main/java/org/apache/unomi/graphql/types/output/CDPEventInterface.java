@@ -21,11 +21,14 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.annotations.annotationTypes.GraphQLPrettify;
+import graphql.annotations.annotationTypes.GraphQLTypeResolver;
+import org.apache.unomi.graphql.types.resolvers.CDPEventInterfaceResolver;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 
 @GraphQLName("CDP_EventInterface")
+@GraphQLTypeResolver(CDPEventInterfaceResolver.class)
 public abstract class CDPEventInterface {
 
     private String id;

@@ -20,9 +20,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.graphql.services.ServiceManager;
 
-import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -33,7 +31,7 @@ import java.util.stream.Collectors;
 import static org.apache.unomi.graphql.types.input.CDPProfileUpdateEventInput.TYPE_NAME_INTERNAL;
 
 @GraphQLName(TYPE_NAME_INTERNAL)
-public class CDPProfileUpdateEventInput implements CDPEventProcessor {
+public class CDPProfileUpdateEventInput extends BaseProfileEventProcessor {
 
     public static final String TYPE_NAME_INTERNAL = "CDP_ProfileUpdateEvent";
 
@@ -49,11 +47,11 @@ public class CDPProfileUpdateEventInput implements CDPEventProcessor {
     public Event buildEvent(
             final LinkedHashMap<String, Object> eventInputAsMap,
             final DataFetchingEnvironment environment) {
-        final Map<String, Object> cdpProfileId = (Map<String, Object>) eventInputAsMap.get("cdp_profileID");
+        final Profile profile = loadProfile(eventInputAsMap, environment);
 
-        final ServiceManager serviceManager = environment.getContext();
-
-        final Profile profile = serviceManager.getProfileService().load((String) cdpProfileId.get("id"));
+        if (profile == null) {
+            return null;
+        }
 
         final LinkedHashMap<String, Object> profilePropertiesAsMap = (LinkedHashMap<String, Object>) eventInputAsMap.get(EVENT_NAME);
 
@@ -67,14 +65,15 @@ public class CDPProfileUpdateEventInput implements CDPEventProcessor {
         final Set<String> propertyToDelete = new HashSet<>(persistedProperties.keySet());
         propertyToDelete.removeAll(profilePropertiesAsMap.keySet());
 
-        final Event event = new Event("updateProperties", null, profile, null, null, profile, new Date());
-        event.setPersistent(false);
-
-        event.setProperty("targetId", profile.getItemId());
-        event.setProperty("targetType", Profile.ITEM_TYPE);
-        event.setProperty("update", propertyToUpdate);
-        event.setProperty("delete", propertyToDelete.stream().map(prop -> "properties." + prop).collect(Collectors.toList()));
-
-        return event;
+        return eventBuilder(profile)
+                .setPropertiesToUpdate(propertyToUpdate)
+                .setPropertiesToDelete(propertyToDelete.stream().map(prop -> "properties." + prop).collect(Collectors.toList()))
+                .build();
     }
+
+    @Override
+    public String getFieldName() {
+        return EVENT_NAME;
+    }
+
 }

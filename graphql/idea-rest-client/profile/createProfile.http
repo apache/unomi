@@ -38,7 +38,15 @@ Content-Type: application/json
   "segments": [],
   "scores": {},
   "mergedWith": null,
-  "consents": {}
+  "consents": {
+      "digitall/newsletter1": {
+            "scope": "digitall",
+            "typeIdentifier": "newsletter1",
+            "status": "GRANTED",
+            "statusDate": "2019-05-15T14:47:28Z",
+            "revokeDate": "2021-05-14T14:47:28Z"
+        }
+  }
 }
 
 ###
