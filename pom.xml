@@ -999,6 +999,7 @@
         <module>samples</module>
         <module>package</module>
         <module>manual</module>
+	<module>playground</module>
     </modules>
 
     <dependencies>
