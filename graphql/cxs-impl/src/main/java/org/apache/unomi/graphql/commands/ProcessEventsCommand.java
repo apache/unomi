@@ -22,14 +22,14 @@ import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLInputObjectType;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
-import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.types.input.CDPConsentUpdateEventInput;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPEventProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Constructor;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
@@ -39,39 +39,82 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
 
     private static final Logger LOG = LoggerFactory.getLogger(ProcessEventsCommand.class.getName());
 
+    private static final List<String> STATIC_FIELDS = new ArrayList<>();
+
+    private final List<CDPEventInput> eventInputs;
+
+    private final List<LinkedHashMap<String, Object>> eventsAsMap;
+
     private final DataFetchingEnvironment environment;
+
+    private final List<GraphQLInputObjectField> fieldDefinitions;
+
+    private final AtomicInteger processedEventsQty = new AtomicInteger();
+
+    static {
+        STATIC_FIELDS.add(CDPConsentUpdateEventInput.EVENT_NAME);
+    }
 
     private ProcessEventsCommand(final Builder builder) {
         super(builder);
 
         this.environment = builder.environment;
+        this.eventInputs = builder.eventInputs;
+
+        this.eventsAsMap = environment.getArgument("events");
+
+        final GraphQLInputObjectType objectType =
+                (GraphQLInputObjectType) environment.getGraphQLSchema().getType(CDPEventInput.TYPE_NAME);
+
+        this.fieldDefinitions = objectType.getFieldDefinitions();
     }
 
     @Override
     public Integer execute() {
-        final ServiceManager serviceManager = environment.getContext();
+        for (int i = 0; i < eventInputs.size(); i++) {
+            final CDPEventInput eventInput = eventInputs.get(i);
 
-        final GraphQLSchemaUpdater schemaProvider = serviceManager.getGraphQLSchemaUpdater();
+            final LinkedHashMap<String, Object> eventInputAsMap = eventsAsMap.get(i);
 
-        final List<LinkedHashMap<String, Object>> events = environment.getArgument("events");
+            processStaticFields(eventInput, eventInputAsMap);
 
-        final List<GraphQLInputObjectField> fieldDefinitions = schemaProvider.getInputObjectType(CDPEventInput.class).getFieldDefinitions();
+            processDynamicFields(eventInputAsMap);
+        }
 
-        final AtomicInteger atomicInteger = new AtomicInteger();
+        return processedEventsQty.get();
+    }
 
-        for (final LinkedHashMap<String, Object> envCdpEventInput : events) {
-            fieldDefinitions.forEach(fieldDefinition -> {
-                try {
-                    if (processField(fieldDefinition, envCdpEventInput)) {
-                        atomicInteger.incrementAndGet();
+    private void processStaticFields(
+            final CDPEventInput eventInput, final LinkedHashMap<String, Object> eventInputAsMap) {
+        final List<CDPEventProcessor> eventProcessors = new ArrayList<>();
+        eventProcessors.add(eventInput.getCdp_consentUpdateEvent());
+
+        eventProcessors.stream()
+                .filter(Objects::nonNull)
+                .forEach(eventProcessor -> {
+                    try {
+                        final Event event = eventProcessor.buildEvent(eventInputAsMap, environment);
+
+                        if (event != null) {
+                            processEvent(event);
+                        }
+
+                    } catch (Exception e) {
+                        LOG.debug("Process field {} is failed", eventProcessor.getFieldName(), e);
                     }
+                });
+    }
+
+    private void processDynamicFields(final LinkedHashMap<String, Object> eventInputAsMap) {
+        fieldDefinitions.forEach(fieldDefinition -> {
+            if (!STATIC_FIELDS.contains(fieldDefinition.getName())) {
+                try {
+                    processField(fieldDefinition, eventInputAsMap);
                 } catch (Exception e) {
                     LOG.debug("Process field {} is failed", fieldDefinition, e);
                 }
-            });
-        }
-
-        return atomicInteger.get();
+            }
+        });
     }
 
     private boolean processField(
@@ -89,7 +132,7 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
             if (typeDefinition != null && typeDefinition.getAdditionalData().containsKey("clazz")) {
                 final String className = typeDefinition.getAdditionalData().get("clazz");
 
-                buildEvent(className, eventInputAsMap);
+                buildAndProcessEvent(className, eventInputAsMap);
 
                 return true;
             }
@@ -98,31 +141,42 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
         return false;
     }
 
-    private void buildEvent(final String className, final LinkedHashMap<String, Object> eventInputAsMap) throws Exception {
+    private void buildAndProcessEvent(final String className, final LinkedHashMap<String, Object> eventInputAsMap) throws Exception {
         final Constructor<?> constructor = Class.forName(className).getConstructor();
         final Object instance = constructor.newInstance();
 
         if (instance instanceof CDPEventProcessor) {
             final Event event = ((CDPEventProcessor) instance).buildEvent(eventInputAsMap, environment);
 
-            int eventCode = serviceManager.getEventService().send(event);
-
-            if (eventCode == EventService.PROFILE_UPDATED) {
-                serviceManager.getProfileService().save(event.getProfile());
+            if (event != null) {
+                processEvent(event);
             }
         }
     }
 
-    public static Builder create(final DataFetchingEnvironment environment) {
-        return new Builder(environment);
+    private void processEvent(final Event event) {
+        int eventCode = serviceManager.getEventService().send(event);
+
+        if (eventCode == EventService.PROFILE_UPDATED) {
+            serviceManager.getProfileService().save(event.getProfile());
+
+            processedEventsQty.incrementAndGet();
+        }
+    }
+
+    public static Builder create(final List<CDPEventInput> eventInputs, final DataFetchingEnvironment environment) {
+        return new Builder(eventInputs, environment);
     }
 
 
     public static final class Builder extends BaseCommand.Builder<Builder> {
 
+        private final List<CDPEventInput> eventInputs;
+
         private final DataFetchingEnvironment environment;
 
-        public Builder(final DataFetchingEnvironment environment) {
+        public Builder(final List<CDPEventInput> eventInputs, final DataFetchingEnvironment environment) {
+            this.eventInputs = eventInputs;
             this.environment = environment;
         }
 

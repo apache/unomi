@@ -20,7 +20,6 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
-import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPEventProcessor;
 
 import java.util.LinkedHashMap;
@@ -39,6 +38,11 @@ public class VENDOR_PageViewEventInput implements CDPEventProcessor {
     @Override
     public Event buildEvent(LinkedHashMap<String, Object> eventInputAsMap, DataFetchingEnvironment environment) {
         return new Event();
+    }
+
+    @Override
+    public String getFieldName() {
+        return EVENT_NAME;
     }
 
 }

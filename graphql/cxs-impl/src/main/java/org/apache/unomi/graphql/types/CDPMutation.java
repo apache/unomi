@@ -60,7 +60,7 @@ public class CDPMutation {
             final @GraphQLNonNull @GraphQLName("events") List<CDPEventInput> eventInputs,
             final DataFetchingEnvironment environment
     ) {
-        return ProcessEventsCommand.create(environment)
+        return ProcessEventsCommand.create(eventInputs, environment)
                 .setServiceManager(environment.getContext())
                 .build()
                 .execute();

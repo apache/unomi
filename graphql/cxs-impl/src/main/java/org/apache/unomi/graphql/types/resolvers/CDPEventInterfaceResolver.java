@@ -14,17 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.input;
+package org.apache.unomi.graphql.types.resolvers;
 
-import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.api.Event;
+import graphql.TypeResolutionEnvironment;
+import graphql.schema.GraphQLObjectType;
+import graphql.schema.TypeResolver;
+import org.apache.unomi.graphql.types.output.CDPConsentUpdateEvent;
 
-import java.util.LinkedHashMap;
+public class CDPEventInterfaceResolver implements TypeResolver {
 
-public interface CDPEventProcessor {
+    @Override
+    public GraphQLObjectType getType(TypeResolutionEnvironment env) {
+        final Object obj = env.getObject();
 
-    Event buildEvent(final LinkedHashMap<String, Object> eventInputAsMap, final DataFetchingEnvironment environment);
+        if (obj instanceof CDPConsentUpdateEvent) {
+            return env.getSchema().getObjectType(CDPConsentUpdateEvent.TYPE_NAME);
+        }
 
-    String getFieldName();
+        return null;
+    }
 
 }

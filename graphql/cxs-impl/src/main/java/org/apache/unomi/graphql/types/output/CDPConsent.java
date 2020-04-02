@@ -43,6 +43,7 @@ public class CDPConsent {
     private CDPClient client = CDPClient.DEFAULT;
 
     @GraphQLField
+    @GraphQLNonNull
     private String type;
 
     @GraphQLField
