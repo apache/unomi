@@ -21,39 +21,39 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
+import org.apache.unomi.api.lists.UserList;
 import org.apache.unomi.graphql.fetchers.list.ListProfileConnectionDataFetcher;
 
 @GraphQLName("CDP_List")
 public class CDPList {
 
+    private UserList userList;
+
+    public CDPList(final UserList userList) {
+        this.userList = userList;
+    }
+
     @GraphQLID
     @GraphQLField
     @GraphQLNonNull
     @GraphQLName("ID")
-    private String id;
-
-    @GraphQLField
-    @GraphQLNonNull
-    private CDPView view;
-
-    @GraphQLField
-    @GraphQLNonNull
-    private String name;
-
-    public CDPList(final String id) {
-        this.id = id;
-    }
-
     public String getId() {
-        return id;
+        return userList.getItemId();
     }
 
+    @GraphQLField
+    @GraphQLNonNull
+    @GraphQLPrettify
     public CDPView getView() {
-        return view;
+        return userList.getScope() != null ? new CDPView(userList.getScope()) : null;
     }
 
+    @GraphQLField
+    @GraphQLNonNull
+    @GraphQLPrettify
     public String name() {
-        return name;
+        return userList.getMetadata() != null ? userList.getMetadata().getName() : null;
     }
 
     @GraphQLField

@@ -25,6 +25,7 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.graphql.types.input.CDPConsentUpdateEventInput;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPEventProcessor;
+import org.apache.unomi.graphql.types.input.CDPListsUpdateEventInput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +54,7 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
 
     static {
         STATIC_FIELDS.add(CDPConsentUpdateEventInput.EVENT_NAME);
+        STATIC_FIELDS.add(CDPListsUpdateEventInput.EVENT_NAME);
     }
 
     private ProcessEventsCommand(final Builder builder) {
@@ -88,6 +90,7 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
             final CDPEventInput eventInput, final LinkedHashMap<String, Object> eventInputAsMap) {
         final List<CDPEventProcessor> eventProcessors = new ArrayList<>();
         eventProcessors.add(eventInput.getCdp_consentUpdateEvent());
+        eventProcessors.add(eventInput.getCdp_listUpdateEvent());
 
         eventProcessors.stream()
                 .filter(Objects::nonNull)
@@ -159,9 +162,8 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             serviceManager.getProfileService().save(event.getProfile());
-
-            processedEventsQty.incrementAndGet();
         }
+        processedEventsQty.incrementAndGet();
     }
 
     public static Builder create(final List<CDPEventInput> eventInputs, final DataFetchingEnvironment environment) {

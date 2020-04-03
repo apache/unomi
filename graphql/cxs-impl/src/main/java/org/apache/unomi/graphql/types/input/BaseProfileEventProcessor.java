@@ -22,64 +22,74 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.graphql.services.ServiceManager;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public abstract class BaseProfileEventProcessor implements CDPEventProcessor {
-
     @SuppressWarnings("unchecked")
     protected Profile loadProfile(final Map<String, Object> eventInputAsMap, final DataFetchingEnvironment environment) {
         final Map<String, Object> cdpProfileId = (Map<String, Object>) eventInputAsMap.get("cdp_profileID");
-
         final ServiceManager serviceManager = environment.getContext();
-
         return serviceManager.getProfileService().load((String) cdpProfileId.get("id"));
     }
 
-    protected final UpdateProfilePropertiesEventBuilder eventBuilder(final Profile profile) {
-        return new UpdateProfilePropertiesEventBuilder(profile);
+    protected final EventBuilder eventBuilder(final Profile profile) {
+        return new EventBuilder("updateProperties", profile);
     }
 
-    protected static class UpdateProfilePropertiesEventBuilder {
+    protected final EventBuilder eventBuilder(final String eventType, final Profile profile) {
+        return new EventBuilder(eventType, profile);
+    }
 
+    protected static class EventBuilder {
         private final Profile profile;
-
+        private final String eventType;
         private Map<String, Object> propertiesToUpdate;
-
         private List<String> propertiesToDelete;
+        private Map<String, Object> properties = new HashMap<>();
+        private boolean persistent;
 
-        public UpdateProfilePropertiesEventBuilder(Profile profile) {
+        public EventBuilder(final String eventType, Profile profile) {
+            this.eventType = eventType;
             this.profile = profile;
         }
 
-        public UpdateProfilePropertiesEventBuilder setPropertiesToUpdate(Map<String, Object> propertiesToUpdate) {
+        public EventBuilder setPropertiesToUpdate(Map<String, Object> propertiesToUpdate) {
             this.propertiesToUpdate = propertiesToUpdate;
             return this;
         }
 
-        public UpdateProfilePropertiesEventBuilder setPropertiesToDelete(List<String> propertiesToDelete) {
+        public EventBuilder setPropertiesToDelete(List<String> propertiesToDelete) {
             this.propertiesToDelete = propertiesToDelete;
             return this;
         }
 
+        public EventBuilder setPersistent(boolean persistent) {
+            this.persistent = persistent;
+            return this;
+        }
+
+        public EventBuilder setProperty(final String property, final Object value) {
+            this.properties.put(property, value);
+            return this;
+        }
+
         public Event build() {
-            final Event event = new Event("updateProperties", null, profile, null, null, profile, new Date());
-
-            event.setPersistent(false);
-
+            final Event event = new Event(eventType, null, profile, null, null, profile, new Date());
+            event.setPersistent(persistent);
             event.setProperty("targetId", profile.getItemId());
             event.setProperty("targetType", Profile.ITEM_TYPE);
-
             if (propertiesToUpdate != null) {
                 event.setProperty("update", propertiesToUpdate);
             }
-
             if (propertiesToDelete != null) {
                 event.setProperty("delete", propertiesToDelete);
             }
-
+            if (!properties.isEmpty()) {
+                event.setProperties(properties);
+            }
             return event;
         }
     }
-
 }

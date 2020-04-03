@@ -17,14 +17,18 @@
 
 package org.apache.unomi.graphql.fetchers.profile;
 
+import com.google.common.collect.Iterables;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.lists.UserList;
+import org.apache.unomi.api.services.UserListService;
 import org.apache.unomi.graphql.fetchers.BaseDataFetcher;
+import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.output.CDPList;
-import org.apache.unomi.graphql.types.output.CDPProfile;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -42,18 +46,29 @@ public class ProfileListsDataFetcher extends BaseDataFetcher<List<CDPList>> {
     @Override
     @SuppressWarnings("unchecked")
     public List<CDPList> get(DataFetchingEnvironment environment) throws Exception {
-        final List<String> listIds = (List<String>) profile.getSystemProperties().get("lists");
+        final ServiceManager serviceManager = environment.getContext();
+        final UserListService userListService = serviceManager.getUserListService();
+        final Map<String, Object> systemProperties = profile.getSystemProperties();
+        if (systemProperties == null) {
+            return null;
+        }
 
+        final List<String> listIds = (List<String>) systemProperties.get("lists");
         if (listIds == null) {
-            return Collections.emptyList();
+            return null;
         }
 
         Stream<String> stream = listIds.stream();
+
+        final List<UserList> userLists = userListService.getAllUserLists();
 
         if (viewIds != null) {
             stream = stream.filter(viewIds::contains);
         }
 
-        return stream.map(CDPList::new).collect(Collectors.toList());
+        return stream.map(viewId -> {
+            final UserList list = Iterables.tryFind(userLists, userList -> viewId.equals(userList.getItemId())).orNull();
+            return list != null ? new CDPList(list) : null;
+        }).filter(Objects::nonNull).collect(Collectors.toList());
     }
 }

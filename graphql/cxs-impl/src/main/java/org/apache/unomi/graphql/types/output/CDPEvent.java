@@ -20,107 +20,94 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
+import graphql.annotations.annotationTypes.GraphQLPrettify;
+import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.utils.DateUtils;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @GraphQLName("CDP_Event")
 public class CDPEvent {
 
-    @GraphQLID
-    @GraphQLField
-    @GraphQLNonNull
-    private String id;
-
-    @GraphQLField
-    private CDPSource source;
-
-    @GraphQLField
-    private CDPClient client;
-
-    @GraphQLField
-    @GraphQLNonNull
-    private CDPProfileID profileID;
-
-    @GraphQLField
-    @GraphQLNonNull
-    private CDPProfile profile;
-
-    @GraphQLField
-    @GraphQLNonNull
-    private CDPObject object;
-
-    @GraphQLField
-    private CDPGeoPoint location;
-
-    @GraphQLField
-    private OffsetDateTime timeStamp;
-
-    @GraphQLField
-    private List<CDPTopic> topics = new ArrayList<CDPTopic>();
-
-    // TODO: properties is not part of the spec
-    private CDPEventProperties properties;
+    private Event event;
 
     public CDPEvent() {
     }
 
     public CDPEvent(Event event) {
-        id = event.getItemId();
-        source = new CDPSource(event.getSource() != null ? event.getSource().getItemId() : "");
-        client = CDPClient.DEFAULT;
-        profileID = new CDPProfileID(event.getProfileId());
-        profile = new CDPProfile(event.getProfile());
-        final String uri = String.format("%s:%s", event.getItemType(), event.getItemId());
-        object = new CDPObject(uri, event.getItemType(), event.getItemId(), null);
-        timeStamp = DateUtils.toOffsetDateTime(event.getTimeStamp());
-//        TODO: implement after unomi supports it
-//        location
-//        topics
-
-        properties = new CDPEventProperties(event.getProperties());
+        this.event = event;
     }
 
+    @GraphQLID
+    @GraphQLField
+    @GraphQLPrettify
+    @GraphQLNonNull
     public String getId() {
-        return id;
+        return event.getItemId();
     }
 
+    @GraphQLField
+    @GraphQLPrettify
     public CDPSource getSource() {
-        return source;
+        return event.getSource() != null ? new CDPSource(event.getSource().getItemId()) : null;
     }
 
+    @GraphQLField
+    @GraphQLPrettify
     public CDPClient getClient() {
-        return client;
+        return CDPClient.DEFAULT;
     }
 
+    @GraphQLField
+    @GraphQLPrettify
+    @GraphQLNonNull
     public CDPProfileID getProfileID() {
-        return profileID;
+        return new CDPProfileID(event.getProfileId());
     }
 
-    public CDPProfile getProfile() {
-        return profile;
+    @GraphQLField
+    @GraphQLPrettify
+    @GraphQLNonNull
+    public CDPProfile getProfile(final DataFetchingEnvironment environment) {
+        Profile profile = event.getProfile();
+        if (profile == null) {
+            final ServiceManager serviceManager = environment.getContext();
+            profile = serviceManager.getProfileService().load(event.getProfileId());
+        }
+        return profile == null ? null : new CDPProfile(profile);
     }
 
+    @GraphQLField
+    @GraphQLPrettify
+    @GraphQLNonNull
     public CDPObject getObject() {
-        return object;
+        final String uri = String.format("%s:%s", event.getItemType(), event.getItemId());
+        return new CDPObject(uri, event.getItemType(), event.getItemId(), null);
     }
 
+    @GraphQLField
+    @GraphQLPrettify
     public CDPGeoPoint getLocation() {
-        return location;
+        return null;
     }
 
+    @GraphQLField
+    @GraphQLPrettify
     public OffsetDateTime getTimeStamp() {
-        return timeStamp;
+        return DateUtils.toOffsetDateTime(event.getTimeStamp());
     }
 
+    @GraphQLField
+    @GraphQLPrettify
     public List<CDPTopic> getTopics() {
-        return topics;
+        return null;
     }
 
     public CDPEventProperties getProperties() {
-        return properties;
+        return new CDPEventProperties(event.getProperties());
     }
 }
