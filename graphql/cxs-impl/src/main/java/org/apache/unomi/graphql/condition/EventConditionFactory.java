@@ -20,6 +20,7 @@ package org.apache.unomi.graphql.condition;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
+import org.apache.unomi.graphql.types.input.CDPListsUpdateEventFilterInput;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -61,6 +62,10 @@ public class EventConditionFactory extends ConditionFactory {
                 rootSubConditions.add(createPropertyCondition("itemId", filterInput.getCdp_sourceID_equals(), definitionsService));
             }
 
+            if (filterInput.getCdp_listsUpdateEvent() != null) {
+                rootSubConditions.add(createListUpdateEventCondition(filterInput.getCdp_listsUpdateEvent(), definitionsService));
+            }
+
             if (filterInput.getAnd() != null && filterInput.getAnd().size() > 0) {
                 final Condition filterAndCondition = createBoolCondition("and", definitionsService);
                 final List<Condition> filterAndSubConditions = filterInput.getAnd().stream()
@@ -80,6 +85,23 @@ public class EventConditionFactory extends ConditionFactory {
             }
         }
 
+        rootCondition.setParameter("subConditions", rootSubConditions);
+        return rootCondition;
+    }
+
+    private Condition createListUpdateEventCondition(CDPListsUpdateEventFilterInput cdp_listsUpdateEvent, DefinitionsService definitionsService) {
+
+        final List<Condition> rootSubConditions = new ArrayList<>();
+
+        if (cdp_listsUpdateEvent.getJoinLists_contains() != null && !cdp_listsUpdateEvent.getJoinLists_contains().isEmpty()) {
+            rootSubConditions.add(createPropertiesCondition("joinLists", "contains", cdp_listsUpdateEvent.getJoinLists_contains(), definitionsService));
+        }
+
+        if (cdp_listsUpdateEvent.getJoinLists_contains() != null && !cdp_listsUpdateEvent.getJoinLists_contains().isEmpty()) {
+            rootSubConditions.add(createPropertiesCondition("leaveLists", "contains", cdp_listsUpdateEvent.getLeaveLists_contains(), definitionsService));
+        }
+
+        final Condition rootCondition = createBoolCondition("and", definitionsService);
         rootCondition.setParameter("subConditions", rootSubConditions);
         return rootCondition;
     }

@@ -59,6 +59,9 @@ public class CDPEventFilterInput {
     @GraphQLField
     private OffsetDateTime cdp_timestamp_gte;
 
+    @GraphQLField
+    private CDPListsUpdateEventFilterInput cdp_listsUpdateEvent;
+
     public CDPEventFilterInput(
             final @GraphQLName("and") List<CDPEventFilterInput> and,
             final @GraphQLName("or") List<CDPEventFilterInput> or,
@@ -70,7 +73,8 @@ public class CDPEventFilterInput {
             final @GraphQLName("cdp_timestamp_lt") OffsetDateTime cdp_timestamp_lt,
             final @GraphQLName("cdp_timestamp_lte") OffsetDateTime cdp_timestamp_lte,
             final @GraphQLName("cdp_timestamp_gt") OffsetDateTime cdp_timestamp_gt,
-            final @GraphQLName("cdp_timestamp_gte") OffsetDateTime cdp_timestamp_gte) {
+            final @GraphQLName("cdp_timestamp_gte") OffsetDateTime cdp_timestamp_gte,
+            final @GraphQLName("cdp_listsUpdateEvent") CDPListsUpdateEventFilterInput cdp_listsUpdateEvent) {
         this.and = and;
         this.or = or;
         this.id_equals = id_equals;
@@ -82,10 +86,11 @@ public class CDPEventFilterInput {
         this.cdp_timestamp_lte = cdp_timestamp_lte;
         this.cdp_timestamp_gt = cdp_timestamp_gt;
         this.cdp_timestamp_gte = cdp_timestamp_gte;
+        this.cdp_listsUpdateEvent = cdp_listsUpdateEvent;
     }
 
     public static CDPEventFilterInput from(final String cdp_profileID_equals) {
-        return new CDPEventFilterInput(null, null, null, null, null, cdp_profileID_equals, null, null, null, null, null);
+        return new CDPEventFilterInput(null, null, null, null, null, cdp_profileID_equals, null, null, null, null, null, null);
     }
 
     public List<CDPEventFilterInput> getAnd() {
@@ -181,4 +186,12 @@ public class CDPEventFilterInput {
         return this;
     }
 
+    public CDPListsUpdateEventFilterInput getCdp_listsUpdateEvent() {
+        return cdp_listsUpdateEvent;
+    }
+
+    public CDPEventFilterInput setCdp_listsUpdateEvent(CDPListsUpdateEventFilterInput cdp_listsUpdateEvent) {
+        this.cdp_listsUpdateEvent = cdp_listsUpdateEvent;
+        return this;
+    }
 }

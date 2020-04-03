@@ -1,0 +1,24 @@
+{
+  "metadata" : {
+    "id": "updateLists",
+    "name": "Update profile/persona lists",
+    "description" : "Update profile/persona lists",
+    "readOnly":true
+  },
+
+  "condition" : {
+    "type": "updateListsEventCondition",
+    "parameterValues": {
+    }
+  },
+
+  "actions" : [
+    {
+      "type": "updateListsEventAction",
+      "parameterValues": {
+
+      }
+    }
+  ]
+
+}
