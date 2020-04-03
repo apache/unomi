@@ -20,15 +20,11 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.api.ConsentStatus;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.graphql.utils.DateUtils;
 
 import java.time.OffsetDateTime;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.Map;
 
 import static org.apache.unomi.graphql.types.input.CDPConsentUpdateEventInput.TYPE_NAME_INTERNAL;
 
@@ -83,7 +79,6 @@ public class CDPConsentUpdateEventInput extends BaseProfileEventProcessor {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public Event buildEvent(LinkedHashMap<String, Object> eventInputAsMap, DataFetchingEnvironment environment) {
         final Profile profile = loadProfile(eventInputAsMap, environment);
 
@@ -91,27 +86,12 @@ public class CDPConsentUpdateEventInput extends BaseProfileEventProcessor {
             return null;
         }
 
-        final LinkedHashMap<String, Object> fieldsMap = (LinkedHashMap<String, Object>) eventInputAsMap.get(EVENT_NAME);
-
-        profile.getConsents().forEach((k, v) -> {
-            if (k.endsWith("/" + fieldsMap.get("type").toString())) {
-                if (fieldsMap.get("status") != null) {
-                    v.setStatus(ConsentStatus.valueOf(fieldsMap.get("status").toString()));
-                }
-                if (fieldsMap.get("lastUpdate") != null) {
-                    v.setStatusDate(DateUtils.toDate((OffsetDateTime) fieldsMap.get("lastUpdate")));
-                }
-                if (fieldsMap.get("expiration") != null) {
-                    v.setRevokeDate(DateUtils.toDate((OffsetDateTime) fieldsMap.get("expiration")));
-                }
-            }
-        });
-
-        final Map<String, Object> propertiesToUpdate = new HashMap<>();
-        propertiesToUpdate.put("consents", profile.getConsents());
-
-        return eventBuilder(profile)
-                .setPropertiesToUpdate(propertiesToUpdate)
+        return eventBuilder(EVENT_NAME, profile)
+                .setPersistent(true)
+                .setProperty("type", type)
+                .setProperty("status", status)
+                .setProperty("lastUpdate", lastUpdate)
+                .setProperty("expiration", expiration)
                 .build();
     }
 
