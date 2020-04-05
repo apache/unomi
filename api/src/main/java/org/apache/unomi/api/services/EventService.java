@@ -122,4 +122,11 @@ public interface EventService {
      * @return {@code true} if the event has already been raised, {@code false} otherwise
      */
     boolean hasEventAlreadyBeenRaised(Event event, boolean session);
+
+    /**
+     * Removes all events of the specified profile
+     *
+     * @param profileId identifier of the profile that we want to remove it's events
+     */
+    void removeProfileEvents(String profileId);
 }
