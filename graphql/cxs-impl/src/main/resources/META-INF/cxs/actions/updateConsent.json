@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "id": "updateConsentEventAction",
+    "name": "updateConsentEventAction",
+    "description": "",
+    "systemTags": [
+      "profileTags",
+      "demographic"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "updateConsent",
+  "parameters": [
+    {
+      "id": "type",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "status",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "lastUpdate",
+      "type": "date",
+      "multivalued": false
+    },
+    {
+      "id": "expiration",
+      "type": "date",
+      "multivalued": false
+    }
+  ]
+}

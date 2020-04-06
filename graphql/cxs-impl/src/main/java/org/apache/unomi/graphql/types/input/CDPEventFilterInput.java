@@ -62,6 +62,9 @@ public class CDPEventFilterInput {
     @GraphQLField
     private CDPListsUpdateEventFilterInput cdp_listsUpdateEvent;
 
+    @GraphQLField
+    private CDPConsentUpdateEventFilterInput cdp_consentUpdateEvent;
+
     public CDPEventFilterInput(
             final @GraphQLName("and") List<CDPEventFilterInput> and,
             final @GraphQLName("or") List<CDPEventFilterInput> or,
@@ -74,6 +77,7 @@ public class CDPEventFilterInput {
             final @GraphQLName("cdp_timestamp_lte") OffsetDateTime cdp_timestamp_lte,
             final @GraphQLName("cdp_timestamp_gt") OffsetDateTime cdp_timestamp_gt,
             final @GraphQLName("cdp_timestamp_gte") OffsetDateTime cdp_timestamp_gte,
+            final @GraphQLName("cdp_consentUpdateEvent") CDPConsentUpdateEventFilterInput cdp_consentUpdateEvent,
             final @GraphQLName("cdp_listsUpdateEvent") CDPListsUpdateEventFilterInput cdp_listsUpdateEvent) {
         this.and = and;
         this.or = or;
@@ -87,10 +91,11 @@ public class CDPEventFilterInput {
         this.cdp_timestamp_gt = cdp_timestamp_gt;
         this.cdp_timestamp_gte = cdp_timestamp_gte;
         this.cdp_listsUpdateEvent = cdp_listsUpdateEvent;
+        this.cdp_consentUpdateEvent = cdp_consentUpdateEvent;
     }
 
     public static CDPEventFilterInput from(final String cdp_profileID_equals) {
-        return new CDPEventFilterInput(null, null, null, null, null, cdp_profileID_equals, null, null, null, null, null, null);
+        return new CDPEventFilterInput(null, null, null, null, null, cdp_profileID_equals, null, null, null, null, null, null, null);
     }
 
     public List<CDPEventFilterInput> getAnd() {
@@ -194,4 +199,14 @@ public class CDPEventFilterInput {
         this.cdp_listsUpdateEvent = cdp_listsUpdateEvent;
         return this;
     }
+
+    public CDPConsentUpdateEventFilterInput getCdp_consentUpdateEvent() {
+        return cdp_consentUpdateEvent;
+    }
+
+    public CDPEventFilterInput setCdp_consentUpdateEvent(CDPConsentUpdateEventFilterInput cdp_consentUpdateEvent) {
+        this.cdp_consentUpdateEvent = cdp_consentUpdateEvent;
+        return this;
+    }
+
 }

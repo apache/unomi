@@ -18,6 +18,7 @@ package org.apache.unomi.graphql.commands.segments;
 
 import com.google.common.base.Strings;
 import graphql.schema.DataFetchingEnvironment;
+import graphql.schema.GraphQLInputObjectType;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
@@ -28,6 +29,7 @@ import org.apache.unomi.graphql.commands.BaseCommand;
 import org.apache.unomi.graphql.schema.ComparisonConditionTranslator;
 import org.apache.unomi.graphql.schema.PropertyNameTranslator;
 import org.apache.unomi.graphql.schema.PropertyValueTypeHelper;
+import org.apache.unomi.graphql.types.input.CDPConsentUpdateEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPInterestFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileEventsFilterInput;
@@ -411,6 +413,10 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
                     .setPropertyValueDate(eventFilterInput.getCdp_timestamp_lte()).build());
         }
 
+        if (eventFilterInput.getCdp_consentUpdateEvent() != null) {
+            subConditions.add(createCdpConsentUpdateEventCondition(eventFilterInput.getCdp_consentUpdateEvent()));
+        }
+
         createConditionBasedOnFilterWithSubFilters(
                 subConditions, eventFilterInput.getAnd(), this::createEventPropertyCondition, "and");
 
@@ -419,6 +425,24 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
 
         return ConditionBuilder.builder(booleanConditionType).buildBooleanCondition("and", subConditions);
     }
+
+    public Condition createCdpConsentUpdateEventCondition(final CDPConsentUpdateEventFilterInput eventFilterInput) {
+        final GraphQLInputObjectType inputObjectType =
+                (GraphQLInputObjectType) environment.getGraphQLSchema().getType(CDPConsentUpdateEventFilterInput.TYPE_NAME);
+
+        final List<Condition> subConditions = new ArrayList<>();
+
+        if (eventFilterInput.getStatus_equals() != null) {
+            subConditions.add(ConditionBuilder.builder(eventPropertyConditionType)
+                    .setPropertyName("status")
+                    .setComparisonOperator("equals")
+                    .setPropertyValue(eventFilterInput.getStatus_equals()).build());
+        }
+
+        return ConditionBuilder.builder(booleanConditionType).buildBooleanCondition("and", subConditions);
+    }
+
+    final List<Condition> subConditions = new ArrayList<>();
 
     private Condition createProfileEventsCondition(final CDPProfileEventsFilterInput eventsFilterInput) {
         if (eventsFilterInput == null || eventsFilterInput.getEventFilter() == null) {

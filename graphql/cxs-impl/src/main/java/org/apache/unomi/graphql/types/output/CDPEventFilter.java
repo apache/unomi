@@ -36,11 +36,13 @@ public class CDPEventFilter {
     }
 
     @GraphQLField
+    @GraphQLName("and")
     public List<CDPEventFilter> andFilters(final DataFetchingEnvironment environment) {
         return null;
     }
 
     @GraphQLField
+    @GraphQLName("or")
     public List<CDPEventFilter> orFilters(final DataFetchingEnvironment environment) {
         return null;
     }
@@ -104,6 +106,11 @@ public class CDPEventFilter {
         final Condition condition = getCondition("timeStamp", "greaterThanOrEqualTo");
 
         return DateUtils.offsetDateTimeFromMap(getValueOrNull(condition, "propertyValueDate"));
+    }
+
+    @GraphQLField
+    public CDPConsentUpdateEventFilter cdp_consentUpdateEvent(final DataFetchingEnvironment environment) {
+        return new CDPConsentUpdateEventFilter();
     }
 
     private <T> T getValueOrNull(final Condition condition) {
