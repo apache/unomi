@@ -324,4 +324,14 @@ public class EventServiceImpl implements EventService {
             eventListeners.remove(eventListenerService);
         }
     }
+
+    public void removeProfileEvents(String profileId){
+        Condition profileCondition = new Condition();
+        profileCondition.setConditionType(definitionsService.getConditionType("eventPropertyCondition"));
+        profileCondition.setParameter("propertyName", "profileId");
+        profileCondition.setParameter("comparisonOperator", "equals");
+        profileCondition.setParameter("propertyValue", profileId);
+
+        persistenceService.removeByQuery(profileCondition,Event.class);
+    }
 }

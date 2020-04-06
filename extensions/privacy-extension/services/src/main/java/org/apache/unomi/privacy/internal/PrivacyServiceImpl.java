@@ -145,8 +145,13 @@ public class PrivacyServiceImpl implements PrivacyService {
     }
 
     @Override
-    public Boolean deleteProfileData(String profileId) {
-        anonymizeBrowsingData(profileId);
+    public Boolean deleteProfileData(String profileId,boolean purgeData) {
+        if (purgeData) {
+            eventService.removeProfileEvents(profileId);
+            profileService.removeProfileSessions(profileId);
+        } else {
+            anonymizeBrowsingData(profileId);
+        }
         profileService.delete(profileId, false);
         return true;
     }
