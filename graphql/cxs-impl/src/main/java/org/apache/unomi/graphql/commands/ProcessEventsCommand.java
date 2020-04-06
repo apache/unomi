@@ -26,6 +26,7 @@ import org.apache.unomi.graphql.types.input.CDPConsentUpdateEventInput;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPEventProcessor;
 import org.apache.unomi.graphql.types.input.CDPListsUpdateEventInput;
+import org.apache.unomi.graphql.types.input.CDPSessionEventInput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,6 +56,7 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
     static {
         STATIC_FIELDS.add(CDPConsentUpdateEventInput.EVENT_NAME);
         STATIC_FIELDS.add(CDPListsUpdateEventInput.EVENT_NAME);
+        STATIC_FIELDS.add(CDPSessionEventInput.EVENT_NAME);
     }
 
     private ProcessEventsCommand(final Builder builder) {
@@ -91,6 +93,7 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
         final List<CDPEventProcessor> eventProcessors = new ArrayList<>();
         eventProcessors.add(eventInput.getCdp_consentUpdateEvent());
         eventProcessors.add(eventInput.getCdp_listUpdateEvent());
+        eventProcessors.add(eventInput.getCdp_sessionEvent());
 
         eventProcessors.stream()
                 .filter(Objects::nonNull)

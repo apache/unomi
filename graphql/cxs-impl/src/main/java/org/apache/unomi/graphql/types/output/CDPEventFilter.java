@@ -113,6 +113,11 @@ public class CDPEventFilter {
         return new CDPConsentUpdateEventFilter();
     }
 
+    @GraphQLField
+    public CDPSessionEventFilter cdp_sessionEvent(final DataFetchingEnvironment environment) {
+        return new CDPSessionEventFilter();
+    }
+
     private <T> T getValueOrNull(final Condition condition) {
         return getValueOrNull(condition, "propertyValue");
     }

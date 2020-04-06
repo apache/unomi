@@ -36,6 +36,7 @@ import org.apache.unomi.graphql.types.input.CDPProfileEventsFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfilePropertiesFilterInput;
 import org.apache.unomi.graphql.types.input.CDPSegmentInput;
+import org.apache.unomi.graphql.types.input.CDPSessionEventFilterInput;
 import org.apache.unomi.graphql.types.output.CDPSegment;
 import org.apache.unomi.graphql.utils.ConditionBuilder;
 
@@ -417,6 +418,10 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
             subConditions.add(createCdpConsentUpdateEventCondition(eventFilterInput.getCdp_consentUpdateEvent()));
         }
 
+        if (eventFilterInput.getCdp_sessionEvent() != null) {
+            subConditions.add(createCdpSessionEventCondition(eventFilterInput.getCdp_sessionEvent()));
+        }
+
         createConditionBasedOnFilterWithSubFilters(
                 subConditions, eventFilterInput.getAnd(), this::createEventPropertyCondition, "and");
 
@@ -437,6 +442,33 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
                     .setPropertyName("status")
                     .setComparisonOperator("equals")
                     .setPropertyValue(eventFilterInput.getStatus_equals()).build());
+        }
+
+        return ConditionBuilder.builder(booleanConditionType).buildBooleanCondition("and", subConditions);
+    }
+
+    public Condition createCdpSessionEventCondition(final CDPSessionEventFilterInput eventFilterInput) {
+        final List<Condition> subConditions = new ArrayList<>();
+
+        if (eventFilterInput.getState_equals() != null) {
+            subConditions.add(ConditionBuilder.builder(eventPropertyConditionType)
+                    .setPropertyName("properties.state")
+                    .setComparisonOperator("equals")
+                    .setPropertyValue(eventFilterInput.getState_equals().name()).build());
+        }
+
+        if (eventFilterInput.getUnomi_scope_equals() != null) {
+            subConditions.add(ConditionBuilder.builder(eventPropertyConditionType)
+                    .setPropertyName("properties.scope")
+                    .setComparisonOperator("equals")
+                    .setPropertyValue(eventFilterInput.getUnomi_scope_equals()).build());
+        }
+
+        if (eventFilterInput.getUnomi_sessionId_equals() != null) {
+            subConditions.add(ConditionBuilder.builder(eventPropertyConditionType)
+                    .setPropertyName("properties.sessionId")
+                    .setComparisonOperator("equals")
+                    .setPropertyValue(eventFilterInput.getUnomi_sessionId_equals()).build());
         }
 
         return ConditionBuilder.builder(booleanConditionType).buildBooleanCondition("and", subConditions);

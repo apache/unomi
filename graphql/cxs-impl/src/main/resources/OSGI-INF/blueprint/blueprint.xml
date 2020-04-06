@@ -21,6 +21,8 @@
 
     <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
 
+    <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
+
     <!-- Action executors -->
 
     <service interface="org.apache.unomi.api.actions.ActionExecutor">
@@ -38,6 +40,16 @@
         </service-properties>
         <bean class="org.apache.unomi.graphql.actions.CDPConsentUpdateAction">
             <property name="eventService" ref="eventService"/>
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
+        <service-properties>
+            <entry key="actionExecutorId" value="cdp_sessionEvent"/>
+        </service-properties>
+        <bean class="org.apache.unomi.graphql.actions.CDPSessionAction">
+            <property name="eventService" ref="eventService"/>
+            <property name="profileService" ref="profileService"/>
         </bean>
     </service>
 

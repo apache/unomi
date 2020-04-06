@@ -42,7 +42,7 @@ public abstract class CDPEventInterface {
     private List<CDPTopic> cdp_topics;
 
     public CDPEventInterface(
-            @GraphQLID @GraphQLNonNull String id,
+            @GraphQLID @GraphQLNonNull @GraphQLName("id") String id,
             @GraphQLName("cdp_source") CDPSource cdp_source,
             @GraphQLName("cdp_client") CDPClient cdp_client,
             @GraphQLNonNull @GraphQLName("cdp_profileID") CDPProfileID cdp_profileID,

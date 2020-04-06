@@ -21,6 +21,7 @@ import graphql.schema.GraphQLObjectType;
 import graphql.schema.TypeResolver;
 import org.apache.unomi.graphql.types.output.CDPConsentUpdateEvent;
 import org.apache.unomi.graphql.types.output.CDPProfileUpdateEvent;
+import org.apache.unomi.graphql.types.output.CDPSessionEvent;
 
 public class CDPEventInterfaceResolver implements TypeResolver {
 
@@ -32,9 +33,11 @@ public class CDPEventInterfaceResolver implements TypeResolver {
             return env.getSchema().getObjectType(CDPConsentUpdateEvent.TYPE_NAME);
         } else if (obj instanceof CDPProfileUpdateEvent) {
             return env.getSchema().getObjectType(CDPProfileUpdateEvent.TYPE_NAME);
+        } else if (obj instanceof CDPSessionEvent) {
+            return env.getSchema().getObjectType(CDPSessionEvent.TYPE_NAME);
+        } else {
+            return null;
         }
-
-        return null;
     }
 
 }
