@@ -1,0 +1,24 @@
+{
+  "metadata" : {
+    "id": "cdp_sessionEvent",
+    "name": "Update session",
+    "description" : "Update session",
+    "readOnly":true
+  },
+
+  "condition" : {
+    "type": "cdpSessionEventCondition",
+    "parameterValues": {
+    }
+  },
+
+  "actions" : [
+    {
+      "type": "cdpSessionEventAction",
+      "parameterValues": {
+
+      }
+    }
+  ]
+
+}

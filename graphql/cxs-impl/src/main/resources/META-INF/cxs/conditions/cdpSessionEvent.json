@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "id": "cdpSessionEventCondition",
+    "name": "cdpSessionEventCondition",
+    "description": "",
+    "systemTags": [
+      "profileTags",
+      "event",
+      "condition",
+      "eventCondition"
+    ],
+    "readOnly": true
+  },
+  "parentCondition": {
+    "type": "eventTypeCondition",
+    "parameterValues": {
+      "eventTypeId": "cdp_sessionEvent"
+    }
+  },
+
+  "parameters": [
+  ]
+}
