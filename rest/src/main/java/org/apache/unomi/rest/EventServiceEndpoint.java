@@ -24,8 +24,10 @@ import org.apache.unomi.api.services.EventService;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
+import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
@@ -49,6 +51,7 @@ public class EventServiceEndpoint {
 
     /**
      * Allows to search events using a query.
+     *
      * @param query the query object to use to search for events. You can specify offset and limits along with a
      *              condition tree.
      * @return a partial list containing the events that match the query.
@@ -56,7 +59,19 @@ public class EventServiceEndpoint {
     @POST
     @Path("/search")
     public PartialList<Event> searchEvents(Query query) {
-        return eventService.searchEvents(query.getCondition(), query.getOffset(), query.getLimit());
+        return eventService.search(query);
+    }
+
+    /**
+     * Allows to retrieve event by id.
+     *
+     * @param id the event id.
+     * @return {@link Event} with the provided id.
+     */
+    @GET
+    @Path("/{id}")
+    public Event getEvents(@PathParam("id") final String id) {
+        return eventService.getEvent(id);
     }
 
 }
