@@ -66,9 +66,10 @@ public interface PrivacyService {
      * This method will perform two operations, first it will call the anonymizeBrowsingData method on the
      * specified profile, and then it will delete the profile from the persistence service.
      * @param profileId the identifier of the profile
+     * @param purgeData flag that indicates whether to purge the profile's data
      * @return true if the operation was successful, false otherwise
      */
-    Boolean deleteProfileData(String profileId);
+    Boolean deleteProfileData(String profileId,boolean purgeData);
 
     /**
      * Controls the activation/deactivation of anonymous browsing. This method will simply set a system

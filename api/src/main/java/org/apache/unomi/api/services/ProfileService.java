@@ -167,6 +167,13 @@ public interface ProfileService {
     PartialList<Session> findProfileSessions(String profileId);
 
     /**
+     * Removes all sessions of the specified profile
+     *
+     * @param profileId identifier of the profile that we want to remove it's sessions
+     */
+    void removeProfileSessions(String profileId);
+
+    /**
      * Checks whether the specified profile and/or session satisfy the specified condition.
      *
      * @param condition the condition we're testing against which might or might not have profile- or session-specific sub-conditions
