@@ -17,15 +17,11 @@
 package org.apache.unomi.graphql.commands.segments;
 
 import com.google.common.base.Strings;
-import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLInputObjectType;
-import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.SegmentService;
-import org.apache.unomi.graphql.commands.BaseCommand;
 import org.apache.unomi.graphql.schema.ComparisonConditionTranslator;
 import org.apache.unomi.graphql.schema.PropertyNameTranslator;
 import org.apache.unomi.graphql.schema.PropertyValueTypeHelper;
@@ -45,16 +41,15 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.apache.unomi.graphql.CDPGraphQLConstants.SEGMENT_ARGUMENT_NAME;
 
-public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
+public class CreateOrUpdateSegmentCommand extends BaseCreateOrUpdateSegmentCommand<CDPSegmentInput, CDPSegment> {
 
     private final CDPSegmentInput segmentInput;
-
-    private final DataFetchingEnvironment environment;
 
     private final ConditionType profileSegmentConditionType;
 
@@ -73,8 +68,7 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
     private CreateOrUpdateSegmentCommand(Builder builder) {
         super(builder);
 
-        this.segmentInput = builder.segmentInput;
-        this.environment = builder.environment;
+        this.segmentInput = builder.getSegmentInput();
 
         final DefinitionsService definitionsService = serviceManager.getDefinitionsService();
 
@@ -89,46 +83,14 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
 
     @Override
     public CDPSegment execute() {
-        final SegmentService segmentService = serviceManager.getSegmentService();
-
-        final String segmentId = Strings.isNullOrEmpty(segmentInput.getId())
-                ? segmentInput.getName()
-                : segmentInput.getId();
-
-        Segment segment = segmentService.getSegmentDefinition(segmentId);
-
-        if (segment == null) {
-            segment = new Segment();
-
-            segment.setItemType(Segment.ITEM_TYPE);
-            segment.setMetadata(createMedata(segmentId));
-        } else {
-            if (segment.getMetadata() == null) {
-                segment.setMetadata(new Metadata());
-            }
-
-            segment.setItemId(segmentId);
-            segment.getMetadata().setId(segmentId);
-            segment.getMetadata().setName(segmentInput.getName());
-            segment.getMetadata().setScope(segmentInput.getView());
-        }
+        Segment segment = preparedSegmentWithoutCondition(segmentInput);
 
         final Condition condition = createSegmentCondition();
         segment.setCondition(condition);
 
-        segmentService.setSegmentDefinition(segment);
+        serviceManager.getSegmentService().setSegmentDefinition(segment);
 
         return new CDPSegment(segment);
-    }
-
-    private Metadata createMedata(final String segmentId) {
-        final Metadata metadata = new Metadata();
-
-        metadata.setId(segmentId);
-        metadata.setName(segmentInput.getName());
-        metadata.setScope(segmentInput.getView());
-
-        return metadata;
     }
 
     private List<Condition> createSubCondition() {
@@ -474,8 +436,6 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
         return ConditionBuilder.builder(booleanConditionType).buildBooleanCondition("and", subConditions);
     }
 
-    final List<Condition> subConditions = new ArrayList<>();
-
     private Condition createProfileEventsCondition(final CDPProfileEventsFilterInput eventsFilterInput) {
         if (eventsFilterInput == null || eventsFilterInput.getEventFilter() == null) {
             return null;
@@ -526,31 +486,21 @@ public class CreateOrUpdateSegmentCommand extends BaseCommand<CDPSegment> {
         return ConditionBuilder.builder(booleanConditionType).buildBooleanCondition("and", subConditions);
     }
 
-    public static Builder create(final CDPSegmentInput segmentInput, final DataFetchingEnvironment environment) {
-        return new Builder(segmentInput, environment);
+    public static Builder create(final CDPSegmentInput segmentInput) {
+        return new Builder(segmentInput);
     }
 
-    public static class Builder extends BaseCommand.Builder<Builder> {
+    public static class Builder extends BaseCreateOrUpdateSegmentCommand.Builder<CDPSegmentInput, Builder> {
 
-        private final CDPSegmentInput segmentInput;
-
-        private final DataFetchingEnvironment environment;
-
-        public Builder(CDPSegmentInput segmentInput, DataFetchingEnvironment environment) {
-            this.segmentInput = segmentInput;
-            this.environment = environment;
+        public Builder(CDPSegmentInput segmentInput) {
+            super(segmentInput);
         }
 
-        private void validate() {
-            if (segmentInput == null) {
-                throw new IllegalArgumentException();
-            }
-            if (Strings.isNullOrEmpty(segmentInput.getName())) {
-                throw new IllegalArgumentException();
-            }
-            if (Strings.isNullOrEmpty(segmentInput.getView())) {
-                throw new IllegalArgumentException();
-            }
+        @Override
+        public void validate() {
+            super.validate();
+
+            Objects.requireNonNull(getSegmentInput().getProfiles(), "The profiles field can not be null");
         }
 
         public CreateOrUpdateSegmentCommand build() {

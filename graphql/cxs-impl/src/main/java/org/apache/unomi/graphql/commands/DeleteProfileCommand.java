@@ -16,7 +16,6 @@
  */
 package org.apache.unomi.graphql.commands;
 
-import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.graphql.services.ServiceManager;
 
@@ -24,12 +23,8 @@ import java.util.Map;
 
 public class DeleteProfileCommand extends BaseCommand<Boolean> {
 
-    private final DataFetchingEnvironment environment;
-
     private DeleteProfileCommand(Builder builder) {
         super(builder);
-
-        this.environment = builder.environment;
     }
 
     @Override
@@ -51,22 +46,18 @@ public class DeleteProfileCommand extends BaseCommand<Boolean> {
         return true;
     }
 
-    public static Builder create(final DataFetchingEnvironment environment) {
-        return new Builder(environment);
+    public static Builder create() {
+        return new Builder();
     }
 
     public static class Builder extends BaseCommand.Builder<Builder> {
 
-        private final DataFetchingEnvironment environment;
-
-
-        public Builder(DataFetchingEnvironment environment) {
-            this.environment = environment;
-        }
-
         public DeleteProfileCommand build() {
+            validate();
+
             return new DeleteProfileCommand(this);
         }
+
     }
 
 }

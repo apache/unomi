@@ -108,7 +108,10 @@ public class CreateOrUpdateProfilePropertiesCommand extends BaseCommand<Boolean>
             this.properties = properties;
         }
 
-        private void validate() {
+        @Override
+        public void validate() {
+            super.validate();
+
             if (properties == null || properties.isEmpty()) {
                 throw new IllegalArgumentException("Properties can not be null or empty.");
             }

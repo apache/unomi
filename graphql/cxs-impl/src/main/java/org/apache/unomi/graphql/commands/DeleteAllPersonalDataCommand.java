@@ -17,7 +17,6 @@
 package org.apache.unomi.graphql.commands;
 
 import com.google.common.base.Strings;
-import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.graphql.services.ServiceManager;
 
@@ -26,12 +25,8 @@ import java.util.Objects;
 
 public class DeleteAllPersonalDataCommand extends BaseCommand<Boolean> {
 
-    private final DataFetchingEnvironment environment;
-
     private DeleteAllPersonalDataCommand(Builder builder) {
         super(builder);
-
-        this.environment = builder.environment;
     }
 
     @Override
@@ -51,20 +46,19 @@ public class DeleteAllPersonalDataCommand extends BaseCommand<Boolean> {
         return serviceManager.getPrivacyService().deleteProfileData(profileId);
     }
 
-    public static Builder create(final DataFetchingEnvironment environment) {
-        return new Builder(environment);
+    public static Builder create() {
+        return new Builder();
     }
 
     public static class Builder extends BaseCommand.Builder<Builder> {
 
-        private final DataFetchingEnvironment environment;
-
-
-        public Builder(final DataFetchingEnvironment environment) {
-            this.environment = environment;
+        public Builder() {
         }
 
-        private void validate() {
+        @Override
+        public void validate() {
+            super.validate();
+
             final Map<String, Object> cdpProfileIDInput = environment.getArgument("profileID");
 
             Objects.requireNonNull(cdpProfileIDInput, "The \"profileID\" variable can not be null");

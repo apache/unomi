@@ -14,40 +14,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.commands;
+package org.apache.unomi.graphql.fetchers.segment;
 
+import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.types.extensions.UnomiSegment;
 
-import java.util.Objects;
+public class UnomiSegmentDataFetcher implements DataFetcher<UnomiSegment> {
 
-public abstract class BaseCommand<T> {
+    private final String segmentId;
 
-    protected final DataFetchingEnvironment environment;
-
-    protected final ServiceManager serviceManager;
-
-    public abstract T execute();
-
-    public BaseCommand(final Builder builder) {
-        this.environment = builder.environment;
-        this.serviceManager = environment.getContext();
+    public UnomiSegmentDataFetcher(String segmentId) {
+        this.segmentId = segmentId;
     }
 
-    public static abstract class Builder<B extends Builder> {
+    @Override
+    public UnomiSegment get(final DataFetchingEnvironment environment) throws Exception {
+        final ServiceManager serviceManager = environment.getContext();
 
-        DataFetchingEnvironment environment;
+        final Segment segment = serviceManager.getSegmentService().getSegmentDefinition(segmentId);
 
-        @SuppressWarnings("unchecked")
-        public B setEnvironment(DataFetchingEnvironment environment) {
-            this.environment = environment;
-            return (B) this;
+        if (segment != null) {
+            return new UnomiSegment(segment);
         }
 
-        public void validate() {
-            Objects.requireNonNull(environment, "Environment can not be null");
-        }
-
+        return null;
     }
 
 }

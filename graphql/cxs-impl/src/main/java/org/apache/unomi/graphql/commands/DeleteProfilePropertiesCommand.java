@@ -81,7 +81,10 @@ public class DeleteProfilePropertiesCommand extends BaseCommand<Boolean> {
             this.propertyNames = propertyNames;
         }
 
-        private void validate() {
+        @Override
+        public void validate() {
+            super.validate();
+
             if (propertyNames == null || propertyNames.isEmpty()) {
                 throw new IllegalArgumentException("The \"propertyNames\" variable can not be null or empty");
             }

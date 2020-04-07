@@ -28,6 +28,8 @@ import org.apache.unomi.graphql.fetchers.profile.ProfileDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.PropertiesConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.segment.FindSegmentsConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.segment.SegmentDataFetcher;
+import org.apache.unomi.graphql.fetchers.segment.UnomiSegmentDataFetcher;
+import org.apache.unomi.graphql.types.extensions.UnomiSegment;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPOrderByInput;
 import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;
@@ -38,8 +40,8 @@ import org.apache.unomi.graphql.types.output.CDPEventConnection;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.CDPProfileConnection;
 import org.apache.unomi.graphql.types.output.CDPPropertyConnection;
-import org.apache.unomi.graphql.types.output.CDPSegmentConnection;
 import org.apache.unomi.graphql.types.output.CDPSegment;
+import org.apache.unomi.graphql.types.output.CDPSegmentConnection;
 
 import java.util.List;
 
@@ -108,6 +110,12 @@ public class CDPQuery {
     public CDPSegment getSegment(final @GraphQLID @GraphQLName("segmentID") String segmentId,
                                  final DataFetchingEnvironment environment) throws Exception {
         return new SegmentDataFetcher(segmentId).get(environment);
+    }
+
+    @GraphQLField
+    public UnomiSegment getUnomiSegment(final @GraphQLID @GraphQLName("segmentID") String segmentId,
+                                        final DataFetchingEnvironment environment) throws Exception {
+        return new UnomiSegmentDataFetcher(segmentId).get(environment);
     }
 
 }

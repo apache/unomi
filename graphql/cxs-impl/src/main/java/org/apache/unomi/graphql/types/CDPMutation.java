@@ -27,11 +27,14 @@ import org.apache.unomi.graphql.commands.DeleteProfileCommand;
 import org.apache.unomi.graphql.commands.DeleteProfilePropertiesCommand;
 import org.apache.unomi.graphql.commands.ProcessEventsCommand;
 import org.apache.unomi.graphql.commands.segments.CreateOrUpdateSegmentCommand;
+import org.apache.unomi.graphql.commands.segments.CreateOrUpdateUnomiSegmentCommand;
 import org.apache.unomi.graphql.commands.segments.DeleteSegmentCommand;
+import org.apache.unomi.graphql.types.extensions.UnomiSegment;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.input.CDPPropertyInput;
 import org.apache.unomi.graphql.types.input.CDPSegmentInput;
+import org.apache.unomi.graphql.types.input.UnomiSegmentInput;
 import org.apache.unomi.graphql.types.output.CDPSegment;
 
 import java.util.List;
@@ -50,7 +53,7 @@ public class CDPMutation {
             final DataFetchingEnvironment environment) {
 
         return CreateOrUpdateProfilePropertiesCommand.create(properties)
-                .setServiceManager(environment.getContext())
+                .setEnvironment(environment)
                 .build()
                 .execute();
     }
@@ -60,8 +63,8 @@ public class CDPMutation {
             final @GraphQLNonNull @GraphQLName("events") List<CDPEventInput> eventInputs,
             final DataFetchingEnvironment environment
     ) {
-        return ProcessEventsCommand.create(eventInputs, environment)
-                .setServiceManager(environment.getContext())
+        return ProcessEventsCommand.create(eventInputs)
+                .setEnvironment(environment)
                 .build()
                 .execute();
     }
@@ -70,8 +73,8 @@ public class CDPMutation {
     public boolean deleteProfile(
             final @GraphQLNonNull @GraphQLName("profileID") CDPProfileIDInput profileIDInput,
             final DataFetchingEnvironment environment) {
-        return DeleteProfileCommand.create(environment)
-                .setServiceManager(environment.getContext())
+        return DeleteProfileCommand.create()
+                .setEnvironment(environment)
                 .build()
                 .execute();
     }
@@ -81,7 +84,7 @@ public class CDPMutation {
             final @GraphQLNonNull @GraphQLName("propertyNames") List<String> propertyNames,
             final DataFetchingEnvironment environment) {
         return DeleteProfilePropertiesCommand.create(propertyNames)
-                .setServiceManager(environment.getContext())
+                .setEnvironment(environment)
                 .build()
                 .execute();
     }
@@ -90,8 +93,8 @@ public class CDPMutation {
     public boolean deleteAllPersonalData(
             final @GraphQLNonNull @GraphQLName("profileID") CDPProfileIDInput profileIDInput,
             final DataFetchingEnvironment environment) {
-        return DeleteAllPersonalDataCommand.create(environment)
-                .setServiceManager(environment.getContext())
+        return DeleteAllPersonalDataCommand.create()
+                .setEnvironment(environment)
                 .build()
                 .execute();
     }
@@ -101,8 +104,8 @@ public class CDPMutation {
             final @GraphQLName(SEGMENT_ARGUMENT_NAME) CDPSegmentInput segmentInput,
             final DataFetchingEnvironment environment
     ) {
-        return CreateOrUpdateSegmentCommand.create(segmentInput, environment)
-                .setServiceManager(environment.getContext())
+        return CreateOrUpdateSegmentCommand.create(segmentInput)
+                .setEnvironment(environment)
                 .build()
                 .execute();
     }
@@ -113,9 +116,21 @@ public class CDPMutation {
             final DataFetchingEnvironment environment
     ) {
         return DeleteSegmentCommand.create(segmentId)
-                .setServiceManager(environment.getContext())
+                .setEnvironment(environment)
                 .build()
                 .execute();
     }
+
+    @GraphQLField
+    public UnomiSegment createOrUpdateUnomiSegment(
+            final @GraphQLName(SEGMENT_ARGUMENT_NAME) UnomiSegmentInput segmentInput,
+            final DataFetchingEnvironment environment
+    ) {
+        return CreateOrUpdateUnomiSegmentCommand.create(segmentInput)
+                .setEnvironment(environment)
+                .build()
+                .execute();
+    }
+
 
 }
