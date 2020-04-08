@@ -17,7 +17,6 @@
 package org.apache.unomi.graphql.commands;
 
 import graphql.language.InputObjectTypeDefinition;
-import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLInputObjectType;
 import org.apache.unomi.api.Event;
@@ -47,8 +46,6 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
 
     private final List<LinkedHashMap<String, Object>> eventsAsMap;
 
-    private final DataFetchingEnvironment environment;
-
     private final List<GraphQLInputObjectField> fieldDefinitions;
 
     private final AtomicInteger processedEventsQty = new AtomicInteger();
@@ -62,7 +59,6 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
     private ProcessEventsCommand(final Builder builder) {
         super(builder);
 
-        this.environment = builder.environment;
         this.eventInputs = builder.eventInputs;
 
         this.eventsAsMap = environment.getArgument("events");
@@ -169,8 +165,8 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
         processedEventsQty.incrementAndGet();
     }
 
-    public static Builder create(final List<CDPEventInput> eventInputs, final DataFetchingEnvironment environment) {
-        return new Builder(eventInputs, environment);
+    public static Builder create(final List<CDPEventInput> eventInputs) {
+        return new Builder(eventInputs);
     }
 
 
@@ -178,14 +174,14 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
 
         private final List<CDPEventInput> eventInputs;
 
-        private final DataFetchingEnvironment environment;
-
-        public Builder(final List<CDPEventInput> eventInputs, final DataFetchingEnvironment environment) {
+        public Builder(final List<CDPEventInput> eventInputs) {
             this.eventInputs = eventInputs;
-            this.environment = environment;
         }
 
-        private void validate() {
+        @Override
+        public void validate() {
+            super.validate();
+
             final List<LinkedHashMap<String, Object>> events = environment.getArgument("events");
 
             if (events == null || events.isEmpty()) {

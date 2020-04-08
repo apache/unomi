@@ -21,8 +21,14 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_Segment")
-public class CDPSegmentInput implements BaseSegmentInput {
+import static org.apache.unomi.graphql.types.input.UnomiSegmentInput.TYPE_NAME_INTERNAL;
+
+@GraphQLName(TYPE_NAME_INTERNAL)
+public class UnomiSegmentInput implements BaseSegmentInput {
+
+    public static final String TYPE_NAME_INTERNAL = "Unomi_Segment";
+
+    public static final String TYPE_NAME = TYPE_NAME_INTERNAL + "Input";
 
     @GraphQLID
     @GraphQLField
@@ -38,17 +44,18 @@ public class CDPSegmentInput implements BaseSegmentInput {
     private String name;
 
     @GraphQLField
-    private CDPProfileFilterInput profiles;
+    @GraphQLNonNull
+    private Object condition;
 
-    public CDPSegmentInput(
+    public UnomiSegmentInput(
             final @GraphQLID @GraphQLName("id") String id,
             final @GraphQLID @GraphQLNonNull @GraphQLName("view") String view,
             final @GraphQLNonNull @GraphQLName("name") String name,
-            final @GraphQLName("profiles") CDPProfileFilterInput profiles) {
+            final @GraphQLNonNull @GraphQLName("condition") Object condition) {
         this.id = id;
         this.view = view;
         this.name = name;
-        this.profiles = profiles;
+        this.condition = condition;
     }
 
     @Override
@@ -56,17 +63,9 @@ public class CDPSegmentInput implements BaseSegmentInput {
         return id;
     }
 
-    public void setId(String id) {
-        this.id = id;
-    }
-
     @Override
     public String getView() {
         return view;
-    }
-
-    public void setView(String view) {
-        this.view = view;
     }
 
     @Override
@@ -74,16 +73,8 @@ public class CDPSegmentInput implements BaseSegmentInput {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public CDPProfileFilterInput getProfiles() {
-        return profiles;
-    }
-
-    public void setProfiles(CDPProfileFilterInput profiles) {
-        this.profiles = profiles;
+    public Object getCondition() {
+        return condition;
     }
 
 }

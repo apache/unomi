@@ -49,7 +49,10 @@ public class DeleteSegmentCommand extends BaseCommand<Boolean> {
             this.segmentId = segmentId;
         }
 
-        private void validate() {
+        @Override
+        public void validate() {
+            super.validate();
+
             if (Strings.isNullOrEmpty(segmentId)) {
                 throw new IllegalArgumentException("The \"segmentID\" variable can not be null or empty");
             }

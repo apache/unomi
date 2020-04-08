@@ -17,10 +17,10 @@
 
 package org.apache.unomi.graphql.fetchers;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.utils.GraphQLObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,8 +31,6 @@ import java.util.Optional;
 
 public abstract class BaseDataFetcher<T> implements DataFetcher<T> {
 
-    protected static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
     public static int DEFAULT_PAGE_SIZE = 10;
 
     private static final Logger logger = LoggerFactory.getLogger(BaseDataFetcher.class);
@@ -42,7 +40,7 @@ public abstract class BaseDataFetcher<T> implements DataFetcher<T> {
         if (param == null) {
             return null;
         }
-        return OBJECT_MAPPER.convertValue(param, clazz);
+        return GraphQLObjectMapper.getInstance().convertValue(param, clazz);
     }
 
     protected <K> K parseParam(final String name, K defaultValue, final DataFetchingEnvironment environment) {

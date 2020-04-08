@@ -14,28 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
+package org.apache.unomi.graphql.types.extensions;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.graphql.conditionparsers.SegmentConditionParser;
+import org.apache.unomi.graphql.types.output.CDPView;
 
-import static org.apache.unomi.graphql.types.output.CDPSegment.TYPE_NAME;
+import static org.apache.unomi.graphql.types.extensions.UnomiSegment.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
-public class CDPSegment {
+public class UnomiSegment {
 
-    public static final String TYPE_NAME = "CDP_Segment";
+    public static final String TYPE_NAME = "Unomi_Segment";
 
-    private Segment segment;
+    private final Segment segment;
 
-    public CDPSegment(Segment segment) {
+    public UnomiSegment(Segment segment) {
         this.segment = segment;
-    }
-
-    public Segment getSegment() {
-        return segment;
     }
 
     @GraphQLField
@@ -62,8 +58,8 @@ public class CDPSegment {
     }
 
     @GraphQLField
-    public Object filter() {
-        return new SegmentConditionParser(segment.getCondition()).parse();
+    public Object condition() {
+        return segment != null ? segment.getCondition() : null;
     }
 
 }

@@ -17,12 +17,12 @@
 package org.apache.unomi.graphql.servlet;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.introspection.IntrospectionQuery;
 import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
 import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.utils.GraphQLObjectMapper;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -42,8 +42,6 @@ import java.util.Map;
 )
 public class GraphQLServlet extends HttpServlet {
 
-    private ObjectMapper objectMapper;
-
     private GraphQLSchemaUpdater graphQLSchemaUpdater;
 
     private ServiceManager serviceManager;
@@ -61,8 +59,6 @@ public class GraphQLServlet extends HttpServlet {
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
-
-        this.objectMapper = new ObjectMapper();
     }
 
     @Override
@@ -77,7 +73,7 @@ public class GraphQLServlet extends HttpServlet {
         if ((variableStr != null) && (variableStr.trim().length() > 0)) {
             TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {
             };
-            variables = objectMapper.readValue(variableStr, typeRef);
+            variables = GraphQLObjectMapper.getInstance().readValue(variableStr, typeRef);
         }
 
         setupCORSHeaders(req, resp);
@@ -89,7 +85,7 @@ public class GraphQLServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {
         };
-        Map<String, Object> body = objectMapper.readValue(req.getInputStream(), typeRef);
+        Map<String, Object> body = GraphQLObjectMapper.getInstance().readValue(req.getInputStream(), typeRef);
 
 
         String query = (String) body.get("query");
@@ -127,7 +123,7 @@ public class GraphQLServlet extends HttpServlet {
 
         final Map<String, Object> specificationResult = executionResult.toSpecification();
 
-        objectMapper.writeValue(resp.getWriter(), specificationResult);
+        GraphQLObjectMapper.getInstance().writeValue(resp.getWriter(), specificationResult);
     }
 
     private void setupCORSHeaders(HttpServletRequest httpServletRequest, ServletResponse response) {
