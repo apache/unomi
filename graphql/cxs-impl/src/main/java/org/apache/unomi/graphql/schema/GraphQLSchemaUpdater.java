@@ -22,6 +22,7 @@ import graphql.annotations.AnnotationsSchemaCreator;
 import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.language.InputObjectTypeDefinition;
+import graphql.schema.DataFetcher;
 import graphql.schema.FieldCoordinates;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLFieldDefinition;
@@ -36,6 +37,7 @@ import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.fetchers.CDPProfilePropertiesFilterDataFetcher;
 import org.apache.unomi.graphql.fetchers.CustomerPropertyDataFetcher;
+import org.apache.unomi.graphql.fetchers.DynamicFieldDataFetcher;
 import org.apache.unomi.graphql.function.DateFunction;
 import org.apache.unomi.graphql.function.DateTimeFunction;
 import org.apache.unomi.graphql.function.JSONFunction;
@@ -49,8 +51,10 @@ import org.apache.unomi.graphql.providers.GraphQLTypesProvider;
 import org.apache.unomi.graphql.types.RootMutation;
 import org.apache.unomi.graphql.types.RootQuery;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
+import org.apache.unomi.graphql.types.input.CDPPersonaInput;
 import org.apache.unomi.graphql.types.input.CDPProfilePropertiesFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileUpdateEventInput;
+import org.apache.unomi.graphql.types.output.CDPPersona;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.CDPProfilePropertiesFilter;
 import org.osgi.service.component.annotations.Activate;
@@ -251,7 +255,6 @@ public class GraphQLSchemaUpdater {
 
         setUpContainer();
         setUpDynamicFields();
-        createEventInputTypes();
 
         final Map<String, GraphQLType> typeRegistry = graphQLAnnotations.getContainer().getTypeRegistry();
 
@@ -273,52 +276,46 @@ public class GraphQLSchemaUpdater {
         return schemaBuilder
                 .query(RootQuery.class)
                 .mutation(RootMutation.class)
+                .setAlwaysPrettify(true)
                 .setAnnotationsProcessor(graphQLAnnotations)
                 .build();
     }
 
-    private void registerDynamicFields(
-            final String graphQLTypeName, final Class<?> annotatedClass, final Collection<PropertyType> propertyTypes) {
+    private void registerDynamicFields(final String graphQLTypeName,
+                                       final Class<?> annotatedClass,
+                                       final Class<? extends DynamicFieldDataFetcher> fetcherClass,
+                                       final Collection<PropertyType> propertyTypes) {
         final GraphQLCodeRegistry.Builder codeRegisterBuilder = graphQLAnnotations.getContainer().getCodeRegistryBuilder();
 
         final List<GraphQLFieldDefinition> fieldDefinitions = propertyTypes.stream().map(propertyType -> {
-
-            final GraphQLFieldDefinition.Builder fieldBuilder = GraphQLFieldDefinition.newFieldDefinition();
-
-            fieldBuilder.type((GraphQLOutputType) convert(propertyType.getValueTypeId()));
-
             final String propertyName = PropertyNameTranslator.translateFromUnomiToGraphQL(propertyType.getItemId());
-            fieldBuilder.name(propertyName);
 
-            codeRegisterBuilder.dataFetcher(
-                    FieldCoordinates.coordinates(graphQLTypeName, propertyName),
-                    new CustomerPropertyDataFetcher(propertyName));
+            try {
+                final DataFetcher dataFetcher = fetcherClass.getConstructor(String.class).newInstance(propertyName);
+                codeRegisterBuilder.dataFetcher(FieldCoordinates.coordinates(graphQLTypeName, propertyName), dataFetcher);
+            } catch (Exception e) {
+                throw new RuntimeException(String.format("Error creating a data fetcher with class %s for field %s", fetcherClass.getName(), propertyName), e);
+            }
 
-            return fieldBuilder.build();
+            return GraphQLFieldDefinition.newFieldDefinition()
+                    .type((GraphQLOutputType) convert(propertyType.getValueTypeId()))
+                    .name(propertyName).build();
         }).collect(Collectors.toList());
 
         final GraphQLObjectType transformedObjectType = graphQLAnnotations.object(annotatedClass)
                 .transform(builder -> fieldDefinitions.forEach(builder::field));
 
-        graphQLAnnotations.getContainer().getTypeRegistry().put(graphQLTypeName, transformedObjectType);
+        registerInTypeRegistry(graphQLTypeName, transformedObjectType);
     }
 
-    private void addInputFilters(
-            final String typeName, final Class<?> annotatedClass, final Collection<PropertyType> propertyTypes) {
-        final GraphQLInputObjectType originalObject = getInputObjectType(annotatedClass);
-
-        final List<GraphQLInputObjectField> inputObjectFields =
-                PropertyFilterUtils.buildInputPropertyFilters(propertyTypes);
-
-        final GraphQLInputObjectType transformedObject =
-                originalObject.transform(builder -> inputObjectFields.forEach(builder::field));
-
-        graphQLAnnotations.getContainer().getTypeRegistry().put(typeName, transformedObject);
+    private void registerInTypeRegistry(final String name, final GraphQLType type) {
+        graphQLAnnotations.getContainer().getTypeRegistry().put(name, type);
     }
 
-    private void addOutputFilters(
-            final String typeName, final Class<?> annotatedClass, final Collection<PropertyType> propertyTypes) {
-
+    private void registerDynamicFilterFields(final String typeName,
+                                             final Class<?> annotatedClass,
+                                             final Class<? extends DynamicFieldDataFetcher> fetcherClass,
+                                             final Collection<PropertyType> propertyTypes) {
         final GraphQLCodeRegistry.Builder codeRegisterBuilder = graphQLAnnotations.getContainer().getCodeRegistryBuilder();
 
         final GraphQLObjectType originalObject = graphQLAnnotations.object(annotatedClass);
@@ -326,34 +323,54 @@ public class GraphQLSchemaUpdater {
         final List<GraphQLFieldDefinition> outputObjectFields =
                 PropertyFilterUtils.buildOutputPropertyFilters(propertyTypes);
 
-        final GraphQLObjectType transformedObject =
+        final GraphQLObjectType transformedObjectType =
                 originalObject.transform(builder -> outputObjectFields.forEach(field -> {
                     builder.field(field);
 
-                    codeRegisterBuilder.dataFetcher(FieldCoordinates.coordinates(typeName, field.getName()),
-                            new CDPProfilePropertiesFilterDataFetcher(field.getName()));
+                    try {
+                        final DataFetcher dataFetcher = fetcherClass.getConstructor(String.class).newInstance(field.getName());
+                        codeRegisterBuilder.dataFetcher(FieldCoordinates.coordinates(typeName, field.getName()), dataFetcher);
+                    } catch (Exception e) {
+                        throw new RuntimeException(String.format("Error creating a data fetcher with class %s for field %s", fetcherClass.getName(), field.getName()), e);
+                    }
+
                 }));
 
-        graphQLAnnotations.getContainer().getTypeRegistry().put(typeName, transformedObject);
+        registerInTypeRegistry(typeName, transformedObjectType);
     }
 
-    private void registerDynamicInputFields(
-            final String graphQLTypeName, final Class<?> clazz, final Collection<PropertyType> propertyTypes) {
-         final List<GraphQLInputObjectField> fieldDefinitions = propertyTypes.stream()
+    private GraphQLInputObjectType registerDynamicInputFields(final String graphQLTypeName,
+                                                              final Class<?> clazz,
+                                                              final Collection<PropertyType> propertyTypes) {
+
+        final List<GraphQLInputObjectField> fieldDefinitions = propertyTypes.stream()
                 .filter(propertyType -> propertyType != null && propertyType.getItemId().matches("[_A-Za-z][_0-9A-Za-z]*"))
-                .map(propertyType -> {
-                    final GraphQLInputObjectField.Builder fieldBuilder = GraphQLInputObjectField.newInputObjectField();
+                .map(propertyType -> GraphQLInputObjectField.newInputObjectField()
+                        .type((GraphQLInputType) convert(propertyType.getValueTypeId()))
+                        .name(propertyType.getItemId())
+                        .build())
+                .collect(Collectors.toList());
 
-                    fieldBuilder.type((GraphQLInputType) convert(propertyType.getValueTypeId()));
-                    fieldBuilder.name(propertyType.getItemId());
-
-                    return fieldBuilder.build();
-                }).collect(Collectors.toList());
-
-        final GraphQLInputType transformedObjectType = getInputObjectType(clazz)
+        final GraphQLInputObjectType transformedObjectType = getInputObjectType(clazz)
                 .transform(builder -> fieldDefinitions.forEach(builder::field));
 
-        graphQLAnnotations.getContainer().getTypeRegistry().put(graphQLTypeName, transformedObjectType);
+        registerInTypeRegistry(graphQLTypeName, transformedObjectType);
+
+        return transformedObjectType;
+    }
+
+    private void registerDynamicInputFilterFields(final String typeName,
+                                                  final Class<?> annotatedClass,
+                                                  final Collection<PropertyType> propertyTypes) {
+        final GraphQLInputObjectType originalObject = getInputObjectType(annotatedClass);
+
+        final List<GraphQLInputObjectField> inputObjectFields =
+                PropertyFilterUtils.buildInputPropertyFilters(propertyTypes);
+
+        final GraphQLInputObjectType transformedObjectType =
+                originalObject.transform(builder -> inputObjectFields.forEach(builder::field));
+
+        registerInTypeRegistry(typeName, transformedObjectType);
     }
 
     private void setUpTypes(final AnnotationsSchemaCreator.Builder schemaBuilder) {
@@ -388,10 +405,18 @@ public class GraphQLSchemaUpdater {
     private void setUpDynamicFields() {
         final Collection<PropertyType> propertyTypes = profileService.getTargetPropertyTypes("profiles");
 
-        addInputFilters(CDPProfilePropertiesFilterInput.TYPE_NAME, CDPProfilePropertiesFilterInput.class, propertyTypes);
-        addOutputFilters(CDPProfilePropertiesFilter.TYPE_NAME, CDPProfilePropertiesFilter.class, propertyTypes);
+        registerDynamicInputFilterFields(CDPProfilePropertiesFilterInput.TYPE_NAME, CDPProfilePropertiesFilterInput.class, propertyTypes);
+        registerDynamicFilterFields(CDPProfilePropertiesFilter.TYPE_NAME, CDPProfilePropertiesFilter.class, CDPProfilePropertiesFilterDataFetcher.class, propertyTypes);
 
-        registerDynamicFields(CDPProfile.TYPE_NAME, CDPProfile.class, propertyTypes);
+        // Profile
+        registerDynamicFields(CDPProfile.TYPE_NAME, CDPProfile.class, CustomerPropertyDataFetcher.class, propertyTypes);
+
+        // Persona
+        registerDynamicInputFields(CDPPersonaInput.TYPE_NAME, CDPPersonaInput.class, propertyTypes);
+        registerDynamicFields(CDPPersona.TYPE_NAME, CDPPersona.class, CustomerPropertyDataFetcher.class, propertyTypes);
+
+        // Events
+        createEventInputTypes(propertyTypes);
     }
 
     private void setUpQueries(final Map<String, GraphQLType> typeRegistry) {
@@ -447,30 +472,9 @@ public class GraphQLSchemaUpdater {
         }
     }
 
-    private void createEventInputTypes() {
-        final Collection<PropertyType> propertyTypes = profileService.getTargetPropertyTypes("profiles");
+    private void createEventInputTypes(Collection<PropertyType> propertyTypes) {
 
-        if (propertyTypes == null) {
-            return;
-        }
-
-        final GraphQLInputObjectType.Builder profileUpdateEventInput = GraphQLInputObjectType.newInputObject()
-                .name(CDPProfileUpdateEventInput.TYPE_NAME)
-                .fields(getInputObjectType(CDPProfileUpdateEventInput.class).getFieldDefinitions())
-                .definition(InputObjectTypeDefinition.newInputObjectDefinition()
-                        .additionalData("clazz", CDPProfileUpdateEventInput.class.getName()).build()
-                );
-
-        propertyTypes.stream().filter(propertyType -> propertyType != null && propertyType.getItemId().matches("[_A-Za-z][_0-9A-Za-z]*"))
-                .forEach(propertyType -> profileUpdateEventInput.field(
-                        GraphQLInputObjectField.newInputObjectField()
-                                .type((GraphQLInputType) convert(propertyType.getValueTypeId()))
-                                .name(propertyType.getItemId())
-                                .build()));
-
-        final Map<String, GraphQLType> typeRegistry = graphQLAnnotations.getTypeRegistry();
-
-        typeRegistry.put(CDPProfileUpdateEventInput.TYPE_NAME, profileUpdateEventInput.build());
+        final GraphQLInputObjectType profileUpdateEventInput = registerDynamicInputFields(CDPProfileUpdateEventInput.TYPE_NAME, CDPProfileUpdateEventInput.class, propertyTypes);
 
         final GraphQLInputObjectType.Builder builder = GraphQLInputObjectType.newInputObject()
                 .name("CDP_EventInput")
@@ -505,8 +509,9 @@ public class GraphQLSchemaUpdater {
             });
         }
 
-        typeRegistry.put("CDP_EventInput", builder.build());
+        registerInTypeRegistry("CDP_EventInput", builder.build());
     }
+
 
     public GraphQLInputObjectType getInputObjectType(final Class<?> annotatedClass) {
         return (GraphQLInputObjectType) graphQLAnnotations.getObjectHandler().getTypeRetriever()

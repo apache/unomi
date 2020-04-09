@@ -43,6 +43,8 @@ public class ProfileInterestsDataFetcher implements DataFetcher<List<CDPInterest
             return Collections.emptyList();
         }
 
-        return interests.keySet().stream().map(CDPInterest::new).collect(Collectors.toList());
+        return interests.entrySet().stream()
+                .map(entry -> new CDPInterest(entry.getKey(), entry.getValue().doubleValue()))
+                .collect(Collectors.toList());
     }
 }

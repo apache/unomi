@@ -16,7 +16,6 @@
  */
 package org.apache.unomi.graphql.fetchers;
 
-import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.graphql.schema.PropertyValueTypeHelper;
@@ -30,16 +29,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-public class CDPProfilePropertiesFilterDataFetcher implements DataFetcher<Object> {
-
-    private final String fieldName;
+public class CDPProfilePropertiesFilterDataFetcher extends DynamicFieldDataFetcher<Object> {
 
     private final String propertyName;
 
     private final String comparisonOperator;
 
     public CDPProfilePropertiesFilterDataFetcher(final String fieldName) {
-        this.fieldName = fieldName;
+        super(fieldName);
 
         final String[] splittedValues = fieldName.split("_", -1);
 
