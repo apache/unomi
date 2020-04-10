@@ -19,19 +19,34 @@ package org.apache.unomi.graphql.types.output;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
+import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.graphql.services.ServiceManager;
 
 @GraphQLName("CDP_EventEdge")
 public class CDPEventEdge {
 
-    @GraphQLField
-    public CDPEvent node;
+    private Event event;
 
-    @GraphQLNonNull
-    @GraphQLField
-    public String cursor;
-
-    public CDPEventEdge(CDPEvent node, String cursor) {
-        this.node = node;
-        this.cursor = cursor;
+    public CDPEventEdge(Event event) {
+        this.event = event;
     }
+
+    public Event getEvent() {
+        return event;
+    }
+
+    @GraphQLField
+    @GraphQLNonNull
+    public String cursor() {
+        return getEvent().getItemId();
+    }
+
+    @GraphQLField
+    public CDPEventInterface node(final DataFetchingEnvironment environment) {
+        final ServiceManager serviceManager = environment.getContext();
+
+        return serviceManager.getEventInterfaceRegister().getEvent(getEvent());
+    }
+
 }

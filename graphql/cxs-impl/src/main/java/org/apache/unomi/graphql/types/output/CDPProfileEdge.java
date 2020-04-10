@@ -19,19 +19,30 @@ package org.apache.unomi.graphql.types.output;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
+import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.graphql.services.ServiceManager;
 
 @GraphQLName("CDP_ProfileEdge")
 public class CDPProfileEdge {
 
-    @GraphQLField
-    public CDPProfile node;
+    private final Profile profile;
 
-    @GraphQLNonNull
-    @GraphQLField
-    public String cursor;
-
-    public CDPProfileEdge(CDPProfile node, String cursor) {
-        this.node = node;
-        this.cursor = cursor;
+    public CDPProfileEdge(final Profile profile) {
+        this.profile = profile;
     }
+
+    @GraphQLField
+    @GraphQLNonNull
+    public String cursor(final DataFetchingEnvironment environment) {
+        return profile != null ? profile.getItemId() : null;
+    }
+
+    @GraphQLField
+    public CDPProfileInterface node(final DataFetchingEnvironment environment) {
+        final ServiceManager serviceManager = environment.getContext();
+
+        return serviceManager.getProfilesInterfaceRegister().getProfile(profile);
+    }
+
 }

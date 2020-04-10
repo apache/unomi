@@ -16,12 +16,11 @@
  */
 package org.apache.unomi.graphql.types.output;
 
-import graphql.annotations.annotationTypes.GraphQLDataFetcher;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
-import graphql.annotations.annotationTypes.GraphQLPrettify;
+import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Consent;
 import org.apache.unomi.graphql.fetchers.consent.ConsentEventConnectionDataFetcher;
 import org.apache.unomi.graphql.utils.DateUtils;
@@ -31,80 +30,63 @@ import java.time.OffsetDateTime;
 @GraphQLName("CDP_Consent")
 public class CDPConsent {
 
-    @GraphQLID
-    @GraphQLField
-    @GraphQLNonNull
     private String token;
-
-    @GraphQLField
-    private CDPSource source;
-
-    @GraphQLField
-    private CDPClient client = CDPClient.DEFAULT;
-
-    @GraphQLField
-    @GraphQLNonNull
-    private String type;
-
-    @GraphQLField
-    private CDPConsentStatus status;
-
-    @GraphQLField
-    private OffsetDateTime lastUpdate;
-
-    @GraphQLField
-    private OffsetDateTime expiration;
-
-    @GraphQLField
-    private CDPProfileInterface profile;
+    private Consent consent;
 
     public CDPConsent(String token, Consent consent) {
         this.token = token;
-        source = new CDPSource(consent.getScope());
-        type = consent.getTypeIdentifier();
-        status = CDPConsentStatus.from(consent.getStatus());
-        lastUpdate = DateUtils.toOffsetDateTime(consent.getStatusDate());
-        expiration = DateUtils.toOffsetDateTime(consent.getRevokeDate());
-//        TODO: CDPProfile contains list of CDPConsents, resulting a circular dependency
-//        profile = builder.profile;
+        this.consent = consent;
     }
 
     public String getToken() {
         return token;
     }
 
-    public CDPSource getSource() {
-        return source;
-    }
-
-    public CDPClient getClient() {
-        return client;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public CDPConsentStatus getStatus() {
-        return status;
-    }
-
-    public OffsetDateTime getLastUpdate() {
-        return lastUpdate;
-    }
-
-    public OffsetDateTime getExpiration() {
-        return expiration;
-    }
-
-    public CDPProfileInterface getProfile() {
-        return profile;
+    @GraphQLID
+    @GraphQLField
+    @GraphQLNonNull
+    public String token() {
+        return token;
     }
 
     @GraphQLField
-    @GraphQLPrettify
-    @GraphQLDataFetcher(ConsentEventConnectionDataFetcher.class)
-    public CDPEventConnection getEvents() {
+    public CDPSource source() {
+        return consent != null ? new CDPSource(consent.getScope()) : null;
+    }
+
+    @GraphQLField
+    public CDPClient client() {
+        return CDPClient.DEFAULT;
+    }
+
+    @GraphQLField
+    public String type() {
+        return consent != null ? consent.getTypeIdentifier() : null;
+    }
+
+    @GraphQLField
+    public CDPConsentStatus status() {
+        return consent != null ? CDPConsentStatus.from(consent.getStatus()) : null;
+    }
+
+    @GraphQLField
+    public OffsetDateTime lastUpdate() {
+        return consent != null ? DateUtils.toOffsetDateTime(consent.getStatusDate()) : null;
+    }
+
+    @GraphQLField
+    public OffsetDateTime expiration() {
+        return consent != null ? DateUtils.toOffsetDateTime(consent.getRevokeDate()) : null;
+    }
+
+    @GraphQLField
+    public CDPProfileInterface profile() {
         return null;
     }
+
+    @GraphQLField
+    public CDPEventConnection events(final DataFetchingEnvironment environment) throws Exception {
+        return new ConsentEventConnectionDataFetcher().get(environment);
+    }
+
 }

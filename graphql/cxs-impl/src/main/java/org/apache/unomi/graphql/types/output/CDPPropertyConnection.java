@@ -22,7 +22,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import java.util.ArrayList;
 import java.util.List;
 
-@GraphQLName("CDP_ProfilePropertyConnection")
+@GraphQLName("CDP_PropertyConnection")
 public class CDPPropertyConnection {
 
     @GraphQLField

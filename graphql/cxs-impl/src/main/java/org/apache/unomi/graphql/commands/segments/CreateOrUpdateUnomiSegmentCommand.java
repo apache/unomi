@@ -19,7 +19,7 @@ package org.apache.unomi.graphql.commands.segments;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.SegmentService;
-import org.apache.unomi.graphql.types.extensions.UnomiSegment;
+import org.apache.unomi.graphql.types.output.UnomiSegment;
 import org.apache.unomi.graphql.types.input.UnomiSegmentInput;
 import org.apache.unomi.graphql.utils.GraphQLObjectMapper;
 

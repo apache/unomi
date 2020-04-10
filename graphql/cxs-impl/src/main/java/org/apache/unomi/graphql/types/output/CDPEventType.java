@@ -23,6 +23,7 @@ import org.apache.unomi.graphql.propertytypes.CDPPropertyType;
 import java.util.ArrayList;
 import java.util.List;
 
+// TODO RM
 @GraphQLName("CDP_EventType")
 public class CDPEventType {
 

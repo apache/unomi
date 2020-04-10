@@ -18,6 +18,7 @@ package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.schema.DataFetchingEnvironment;
 
 import static org.apache.unomi.graphql.types.output.CDPSessionEventFilter.TYPE_NAME;
 
@@ -26,40 +27,23 @@ public class CDPSessionEventFilter {
 
     public static final String TYPE_NAME = "CDP_SessionEventFilter";
 
-    @GraphQLField
-    private CDPSessionState state_equals;
+    public CDPSessionEventFilter() {
 
-    @GraphQLField
-    private String unomi_sessionId_equals;
+    }
 
     @GraphQLField
-    private String unomi_scope_equals;
-
-    public CDPSessionState getState_equals() {
-        return state_equals;
+    public CDPSessionState state_equals(final DataFetchingEnvironment environment) {
+        return null;
     }
 
-    public CDPSessionEventFilter setState_equals(CDPSessionState state_equals) {
-        this.state_equals = state_equals;
-        return this;
+    @GraphQLField
+    public String unomi_sessionId_equals(final DataFetchingEnvironment environment) {
+        return null;
     }
 
-    public String getUnomi_sessionId_equals() {
-        return unomi_sessionId_equals;
-    }
-
-    public CDPSessionEventFilter setUnomi_sessionId_equals(String unomi_sessionId_equals) {
-        this.unomi_sessionId_equals = unomi_sessionId_equals;
-        return this;
-    }
-
-    public String getUnomi_scope_equals() {
-        return unomi_scope_equals;
-    }
-
-    public CDPSessionEventFilter setUnomi_scope_equals(String unomi_scope_equals) {
-        this.unomi_scope_equals = unomi_scope_equals;
-        return this;
+    @GraphQLField
+    public String unomi_scope_equals(final DataFetchingEnvironment environment) {
+        return null;
     }
 
 }

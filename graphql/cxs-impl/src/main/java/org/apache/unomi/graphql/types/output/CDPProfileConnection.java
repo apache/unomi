@@ -25,10 +25,8 @@ import java.util.List;
 @GraphQLName("CDP_ProfileConnection")
 public class CDPProfileConnection {
 
-    @GraphQLField
     private List<CDPProfileEdge> edges;
 
-    @GraphQLField
     private CDPPageInfo pageInfo;
 
     public CDPProfileConnection() {
@@ -40,11 +38,13 @@ public class CDPProfileConnection {
         this.pageInfo = pageInfo;
     }
 
-    public List<CDPProfileEdge> getEdges() {
+    @GraphQLField
+    public List<CDPProfileEdge> edges() {
         return edges;
     }
 
-    public CDPPageInfo getPageInfo() {
+    @GraphQLField
+    public CDPPageInfo pageInfo() {
         return pageInfo;
     }
 }

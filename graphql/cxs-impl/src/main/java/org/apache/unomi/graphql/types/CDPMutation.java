@@ -30,7 +30,7 @@ import org.apache.unomi.graphql.commands.ProcessEventsCommand;
 import org.apache.unomi.graphql.commands.segments.CreateOrUpdateSegmentCommand;
 import org.apache.unomi.graphql.commands.segments.CreateOrUpdateUnomiSegmentCommand;
 import org.apache.unomi.graphql.commands.segments.DeleteSegmentCommand;
-import org.apache.unomi.graphql.types.extensions.UnomiSegment;
+import org.apache.unomi.graphql.types.output.UnomiSegment;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPPersonaInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;

@@ -17,9 +17,8 @@
 package org.apache.unomi.graphql.fetchers;
 
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.graphql.types.output.CDPEvent;
-import org.apache.unomi.graphql.types.output.CDPPersona;
-import org.apache.unomi.graphql.types.output.CDPProfile;
+import org.apache.unomi.graphql.types.output.CDPEventInterface;
+import org.apache.unomi.graphql.types.output.CDPProfileInterface;
 
 public class CustomerPropertyDataFetcher extends DynamicFieldDataFetcher<Object> {
 
@@ -31,12 +30,10 @@ public class CustomerPropertyDataFetcher extends DynamicFieldDataFetcher<Object>
     public Object get(final DataFetchingEnvironment environment) {
         final Object source = environment.getSource();
 
-        if (source instanceof CDPPersona) {
-            return ((CDPPersona) environment.getSource()).getPersona().getProperty(fieldName);
-        } else if (source instanceof CDPProfile) {
-            return ((CDPProfile) environment.getSource()).getProfile().getProperty(fieldName);
-        } else if (source instanceof CDPEvent) {
-            return ((CDPEvent) environment.getSource()).getProperties().getProperties().get(fieldName);
+        if (source instanceof CDPProfileInterface) {
+            return ((CDPProfileInterface) environment.getSource()).getProperty(fieldName);
+        } else if (source instanceof CDPEventInterface) {
+            return ((CDPEventInterface) environment.getSource()).getProperty(fieldName);
         } else {
             return null;
         }

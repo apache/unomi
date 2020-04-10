@@ -20,7 +20,6 @@ package org.apache.unomi.graphql.fetchers;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.graphql.types.output.CDPPageInfo;
-import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.CDPProfileConnection;
 import org.apache.unomi.graphql.types.output.CDPProfileEdge;
 
@@ -31,7 +30,7 @@ public abstract class ProfileConnectionDataFetcher extends BaseConnectionDataFet
 
     protected CDPProfileConnection createProfileConnection(PartialList<Profile> profiles) {
         final List<CDPProfileEdge> eventEdges = profiles.getList().stream()
-                .map(profile -> new CDPProfileEdge(new CDPProfile(profile), profile.getItemId()))
+                .map(CDPProfileEdge::new)
                 .collect(Collectors.toList());
         final CDPPageInfo cdpPageInfo = new CDPPageInfo(profiles.getOffset() > 0, profiles.getTotalSize() > profiles.getList().size());
 

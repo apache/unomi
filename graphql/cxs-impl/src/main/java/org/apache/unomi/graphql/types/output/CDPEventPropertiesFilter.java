@@ -20,4 +20,8 @@ import graphql.annotations.annotationTypes.GraphQLName;
 
 @GraphQLName("CDP_EventPropertiesFilter")
 public class CDPEventPropertiesFilter {
+
+    public CDPEventPropertiesFilter() {
+    }
+
 }

@@ -21,24 +21,24 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
-import graphql.annotations.annotationTypes.GraphQLPrettify;
-import org.apache.unomi.api.Consent;
+import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Persona;
+import org.apache.unomi.graphql.fetchers.profile.ProfileConsentsDataFetcher;
+import org.apache.unomi.graphql.fetchers.profile.ProfileInterestsDataFetcher;
+import org.apache.unomi.graphql.fetchers.profile.ProfileListsDataFetcher;
+import org.apache.unomi.graphql.fetchers.profile.ProfileSegmentsDataFetcher;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.apache.unomi.graphql.types.output.CDPPersona.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
-public class CDPPersona {
+public class CDPPersona implements CDPProfileInterface {
 
     public static final String TYPE_NAME = "CDP_Persona";
 
     private Persona persona;
-
 
     public CDPPersona(Persona persona) {
         this.persona = persona;
@@ -46,28 +46,36 @@ public class CDPPersona {
 
     @GraphQLID
     @GraphQLField
-    @GraphQLPrettify
-    public String getId() {
+    public String id() {
         return persona != null ? persona.getItemId() : null;
     }
 
     @GraphQLField
     @GraphQLNonNull
-    @GraphQLPrettify
-    public String getCdp_name() {
+    public String cdp_name() {
         return persona != null ? (String) persona.getProperty("cdp_name") : null;
     }
 
     @GraphQLField
     @GraphQLNonNull
-    @GraphQLPrettify
-    public String getCdp_view() {
-        return persona != null ? (String) persona.getProperty("cdp_view") : null;
+    public CDPView cdp_view() {
+        if (persona == null) {
+            return null;
+        }
+
+        final Object view = persona.getProperty("cdp_view");
+
+        return view != null ? new CDPView(view.toString()) : null;
     }
 
+    @Override
+    public Object getProperty(final String propertyName) {
+        return persona != null ? persona.getProperty(propertyName) : null;
+    }
+
+    @Override
     @GraphQLField
-    @GraphQLPrettify
-    public List<CDPProfileID> getCdp_profileIDs() {
+    public List<CDPProfileID> cdp_profileIDs(final DataFetchingEnvironment environment) throws Exception {
         if (persona == null) {
             return null;
         }
@@ -77,34 +85,30 @@ public class CDPPersona {
     }
 
     @GraphQLField
-    @GraphQLPrettify
-    public Set<String> getCdp_segments() {
-        return persona != null ? persona.getSegments() : null;
+    public List<CDPSegment> cdp_segments(
+            final @GraphQLName("views") List<String> viewIds, final DataFetchingEnvironment environment) throws Exception {
+        return persona != null ? new ProfileSegmentsDataFetcher(persona, viewIds).get(environment) : null;
     }
 
     @GraphQLField
-    @GraphQLPrettify
-    public List<CDPInterest> getCdp_interests() {
-        if (persona == null) {
-            return null;
-        }
-
-        Map<String, Double> interests = (Map<String, Double>) persona.getProperty("interests");
-        return interests != null ? interests.entrySet().stream().map(entry -> new CDPInterest(entry.getKey(), entry.getValue())).collect(Collectors.toList()) : null;
+    public List<CDPInterest> cdp_interests(
+            final @GraphQLName("views") List<String> viewIds,
+            final DataFetchingEnvironment environment) throws Exception {
+        return persona != null ? new ProfileInterestsDataFetcher(persona).get(environment) : null;
     }
 
     @GraphQLField
-    @GraphQLPrettify
-    public List<CDPConsent> getCdp_consents() {
-        if (persona == null) {
-            return null;
-        }
+    public List<CDPConsent> cdp_consents(final DataFetchingEnvironment environment) throws Exception {
+        return persona != null ? new ProfileConsentsDataFetcher(persona).get(environment) : null;
+    }
 
-        Map<String, Consent> consents = persona.getConsents();
-        return consents != null ? consents.entrySet().stream().map(entry -> new CDPConsent(entry.getKey(), entry.getValue())).collect(Collectors.toList()) : null;
+    @Override
+    public List<CDPList> cdp_lists(final @GraphQLName("views") List<String> viewIds, final DataFetchingEnvironment environment) throws Exception {
+        return persona != null ? new ProfileListsDataFetcher(persona, viewIds).get(environment) : null;
     }
 
     public Persona getPersona() {
         return persona;
     }
+
 }

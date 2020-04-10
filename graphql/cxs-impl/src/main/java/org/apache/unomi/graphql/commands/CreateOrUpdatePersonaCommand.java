@@ -19,7 +19,6 @@ package org.apache.unomi.graphql.commands;
 import org.apache.unomi.api.Consent;
 import org.apache.unomi.api.ConsentStatus;
 import org.apache.unomi.api.Persona;
-import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.schema.PropertyNameTranslator;
 import org.apache.unomi.graphql.types.input.CDPPersonaConsentInput;
@@ -28,7 +27,6 @@ import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.output.CDPPersona;
 import org.apache.unomi.graphql.utils.DateUtils;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -52,15 +50,14 @@ public class CreateOrUpdatePersonaCommand extends BaseCommand<CDPPersona> {
     public CDPPersona execute() {
         final ProfileService profileService = serviceManager.getProfileService();
 
-        Collection<PropertyType> personaProps = profileService.getTargetPropertyTypes("profiles");
         final Map<String, Object> personaAsMap = environment.getArgument(PERSONA_ARGUMENT_NAME);
 
-        Persona persona = profileService.savePersona(createPersona(personaInput, personaProps, personaAsMap));
+        Persona persona = profileService.savePersona(createPersona(personaInput, personaAsMap));
 
         return new CDPPersona(persona);
     }
 
-    private Persona createPersona(final CDPPersonaInput personaInput, Collection<PropertyType> personaProps, Map<String, Object> personaAsMap) {
+    private Persona createPersona(final CDPPersonaInput personaInput, Map<String, Object> personaAsMap) {
         final Persona persona = new Persona(personaInput.getId());
 
         persona.setScope(personaInput.getCdp_view());

@@ -17,89 +17,58 @@
 package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
+import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.graphql.utils.DateUtils;
 
 import java.time.OffsetDateTime;
-import java.util.List;
+import java.util.Map;
 
 import static org.apache.unomi.graphql.types.output.CDPConsentUpdateEvent.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
-public class CDPConsentUpdateEvent extends CDPEventInterface {
+public class CDPConsentUpdateEvent implements CDPEventInterface {
 
     public static final String TYPE_NAME = "CDP_ConsentUpdateEvent";
 
+    private final Event event;
+
+    public CDPConsentUpdateEvent(Event event) {
+        this.event = event;
+    }
+
+    @Override
+    public Event getEvent() {
+        return event;
+    }
+
     @GraphQLField
     @GraphQLNonNull
-    private String type;
+    public String type(DataFetchingEnvironment environment) {
+        final Object type = getEvent().getProperty("type");
+        return type != null ? type.toString() : null;
+    }
 
     @GraphQLField
-    private String status;
+    public String status(DataFetchingEnvironment environment) {
+        final Object status = getEvent().getProperty("status");
+        return status != null ? status.toString() : null;
+    }
 
     @GraphQLField
-    private OffsetDateTime lastUpdate;
+    @SuppressWarnings("unchecked")
+    public OffsetDateTime lastUpdate(DataFetchingEnvironment environment) {
+        final Object lastUpdate = getEvent().getProperty("lastUpdate");
+        return lastUpdate != null ? DateUtils.offsetDateTimeFromMap((Map<String, Object>) lastUpdate) : null;
+    }
 
     @GraphQLField
-    private OffsetDateTime expiration;
-
-    public CDPConsentUpdateEvent(
-            final @GraphQLID @GraphQLNonNull String id,
-            final @GraphQLName("cdp_source") CDPSource cdp_source,
-            final @GraphQLName("cdp_client") CDPClient cdp_client,
-            final @GraphQLNonNull @GraphQLName("cdp_profileID") CDPProfileID cdp_profileID,
-            final @GraphQLNonNull @GraphQLName("cdp_profile") CDPProfile cdp_profile,
-            final @GraphQLNonNull @GraphQLName("cdp_object") CDPObject cdp_object,
-            final @GraphQLName("cdp_location") CDPGeoPoint cdp_location,
-            final @GraphQLName("cdp_timestamp") OffsetDateTime cdp_timestamp,
-            final @GraphQLName("cdp_topics") List<CDPTopic> cdp_topics,
-            final @GraphQLNonNull @GraphQLName("type") String type,
-            final @GraphQLName("status") String status,
-            final @GraphQLName("lastUpdate") OffsetDateTime lastUpdate,
-            final @GraphQLName("expiration") OffsetDateTime expiration) {
-        super(id, cdp_source, cdp_client, cdp_profileID, cdp_profile, cdp_object, cdp_location, cdp_timestamp, cdp_topics);
-
-        this.type = type;
-        this.status = status;
-        this.lastUpdate = lastUpdate;
-        this.expiration = expiration;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public CDPConsentUpdateEvent setType(String type) {
-        this.type = type;
-        return this;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public CDPConsentUpdateEvent setStatus(String status) {
-        this.status = status;
-        return this;
-    }
-
-    public OffsetDateTime getLastUpdate() {
-        return lastUpdate;
-    }
-
-    public CDPConsentUpdateEvent setLastUpdate(OffsetDateTime lastUpdate) {
-        this.lastUpdate = lastUpdate;
-        return this;
-    }
-
-    public OffsetDateTime getExpiration() {
-        return expiration;
-    }
-
-    public CDPConsentUpdateEvent setExpiration(OffsetDateTime expiration) {
-        this.expiration = expiration;
-        return this;
+    @SuppressWarnings("unchecked")
+    public OffsetDateTime expiration(DataFetchingEnvironment environment) {
+        final Object expiration = getEvent().getProperty("expiration");
+        return expiration != null ? DateUtils.offsetDateTimeFromMap((Map<String, Object>) expiration) : null;
     }
 
 }

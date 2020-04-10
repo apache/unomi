@@ -22,9 +22,9 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.graphql.fetchers.BaseDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
-import org.apache.unomi.graphql.types.output.CDPEvent;
+import org.apache.unomi.graphql.types.output.CDPEventInterface;
 
-public class EventDataFetcher extends BaseDataFetcher<CDPEvent> {
+public class EventDataFetcher extends BaseDataFetcher<CDPEventInterface> {
 
     private final String id;
 
@@ -33,12 +33,12 @@ public class EventDataFetcher extends BaseDataFetcher<CDPEvent> {
     }
 
     @Override
-    public CDPEvent get(DataFetchingEnvironment environment) throws Exception {
+    public CDPEventInterface get(DataFetchingEnvironment environment) throws Exception {
         final ServiceManager serviceManager = environment.getContext();
         final EventService eventService = serviceManager.getEventService();
         final Event event = eventService.getEvent(id);
 
-        return event != null ? new CDPEvent(event) : null;
+        return serviceManager.getEventInterfaceRegister().getEvent(event);
     }
 
 }

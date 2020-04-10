@@ -23,11 +23,16 @@ import graphql.annotations.annotationTypes.GraphQLName;
 @GraphQLName("CDP_View")
 public class CDPView {
 
-    @GraphQLID
-    @GraphQLField
-    public String name;
+    private String name;
 
-    public CDPView(@GraphQLID String name) {
+    public CDPView(final String name) {
         this.name = name;
     }
+
+    @GraphQLID
+    @GraphQLField
+    public String name() {
+        return name;
+    }
+
 }
