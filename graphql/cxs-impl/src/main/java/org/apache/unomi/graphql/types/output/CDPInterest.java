@@ -30,8 +30,10 @@ public class CDPInterest {
     @GraphQLField
     private Double score;
 
-    public CDPInterest(@GraphQLID String topic) {
+    public CDPInterest(@GraphQLID final String topic,
+                       final Double score) {
         this.topic = topic;
+        this.score = score;
     }
 
     public String getTopic() {

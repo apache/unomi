@@ -17,26 +17,26 @@
 package org.apache.unomi.graphql.fetchers;
 
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.graphql.schema.PropertyNameTranslator;
 import org.apache.unomi.graphql.types.output.CDPEvent;
+import org.apache.unomi.graphql.types.output.CDPPersona;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 
-public class CustomerPropertyDataFetcher extends BaseDataFetcher<Object> {
-
-    private final String propertyName;
+public class CustomerPropertyDataFetcher extends DynamicFieldDataFetcher<Object> {
 
     public CustomerPropertyDataFetcher(String propertyName) {
-        this.propertyName = PropertyNameTranslator.translateFromGraphQLToUnomi(propertyName);
+        super(propertyName);
     }
 
     @Override
     public Object get(final DataFetchingEnvironment environment) {
         final Object source = environment.getSource();
 
-        if (source instanceof CDPProfile) {
-            return ((CDPProfile) environment.getSource()).getProfile().getProperty(propertyName);
+        if (source instanceof CDPPersona) {
+            return ((CDPPersona) environment.getSource()).getPersona().getProperty(fieldName);
+        } else if (source instanceof CDPProfile) {
+            return ((CDPProfile) environment.getSource()).getProfile().getProperty(fieldName);
         } else if (source instanceof CDPEvent) {
-            return ((CDPEvent) environment.getSource()).getProperties().getProperties().get(propertyName);
+            return ((CDPEvent) environment.getSource()).getProperties().getProperties().get(fieldName);
         } else {
             return null;
         }

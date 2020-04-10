@@ -21,6 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.commands.CreateOrUpdatePersonaCommand;
 import org.apache.unomi.graphql.commands.CreateOrUpdateProfilePropertiesCommand;
 import org.apache.unomi.graphql.commands.DeleteAllPersonalDataCommand;
 import org.apache.unomi.graphql.commands.DeleteProfileCommand;
@@ -31,14 +32,17 @@ import org.apache.unomi.graphql.commands.segments.CreateOrUpdateUnomiSegmentComm
 import org.apache.unomi.graphql.commands.segments.DeleteSegmentCommand;
 import org.apache.unomi.graphql.types.extensions.UnomiSegment;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
+import org.apache.unomi.graphql.types.input.CDPPersonaInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.input.CDPPropertyInput;
 import org.apache.unomi.graphql.types.input.CDPSegmentInput;
 import org.apache.unomi.graphql.types.input.UnomiSegmentInput;
+import org.apache.unomi.graphql.types.output.CDPPersona;
 import org.apache.unomi.graphql.types.output.CDPSegment;
 
 import java.util.List;
 
+import static org.apache.unomi.graphql.CDPGraphQLConstants.PERSONA_ARGUMENT_NAME;
 import static org.apache.unomi.graphql.CDPGraphQLConstants.SEGMENT_ARGUMENT_NAME;
 import static org.apache.unomi.graphql.types.CDPMutation.TYPE_NAME;
 
@@ -132,5 +136,13 @@ public class CDPMutation {
                 .execute();
     }
 
+    @GraphQLField
+    public CDPPersona createOrUpdatePersona(final @GraphQLName(PERSONA_ARGUMENT_NAME) CDPPersonaInput personaInput,
+                                            final DataFetchingEnvironment environment) {
+        return CreateOrUpdatePersonaCommand.create(personaInput)
+                .setEnvironment(environment)
+                .build()
+                .execute();
+    }
 
 }

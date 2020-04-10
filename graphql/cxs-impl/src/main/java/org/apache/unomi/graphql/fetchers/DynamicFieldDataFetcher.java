@@ -14,11 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
 
-public class CDPGraphQLConstants {
+package org.apache.unomi.graphql.fetchers;
 
-    public static final String SEGMENT_ARGUMENT_NAME = "segment";
-    public static final String PERSONA_ARGUMENT_NAME = "persona";
+import graphql.schema.DataFetcher;
+import org.apache.unomi.graphql.schema.PropertyNameTranslator;
 
+public abstract class DynamicFieldDataFetcher<T> implements DataFetcher<T> {
+
+    protected String fieldName;
+
+    public DynamicFieldDataFetcher(String fieldName) {
+        this.fieldName = PropertyNameTranslator.translateFromGraphQLToUnomi(fieldName);
+    }
+
+    public String getFieldName() {
+        return fieldName;
+    }
 }

@@ -14,11 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
 
-public class CDPGraphQLConstants {
+package org.apache.unomi.graphql.types.input;
 
-    public static final String SEGMENT_ARGUMENT_NAME = "segment";
-    public static final String PERSONA_ARGUMENT_NAME = "persona";
+import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLID;
+import graphql.annotations.annotationTypes.GraphQLName;
 
+@GraphQLName("CDP_Interest")
+public class CDPInterestInput {
+
+    @GraphQLID
+    @GraphQLField
+    private String topic;
+
+    @GraphQLField
+    private Double score;
+
+    public CDPInterestInput(@GraphQLID @GraphQLName("topic") final String topic,
+                            @GraphQLName("score") final Double score) {
+        this.topic = topic;
+        this.score = score;
+    }
+
+    public String getTopic() {
+        return topic;
+    }
+
+    public Double getScore() {
+        return score;
+    }
 }
