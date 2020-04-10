@@ -26,6 +26,7 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
@@ -250,6 +251,28 @@ public class EventServiceImpl implements EventService {
         }
     }
 
+    @Override
+    public PartialList<Event> search(Query query) {
+        if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition())) {
+            if (StringUtils.isNotBlank(query.getText())) {
+                return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
+            } else {
+                return persistenceService.query(query.getCondition(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
+            }
+        } else {
+            if (StringUtils.isNotBlank(query.getText())) {
+                return persistenceService.queryFullText(query.getText(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
+            } else {
+                return persistenceService.getAllItems(Event.class, query.getOffset(), query.getLimit(), query.getSortby());
+            }
+        }
+    }
+
+    @Override
+    public Event getEvent(String id) {
+        return persistenceService.load(id, Event.class);
+    }
+
     public boolean hasEventAlreadyBeenRaised(Event event, boolean session) {
         List<Condition> conditions = new ArrayList<Condition>();
 
@@ -300,5 +323,15 @@ public class EventServiceImpl implements EventService {
             EventListenerService eventListenerService = bundleContext.getService(serviceReference);
             eventListeners.remove(eventListenerService);
         }
+    }
+
+    public void removeProfileEvents(String profileId){
+        Condition profileCondition = new Condition();
+        profileCondition.setConditionType(definitionsService.getConditionType("eventPropertyCondition"));
+        profileCondition.setParameter("propertyName", "profileId");
+        profileCondition.setParameter("comparisonOperator", "equals");
+        profileCondition.setParameter("propertyValue", profileId);
+
+        persistenceService.removeByQuery(profileCondition,Event.class);
     }
 }
