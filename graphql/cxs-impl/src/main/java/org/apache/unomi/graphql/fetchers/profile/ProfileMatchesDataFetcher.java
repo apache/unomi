@@ -23,7 +23,6 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.graphql.condition.ConditionFactory;
 import org.apache.unomi.graphql.condition.ProfileConditionFactory;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.input.CDPNamedFilterInput;
@@ -32,6 +31,8 @@ import org.apache.unomi.graphql.types.output.CDPFilterMatch;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 
@@ -56,11 +57,19 @@ public class ProfileMatchesDataFetcher implements DataFetcher<List<CDPFilterMatc
         final Date now = new Date();
         final Session session = new Session("profile-matcher-" + now.getTime(), profile, now, "digitall");
 
-        final ProfileConditionFactory factory = ConditionFactory.profile();
+        final List<Map<String, Object>> namedFiltersAsMap = environment.getArgument("namedFilters");
+
+        final ProfileConditionFactory factory = ProfileConditionFactory.get(environment);
+        AtomicInteger i = new AtomicInteger();
         return namedFilters.stream().map(filterInput -> {
+            Map<String, Object> namedFilterAsMap = null;
+            if (namedFiltersAsMap.size() > i.get()) {
+                namedFilterAsMap = namedFiltersAsMap.get(i.get());
+            }
             final long startTime = System.currentTimeMillis();
-            final Condition condition = factory.createProfileFilterInputCondition(filterInput.getFilter(), null, null, serviceManager.getDefinitionsService());
+            final Condition condition = factory.profileFilterInputCondition(filterInput.getFilter(), namedFilterAsMap, null, null);
             final boolean matches = profileService.matchCondition(condition, profile, session);
+            i.getAndIncrement();
             return new CDPFilterMatch(filterInput.getName(), matches, System.currentTimeMillis() - startTime);
         }).collect(Collectors.toList());
     }
