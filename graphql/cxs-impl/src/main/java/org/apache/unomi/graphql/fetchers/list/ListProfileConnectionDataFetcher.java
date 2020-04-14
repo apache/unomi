@@ -22,7 +22,7 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
-import org.apache.unomi.graphql.condition.ConditionFactory;
+import org.apache.unomi.graphql.condition.ProfileConditionFactory;
 import org.apache.unomi.graphql.fetchers.ConnectionParams;
 import org.apache.unomi.graphql.fetchers.ProfileConnectionDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
@@ -46,7 +46,8 @@ public class ListProfileConnectionDataFetcher extends ProfileConnectionDataFetch
         final ServiceManager serviceManager = environment.getContext();
         final ConnectionParams params = parseConnectionParams(environment);
 
-        Condition listIdCondition = ConditionFactory.profile().createPropertyCondition("systemProperties.lists", "contains", cdpList.getId(), serviceManager.getDefinitionsService());
+        Condition listIdCondition = ProfileConditionFactory.get(environment)
+                .propertyCondition("systemProperties.lists", "contains", cdpList.getId());
 
         final Query query = new Query();
         query.setOffset(params.getFirst());

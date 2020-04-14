@@ -17,66 +17,88 @@
 
 package org.apache.unomi.graphql.condition;
 
+import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.utils.ConditionBuilder;
+
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public abstract class ConditionFactory {
 
-    private static ProfileConditionFactory profileConditionFactory = new ProfileConditionFactory();
+    protected DataFetchingEnvironment environment;
 
-    private static EventConditionFactory eventConditionFactory = new EventConditionFactory();
+    protected DefinitionsService definitionsService;
 
-    private String entityName;
+    private String conditionTypeId;
 
-    protected ConditionFactory(String entityName) {
-        this.entityName = entityName;
+    private Map<String, ConditionType> conditionTypesMap;
+
+    protected ConditionFactory(final String conditionTypeId, final DataFetchingEnvironment environment) {
+        this.environment = environment;
+        this.conditionTypeId = conditionTypeId;
+
+        final ServiceManager context = environment.getContext();
+        this.definitionsService = context.getDefinitionsService();
+
+        this.conditionTypesMap = definitionsService.getAllConditionTypes().stream()
+                .collect(Collectors.toMap(ConditionType::getItemId, Function.identity()));
     }
 
-    public static ProfileConditionFactory profile() {
-        return ConditionFactory.profileConditionFactory;
+    public Condition booleanCondition(final String operator, List<Condition> subConditions) {
+        return ConditionBuilder.create(getConditionType("booleanCondition"))
+                .parameter("operator", operator)
+                .parameter("subConditions", subConditions)
+                .build();
     }
 
-    public static EventConditionFactory event() {
-        return ConditionFactory.eventConditionFactory;
+    public Condition propertyCondition(final String propertyName, final String operator, final String propertyValueName, final Object propertyValue) {
+        return ConditionBuilder.create(getConditionType(conditionTypeId))
+                .property(propertyName)
+                .operator(operator)
+                .parameter(propertyValueName, propertyValue)
+                .build();
     }
 
-    public Condition createBoolCondition(final String operator, DefinitionsService definitionsService) {
-        final Condition andCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-        andCondition.setParameter("operator", operator);
-        return andCondition;
+    public Condition propertyCondition(final String propertyName, final Object propertyValue) {
+        return propertyCondition(propertyName, "equals", propertyValue);
     }
 
-    public Condition createPropertyCondition(final String propertyName, final Object propertyValue, DefinitionsService definitionsService) {
-        return createPropertyCondition(propertyName, "equals", propertyValue, definitionsService);
+    public Condition propertyCondition(final String propertyName, final String operator, final Object propertyValue) {
+        return propertyCondition(propertyName, operator, "propertyValue", propertyValue);
     }
 
-    public Condition createPropertyCondition(final String propertyName, final String operator, final Object propertyValue, DefinitionsService definitionsService) {
-        return createPropertyCondition(propertyName, operator, "propertyValue", propertyValue, definitionsService);
+    public Condition integerPropertyCondition(final String propertyName, final Object propertyValue) {
+        return integerPropertyCondition(propertyName, "equals", propertyValue);
     }
 
-    public Condition createIntegerPropertyCondition(final String propertyName, final Object propertyValue, DefinitionsService definitionsService) {
-        return createIntegerPropertyCondition(propertyName, "equals", propertyValue, definitionsService);
+    public Condition integerPropertyCondition(final String propertyName, final String operator, final Object propertyValue) {
+        return propertyCondition(propertyName, operator, "propertyValueInteger", propertyValue);
     }
 
-    public Condition createIntegerPropertyCondition(final String propertyName, final String operator, final Object propertyValue, DefinitionsService definitionsService) {
-        return createPropertyCondition(propertyName, operator, "propertyValueInteger", propertyValue, definitionsService);
+    public Condition datePropertyCondition(final String propertyName, final String operator, final Object propertyValue) {
+        return propertyCondition(propertyName, operator, "propertyValueDate", propertyValue);
     }
 
-    public Condition createDatePropertyCondition(final String propertyName, final String operator, final Object propertyValue, DefinitionsService definitionsService) {
-        return createPropertyCondition(propertyName, operator, "propertyValueDate", propertyValue, definitionsService);
+    public Condition propertiesCondition(final String propertyName, final String operator, final List<String> propertyValues) {
+        return propertyCondition(propertyName, operator, "propertyValues", propertyValues);
     }
 
-    public Condition createPropertiesCondition(final String propertyName, final String operator, final Object propertyValue, DefinitionsService definitionsService) {
-        return createPropertyCondition(propertyName, operator, "propertyValues", propertyValue, definitionsService);
+    public ConditionType getConditionType(final String typeId) {
+        return this.conditionTypesMap.get(typeId);
     }
 
-    public Condition createPropertyCondition(final String propertyName, final String operator, final String propertyValueName, final Object propertyValue, DefinitionsService definitionsService) {
-        final Condition profileIdCondition = new Condition(definitionsService.getConditionType(entityName));
+    <INPUT> Condition filtersToCondition(final List<INPUT> inputFilters, final Function<INPUT, Condition> function, final String operator) {
 
-        profileIdCondition.setParameter("propertyName", propertyName);
-        profileIdCondition.setParameter("comparisonOperator", operator);
-        profileIdCondition.setParameter(propertyValueName, propertyValue);
+        final List<Condition> subConditions = inputFilters.stream()
+                .map(function)
+                .collect(Collectors.toList());
 
-        return profileIdCondition;
+        return booleanCondition(operator, subConditions);
     }
 }

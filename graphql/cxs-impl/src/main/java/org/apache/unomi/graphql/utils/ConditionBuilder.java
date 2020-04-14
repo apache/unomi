@@ -35,6 +35,8 @@ public class ConditionBuilder {
 
     private String propertyValue;
 
+    private List<String> propertyValues;
+
     private OffsetDateTime propertyValueDate;
 
     private Object propertyValueInteger;
@@ -45,47 +47,67 @@ public class ConditionBuilder {
         this.conditionType = conditionType;
     }
 
-    public static ConditionBuilder builder(final ConditionType conditionType) {
+    public static ConditionBuilder create(final ConditionType conditionType) {
         return new ConditionBuilder(conditionType);
     }
 
-    public ConditionBuilder setPropertyName(String propertyName) {
+    public ConditionBuilder property(String propertyName) {
         this.propertyName = propertyName;
         return this;
     }
 
-    public ConditionBuilder setComparisonOperator(String comparisonOperator) {
+    public ConditionBuilder operator(String comparisonOperator) {
         this.comparisonOperator = comparisonOperator;
         return this;
     }
 
-    public ConditionBuilder setPropertyValue(String propertyValue) {
+    public ConditionBuilder value(String propertyValue) {
         this.propertyValue = propertyValue;
         return this;
     }
 
-    public ConditionBuilder setPropertyValueDate(OffsetDateTime propertyValueDate) {
+    public ConditionBuilder value(OffsetDateTime propertyValueDate) {
         this.propertyValueDate = propertyValueDate;
         return this;
     }
 
-    public ConditionBuilder setPropertyValueInteger(Object propertyValueInteger) {
+    public ConditionBuilder value(Object propertyValueInteger) {
         this.propertyValueInteger = propertyValueInteger;
         return this;
     }
 
-    public ConditionBuilder setParameter(final String parameter, final Object value) {
+    public ConditionBuilder values(List<String> propertyValues) {
+        this.propertyValues = propertyValues;
+        return this;
+    }
+
+    public ConditionBuilder parameter(final String parameter, final Object value) {
         this.parameters.put(parameter, value);
         return this;
     }
 
-    public Condition buildBooleanCondition(final String operator, final List<Condition> subConditions) {
-        final Condition condition = new Condition(conditionType);
+    public ConditionBuilder eq(final String value) {
+        return this.value(value).operator("equals");
+    }
 
-        condition.setParameter("operator", operator);
-        condition.setParameter("subConditions", subConditions);
+    public ConditionBuilder neq(final String value) {
+        return this.value(value).operator("notEquals");
+    }
 
-        return condition;
+    public ConditionBuilder lt(final String value) {
+        return this.value(value).operator("lessThan");
+    }
+
+    public ConditionBuilder lte(final String value) {
+        return this.value(value).operator("lessThanOrEqualTo");
+    }
+
+    public ConditionBuilder gt(final String value) {
+        return this.value(value).operator("greaterThan");
+    }
+
+    public ConditionBuilder gte(final String value) {
+        return this.value(value).operator("greaterThanOrEqualTo");
     }
 
     public Condition build() {
@@ -105,6 +127,9 @@ public class ConditionBuilder {
         }
         if (propertyValueInteger != null) {
             condition.setParameter("propertyValueInteger", propertyValueInteger);
+        }
+        if (propertyValues != null && !propertyValues.isEmpty()) {
+            condition.setParameter("propertyValues", propertyValues);
         }
 
         if (!parameters.isEmpty()) {

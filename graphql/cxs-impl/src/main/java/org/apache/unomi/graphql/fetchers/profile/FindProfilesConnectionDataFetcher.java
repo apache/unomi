@@ -22,7 +22,7 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
-import org.apache.unomi.graphql.condition.ConditionFactory;
+import org.apache.unomi.graphql.condition.ProfileConditionFactory;
 import org.apache.unomi.graphql.fetchers.ConnectionParams;
 import org.apache.unomi.graphql.fetchers.ProfileConnectionDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
@@ -47,8 +47,8 @@ public class FindProfilesConnectionDataFetcher extends ProfileConnectionDataFetc
         final ServiceManager serviceManager = environment.getContext();
         final ConnectionParams params = parseConnectionParams(environment);
 
-        final Condition condition = ConditionFactory.profile().createProfileFilterInputCondition(
-                filterInput, params.getAfter(), params.getBefore(), serviceManager.getDefinitionsService());
+        final Condition condition = ProfileConditionFactory.get(environment)
+                .profileFilterInputCondition(filterInput, environment.getArgument("filter"), params.getAfter(), params.getBefore());
         final Query query = buildQuery(condition, orderByInput, params);
 
         PartialList<Profile> profiles = serviceManager.getProfileService().search(query, Profile.class);

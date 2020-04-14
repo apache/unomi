@@ -18,6 +18,7 @@ package org.apache.unomi.graphql.conditionparsers;
 
 import org.apache.unomi.api.conditions.Condition;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -38,10 +39,13 @@ public class SegmentProfileIDsConditionParser {
         return conditions.stream()
                 .filter(condition -> IS_PROFILE_PROPERTY_CONDITION_TYPE.test(condition)
                         && "itemId".equals(condition.getParameter("propertyName"))
-                        && "contains".equals(condition.getParameter("comparisonOperator"))
-                        && Objects.nonNull(condition.getParameter("propertyValue")))
-                .map(condition -> condition.getParameter("propertyValue").toString())
-                .collect(Collectors.toList());
+                        && "inContains".equals(condition.getParameter("comparisonOperator"))
+                        && Objects.nonNull(condition.getParameter("propertyValues")))
+                .map(condition -> (List<String>) condition.getParameter("propertyValues"))
+                .reduce(new ArrayList<>(), (List<String> all, List<String> ids) -> {
+                    all.addAll(ids);
+                    return all;
+                });
     }
 
 }
