@@ -17,10 +17,14 @@
 package org.apache.unomi.graphql.types;
 
 import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
 
+import static org.apache.unomi.graphql.types.RootQuery.TYPE_NAME;
+
+@GraphQLName(TYPE_NAME)
 public class RootQuery {
 
-    public static final String TYPE_NAME = "RootQuery";
+    public static final String TYPE_NAME = "Query";
 
     @GraphQLField
     public static CDPQuery cdp() {

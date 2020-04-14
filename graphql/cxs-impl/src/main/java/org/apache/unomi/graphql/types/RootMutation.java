@@ -17,12 +17,14 @@
 package org.apache.unomi.graphql.types;
 
 import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLMutation;
+import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLMutation
+import static org.apache.unomi.graphql.types.RootMutation.TYPE_NAME;
+
+@GraphQLName(TYPE_NAME)
 public class RootMutation {
 
-    public static final String TYPE_NAME = "RootMutation";
+    public static final String TYPE_NAME = "Mutation";
 
     @GraphQLField
     public static CDPMutation cdp() {

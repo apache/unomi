@@ -21,6 +21,7 @@ import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLInputObjectType;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.graphql.CDPGraphQLConstants;
 import org.apache.unomi.graphql.types.input.CDPConsentUpdateEventInput;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPEventProcessor;
@@ -131,8 +132,8 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
 
             final InputObjectTypeDefinition typeDefinition = inputObjectType.getDefinition();
 
-            if (typeDefinition != null && typeDefinition.getAdditionalData().containsKey("clazz")) {
-                final String className = typeDefinition.getAdditionalData().get("clazz");
+            if (typeDefinition != null && typeDefinition.getAdditionalData().containsKey(CDPGraphQLConstants.EVENT_PROCESSOR_CLASS)) {
+                final String className = typeDefinition.getAdditionalData().get(CDPGraphQLConstants.EVENT_PROCESSOR_CLASS);
 
                 buildAndProcessEvent(className, eventInputAsMap);
 

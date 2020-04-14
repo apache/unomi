@@ -18,14 +18,13 @@ package org.apache.unomi.graphql.schema;
 
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.graphql.types.output.CDPProfileInterface;
+import org.apache.unomi.graphql.utils.ReflectionUtil;
 import org.osgi.service.component.annotations.Component;
 
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component(immediate = true, service = CDPProfilesInterfaceRegister.class)
 public class CDPProfilesInterfaceRegister {
-
-    private static final String TYPE_NAME_FIELD = "TYPE_NAME";
 
     private ConcurrentHashMap<String, Class<? extends CDPProfileInterface>> profiles;
 
@@ -34,7 +33,7 @@ public class CDPProfilesInterfaceRegister {
     }
 
     public void register(final Class<? extends CDPProfileInterface> profileMember) {
-        profiles.putIfAbsent(getProfileType(profileMember), profileMember);
+        profiles.put(getProfileType(profileMember), profileMember);
     }
 
     public <PROFILE extends Profile> CDPProfileInterface getProfile(final PROFILE profile) {
@@ -46,15 +45,7 @@ public class CDPProfilesInterfaceRegister {
     }
 
     private String getProfileType(final Class<? extends CDPProfileInterface> clazz) {
-        try {
-            return transformProfileType((String) clazz.getField(TYPE_NAME_FIELD).get(null));
-        } catch (final NoSuchFieldException e) {
-            throw new RuntimeException(
-                    String.format("Class %s doesn't have a publicly accessible \"TYPE_NAME\" field", clazz.getName()), e);
-        } catch (final IllegalAccessException e) {
-            throw new RuntimeException(
-                    String.format("Error resolving \"TYPE_NAME\" for class %s", clazz.getName()), e);
-        }
+        return transformProfileType(ReflectionUtil.getTypeName(clazz));
     }
 
     private String transformProfileType(final String eventType) {

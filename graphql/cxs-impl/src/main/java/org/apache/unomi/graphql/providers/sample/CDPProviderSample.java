@@ -29,21 +29,19 @@ import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
 import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
 import org.apache.unomi.graphql.providers.GraphQLProcessEventsProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
-import org.apache.unomi.graphql.providers.GraphQLTypesProvider;
 import org.apache.unomi.graphql.types.RootMutation;
 import org.apache.unomi.graphql.types.RootQuery;
 import org.apache.unomi.graphql.types.input.CDPEventProcessor;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.osgi.service.component.annotations.Component;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
 @Component(enabled = false)
 public class CDPProviderSample
-        implements GraphQLExtensionsProvider, GraphQLMutationProvider, GraphQLQueryProvider, GraphQLTypesProvider, GraphQLCodeRegistryProvider, GraphQLProcessEventsProvider, GraphQLAdditionalTypesProvider {
+        implements GraphQLExtensionsProvider, GraphQLMutationProvider, GraphQLQueryProvider, GraphQLCodeRegistryProvider, GraphQLProcessEventsProvider, GraphQLAdditionalTypesProvider {
 
     @Override
     public Set<Class<?>> getExtensions() {
@@ -83,11 +81,6 @@ public class CDPProviderSample
     }
 
     @Override
-    public Set<Class<?>> getTypes() {
-        return Collections.singleton(SampleType.class);
-    }
-
-    @Override
     public GraphQLCodeRegistry.Builder getCodeRegistry(final GraphQLCodeRegistry codeRegistry) {
         return GraphQLCodeRegistry
                 .newCodeRegistry(codeRegistry)
@@ -110,13 +103,13 @@ public class CDPProviderSample
     }
 
     @Override
-    public Collection<Class<? extends CDPEventProcessor>> getProcessEvents() {
-        return Collections.singletonList(VENDOR_PageViewEventInput.class);
+    public Set<Class<? extends CDPEventProcessor>> getProcessEvents() {
+        return Collections.singleton(VENDOR_PageViewEventInput.class);
     }
 
     @Override
     public Set<Class<?>> getAdditionalTypes() {
-        return Collections.emptySet();
+        return Collections.singleton(SampleType.class);
     }
 
 }

@@ -14,14 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.utils;
 
-public interface CDPGraphQLConstants {
+public class ReflectionUtil {
 
-    String SEGMENT_ARGUMENT_NAME = "segment";
+    private static final String TYPE_NAME_FIELD = "TYPE_NAME";
 
-    String PERSONA_ARGUMENT_NAME = "persona";
-
-    String EVENT_PROCESSOR_CLASS = "eventProcessorClass";
-
+    public static String getTypeName(final Class clazz) {
+        try {
+            return (String) clazz.getField(TYPE_NAME_FIELD).get(null);
+        } catch (final NoSuchFieldException e) {
+            throw new RuntimeException(String.format("Class %s doesn't have a publicly accessible \"TYPE_NAME\" field", clazz.getName()), e);
+        } catch (final IllegalAccessException e) {
+            throw new RuntimeException(String.format("Error resolving \"TYPE_NAME\" for class %s", clazz.getName()), e);
+        }
+    }
 }

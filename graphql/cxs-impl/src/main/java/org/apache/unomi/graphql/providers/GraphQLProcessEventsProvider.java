@@ -18,8 +18,8 @@ package org.apache.unomi.graphql.providers;
 
 import org.apache.unomi.graphql.types.input.CDPEventProcessor;
 
-import java.util.Collection;
+import java.util.Set;
 
 public interface GraphQLProcessEventsProvider {
-    Collection<Class<? extends CDPEventProcessor>> getProcessEvents();
+    Set<Class<? extends CDPEventProcessor>> getProcessEvents();
 }

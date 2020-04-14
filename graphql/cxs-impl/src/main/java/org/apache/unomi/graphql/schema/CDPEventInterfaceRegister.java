@@ -19,6 +19,7 @@ package org.apache.unomi.graphql.schema;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.graphql.types.output.CDPEventInterface;
 import org.apache.unomi.graphql.types.output.UnomiEvent;
+import org.apache.unomi.graphql.utils.ReflectionUtil;
 import org.osgi.service.component.annotations.Component;
 
 import java.util.Objects;
@@ -26,8 +27,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Component(immediate = true, service = CDPEventInterfaceRegister.class)
 public class CDPEventInterfaceRegister {
-
-    private static final String TYPE_NAME_FIELD = "TYPE_NAME";
 
     private ConcurrentHashMap<String, Class<? extends CDPEventInterface>> events;
 
@@ -37,7 +36,7 @@ public class CDPEventInterfaceRegister {
 
     public void register(final Class<? extends CDPEventInterface> eventMember) {
         if (!Objects.equals(eventMember, UnomiEvent.class)) {
-            events.putIfAbsent(getEventType(eventMember), eventMember);
+            events.put(getEventType(eventMember), eventMember);
         }
     }
 
@@ -54,15 +53,7 @@ public class CDPEventInterfaceRegister {
     }
 
     private String getEventType(final Class<? extends CDPEventInterface> clazz) {
-        try {
-            return transformEventType((String) clazz.getField(TYPE_NAME_FIELD).get(null));
-        } catch (final NoSuchFieldException e) {
-            throw new RuntimeException(
-                    String.format("Class %s doesn't have a publicly accessible \"TYPE_NAME\" field", clazz.getName()), e);
-        } catch (final IllegalAccessException e) {
-            throw new RuntimeException(
-                    String.format("Error resolving \"TYPE_NAME\" for class %s", clazz.getName()), e);
-        }
+        return transformEventType(ReflectionUtil.getTypeName(clazz));
     }
 
     private String transformEventType(final String eventType) {
