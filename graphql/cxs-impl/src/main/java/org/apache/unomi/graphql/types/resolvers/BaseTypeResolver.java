@@ -19,24 +19,14 @@ package org.apache.unomi.graphql.types.resolvers;
 import graphql.TypeResolutionEnvironment;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.TypeResolver;
+import org.apache.unomi.graphql.utils.ReflectionUtil;
 
 public class BaseTypeResolver implements TypeResolver {
-
-    private static final String TYPE_NAME_FIELD = "TYPE_NAME";
 
     @Override
     public GraphQLObjectType getType(final TypeResolutionEnvironment env) {
         final Class clazz = env.getObject().getClass();
-
-        try {
-            final String typeName = (String) clazz.getField(TYPE_NAME_FIELD).get(null);
-
-            return env.getSchema().getObjectType(typeName);
-        } catch (final NoSuchFieldException e) {
-            throw new RuntimeException(String.format("Class %s doesn't have a publicly accessible \"TYPE_NAME\" field", clazz.getName()), e);
-        } catch (final IllegalAccessException e) {
-            throw new RuntimeException(String.format("Error resolving \"TYPE_NAME\" for class %s", clazz.getName()), e);
-        }
+        return env.getSchema().getObjectType(ReflectionUtil.getTypeName(clazz));
     }
 
 }

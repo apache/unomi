@@ -16,6 +16,12 @@
  */
 package org.apache.unomi.graphql.providers;
 
+import graphql.annotations.processor.typeFunctions.TypeFunction;
+import org.apache.unomi.graphql.function.DateFunction;
+import org.apache.unomi.graphql.function.DateTimeFunction;
+import org.apache.unomi.graphql.function.JSONFunction;
+import org.apache.unomi.graphql.types.input.CDPEventProcessor;
+import org.apache.unomi.graphql.types.input.CDPProfileUpdateEventInput;
 import org.apache.unomi.graphql.types.output.CDPConsentUpdateEvent;
 import org.apache.unomi.graphql.types.output.CDPListsUpdateEvent;
 import org.apache.unomi.graphql.types.output.CDPProfileUpdateEvent;
@@ -27,10 +33,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Component
-public class CDPDefaultGraphQLProvider implements GraphQLTypesProvider {
+public class CDPDefaultGraphQLProvider
+        implements GraphQLAdditionalTypesProvider, GraphQLTypeFunctionProvider, GraphQLProcessEventsProvider {
 
     @Override
-    public Set<Class<?>> getTypes() {
+    public Set<Class<?>> getAdditionalTypes() {
         final Set<Class<?>> additionalTypes = new HashSet<>();
 
         additionalTypes.add(CDPSessionEvent.class);
@@ -40,6 +47,26 @@ public class CDPDefaultGraphQLProvider implements GraphQLTypesProvider {
         additionalTypes.add(UnomiEvent.class);
 
         return additionalTypes;
+    }
+
+    @Override
+    public Set<TypeFunction> getTypeFunctions() {
+        final Set<TypeFunction> typeFunctions = new HashSet<>();
+
+        typeFunctions.add(new DateTimeFunction());
+        typeFunctions.add(new DateFunction());
+        typeFunctions.add(new JSONFunction());
+
+        return typeFunctions;
+    }
+
+    @Override
+    public Set<Class<? extends CDPEventProcessor>> getProcessEvents() {
+        final Set<Class<? extends CDPEventProcessor>> eventProcessors = new HashSet<>();
+
+        eventProcessors.add(CDPProfileUpdateEventInput.class);
+
+        return eventProcessors;
     }
 
 }

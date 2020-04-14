@@ -16,10 +16,12 @@
  */
 package org.apache.unomi.graphql.providers;
 
+import graphql.annotations.processor.typeFunctions.TypeFunction;
+
 import java.util.Set;
 
-public interface GraphQLTypesProvider extends GraphQLProvider {
+public interface GraphQLTypeFunctionProvider {
 
-    Set<Class<?>> getTypes();
+    Set<TypeFunction> getTypeFunctions();
 
 }
