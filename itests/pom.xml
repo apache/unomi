@@ -45,6 +45,14 @@
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
+            <artifactId>cdp-graphql-feature</artifactId>
+            <classifier>features</classifier>
+            <version>${project.version}</version>
+            <type>xml</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-spi</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
