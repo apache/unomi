@@ -19,7 +19,6 @@ package org.apache.unomi.graphql.fetchers;
 
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
-import org.apache.unomi.graphql.types.output.CDPEvent;
 import org.apache.unomi.graphql.types.output.CDPEventConnection;
 import org.apache.unomi.graphql.types.output.CDPEventEdge;
 import org.apache.unomi.graphql.types.output.CDPPageInfo;
@@ -30,7 +29,7 @@ import java.util.stream.Collectors;
 public abstract class EventConnectionDataFetcher extends BaseConnectionDataFetcher<CDPEventConnection> {
 
     protected CDPEventConnection createEventConnection(PartialList<Event> events) {
-        final List<CDPEventEdge> eventEdges = events.getList().stream().map(event -> new CDPEventEdge(new CDPEvent(event), event.getItemId())).collect(Collectors.toList());
+        final List<CDPEventEdge> eventEdges = events.getList().stream().map(CDPEventEdge::new).collect(Collectors.toList());
         final CDPPageInfo cdpPageInfo = new CDPPageInfo(events.getOffset() > 0, events.getTotalSize() > events.getList().size());
 
         return new CDPEventConnection(eventEdges, cdpPageInfo);

@@ -16,22 +16,5 @@
  */
 package org.apache.unomi.graphql.types.resolvers;
 
-import graphql.TypeResolutionEnvironment;
-import graphql.schema.GraphQLObjectType;
-import graphql.schema.TypeResolver;
-import org.apache.unomi.graphql.types.output.CDPProfile;
-
-public class CDPProfileTypeResolver implements TypeResolver {
-
-    @Override
-    public GraphQLObjectType getType(TypeResolutionEnvironment env) {
-        final Object obj = env.getObject();
-
-        if (obj instanceof CDPProfile) {
-            return env.getSchema().getObjectType(CDPProfile.TYPE_NAME);
-        }
-
-        return null;
-    }
-
+public class CDPProfileTypeResolver extends BaseTypeResolver {
 }

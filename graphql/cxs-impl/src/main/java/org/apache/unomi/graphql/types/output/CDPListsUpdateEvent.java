@@ -14,23 +14,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.fetchers.segment;
+package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.Event;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
-public class SegmentProfileListDataFetcher extends BaseSegmentContainsDataFetcher {
+import static org.apache.unomi.graphql.types.output.CDPListsUpdateEvent.TYPE_NAME;
+
+@GraphQLName(TYPE_NAME)
+public class CDPListsUpdateEvent implements CDPEventInterface {
+
+    public static final String TYPE_NAME = "CDP_ListsUpdateEvent";
+
+    private final Event event;
+
+    public CDPListsUpdateEvent(final Event event) {
+        this.event = event;
+    }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public List<String> get(DataFetchingEnvironment environment) throws Exception {
-        return getSubConditions(environment).stream()
-                .filter(condition -> "profileUserListCondition".equals(condition.getConditionTypeId()))
-                .flatMap(condition -> ((ArrayList<String>) condition.getParameter("lists")).stream())
-                .collect(Collectors.toList());
+    public Event getEvent() {
+        return event;
+    }
+
+    @GraphQLField
+    public List<CDPList> joinLists(final DataFetchingEnvironment environment) {
+        return null;
+    }
+
+    @GraphQLField
+    public List<CDPList> leaveLists(final DataFetchingEnvironment environment) {
+        return null;
     }
 
 }

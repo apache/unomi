@@ -14,23 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.fetchers.segment;
+package org.apache.unomi.graphql.types.output;
 
-import graphql.schema.DataFetchingEnvironment;
+import graphql.annotations.annotationTypes.GraphQLName;
+import org.apache.unomi.api.Event;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
+import static org.apache.unomi.graphql.types.output.UnomiEvent.TYPE_NAME;
 
-public class SegmentProfileSegmentsDataFetcher extends BaseSegmentContainsDataFetcher {
+@GraphQLName(TYPE_NAME)
+public class UnomiEvent implements CDPEventInterface {
+
+    public static final String TYPE_NAME = "Unomi_Event";
+
+    private final Event event;
+
+    public UnomiEvent(Event event) {
+        this.event = event;
+    }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public List<String> get(DataFetchingEnvironment environment) throws Exception {
-        return getSubConditions(environment).stream()
-                .filter(condition -> "profileSegmentCondition".equals(condition.getConditionTypeId()))
-                .flatMap(condition -> ((ArrayList<String>) condition.getParameter("segments")).stream())
-                .collect(Collectors.toList());
+    public Event getEvent() {
+        return event;
     }
 
 }

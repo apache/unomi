@@ -81,7 +81,6 @@ public class ProfileConditionFactory extends ConditionFactory {
     }
 
     public Condition createProfileFilterInputCondition(CDPProfileFilterInput filterInput, Date after, Date before, DefinitionsService definitionsService) {
-        final Condition rootCondition = createBoolCondition("and", definitionsService);
         final List<Condition> rootSubConditions = new ArrayList<>();
 
         if (after != null) {
@@ -122,7 +121,10 @@ public class ProfileConditionFactory extends ConditionFactory {
             }
         }
 
+        final Condition rootCondition = createBoolCondition("and", definitionsService);
+
         rootCondition.setParameter("subConditions", rootSubConditions);
+
         return rootCondition;
     }
 

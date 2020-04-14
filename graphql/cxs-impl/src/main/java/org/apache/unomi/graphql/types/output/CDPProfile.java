@@ -52,6 +52,11 @@ public class CDPProfile implements CDPProfileInterface {
     }
 
     @Override
+    public Object getProperty(final String propertyName) {
+        return profile != null ? profile.getProperty(propertyName) : null;
+    }
+
+    @Override
     @GraphQLField
     public List<CDPProfileID> cdp_profileIDs(final DataFetchingEnvironment environment) throws Exception {
         return new ProfileIdsDataFetcher(profile).get(environment);

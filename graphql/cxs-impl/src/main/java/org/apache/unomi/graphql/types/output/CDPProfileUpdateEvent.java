@@ -16,31 +16,25 @@
  */
 package org.apache.unomi.graphql.types.output;
 
-import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLNonNull;
-
-import java.time.OffsetDateTime;
-import java.util.List;
+import org.apache.unomi.api.Event;
 
 import static org.apache.unomi.graphql.types.output.CDPProfileUpdateEvent.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
-public class CDPProfileUpdateEvent extends CDPEventInterface {
+public class CDPProfileUpdateEvent implements CDPEventInterface {
 
     public static final String TYPE_NAME = "CDP_ProfileUpdateEvent";
 
-    public CDPProfileUpdateEvent(
-            @GraphQLID @GraphQLNonNull String id,
-            CDPSource cdp_source,
-            CDPClient cdp_client,
-            @GraphQLNonNull CDPProfileID cdp_profileID,
-            @GraphQLNonNull CDPProfile cdp_profile,
-            @GraphQLNonNull CDPObject cdp_object,
-            CDPGeoPoint cdp_location,
-            OffsetDateTime cdp_timestamp,
-            List<CDPTopic> cdp_topics) {
-        super(id, cdp_source, cdp_client, cdp_profileID, cdp_profile, cdp_object, cdp_location, cdp_timestamp, cdp_topics);
+    private final Event event;
+
+    public CDPProfileUpdateEvent(Event event) {
+        this.event = event;
+    }
+
+    @Override
+    public Event getEvent() {
+        return event;
     }
 
 }

@@ -20,47 +20,40 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
+import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.Event;
 
 import java.util.List;
 
 @GraphQLName("CDP_Object")
 public class CDPObject {
 
+    private Event event;
+
+    public CDPObject(Event event) {
+        this.event = event;
+    }
+
     @GraphQLID
     @GraphQLField
     @GraphQLNonNull
-    private String uri;
+    public String uri() {
+        return String.format("%s:%s", event.getItemType(), event.getItemId());
+    }
 
     @GraphQLField
-    private String scheme;
+    public String scheme() {
+        return event.getItemType();
+    }
 
     @GraphQLField
-    private String path;
+    public String path() {
+        return event.getItemId();
+    }
 
     @GraphQLField
-    private List<CDPTopic> topics;
-
-    public CDPObject(@GraphQLID @GraphQLNonNull String uri, String scheme, String path, List<CDPTopic> topics) {
-        this.uri = uri;
-        this.scheme = scheme;
-        this.path = path;
-        this.topics = topics;
-    }
-
-    public String getUri() {
-        return uri;
-    }
-
-    public String getScheme() {
-        return scheme;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public List<CDPTopic> getTopics() {
-        return topics;
+    public List<CDPTopic> topics(final DataFetchingEnvironment environment) {
+        return null;
     }
 
 }

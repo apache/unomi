@@ -18,19 +18,47 @@ package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import org.apache.unomi.api.segments.Segment;
 
-@GraphQLName("CDP_EventOccurrenceFilter")
-public class CDPEventOccurrenceFilter {
-    @GraphQLField
-    public String eventType;
-    @GraphQLField
-    public String beforeTime;
-    @GraphQLField
-    public String afterTime;
-    @GraphQLField
-    public String betweenTime;
-    @GraphQLField
-    public int count;
+import static org.apache.unomi.graphql.types.output.UnomiSegment.TYPE_NAME;
 
-    public CDPEventFilter eventFilter;
+@GraphQLName(TYPE_NAME)
+public class UnomiSegment {
+
+    public static final String TYPE_NAME = "Unomi_Segment";
+
+    private final Segment segment;
+
+    public UnomiSegment(Segment segment) {
+        this.segment = segment;
+    }
+
+    @GraphQLField
+    public String id() {
+        return segment != null ? segment.getItemId() : null;
+    }
+
+    @GraphQLField
+    public CDPView view() {
+        if (segment == null) {
+            return null;
+        }
+
+        return segment.getScope() != null ? new CDPView(segment.getScope()) : null;
+    }
+
+    @GraphQLField
+    public String name() {
+        if (segment != null && segment.getMetadata() != null) {
+            return segment.getMetadata().getName();
+        }
+
+        return null;
+    }
+
+    @GraphQLField
+    public Object condition() {
+        return segment != null ? segment.getCondition() : null;
+    }
+
 }

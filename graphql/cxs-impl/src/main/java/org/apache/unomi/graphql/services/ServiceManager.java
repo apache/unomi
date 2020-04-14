@@ -22,7 +22,9 @@ import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.api.services.UserListService;
+import org.apache.unomi.graphql.schema.CDPEventInterfaceRegister;
 import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
+import org.apache.unomi.graphql.schema.CDPProfilesInterfaceRegister;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -36,6 +38,8 @@ public class ServiceManager {
     private GraphQLSchemaUpdater graphQLSchemaUpdater;
     private PrivacyService privacyService;
     private UserListService userListService;
+    private CDPEventInterfaceRegister eventInterfaceRegister;
+    private CDPProfilesInterfaceRegister profilesInterfaceRegister;
 
     @Reference
     public void setProfileService(ProfileService profileService) {
@@ -72,6 +76,16 @@ public class ServiceManager {
         this.privacyService = privacyService;
     }
 
+    @Reference
+    public void setEventInterfaceRegister(CDPEventInterfaceRegister eventInterfaceRegister) {
+        this.eventInterfaceRegister = eventInterfaceRegister;
+    }
+
+    @Reference
+    public void setProfilesInterfaceRegister(CDPProfilesInterfaceRegister profilesInterfaceRegister) {
+        this.profilesInterfaceRegister = profilesInterfaceRegister;
+    }
+
     public ProfileService getProfileService() {
         return profileService;
     }
@@ -99,4 +113,13 @@ public class ServiceManager {
     public UserListService getUserListService() {
         return userListService;
     }
+
+    public CDPEventInterfaceRegister getEventInterfaceRegister() {
+        return eventInterfaceRegister;
+    }
+
+    public CDPProfilesInterfaceRegister getProfilesInterfaceRegister() {
+        return profilesInterfaceRegister;
+    }
+
 }

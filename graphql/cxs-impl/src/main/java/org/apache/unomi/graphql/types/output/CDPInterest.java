@@ -23,33 +23,24 @@ import graphql.annotations.annotationTypes.GraphQLName;
 @GraphQLName("CDP_Interest")
 public class CDPInterest {
 
-    @GraphQLID
-    @GraphQLField
     private String topic;
 
-    @GraphQLField
     private Double score;
 
-    public CDPInterest(@GraphQLID final String topic,
-                       final Double score) {
+    public CDPInterest(@GraphQLID final String topic, final Double score) {
         this.topic = topic;
         this.score = score;
     }
 
-    public String getTopic() {
+    @GraphQLID
+    @GraphQLField
+    public String topic() {
         return topic;
     }
 
-    public void setTopic(String topic) {
-        this.topic = topic;
-    }
-
-    public Double getScore() {
+    @GraphQLField
+    public Double score() {
         return score;
-    }
-
-    public void setScore(Double score) {
-        this.score = score;
     }
 
 }

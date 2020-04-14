@@ -24,8 +24,15 @@ import org.apache.unomi.graphql.types.resolvers.CDPProfileTypeResolver;
 
 import java.util.List;
 
+import static org.apache.unomi.graphql.types.output.CDPProfileInterface.TYPE_NAME;
+
+@GraphQLName(TYPE_NAME)
 @GraphQLTypeResolver(CDPProfileTypeResolver.class)
 public interface CDPProfileInterface {
+
+    String TYPE_NAME = "CDP_ProfileInterface";
+
+    Object getProperty(final String propertyName);
 
     @GraphQLField
     List<CDPProfileID> cdp_profileIDs(final DataFetchingEnvironment environment) throws Exception;

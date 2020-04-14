@@ -35,7 +35,6 @@ import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.graphql.fetchers.CDPProfilePropertiesFilterDataFetcher;
 import org.apache.unomi.graphql.fetchers.CustomerPropertyDataFetcher;
 import org.apache.unomi.graphql.fetchers.DynamicFieldDataFetcher;
 import org.apache.unomi.graphql.function.DateFunction;
@@ -54,9 +53,10 @@ import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPPersonaInput;
 import org.apache.unomi.graphql.types.input.CDPProfilePropertiesFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileUpdateEventInput;
+import org.apache.unomi.graphql.types.output.CDPEventInterface;
 import org.apache.unomi.graphql.types.output.CDPPersona;
 import org.apache.unomi.graphql.types.output.CDPProfile;
-import org.apache.unomi.graphql.types.output.CDPProfilePropertiesFilter;
+import org.apache.unomi.graphql.types.output.CDPProfileInterface;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
@@ -96,6 +96,10 @@ public class GraphQLSchemaUpdater {
 
     private ProfileService profileService;
 
+    private CDPEventInterfaceRegister eventInterfaceRegister;
+
+    private CDPProfilesInterfaceRegister profilesInterfaceRegister;
+
     private ScheduledExecutorService executorService;
 
     private ScheduledFuture<?> updateFuture;
@@ -124,6 +128,16 @@ public class GraphQLSchemaUpdater {
     @Reference
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;
+    }
+
+    @Reference
+    public void setEventInterfaceRegister(CDPEventInterfaceRegister eventInterfaceRegister) {
+        this.eventInterfaceRegister = eventInterfaceRegister;
+    }
+
+    @Reference
+    public void setProfilesInterfaceRegister(CDPProfilesInterfaceRegister profilesInterfaceRegister) {
+        this.profilesInterfaceRegister = profilesInterfaceRegister;
     }
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
@@ -273,12 +287,16 @@ public class GraphQLSchemaUpdater {
             }
         });
 
-        return schemaBuilder
+        final GraphQLSchema schema = schemaBuilder
                 .query(RootQuery.class)
                 .mutation(RootMutation.class)
-                .setAlwaysPrettify(true)
                 .setAnnotationsProcessor(graphQLAnnotations)
                 .build();
+
+        profilesInterfaceRegister.register(CDPProfile.class);
+        profilesInterfaceRegister.register(CDPPersona.class);
+
+        return schema;
     }
 
     private void registerDynamicFields(final String graphQLTypeName,
@@ -373,13 +391,28 @@ public class GraphQLSchemaUpdater {
         registerInTypeRegistry(typeName, transformedObjectType);
     }
 
+    @SuppressWarnings("unchecked")
     private void setUpTypes(final AnnotationsSchemaCreator.Builder schemaBuilder) {
-        if (!typesProviders.isEmpty()) {
-            for (GraphQLTypesProvider typesProvider : typesProviders) {
-                if (typesProvider.getTypes() != null) {
-                    schemaBuilder.additionalTypes(typesProvider.getTypes());
-                }
+        if (typesProviders.isEmpty()) {
+            return;
+        }
+
+        for (GraphQLTypesProvider typesProvider : typesProviders) {
+            if (typesProvider.getTypes() == null) {
+                continue;
             }
+
+            typesProvider.getTypes().forEach(additionalClass -> {
+                if (CDPEventInterface.class.isAssignableFrom(additionalClass)) {
+                    eventInterfaceRegister.register((Class<? extends CDPEventInterface>) additionalClass);
+                }
+
+                if (CDPProfileInterface.class.isAssignableFrom(additionalClass)) {
+                    profilesInterfaceRegister.register((Class<? extends CDPProfileInterface>) additionalClass);
+                }
+
+                schemaBuilder.additionalType(additionalClass);
+            });
         }
     }
 
@@ -406,7 +439,6 @@ public class GraphQLSchemaUpdater {
         final Collection<PropertyType> propertyTypes = profileService.getTargetPropertyTypes("profiles");
 
         registerDynamicInputFilterFields(CDPProfilePropertiesFilterInput.TYPE_NAME, CDPProfilePropertiesFilterInput.class, propertyTypes);
-        registerDynamicFilterFields(CDPProfilePropertiesFilter.TYPE_NAME, CDPProfilePropertiesFilter.class, CDPProfilePropertiesFilterDataFetcher.class, propertyTypes);
 
         // Profile
         registerDynamicFields(CDPProfile.TYPE_NAME, CDPProfile.class, CustomerPropertyDataFetcher.class, propertyTypes);

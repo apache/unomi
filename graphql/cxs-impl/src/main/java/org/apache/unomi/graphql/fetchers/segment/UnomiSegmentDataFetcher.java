@@ -20,7 +20,7 @@ import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.graphql.services.ServiceManager;
-import org.apache.unomi.graphql.types.extensions.UnomiSegment;
+import org.apache.unomi.graphql.types.output.UnomiSegment;
 
 public class UnomiSegmentDataFetcher implements DataFetcher<UnomiSegment> {
 
