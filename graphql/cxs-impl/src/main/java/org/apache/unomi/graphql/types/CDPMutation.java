@@ -23,22 +23,26 @@ import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.graphql.commands.CreateOrUpdatePersonaCommand;
 import org.apache.unomi.graphql.commands.CreateOrUpdateProfilePropertiesCommand;
+import org.apache.unomi.graphql.commands.CreateOrUpdateViewCommand;
 import org.apache.unomi.graphql.commands.DeleteAllPersonalDataCommand;
 import org.apache.unomi.graphql.commands.DeleteProfileCommand;
 import org.apache.unomi.graphql.commands.DeleteProfilePropertiesCommand;
+import org.apache.unomi.graphql.commands.DeleteViewCommand;
 import org.apache.unomi.graphql.commands.ProcessEventsCommand;
 import org.apache.unomi.graphql.commands.segments.CreateOrUpdateSegmentCommand;
 import org.apache.unomi.graphql.commands.segments.CreateOrUpdateUnomiSegmentCommand;
 import org.apache.unomi.graphql.commands.segments.DeleteSegmentCommand;
-import org.apache.unomi.graphql.types.output.UnomiSegment;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPPersonaInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.input.CDPPropertyInput;
 import org.apache.unomi.graphql.types.input.CDPSegmentInput;
+import org.apache.unomi.graphql.types.input.CDPViewInput;
 import org.apache.unomi.graphql.types.input.UnomiSegmentInput;
 import org.apache.unomi.graphql.types.output.CDPPersona;
 import org.apache.unomi.graphql.types.output.CDPSegment;
+import org.apache.unomi.graphql.types.output.CDPView;
+import org.apache.unomi.graphql.types.output.UnomiSegment;
 
 import java.util.List;
 
@@ -137,9 +141,30 @@ public class CDPMutation {
     }
 
     @GraphQLField
-    public CDPPersona createOrUpdatePersona(final @GraphQLName(PERSONA_ARGUMENT_NAME) CDPPersonaInput personaInput,
-                                            final DataFetchingEnvironment environment) {
+    public CDPPersona createOrUpdatePersona(
+            final @GraphQLName(PERSONA_ARGUMENT_NAME) CDPPersonaInput personaInput,
+            final DataFetchingEnvironment environment) {
         return CreateOrUpdatePersonaCommand.create(personaInput)
+                .setEnvironment(environment)
+                .build()
+                .execute();
+    }
+
+    @GraphQLField
+    public CDPView createOrUpdateView(
+            final @GraphQLName("view") CDPViewInput viewInput,
+            final DataFetchingEnvironment environment) {
+        return CreateOrUpdateViewCommand.create(viewInput)
+                .setEnvironment(environment)
+                .build()
+                .execute();
+    }
+
+    @GraphQLField
+    public Boolean deleteView(
+            final @GraphQLID @GraphQLNonNull @GraphQLName("viewID") String viewId,
+            final DataFetchingEnvironment environment) {
+        return DeleteViewCommand.create(viewId)
                 .setEnvironment(environment)
                 .build()
                 .execute();

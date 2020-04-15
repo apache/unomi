@@ -21,6 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.fetchers.ViewDataFetcher;
 import org.apache.unomi.graphql.fetchers.event.EventDataFetcher;
 import org.apache.unomi.graphql.fetchers.event.FindEventsConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.FindProfilesConnectionDataFetcher;
@@ -41,6 +42,7 @@ import org.apache.unomi.graphql.types.output.CDPProfileConnection;
 import org.apache.unomi.graphql.types.output.CDPPropertyConnection;
 import org.apache.unomi.graphql.types.output.CDPSegment;
 import org.apache.unomi.graphql.types.output.CDPSegmentConnection;
+import org.apache.unomi.graphql.types.output.CDPView;
 import org.apache.unomi.graphql.types.output.UnomiSegment;
 
 import java.util.List;
@@ -116,6 +118,11 @@ public class CDPQuery {
     public UnomiSegment getUnomiSegment(final @GraphQLID @GraphQLName("segmentID") String segmentId,
                                         final DataFetchingEnvironment environment) throws Exception {
         return new UnomiSegmentDataFetcher(segmentId).get(environment);
+    }
+
+    @GraphQLField
+    public List<CDPView> getViews(final DataFetchingEnvironment environment) throws Exception {
+        return new ViewDataFetcher().get(environment);
     }
 
 }
