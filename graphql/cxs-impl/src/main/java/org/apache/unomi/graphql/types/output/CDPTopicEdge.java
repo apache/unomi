@@ -14,27 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.input;
+package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLNonNull;
+import graphql.schema.DataFetchingEnvironment;
 
-@GraphQLName("CDP_ViewInput")
-public class CDPViewInput {
+import static org.apache.unomi.graphql.types.output.CDPTopicEdge.TYPE_NAME;
 
-    @GraphQLID
-    @GraphQLNonNull
+@GraphQLName(TYPE_NAME)
+public class CDPTopicEdge {
+
+    public static final String TYPE_NAME = "CDP_TopicEdge";
+
     @GraphQLField
-    private String name;
-
-    public CDPViewInput(final @GraphQLID @GraphQLNonNull @GraphQLName("name") String name) {
-        this.name = name;
+    public CDPTopic node(final DataFetchingEnvironment environment) {
+        return null;
     }
 
-    public String getName() {
-        return name;
+    @GraphQLField
+    public String cursor(final DataFetchingEnvironment environment) {
+        return null;
     }
 
 }

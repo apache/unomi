@@ -14,27 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.input;
+package org.apache.unomi.graphql.fetchers;
 
-import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
-import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLNonNull;
+import graphql.schema.DataFetcher;
+import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.types.output.CDPTopic;
 
-@GraphQLName("CDP_ViewInput")
-public class CDPViewInput {
+public class TopicDataFetcher implements DataFetcher<CDPTopic> {
 
-    @GraphQLID
-    @GraphQLNonNull
-    @GraphQLField
-    private String name;
+    private final String topicId;
 
-    public CDPViewInput(final @GraphQLID @GraphQLNonNull @GraphQLName("name") String name) {
-        this.name = name;
+    public TopicDataFetcher(final String topicId) {
+        this.topicId = topicId;
     }
 
-    public String getName() {
-        return name;
+    @Override
+    public CDPTopic get(DataFetchingEnvironment environment) throws Exception {
+        // Unomi doesn't have an API for that yet, so return a stub
+        return null;
     }
 
 }

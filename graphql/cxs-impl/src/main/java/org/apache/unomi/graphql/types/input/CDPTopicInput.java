@@ -21,16 +21,41 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_ViewInput")
-public class CDPViewInput {
+import static org.apache.unomi.graphql.types.input.CDPTopicInput.TYPE_NAME;
+
+@GraphQLName(TYPE_NAME)
+public class CDPTopicInput {
+
+    public static final String TYPE_NAME = "CDP_TopicInput";
 
     @GraphQLID
-    @GraphQLNonNull
     @GraphQLField
+    private String id;
+
+    @GraphQLID
+    @GraphQLField
+    @GraphQLNonNull
+    private String view;
+
+    @GraphQLField
+    @GraphQLNonNull
     private String name;
 
-    public CDPViewInput(final @GraphQLID @GraphQLNonNull @GraphQLName("name") String name) {
+    public CDPTopicInput(
+            final @GraphQLID @GraphQLName("id") String id,
+            final @GraphQLID @GraphQLNonNull @GraphQLName("view") String view,
+            final @GraphQLNonNull @GraphQLName("name") String name) {
+        this.id = id;
+        this.view = view;
         this.name = name;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getView() {
+        return view;
     }
 
     public String getName() {
