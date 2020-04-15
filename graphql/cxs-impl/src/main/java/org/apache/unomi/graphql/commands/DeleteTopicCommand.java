@@ -18,14 +18,14 @@ package org.apache.unomi.graphql.commands;
 
 import java.util.Objects;
 
-public class DeleteViewCommand extends BaseCommand<Boolean> {
+public class DeleteTopicCommand extends BaseCommand<Boolean> {
 
-    private final String viewId;
+    private final String topicId;
 
-    public DeleteViewCommand(Builder builder) {
+    public DeleteTopicCommand(Builder builder) {
         super(builder);
 
-        this.viewId = builder.viewId;
+        this.topicId = builder.topicId;
     }
 
     @Override
@@ -34,29 +34,29 @@ public class DeleteViewCommand extends BaseCommand<Boolean> {
         return false;
     }
 
-    public static Builder create(final String viewId) {
-        return new Builder(viewId);
+    public static Builder create(final String topicId) {
+        return new Builder(topicId);
     }
 
     public static class Builder extends BaseCommand.Builder<Builder> {
 
-        final String viewId;
+        final String topicId;
 
-        public Builder(String viewId) {
-            this.viewId = viewId;
+        public Builder(String topicId) {
+            this.topicId = topicId;
         }
 
         @Override
         public void validate() {
             super.validate();
 
-            Objects.requireNonNull(viewId, "ViewID can not be null");
+            Objects.requireNonNull(topicId, "TopicID can not be null");
         }
 
-        public DeleteViewCommand build() {
+        public DeleteTopicCommand build() {
             validate();
 
-            return new DeleteViewCommand(this);
+            return new DeleteTopicCommand(this);
         }
 
     }

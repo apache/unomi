@@ -16,50 +16,54 @@
  */
 package org.apache.unomi.graphql.commands;
 
+import org.apache.unomi.graphql.types.input.CDPTopicInput;
+import org.apache.unomi.graphql.types.output.CDPTopic;
+
 import java.util.Objects;
 
-public class DeleteViewCommand extends BaseCommand<Boolean> {
+public class CreateOrUpdateTopicCommand extends BaseCommand<CDPTopic> {
 
-    private final String viewId;
+    private final CDPTopicInput topicInput;
 
-    public DeleteViewCommand(Builder builder) {
+    private CreateOrUpdateTopicCommand(Builder builder) {
         super(builder);
 
-        this.viewId = builder.viewId;
+        this.topicInput = builder.topicInput;
     }
 
     @Override
-    public Boolean execute() {
+    public CDPTopic execute() {
         // Unomi doesn't have an API for that yet, so return a stub
-        return false;
+        return new CDPTopic();
     }
 
-    public static Builder create(final String viewId) {
-        return new Builder(viewId);
+    public static Builder create(final CDPTopicInput topicInput) {
+        return new Builder(topicInput);
     }
 
     public static class Builder extends BaseCommand.Builder<Builder> {
 
-        final String viewId;
+        final CDPTopicInput topicInput;
 
-        public Builder(String viewId) {
-            this.viewId = viewId;
+        public Builder(CDPTopicInput topicInput) {
+            this.topicInput = topicInput;
         }
 
         @Override
         public void validate() {
             super.validate();
 
-            Objects.requireNonNull(viewId, "ViewID can not be null");
+            Objects.requireNonNull(topicInput, "Topic can not be null");
+            Objects.requireNonNull(topicInput.getView(), "View can not be null");
+            Objects.requireNonNull(topicInput.getName(), "Name can not be null");
         }
 
-        public DeleteViewCommand build() {
+        public CreateOrUpdateTopicCommand build() {
             validate();
 
-            return new DeleteViewCommand(this);
+            return new CreateOrUpdateTopicCommand(this);
         }
 
     }
-
 
 }

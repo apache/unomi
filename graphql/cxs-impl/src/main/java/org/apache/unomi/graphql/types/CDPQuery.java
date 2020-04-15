@@ -21,6 +21,8 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.fetchers.FindTopicsConnectionDataFetcher;
+import org.apache.unomi.graphql.fetchers.TopicDataFetcher;
 import org.apache.unomi.graphql.fetchers.ViewDataFetcher;
 import org.apache.unomi.graphql.fetchers.event.EventDataFetcher;
 import org.apache.unomi.graphql.fetchers.event.FindEventsConnectionDataFetcher;
@@ -35,6 +37,7 @@ import org.apache.unomi.graphql.types.input.CDPOrderByInput;
 import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.input.CDPSegmentFilterInput;
+import org.apache.unomi.graphql.types.input.CDPTopicFilterInput;
 import org.apache.unomi.graphql.types.output.CDPEventConnection;
 import org.apache.unomi.graphql.types.output.CDPEventInterface;
 import org.apache.unomi.graphql.types.output.CDPProfile;
@@ -42,6 +45,8 @@ import org.apache.unomi.graphql.types.output.CDPProfileConnection;
 import org.apache.unomi.graphql.types.output.CDPPropertyConnection;
 import org.apache.unomi.graphql.types.output.CDPSegment;
 import org.apache.unomi.graphql.types.output.CDPSegmentConnection;
+import org.apache.unomi.graphql.types.output.CDPTopic;
+import org.apache.unomi.graphql.types.output.CDPTopicConnection;
 import org.apache.unomi.graphql.types.output.CDPView;
 import org.apache.unomi.graphql.types.output.UnomiSegment;
 
@@ -123,6 +128,23 @@ public class CDPQuery {
     @GraphQLField
     public List<CDPView> getViews(final DataFetchingEnvironment environment) throws Exception {
         return new ViewDataFetcher().get(environment);
+    }
+
+    @GraphQLField
+    public CDPTopic getTopic(final @GraphQLID @GraphQLName("topicID") String topicId,
+                             final DataFetchingEnvironment environment) throws Exception {
+        return new TopicDataFetcher(topicId).get(environment);
+    }
+
+    @GraphQLField
+    public CDPTopicConnection findTopics(final @GraphQLName("filter") CDPTopicFilterInput filterInput,
+                                         final @GraphQLName("orderBy") List<CDPOrderByInput> orderByInput,
+                                         final @GraphQLName("first") Integer first,
+                                         final @GraphQLName("after") String after,
+                                         final @GraphQLName("last") Integer last,
+                                         final @GraphQLName("before") String before,
+                                         final DataFetchingEnvironment environment) throws Exception {
+        return new FindTopicsConnectionDataFetcher(filterInput, orderByInput).get(environment);
     }
 
 }
