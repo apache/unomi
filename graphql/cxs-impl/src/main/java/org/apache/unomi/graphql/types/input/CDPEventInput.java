@@ -21,7 +21,9 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_Event")
+import static org.apache.unomi.graphql.types.input.CDPEventInput.TYPE_NAME;
+
+@GraphQLName(TYPE_NAME)
 public class CDPEventInput {
 
     public static final String TYPE_NAME = "CDP_EventInput";
@@ -72,59 +74,27 @@ public class CDPEventInput {
         return id;
     }
 
-    public void setId(String id) {
-        this.id = id;
-    }
-
     public String getCdp_sourceID() {
         return cdp_sourceID;
-    }
-
-    public void setCdp_sourceID(String cdp_sourceID) {
-        this.cdp_sourceID = cdp_sourceID;
     }
 
     public CDPProfileIDInput getCdp_profileID() {
         return cdp_profileID;
     }
 
-    public void setCdp_profileID(CDPProfileIDInput cdp_profileID) {
-        this.cdp_profileID = cdp_profileID;
-    }
-
     public String getCdp_objectID() {
         return cdp_objectID;
-    }
-
-    public void setCdp_objectID(String cdp_objectID) {
-        this.cdp_objectID = cdp_objectID;
     }
 
     public CDPConsentUpdateEventInput getCdp_consentUpdateEvent() {
         return cdp_consentUpdateEvent;
     }
 
-    public CDPEventInput setCdp_consentUpdateEvent(CDPConsentUpdateEventInput cdp_consentUpdateEvent) {
-        this.cdp_consentUpdateEvent = cdp_consentUpdateEvent;
-        return this;
-    }
-
     public CDPListsUpdateEventInput getCdp_listUpdateEvent() {
         return cdp_listUpdateEvent;
-    }
-
-    public CDPEventInput setCdp_listUpdateEvent(CDPListsUpdateEventInput cdp_listUpdateEvent) {
-        this.cdp_listUpdateEvent = cdp_listUpdateEvent;
-        return this;
     }
 
     public CDPSessionEventInput getCdp_sessionEvent() {
         return cdp_sessionEvent;
     }
-
-    public CDPEventInput setCdp_sessionEvent(CDPSessionEventInput cdp_sessionEvent) {
-        this.cdp_sessionEvent = cdp_sessionEvent;
-        return this;
-    }
-
 }

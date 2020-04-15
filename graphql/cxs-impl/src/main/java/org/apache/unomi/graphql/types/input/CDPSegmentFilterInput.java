@@ -21,7 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 
 import java.util.List;
 
-@GraphQLName("CDP_SegmentFilter")
+@GraphQLName("CDP_SegmentFilterInput")
 public class CDPSegmentFilterInput {
 
     @GraphQLField
@@ -67,48 +67,23 @@ public class CDPSegmentFilterInput {
         return andFilters;
     }
 
-    public void setAndFilters(List<CDPSegmentFilterInput> andFilters) {
-        this.andFilters = andFilters;
-    }
-
     public List<CDPSegmentFilterInput> getOrFilters() {
         return orFilters;
-    }
-
-    public void setOrFilters(List<CDPSegmentFilterInput> orFilters) {
-        this.orFilters = orFilters;
     }
 
     public String getViewEquals() {
         return viewEquals;
     }
 
-    public void setViewEquals(String viewEquals) {
-        this.viewEquals = viewEquals;
-    }
-
     public String getViewRegexp() {
         return viewRegexp;
-    }
-
-    public void setViewRegexp(String viewRegexp) {
-        this.viewRegexp = viewRegexp;
     }
 
     public String getNameEquals() {
         return nameEquals;
     }
 
-    public void setNameEquals(String nameEquals) {
-        this.nameEquals = nameEquals;
-    }
-
     public String getNameRegexp() {
         return nameRegexp;
     }
-
-    public void setNameRegexp(String nameRegexp) {
-        this.nameRegexp = nameRegexp;
-    }
-
 }

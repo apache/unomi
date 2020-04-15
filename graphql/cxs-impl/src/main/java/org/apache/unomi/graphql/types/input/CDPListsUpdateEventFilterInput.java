@@ -22,6 +22,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 
 import java.util.List;
 
+@GraphQLName("CDP_ListsUpdateEventFilterInput")
 public class CDPListsUpdateEventFilterInput {
 
     @GraphQLField
@@ -30,8 +31,8 @@ public class CDPListsUpdateEventFilterInput {
     @GraphQLField
     private List<String> leaveLists_contains;
 
-    public CDPListsUpdateEventFilterInput(@GraphQLName("joinLists_contains") List<String> joinLists_contains,
-                                          @GraphQLName("leaveLists_contains") List<String> leaveLists_contains) {
+    public CDPListsUpdateEventFilterInput(final @GraphQLName("joinLists_contains") List<String> joinLists_contains,
+                                          final @GraphQLName("leaveLists_contains") List<String> leaveLists_contains) {
         this.joinLists_contains = joinLists_contains;
         this.leaveLists_contains = leaveLists_contains;
     }

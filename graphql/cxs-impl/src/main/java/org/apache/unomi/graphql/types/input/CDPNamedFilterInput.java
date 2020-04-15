@@ -20,7 +20,7 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_NamedFilter")
+@GraphQLName("CDP_NamedFilterInput")
 public class CDPNamedFilterInput {
 
     @GraphQLField
@@ -30,7 +30,8 @@ public class CDPNamedFilterInput {
     @GraphQLField
     private CDPProfileFilterInput filter;
 
-    public CDPNamedFilterInput(@GraphQLName("name") @GraphQLNonNull String name, @GraphQLName("filter") CDPProfileFilterInput filter) {
+    public CDPNamedFilterInput(final @GraphQLName("name") @GraphQLNonNull String name,
+                               final @GraphQLName("filter") CDPProfileFilterInput filter) {
         this.name = name;
         this.filter = filter;
     }
@@ -39,16 +40,7 @@ public class CDPNamedFilterInput {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public CDPProfileFilterInput getFilter() {
         return filter;
     }
-
-    public void setFilter(CDPProfileFilterInput filter) {
-        this.filter = filter;
-    }
-
 }

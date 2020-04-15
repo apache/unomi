@@ -20,24 +20,18 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_Optimization")
+@GraphQLName("CDP_OptimizationInput")
 public class CDPOptimizationInput {
 
     @GraphQLField
     @GraphQLNonNull
     private String name;
 
-    public CDPOptimizationInput(
-            final @GraphQLNonNull @GraphQLName("name") String name) {
+    public CDPOptimizationInput(final @GraphQLNonNull @GraphQLName("name") String name) {
         this.name = name;
     }
 
     public String getName() {
         return name;
     }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
 }

@@ -19,23 +19,22 @@ package org.apache.unomi.graphql.types.input;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-import java.util.ArrayList;
 import java.util.List;
 
-@GraphQLName("CDP_ProfileFilter")
+@GraphQLName("CDP_ProfileFilterInput")
 public class CDPProfileFilterInput {
 
     @GraphQLField
-    private List<String> profileIDs_contains = new ArrayList<>();
+    private List<String> profileIDs_contains;
 
     @GraphQLField
-    private List<String> segments_contains = new ArrayList<>();
+    private List<String> segments_contains;
 
     @GraphQLField
-    private List<String> consents_contains = new ArrayList<>();
+    private List<String> consents_contains;
 
     @GraphQLField
-    private List<String> lists_contains = new ArrayList<>();
+    private List<String> lists_contains;
 
     @GraphQLField
     private CDPProfilePropertiesFilterInput properties;
@@ -46,13 +45,13 @@ public class CDPProfileFilterInput {
     @GraphQLField
     private CDPProfileEventsFilterInput events;
 
-    public CDPProfileFilterInput(@GraphQLName("profileIDs_contains") List<String> profileIDs_contains,
-                                 @GraphQLName("segments_contains") List<String> segments_contains,
-                                 @GraphQLName("consents_contains") List<String> consents_contains,
-                                 @GraphQLName("lists_contains") List<String> lists_contains,
-                                 @GraphQLName("properties") CDPProfilePropertiesFilterInput properties,
-                                 @GraphQLName("interests") CDPInterestFilterInput interests,
-                                 @GraphQLName("events") CDPProfileEventsFilterInput events) {
+    public CDPProfileFilterInput(final @GraphQLName("profileIDs_contains") List<String> profileIDs_contains,
+                                 final @GraphQLName("segments_contains") List<String> segments_contains,
+                                 final @GraphQLName("consents_contains") List<String> consents_contains,
+                                 final @GraphQLName("lists_contains") List<String> lists_contains,
+                                 final @GraphQLName("properties") CDPProfilePropertiesFilterInput properties,
+                                 final @GraphQLName("interests") CDPInterestFilterInput interests,
+                                 final @GraphQLName("events") CDPProfileEventsFilterInput events) {
         this.profileIDs_contains = profileIDs_contains;
         this.segments_contains = segments_contains;
         this.consents_contains = consents_contains;
@@ -66,55 +65,27 @@ public class CDPProfileFilterInput {
         return profileIDs_contains;
     }
 
-    public void setProfileIDs_contains(List<String> profileIDs_contains) {
-        this.profileIDs_contains = profileIDs_contains;
-    }
-
     public List<String> getSegments_contains() {
         return segments_contains;
-    }
-
-    public void setSegments_contains(List<String> segments_contains) {
-        this.segments_contains = segments_contains;
     }
 
     public List<String> getConsents_contains() {
         return consents_contains;
     }
 
-    public void setConsents_contains(List<String> consents_contains) {
-        this.consents_contains = consents_contains;
-    }
-
     public List<String> getLists_contains() {
         return lists_contains;
-    }
-
-    public void setLists_contains(List<String> lists_contains) {
-        this.lists_contains = lists_contains;
     }
 
     public CDPProfilePropertiesFilterInput getProperties() {
         return properties;
     }
 
-    public void setProperties(CDPProfilePropertiesFilterInput properties) {
-        this.properties = properties;
-    }
-
     public CDPInterestFilterInput getInterests() {
         return interests;
     }
 
-    public void setInterests(CDPInterestFilterInput interests) {
-        this.interests = interests;
-    }
-
     public CDPProfileEventsFilterInput getEvents() {
         return events;
-    }
-
-    public void setEvents(CDPProfileEventsFilterInput events) {
-        this.events = events;
     }
 }

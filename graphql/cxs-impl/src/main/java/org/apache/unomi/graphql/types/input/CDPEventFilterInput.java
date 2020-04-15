@@ -23,14 +23,14 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@GraphQLName("CDP_EventFilter")
+@GraphQLName("CDP_EventFilterInput")
 public class CDPEventFilterInput {
 
     @GraphQLField
-    private List<CDPEventFilterInput> and = new ArrayList<>();
+    private List<CDPEventFilterInput> and;
 
     @GraphQLField
-    private List<CDPEventFilterInput> or = new ArrayList<>();
+    private List<CDPEventFilterInput> or;
 
     @GraphQLField
     private String id_equals;
@@ -107,120 +107,55 @@ public class CDPEventFilterInput {
         return and;
     }
 
-    public void setAnd(List<CDPEventFilterInput> and) {
-        this.and = and;
-    }
-
     public List<CDPEventFilterInput> getOr() {
         return or;
-    }
-
-    public void setOr(List<CDPEventFilterInput> or) {
-        this.or = or;
     }
 
     public String getId_equals() {
         return id_equals;
     }
 
-    public void setId_equals(String id_equals) {
-        this.id_equals = id_equals;
-    }
-
     public String getCdp_clientID_equals() {
         return cdp_clientID_equals;
-    }
-
-    public void setCdp_clientID_equals(String cdp_clientID_equals) {
-        this.cdp_clientID_equals = cdp_clientID_equals;
     }
 
     public String getCdp_sourceID_equals() {
         return cdp_sourceID_equals;
     }
 
-    public void setCdp_sourceID_equals(String cdp_sourceID_equals) {
-        this.cdp_sourceID_equals = cdp_sourceID_equals;
-    }
-
     public String getCdp_profileID_equals() {
         return cdp_profileID_equals;
-    }
-
-    public void setCdp_profileID_equals(String cdp_profileID_equals) {
-        this.cdp_profileID_equals = cdp_profileID_equals;
     }
 
     public OffsetDateTime getCdp_timestamp_equals() {
         return cdp_timestamp_equals;
     }
 
-    public CDPEventFilterInput setCdp_timestamp_equals(OffsetDateTime cdp_timestamp_equals) {
-        this.cdp_timestamp_equals = cdp_timestamp_equals;
-        return this;
-    }
-
     public OffsetDateTime getCdp_timestamp_lt() {
         return cdp_timestamp_lt;
-    }
-
-    public CDPEventFilterInput setCdp_timestamp_lt(OffsetDateTime cdp_timestamp_lt) {
-        this.cdp_timestamp_lt = cdp_timestamp_lt;
-        return this;
     }
 
     public OffsetDateTime getCdp_timestamp_lte() {
         return cdp_timestamp_lte;
     }
 
-    public CDPEventFilterInput setCdp_timestamp_lte(OffsetDateTime cdp_timestamp_lte) {
-        this.cdp_timestamp_lte = cdp_timestamp_lte;
-        return this;
-    }
-
     public OffsetDateTime getCdp_timestamp_gt() {
         return cdp_timestamp_gt;
-    }
-
-    public CDPEventFilterInput setCdp_timestamp_gt(OffsetDateTime cdp_timestamp_gt) {
-        this.cdp_timestamp_gt = cdp_timestamp_gt;
-        return this;
     }
 
     public OffsetDateTime getCdp_timestamp_gte() {
         return cdp_timestamp_gte;
     }
 
-    public CDPEventFilterInput setCdp_timestamp_gte(OffsetDateTime cdp_timestamp_gte) {
-        this.cdp_timestamp_gte = cdp_timestamp_gte;
-        return this;
-    }
-
     public CDPListsUpdateEventFilterInput getCdp_listsUpdateEvent() {
         return cdp_listsUpdateEvent;
-    }
-
-    public CDPEventFilterInput setCdp_listsUpdateEvent(CDPListsUpdateEventFilterInput cdp_listsUpdateEvent) {
-        this.cdp_listsUpdateEvent = cdp_listsUpdateEvent;
-        return this;
     }
 
     public CDPConsentUpdateEventFilterInput getCdp_consentUpdateEvent() {
         return cdp_consentUpdateEvent;
     }
 
-    public CDPEventFilterInput setCdp_consentUpdateEvent(CDPConsentUpdateEventFilterInput cdp_consentUpdateEvent) {
-        this.cdp_consentUpdateEvent = cdp_consentUpdateEvent;
-        return this;
-    }
-
-
     public CDPSessionEventFilterInput getCdp_sessionEvent() {
         return cdp_sessionEvent;
-    }
-
-    public CDPEventFilterInput setCdp_sessionEvent(CDPSessionEventFilterInput cdp_sessionEvent) {
-        this.cdp_sessionEvent = cdp_sessionEvent;
-        return this;
     }
 }

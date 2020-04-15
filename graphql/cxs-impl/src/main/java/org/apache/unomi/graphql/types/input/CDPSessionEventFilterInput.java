@@ -20,14 +20,12 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import org.apache.unomi.graphql.types.output.CDPSessionState;
 
-import static org.apache.unomi.graphql.types.input.CDPSessionEventFilterInput.TYPE_NAME_INTERNAL;
+import static org.apache.unomi.graphql.types.input.CDPSessionEventFilterInput.TYPE_NAME;
 
-@GraphQLName(TYPE_NAME_INTERNAL)
+@GraphQLName(TYPE_NAME)
 public class CDPSessionEventFilterInput {
 
-    public static final String TYPE_NAME_INTERNAL = "CDP_SessionEventFilter";
-
-    public static final String TYPE_NAME = TYPE_NAME_INTERNAL + "Input";
+    public static final String TYPE_NAME = "CDP_SessionEventFilterInput";
 
     @GraphQLField
     private CDPSessionState state_equals;
@@ -58,5 +56,4 @@ public class CDPSessionEventFilterInput {
     public String getUnomi_scope_equals() {
         return unomi_scope_equals;
     }
-
 }

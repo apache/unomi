@@ -269,7 +269,7 @@ public class GraphQLSchemaProvider {
         final ProcessingElementsContainer container = graphQLAnnotations.getContainer();
 
         container.setInputPrefix("");
-        container.setInputSuffix("Input");
+        container.setInputSuffix("");
     }
 
     private void registerExtensions() {

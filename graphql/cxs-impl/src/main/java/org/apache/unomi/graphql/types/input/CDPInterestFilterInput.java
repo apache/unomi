@@ -20,23 +20,20 @@ package org.apache.unomi.graphql.types.input;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-import java.util.ArrayList;
 import java.util.List;
 
-import static org.apache.unomi.graphql.types.input.CDPInterestFilterInput.TYPE_NAME_INTERNAL;
+import static org.apache.unomi.graphql.types.input.CDPInterestFilterInput.TYPE_NAME;
 
-@GraphQLName(TYPE_NAME_INTERNAL)
+@GraphQLName(TYPE_NAME)
 public class CDPInterestFilterInput {
 
-    public static final String TYPE_NAME_INTERNAL = "CDP_InterestFilter";
-
-    public static final String TYPE_NAME = TYPE_NAME_INTERNAL + "Input";
+    public static final String TYPE_NAME = "CDP_InterestFilterInput";
 
     @GraphQLField
-    private List<CDPInterestFilterInput> and = new ArrayList<>();
+    private List<CDPInterestFilterInput> and;
 
     @GraphQLField
-    private List<CDPInterestFilterInput> or = new ArrayList<>();
+    private List<CDPInterestFilterInput> or;
 
     @GraphQLField
     private String topic_equals;
@@ -56,14 +53,14 @@ public class CDPInterestFilterInput {
     @GraphQLField
     private Double score_gte;
 
-    public CDPInterestFilterInput(@GraphQLName("and") List<CDPInterestFilterInput> and,
-                                  @GraphQLName("or") List<CDPInterestFilterInput> or,
-                                  @GraphQLName("topic_equals") String topic_equals,
-                                  @GraphQLName("score_equals") Double score_equals,
-                                  @GraphQLName("score_lt") Double score_lt,
-                                  @GraphQLName("score_lte") Double score_lte,
-                                  @GraphQLName("score_gt") Double score_gt,
-                                  @GraphQLName("score_gte") Double score_gte) {
+    public CDPInterestFilterInput(final @GraphQLName("and") List<CDPInterestFilterInput> and,
+                                  final @GraphQLName("or") List<CDPInterestFilterInput> or,
+                                  final @GraphQLName("topic_equals") String topic_equals,
+                                  final @GraphQLName("score_equals") Double score_equals,
+                                  final @GraphQLName("score_lt") Double score_lt,
+                                  final @GraphQLName("score_lte") Double score_lte,
+                                  final @GraphQLName("score_gt") Double score_gt,
+                                  final @GraphQLName("score_gte") Double score_gte) {
         this.and = and;
         this.or = or;
         this.topic_equals = topic_equals;
@@ -78,64 +75,31 @@ public class CDPInterestFilterInput {
         return and;
     }
 
-    public void setAnd(List<CDPInterestFilterInput> and) {
-        this.and = and;
-    }
-
     public List<CDPInterestFilterInput> getOr() {
         return or;
-    }
-
-    public void setOr(List<CDPInterestFilterInput> or) {
-        this.or = or;
     }
 
     public String getTopic_equals() {
         return topic_equals;
     }
 
-    public void setTopic_equals(String topic_equals) {
-        this.topic_equals = topic_equals;
-    }
-
     public Double getScore_equals() {
         return score_equals;
-    }
-
-    public void setScore_equals(Double score_equals) {
-        this.score_equals = score_equals;
     }
 
     public Double getScore_lt() {
         return score_lt;
     }
 
-    public void setScore_lt(Double score_lt) {
-        this.score_lt = score_lt;
-    }
-
     public Double getScore_lte() {
         return score_lte;
-    }
-
-    public void setScore_lte(Double score_lte) {
-        this.score_lte = score_lte;
     }
 
     public Double getScore_gt() {
         return score_gt;
     }
 
-    public void setScore_gt(Double score_gt) {
-        this.score_gt = score_gt;
-    }
-
     public Double getScore_gte() {
         return score_gte;
     }
-
-    public void setScore_gte(Double score_gte) {
-        this.score_gte = score_gte;
-    }
-
 }

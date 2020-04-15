@@ -21,7 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_Client")
+@GraphQLName("CDP_ClientInput")
 public class CDPClientInput {
 
     @GraphQLID
@@ -43,16 +43,7 @@ public class CDPClientInput {
         return id;
     }
 
-    public void setId(String id) {
-        this.id = id;
-    }
-
     public String getTitle() {
         return title;
     }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
 }

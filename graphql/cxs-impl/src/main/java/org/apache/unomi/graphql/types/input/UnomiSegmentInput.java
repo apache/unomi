@@ -21,14 +21,12 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-import static org.apache.unomi.graphql.types.input.UnomiSegmentInput.TYPE_NAME_INTERNAL;
+import static org.apache.unomi.graphql.types.input.UnomiSegmentInput.TYPE_NAME;
 
-@GraphQLName(TYPE_NAME_INTERNAL)
+@GraphQLName(TYPE_NAME)
 public class UnomiSegmentInput implements BaseSegmentInput {
 
-    public static final String TYPE_NAME_INTERNAL = "Unomi_Segment";
-
-    public static final String TYPE_NAME = TYPE_NAME_INTERNAL + "Input";
+    public static final String TYPE_NAME = "Unomi_SegmentInput";
 
     @GraphQLID
     @GraphQLField

@@ -19,8 +19,8 @@ package org.apache.unomi.graphql.types.input;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CDP_DateFilter")
-public class CDPDateFilter {
+@GraphQLName("CDP_DateFilterInput")
+public class CDPDateFilterInput {
 
     @GraphQLField
     private long after;
@@ -34,7 +34,7 @@ public class CDPDateFilter {
     @GraphQLField
     private boolean includeBefore;
 
-    public CDPDateFilter(
+    public CDPDateFilterInput(
             final @GraphQLName("after") long after,
             final @GraphQLName("includeAfter") boolean includeAfter,
             final @GraphQLName("before") long before,
@@ -49,32 +49,15 @@ public class CDPDateFilter {
         return after;
     }
 
-    public void setAfter(long after) {
-        this.after = after;
-    }
-
     public boolean isIncludeAfter() {
         return includeAfter;
-    }
-
-    public void setIncludeAfter(boolean includeAfter) {
-        this.includeAfter = includeAfter;
     }
 
     public long getBefore() {
         return before;
     }
 
-    public void setBefore(long before) {
-        this.before = before;
-    }
-
     public boolean isIncludeBefore() {
         return includeBefore;
     }
-
-    public void setIncludeBefore(boolean includeBefore) {
-        this.includeBefore = includeBefore;
-    }
-
 }

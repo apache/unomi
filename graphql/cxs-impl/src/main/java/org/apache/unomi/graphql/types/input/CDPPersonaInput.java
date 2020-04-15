@@ -25,14 +25,12 @@ import graphql.annotations.annotationTypes.GraphQLNonNull;
 import java.util.List;
 import java.util.Set;
 
-import static org.apache.unomi.graphql.types.input.CDPPersonaInput.TYPE_NAME_INTERNAL;
+import static org.apache.unomi.graphql.types.input.CDPPersonaInput.TYPE_NAME;
 
-@GraphQLName(TYPE_NAME_INTERNAL)
+@GraphQLName(TYPE_NAME)
 public class CDPPersonaInput {
 
-    public static final String TYPE_NAME_INTERNAL = "CDP_Persona";
-
-    public static final String TYPE_NAME = TYPE_NAME_INTERNAL + "Input";
+    public static final String TYPE_NAME = "CDP_PersonaInput";
 
     @GraphQLID
     @GraphQLField
@@ -60,13 +58,13 @@ public class CDPPersonaInput {
 
     // # fields will be added here according to registered profile properties
 
-    public CDPPersonaInput(@GraphQLID @GraphQLName("id") final String id,
-                           @GraphQLNonNull @GraphQLName("cdp_name") final String cdp_name,
-                           @GraphQLNonNull @GraphQLName("cdp_view") final String cdp_view,
-                           @GraphQLName("cdp_profileIDs") final List<CDPProfileIDInput> cdp_profileIDs,
-                           @GraphQLName("cdp_segments") final Set<String> cdp_segments,
-                           @GraphQLName("cdp_interests") final List<CDPInterestInput> cdp_interests,
-                           @GraphQLName("cdp_consents") final List<CDPPersonaConsentInput> cdp_consents) {
+    public CDPPersonaInput(final @GraphQLID @GraphQLName("id") String id,
+                           final @GraphQLNonNull @GraphQLName("cdp_name") String cdp_name,
+                           final @GraphQLNonNull @GraphQLName("cdp_view") String cdp_view,
+                           final @GraphQLName("cdp_profileIDs") List<CDPProfileIDInput> cdp_profileIDs,
+                           final @GraphQLName("cdp_segments") Set<String> cdp_segments,
+                           final @GraphQLName("cdp_interests") List<CDPInterestInput> cdp_interests,
+                           final @GraphQLName("cdp_consents") List<CDPPersonaConsentInput> cdp_consents) {
         this.id = id;
         this.cdp_name = cdp_name;
         this.cdp_view = cdp_view;

@@ -21,7 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_View")
+@GraphQLName("CDP_ViewInput")
 public class CDPView {
 
     private String name;
