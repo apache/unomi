@@ -22,14 +22,12 @@ import graphql.annotations.annotationTypes.GraphQLName;
 
 import java.time.OffsetDateTime;
 
-import static org.apache.unomi.graphql.types.input.CDPConsentUpdateEventFilterInput.TYPE_NAME_INTERNAL;
+import static org.apache.unomi.graphql.types.input.CDPConsentUpdateEventFilterInput.TYPE_NAME;
 
-@GraphQLName(TYPE_NAME_INTERNAL)
+@GraphQLName(TYPE_NAME)
 public class CDPConsentUpdateEventFilterInput {
 
-    public static final String TYPE_NAME_INTERNAL = "CDP_ConsentUpdateEventFilter";
-
-    public static final String TYPE_NAME = TYPE_NAME_INTERNAL + "Input";
+    public static final String TYPE_NAME = "CDP_ConsentUpdateEventFilterInput";
 
     @GraphQLField
     private String type_equals;

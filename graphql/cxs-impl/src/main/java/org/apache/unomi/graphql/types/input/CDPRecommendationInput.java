@@ -20,7 +20,7 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_Recommendation")
+@GraphQLName("CDP_RecommendationInput")
 public class CDPRecommendationInput {
 
     @GraphQLField
@@ -35,9 +35,4 @@ public class CDPRecommendationInput {
     public String getName() {
         return name;
     }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
 }

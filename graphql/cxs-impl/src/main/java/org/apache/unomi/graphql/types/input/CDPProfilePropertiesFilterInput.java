@@ -20,23 +20,20 @@ package org.apache.unomi.graphql.types.input;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-import java.util.ArrayList;
 import java.util.List;
 
-import static org.apache.unomi.graphql.types.input.CDPProfilePropertiesFilterInput.TYPE_NAME_INTERNAL;
+import static org.apache.unomi.graphql.types.input.CDPProfilePropertiesFilterInput.TYPE_NAME;
 
-@GraphQLName(TYPE_NAME_INTERNAL)
+@GraphQLName(TYPE_NAME)
 public class CDPProfilePropertiesFilterInput {
 
-    public static final String TYPE_NAME_INTERNAL = "CDP_ProfilePropertiesFilter";
-
-    public static final String TYPE_NAME = TYPE_NAME_INTERNAL + "Input";
+    public static final String TYPE_NAME = "CDP_ProfilePropertiesFilterInput";
 
     @GraphQLField
-    private List<CDPProfilePropertiesFilterInput> and = new ArrayList<>();
+    private List<CDPProfilePropertiesFilterInput> and;
 
     @GraphQLField
-    private List<CDPProfilePropertiesFilterInput> or = new ArrayList<>();
+    private List<CDPProfilePropertiesFilterInput> or;
 
     public CDPProfilePropertiesFilterInput(@GraphQLName("and") List<CDPProfilePropertiesFilterInput> and,
                                            @GraphQLName("or") List<CDPProfilePropertiesFilterInput> or) {
@@ -48,16 +45,7 @@ public class CDPProfilePropertiesFilterInput {
         return and;
     }
 
-    public void setAnd(List<CDPProfilePropertiesFilterInput> and) {
-        this.and = and;
-    }
-
     public List<CDPProfilePropertiesFilterInput> getOr() {
         return or;
     }
-
-    public void setOr(List<CDPProfilePropertiesFilterInput> or) {
-        this.or = or;
-    }
-
 }

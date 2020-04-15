@@ -26,14 +26,12 @@ import org.apache.unomi.api.Profile;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 
-import static org.apache.unomi.graphql.types.input.CDPConsentUpdateEventInput.TYPE_NAME_INTERNAL;
+import static org.apache.unomi.graphql.types.input.CDPConsentUpdateEventInput.TYPE_NAME;
 
-@GraphQLName(TYPE_NAME_INTERNAL)
+@GraphQLName(TYPE_NAME)
 public class CDPConsentUpdateEventInput extends BaseProfileEventProcessor {
 
-    public static final String TYPE_NAME_INTERNAL = "CDP_ConsentUpdateEvent";
-
-    public static final String TYPE_NAME = TYPE_NAME_INTERNAL + "Input";
+    public static final String TYPE_NAME = "CDP_ConsentUpdateEventInput";
 
     public static final String EVENT_NAME = "cdp_consentUpdateEvent";
 

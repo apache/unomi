@@ -28,19 +28,14 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.apache.unomi.graphql.types.input.CDPProfileUpdateEventInput.TYPE_NAME_INTERNAL;
+import static org.apache.unomi.graphql.types.input.CDPProfileUpdateEventInput.TYPE_NAME;
 
-@GraphQLName(TYPE_NAME_INTERNAL)
+@GraphQLName(TYPE_NAME)
 public class CDPProfileUpdateEventInput extends BaseProfileEventProcessor {
 
-    public static final String TYPE_NAME_INTERNAL = "CDP_ProfileUpdateEvent";
-
-    public static final String TYPE_NAME = TYPE_NAME_INTERNAL + "Input";
+    public static final String TYPE_NAME = "CDP_ProfileUpdateEventInput";
 
     public static final String EVENT_NAME = "cdp_profileUpdateEvent";
-
-    public CDPProfileUpdateEventInput() {
-    }
 
     @Override
     @SuppressWarnings("unchecked")

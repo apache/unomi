@@ -21,7 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
-@GraphQLName("CDP_Segment")
+@GraphQLName("CDP_SegmentInput")
 public class CDPSegmentInput implements BaseSegmentInput {
 
     @GraphQLID
@@ -56,17 +56,9 @@ public class CDPSegmentInput implements BaseSegmentInput {
         return id;
     }
 
-    public void setId(String id) {
-        this.id = id;
-    }
-
     @Override
     public String getView() {
         return view;
-    }
-
-    public void setView(String view) {
-        this.view = view;
     }
 
     @Override
@@ -74,16 +66,7 @@ public class CDPSegmentInput implements BaseSegmentInput {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public CDPProfileFilterInput getProfiles() {
         return profiles;
     }
-
-    public void setProfiles(CDPProfileFilterInput profiles) {
-        this.profiles = profiles;
-    }
-
 }

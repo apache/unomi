@@ -23,7 +23,7 @@ import graphql.annotations.annotationTypes.GraphQLNonNull;
 
 import java.time.OffsetDateTime;
 
-@GraphQLName("CDP_PersonaConsent")
+@GraphQLName("CDP_PersonaConsentInput")
 public class CDPPersonaConsentInput {
 
     @GraphQLField
@@ -39,10 +39,10 @@ public class CDPPersonaConsentInput {
     @GraphQLField
     private OffsetDateTime expiration;
 
-    public CDPPersonaConsentInput(@GraphQLNonNull @GraphQLName("type") final String type,
-                                  @GraphQLName("status") final String status,
-                                  @GraphQLName("lastUpdate") final OffsetDateTime lastUpdate,
-                                  @GraphQLName("expiration") OffsetDateTime expiration) {
+    public CDPPersonaConsentInput(final @GraphQLNonNull @GraphQLName("type") String type,
+                                  final @GraphQLName("status") String status,
+                                  final @GraphQLName("lastUpdate") OffsetDateTime lastUpdate,
+                                  final @GraphQLName("expiration") OffsetDateTime expiration) {
         this.type = type;
         this.status = status;
         this.lastUpdate = lastUpdate;

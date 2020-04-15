@@ -31,7 +31,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-@GraphQLName("CDP_Property")
+@GraphQLName("CDP_PropertyInput")
 public class CDPPropertyInput {
 
     @GraphQLField
@@ -67,14 +67,14 @@ public class CDPPropertyInput {
     private CDPSetPropertyTypeInput setPropertyTypeInput;
 
     public CDPPropertyInput(
-            @GraphQLName("identifier") CDPIdentifierPropertyType identifierPropertyTypeInput,
-            @GraphQLName("string") CDPStringPropertyType stringPropertyTypeInput,
-            @GraphQLName("int") CDPIntPropertyType integerPropertyTypeInput,
-            @GraphQLName("float") CDPFloatPropertyType floatPropertyTypeInput,
-            @GraphQLName("date") CDPDatePropertyType datePropertyTypeInput,
-            @GraphQLName("boolean") CDPBooleanPropertyType booleanPropertyTypeInput,
-            @GraphQLName("geopoint") CDPGeoPointPropertyType geoPointPropertyTypeInput,
-            @GraphQLName("set") CDPSetPropertyTypeInput setPropertyTypeInput) {
+            final @GraphQLName("identifier") CDPIdentifierPropertyType identifierPropertyTypeInput,
+            final @GraphQLName("string") CDPStringPropertyType stringPropertyTypeInput,
+            final @GraphQLName("int") CDPIntPropertyType integerPropertyTypeInput,
+            final @GraphQLName("float") CDPFloatPropertyType floatPropertyTypeInput,
+            final @GraphQLName("date") CDPDatePropertyType datePropertyTypeInput,
+            final @GraphQLName("boolean") CDPBooleanPropertyType booleanPropertyTypeInput,
+            final @GraphQLName("geopoint") CDPGeoPointPropertyType geoPointPropertyTypeInput,
+            final @GraphQLName("set") CDPSetPropertyTypeInput setPropertyTypeInput) {
         this.identifierPropertyTypeInput = identifierPropertyTypeInput;
         this.stringPropertyTypeInput = stringPropertyTypeInput;
         this.integerPropertyTypeInput = integerPropertyTypeInput;
@@ -89,64 +89,32 @@ public class CDPPropertyInput {
         return identifierPropertyTypeInput;
     }
 
-    public void setIdentifierPropertyTypeInput(CDPIdentifierPropertyType identifierPropertyTypeInput) {
-        this.identifierPropertyTypeInput = identifierPropertyTypeInput;
-    }
-
     public CDPStringPropertyType getStringPropertyTypeInput() {
         return stringPropertyTypeInput;
-    }
-
-    public void setStringPropertyTypeInput(CDPStringPropertyType stringPropertyTypeInput) {
-        this.stringPropertyTypeInput = stringPropertyTypeInput;
     }
 
     public CDPIntPropertyType getIntegerPropertyTypeInput() {
         return integerPropertyTypeInput;
     }
 
-    public void setIntegerPropertyTypeInput(CDPIntPropertyType integerPropertyTypeInput) {
-        this.integerPropertyTypeInput = integerPropertyTypeInput;
-    }
-
     public CDPFloatPropertyType getFloatPropertyTypeInput() {
         return floatPropertyTypeInput;
-    }
-
-    public void setFloatPropertyTypeInput(CDPFloatPropertyType floatPropertyTypeInput) {
-        this.floatPropertyTypeInput = floatPropertyTypeInput;
     }
 
     public CDPDatePropertyType getDatePropertyTypeInput() {
         return datePropertyTypeInput;
     }
 
-    public void setDatePropertyTypeInput(CDPDatePropertyType datePropertyTypeInput) {
-        this.datePropertyTypeInput = datePropertyTypeInput;
-    }
-
     public CDPBooleanPropertyType getBooleanPropertyTypeInput() {
         return booleanPropertyTypeInput;
-    }
-
-    public void setBooleanPropertyTypeInput(CDPBooleanPropertyType booleanPropertyTypeInput) {
-        this.booleanPropertyTypeInput = booleanPropertyTypeInput;
     }
 
     public CDPGeoPointPropertyType getGeoPointPropertyTypeInput() {
         return geoPointPropertyTypeInput;
     }
 
-    public void setGeoPointPropertyTypeInput(CDPGeoPointPropertyType geoPointPropertyTypeInput) {
-        this.geoPointPropertyTypeInput = geoPointPropertyTypeInput;
-    }
-
     public CDPSetPropertyTypeInput getSetPropertyTypeInput() {
         return setPropertyTypeInput;
-    }
-
-    public void setSetPropertyTypeInput(CDPSetPropertyTypeInput setPropertyTypeInput) {
-        this.setPropertyTypeInput = setPropertyTypeInput;
     }
 
     public CDPPropertyType getProperty() {

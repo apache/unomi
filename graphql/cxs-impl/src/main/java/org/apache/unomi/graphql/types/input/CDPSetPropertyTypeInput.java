@@ -23,17 +23,17 @@ import org.apache.unomi.graphql.propertytypes.CDPPropertyType;
 
 import java.util.List;
 
-@GraphQLName("CDP_SetProperty")
+@GraphQLName("CDP_SetPropertyInput")
 public class CDPSetPropertyTypeInput extends CDPPropertyType {
 
     @GraphQLField
     private List<CDPPropertyInput> properties;
 
-    public CDPSetPropertyTypeInput(@GraphQLName("name") String name,
-                                   @GraphQLName("minOccurrences") Integer minOccurrences,
-                                   @GraphQLName("maxOccurrences") Integer maxOccurrences,
-                                   @GraphQLName("tags") List<String> tags,
-                                   @GraphQLName("properties") List<CDPPropertyInput> properties) {
+    public CDPSetPropertyTypeInput(final @GraphQLName("name") String name,
+                                   final @GraphQLName("minOccurrences") Integer minOccurrences,
+                                   final @GraphQLName("maxOccurrences") Integer maxOccurrences,
+                                   final @GraphQLName("tags") List<String> tags,
+                                   final @GraphQLName("properties") List<CDPPropertyInput> properties) {
         super(name, minOccurrences, maxOccurrences, tags);
         this.properties = properties;
     }
@@ -41,9 +41,4 @@ public class CDPSetPropertyTypeInput extends CDPPropertyType {
     public List<CDPPropertyInput> getProperties() {
         return properties;
     }
-
-    public void setProperties(List<CDPPropertyInput> properties) {
-        this.properties = properties;
-    }
-
 }

@@ -25,14 +25,12 @@ import org.apache.unomi.api.Profile;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-import static org.apache.unomi.graphql.types.input.CDPListsUpdateEventInput.TYPE_NAME_INTERNAL;
+import static org.apache.unomi.graphql.types.input.CDPListsUpdateEventInput.TYPE_NAME;
 
-@GraphQLName(TYPE_NAME_INTERNAL)
+@GraphQLName(TYPE_NAME)
 public class CDPListsUpdateEventInput extends BaseProfileEventProcessor {
 
-    public static final String TYPE_NAME_INTERNAL = "CDP_ListsUpdateEvent";
-
-    public static final String TYPE_NAME = TYPE_NAME_INTERNAL + "Input";
+    public static final String TYPE_NAME = "CDP_ListsUpdateEventInput";
 
     public static final String EVENT_NAME = "cdp_listsUpdateEvent";
 
@@ -42,8 +40,8 @@ public class CDPListsUpdateEventInput extends BaseProfileEventProcessor {
     @GraphQLField
     private List<String> leaveLists;
 
-    public CDPListsUpdateEventInput(@GraphQLName("joinLists") List<String> joinLists,
-                                    @GraphQLName("leaveLists") List<String> leaveLists) {
+    public CDPListsUpdateEventInput(final @GraphQLName("joinLists") List<String> joinLists,
+                                    final @GraphQLName("leaveLists") List<String> leaveLists) {
         this.joinLists = joinLists;
         this.leaveLists = leaveLists;
     }

@@ -22,7 +22,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import java.util.ArrayList;
 import java.util.List;
 
-@GraphQLName("CDP_EventType")
+@GraphQLName("CDP_EventTypeInput")
 public class CDPEventTypeInput {
 
     @GraphQLField
@@ -35,12 +35,12 @@ public class CDPEventTypeInput {
     private String typeName;
 
     @GraphQLField
-    private List<CDPPropertyInput> properties = new ArrayList<>();
+    private List<CDPPropertyInput> properties;
 
-    public CDPEventTypeInput(@GraphQLName("id") String id,
-                             @GraphQLName("scope") String scope,
-                             @GraphQLName("typeName") String typeName,
-                             @GraphQLName("properties") List<CDPPropertyInput> properties) {
+    public CDPEventTypeInput(final @GraphQLName("id") String id,
+                             final @GraphQLName("scope") String scope,
+                             final @GraphQLName("typeName") String typeName,
+                             final @GraphQLName("properties") List<CDPPropertyInput> properties) {
         this.id = id;
         this.scope = scope;
         this.typeName = typeName;
@@ -51,32 +51,15 @@ public class CDPEventTypeInput {
         return id;
     }
 
-    public void setId(String id) {
-        this.id = id;
-    }
-
     public String getScope() {
         return scope;
-    }
-
-    public void setScope(String scope) {
-        this.scope = scope;
     }
 
     public String getTypeName() {
         return typeName;
     }
 
-    public void setTypeName(String typeName) {
-        this.typeName = typeName;
-    }
-
     public List<CDPPropertyInput> getProperties() {
         return properties;
     }
-
-    public void setProperties(List<CDPPropertyInput> properties) {
-        this.properties = properties;
-    }
-
 }

@@ -21,7 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CDP_Interest")
+@GraphQLName("CDP_InterestInput")
 public class CDPInterestInput {
 
     @GraphQLID
@@ -31,8 +31,8 @@ public class CDPInterestInput {
     @GraphQLField
     private Double score;
 
-    public CDPInterestInput(@GraphQLID @GraphQLName("topic") final String topic,
-                            @GraphQLName("score") final Double score) {
+    public CDPInterestInput(final @GraphQLID @GraphQLName("topic") String topic,
+                            final @GraphQLName("score") Double score) {
         this.topic = topic;
         this.score = score;
     }
