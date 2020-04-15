@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
+package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
@@ -22,18 +22,18 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
 @GraphQLName("CDP_View")
-public class CDPView {
+public class CDPViewInput {
 
+    @GraphQLID
+    @GraphQLNonNull
+    @GraphQLField
     private String name;
 
-    public CDPView(final String name) {
+    public CDPViewInput(final @GraphQLID @GraphQLNonNull @GraphQLName("name") String name) {
         this.name = name;
     }
 
-    @GraphQLID
-    @GraphQLField
-    @GraphQLNonNull
-    public String name() {
+    public String getName() {
         return name;
     }
 
