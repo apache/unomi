@@ -23,11 +23,13 @@ import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.graphql.commands.CreateOrUpdatePersonaCommand;
 import org.apache.unomi.graphql.commands.CreateOrUpdateProfilePropertiesCommand;
+import org.apache.unomi.graphql.commands.CreateOrUpdateSourceCommand;
 import org.apache.unomi.graphql.commands.CreateOrUpdateTopicCommand;
 import org.apache.unomi.graphql.commands.CreateOrUpdateViewCommand;
 import org.apache.unomi.graphql.commands.DeleteAllPersonalDataCommand;
 import org.apache.unomi.graphql.commands.DeleteProfileCommand;
 import org.apache.unomi.graphql.commands.DeleteProfilePropertiesCommand;
+import org.apache.unomi.graphql.commands.DeleteSourceCommand;
 import org.apache.unomi.graphql.commands.DeleteTopicCommand;
 import org.apache.unomi.graphql.commands.DeleteViewCommand;
 import org.apache.unomi.graphql.commands.ProcessEventsCommand;
@@ -39,11 +41,13 @@ import org.apache.unomi.graphql.types.input.CDPPersonaInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.input.CDPPropertyInput;
 import org.apache.unomi.graphql.types.input.CDPSegmentInput;
+import org.apache.unomi.graphql.types.input.CDPSourceInput;
 import org.apache.unomi.graphql.types.input.CDPTopicInput;
 import org.apache.unomi.graphql.types.input.CDPViewInput;
 import org.apache.unomi.graphql.types.input.UnomiSegmentInput;
 import org.apache.unomi.graphql.types.output.CDPPersona;
 import org.apache.unomi.graphql.types.output.CDPSegment;
+import org.apache.unomi.graphql.types.output.CDPSource;
 import org.apache.unomi.graphql.types.output.CDPTopic;
 import org.apache.unomi.graphql.types.output.CDPView;
 import org.apache.unomi.graphql.types.output.UnomiSegment;
@@ -189,6 +193,26 @@ public class CDPMutation {
             final @GraphQLID @GraphQLNonNull @GraphQLName("topicID") String topicId,
             final DataFetchingEnvironment environment) {
         return DeleteTopicCommand.create(topicId)
+                .setEnvironment(environment)
+                .build()
+                .execute();
+    }
+
+    @GraphQLField
+    public CDPSource createOrUpdateSource(
+            final @GraphQLName("source") CDPSourceInput sourceInput,
+            final DataFetchingEnvironment environment) {
+        return CreateOrUpdateSourceCommand.create(sourceInput)
+                .setEnvironment(environment)
+                .build()
+                .execute();
+    }
+
+    @GraphQLField
+    public Boolean deleteSource(
+            final @GraphQLID @GraphQLNonNull @GraphQLName("sourceID") String sourceId,
+            final DataFetchingEnvironment environment) {
+        return DeleteSourceCommand.create(sourceId)
                 .setEnvironment(environment)
                 .build()
                 .execute();
