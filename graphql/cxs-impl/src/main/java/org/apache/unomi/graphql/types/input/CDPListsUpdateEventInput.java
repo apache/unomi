@@ -21,6 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.graphql.CDPGraphQLConstants;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,7 +33,7 @@ public class CDPListsUpdateEventInput extends BaseProfileEventProcessor {
 
     public static final String TYPE_NAME = "CDP_ListsUpdateEventInput";
 
-    public static final String EVENT_NAME = "cdp_listsUpdateEvent";
+    public static final String EVENT_NAME = CDPGraphQLConstants.CDP_LIST_UPDATE_EVENT_NAME;
 
     @GraphQLField
     private List<String> joinLists;

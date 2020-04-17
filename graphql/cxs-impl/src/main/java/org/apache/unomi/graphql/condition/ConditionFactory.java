@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public abstract class ConditionFactory {
+public class ConditionFactory {
 
     protected DataFetchingEnvironment environment;
 
@@ -39,7 +39,7 @@ public abstract class ConditionFactory {
 
     private Map<String, ConditionType> conditionTypesMap;
 
-    protected ConditionFactory(final String conditionTypeId, final DataFetchingEnvironment environment) {
+    public ConditionFactory(final String conditionTypeId, final DataFetchingEnvironment environment) {
         this.environment = environment;
         this.conditionTypeId = conditionTypeId;
 
@@ -93,7 +93,7 @@ public abstract class ConditionFactory {
         return this.conditionTypesMap.get(typeId);
     }
 
-    <INPUT> Condition filtersToCondition(final List<INPUT> inputFilters, final Function<INPUT, Condition> function, final String operator) {
+    public <INPUT> Condition filtersToCondition(final List<INPUT> inputFilters, final Function<INPUT, Condition> function, final String operator) {
 
         final List<Condition> subConditions = inputFilters.stream()
                 .map(function)

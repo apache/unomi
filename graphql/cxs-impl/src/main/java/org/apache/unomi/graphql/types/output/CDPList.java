@@ -16,17 +16,20 @@
  */
 package org.apache.unomi.graphql.types.output;
 
-import graphql.annotations.annotationTypes.GraphQLDataFetcher;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
-import graphql.annotations.annotationTypes.GraphQLPrettify;
+import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.lists.UserList;
 import org.apache.unomi.graphql.fetchers.list.ListProfileConnectionDataFetcher;
 
-@GraphQLName("CDP_List")
+import static org.apache.unomi.graphql.types.output.CDPList.TYPE_NAME;
+
+@GraphQLName(TYPE_NAME)
 public class CDPList {
+
+    public static final String TYPE_NAME = "CDP_List";
 
     private UserList userList;
 
@@ -37,45 +40,39 @@ public class CDPList {
     @GraphQLID
     @GraphQLField
     @GraphQLNonNull
-    @GraphQLName("ID")
-    public String getId() {
+    public String id() {
         return userList.getItemId();
     }
 
     @GraphQLField
     @GraphQLNonNull
-    @GraphQLPrettify
-    public CDPView getView() {
+    public CDPView view() {
         return userList.getScope() != null ? new CDPView(userList.getScope()) : null;
     }
 
     @GraphQLField
     @GraphQLNonNull
-    @GraphQLPrettify
     public String name() {
         return userList.getMetadata() != null ? userList.getMetadata().getName() : null;
     }
 
     @GraphQLField
-    @GraphQLDataFetcher(value = ListProfileConnectionDataFetcher.class, args = {ListProfileConnectionDataFetcher.ACTIVE})
     public CDPProfileConnection active(
-            @GraphQLName("first") Integer first,
-            @GraphQLName("after") String after,
-            @GraphQLName("last") Integer last,
-            @GraphQLName("before") String before
-    ) {
-        return null;
+            final @GraphQLName("first") Integer first,
+            final @GraphQLName("after") String after,
+            final @GraphQLName("last") Integer last,
+            final @GraphQLName("before") String before,
+            final DataFetchingEnvironment environment) throws Exception {
+        return new ListProfileConnectionDataFetcher().get(environment);
     }
 
     @GraphQLField
-    @GraphQLDataFetcher(value = ListProfileConnectionDataFetcher.class, args = {ListProfileConnectionDataFetcher.INACTIVE})
     public CDPProfileConnection inactive(
             @GraphQLName("first") Integer first,
             @GraphQLName("after") String after,
             @GraphQLName("last") Integer last,
-            @GraphQLName("before") String before
-    ) {
-        return null;
+            @GraphQLName("before") String before) {
+        return new CDPProfileConnection();
     }
 
 }

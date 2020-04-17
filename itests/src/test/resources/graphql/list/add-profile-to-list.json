@@ -1,0 +1,13 @@
+{
+  "operationName": "addProfileToList",
+  "variables": {
+    "listID": "myListId2",
+    "profileID": {
+      "id": "10000",
+      "client": {
+        "id": "client"
+      }
+    }
+  },
+  "query": "mutation addProfileToList($listID: String, $profileID: CDP_ProfileIDInput) {\n  cdp {\n    addProfileToList(listID: $listID, profileID: $profileID) {\n      ID\n      name\n      view {\n        name\n      }\n    }\n  }\n}\n"
+}

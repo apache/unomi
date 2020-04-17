@@ -24,4 +24,6 @@ public interface CDPGraphQLConstants {
 
     String EVENT_PROCESSOR_CLASS = "eventProcessorClass";
 
+    String CDP_LIST_UPDATE_EVENT_NAME = "cdp_listsUpdateEvent";
+
 }

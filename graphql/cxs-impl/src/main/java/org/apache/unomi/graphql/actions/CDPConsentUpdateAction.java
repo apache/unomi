@@ -16,7 +16,6 @@
  */
 package org.apache.unomi.graphql.actions;
 
-import org.apache.unomi.api.Consent;
 import org.apache.unomi.api.ConsentStatus;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
@@ -24,14 +23,15 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.graphql.utils.DateUtils;
+import org.apache.unomi.graphql.utils.EventBuilder;
 
 import java.time.OffsetDateTime;
-import java.util.Date;
-import java.util.Objects;
+import java.util.HashMap;
+import java.util.Map;
 
 public class CDPConsentUpdateAction implements ActionExecutor {
 
-    EventService eventService;
+    private EventService eventService;
 
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
@@ -50,44 +50,29 @@ public class CDPConsentUpdateAction implements ActionExecutor {
             return EventService.NO_CHANGE;
         }
 
-        if (profile.getConsents() != null && !profile.getConsents().isEmpty()) {
-            boolean profileUpdated = false;
-
-            for (final Consent consent : profile.getConsents().values()) {
-                if (Objects.equals(typeIdentifier, consent.getTypeIdentifier())) {
-                    if (consentStatus != null) {
-                        consent.setStatus(ConsentStatus.valueOf(consentStatus));
-
-                        profileUpdated = true;
-                    }
-                    if (lastUpdate != null) {
-                        consent.setStatusDate(DateUtils.toDate(lastUpdate));
-
-                        profileUpdated = true;
-                    }
-                    if (expiration != null) {
-                        consent.setRevokeDate(DateUtils.toDate(expiration));
-
-                        profileUpdated = true;
-                    }
-
-                    if (profileUpdated) {
-                        return sendEvent(profile, event);
-                    }
+        profile.getConsents().forEach((key, consent) -> {
+            if (key.endsWith("/" + typeIdentifier)) {
+                if (consentStatus != null) {
+                    consent.setStatus(ConsentStatus.valueOf(consentStatus));
+                }
+                if (lastUpdate != null) {
+                    consent.setStatusDate(DateUtils.toDate(lastUpdate));
+                }
+                if (expiration != null) {
+                    consent.setRevokeDate(DateUtils.toDate(expiration));
                 }
             }
-        }
+        });
 
-        return EventService.NO_CHANGE;
-    }
+        final Map<String, Object> propertiesToUpdate = new HashMap<>();
+        propertiesToUpdate.put("consents", profile.getConsents());
 
-    private int sendEvent(final Profile profile, final Event event) {
-        final Event profileUpdated =
-                new Event("profileUpdated", event.getSession(), profile, event.getScope(), event.getSource(), profile, new Date());
+        final Event updatePropertiesEvent = EventBuilder.create("updateProperties", profile)
+                .setPropertiesToUpdate(propertiesToUpdate)
+                .setPersistent(false)
+                .build();
 
-        profileUpdated.setPersistent(false);
-
-        return eventService.send(profileUpdated);
+        return eventService.send(updatePropertiesEvent);
     }
 
 }

@@ -31,23 +31,14 @@ import org.apache.unomi.graphql.types.output.CDPProfileConnection;
 
 public class ListProfileConnectionDataFetcher extends ProfileConnectionDataFetcher {
 
-    public static final String ACTIVE = "Active";
-    public static final String INACTIVE = "Inctive";
-
-    private String type;
-
-    public ListProfileConnectionDataFetcher(final String type) {
-        this.type = type;
-    }
-
     @Override
-    public CDPProfileConnection get(DataFetchingEnvironment environment) throws Exception {
+    public CDPProfileConnection get(final DataFetchingEnvironment environment) throws Exception {
         final CDPList cdpList = environment.getSource();
         final ServiceManager serviceManager = environment.getContext();
         final ConnectionParams params = parseConnectionParams(environment);
 
         Condition listIdCondition = ProfileConditionFactory.get(environment)
-                .propertyCondition("systemProperties.lists", "contains", cdpList.getId());
+                .propertyCondition("systemProperties.lists", "contains", cdpList.id());
 
         final Query query = new Query();
         query.setOffset(params.getFirst());
