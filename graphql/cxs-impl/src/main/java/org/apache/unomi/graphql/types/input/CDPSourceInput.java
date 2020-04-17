@@ -14,39 +14,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
+package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
-import graphql.schema.DataFetchingEnvironment;
 
-@GraphQLName("CDP_Source")
-public class CDPSource {
+import static org.apache.unomi.graphql.types.input.CDPSourceInput.TYPE_NAME;
 
-    private String id;
+@GraphQLName(TYPE_NAME)
+public class CDPSourceInput {
 
-    private Boolean thirdParty;
-
-    public CDPSource(String id) {
-        this(id, false);
-    }
-
-    public CDPSource(String id, Boolean thirdParty) {
-        this.id = id;
-        this.thirdParty = thirdParty;
-    }
+    public static final String TYPE_NAME = "CDP_SourceInput";
 
     @GraphQLID
     @GraphQLField
     @GraphQLNonNull
-    public String id(final DataFetchingEnvironment environment) {
+    private String id;
+
+    @GraphQLField
+    private Boolean thirdParty;
+
+    public CDPSourceInput(
+            final @GraphQLID @GraphQLNonNull @GraphQLName("id") String id,
+            final @GraphQLName("thirdParty") Boolean thirdParty) {
+        this.id = id;
+        this.thirdParty = thirdParty;
+    }
+
+    public String getId() {
         return id;
     }
 
-    @GraphQLField
-    public Boolean thirdParty(final DataFetchingEnvironment environment) {
+    public Boolean getThirdParty() {
         return thirdParty;
     }
+
 }

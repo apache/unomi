@@ -14,39 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
+package org.apache.unomi.graphql.fetchers;
 
-import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
-import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLNonNull;
+import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.types.output.CDPSource;
 
-@GraphQLName("CDP_Source")
-public class CDPSource {
+import java.util.Collections;
+import java.util.List;
 
-    private String id;
+public class SourceDataFetcher implements DataFetcher<List<CDPSource>> {
 
-    private Boolean thirdParty;
-
-    public CDPSource(String id) {
-        this(id, false);
+    @Override
+    public List<CDPSource> get(final DataFetchingEnvironment environment) throws Exception {
+        // Unomi doesn't have an API for that yet, so return a stub
+        return Collections.emptyList();
     }
 
-    public CDPSource(String id, Boolean thirdParty) {
-        this.id = id;
-        this.thirdParty = thirdParty;
-    }
-
-    @GraphQLID
-    @GraphQLField
-    @GraphQLNonNull
-    public String id(final DataFetchingEnvironment environment) {
-        return id;
-    }
-
-    @GraphQLField
-    public Boolean thirdParty(final DataFetchingEnvironment environment) {
-        return thirdParty;
-    }
 }

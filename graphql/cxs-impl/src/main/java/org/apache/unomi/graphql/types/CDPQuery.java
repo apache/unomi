@@ -22,6 +22,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.graphql.fetchers.FindTopicsConnectionDataFetcher;
+import org.apache.unomi.graphql.fetchers.SourceDataFetcher;
 import org.apache.unomi.graphql.fetchers.TopicDataFetcher;
 import org.apache.unomi.graphql.fetchers.ViewDataFetcher;
 import org.apache.unomi.graphql.fetchers.event.EventDataFetcher;
@@ -45,6 +46,7 @@ import org.apache.unomi.graphql.types.output.CDPProfileConnection;
 import org.apache.unomi.graphql.types.output.CDPPropertyConnection;
 import org.apache.unomi.graphql.types.output.CDPSegment;
 import org.apache.unomi.graphql.types.output.CDPSegmentConnection;
+import org.apache.unomi.graphql.types.output.CDPSource;
 import org.apache.unomi.graphql.types.output.CDPTopic;
 import org.apache.unomi.graphql.types.output.CDPTopicConnection;
 import org.apache.unomi.graphql.types.output.CDPView;
@@ -145,6 +147,11 @@ public class CDPQuery {
                                          final @GraphQLName("before") String before,
                                          final DataFetchingEnvironment environment) throws Exception {
         return new FindTopicsConnectionDataFetcher(filterInput, orderByInput).get(environment);
+    }
+
+    @GraphQLField
+    public List<CDPSource> getSources(final DataFetchingEnvironment environment) throws Exception {
+        return new SourceDataFetcher().get(environment);
     }
 
 }
