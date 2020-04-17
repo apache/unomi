@@ -180,17 +180,6 @@
                                     </outputDirectory>
                                     <destFileName>org.apache.unomi.web.cfg</destFileName>
                                 </artifactItem>
-				<artifactItem>
-                                    <groupId>org.apache.unomi</groupId>
-                                    <artifactId>unomi-graphql-playground-wab</artifactId>
-                                    <version>${project.version}</version>
-                                    <classifier>unomiplaygroundcfg</classifier>
-                                    <type>cfg</type>
-                                    <outputDirectory>
-                                        ${project.build.directory}/assembly/etc
-                                    </outputDirectory>
-                                    <destFileName>org.apache.unomi.playground.web.cfg</destFileName>
-                                </artifactItem>
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
                                     <artifactId>unomi-persistence-elasticsearch-core</artifactId>
