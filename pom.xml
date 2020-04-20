@@ -528,6 +528,7 @@
                                 <exclude>**/*.log</exclude>
                                 <!-- exclude node_modules directories and JS package manager files -->
                                 <exclude>**/node_modules/**/*</exclude>
+                                <exclude>**/node/**/*</exclude>
                                 <exclude>**/yarn.lock</exclude>
                                 <exclude>**/*.js.map</exclude>
                             </excludes>
