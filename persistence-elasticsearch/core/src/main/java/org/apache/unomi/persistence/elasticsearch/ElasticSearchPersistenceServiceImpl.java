@@ -140,9 +140,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String monthlyIndexNumberOfShards;
     private String monthlyIndexNumberOfReplicas;
     private String monthlyIndexMappingTotalFieldsLimit;
+    private String monthlyIndexMaxDocValueFieldsSearch;
     private String numberOfShards;
     private String numberOfReplicas;
     private String indexMappingTotalFieldsLimit;
+    private String indexMaxDocValueFieldsSearch;
     private BundleContext bundleContext;
     private Map<String, String> mappings = new HashMap<String, String>();
     private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
@@ -211,6 +213,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.monthlyIndexMappingTotalFieldsLimit = monthlyIndexMappingTotalFieldsLimit;
     }
 
+    public void setMonthlyIndexMaxDocValueFieldsSearch(String monthlyIndexMaxDocValueFieldsSearch) {
+        this.monthlyIndexMaxDocValueFieldsSearch = monthlyIndexMaxDocValueFieldsSearch;
+    }
+
     public void setNumberOfShards(String numberOfShards) {
         this.numberOfShards = numberOfShards;
     }
@@ -221,6 +227,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setIndexMappingTotalFieldsLimit(String indexMappingTotalFieldsLimit) {
         this.indexMappingTotalFieldsLimit = indexMappingTotalFieldsLimit;
+    }
+
+    public void setIndexMaxDocValueFieldsSearch(String indexMaxDocValueFieldsSearch) {
+        this.indexMaxDocValueFieldsSearch = indexMaxDocValueFieldsSearch;
     }
 
     public void setDefaultQueryLimit(Integer defaultQueryLimit) {
@@ -978,11 +988,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 for (String itemName : itemsMonthlyIndexed) {
                     PutIndexTemplateRequest putIndexTemplateRequest = new PutIndexTemplateRequest("context-"+itemName+"-date-template")
                             .patterns(Collections.singletonList(getMonthlyIndexForQuery(itemName)))
+                            .order(1)
                             .settings("{\n" +
                                     "    \"index\" : {\n" +
                                     "        \"number_of_shards\" : " + monthlyIndexNumberOfShards + ",\n" +
                                     "        \"number_of_replicas\" : " + monthlyIndexNumberOfReplicas + ",\n" +
-                                    "        \"mapping.total_fields.limit\" : " + monthlyIndexMappingTotalFieldsLimit + "\n" +
+                                    "        \"mapping.total_fields.limit\" : " + monthlyIndexMappingTotalFieldsLimit + ",\n" +
+                                    "        \"max_docvalue_fields_search\" : " + monthlyIndexMaxDocValueFieldsSearch + "\n" +
                                     "    },\n" +
                                     "    \"analysis\": {\n" +
                                     "      \"analyzer\": {\n" +
@@ -1057,7 +1069,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         "    \"index\" : {\n" +
                         "        \"number_of_shards\" : " + numberOfShards + ",\n" +
                         "        \"number_of_replicas\" : " + numberOfReplicas + ",\n" +
-                        "        \"mapping.total_fields.limit\" : " + indexMappingTotalFieldsLimit + "\n" +
+                        "        \"mapping.total_fields.limit\" : " + indexMappingTotalFieldsLimit + ",\n" +
+                        "        \"max_docvalue_fields_search\" : " + indexMaxDocValueFieldsSearch + "\n" +
                         "    },\n" +
                         "    \"analysis\": {\n" +
                         "      \"analyzer\": {\n" +
