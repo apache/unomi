@@ -1,0 +1,10 @@
+{
+  "operationName": "findLists",
+  "variables": {
+    "filter": {
+      "name_equals": "myListName",
+      "view_equals": "mySite"
+    }
+  },
+  "query": "query findLists($filter: CDP_ListFilterInput) {\n  cdp {\n    findLists(filter: $filter) {\n      totalCount\n      edges {\n        node {\n          id\n          name\n          view {\n            name\n          }\n          active {\n            edges {\n              node {\n                cdp_profileIDs {\n                  id\n                }\n              }\n            }\n            pageInfo {\n              hasNextPage\n              hasPreviousPage\n            }\n          }\n        }\n      }\n      pageInfo {\n        hasNextPage\n        hasPreviousPage\n      }\n    }\n  }\n}\n"
+}

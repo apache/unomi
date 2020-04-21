@@ -33,10 +33,15 @@ import org.apache.unomi.graphql.commands.DeleteSourceCommand;
 import org.apache.unomi.graphql.commands.DeleteTopicCommand;
 import org.apache.unomi.graphql.commands.DeleteViewCommand;
 import org.apache.unomi.graphql.commands.ProcessEventsCommand;
+import org.apache.unomi.graphql.commands.list.AddProfileToListCommand;
+import org.apache.unomi.graphql.commands.list.CreateOrUpdateListCommand;
+import org.apache.unomi.graphql.commands.list.DeleteListCommand;
+import org.apache.unomi.graphql.commands.list.RemoveProfileFromListCommand;
 import org.apache.unomi.graphql.commands.segments.CreateOrUpdateSegmentCommand;
 import org.apache.unomi.graphql.commands.segments.CreateOrUpdateUnomiSegmentCommand;
 import org.apache.unomi.graphql.commands.segments.DeleteSegmentCommand;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
+import org.apache.unomi.graphql.types.input.CDPListInput;
 import org.apache.unomi.graphql.types.input.CDPPersonaInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.input.CDPPropertyInput;
@@ -45,6 +50,7 @@ import org.apache.unomi.graphql.types.input.CDPSourceInput;
 import org.apache.unomi.graphql.types.input.CDPTopicInput;
 import org.apache.unomi.graphql.types.input.CDPViewInput;
 import org.apache.unomi.graphql.types.input.UnomiSegmentInput;
+import org.apache.unomi.graphql.types.output.CDPList;
 import org.apache.unomi.graphql.types.output.CDPPersona;
 import org.apache.unomi.graphql.types.output.CDPSegment;
 import org.apache.unomi.graphql.types.output.CDPSource;
@@ -213,6 +219,54 @@ public class CDPMutation {
             final @GraphQLID @GraphQLNonNull @GraphQLName("sourceID") String sourceId,
             final DataFetchingEnvironment environment) {
         return DeleteSourceCommand.create(sourceId)
+                .setEnvironment(environment)
+                .build()
+                .execute();
+    }
+
+    @GraphQLField
+    public CDPList createOrUpdateList(
+            final @GraphQLName("list") CDPListInput listInput,
+            final DataFetchingEnvironment environment) {
+        return CreateOrUpdateListCommand.create(listInput)
+                .setEnvironment(environment)
+                .build()
+                .execute();
+    }
+
+    @GraphQLField
+    public CDPList addProfileToList(
+            final @GraphQLName("listID") String listId,
+            final @GraphQLName("profileID") CDPProfileIDInput profileIDInput,
+            final @GraphQLName("active") Boolean active,
+            final DataFetchingEnvironment environment) {
+        return AddProfileToListCommand.create()
+                .setEnvironment(environment)
+                .listId(listId)
+                .profileIDInput(profileIDInput)
+                .active(active)
+                .build()
+                .execute();
+    }
+
+    @GraphQLField
+    public Boolean removeProfileFromList(
+            final @GraphQLID @GraphQLName("listID") String listId,
+            final @GraphQLName("profileID") CDPProfileIDInput profileIDInput,
+            final DataFetchingEnvironment environment) {
+        return RemoveProfileFromListCommand.create()
+                .setEnvironment(environment)
+                .listId(listId)
+                .profileIDInput(profileIDInput)
+                .build()
+                .execute();
+    }
+
+    @GraphQLField
+    public Boolean deleteList(
+            final @GraphQLID @GraphQLName("listID") String listId,
+            final DataFetchingEnvironment environment) {
+        return DeleteListCommand.create(listId)
                 .setEnvironment(environment)
                 .build()
                 .execute();

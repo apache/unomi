@@ -27,6 +27,8 @@ import org.apache.unomi.graphql.fetchers.TopicDataFetcher;
 import org.apache.unomi.graphql.fetchers.ViewDataFetcher;
 import org.apache.unomi.graphql.fetchers.event.EventDataFetcher;
 import org.apache.unomi.graphql.fetchers.event.FindEventsConnectionDataFetcher;
+import org.apache.unomi.graphql.fetchers.list.GetListDataFetcher;
+import org.apache.unomi.graphql.fetchers.list.ListConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.FindProfilesConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.ProfileDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.PropertiesConnectionDataFetcher;
@@ -34,6 +36,7 @@ import org.apache.unomi.graphql.fetchers.segment.FindSegmentsConnectionDataFetch
 import org.apache.unomi.graphql.fetchers.segment.SegmentDataFetcher;
 import org.apache.unomi.graphql.fetchers.segment.UnomiSegmentDataFetcher;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
+import org.apache.unomi.graphql.types.input.CDPListFilterInput;
 import org.apache.unomi.graphql.types.input.CDPOrderByInput;
 import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
@@ -41,6 +44,8 @@ import org.apache.unomi.graphql.types.input.CDPSegmentFilterInput;
 import org.apache.unomi.graphql.types.input.CDPTopicFilterInput;
 import org.apache.unomi.graphql.types.output.CDPEventConnection;
 import org.apache.unomi.graphql.types.output.CDPEventInterface;
+import org.apache.unomi.graphql.types.output.CDPList;
+import org.apache.unomi.graphql.types.output.CDPListConnection;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.CDPProfileConnection;
 import org.apache.unomi.graphql.types.output.CDPPropertyConnection;
@@ -152,6 +157,25 @@ public class CDPQuery {
     @GraphQLField
     public List<CDPSource> getSources(final DataFetchingEnvironment environment) throws Exception {
         return new SourceDataFetcher().get(environment);
+    }
+
+    @GraphQLField
+    public CDPList getList(
+            final @GraphQLID @GraphQLName("listID") String listId,
+            final DataFetchingEnvironment environment) throws Exception {
+        return new GetListDataFetcher(listId).get(environment);
+    }
+
+    @GraphQLField
+    public CDPListConnection findLists(
+            final @GraphQLName("filter") CDPListFilterInput filterInput,
+            final @GraphQLName("orderBy") List<CDPOrderByInput> orderByInput,
+            final @GraphQLName("first") Integer first,
+            final @GraphQLName("after") String after,
+            final @GraphQLName("last") Integer last,
+            final @GraphQLName("before") String before,
+            final DataFetchingEnvironment environment) throws Exception {
+        return new ListConnectionDataFetcher(filterInput, orderByInput).get(environment);
     }
 
 }

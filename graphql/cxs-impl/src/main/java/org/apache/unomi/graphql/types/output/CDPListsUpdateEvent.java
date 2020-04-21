@@ -20,8 +20,15 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.query.Query;
+import org.apache.unomi.graphql.condition.ConditionFactory;
+import org.apache.unomi.graphql.converters.UserListConverter;
+import org.apache.unomi.graphql.services.ServiceManager;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.apache.unomi.graphql.types.output.CDPListsUpdateEvent.TYPE_NAME;
 
@@ -43,12 +50,39 @@ public class CDPListsUpdateEvent implements CDPEventInterface {
 
     @GraphQLField
     public List<CDPList> joinLists(final DataFetchingEnvironment environment) {
-        return null;
+        return createResult("joinLists", environment);
     }
 
     @GraphQLField
     public List<CDPList> leaveLists(final DataFetchingEnvironment environment) {
-        return null;
+        return createResult("leaveLists", environment);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<CDPList> createResult(final String propertyName, final DataFetchingEnvironment environment) {
+        final List<String> listIds = (List<String>) getProperty(propertyName);
+
+        if (listIds == null || listIds.isEmpty()) {
+            return null;
+        }
+
+        final ServiceManager serviceManager = environment.getContext();
+
+        final ConditionFactory factory = new ConditionFactory("userListPropertyCondition", environment);
+
+        final Query query = new Query();
+        query.setCondition(factory.propertiesCondition("itemId", "in", listIds));
+
+        final PartialList<Metadata> partialList = serviceManager.getUserListServiceExt().getListMetadatas(query);
+
+        if (partialList == null || partialList.getList() == null) {
+            return null;
+        }
+
+        return partialList.getList().stream()
+                .map(UserListConverter::convertToUnomiList)
+                .map(CDPList::new)
+                .collect(Collectors.toList());
     }
 
 }

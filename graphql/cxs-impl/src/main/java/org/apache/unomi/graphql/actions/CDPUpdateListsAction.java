@@ -21,18 +21,19 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.graphql.utils.EventBuilder;
 
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A rule action that can add a profile to a list
  */
 public class CDPUpdateListsAction implements ActionExecutor {
 
-    EventService eventService;
+    private EventService eventService;
 
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
@@ -43,32 +44,31 @@ public class CDPUpdateListsAction implements ActionExecutor {
         List<String> joinLists = (List<String>) event.getProperty("joinLists");
         List<String> leaveLists = (List<String>) event.getProperty("leaveLists");
 
-        boolean listsChanged = false;
         final Profile profile = event.getProfile();
         List<String> existingLists = (List<String>) profile.getSystemProperties().get("lists");
         if (existingLists == null) {
             existingLists = new ArrayList<>();
         }
         if (!existingLists.isEmpty() && leaveLists != null && !leaveLists.isEmpty()) {
-            listsChanged = existingLists.removeAll(leaveLists);
+            existingLists.removeAll(leaveLists);
         }
         if (joinLists != null && !joinLists.isEmpty()) {
             for (String newListIdentifier : joinLists) {
                 if (!existingLists.contains(newListIdentifier)) {
                     existingLists.add(newListIdentifier);
-                    listsChanged = true;
                 }
             }
         }
 
-        if (listsChanged) {
-            profile.getSystemProperties().put("lists", existingLists);
-            Event profileUpdated = new Event("profileUpdated", null, profile, event.getScope(), null, profile, new Date());
-            profileUpdated.setPersistent(false);
-            eventService.send(profileUpdated);
-            return EventService.PROFILE_UPDATED;
-        } else {
-            return EventService.NO_CHANGE;
-        }
+        final Map<String, Object> propertyToUpdate = new HashMap<>();
+        propertyToUpdate.put("systemProperties.lists", existingLists);
+
+        final Event updatePropertiesEvent = EventBuilder.create("updateProperties", profile)
+                .setPropertiesToUpdate(propertyToUpdate)
+                .setPersistent(false)
+                .build();
+
+        return eventService.send(updatePropertiesEvent);
     }
+
 }
