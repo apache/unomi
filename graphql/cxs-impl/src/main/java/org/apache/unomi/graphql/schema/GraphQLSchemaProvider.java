@@ -337,11 +337,15 @@ public class GraphQLSchemaProvider {
 
     private GraphQLType convert(final String type) {
         switch (type) {
+            case "id":
+                return Scalars.GraphQLID;
             case "integer":
                 return Scalars.GraphQLInt;
             case "float":
                 return Scalars.GraphQLFloat;
             case "set":
+                return null; // TODO
+            case "geopoint":
                 return null; // TODO
             case "date":
                 return DateTimeFunction.DATE_TIME_SCALAR;

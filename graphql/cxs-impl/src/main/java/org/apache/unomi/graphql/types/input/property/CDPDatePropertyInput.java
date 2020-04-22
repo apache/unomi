@@ -14,37 +14,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.propertytypes;
+package org.apache.unomi.graphql.types.input.property;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLPrettify;
+import org.apache.unomi.api.PropertyType;
 
 import java.util.List;
 
-@GraphQLName("CDP_SetProperty")
-public class CDPSetPropertyType extends CDPPropertyType {
+@GraphQLName("CDP_DatePropertyInput")
+public class CDPDatePropertyInput extends BaseCDPPropertyInput {
 
-    private List<CDPPropertyType> properties;
+    private String defaultValue;
 
-    public CDPSetPropertyType(@GraphQLName("name") String name,
-                              @GraphQLName("minOccurrences") Integer minOccurrences,
-                              @GraphQLName("maxOccurrences") Integer maxOccurrences,
-                              @GraphQLName("tags") List<String> tags,
-                              @GraphQLName("properties") List<CDPPropertyType> properties) {
+    public CDPDatePropertyInput(final @GraphQLName("name") String name,
+                                final @GraphQLName("minOccurrences") Integer minOccurrences,
+                                final @GraphQLName("maxOccurrences") Integer maxOccurrences,
+                                final @GraphQLName("tags") List<String> tags,
+                                final @GraphQLName("defaultValue") String defaultValue) {
         super(name, minOccurrences, maxOccurrences, tags);
-        this.properties = properties;
+        this.defaultValue = defaultValue;
     }
 
     @GraphQLField
     @GraphQLPrettify
-    public List<CDPPropertyType> getProperties() {
-        return properties;
+    public String getDefaultValue() {
+        return defaultValue;
     }
 
     @Override
     public String getCDPPropertyType() {
-        return "set";
+        return "date";
     }
 
+    @Override
+    public void updateType(final PropertyType type) {
+        if (type == null) {
+            return;
+        }
+        super.updateType(type);
+        type.setDefaultValue(defaultValue);
+    }
 }

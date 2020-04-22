@@ -14,37 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.propertytypes;
+package org.apache.unomi.graphql.types.output.property;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLPrettify;
+import org.apache.unomi.api.PropertyType;
+import org.apache.unomi.graphql.types.output.CDPPropertyInterface;
 
-import java.util.List;
+import static org.apache.unomi.graphql.types.output.property.CDPIdentifierPropertyType.TYPE_NAME;
 
-@GraphQLName("CDP_GeoPointProperty")
-public class CDPGeoPointPropertyType extends CDPPropertyType {
+@GraphQLName(TYPE_NAME)
+public class CDPIdentifierPropertyType extends CDPPropertyType implements CDPPropertyInterface {
 
-    private String defaultValue;
+    public static final String TYPE_NAME = "CDP_IdentifierProperty";
 
-    public CDPGeoPointPropertyType(@GraphQLName("name") String name,
-                                   @GraphQLName("minOccurrences") Integer minOccurrences,
-                                   @GraphQLName("maxOccurrences") Integer maxOccurrences,
-                                   @GraphQLName("tags") List<String> tags,
-                                   @GraphQLName("defaultValue") String defaultValue) {
-        super(name, minOccurrences, maxOccurrences, tags);
-        this.defaultValue = defaultValue;
+    public static final String UNOMI_TYPE = "id";
+
+    public CDPIdentifierPropertyType(final PropertyType type) {
+        super(type);
     }
 
     @GraphQLField
-    @GraphQLPrettify
-    public String getDefaultValue() {
-        return defaultValue;
+    public String regexp() {
+        //TODO when unomi supports this type
+        return null;
     }
 
-    @Override
-    public String getCDPPropertyType() {
-        return "string";
+    @GraphQLField
+    public String defaultValue() {
+        return type != null ? type.getDefaultValue() : null;
     }
-
 }

@@ -27,6 +27,14 @@ import org.apache.unomi.graphql.types.output.CDPListsUpdateEvent;
 import org.apache.unomi.graphql.types.output.CDPProfileUpdateEvent;
 import org.apache.unomi.graphql.types.output.CDPSessionEvent;
 import org.apache.unomi.graphql.types.output.UnomiEvent;
+import org.apache.unomi.graphql.types.output.property.CDPBooleanPropertyType;
+import org.apache.unomi.graphql.types.output.property.CDPDatePropertyType;
+import org.apache.unomi.graphql.types.output.property.CDPFloatPropertyType;
+import org.apache.unomi.graphql.types.output.property.CDPGeoPointPropertyType;
+import org.apache.unomi.graphql.types.output.property.CDPIdentifierPropertyType;
+import org.apache.unomi.graphql.types.output.property.CDPIntPropertyType;
+import org.apache.unomi.graphql.types.output.property.CDPSetPropertyType;
+import org.apache.unomi.graphql.types.output.property.CDPStringPropertyType;
 import org.osgi.service.component.annotations.Component;
 
 import java.util.HashSet;
@@ -45,6 +53,15 @@ public class CDPDefaultGraphQLProvider
         additionalTypes.add(CDPConsentUpdateEvent.class);
         additionalTypes.add(CDPListsUpdateEvent.class);
         additionalTypes.add(UnomiEvent.class);
+
+        additionalTypes.add(CDPBooleanPropertyType.class);
+        additionalTypes.add(CDPDatePropertyType.class);
+        additionalTypes.add(CDPFloatPropertyType.class);
+        additionalTypes.add(CDPGeoPointPropertyType.class);
+        additionalTypes.add(CDPIdentifierPropertyType.class);
+        additionalTypes.add(CDPIntPropertyType.class);
+        additionalTypes.add(CDPSetPropertyType.class);
+        additionalTypes.add(CDPStringPropertyType.class);
 
         return additionalTypes;
     }

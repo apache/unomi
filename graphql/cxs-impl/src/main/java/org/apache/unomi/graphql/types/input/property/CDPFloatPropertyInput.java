@@ -14,28 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.propertytypes;
+package org.apache.unomi.graphql.types.input.property;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLPrettify;
+import org.apache.unomi.api.PropertyType;
 
 import java.util.List;
 
-@GraphQLName("CDP_FloatProperty")
-public class CDPFloatPropertyType extends CDPPropertyType {
+@GraphQLName("CDP_FloatPropertyInput")
+public class CDPFloatPropertyInput extends BaseCDPPropertyInput {
 
     private Double minValue;
     private Double maxValue;
     private Double defaultValue;
 
-    public CDPFloatPropertyType(@GraphQLName("name") String name,
-                                @GraphQLName("minOccurrences") Integer minOccurrences,
-                                @GraphQLName("maxOccurrences") Integer maxOccurrences,
-                                @GraphQLName("tags") List<String> tags,
-                                @GraphQLName("minValue") Double minValue,
-                                @GraphQLName("maxValue") Double maxValue,
-                                @GraphQLName("defaultValue") Double defaultValue) {
+    public CDPFloatPropertyInput(@GraphQLName("name") String name,
+                                 @GraphQLName("minOccurrences") Integer minOccurrences,
+                                 @GraphQLName("maxOccurrences") Integer maxOccurrences,
+                                 @GraphQLName("tags") List<String> tags,
+                                 @GraphQLName("minValue") Double minValue,
+                                 @GraphQLName("maxValue") Double maxValue,
+                                 @GraphQLName("defaultValue") Double defaultValue) {
         super(name, minOccurrences, maxOccurrences, tags);
         this.minValue = minValue;
         this.maxValue = maxValue;
@@ -65,4 +66,18 @@ public class CDPFloatPropertyType extends CDPPropertyType {
         return "float";
     }
 
+    @Override
+    public void updateType(final PropertyType type) {
+        if (type == null) {
+            return;
+        }
+        super.updateType(type);
+        type.setDefaultValue(defaultValue != null ? defaultValue.toString() : null);
+        if (minValue != null || maxValue != null) {
+            final Double to = maxValue != null && (minValue == null || maxValue >= minValue) ? maxValue : null;
+            updateDefaultNumericRange(type, minValue, to);
+        } else {
+            deleteDefaultNumericRange(type);
+        }
+    }
 }

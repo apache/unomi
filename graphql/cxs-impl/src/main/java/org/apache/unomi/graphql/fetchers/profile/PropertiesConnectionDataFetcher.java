@@ -22,7 +22,6 @@ import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.graphql.fetchers.BaseConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.ConnectionParams;
-import org.apache.unomi.graphql.propertytypes.CDPPropertyType;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.output.CDPPageInfo;
 import org.apache.unomi.graphql.types.output.CDPPropertyConnection;
@@ -56,7 +55,7 @@ public class PropertiesConnectionDataFetcher extends BaseConnectionDataFetcher<C
         final List<CDPPropertyEdge> edges = new ArrayList<>(properties)
                 .subList(startIndex, lastIndex)
                 .stream()
-                .map(entry -> new CDPPropertyEdge(new CDPPropertyType(entry), entry.getItemId()))
+                .map(CDPPropertyEdge::new)
                 .collect(Collectors.toList());
         return new CDPPropertyConnection(edges, cdpPageInfo);
     }

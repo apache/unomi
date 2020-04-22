@@ -14,35 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
+package org.apache.unomi.graphql.types.output.property;
 
+import com.google.common.base.Strings;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLNonNull;
-import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.api.PropertyType;
+import org.apache.unomi.graphql.types.output.CDPPropertyInterface;
 
-@GraphQLName("CDP_ProfileEdge")
-public class CDPProfileEdge {
+import static org.apache.unomi.graphql.types.output.property.CDPBooleanPropertyType.TYPE_NAME;
 
-    private final Profile profile;
+@GraphQLName(TYPE_NAME)
+public class CDPBooleanPropertyType extends CDPPropertyType implements CDPPropertyInterface {
 
-    public CDPProfileEdge(final Profile profile) {
-        this.profile = profile;
+    public static final String TYPE_NAME = "CDP_BooleanProperty";
+
+    public static final String UNOMI_TYPE = "boolean";
+
+    public CDPBooleanPropertyType(PropertyType type) {
+        super(type);
     }
 
     @GraphQLField
-    @GraphQLNonNull
-    public String cursor(final DataFetchingEnvironment environment) {
-        return profile != null ? profile.getItemId() : null;
+    public Boolean defaultValue() {
+        final String defaultValue = type.getDefaultValue();
+        return !Strings.isNullOrEmpty(defaultValue) ? Boolean.valueOf(defaultValue) : null;
     }
-
-    @GraphQLField
-    public CDPProfileInterface node(final DataFetchingEnvironment environment) {
-        final ServiceManager serviceManager = environment.getContext();
-
-        return serviceManager.getProfileInterfaceRegister().getProfile(profile);
-    }
-
 }
