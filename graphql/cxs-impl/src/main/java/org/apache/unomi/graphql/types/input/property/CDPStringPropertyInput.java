@@ -14,26 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.propertytypes;
+package org.apache.unomi.graphql.types.input.property;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLPrettify;
+import org.apache.unomi.api.PropertyType;
 
 import java.util.List;
 
-@GraphQLName("CDP_StringProperty")
-public class CDPStringPropertyType extends CDPPropertyType {
+@GraphQLName("CDP_StringPropertyInput")
+public class CDPStringPropertyInput extends BaseCDPPropertyInput {
 
     private String regexp;
     private String defaultValue;
 
-    public CDPStringPropertyType(@GraphQLName("name") String name,
-                                 @GraphQLName("minOccurrences") Integer minOccurrences,
-                                 @GraphQLName("maxOccurrences") Integer maxOccurrences,
-                                 @GraphQLName("tags") List<String> tags,
-                                 @GraphQLName("regexp") String regexp,
-                                 @GraphQLName("defaultValue") String defaultValue) {
+    public CDPStringPropertyInput(@GraphQLName("name") String name,
+                                  @GraphQLName("minOccurrences") Integer minOccurrences,
+                                  @GraphQLName("maxOccurrences") Integer maxOccurrences,
+                                  @GraphQLName("tags") List<String> tags,
+                                  @GraphQLName("regexp") String regexp,
+                                  @GraphQLName("defaultValue") String defaultValue) {
         super(name, minOccurrences, maxOccurrences, tags);
         this.regexp = regexp;
         this.defaultValue = defaultValue;
@@ -51,4 +52,18 @@ public class CDPStringPropertyType extends CDPPropertyType {
         return defaultValue;
     }
 
+    @Override
+    public String getCDPPropertyType() {
+        return "string";
+    }
+
+    @Override
+    public void updateType(final PropertyType type) {
+        if (type == null) {
+            return;
+        }
+        super.updateType(type);
+        type.setDefaultValue(defaultValue);
+        //TODO save regexp
+    }
 }

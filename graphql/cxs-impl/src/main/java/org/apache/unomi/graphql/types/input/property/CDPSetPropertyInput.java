@@ -14,42 +14,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.propertytypes;
+package org.apache.unomi.graphql.types.input.property;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLPrettify;
+import org.apache.unomi.graphql.types.input.CDPPropertyInput;
 
 import java.util.List;
 
-@GraphQLName("CDP_BooleanProperty")
-public class CDPBooleanPropertyType extends CDPPropertyType {
+@GraphQLName("CDP_SetPropertyInput")
+public class CDPSetPropertyInput extends BaseCDPPropertyInput {
 
-    private Boolean defaultValue;
+    private List<CDPPropertyInput> properties;
 
-    public CDPBooleanPropertyType(@GraphQLName("name") String name,
-                                  @GraphQLName("minOccurrences") Integer minOccurrences,
-                                  @GraphQLName("maxOccurrences") Integer maxOccurrences,
-                                  @GraphQLName("tags") List<String> tags,
-                                  @GraphQLName("defaultValue") Boolean defaultValue) {
+    public CDPSetPropertyInput(@GraphQLName("name") String name,
+                               @GraphQLName("minOccurrences") Integer minOccurrences,
+                               @GraphQLName("maxOccurrences") Integer maxOccurrences,
+                               @GraphQLName("tags") List<String> tags,
+                               @GraphQLName("properties") List<CDPPropertyInput> properties) {
         super(name, minOccurrences, maxOccurrences, tags);
-        this.defaultValue = defaultValue;
-    }
-
-    public CDPBooleanPropertyType(CDPPropertyType input, Boolean defaultValue) {
-        super(input);
-        this.defaultValue = defaultValue;
+        this.properties = properties;
     }
 
     @GraphQLField
     @GraphQLPrettify
-    public Boolean isDefaultValue() {
-        return defaultValue;
+    public List<CDPPropertyInput> getProperties() {
+        return properties;
     }
 
     @Override
     public String getCDPPropertyType() {
-        return "boolean";
+        return "set";
     }
 
 }

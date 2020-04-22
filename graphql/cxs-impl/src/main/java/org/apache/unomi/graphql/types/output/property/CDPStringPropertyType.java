@@ -14,35 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
+package org.apache.unomi.graphql.types.output.property;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLNonNull;
-import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.api.PropertyType;
+import org.apache.unomi.graphql.types.output.CDPPropertyInterface;
 
-@GraphQLName("CDP_ProfileEdge")
-public class CDPProfileEdge {
+import static org.apache.unomi.graphql.types.output.property.CDPStringPropertyType.TYPE_NAME;
 
-    private final Profile profile;
+@GraphQLName(TYPE_NAME)
+public class CDPStringPropertyType extends CDPPropertyType implements CDPPropertyInterface {
 
-    public CDPProfileEdge(final Profile profile) {
-        this.profile = profile;
+    public static final String TYPE_NAME = "CDP_StringProperty";
+
+    public static final String UNOMI_TYPE = "string";
+
+    public CDPStringPropertyType(final PropertyType type) {
+        super(type);
     }
 
     @GraphQLField
-    @GraphQLNonNull
-    public String cursor(final DataFetchingEnvironment environment) {
-        return profile != null ? profile.getItemId() : null;
+    public String regexp() {
+        //TODO when unomi supports this type
+        return null;
     }
 
     @GraphQLField
-    public CDPProfileInterface node(final DataFetchingEnvironment environment) {
-        final ServiceManager serviceManager = environment.getContext();
-
-        return serviceManager.getProfileInterfaceRegister().getProfile(profile);
+    public String defaultValue() {
+        return type != null ? type.getDefaultValue() : null;
     }
-
 }

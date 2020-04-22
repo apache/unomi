@@ -14,18 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql;
+package org.apache.unomi.graphql.types.resolvers;
 
-public interface CDPGraphQLConstants {
-
-    String SEGMENT_ARGUMENT_NAME = "segment";
-
-    String PERSONA_ARGUMENT_NAME = "persona";
-
-    String EVENT_PROCESSOR_CLASS = "eventProcessorClass";
-
-    String CDP_LIST_UPDATE_EVENT_NAME = "cdp_listsUpdateEvent";
-
-    String DEFAULT_RANGE_NAME = "defaultRange";
+public class CDPPropertyInterfaceResolver extends BaseTypeResolver {
 
 }

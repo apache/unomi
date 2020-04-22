@@ -22,7 +22,8 @@ import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.graphql.schema.CDPEventInterfaceRegister;
-import org.apache.unomi.graphql.schema.CDPProfilesInterfaceRegister;
+import org.apache.unomi.graphql.schema.CDPProfileInterfaceRegister;
+import org.apache.unomi.graphql.schema.CDPPropertyInterfaceRegister;
 import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
 import org.apache.unomi.api.services.UserListService;
 import org.osgi.service.component.annotations.Component;
@@ -40,7 +41,8 @@ public class ServiceManager {
     private UserListService userListService;
     private org.apache.unomi.services.UserListService userListServiceExt;
     private CDPEventInterfaceRegister eventInterfaceRegister;
-    private CDPProfilesInterfaceRegister profilesInterfaceRegister;
+    private CDPProfileInterfaceRegister profileInterfaceRegister;
+    private CDPPropertyInterfaceRegister propertyInterfaceRegister;
 
     @Reference
     public void setProfileService(ProfileService profileService) {
@@ -83,8 +85,13 @@ public class ServiceManager {
     }
 
     @Reference
-    public void setProfilesInterfaceRegister(CDPProfilesInterfaceRegister profilesInterfaceRegister) {
-        this.profilesInterfaceRegister = profilesInterfaceRegister;
+    public void setProfileInterfaceRegister(CDPProfileInterfaceRegister profileInterfaceRegister) {
+        this.profileInterfaceRegister = profileInterfaceRegister;
+    }
+
+    @Reference
+    public void setPropertyInterfaceRegister(CDPPropertyInterfaceRegister propertyInterfaceRegister) {
+        this.propertyInterfaceRegister = propertyInterfaceRegister;
     }
 
     @Reference
@@ -124,11 +131,15 @@ public class ServiceManager {
         return eventInterfaceRegister;
     }
 
-    public CDPProfilesInterfaceRegister getProfilesInterfaceRegister() {
-        return profilesInterfaceRegister;
+    public CDPProfileInterfaceRegister getProfileInterfaceRegister() {
+        return profileInterfaceRegister;
     }
 
     public org.apache.unomi.services.UserListService getUserListServiceExt() {
         return userListServiceExt;
+    }
+
+    public CDPPropertyInterfaceRegister getPropertyInterfaceRegister() {
+        return propertyInterfaceRegister;
     }
 }

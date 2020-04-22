@@ -19,14 +19,23 @@ package org.apache.unomi.graphql.utils;
 public class ReflectionUtil {
 
     private static final String TYPE_NAME_FIELD = "TYPE_NAME";
+    private static final String UNOMI_TYPE_FIELD = "UNOMI_TYPE";
 
-    public static String getTypeName(final Class clazz) {
+    public static String getStaticField(final Class clazz, final String field) {
         try {
-            return (String) clazz.getField(TYPE_NAME_FIELD).get(null);
+            return (String) clazz.getField(field).get(null);
         } catch (final NoSuchFieldException e) {
             throw new RuntimeException(String.format("Class %s doesn't have a publicly accessible \"TYPE_NAME\" field", clazz.getName()), e);
         } catch (final IllegalAccessException e) {
             throw new RuntimeException(String.format("Error resolving \"TYPE_NAME\" for class %s", clazz.getName()), e);
         }
+    }
+
+    public static String getTypeName(final Class clazz) {
+        return getStaticField(clazz, TYPE_NAME_FIELD);
+    }
+
+    public static String getUnomiType(final Class clazz) {
+        return getStaticField(clazz, UNOMI_TYPE_FIELD);
     }
 }

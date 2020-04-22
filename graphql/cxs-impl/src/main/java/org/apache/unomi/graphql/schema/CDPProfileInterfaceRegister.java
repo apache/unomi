@@ -23,12 +23,12 @@ import org.osgi.service.component.annotations.Component;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-@Component(immediate = true, service = CDPProfilesInterfaceRegister.class)
-public class CDPProfilesInterfaceRegister {
+@Component(immediate = true, service = CDPProfileInterfaceRegister.class)
+public class CDPProfileInterfaceRegister {
 
     private ConcurrentHashMap<String, Class<? extends CDPProfileInterface>> profiles;
 
-    public CDPProfilesInterfaceRegister() {
+    public CDPProfileInterfaceRegister() {
         profiles = new ConcurrentHashMap<>();
     }
 

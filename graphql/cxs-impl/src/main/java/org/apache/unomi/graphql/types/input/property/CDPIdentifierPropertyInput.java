@@ -14,55 +14,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.propertytypes;
+package org.apache.unomi.graphql.types.input.property;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLPrettify;
+import org.apache.unomi.api.PropertyType;
 
 import java.util.List;
 
-@GraphQLName("CDP_IntProperty")
-public class CDPIntPropertyType extends CDPPropertyType {
+@GraphQLName("CDP_IdentifierPropertyInput")
+public class CDPIdentifierPropertyInput extends BaseCDPPropertyInput {
 
-    private Integer minValue;
-    private Integer maxValue;
-    private Integer defaultValue;
+    private String regexp;
+    private String defaultValue;
 
-    public CDPIntPropertyType(@GraphQLName("name") String name,
-                              @GraphQLName("minOccurrences") Integer minOccurrences,
-                              @GraphQLName("maxOccurrences") Integer maxOccurrences,
-                              @GraphQLName("tags") List<String> tags,
-                              @GraphQLName("minValue") Integer minValue,
-                              @GraphQLName("maxValue") Integer maxValue,
-                              @GraphQLName("defaultValue") Integer defaultValue) {
+    public CDPIdentifierPropertyInput(@GraphQLName("name") String name,
+                                      @GraphQLName("minOccurrences") Integer minOccurrences,
+                                      @GraphQLName("maxOccurrences") Integer maxOccurrences,
+                                      @GraphQLName("tags") List<String> tags,
+                                      @GraphQLName("regexp") String regexp,
+                                      @GraphQLName("defaultValue") String defaultValue) {
         super(name, minOccurrences, maxOccurrences, tags);
-        this.minValue = minValue;
-        this.maxValue = maxValue;
+        this.regexp = regexp;
         this.defaultValue = defaultValue;
     }
 
     @GraphQLField
     @GraphQLPrettify
-    public Integer getMinValue() {
-        return minValue;
+    public String getRegexp() {
+        return regexp;
     }
 
     @GraphQLField
     @GraphQLPrettify
-    public Integer getMaxValue() {
-        return maxValue;
-    }
-
-    @GraphQLField
-    @GraphQLPrettify
-    public Integer getDefaultValue() {
+    public String getDefaultValue() {
         return defaultValue;
     }
 
     @Override
     public String getCDPPropertyType() {
-        return "integer";
+        return "id";
     }
 
+    @Override
+    public void updateType(final PropertyType type) {
+        if (type == null) {
+            return;
+        }
+        super.updateType(type);
+        type.setDefaultValue(defaultValue);
+        //TODO save regexp
+    }
 }

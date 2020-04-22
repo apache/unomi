@@ -30,6 +30,15 @@ import org.apache.unomi.graphql.types.output.CDPEventInterface;
 import org.apache.unomi.graphql.types.output.CDPPersona;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.CDPProfileInterface;
+import org.apache.unomi.graphql.types.output.CDPPropertyInterface;
+import org.apache.unomi.graphql.types.output.property.CDPBooleanPropertyType;
+import org.apache.unomi.graphql.types.output.property.CDPDatePropertyType;
+import org.apache.unomi.graphql.types.output.property.CDPFloatPropertyType;
+import org.apache.unomi.graphql.types.output.property.CDPGeoPointPropertyType;
+import org.apache.unomi.graphql.types.output.property.CDPIdentifierPropertyType;
+import org.apache.unomi.graphql.types.output.property.CDPIntPropertyType;
+import org.apache.unomi.graphql.types.output.property.CDPSetPropertyType;
+import org.apache.unomi.graphql.types.output.property.CDPStringPropertyType;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
@@ -74,7 +83,9 @@ public class GraphQLSchemaUpdater {
 
     private CDPEventInterfaceRegister eventInterfaceRegister;
 
-    private CDPProfilesInterfaceRegister profilesInterfaceRegister;
+    private CDPProfileInterfaceRegister profilesInterfaceRegister;
+
+    private CDPPropertyInterfaceRegister propertyInterfaceRegister;
 
     private ScheduledExecutorService executorService;
 
@@ -116,8 +127,13 @@ public class GraphQLSchemaUpdater {
     }
 
     @Reference
-    public void setProfilesInterfaceRegister(CDPProfilesInterfaceRegister profilesInterfaceRegister) {
+    public void setProfilesInterfaceRegister(CDPProfileInterfaceRegister profilesInterfaceRegister) {
         this.profilesInterfaceRegister = profilesInterfaceRegister;
+    }
+
+    @Reference
+    public void setPropertiesInterfaceRegister(CDPPropertyInterfaceRegister propertyInterfaceRegister) {
+        this.propertyInterfaceRegister = propertyInterfaceRegister;
     }
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
@@ -261,6 +277,10 @@ public class GraphQLSchemaUpdater {
 
                 if (CDPProfileInterface.class.isAssignableFrom(additionalType)) {
                     profilesInterfaceRegister.register((Class<? extends CDPProfileInterface>) additionalType);
+                }
+
+                if (CDPPropertyInterface.class.isAssignableFrom(additionalType)) {
+                    propertyInterfaceRegister.register((Class<? extends CDPPropertyInterface>) additionalType);
                 }
             });
         }

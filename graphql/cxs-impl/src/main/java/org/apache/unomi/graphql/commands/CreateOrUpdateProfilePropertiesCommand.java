@@ -16,17 +16,14 @@
  */
 package org.apache.unomi.graphql.commands;
 
-import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.graphql.propertytypes.CDPPropertyType;
+import org.apache.unomi.graphql.types.input.property.BaseCDPPropertyInput;
 import org.apache.unomi.graphql.types.input.CDPPropertyInput;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class CreateOrUpdateProfilePropertiesCommand extends BaseCommand<Boolean> {
@@ -48,56 +45,21 @@ public class CreateOrUpdateProfilePropertiesCommand extends BaseCommand<Boolean>
 
         // TODO handle properties for SET
         properties.forEach(propertyInput -> {
-            final CDPPropertyType cdpPropertyType = propertyInput.getProperty();
+            final BaseCDPPropertyInput cdpPropertyTypeInput = propertyInput.getProperty();
 
-            PropertyType propertyType = profileService.getPropertyType(cdpPropertyType.getName());
-
+            PropertyType propertyType = profileService.getPropertyType(cdpPropertyTypeInput.getName());
             if (propertyType == null) {
-                propertyType = createPropertyType(cdpPropertyType);
-                profileService.setPropertyType(propertyType);
+                propertyType = new PropertyType();
+            } else if (!propertyType.getValueTypeId().equals(cdpPropertyTypeInput.getCDPPropertyType())) {
+                profileService.deletePropertyType(cdpPropertyTypeInput.getName());
             }
 
-            if (!propertyType.getValueTypeId().equals(cdpPropertyType.getCDPPropertyType())) {
-                profileService.deletePropertyType(cdpPropertyType.getName());
-
-                propertyType = createPropertyType(cdpPropertyType);
-                profileService.setPropertyType(propertyType);
-            }
+            cdpPropertyTypeInput.updateType(propertyType);
+            profileService.setPropertyType(propertyType);
         });
-
         serviceManager.getGraphQLSchemaUpdater().updateSchema();
 
         return true;
-    }
-
-    private PropertyType createPropertyType(final CDPPropertyType cdpPropertyType) {
-        final PropertyType propertyType = new PropertyType();
-
-        propertyType.setTarget("profiles");
-        propertyType.setItemId(cdpPropertyType.getName());
-        propertyType.setValueTypeId(cdpPropertyType.getCDPPropertyType());
-
-        final Metadata metadata = createMetadata(cdpPropertyType);
-        propertyType.setMetadata(metadata);
-
-        return propertyType;
-    }
-
-    private Metadata createMetadata(final CDPPropertyType property) {
-        final Metadata metadata = new Metadata();
-
-        metadata.setId(property.getName());
-        metadata.setName(property.getName());
-
-        final Set<String> systemTags = new HashSet<>();
-
-        systemTags.add("profileProperties");
-        systemTags.add("properties");
-        systemTags.add("systemProfileProperties");
-
-        metadata.setSystemTags(systemTags);
-
-        return metadata;
     }
 
     public static class Builder extends BaseCommand.Builder<Builder> {
@@ -117,7 +79,7 @@ public class CreateOrUpdateProfilePropertiesCommand extends BaseCommand<Boolean>
             }
 
             properties.forEach(prop -> {
-                final List<CDPPropertyType> properties = Arrays.asList(
+                final List<BaseCDPPropertyInput> properties = Arrays.asList(
                         prop.getIdentifierPropertyTypeInput(),
                         prop.getStringPropertyTypeInput(),
                         prop.getIntegerPropertyTypeInput(),
@@ -127,7 +89,7 @@ public class CreateOrUpdateProfilePropertiesCommand extends BaseCommand<Boolean>
                         prop.getGeoPointPropertyTypeInput(),
                         prop.getSetPropertyTypeInput());
 
-                final List<CDPPropertyType> filteredProperties = properties.stream().filter(Objects::nonNull).collect(Collectors.toList());
+                final List<BaseCDPPropertyInput> filteredProperties = properties.stream().filter(Objects::nonNull).collect(Collectors.toList());
 
                 if (filteredProperties.size() != 1) {
                     throw new IllegalArgumentException("Only one field is allowed to have a value corresponding to the declared property value type.  All other value fields must be null.");

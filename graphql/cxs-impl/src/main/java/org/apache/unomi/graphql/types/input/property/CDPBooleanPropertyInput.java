@@ -14,40 +14,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.propertytypes;
+package org.apache.unomi.graphql.types.input.property;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLPrettify;
+import org.apache.unomi.api.PropertyType;
 
 import java.util.List;
 
-@GraphQLName("CDP_IdentifierProperty")
-public class CDPIdentifierPropertyType extends CDPPropertyType {
+@GraphQLName("CDP_BooleanPropertyInput")
+public class CDPBooleanPropertyInput extends BaseCDPPropertyInput {
 
-    private String regexp;
-    private String defaultValue;
+    private Boolean defaultValue;
 
-    public CDPIdentifierPropertyType(@GraphQLName("name") String name,
-                                     @GraphQLName("minOccurrences") Integer minOccurrences,
-                                     @GraphQLName("maxOccurrences") Integer maxOccurrences,
-                                     @GraphQLName("tags") List<String> tags,
-                                     @GraphQLName("regexp") String regexp,
-                                     @GraphQLName("defaultValue") String defaultValue) {
+    public CDPBooleanPropertyInput(@GraphQLName("name") String name,
+                                   @GraphQLName("minOccurrences") Integer minOccurrences,
+                                   @GraphQLName("maxOccurrences") Integer maxOccurrences,
+                                   @GraphQLName("tags") List<String> tags,
+                                   @GraphQLName("defaultValue") Boolean defaultValue) {
         super(name, minOccurrences, maxOccurrences, tags);
-        this.regexp = regexp;
         this.defaultValue = defaultValue;
     }
 
     @GraphQLField
     @GraphQLPrettify
-    public String getRegexp() {
-        return regexp;
+    public Boolean isDefaultValue() {
+        return defaultValue;
     }
 
-    @GraphQLField
-    @GraphQLPrettify
-    public String getDefaultValue() {
-        return defaultValue;
+    @Override
+    public String getCDPPropertyType() {
+        return "boolean";
+    }
+
+    @Override
+    public void updateType(final PropertyType type) {
+        if (type == null) {
+            return;
+        }
+        super.updateType(type);
+        type.setDefaultValue(defaultValue != null ? defaultValue.toString() : null);
     }
 }
