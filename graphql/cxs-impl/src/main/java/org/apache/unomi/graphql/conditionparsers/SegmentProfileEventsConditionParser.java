@@ -19,6 +19,7 @@ package org.apache.unomi.graphql.conditionparsers;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.graphql.utils.DateUtils;
 
+import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -83,19 +84,28 @@ public class SegmentProfileEventsConditionParser {
     private Map<String, Object> processProfileEventProperties(final Condition condition) {
         final Map<String, Object> fieldsMap = new LinkedHashMap<>();
 
-        ((List<Condition>) condition.getParameter("subConditions")).forEach(subCondition -> {
-            if (IS_BOOLEAN_CONDITION_TYPE.test(subCondition)) {
-                final List<Map<String, Object>> conditionList = ((List<Condition>) subCondition.getParameter("subConditions"))
-                        .stream()
-                        .map(this::processProfileEventProperties)
-                        .collect(Collectors.toList());
+        if (IS_BOOLEAN_CONDITION_TYPE.test(condition)) {
+            ((List<Condition>) condition.getParameter("subConditions")).forEach(subCondition -> {
+                if (IS_BOOLEAN_CONDITION_TYPE.test(subCondition)) {
+                    final List<Map<String, Object>> conditionList = ((List<Condition>) subCondition.getParameter("subConditions"))
+                            .stream()
+                            .map(this::processProfileEventProperties)
+                            .collect(Collectors.toList());
 
-                fieldsMap.put(subCondition.getParameter("operator").toString(), conditionList);
-            } else {
-                final Map<String, Object> fieldAsTuple = createProfileEventPropertyField(subCondition);
+                    fieldsMap.put(subCondition.getParameter("operator").toString(), conditionList);
+                } else {
+                    final Map<String, Object> fieldAsTuple = createProfileEventPropertyField(subCondition);
+                    if (fieldAsTuple.size() == 2) {
+                        fieldsMap.put(fieldAsTuple.get("fieldName").toString(), fieldAsTuple.get("fieldValue"));
+                    }
+                }
+            });
+        } else {
+            final Map<String, Object> fieldAsTuple = createProfileEventPropertyField(condition);
+            if (fieldAsTuple.size() == 2) {
                 fieldsMap.put(fieldAsTuple.get("fieldName").toString(), fieldAsTuple.get("fieldValue"));
             }
-        });
+        }
 
         return fieldsMap;
     }
@@ -117,7 +127,9 @@ public class SegmentProfileEventsConditionParser {
                 tuple.put("fieldName", "cdp_timestamp_gte");
             }
 
-            tuple.put("fieldValue", DateUtils.offsetDateTimeFromMap((Map<String, Object>) condition.getParameter("propertyValueDate")).toString());
+            final OffsetDateTime fieldValue = DateUtils.offsetDateTimeFromMap((Map<String, Object>) condition.getParameter("propertyValueDate"));
+
+            tuple.put("fieldValue", fieldValue != null ? fieldValue.toString() : null);
         } else {
             if ("source.itemId".equals(condition.getParameter("propertyName").toString())) {
                 tuple.put("fieldName", "cdp_sourceID_equals");
@@ -125,6 +137,8 @@ public class SegmentProfileEventsConditionParser {
                 tuple.put("fieldName", "cdp_profileID_equals");
             } else if ("itemId".equals(condition.getParameter("propertyName").toString())) {
                 tuple.put("fieldName", "id_equals");
+            } else if ("properties.clientId".equals(condition.getParameter("propertyName").toString())) {
+                tuple.put("fieldName", "cdp_clientID_equals");
             }
 
             tuple.put("fieldValue", condition.getParameter("propertyValue"));

@@ -1,0 +1,7 @@
+{
+  "operationName": "getSegment",
+  "variables": {
+    "segmentID": "cdpSegment"
+  },
+  "query": "query getSegment($segmentID: ID) {\n  cdp {\n    getSegment(segmentID: $segmentID) {\n      id\n      name\n      filter\n    }\n  }\n}\n"
+}

@@ -14,31 +14,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
+package org.apache.unomi.graphql.providers.sample;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.graphql.types.input.CDPEventProcessor;
 
 import java.util.LinkedHashMap;
-import java.util.Map;
 
-@GraphQLName("CDP_EventProperties")
-public class CDPEventProperties {
+import static org.apache.unomi.graphql.providers.sample.MyEventInput.TYPE_NAME;
+
+@GraphQLName(TYPE_NAME)
+public class MyEventInput implements CDPEventProcessor {
+
+    public static final String TYPE_NAME = "MY_EventInput";
+
     @GraphQLField
-    public int nbProperties;
+    private String name;
 
-    Map<String, Object> properties;
-
-    public Map<String, Object> getProperties() {
-        return properties;
+    public MyEventInput(final @GraphQLName("name") String name) {
+        this.name = name;
     }
 
-    public CDPEventProperties() {
-        this(new LinkedHashMap<>());
+    public String getName() {
+        return name;
     }
 
-    public CDPEventProperties(Map<String, Object> properties) {
-        this.properties = properties;
-        nbProperties = properties != null ? properties.size() : 0;
+    @Override
+    public Event buildEvent(LinkedHashMap<String, Object> eventInputAsMap, DataFetchingEnvironment environment) {
+        return new Event();
     }
+
+    @Override
+    public String getFieldName() {
+        return "my_event";
+    }
+
 }

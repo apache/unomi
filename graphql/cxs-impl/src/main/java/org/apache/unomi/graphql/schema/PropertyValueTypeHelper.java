@@ -47,7 +47,7 @@ public class PropertyValueTypeHelper {
         return getPropertyValueParameter(fieldType);
     }
 
-    private static String getPropertyValueParameter(final GraphQLType fieldType) {
+    public static String getPropertyValueParameter(final GraphQLType fieldType) {
         if (!(fieldType instanceof GraphQLScalarType)) {
             return "propertyValue";
         }

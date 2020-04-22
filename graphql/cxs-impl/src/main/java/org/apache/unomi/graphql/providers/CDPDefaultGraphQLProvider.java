@@ -20,7 +20,7 @@ import graphql.annotations.processor.typeFunctions.TypeFunction;
 import org.apache.unomi.graphql.function.DateFunction;
 import org.apache.unomi.graphql.function.DateTimeFunction;
 import org.apache.unomi.graphql.function.JSONFunction;
-import org.apache.unomi.graphql.types.input.CDPEventProcessor;
+import org.apache.unomi.graphql.types.input.CDPProfileUpdateEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileUpdateEventInput;
 import org.apache.unomi.graphql.types.output.CDPConsentUpdateEvent;
 import org.apache.unomi.graphql.types.output.CDPListsUpdateEvent;
@@ -42,10 +42,10 @@ import java.util.Set;
 
 @Component
 public class CDPDefaultGraphQLProvider
-        implements GraphQLAdditionalTypesProvider, GraphQLTypeFunctionProvider, GraphQLProcessEventsProvider {
+        implements GraphQLAdditionalTypesProvider, GraphQLTypeFunctionProvider {
 
     @Override
-    public Set<Class<?>> getAdditionalTypes() {
+    public Set<Class<?>> getAdditionalOutputTypes() {
         final Set<Class<?>> additionalTypes = new HashSet<>();
 
         additionalTypes.add(CDPSessionEvent.class);
@@ -67,6 +67,16 @@ public class CDPDefaultGraphQLProvider
     }
 
     @Override
+    public Set<Class<?>> getAdditionalInputTypes() {
+        final Set<Class<?>> additionalTypes = new HashSet<>();
+
+        additionalTypes.add(CDPProfileUpdateEventInput.class);
+        additionalTypes.add(CDPProfileUpdateEventFilterInput.class);
+
+        return additionalTypes;
+    }
+
+    @Override
     public Set<TypeFunction> getTypeFunctions() {
         final Set<TypeFunction> typeFunctions = new HashSet<>();
 
@@ -75,15 +85,6 @@ public class CDPDefaultGraphQLProvider
         typeFunctions.add(new JSONFunction());
 
         return typeFunctions;
-    }
-
-    @Override
-    public Set<Class<? extends CDPEventProcessor>> getProcessEvents() {
-        final Set<Class<? extends CDPEventProcessor>> eventProcessors = new HashSet<>();
-
-        eventProcessors.add(CDPProfileUpdateEventInput.class);
-
-        return eventProcessors;
     }
 
 }

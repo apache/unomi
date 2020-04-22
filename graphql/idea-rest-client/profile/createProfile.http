@@ -29,9 +29,9 @@ Content-Type: application/json
     "phoneNumber": null,
     "birthDay": null,
     "interests": {
-      "interestName1": 10,
-      "interestName2": 5,
-      "interestName3": 7
+      "interestName1": 1.0,
+      "interestName2": 0.5,
+      "interestName3": 0.7
     }
   },
   "systemProperties": {},

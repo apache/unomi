@@ -25,7 +25,7 @@ import java.time.OffsetDateTime;
 import static org.apache.unomi.graphql.types.input.CDPConsentUpdateEventFilterInput.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
-public class CDPConsentUpdateEventFilterInput {
+public class CDPConsentUpdateEventFilterInput implements EventFilterInputMarker {
 
     public static final String TYPE_NAME = "CDP_ConsentUpdateEventFilterInput";
 

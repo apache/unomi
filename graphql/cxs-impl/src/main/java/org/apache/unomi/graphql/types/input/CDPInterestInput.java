@@ -20,18 +20,20 @@ package org.apache.unomi.graphql.types.input;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLNonNull;
 
 @GraphQLName("CDP_InterestInput")
 public class CDPInterestInput {
 
     @GraphQLID
     @GraphQLField
+    @GraphQLNonNull
     private String topic;
 
     @GraphQLField
     private Double score;
 
-    public CDPInterestInput(final @GraphQLID @GraphQLName("topic") String topic,
+    public CDPInterestInput(final @GraphQLID @GraphQLNonNull @GraphQLName("topic") String topic,
                             final @GraphQLName("score") Double score) {
         this.topic = topic;
         this.score = score;

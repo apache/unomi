@@ -24,8 +24,10 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.utils.ConditionBuilder;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -93,11 +95,25 @@ public class ConditionFactory {
         return this.conditionTypesMap.get(typeId);
     }
 
-    public <INPUT> Condition filtersToCondition(final List<INPUT> inputFilters, final Function<INPUT, Condition> function, final String operator) {
-
+    public <INPUT> Condition filtersToCondition(
+            final List<INPUT> inputFilters, final Function<INPUT, Condition> function, final String operator) {
         final List<Condition> subConditions = inputFilters.stream()
                 .map(function)
                 .collect(Collectors.toList());
+
+        return booleanCondition(operator, subConditions);
+    }
+
+    public <INPUT> Condition filtersToCondition(
+            final List<INPUT> inputFilters,
+            final List<Map<String, Object>> filterInputAsMap,
+            final BiFunction<INPUT, Map<String, Object>, Condition> function,
+            final String operator) {
+        final List<Condition> subConditions = new ArrayList<>();
+
+        for (int i = 0; i < inputFilters.size(); i++) {
+            subConditions.add(function.apply(inputFilters.get(i), filterInputAsMap.get(i)));
+        }
 
         return booleanCondition(operator, subConditions);
     }

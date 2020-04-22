@@ -20,11 +20,14 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
-@GraphQLName("CDP_EventFilterInput")
+import static org.apache.unomi.graphql.types.input.CDPEventFilterInput.TYPE_NAME;
+
+@GraphQLName(TYPE_NAME)
 public class CDPEventFilterInput {
+
+    public static final String TYPE_NAME = "CDP_EventFilterInput";
 
     @GraphQLField
     private List<CDPEventFilterInput> and;
@@ -68,6 +71,9 @@ public class CDPEventFilterInput {
     @GraphQLField
     private CDPSessionEventFilterInput cdp_sessionEvent;
 
+    @GraphQLField
+    private CDPProfileUpdateEventFilterInput cdp_profileUpdateEvent;
+
     public CDPEventFilterInput(
             final @GraphQLName("and") List<CDPEventFilterInput> and,
             final @GraphQLName("or") List<CDPEventFilterInput> or,
@@ -82,7 +88,8 @@ public class CDPEventFilterInput {
             final @GraphQLName("cdp_timestamp_gte") OffsetDateTime cdp_timestamp_gte,
             final @GraphQLName("cdp_consentUpdateEvent") CDPConsentUpdateEventFilterInput cdp_consentUpdateEvent,
             final @GraphQLName("cdp_listsUpdateEvent") CDPListsUpdateEventFilterInput cdp_listsUpdateEvent,
-            final @GraphQLName("cdp_sessionEvent") CDPSessionEventFilterInput cdp_sessionEvent) {
+            final @GraphQLName("cdp_sessionEvent") CDPSessionEventFilterInput cdp_sessionEvent,
+            final @GraphQLName("cdp_profileUpdateEvent") CDPProfileUpdateEventFilterInput cdp_profileUpdateEvent) {
         this.and = and;
         this.or = or;
         this.id_equals = id_equals;
@@ -97,10 +104,7 @@ public class CDPEventFilterInput {
         this.cdp_listsUpdateEvent = cdp_listsUpdateEvent;
         this.cdp_consentUpdateEvent = cdp_consentUpdateEvent;
         this.cdp_sessionEvent = cdp_sessionEvent;
-    }
-
-    public static CDPEventFilterInput from(final String cdp_profileID_equals) {
-        return new CDPEventFilterInput(null, null, null, null, null, cdp_profileID_equals, null, null, null, null, null, null, null, null);
+        this.cdp_profileUpdateEvent = cdp_profileUpdateEvent;
     }
 
     public List<CDPEventFilterInput> getAnd() {
@@ -158,4 +162,9 @@ public class CDPEventFilterInput {
     public CDPSessionEventFilterInput getCdp_sessionEvent() {
         return cdp_sessionEvent;
     }
+
+    public CDPProfileUpdateEventFilterInput getCdp_profileUpdateEvent() {
+        return cdp_profileUpdateEvent;
+    }
+
 }

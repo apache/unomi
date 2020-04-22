@@ -20,6 +20,8 @@ import java.util.Set;
 
 public interface GraphQLAdditionalTypesProvider {
 
-    Set<Class<?>> getAdditionalTypes();
+    Set<Class<?>> getAdditionalOutputTypes();
+
+    Set<Class<?>> getAdditionalInputTypes();
 
 }

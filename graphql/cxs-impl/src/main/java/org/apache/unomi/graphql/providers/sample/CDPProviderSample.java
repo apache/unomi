@@ -27,11 +27,9 @@ import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
 import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
 import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
-import org.apache.unomi.graphql.providers.GraphQLProcessEventsProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
 import org.apache.unomi.graphql.types.RootMutation;
 import org.apache.unomi.graphql.types.RootQuery;
-import org.apache.unomi.graphql.types.input.CDPEventProcessor;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.osgi.service.component.annotations.Component;
 
@@ -41,7 +39,7 @@ import java.util.Set;
 
 @Component(enabled = false)
 public class CDPProviderSample
-        implements GraphQLExtensionsProvider, GraphQLMutationProvider, GraphQLQueryProvider, GraphQLCodeRegistryProvider, GraphQLProcessEventsProvider, GraphQLAdditionalTypesProvider {
+        implements GraphQLExtensionsProvider, GraphQLMutationProvider, GraphQLQueryProvider, GraphQLCodeRegistryProvider, GraphQLAdditionalTypesProvider {
 
     @Override
     public Set<Class<?>> getExtensions() {
@@ -103,13 +101,24 @@ public class CDPProviderSample
     }
 
     @Override
-    public Set<Class<? extends CDPEventProcessor>> getProcessEvents() {
-        return Collections.singleton(VENDOR_PageViewEventInput.class);
+    public Set<Class<?>> getAdditionalOutputTypes() {
+        final Set<Class<?>> types = new HashSet<>();
+
+        types.add(MyEvent.class);
+        types.add(SampleType.class);
+
+        return types;
     }
 
     @Override
-    public Set<Class<?>> getAdditionalTypes() {
-        return Collections.singleton(SampleType.class);
+    public Set<Class<?>> getAdditionalInputTypes() {
+        final Set<Class<?>> types = new HashSet<>();
+
+        types.add(MyEventInput.class);
+        types.add(MyEventFilterInput.class);
+        types.add(VENDOR_PageViewEventInput.class);
+
+        return types;
     }
 
 }

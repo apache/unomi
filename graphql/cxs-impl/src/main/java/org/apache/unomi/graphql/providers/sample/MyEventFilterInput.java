@@ -14,36 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
+package org.apache.unomi.graphql.providers.sample;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.types.input.EventFilterInputMarker;
 
-import static org.apache.unomi.graphql.types.output.CDPSessionEventFilter.TYPE_NAME;
+import static org.apache.unomi.graphql.providers.sample.MyEventFilterInput.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
-public class CDPSessionEventFilter {
+public class MyEventFilterInput implements EventFilterInputMarker {
 
-    public static final String TYPE_NAME = "CDP_SessionEventFilter";
-
-    public CDPSessionEventFilter() {
-
-    }
+    public static final String TYPE_NAME = "MY_EventFilterInput";
 
     @GraphQLField
-    public CDPSessionState state_equals(final DataFetchingEnvironment environment) {
-        return null;
+    private String name_equals;
+
+    public MyEventFilterInput(@GraphQLName("name_equals") String name_equals) {
+        this.name_equals = name_equals;
     }
 
-    @GraphQLField
-    public String unomi_sessionId_equals(final DataFetchingEnvironment environment) {
-        return null;
-    }
-
-    @GraphQLField
-    public String unomi_scope_equals(final DataFetchingEnvironment environment) {
-        return null;
+    public String getName_equals() {
+        return name_equals;
     }
 
 }

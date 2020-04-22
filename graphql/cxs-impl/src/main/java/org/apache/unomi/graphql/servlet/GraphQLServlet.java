@@ -38,7 +38,7 @@ import java.util.Map;
 
 @Component(
         service = {javax.servlet.http.HttpServlet.class, javax.servlet.Servlet.class},
-        property = {"alias=/cdpgraphql"}
+        property = {"alias=/graphql"}
 )
 public class GraphQLServlet extends HttpServlet {
 

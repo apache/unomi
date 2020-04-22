@@ -61,6 +61,7 @@ public class CDPProfileUpdateEventInput extends BaseProfileEventProcessor {
         propertyToDelete.removeAll(profilePropertiesAsMap.keySet());
 
         return eventBuilder(profile)
+                .setPersistent(true)
                 .setPropertiesToUpdate(propertyToUpdate)
                 .setPropertiesToDelete(propertyToDelete.stream().map(prop -> "properties." + prop).collect(Collectors.toList()))
                 .build();
