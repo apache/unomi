@@ -157,6 +157,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     public Set<Rule> getMatchingRules(Event event) {
         Set<Rule> matchedRules = new LinkedHashSet<Rule>();
 
+        Boolean hasEventAlreadyBeenRaised = null;
         Boolean hasEventAlreadyBeenRaisedForSession = null;
         Boolean hasEventAlreadyBeenRaisedForProfile = null;
 
@@ -189,8 +190,14 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                     updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
                     continue;
                 }
-
-                if (rule.isRaiseEventOnlyOnceForProfile()) {
+                if (rule.isRaiseEventOnlyOnce()) {
+                    hasEventAlreadyBeenRaised = hasEventAlreadyBeenRaised != null ? hasEventAlreadyBeenRaised : eventService.hasEventAlreadyBeenRaised(event);
+                    if (hasEventAlreadyBeenRaised) {
+                        updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
+                        fireAlreadyRaised(RuleListenerService.AlreadyRaisedFor.EVENT, rule, event);
+                        continue;
+                    }
+                } else if (rule.isRaiseEventOnlyOnceForProfile()) {
                     hasEventAlreadyBeenRaisedForProfile = hasEventAlreadyBeenRaisedForProfile != null ? hasEventAlreadyBeenRaisedForProfile : eventService.hasEventAlreadyBeenRaised(event, false);
                     if (hasEventAlreadyBeenRaisedForProfile) {
                         updateRuleStatistics(ruleStatistics, ruleConditionStartTime);

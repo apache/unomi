@@ -78,6 +78,8 @@ include::builtin-condition-types.adoc[]
 
 include::builtin-action-types.adoc[]
 
+include::updating-events.adoc[]
+
 == Integration samples
 
 include::samples/samples.adoc[]

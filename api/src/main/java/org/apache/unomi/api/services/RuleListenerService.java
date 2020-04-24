@@ -30,7 +30,8 @@ public interface RuleListenerService {
      */
     enum AlreadyRaisedFor {
         SESSION,
-        PROFILE
+        PROFILE,
+        EVENT
     }
 
     /**
