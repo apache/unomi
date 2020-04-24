@@ -16,9 +16,15 @@
  */
 package org.apache.unomi.graphql.utils;
 
+import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.processor.util.NamingKit;
+
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+
 public class ReflectionUtil {
 
-    private static final String TYPE_NAME_FIELD = "TYPE_NAME";
     private static final String UNOMI_TYPE_FIELD = "UNOMI_TYPE";
 
     public static String getStaticField(final Class clazz, final String field) {
@@ -31,11 +37,32 @@ public class ReflectionUtil {
         }
     }
 
-    public static String getTypeName(final Class clazz) {
-        return getStaticField(clazz, TYPE_NAME_FIELD);
-    }
-
     public static String getUnomiType(final Class clazz) {
         return getStaticField(clazz, UNOMI_TYPE_FIELD);
     }
+
+    public static String resolveTypeName(final Class<?> annotatedClass) {
+        final GraphQLName graphQLName = annotatedClass.getAnnotation(GraphQLName.class);
+
+        return NamingKit.toGraphqlName(graphQLName != null ? graphQLName.value() : annotatedClass.getSimpleName());
+    }
+
+    public static String resolveFieldName(final Field annotatedField) {
+        final GraphQLName graphQLName = annotatedField.getAnnotation(GraphQLName.class);
+
+        return NamingKit.toGraphqlName(graphQLName != null ? graphQLName.value() : annotatedField.getName());
+    }
+
+    public static List<String> getNonDynamicFields(final Class<?> annotatedClass) {
+        final Field[] declaredFields = annotatedClass.getDeclaredFields();
+
+        final List<String> result = new ArrayList<>();
+
+        for (final Field field : declaredFields) {
+            result.add(resolveFieldName(field));
+        }
+
+        return result;
+    }
+
 }

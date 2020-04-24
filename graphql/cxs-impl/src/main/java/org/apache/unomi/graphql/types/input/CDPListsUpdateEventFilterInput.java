@@ -23,7 +23,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import java.util.List;
 
 @GraphQLName("CDP_ListsUpdateEventFilterInput")
-public class CDPListsUpdateEventFilterInput {
+public class CDPListsUpdateEventFilterInput implements EventFilterInputMarker {
 
     @GraphQLField
     private List<String> joinLists_contains;

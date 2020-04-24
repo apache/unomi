@@ -45,7 +45,7 @@ public class CDPProfileInterfaceRegister {
     }
 
     private String getProfileType(final Class<? extends CDPProfileInterface> clazz) {
-        return transformProfileType(ReflectionUtil.getTypeName(clazz));
+        return transformProfileType(ReflectionUtil.resolveTypeName(clazz));
     }
 
     private String transformProfileType(final String eventType) {

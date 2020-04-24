@@ -14,19 +14,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.resolvers;
+package org.apache.unomi.graphql.providers.sample;
 
-import graphql.TypeResolutionEnvironment;
-import graphql.schema.GraphQLObjectType;
-import graphql.schema.TypeResolver;
-import org.apache.unomi.graphql.utils.ReflectionUtil;
+import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.graphql.types.output.CDPEventInterface;
 
-public class BaseTypeResolver implements TypeResolver {
+import static org.apache.unomi.graphql.providers.sample.MyEvent.TYPE_NAME;
+
+@GraphQLName(TYPE_NAME)
+public class MyEvent implements CDPEventInterface {
+
+    public static final String TYPE_NAME = "My_Event";
+
+    private final Event event;
+
+    public MyEvent(final Event event) {
+        this.event = event;
+    }
+
+    @GraphQLField
+    public String name(final DataFetchingEnvironment environment) {
+        return "Name";
+    }
 
     @Override
-    public GraphQLObjectType getType(final TypeResolutionEnvironment env) {
-        final Class clazz = env.getObject().getClass();
-        return env.getSchema().getObjectType(ReflectionUtil.resolveTypeName(clazz));
+    public Event getEvent() {
+        return event;
     }
 
 }

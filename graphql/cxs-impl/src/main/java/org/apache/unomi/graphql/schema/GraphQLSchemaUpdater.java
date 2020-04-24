@@ -23,7 +23,6 @@ import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
 import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
 import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
-import org.apache.unomi.graphql.providers.GraphQLProcessEventsProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
 import org.apache.unomi.graphql.providers.GraphQLTypeFunctionProvider;
 import org.apache.unomi.graphql.types.output.CDPEventInterface;
@@ -57,7 +56,7 @@ import java.util.concurrent.TimeUnit;
 @Component(service = GraphQLSchemaUpdater.class)
 public class GraphQLSchemaUpdater {
 
-    @interface SchemaConfig {
+    public @interface SchemaConfig {
 
         int schema_update_delay() default 0;
 
@@ -68,8 +67,6 @@ public class GraphQLSchemaUpdater {
     private final List<GraphQLMutationProvider> mutationProviders = new CopyOnWriteArrayList<>();
 
     private final List<GraphQLExtensionsProvider> extensionsProviders = new CopyOnWriteArrayList<>();
-
-    private final List<GraphQLProcessEventsProvider> eventsProviders = new CopyOnWriteArrayList<>();
 
     private final List<GraphQLAdditionalTypesProvider> additionalTypesProviders = new CopyOnWriteArrayList<>();
 
@@ -176,19 +173,6 @@ public class GraphQLSchemaUpdater {
     }
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
-    public void bindEventsProviders(GraphQLProcessEventsProvider provider) {
-        eventsProviders.add(provider);
-
-        updateSchema();
-    }
-
-    public void unbindEventsProviders(GraphQLProcessEventsProvider provider) {
-        eventsProviders.remove(provider);
-
-        updateSchema();
-    }
-
-    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     public void bindAdditionalTypes(GraphQLAdditionalTypesProvider provider) {
         additionalTypesProviders.add(provider);
 
@@ -261,7 +245,6 @@ public class GraphQLSchemaUpdater {
                 .additionalTypesProviders(additionalTypesProviders)
                 .queryProviders(queryProviders)
                 .mutationProviders(mutationProviders)
-                .eventsProviders(eventsProviders)
                 .codeRegistryProvider(codeRegistryProvider).build();
 
         final GraphQLSchema schema = schemaProvider.createSchema();

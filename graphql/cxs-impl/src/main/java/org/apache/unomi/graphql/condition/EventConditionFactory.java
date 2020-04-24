@@ -18,15 +18,24 @@
 package org.apache.unomi.graphql.condition;
 
 import graphql.schema.DataFetchingEnvironment;
+import graphql.schema.GraphQLInputObjectField;
+import graphql.schema.GraphQLInputObjectType;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.graphql.schema.ComparisonConditionTranslator;
+import org.apache.unomi.graphql.schema.PropertyNameTranslator;
+import org.apache.unomi.graphql.schema.PropertyValueTypeHelper;
 import org.apache.unomi.graphql.types.input.CDPConsentUpdateEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPListsUpdateEventFilterInput;
+import org.apache.unomi.graphql.types.input.CDPProfileUpdateEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPSessionEventFilterInput;
+import org.apache.unomi.graphql.utils.ReflectionUtil;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class EventConditionFactory extends ConditionFactory {
 
@@ -43,7 +52,30 @@ public class EventConditionFactory extends ConditionFactory {
         super("eventPropertyCondition", environment);
     }
 
-    public Condition eventFilterInputCondition(CDPEventFilterInput filterInput, Date after, Date before) {
+    public Condition eventFilterInputCondition(final String profileId, final Date after, final Date before) {
+        final List<Condition> rootSubConditions = new ArrayList<>();
+
+        if (after != null) {
+            rootSubConditions.add(datePropertyCondition("timeStamp", "greaterThan", after));
+        }
+
+        if (before != null) {
+            rootSubConditions.add(datePropertyCondition("timeStamp", "lessThanOrEqual", before));
+        }
+
+        if (profileId != null) {
+            rootSubConditions.add(propertyCondition("profileId", profileId));
+        }
+
+        return booleanCondition("and", rootSubConditions);
+    }
+
+    public Condition eventFilterInputCondition(final CDPEventFilterInput filterInput, final Map<String, Object> filterInputAsMap) {
+        return eventFilterInputCondition(filterInput, filterInputAsMap, null, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Condition eventFilterInputCondition(final CDPEventFilterInput filterInput, final Map<String, Object> filterInputAsMap, final Date after, final Date before) {
         final List<Condition> rootSubConditions = new ArrayList<>();
 
         if (after != null) {
@@ -81,7 +113,7 @@ public class EventConditionFactory extends ConditionFactory {
             }
 
             if (filterInput.getCdp_clientID_equals() != null) {
-                rootSubConditions.add(propertyCondition("clientId", filterInput.getCdp_clientID_equals()));
+                rootSubConditions.add(propertyCondition("properties.clientId", filterInput.getCdp_clientID_equals()));
             }
 
             if (filterInput.getCdp_profileID_equals() != null) {
@@ -104,16 +136,69 @@ public class EventConditionFactory extends ConditionFactory {
                 rootSubConditions.add(createCdpSessionEventCondition(filterInput.getCdp_sessionEvent()));
             }
 
-            if (filterInput.getAnd() != null && filterInput.getAnd().size() > 0) {
-                rootSubConditions.add(filtersToCondition(filterInput.getAnd(), andInput -> eventFilterInputCondition(andInput, null, null), "and"));
+            if (filterInput.getCdp_profileUpdateEvent() != null) {
+                final Map<String, Object> profileUpdateEventAsMap = (Map<String, Object>) filterInputAsMap.get("cdp_profileUpdateEvent");
+
+                rootSubConditions.add(
+                        createDynamicEventCondition("cdp_profileUpdateEvent", profileUpdateEventAsMap, CDPProfileUpdateEventFilterInput.TYPE_NAME));
             }
 
-            if (filterInput.getOr() != null && filterInput.getOr().size() > 0) {
-                rootSubConditions.add(filtersToCondition(filterInput.getOr(), orInput -> eventFilterInputCondition(orInput, null, null), "or"));
+            final List<String> nonDynamicFields = ReflectionUtil.getNonDynamicFields(filterInput.getClass());
+
+            final GraphQLInputObjectType inputObjectType =
+                    (GraphQLInputObjectType) environment.getGraphQLSchema().getType(ReflectionUtil.resolveTypeName(CDPEventFilterInput.class));
+
+            final List<String> dynamicInputFields = inputObjectType.getFieldDefinitions()
+                    .stream()
+                    .filter(inputObjectField -> !nonDynamicFields.contains(inputObjectField.getName()))
+                    .map(GraphQLInputObjectField::getName)
+                    .collect(Collectors.toList());
+
+            dynamicInputFields.forEach(fieldName -> {
+                final Map<String, Object> dynamicEventAsMap = (Map<String, Object>) filterInputAsMap.get(fieldName);
+
+                if (dynamicEventAsMap != null) {
+                    final String typeName = ((GraphQLInputObjectType) inputObjectType.getFieldDefinition(fieldName).getType()).getName();
+
+                    rootSubConditions.add(createDynamicEventCondition(fieldName, dynamicEventAsMap, typeName));
+                }
+            });
+
+            if (filterInput.getAnd() != null && !filterInput.getAnd().isEmpty()) {
+                final List<Map<String, Object>> listFilterInputAsMap = (List<Map<String, Object>>) filterInputAsMap.get("and");
+
+                rootSubConditions.add(filtersToCondition(filterInput.getAnd(), listFilterInputAsMap, this::eventFilterInputCondition, "and"));
+            }
+
+            if (filterInput.getOr() != null && !filterInput.getOr().isEmpty()) {
+                final List<Map<String, Object>> listFilterInputAsMap = (List<Map<String, Object>>) filterInputAsMap.get("or");
+
+                rootSubConditions.add(filtersToCondition(filterInput.getOr(), listFilterInputAsMap, this::eventFilterInputCondition, "or"));
             }
         }
 
         return booleanCondition("and", rootSubConditions);
+    }
+
+    private Condition createDynamicEventCondition(final String dynamicPropertyName, final Map<String, Object> eventAsMap, final String inputTypeName) {
+        final List<Condition> conditions = new ArrayList<>();
+
+        conditions.add(propertyCondition("eventType", dynamicPropertyName));
+
+        eventAsMap.forEach((propertyName, propertyValue) -> {
+            final String[] propertyFilter = propertyName.split("_", -1);
+
+            final String propertyValueType =
+                    PropertyValueTypeHelper.getPropertyValueParameterForInputType(inputTypeName, propertyName, environment);
+
+            conditions.add(
+                    propertyCondition("properties." + PropertyNameTranslator.translateFromGraphQLToUnomi(propertyFilter[0]),
+                            ComparisonConditionTranslator.translateFromGraphQLToUnomi(propertyFilter[1]),
+                            propertyValueType,
+                            propertyValue));
+        });
+
+        return booleanCondition("and", conditions);
     }
 
     private Condition listUpdateEventCondition(CDPListsUpdateEventFilterInput cdp_listsUpdateEvent) {

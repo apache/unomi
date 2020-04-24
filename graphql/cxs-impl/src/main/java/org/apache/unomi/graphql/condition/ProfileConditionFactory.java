@@ -89,11 +89,12 @@ public class ProfileConditionFactory extends ConditionFactory {
         return booleanCondition("and", rootSubConditions);
     }
 
-    public Condition profileFilterInputCondition(final CDPProfileFilterInput filterInput, final Map<String, Object> filterAsMap) {
-        return profileFilterInputCondition(filterInput, filterAsMap, null, null);
+    public Condition profileFilterInputCondition(final CDPProfileFilterInput filterInput, final Map<String, Object> filterInputAsMap) {
+        return profileFilterInputCondition(filterInput, filterInputAsMap, null, null);
     }
 
-    public Condition profileFilterInputCondition(final CDPProfileFilterInput filterInput, final Map<String, Object> filterAsMap, Date after, Date before) {
+    @SuppressWarnings("unchecked")
+    public Condition profileFilterInputCondition(final CDPProfileFilterInput filterInput, final Map<String, Object> filterInputAsMap, Date after, Date before) {
         final List<Condition> rootSubConditions = new ArrayList<>();
 
         if (after != null) {
@@ -129,15 +130,13 @@ public class ProfileConditionFactory extends ConditionFactory {
             }
 
             if (filterInput.getProperties() != null) {
-                Map<String, Object> propertiesFilterAsMap = null;
-                if (filterAsMap != null) {
-                    propertiesFilterAsMap = (Map<String, Object>) filterAsMap.get("properties");
-                }
+                final Map<String, Object> propertiesFilterAsMap = (Map<String, Object>) filterInputAsMap.get("properties");
                 rootSubConditions.add(profilePropertiesFilterInputCondition(filterInput.getProperties(), propertiesFilterAsMap));
             }
 
             if (filterInput.getEvents() != null) {
-                rootSubConditions.add(profileEventsFilterInputCondition(filterInput.getEvents()));
+                final Map<String, Object> eventsFilterAsMap = (Map<String, Object>) filterInputAsMap.get("events");
+                rootSubConditions.add(profileEventsFilterInputCondition(filterInput.getEvents(), eventsFilterAsMap));
             }
 
             if (filterInput.getInterests() != null) {
@@ -205,57 +204,60 @@ public class ProfileConditionFactory extends ConditionFactory {
         return booleanCondition("and", rootSubConditions);
     }
 
-    private Condition profileEventsFilterInputCondition(final CDPProfileEventsFilterInput filterInput) {
+    @SuppressWarnings("unchecked")
+    private Condition profileEventsFilterInputCondition(final CDPProfileEventsFilterInput filterInput, final Map<String, Object> eventsFilterAsMap) {
         final List<Condition> rootSubConditions = new ArrayList<>();
 
         if (filterInput.getNot() != null) {
+            final Map<String, Object> notEventsFilterAsMap = (Map<String, Object>) eventsFilterAsMap.get("not");
+
             rootSubConditions.add(ConditionBuilder.create(getConditionType("notCondition"))
-                    .parameter("subCondition", profileEventsFilterInputCondition(filterInput.getNot()))
+                    .parameter("subCondition", profileEventsFilterInputCondition(filterInput.getNot(), notEventsFilterAsMap))
                     .build());
         }
 
-        final Condition pastCondition = pastEventsCondition(filterInput);
+        final Condition pastCondition = pastEventsCondition(filterInput, eventsFilterAsMap);
         if (pastCondition != null) {
             rootSubConditions.add(pastCondition);
         }
 
         if (filterInput.getAnd() != null && !filterInput.getAnd().isEmpty()) {
-            rootSubConditions.add(filtersToCondition(filterInput.getAnd(), this::profileEventsFilterInputCondition, "and"));
+            final List<Map<String, Object>> listEventsFilterAsMap = (List<Map<String, Object>>) eventsFilterAsMap.get("and");
+
+            rootSubConditions.add(filtersToCondition(filterInput.getAnd(), listEventsFilterAsMap, this::profileEventsFilterInputCondition, "and"));
         }
 
         if (filterInput.getOr() != null && !filterInput.getOr().isEmpty()) {
-            rootSubConditions.add(filtersToCondition(filterInput.getOr(), this::profileEventsFilterInputCondition, "or"));
+            final List<Map<String, Object>> listEventsFilterAsMap = (List<Map<String, Object>>) eventsFilterAsMap.get("or");
+
+            rootSubConditions.add(filtersToCondition(filterInput.getOr(), listEventsFilterAsMap, this::profileEventsFilterInputCondition, "or"));
         }
 
         return booleanCondition("and", rootSubConditions);
     }
 
+    @SuppressWarnings("unchecked")
     private Condition profilePropertiesFilterInputCondition(final CDPProfilePropertiesFilterInput filterInput, final Map<String, Object> filterAsMap) {
         final List<Condition> rootSubConditions = new ArrayList<>();
 
-        if (filterInput.getAnd() != null && filterInput.getAnd().isEmpty()) {
-            rootSubConditions.add(filtersToCondition(filterInput.getAnd(), andFilter -> profilePropertiesFilterInputCondition(andFilter, filterAsMap), "and"));
+        if (filterInput.getAnd() != null && !filterInput.getAnd().isEmpty()) {
+            final List<Map<String, Object>> listFilterAsMap = (List<Map<String, Object>>) filterAsMap.get("and");
+
+            rootSubConditions.add(filtersToCondition(filterInput.getAnd(), listFilterAsMap, this::profilePropertiesFilterInputCondition, "and"));
         }
 
         if (filterInput.getOr() != null && !filterInput.getOr().isEmpty()) {
-            rootSubConditions.add(filtersToCondition(filterInput.getOr(), orFilter -> profilePropertiesFilterInputCondition(orFilter, filterAsMap), "or"));
+            final List<Map<String, Object>> listFilterAsMap = (List<Map<String, Object>>) filterAsMap.get("or");
+
+            rootSubConditions.add(filtersToCondition(filterInput.getOr(), listFilterAsMap, this::profilePropertiesFilterInputCondition, "or"));
         }
 
-        final Condition dynamicCondition = dynamicProfilePropertiesCondition(filterAsMap);
-        if (dynamicCondition != null) {
-            rootSubConditions.add(dynamicCondition);
-        }
+        addDynamicProfilePropertiesCondition(filterAsMap, rootSubConditions);
 
         return booleanCondition("and", rootSubConditions);
     }
 
-    private Condition dynamicProfilePropertiesCondition(Map<String, Object> filterAsMap) {
-        if (filterAsMap == null || filterAsMap.isEmpty()) {
-            return null;
-        }
-
-        final List<Condition> subConditions = new ArrayList<>();
-
+    private void addDynamicProfilePropertiesCondition(Map<String, Object> filterAsMap, final List<Condition> subConditions) {
         filterAsMap.forEach((propertyName, value) -> {
             if (!"and".equals(propertyName) && !"or".equals(propertyName)) {
 
@@ -272,16 +274,17 @@ public class ProfileConditionFactory extends ConditionFactory {
                         value));
             }
         });
-
-        return booleanCondition("and", subConditions);
     }
 
-    private Condition pastEventsCondition(final CDPProfileEventsFilterInput filterInput) {
+    @SuppressWarnings("unchecked")
+    private Condition pastEventsCondition(final CDPProfileEventsFilterInput filterInput, final Map<String, Object> filterInputAsMap) {
         boolean notEmpty = false;
         final ConditionBuilder pastEventConditionBuilder = ConditionBuilder.create(getConditionType("pastEventCondition"));
 
         if (filterInput.getEventFilter() != null) {
-            final Condition eventFilterCondition = EventConditionFactory.get(environment).eventFilterInputCondition(filterInput.getEventFilter(), null, null);
+            final Map<String, Object> eventFilterInputAsMap = (Map<String, Object>) filterInputAsMap.get("eventFilter");
+
+            final Condition eventFilterCondition = EventConditionFactory.get(environment).eventFilterInputCondition(filterInput.getEventFilter(), eventFilterInputAsMap);
 
             pastEventConditionBuilder.parameter("eventCondition", eventFilterCondition);
             notEmpty = true;

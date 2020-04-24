@@ -67,7 +67,7 @@ public class ProfileMatchesDataFetcher implements DataFetcher<List<CDPFilterMatc
                 namedFilterAsMap = namedFiltersAsMap.get(i.get());
             }
             final long startTime = System.currentTimeMillis();
-            final Condition condition = factory.profileFilterInputCondition(filterInput.getFilter(), namedFilterAsMap, null, null);
+            final Condition condition = factory.profileFilterInputCondition(filterInput.getFilter(), namedFilterAsMap);
             final boolean matches = profileService.matchCondition(condition, profile, session);
             i.getAndIncrement();
             return new CDPFilterMatch(filterInput.getName(), matches, System.currentTimeMillis() - startTime);

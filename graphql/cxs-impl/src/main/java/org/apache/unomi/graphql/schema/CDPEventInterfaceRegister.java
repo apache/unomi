@@ -53,7 +53,7 @@ public class CDPEventInterfaceRegister {
     }
 
     private String getEventType(final Class<? extends CDPEventInterface> clazz) {
-        return transformEventType(ReflectionUtil.getTypeName(clazz));
+        return transformEventType(ReflectionUtil.resolveTypeName(clazz));
     }
 
     private String transformEventType(final String eventType) {

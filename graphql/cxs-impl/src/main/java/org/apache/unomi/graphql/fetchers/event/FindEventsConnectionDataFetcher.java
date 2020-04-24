@@ -32,6 +32,7 @@ import org.apache.unomi.graphql.types.input.CDPOrderByInput;
 import org.apache.unomi.graphql.types.output.CDPEventConnection;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class FindEventsConnectionDataFetcher extends EventConnectionDataFetcher {
@@ -50,8 +51,10 @@ public class FindEventsConnectionDataFetcher extends EventConnectionDataFetcher 
         final ServiceManager serviceManager = environment.getContext();
         final ConnectionParams params = parseConnectionParams(environment);
 
+        final Map<String, Object> filterInputAsMap = environment.getArgument("filter");
+
         final Condition condition = EventConditionFactory.get(environment)
-                .eventFilterInputCondition(filterInput, params.getAfter(), params.getBefore());
+                .eventFilterInputCondition(filterInput, filterInputAsMap, params.getAfter(), params.getBefore());
 
         final Query query = new Query();
         if (orderByInput != null) {

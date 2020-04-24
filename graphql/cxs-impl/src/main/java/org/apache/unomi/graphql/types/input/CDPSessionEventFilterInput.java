@@ -23,7 +23,7 @@ import org.apache.unomi.graphql.types.output.CDPSessionState;
 import static org.apache.unomi.graphql.types.input.CDPSessionEventFilterInput.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
-public class CDPSessionEventFilterInput {
+public class CDPSessionEventFilterInput implements EventFilterInputMarker {
 
     public static final String TYPE_NAME = "CDP_SessionEventFilterInput";
 

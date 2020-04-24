@@ -18,8 +18,10 @@ package org.apache.unomi.graphql.schema;
 
 import graphql.Scalars;
 import graphql.annotations.AnnotationsSchemaCreator;
+import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.annotations.processor.ProcessingElementsContainer;
+import graphql.annotations.processor.util.NamingKit;
 import graphql.language.InputObjectTypeDefinition;
 import graphql.schema.DataFetcher;
 import graphql.schema.FieldCoordinates;
@@ -42,19 +44,22 @@ import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
 import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
 import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
-import org.apache.unomi.graphql.providers.GraphQLProcessEventsProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
 import org.apache.unomi.graphql.providers.GraphQLTypeFunctionProvider;
 import org.apache.unomi.graphql.types.RootMutation;
 import org.apache.unomi.graphql.types.RootQuery;
+import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
+import org.apache.unomi.graphql.types.input.CDPEventProcessor;
 import org.apache.unomi.graphql.types.input.CDPPersonaInput;
 import org.apache.unomi.graphql.types.input.CDPProfilePropertiesFilterInput;
+import org.apache.unomi.graphql.types.input.CDPProfileUpdateEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileUpdateEventInput;
+import org.apache.unomi.graphql.types.input.EventFilterInputMarker;
 import org.apache.unomi.graphql.types.output.CDPPersona;
 import org.apache.unomi.graphql.types.output.CDPProfile;
-import org.apache.unomi.graphql.utils.ReflectionUtil;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -76,8 +81,6 @@ public class GraphQLSchemaProvider {
 
     private final List<GraphQLMutationProvider> mutationProviders;
 
-    private final List<GraphQLProcessEventsProvider> eventsProviders;
-
     private final GraphQLCodeRegistryProvider codeRegistryProvider;
 
     private GraphQLAnnotations graphQLAnnotations;
@@ -92,7 +95,6 @@ public class GraphQLSchemaProvider {
         this.additionalTypesProviders = builder.additionalTypesProviders;
         this.queryProviders = builder.queryProviders;
         this.mutationProviders = builder.mutationProviders;
-        this.eventsProviders = builder.eventsProviders;
         this.codeRegistryProvider = builder.codeRegistryProvider;
     }
 
@@ -143,10 +145,30 @@ public class GraphQLSchemaProvider {
     }
 
     private void registerDynamicFields() {
+        if (additionalTypesProviders != null && !additionalTypesProviders.isEmpty()) {
+            for (final GraphQLAdditionalTypesProvider typeProvider : additionalTypesProviders) {
+                if (typeProvider != null && typeProvider.getAdditionalInputTypes() != null) {
+                    typeProvider.getAdditionalInputTypes().forEach(additionalType -> {
+                        final GraphQLName name = additionalType.getAnnotation(GraphQLName.class);
+
+                        final String typeName = NamingKit.toGraphqlName(name == null ? additionalType.getSimpleName() : name.value());
+
+                        final GraphQLInputObjectType.Builder builder = GraphQLInputObjectType.newInputObject()
+                                .name(typeName)
+                                .fields(getInputObjectType(additionalType).getFieldDefinitions());
+
+                        registerInTypeRegistry(typeName, builder.build());
+                    });
+                }
+            }
+        }
+
         final Collection<PropertyType> propertyTypes = profileService.getTargetPropertyTypes("profiles");
 
         registerDynamicInputFilterFields(CDPProfilePropertiesFilterInput.TYPE_NAME, CDPProfilePropertiesFilterInput.class, propertyTypes);
+        registerDynamicInputFilterFields(CDPProfileUpdateEventFilterInput.TYPE_NAME, CDPProfileUpdateEventFilterInput.class, propertyTypes);
         registerDynamicInputFields(CDPProfileUpdateEventInput.TYPE_NAME, CDPProfileUpdateEventInput.class, propertyTypes);
+        registerEventFilterInputTypes();
 
         // Profile
         registerDynamicOutputFields(CDPProfile.TYPE_NAME, CDPProfile.class, CustomerPropertyDataFetcher.class, propertyTypes);
@@ -156,7 +178,7 @@ public class GraphQLSchemaProvider {
         registerDynamicOutputFields(CDPPersona.TYPE_NAME, CDPPersona.class, CustomerPropertyDataFetcher.class, propertyTypes);
 
         // Events
-        createEventInputTypes();
+        registerEventInputTypes();
     }
 
     private void registerDynamicInputFilterFields(final String typeName,
@@ -200,10 +222,9 @@ public class GraphQLSchemaProvider {
         registerInTypeRegistry(graphQLTypeName, transformedObjectType);
     }
 
-    private GraphQLInputObjectType registerDynamicInputFields(final String graphQLTypeName,
-                                                              final Class<?> clazz,
-                                                              final Collection<PropertyType> propertyTypes) {
-
+    private void registerDynamicInputFields(final String graphQLTypeName,
+                                            final Class<?> clazz,
+                                            final Collection<PropertyType> propertyTypes) {
         final List<GraphQLInputObjectField> fieldDefinitions = propertyTypes.stream()
                 .map(propertyType -> GraphQLInputObjectField.newInputObjectField()
                         .type((GraphQLInputType) convert(propertyType.getValueTypeId()))
@@ -215,39 +236,78 @@ public class GraphQLSchemaProvider {
                 .transform(builder -> fieldDefinitions.forEach(builder::field));
 
         registerInTypeRegistry(graphQLTypeName, transformedObjectType);
-
-        return transformedObjectType;
     }
 
-    private void createEventInputTypes() {
-
+    private void registerEventInputTypes() {
         final GraphQLInputObjectType.Builder builder = GraphQLInputObjectType.newInputObject()
                 .name(CDPEventInput.TYPE_NAME)
                 .fields(getInputObjectType(CDPEventInput.class).getFieldDefinitions());
 
-        if (!eventsProviders.isEmpty()) {
-            eventsProviders.forEach(eventProvider -> {
-                if (eventProvider.getProcessEvents() != null) {
-                    eventProvider.getProcessEvents().forEach(eventProcessorClass -> {
-                        final String typeName = ReflectionUtil.getTypeName(eventProcessorClass);
 
-                        final GraphQLInputObjectType.Builder eventInput = GraphQLInputObjectType.newInputObject()
-                                .name(typeName)
-                                .fields(getInputObjectType(eventProcessorClass).getFieldDefinitions())
-                                .definition(InputObjectTypeDefinition.newInputObjectDefinition()
-                                        .additionalData(CDPGraphQLConstants.EVENT_PROCESSOR_CLASS, eventProcessorClass.getName()).build()
-                                );
+        if (!additionalTypesProviders.isEmpty()) {
+            additionalTypesProviders.forEach(provider -> {
+                if (provider != null && provider.getAdditionalInputTypes() != null) {
+                    provider.getAdditionalInputTypes().stream()
+                            .filter(CDPEventProcessor.class::isAssignableFrom)
+                            .forEach(additionalType -> {
+                                final GraphQLName name = additionalType.getAnnotation(GraphQLName.class);
 
-                        builder.field(GraphQLInputObjectField.newInputObjectField()
-                                .name(generateFieldName(typeName))
-                                .type(eventInput)
-                                .build());
-                    });
+                                final String typeName = NamingKit.toGraphqlName(name == null ? additionalType.getSimpleName() : name.value());
+
+                                final GraphQLInputObjectType.Builder eventInput = GraphQLInputObjectType.newInputObject()
+                                        .name(typeName)
+                                        .fields(getInputObjectType(additionalType).getFieldDefinitions())
+                                        .definition(InputObjectTypeDefinition.newInputObjectDefinition()
+                                                .additionalData(CDPGraphQLConstants.EVENT_PROCESSOR_CLASS, additionalType.getName()).build()
+                                        );
+
+                                builder.field(GraphQLInputObjectField.newInputObjectField()
+                                        .name(generateFieldName(typeName))
+                                        .type(eventInput)
+                                        .build());
+                            });
                 }
             });
         }
 
         registerInTypeRegistry(CDPEventInput.TYPE_NAME, builder.build());
+    }
+
+    private void registerEventFilterInputTypes() {
+        final List<GraphQLInputObjectField> fieldDefinitions = new ArrayList<>();
+
+        final List<String> registeredFieldNames = getInputObjectType(CDPEventFilterInput.class).getFieldDefinitions()
+                .stream()
+                .map(GraphQLInputObjectField::getName)
+                .collect(Collectors.toList());
+
+        if (!additionalTypesProviders.isEmpty()) {
+            additionalTypesProviders.forEach(provider -> {
+                if (provider != null && provider.getAdditionalInputTypes() != null) {
+                    provider.getAdditionalInputTypes().stream()
+                            .filter(EventFilterInputMarker.class::isAssignableFrom)
+                            .forEach(additionalType -> {
+                                final GraphQLName name = additionalType.getAnnotation(GraphQLName.class);
+
+                                final String typeName = NamingKit.toGraphqlName(name == null ? additionalType.getSimpleName() : name.value());
+
+                                final String fieldName = generateFieldName(typeName.replace("FilterInput", ""));
+
+                                if (!registeredFieldNames.contains(fieldName)) {
+                                    fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                                            .type(getInputObjectType(additionalType))
+                                            .name(fieldName)
+                                            .build());
+                                }
+                            });
+                }
+            });
+        }
+
+        final GraphQLInputObjectType transformedObjectType = getInputObjectType(CDPEventFilterInput.class)
+                .transform(builder -> fieldDefinitions.forEach(builder::field));
+
+        registerInTypeRegistry(CDPEventFilterInput.TYPE_NAME, transformedObjectType);
     }
 
     private String generateFieldName(final String typeName) {
@@ -258,7 +318,8 @@ public class GraphQLSchemaProvider {
 
         final String eventName = typeName.substring(0, index).toLowerCase() + "_" + new String(chars);
 
-        return eventName.replace("Input", "");
+        return eventName.replace("Filter", "")
+                .replace("Input", "");
     }
 
     private void registerInTypeRegistry(final String name, final GraphQLType type) {
@@ -320,8 +381,8 @@ public class GraphQLSchemaProvider {
         }
 
         for (final GraphQLAdditionalTypesProvider typesProvider : additionalTypesProviders) {
-            if (typesProvider.getAdditionalTypes() != null) {
-                additionalTypes.addAll(typesProvider.getAdditionalTypes());
+            if (typesProvider.getAdditionalOutputTypes() != null) {
+                additionalTypes.addAll(typesProvider.getAdditionalOutputTypes());
             }
         }
     }
@@ -380,8 +441,6 @@ public class GraphQLSchemaProvider {
 
         List<GraphQLMutationProvider> mutationProviders;
 
-        List<GraphQLProcessEventsProvider> eventsProviders;
-
         GraphQLCodeRegistryProvider codeRegistryProvider;
 
         private Builder(final ProfileService profileService) {
@@ -410,11 +469,6 @@ public class GraphQLSchemaProvider {
 
         public Builder mutationProviders(List<GraphQLMutationProvider> mutationProviders) {
             this.mutationProviders = mutationProviders;
-            return this;
-        }
-
-        public Builder eventsProviders(List<GraphQLProcessEventsProvider> eventsProviders) {
-            this.eventsProviders = eventsProviders;
             return this;
         }
 

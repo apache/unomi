@@ -14,12 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.providers;
+package org.apache.unomi.graphql.types.input;
 
-import org.apache.unomi.graphql.types.input.CDPEventProcessor;
+import graphql.annotations.annotationTypes.GraphQLName;
 
-import java.util.Set;
+import static org.apache.unomi.graphql.types.input.CDPProfileUpdateEventFilterInput.TYPE_NAME;
 
-public interface GraphQLProcessEventsProvider {
-    Set<Class<? extends CDPEventProcessor>> getProcessEvents();
+@GraphQLName(TYPE_NAME)
+public class CDPProfileUpdateEventFilterInput implements EventFilterInputMarker {
+
+    public static final String TYPE_NAME = "CDP_ProfileUpdateEventFilterInput";
+
+    // input fields will be added here according to registered profile properties
+
 }
