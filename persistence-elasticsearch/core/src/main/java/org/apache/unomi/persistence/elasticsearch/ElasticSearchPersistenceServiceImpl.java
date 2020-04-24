@@ -38,6 +38,7 @@ import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.persistence.elasticsearch.conditions.*;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
+import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
@@ -72,6 +73,7 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
+import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptException;
 import org.elasticsearch.script.ScriptType;
@@ -688,6 +690,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             return null;
                         }
                     }
+                } catch (ElasticsearchStatusException ese) {
+                    if (ese.status().equals(RestStatus.NOT_FOUND)) {
+                        // this can happen if we are just testing the existence of the item, it is not always an error.
+                        return null;
+                    }
+                    throw new Exception("Error loading itemType=" + clazz.getName() + " itemId=" + itemId, ese);
                 } catch (IndexNotFoundException e) {
                     // this can happen if we are just testing the existence of the item, it is not always an error.
                     return null;
@@ -1475,6 +1483,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         scrollIdentifier = response.getScrollId();
                         totalHits = searchHits.getTotalHits().value;
                         totalHitsRelation = getTotalHitsRelation(searchHits.getTotalHits());
+                        if (scrollIdentifier != null && totalHits == 0) {
+                            // we have no results, we must clear the scroll request immediately.
+                            ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
+                            clearScrollRequest.addScrollId(response.getScrollId());
+                            client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
+                        }
                         for (SearchHit searchHit : searchHits) {
                             String sourceAsString = searchHit.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
