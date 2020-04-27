@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types;
+package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
@@ -42,24 +42,10 @@ import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.input.CDPSegmentFilterInput;
 import org.apache.unomi.graphql.types.input.CDPTopicFilterInput;
-import org.apache.unomi.graphql.types.output.CDPEventConnection;
-import org.apache.unomi.graphql.types.output.CDPEventInterface;
-import org.apache.unomi.graphql.types.output.CDPList;
-import org.apache.unomi.graphql.types.output.CDPListConnection;
-import org.apache.unomi.graphql.types.output.CDPProfile;
-import org.apache.unomi.graphql.types.output.CDPProfileConnection;
-import org.apache.unomi.graphql.types.output.CDPPropertyConnection;
-import org.apache.unomi.graphql.types.output.CDPSegment;
-import org.apache.unomi.graphql.types.output.CDPSegmentConnection;
-import org.apache.unomi.graphql.types.output.CDPSource;
-import org.apache.unomi.graphql.types.output.CDPTopic;
-import org.apache.unomi.graphql.types.output.CDPTopicConnection;
-import org.apache.unomi.graphql.types.output.CDPView;
-import org.apache.unomi.graphql.types.output.UnomiSegment;
 
 import java.util.List;
 
-import static org.apache.unomi.graphql.types.CDPQuery.TYPE_NAME;
+import static org.apache.unomi.graphql.types.output.CDPQuery.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
 public class CDPQuery {

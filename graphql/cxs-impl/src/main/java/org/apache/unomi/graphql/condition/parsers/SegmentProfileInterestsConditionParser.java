@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.conditionparsers;
+package org.apache.unomi.graphql.condition.parsers;
 
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.graphql.schema.ComparisonConditionTranslator;

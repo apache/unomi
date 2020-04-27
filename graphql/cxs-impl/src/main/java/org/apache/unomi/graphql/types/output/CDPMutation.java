@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types;
+package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
@@ -50,19 +50,12 @@ import org.apache.unomi.graphql.types.input.CDPSourceInput;
 import org.apache.unomi.graphql.types.input.CDPTopicInput;
 import org.apache.unomi.graphql.types.input.CDPViewInput;
 import org.apache.unomi.graphql.types.input.UnomiSegmentInput;
-import org.apache.unomi.graphql.types.output.CDPList;
-import org.apache.unomi.graphql.types.output.CDPPersona;
-import org.apache.unomi.graphql.types.output.CDPSegment;
-import org.apache.unomi.graphql.types.output.CDPSource;
-import org.apache.unomi.graphql.types.output.CDPTopic;
-import org.apache.unomi.graphql.types.output.CDPView;
-import org.apache.unomi.graphql.types.output.UnomiSegment;
 
 import java.util.List;
 
 import static org.apache.unomi.graphql.CDPGraphQLConstants.PERSONA_ARGUMENT_NAME;
 import static org.apache.unomi.graphql.CDPGraphQLConstants.SEGMENT_ARGUMENT_NAME;
-import static org.apache.unomi.graphql.types.CDPMutation.TYPE_NAME;
+import static org.apache.unomi.graphql.types.output.CDPMutation.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
 public class CDPMutation {

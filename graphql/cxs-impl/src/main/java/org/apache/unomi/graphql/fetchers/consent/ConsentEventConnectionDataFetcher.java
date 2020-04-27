@@ -21,7 +21,7 @@ import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.graphql.condition.EventConditionFactory;
+import org.apache.unomi.graphql.condition.factories.EventConditionFactory;
 import org.apache.unomi.graphql.fetchers.EventConnectionDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.output.CDPConsent;

@@ -14,21 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types;
+package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-import static org.apache.unomi.graphql.types.RootMutation.TYPE_NAME;
+import static org.apache.unomi.graphql.types.output.RootQuery.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
-public class RootMutation {
+public class RootQuery {
 
-    public static final String TYPE_NAME = "Mutation";
+    public static final String TYPE_NAME = "Query";
 
     @GraphQLField
-    public static CDPMutation cdp() {
-        return new CDPMutation();
+    public static CDPQuery cdp() {
+        return new CDPQuery();
     }
 
 }

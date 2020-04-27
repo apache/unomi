@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.graphql.condition;
+package org.apache.unomi.graphql.condition.factories;
 
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.conditions.Condition;

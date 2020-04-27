@@ -22,7 +22,7 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
-import org.apache.unomi.graphql.condition.ProfileConditionFactory;
+import org.apache.unomi.graphql.condition.factories.ProfileConditionFactory;
 import org.apache.unomi.graphql.fetchers.ConnectionParams;
 import org.apache.unomi.graphql.fetchers.ProfileConnectionDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
