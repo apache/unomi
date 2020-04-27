@@ -23,24 +23,25 @@ import org.junit.runners.Suite.SuiteClasses;
 
 /**
  * Defines suite of test classes to run.
- * 
+ *
  * @author Sergiy Shyrkov
  */
 @RunWith(Suite.class)
 @SuiteClasses({
-        BasicIT.class,
-        ConditionEvaluatorIT.class,
-        ConditionESQueryBuilderIT.class,
-        SegmentIT.class,
-        ProfileServiceIT.class,
-        ProfileImportBasicIT.class,
-        ProfileImportSurfersIT.class,
-        ProfileImportRankingIT.class,
-        ProfileImportActorsIT.class,
-        ProfileExportIT.class,
-        PropertiesUpdateActionIT.class,
-        ModifyConsentIT.class,
-        PatchIT.class
+	BasicIT.class,
+	ConditionEvaluatorIT.class,
+	ConditionESQueryBuilderIT.class,
+	SegmentIT.class,
+	ProfileServiceIT.class,
+	ProfileImportBasicIT.class,
+	ProfileImportSurfersIT.class,
+	ProfileImportRankingIT.class,
+	ProfileImportActorsIT.class,
+	ProfileExportIT.class,
+	PropertiesUpdateActionIT.class,
+	ModifyConsentIT.class,
+	PatchIT.class,
+	UpdateEventFromContextServletIT.class
 })
 public class AllITs {
 }

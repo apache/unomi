@@ -152,6 +152,7 @@ public class MigrationTo150 implements Migration {
                 .put("index", new JSONObject()
                         .put("number_of_shards", numberOfShards)
                         .put("number_of_replicas", numberOfReplicas)
+                        .put("max_docvalue_fields_search", 1000)
                 )
                 .put("analysis", new JSONObject()
                         .put("analyzer", new JSONObject()

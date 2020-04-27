@@ -25,7 +25,7 @@ import java.util.*;
 /**
  * An event that can be processed and evaluated by the context server. Events can be triggered by clients following user actions or can also be issued internally in the context
  * server in response to another event. Conceptually, an event can be seen as a sentence, the event's type being the verb, the source the subject and the target the object.
- *
+ * <p>
  * Source and target can be any unomi item but are not limited to them. In particular, as long as they can be described using properties and unomi’s type mechanism and can be
  * processed either natively or via extension plugins, source and target can represent just about anything.
  */
@@ -74,6 +74,23 @@ public class Event extends Item implements TimestampedItem {
     /**
      * Instantiates a new Event.
      *
+     * @param itemId    the event item id identifier
+     * @param eventType the event type identifier
+     * @param session   the session associated with the event
+     * @param profile   the profile associated with the event
+     * @param scope     the scope from which the event is issued
+     * @param source    the source of the event
+     * @param target    the target of the event if any
+     * @param timestamp the timestamp associated with the event if provided
+     */
+    public Event(String itemId, String eventType, Session session, Profile profile, String scope, Item source, Item target, Date timestamp) {
+        super(itemId);
+        initEvent(eventType, session, profile, scope, source, target, timestamp);
+    }
+
+    /**
+     * Instantiates a new Event.
+     *
      * @param eventType the event type identifier
      * @param session   the session associated with the event
      * @param profile   the profile associated with the event
@@ -83,7 +100,48 @@ public class Event extends Item implements TimestampedItem {
      * @param timestamp the timestamp associated with the event if provided
      */
     public Event(String eventType, Session session, Profile profile, String scope, Item source, Item target, Date timestamp) {
-        super(UUID.randomUUID().toString());
+        this(eventType, session, profile, scope, source, target, null, timestamp, false);
+    }
+
+    /**
+     * Instantiates a new Event.
+     *
+     * @param eventType the event type identifier
+     * @param session   the session associated with the event
+     * @param profile   the profile associated with the event
+     * @param scope     the scope from which the event is issued
+     * @param source    the source of the event
+     * @param target    the target of the event if any
+     * @param timestamp the timestamp associated with the event if provided
+     * @param persistent specifies if the event needs to be persisted
+     */
+    public Event(String eventType, Session session, Profile profile, String scope, Item source, Item target, Map<String, Object> properties, Date timestamp, boolean persistent) {
+        this(UUID.randomUUID().toString(), eventType, session, profile, scope, source, target, properties, timestamp, persistent);
+    }
+
+    /**
+     * Instantiates a new Event.
+     *
+     * @param itemId     the event item id identifier
+     * @param eventType  the event type identifier
+     * @param session    the session associated with the event
+     * @param profile    the profile associated with the event
+     * @param scope      the scope from which the event is issued
+     * @param source     the source of the event
+     * @param target     the target of the event if any
+     * @param properties the properties for this event if any
+     * @param timestamp  the timestamp associated with the event if provided
+     * @param persistent specifies if the event needs to be persisted
+     */
+    public Event(String itemId, String eventType, Session session, Profile profile, String scope, Item source, Item target, Map<String, Object> properties, Date timestamp, boolean persistent) {
+        this(itemId, eventType, session, profile, scope, source, target, timestamp);
+        this.persistent = persistent;
+        if (properties != null) {
+            this.properties = properties;
+        }
+    }
+
+    private void initEvent(String eventType, Session session, Profile profile, String scope, Item source, Item target, Date timestamp) {
         this.eventType = eventType;
         this.profile = profile;
         this.session = session;
@@ -103,33 +161,20 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Instantiates a new Event.
-     *
-     * @param eventType  the event type identifier
-     * @param session    the session associated with the event
-     * @param profile    the profile associated with the event
-     * @param scope      the scope from which the event is issued
-     * @param source     the source of the event
-     * @param target     the target of the event if any
-     * @param timestamp  the timestamp associated with the event if provided
-     * @param properties the properties for this event if any
-     * @param persistent specifies if the event needs to be persisted
-     */
-    public Event(String eventType, Session session, Profile profile, String scope, Item source, Item target, Map<String, Object> properties, Date timestamp, boolean persistent) {
-        this(eventType, session, profile, scope, source, target, timestamp);
-        this.persistent = persistent;
-        if (properties != null) {
-            this.properties = properties;
-        }
-    }
-
-    /**
      * Retrieves the session identifier if available.
      *
      * @return the session identifier or {@code null} if unavailable
      */
     public String getSessionId() {
         return sessionId;
+    }
+
+    /**
+     * Set the session id
+     * @param sessionId the session id
+     */
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
     }
 
     /**
@@ -159,8 +204,28 @@ public class Event extends Item implements TimestampedItem {
         return eventType;
     }
 
+    /**
+     * Sets the event type
+     * @param eventType the event type
+     */
+    public void setEventType(String eventType) {
+        this.eventType = eventType;
+    }
+
+    /**
+     * Retrieves the event time stamp
+     *
+     * @return the event time stamp
+     */
     public Date getTimeStamp() {
         return timeStamp;
+    }
+
+    /**
+     * @param timeStamp set the time stamp
+     */
+    public void setTimeStamp(Date timeStamp) {
+        this.timeStamp = timeStamp;
     }
 
     /**
@@ -231,6 +296,14 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
+     * Sets the map of attribues
+     * @param attributes the attributes map
+     */
+    public void setAttributes(Map<String, Object> attributes) {
+        this.attributes = attributes;
+    }
+
+    /**
      * Sets the property identified by the provided name to the specified value.
      *
      * @param name  the name of the property to be set
@@ -259,6 +332,18 @@ public class Event extends Item implements TimestampedItem {
         return properties;
     }
 
+    /**
+     * Sets map of properties that will override existing field if it exists
+     *
+     * @param properties Map of new Properties
+     */
+    public void setProperties(Map<String, Object> properties) {
+        this.properties = properties;
+    }
+
+    /**
+     * @return the scope
+     */
     public String getScope() {
         return scope;
     }

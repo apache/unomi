@@ -148,7 +148,7 @@
                 <groupId>com.github.alexcojocaru</groupId>
                 <artifactId>elasticsearch-maven-plugin</artifactId>
                 <!-- REPLACE THE FOLLOWING WITH THE PLUGIN VERSION YOU NEED -->
-                <version>6.13</version>
+                <version>6.16</version>
                 <configuration>
                     <clusterName>contextElasticSearchITests</clusterName>
                     <transportPort>9500</transportPort>
@@ -156,6 +156,11 @@
                     <version>${elasticsearch.version}</version>
                     <autoCreateIndex>true</autoCreateIndex>
                     <timeout>120</timeout>
+                    <instanceSettings>
+                        <properties>
+                            <cluster.routing.allocation.disk.threshold_enabled>false</cluster.routing.allocation.disk.threshold_enabled>
+                        </properties>
+                    </instanceSettings>
                 </configuration>
                 <executions>
                     <!--

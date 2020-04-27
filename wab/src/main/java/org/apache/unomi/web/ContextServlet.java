@@ -211,10 +211,10 @@ public class ContextServlet extends HttpServlet {
 
             if (session == null || invalidateSession) {
                 sessionProfile = privacyService.isRequireAnonymousBrowsing(profile) ? privacyService.getAnonymousProfile(profile) : profile;
-                session = new Session(sessionId, sessionProfile, timestamp, scope);
 
                 if (StringUtils.isNotBlank(sessionId)) {
                     // Only save session and send event if a session id was provided, otherwise keep transient session
+                    session = new Session(sessionId, sessionProfile, timestamp, scope);
                     changes |= EventService.SESSION_UPDATED;
                     Event event = new Event("sessionCreated", session, profile, scope, null, session, timestamp);
                     if (sessionProfile.isAnonymousProfile()) {
@@ -241,7 +241,7 @@ public class ContextServlet extends HttpServlet {
 
                 if (logger.isDebugEnabled()) {
                     logger.debug("Received event {} for profile={} {} target={} timestamp={}", profileUpdated.getEventType(), profile.getItemId(),
-                            " session=" + session.getItemId(), profileUpdated.getTarget(), timestamp);
+                            " session=" + (session != null ? session.getItemId() : null), profileUpdated.getTarget(), timestamp);
                 }
                 changes |= eventService.send(profileUpdated);
             }
@@ -336,13 +336,15 @@ public class ContextServlet extends HttpServlet {
             data.setProfileProperties(profileProperties);
         }
 
-        data.setSessionId(session.getItemId());
-        if (contextRequest.getRequiredSessionProperties() != null) {
-            Map<String, Object> sessionProperties = new HashMap<>(session.getProperties());
-            if (!contextRequest.getRequiredSessionProperties().contains("*")) {
-                sessionProperties.keySet().retainAll(contextRequest.getRequiredSessionProperties());
+        if (session != null) {
+            data.setSessionId(session.getItemId());
+            if (contextRequest.getRequiredSessionProperties() != null) {
+                Map<String, Object> sessionProperties = new HashMap<>(session.getProperties());
+                if (!contextRequest.getRequiredSessionProperties().contains("*")) {
+                    sessionProperties.keySet().retainAll(contextRequest.getRequiredSessionProperties());
+                }
+                data.setSessionProperties(sessionProperties);
             }
-            data.setSessionProperties(sessionProperties);
         }
 
         processOverrides(contextRequest, profile, session);
@@ -398,7 +400,7 @@ public class ContextServlet extends HttpServlet {
                 if (contextRequest.getProfileOverrides().getProperties()!=null) {
                     profile.setProperties(contextRequest.getProfileOverrides().getProperties());
                 }
-                if (contextRequest.getSessionPropertiesOverrides()!=null) {
+                if (contextRequest.getSessionPropertiesOverrides()!=null && session != null) {
                     session.setProperties(contextRequest.getSessionPropertiesOverrides());
                 }
             }

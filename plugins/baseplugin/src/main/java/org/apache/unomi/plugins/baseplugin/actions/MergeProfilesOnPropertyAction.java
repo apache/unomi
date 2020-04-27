@@ -182,7 +182,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                                     // be deleted upon next load
                                     profile.setMergedWith(masterProfileId);
                                     Map<String,Object> sourceMap = new HashMap<>();
-                                    sourceMap.put("mergedWith", masterProfile);
+                                    sourceMap.put("mergedWith", masterProfileId);
                                     profile.setSystemProperty("lastUpdated", new Date());
                                     sourceMap.put("systemProperties", profile.getSystemProperties());
                                     persistenceService.update(profile.getItemId(), null, Profile.class, sourceMap);

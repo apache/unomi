@@ -73,6 +73,9 @@ public class ServletCommon {
                         logger.warn("Event is not allowed : {}", event.getEventType());
                         continue;
                     }
+                    if (thirdPartyId != null && event.getItemId() != null) {
+                        eventToSend = new Event(event.getItemId(), event.getEventType(), session, profile, event.getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
+                    }
                     if (filteredEventTypes != null && filteredEventTypes.contains(event.getEventType())) {
                         logger.debug("Profile is filtering event type {}", event.getEventType());
                         continue;
@@ -85,7 +88,7 @@ public class ServletCommon {
                     eventToSend.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     eventToSend.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                     logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session="
-                            + session.getItemId() + " target=" + event.getTarget() + " timestamp=" + timestamp);
+                            + (session!= null?session.getItemId():null) + " target=" + event.getTarget() + " timestamp=" + timestamp);
                     changes = eventService.send(eventToSend);
                     // If the event execution changes the profile we need to update it so the next event use the right profile
                     if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {

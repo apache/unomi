@@ -25,6 +25,7 @@
              start-level="70">
         <feature>war</feature>
         <feature>cxf-jaxrs</feature>
+        <feature>cxf-features-metrics</feature>
         <feature>cellar</feature>
         <feature>eventadmin</feature>
         <feature>shell-compat</feature>
@@ -80,5 +81,10 @@
         <bundle start-level="85" start="false">mvn:org.apache.unomi/unomi-web-tracker-wab/${project.version}</bundle>
 
         <bundle start-level="99">mvn:org.apache.unomi/shell-commands/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-documentation" description="Documentation of Unomi in HTML" version="${project.version}">
+        <feature>war</feature>
+        <bundle>mvn:org.apache.unomi/manual/${project.version}</bundle>
     </feature>
 </features>

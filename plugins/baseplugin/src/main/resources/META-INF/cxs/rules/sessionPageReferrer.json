@@ -27,7 +27,7 @@
         {
             "parameterValues": {
                 "setPropertyName": "size",
-                "setPropertyValue": "script::session.size + 1",
+                "setPropertyValue": "script::session != null ? session.size + 1 : 0",
                 "storeInSession": true
             },
             "type": "setPropertyAction"
