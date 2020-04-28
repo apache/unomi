@@ -409,7 +409,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else {
             JodaDateMathParser parser = new JodaDateMathParser(Joda.forPattern("strictDateOptionalTime||epoch_millis"));
             try {
-                return new Date(parser.parse(value.toString(), System::currentTimeMillis).getEpochSecond());
+                return Date.from(parser.parse(value.toString(), System::currentTimeMillis));
             } catch (ElasticsearchParseException e) {
                 logger.warn("unable to parse date " + value.toString(), e);
             }
