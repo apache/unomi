@@ -39,12 +39,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class EventServiceImpl implements EventService {
     private static final Logger logger = LoggerFactory.getLogger(EventServiceImpl.class.getName());
     private static final int MAX_RECURSION_DEPTH = 10;
 
-    private List<EventListenerService> eventListeners = new ArrayList<EventListenerService>();
+    private List<EventListenerService> eventListeners = new CopyOnWriteArrayList<EventListenerService>();
 
     private PersistenceService persistenceService;
 

@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 public class RulesServiceImpl implements RulesService, EventListenerService, SynchronousBundleListener {
@@ -61,7 +62,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     private Integer rulesRefreshInterval = 1000;
     private Integer rulesStatisticsRefreshInterval = 10000;
 
-    private List<RuleListenerService> ruleListeners = new ArrayList<RuleListenerService>();
+    private List<RuleListenerService> ruleListeners = new CopyOnWriteArrayList<RuleListenerService>();
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
