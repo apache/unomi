@@ -69,19 +69,17 @@ public class ContextServlet extends HttpServlet {
     }
 
     @Override
-    public void service(ServletRequest request, ServletResponse response) throws IOException {
+    public void service(HttpServletRequest request, HttpServletResponse response) throws IOException {
         final Date timestamp = new Date();
         if (request.getParameter("timestamp") != null) {
             timestamp.setTime(Long.parseLong(request.getParameter("timestamp")));
         }
 
-        HttpServletRequest httpServletRequest = (HttpServletRequest) request;
-
         // set up CORS headers as soon as possible so that errors are not misconstrued on the client for CORS errors
-        HttpUtils.setupCORSHeaders(httpServletRequest, response);
+        HttpUtils.setupCORSHeaders(request, response);
 
         // Handle OPTIONS request
-        String httpMethod = httpServletRequest.getMethod();
+        String httpMethod = request.getMethod();
         if ("options".equals(httpMethod.toLowerCase())) {
             response.flushBuffer();
             if (logger.isDebugEnabled()) {
@@ -109,7 +107,7 @@ public class ContextServlet extends HttpServlet {
         ContextRequest contextRequest = null;
         String scope = null;
         String sessionId = null;
-        String stringPayload = HttpUtils.getPayload(httpServletRequest);
+        String stringPayload = HttpUtils.getPayload(request);
         if (stringPayload != null) {
             ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
             JsonFactory factory = mapper.getFactory();
@@ -131,13 +129,13 @@ public class ContextServlet extends HttpServlet {
         }
 
         // Get profile id from the cookie
-        String cookieProfileId = ServletCommon.getProfileIdCookieValue(httpServletRequest, profileIdCookieName);
+        String cookieProfileId = ServletCommon.getProfileIdCookieValue(request, profileIdCookieName);
 
         if (cookieProfileId == null && sessionId == null && personaId == null) {
             ((HttpServletResponse)response).sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
             logger.error("Couldn't find cookieProfileId, sessionId or personaId in incoming request! Stopped processing request. See debug level for more information");
             if (logger.isDebugEnabled()) {
-                logger.debug("Request dump: {}", HttpUtils.dumpRequestInfo(httpServletRequest));
+                logger.debug("Request dump: {}", HttpUtils.dumpRequestInfo(request));
             }
             return;
         }
@@ -270,7 +268,7 @@ public class ContextServlet extends HttpServlet {
             contextResponse.setSessionId(session.getItemId());
         }
 
-        String extension = httpServletRequest.getRequestURI().substring(httpServletRequest.getRequestURI().lastIndexOf(".") + 1);
+        String extension = request.getRequestURI().substring(request.getRequestURI().lastIndexOf(".") + 1);
         boolean noScript = "json".equals(extension);
         String contextAsJSONString = CustomObjectMapper.getObjectMapper().writeValueAsString(contextResponse);
         Writer responseWriter;
