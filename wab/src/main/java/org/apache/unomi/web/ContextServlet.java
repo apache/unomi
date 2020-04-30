@@ -268,6 +268,10 @@ public class ContextServlet extends HttpServlet {
             contextResponse.setSessionId(session.getItemId());
         }
 
+        if ((changes & EventService.ERROR) == EventService.ERROR) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
+
         String extension = request.getRequestURI().substring(request.getRequestURI().lastIndexOf(".") + 1);
         boolean noScript = "json".equals(extension);
         String contextAsJSONString = CustomObjectMapper.getObjectMapper().writeValueAsString(contextResponse);
