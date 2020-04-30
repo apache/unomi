@@ -50,6 +50,7 @@ services:
       - ELASTICSEARCH_HOST=elasticsearch
       - ELASTICSEARCH_PORT=9200
       - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
+      - UNOMI_ROOT_PASSWORD=paulaan.me
     links:
       - elasticsearch
     depends_on:
