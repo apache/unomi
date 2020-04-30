@@ -150,38 +150,44 @@ public class EventServiceImpl implements EventService {
             return NO_CHANGE;
         }
 
+        boolean saveSucceeded = true;
         if (event.isPersistent()) {
-            persistenceService.save(event);
+            saveSucceeded = persistenceService.save(event);
         }
 
-        int changes = NO_CHANGE;
+        int changes;
 
-        final Session session = event.getSession();
-        if (event.isPersistent() && session != null) {
-            session.setLastEventDate(event.getTimeStamp());
-        }
+        if (saveSucceeded) {
+            changes = NO_CHANGE;
+            final Session session = event.getSession();
+            if (event.isPersistent() && session != null) {
+                session.setLastEventDate(event.getTimeStamp());
+            }
 
-        if (event.getProfile() != null) {
-            for (EventListenerService eventListenerService : eventListeners) {
-                if (eventListenerService.canHandle(event)) {
-                    changes |= eventListenerService.onEvent(event);
+            if (event.getProfile() != null) {
+                for (EventListenerService eventListenerService : eventListeners) {
+                    if (eventListenerService.canHandle(event)) {
+                        changes |= eventListenerService.onEvent(event);
+                    }
+                }
+                // At the end of the processing event execute the post executor actions
+                for (ActionPostExecutor actionPostExecutor : event.getActionPostExecutors()) {
+                    changes |= actionPostExecutor.execute() ? changes : NO_CHANGE;
+                }
+
+                if ((changes & PROFILE_UPDATED) == PROFILE_UPDATED) {
+                    Event profileUpdated = new Event("profileUpdated", session, event.getProfile(), event.getScope(), event.getSource(), event.getProfile(), event.getTimeStamp());
+                    profileUpdated.setPersistent(false);
+                    profileUpdated.getAttributes().putAll(event.getAttributes());
+                    changes |= send(profileUpdated, depth + 1);
+                    if (session != null && session.getProfileId() != null) {
+                        changes |= SESSION_UPDATED;
+                        session.setProfile(event.getProfile());
+                    }
                 }
             }
-            // At the end of the processing event execute the post executor actions
-            for (ActionPostExecutor actionPostExecutor : event.getActionPostExecutors()) {
-                changes |= actionPostExecutor.execute() ? changes : NO_CHANGE;
-            }
-
-            if ((changes & PROFILE_UPDATED) == PROFILE_UPDATED) {
-                Event profileUpdated = new Event("profileUpdated", session, event.getProfile(), event.getScope(), event.getSource(), event.getProfile(), event.getTimeStamp());
-                profileUpdated.setPersistent(false);
-                profileUpdated.getAttributes().putAll(event.getAttributes());
-                changes |= send(profileUpdated, depth + 1);
-                if (session != null && session.getProfileId() != null) {
-                    changes |= SESSION_UPDATED;
-                    session.setProfile(event.getProfile());
-                }
-            }
+        } else {
+            changes = ERROR;
         }
         return changes;
     }

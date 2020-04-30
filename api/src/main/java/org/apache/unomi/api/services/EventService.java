@@ -38,13 +38,17 @@ public interface EventService {
      */
     int NO_CHANGE = 0;
     /**
+     * An error occurred while processing the event.
+     */
+    int ERROR = 1;
+    /**
      * The associated session was updated following an event being handled.
      */
-    int SESSION_UPDATED = 1;
+    int SESSION_UPDATED = 2;
     /**
      * The associated profile was updated following an event being handled.
      */
-    int PROFILE_UPDATED = 2;
+    int PROFILE_UPDATED = 4;
 
     /**
      * Propagates the specified event in the context server, notifying
