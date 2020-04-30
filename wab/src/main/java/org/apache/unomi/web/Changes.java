@@ -26,15 +26,25 @@ import org.apache.unomi.api.Profile;
  */
 public class Changes {
     private int changeType;
+    private int processedItems;
     private Profile profile;
 
     public Changes(int changeType, Profile profile) {
+        this(changeType,0,profile);
+    }
+
+    public Changes(int changeType, int processedItems, Profile profile) {
         this.changeType = changeType;
+        this.processedItems = processedItems;
         this.profile = profile;
     }
 
     public int getChangeType() {
         return changeType;
+    }
+
+    public int getProcessedItems() {
+        return processedItems;
     }
 
     public Profile getProfile() {

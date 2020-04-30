@@ -319,6 +319,7 @@ public class ContextServlet extends HttpServlet {
                                 ServletRequest request, ServletResponse response, Date timestamp) {
         Changes changes = ServletCommon.handleEvents(contextRequest.getEvents(), session, profile, request, response, timestamp,
                 privacyService, eventService);
+        data.setProcessedEvents(changes.getProcessedItems());
 
         profile = changes.getProfile();
 
