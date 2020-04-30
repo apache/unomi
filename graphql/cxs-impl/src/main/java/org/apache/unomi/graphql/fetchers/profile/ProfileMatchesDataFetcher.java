@@ -23,7 +23,7 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.graphql.condition.ProfileConditionFactory;
+import org.apache.unomi.graphql.condition.factories.ProfileConditionFactory;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.input.CDPNamedFilterInput;
 import org.apache.unomi.graphql.types.output.CDPFilterMatch;

@@ -28,8 +28,8 @@ import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
 import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
-import org.apache.unomi.graphql.types.RootMutation;
-import org.apache.unomi.graphql.types.RootQuery;
+import org.apache.unomi.graphql.types.output.RootMutation;
+import org.apache.unomi.graphql.types.output.RootQuery;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.osgi.service.component.annotations.Component;
 

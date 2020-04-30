@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.graphql.condition;
+package org.apache.unomi.graphql.condition.factories;
 
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLInputObjectField;
@@ -186,13 +186,13 @@ public class EventConditionFactory extends ConditionFactory {
         conditions.add(propertyCondition("eventType", dynamicPropertyName));
 
         eventAsMap.forEach((propertyName, propertyValue) -> {
-            final String[] propertyFilter = propertyName.split("_", -1);
+            final String[] propertyFilter = PropertyNameTranslator.translateFromGraphQLToUnomi(propertyName).split("_", -1);
 
             final String propertyValueType =
                     PropertyValueTypeHelper.getPropertyValueParameterForInputType(inputTypeName, propertyName, environment);
 
             conditions.add(
-                    propertyCondition("properties." + PropertyNameTranslator.translateFromGraphQLToUnomi(propertyFilter[0]),
+                    propertyCondition("properties." + propertyFilter[0],
                             ComparisonConditionTranslator.translateFromGraphQLToUnomi(propertyFilter[1]),
                             propertyValueType,
                             propertyValue));

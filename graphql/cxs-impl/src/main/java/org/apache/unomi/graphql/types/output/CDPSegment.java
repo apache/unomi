@@ -18,8 +18,9 @@ package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.graphql.conditionparsers.SegmentConditionParser;
+import org.apache.unomi.graphql.condition.parsers.SegmentConditionParser;
 
 import static org.apache.unomi.graphql.types.output.CDPSegment.TYPE_NAME;
 
@@ -62,8 +63,8 @@ public class CDPSegment {
     }
 
     @GraphQLField
-    public Object filter() {
-        return new SegmentConditionParser(segment.getCondition()).parse();
+    public Object filter(final DataFetchingEnvironment environment) {
+        return new SegmentConditionParser(segment.getCondition(), environment).parse();
     }
 
 }

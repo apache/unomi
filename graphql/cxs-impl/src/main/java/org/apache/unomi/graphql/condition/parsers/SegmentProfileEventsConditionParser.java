@@ -14,10 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.conditionparsers;
+package org.apache.unomi.graphql.condition.parsers;
 
+import graphql.schema.DataFetchingEnvironment;
+import graphql.schema.GraphQLInputObjectType;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.graphql.schema.PropertyNameTranslator;
+import org.apache.unomi.graphql.schema.PropertyValueTypeHelper;
+import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.utils.DateUtils;
+import org.apache.unomi.graphql.utils.ReflectionUtil;
 
 import java.time.OffsetDateTime;
 import java.util.HashMap;
@@ -37,8 +43,11 @@ public class SegmentProfileEventsConditionParser {
 
     private final Condition condition;
 
-    public SegmentProfileEventsConditionParser(final Condition condition) {
+    private final DataFetchingEnvironment environment;
+
+    public SegmentProfileEventsConditionParser(final Condition condition, final DataFetchingEnvironment environment) {
         this.condition = condition;
+        this.environment = environment;
     }
 
     public Map<String, Object> parse() {
@@ -87,41 +96,90 @@ public class SegmentProfileEventsConditionParser {
         if (IS_BOOLEAN_CONDITION_TYPE.test(condition)) {
             ((List<Condition>) condition.getParameter("subConditions")).forEach(subCondition -> {
                 if (IS_BOOLEAN_CONDITION_TYPE.test(subCondition)) {
-                    final List<Map<String, Object>> conditionList = ((List<Condition>) subCondition.getParameter("subConditions"))
-                            .stream()
-                            .map(this::processProfileEventProperties)
-                            .collect(Collectors.toList());
+                    final List<Condition> subConditions = (List<Condition>) subCondition.getParameter("subConditions");
 
-                    fieldsMap.put(subCondition.getParameter("operator").toString(), conditionList);
-                } else {
-                    final Map<String, Object> fieldAsTuple = createProfileEventPropertyField(subCondition);
-                    if (fieldAsTuple.size() == 2) {
-                        fieldsMap.put(fieldAsTuple.get("fieldName").toString(), fieldAsTuple.get("fieldValue"));
+                    if ("and".equals(subCondition.getParameter("operator").toString())
+                            && subConditions.stream().anyMatch(c -> c.getParameter("propertyName") != null
+                            && "eventType".equals(c.getParameter("propertyName").toString()))) {
+                        processDynamicEventField(subCondition, fieldsMap);
+                    } else {
+                        final List<Map<String, Object>> conditionList = subConditions.stream()
+                                .map(this::processProfileEventProperties)
+                                .collect(Collectors.toList());
+
+                        fieldsMap.put(subCondition.getParameter("operator").toString(), conditionList);
                     }
+                } else {
+                    processEventPropertyCondition(subCondition, fieldsMap);
                 }
             });
         } else {
-            final Map<String, Object> fieldAsTuple = createProfileEventPropertyField(condition);
-            if (fieldAsTuple.size() == 2) {
-                fieldsMap.put(fieldAsTuple.get("fieldName").toString(), fieldAsTuple.get("fieldValue"));
-            }
+            processEventPropertyCondition(condition, fieldsMap);
         }
 
         return fieldsMap;
+    }
+
+    private void processEventPropertyCondition(final Condition condition, final Map<String, Object> fieldsMap) {
+        final Map<String, Object> fieldAsTuple = createProfileEventPropertyField(condition);
+        if (fieldAsTuple.size() == 2) {
+            fieldsMap.put(fieldAsTuple.get("fieldName").toString(), fieldAsTuple.get("fieldValue"));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void processDynamicEventField(final Condition condition, final Map<String, Object> container) {
+        final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
+
+        final String dynamicFieldName = subConditions.stream()
+                .filter(subCondition -> "eventType".equals(subCondition.getParameter("propertyName").toString()))
+                .map(subCondition -> subCondition.getParameter("propertyValue").toString())
+                .findFirst().orElse(null);
+
+        if (dynamicFieldName != null) {
+            final GraphQLInputObjectType inputObjectType =
+                    (GraphQLInputObjectType) environment.getGraphQLSchema().getType(ReflectionUtil.resolveTypeName(CDPEventFilterInput.class));
+
+            final String typeName = ((GraphQLInputObjectType) inputObjectType.getFieldDefinition(dynamicFieldName).getType()).getName();
+
+            final Map<String, Object> dynamicFieldAsMap = new HashMap<>();
+
+            for (final Condition subCondition : subConditions) {
+                if ("eventType".equals(subCondition.getParameter("propertyName").toString())) {
+                    continue;
+                }
+
+                final String propertyName = subCondition.getParameter("propertyName").toString().replace("properties.", "");
+
+                final String comparisonOperator = subCondition.getParameter("comparisonOperator").toString();
+
+                final String fieldName = PropertyNameTranslator.translateFromUnomiToGraphQL(propertyName) + "_" + comparisonOperator;
+
+                final String propertyValueType = PropertyValueTypeHelper.getPropertyValueParameterForInputType(typeName, fieldName, environment);
+
+                dynamicFieldAsMap.put(fieldName, subCondition.getParameter(propertyValueType));
+            }
+
+            container.put(dynamicFieldName, dynamicFieldAsMap);
+        }
     }
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> createProfileEventPropertyField(final Condition condition) {
         final Map<String, Object> tuple = new HashMap<>();
 
-        if ("timeStamp".equals(condition.getParameter("propertyName").toString())) {
-            if ("equals".equals(condition.getParameter("comparisonOperator").toString())) {
+        final String propertyName = condition.getParameter("propertyName").toString();
+
+        if ("timeStamp".equals(propertyName)) {
+            final String comparisonOperator = condition.getParameter("comparisonOperator").toString();
+
+            if ("equals".equals(comparisonOperator)) {
                 tuple.put("fieldName", "cdp_timestamp_equals");
-            } else if ("lessThan".equals(condition.getParameter("comparisonOperator").toString())) {
+            } else if ("lessThan".equals(comparisonOperator)) {
                 tuple.put("fieldName", "cdp_timestamp_lt");
-            } else if ("lessThanOrEqualTo".equals(condition.getParameter("comparisonOperator").toString())) {
+            } else if ("lessThanOrEqualTo".equals(comparisonOperator)) {
                 tuple.put("fieldName", "cdp_timestamp_lte");
-            } else if ("greaterThan".equals(condition.getParameter("comparisonOperator").toString())) {
+            } else if ("greaterThan".equals(comparisonOperator)) {
                 tuple.put("fieldName", "cdp_timestamp_gt");
             } else {
                 tuple.put("fieldName", "cdp_timestamp_gte");
@@ -131,13 +189,13 @@ public class SegmentProfileEventsConditionParser {
 
             tuple.put("fieldValue", fieldValue != null ? fieldValue.toString() : null);
         } else {
-            if ("source.itemId".equals(condition.getParameter("propertyName").toString())) {
+            if ("source.itemId".equals(propertyName)) {
                 tuple.put("fieldName", "cdp_sourceID_equals");
-            } else if ("profileId".equals(condition.getParameter("propertyName").toString())) {
+            } else if ("profileId".equals(propertyName)) {
                 tuple.put("fieldName", "cdp_profileID_equals");
-            } else if ("itemId".equals(condition.getParameter("propertyName").toString())) {
+            } else if ("itemId".equals(propertyName)) {
                 tuple.put("fieldName", "id_equals");
-            } else if ("properties.clientId".equals(condition.getParameter("propertyName").toString())) {
+            } else if ("properties.clientId".equals(propertyName)) {
                 tuple.put("fieldName", "cdp_clientID_equals");
             }
 

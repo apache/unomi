@@ -18,10 +18,8 @@ package org.apache.unomi.graphql.schema;
 
 import graphql.Scalars;
 import graphql.annotations.AnnotationsSchemaCreator;
-import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.annotations.processor.ProcessingElementsContainer;
-import graphql.annotations.processor.util.NamingKit;
 import graphql.language.InputObjectTypeDefinition;
 import graphql.schema.DataFetcher;
 import graphql.schema.FieldCoordinates;
@@ -46,8 +44,8 @@ import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
 import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
 import org.apache.unomi.graphql.providers.GraphQLTypeFunctionProvider;
-import org.apache.unomi.graphql.types.RootMutation;
-import org.apache.unomi.graphql.types.RootQuery;
+import org.apache.unomi.graphql.types.output.RootMutation;
+import org.apache.unomi.graphql.types.output.RootQuery;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPEventProcessor;
@@ -58,6 +56,7 @@ import org.apache.unomi.graphql.types.input.CDPProfileUpdateEventInput;
 import org.apache.unomi.graphql.types.input.EventFilterInputMarker;
 import org.apache.unomi.graphql.types.output.CDPPersona;
 import org.apache.unomi.graphql.types.output.CDPProfile;
+import org.apache.unomi.graphql.utils.ReflectionUtil;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -149,9 +148,7 @@ public class GraphQLSchemaProvider {
             for (final GraphQLAdditionalTypesProvider typeProvider : additionalTypesProviders) {
                 if (typeProvider != null && typeProvider.getAdditionalInputTypes() != null) {
                     typeProvider.getAdditionalInputTypes().forEach(additionalType -> {
-                        final GraphQLName name = additionalType.getAnnotation(GraphQLName.class);
-
-                        final String typeName = NamingKit.toGraphqlName(name == null ? additionalType.getSimpleName() : name.value());
+                        final String typeName = ReflectionUtil.resolveTypeName(additionalType);
 
                         final GraphQLInputObjectType.Builder builder = GraphQLInputObjectType.newInputObject()
                                 .name(typeName)
@@ -250,9 +247,7 @@ public class GraphQLSchemaProvider {
                     provider.getAdditionalInputTypes().stream()
                             .filter(CDPEventProcessor.class::isAssignableFrom)
                             .forEach(additionalType -> {
-                                final GraphQLName name = additionalType.getAnnotation(GraphQLName.class);
-
-                                final String typeName = NamingKit.toGraphqlName(name == null ? additionalType.getSimpleName() : name.value());
+                                final String typeName = ReflectionUtil.resolveTypeName(additionalType);
 
                                 final GraphQLInputObjectType.Builder eventInput = GraphQLInputObjectType.newInputObject()
                                         .name(typeName)
@@ -287,9 +282,7 @@ public class GraphQLSchemaProvider {
                     provider.getAdditionalInputTypes().stream()
                             .filter(EventFilterInputMarker.class::isAssignableFrom)
                             .forEach(additionalType -> {
-                                final GraphQLName name = additionalType.getAnnotation(GraphQLName.class);
-
-                                final String typeName = NamingKit.toGraphqlName(name == null ? additionalType.getSimpleName() : name.value());
+                                final String typeName = ReflectionUtil.resolveTypeName(additionalType);
 
                                 final String fieldName = generateFieldName(typeName.replace("FilterInput", ""));
 

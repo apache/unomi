@@ -23,7 +23,7 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.query.Query;
-import org.apache.unomi.graphql.condition.ConditionFactory;
+import org.apache.unomi.graphql.condition.factories.ConditionFactory;
 import org.apache.unomi.graphql.converters.UserListConverter;
 import org.apache.unomi.graphql.services.ServiceManager;
 

@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.conditionparsers;
+package org.apache.unomi.graphql.condition.parsers;
 
+import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.conditions.Condition;
 
 import java.util.ArrayList;
@@ -45,14 +46,17 @@ public class SegmentConditionParser {
 
     private final Condition segmentCondition;
 
+    private final DataFetchingEnvironment environment;
+
     private Map<String, ConditionDecorator> conditionsContext = new LinkedHashMap<>();
 
     private Map<FilterType, List<ConditionDecorator>> groupedConditionsByFilterType = new LinkedHashMap<>();
 
     private Map<FilterType, String> rootConditionIdPerFilterType = new LinkedHashMap<>();
 
-    public SegmentConditionParser(final Condition segmentCondition) {
+    public SegmentConditionParser(final Condition segmentCondition, final DataFetchingEnvironment environment) {
         this.segmentCondition = segmentCondition;
+        this.environment = environment;
     }
 
     public Map<String, Object> parse() {
@@ -94,7 +98,7 @@ public class SegmentConditionParser {
                     break;
                 case EVENTS:
                     dataHolder.put(filterType.getValue(),
-                            new SegmentProfileEventsConditionParser(conditionDecorator.getCondition()).parse());
+                            new SegmentProfileEventsConditionParser(conditionDecorator.getCondition(), environment).parse());
                     break;
                 case PROPERTIES:
                     dataHolder.put(filterType.getValue(),
