@@ -235,13 +235,13 @@ Unomi.prototype.loadContext = function (skipEvents, invalidate) {
         self.ready();
 
         if (window.digitalData.loadCallbacks) {
-            console.info('[UNOMI] Found context server load callbacks, calling now...');
+            console.info('[Tracker] Found context server load callbacks, calling now...');
             for (var i = 0; i < window.digitalData.loadCallbacks.length; i++) {
                 window.digitalData.loadCallbacks[i](digitalData);
             }
         }
         if (window.digitalData.personalizationCallback) {
-            console.info('[UNOMI] Found context server personalization, calling now...');
+            console.info('[Tracker] Found context server personalization, calling now...');
             for (var i = 0; i < window.digitalData.personalizationCallback.length; i++) {
                 window.digitalData.personalizationCallback[i].callback(cxs.personalizations[window.digitalData.personalizationCallback[i].personalization.id]);
             }
@@ -260,12 +260,12 @@ Unomi.prototype.loadContext = function (skipEvents, invalidate) {
         error: this.executeFallback
     });
 
-    console.info('[UNOMI] Context loading...');
+    console.info('[Tracker] Context loading...');
 };
 
 Unomi.prototype.onpersonalize = function (msg) {
     if (this.contextLoaded) {
-        console.error('[UNOMI] Already loaded, too late...');
+        console.error('[Tracker] Already loaded, too late...');
         return;
     }
     window.digitalData = window.digitalData || {
@@ -408,7 +408,7 @@ Unomi.prototype.collectEvents = function (events, successCallback, errorCallback
 Unomi.prototype.registerEvent = function (event) {
     if (window.digitalData) {
         if (window.cxs) {
-            console.error('[UNOMI] already loaded, too late...');
+            console.error('[Tracker] already loaded, too late...');
         } else {
             window.digitalData.events = window.digitalData.events || [];
             window.digitalData.events.push(event);
@@ -423,19 +423,19 @@ Unomi.prototype.registerEvent = function (event) {
 Unomi.prototype.registerCallback = function (onLoadCallback) {
     if (window.digitalData) {
         if (window.cxs) {
-            console.info('[UNOMI] digitalData object loaded, calling on load callback immediately and registering update callback...');
+            console.info('[Tracker] digitalData object loaded, calling on load callback immediately and registering update callback...');
             if (onLoadCallback) {
                 onLoadCallback(window.digitalData);
             }
         } else {
-            console.info('[UNOMI] digitalData object present but not loaded, registering load callback...');
+            console.info('[Tracker] digitalData object present but not loaded, registering load callback...');
             if (onLoadCallback) {
                 window.digitalData.loadCallbacks = window.digitalData.loadCallbacks || [];
                 window.digitalData.loadCallbacks.push(onLoadCallback);
             }
         }
     } else {
-        console.info('[UNOMI] No digital data object found, creating and registering update callback...');
+        console.info('[Tracker] No digital data object found, creating and registering update callback...');
         window.digitalData = {};
         if (onLoadCallback) {
             window.digitalData.loadCallbacks = [];
@@ -504,7 +504,7 @@ Unomi.prototype.ajax = function (ajaxOptions) {
     if (this.options.timeoutInMilliseconds !== -1) {
         setTimeout(function () {
             if (!requestExecuted) {
-                console.error('[UNOMI] XML request timeout, url: ' + ajaxOptions.url);
+                console.error('[Tracker] XML request timeout, url: ' + ajaxOptions.url);
                 requestExecuted = true;
                 if (ajaxOptions.error) {
                     ajaxOptions.error(xhr);
@@ -528,7 +528,7 @@ Unomi.prototype.ajax = function (ajaxOptions) {
                     if (ajaxOptions.error) {
                         ajaxOptions.error(xhr);
                     }
-                    console.error('[UNOMI] XML request error: ' + xhr.statusText + ' (' + xhr.status + ')');
+                    console.error('[Tracker] XML request error: ' + xhr.statusText + ' (' + xhr.status + ')');
                 }
             }
         }
@@ -544,7 +544,7 @@ Unomi.prototype.ajax = function (ajaxOptions) {
 };
 
 Unomi.prototype.executeFallback = function () {
-    console.warn('[UNOMI] execute fallback');
+    console.warn('[Tracker] execute fallback');
     window.cxs = {};
     for (var index in window.digitalData.loadCallbacks) {
         window.digitalData.loadCallbacks[index]();

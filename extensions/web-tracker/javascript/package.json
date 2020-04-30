@@ -12,7 +12,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "yarn browserify && yarn replace && yarn minify",
-    "browserify": "browserify src/index.js -p [ browserify-header --file src/license.js ] -s unomiTracker -o dist/unomi-tracker.js",
+    "browserify": "browserify src/index.js -p [ browserify-header --file src/license.js ] -s follower -o dist/unomi-tracker.js",
     "replace": "replace-in-file 'analytics.require = require' '//analytics.require = require' dist/unomi-tracker.js",
     "minify": "uglifyjs -c -m --comments '/@license/' -o dist/unomi-tracker.min.js -- dist/unomi-tracker.js",
     "snippet:minify": "uglifyjs -c -m -o snippet.min.js --source-map snippet.min.js.map -- snippet.js",
