@@ -25,7 +25,7 @@ var Unomi = (module.exports = integration('Apache Unomi')
     .readyOnLoad()
     .option('scope', 'systemscope')
     .option('url', 'http://localhost:8181')
-    .option('timeoutInMilliseconds', 1500)
+    .option('timeoutInMilliseconds', 3000)
     .option('sessionCookieName', 'unomiSessionId')
     .option('sessionId'));
 

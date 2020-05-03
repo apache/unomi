@@ -666,6 +666,12 @@
                 </plugins>
             </build>
         </profile>
+        <profile>
+            <id>docker</id>
+            <modules>
+                <module>docker</module>
+            </modules>
+        </profile>
     </profiles>
 
     <dependencyManagement>

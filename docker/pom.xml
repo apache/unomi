@@ -73,8 +73,7 @@
                     <images>
                         <image>
                             <alias>unomi</alias>
-                            <name>apache/unomi:latest</name>
-
+                            <name>apache/unomi:${project.version}</name>
                             <external>
                                 <type>compose</type>
                                 <basedir>${basedir}</basedir>
