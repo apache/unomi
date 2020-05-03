@@ -100,7 +100,7 @@ public class Event extends Item implements TimestampedItem {
      * @param timestamp the timestamp associated with the event if provided
      */
     public Event(String eventType, Session session, Profile profile, String scope, Item source, Item target, Date timestamp) {
-        this(eventType, session, profile, scope, source, target, null, timestamp, false);
+        this(eventType, session, profile, scope, source, target, null, timestamp, true);
     }
 
     /**

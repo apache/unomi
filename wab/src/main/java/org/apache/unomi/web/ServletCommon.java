@@ -64,8 +64,10 @@ public class ServletCommon {
 
         int changes = EventService.NO_CHANGE;
         // execute provided events if any
+        int processedEventsCnt = 0;
         if (events != null && !(profile instanceof Persona)) {
             for (Event event : events) {
+                processedEventsCnt++;
                 if (event.getEventType() != null) {
                     Event eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(),
                             event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
@@ -94,10 +96,15 @@ public class ServletCommon {
                     if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
                         profile = eventToSend.getProfile();
                     }
+                    if ((changes & EventService.ERROR) == EventService.ERROR) {
+                        //Don't count the event that failed
+                        processedEventsCnt--;
+                        logger.error("Error processing events. Total number of processed events: {}/{}", processedEventsCnt,events.size());
+                        break;
+                    }
                 }
             }
         }
-
-        return new Changes(changes, profile);
+        return new Changes(changes, processedEventsCnt, profile);
     }
 }

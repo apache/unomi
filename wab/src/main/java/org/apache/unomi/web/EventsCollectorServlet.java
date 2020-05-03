@@ -187,6 +187,11 @@ public class EventsCollectorServlet extends HttpServlet {
                 profileService.saveSession(session);
             }
         }
+        if ((changes & EventService.ERROR) == EventService.ERROR) {
+            String errorMessage = "Error processing events. Total number of processed events: " + changesObject.getProcessedItems() + "/" + eventsCollectorRequest.getEvents().size();
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, errorMessage);
+            return;
+        }
 
         response.setContentType("application/json");
         PrintWriter responseWriter = response.getWriter();
