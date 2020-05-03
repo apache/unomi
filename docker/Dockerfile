@@ -24,19 +24,16 @@ ENV PATH $PATH:$UNOMI_HOME/bin
 ENV KARAF_OPTS "-Dunomi.autoStart=true"
 
 ENV ELASTICSEARCH_HOST localhost
-ENV ELASTICSEARCH_PORT 9300
+ENV ELASTICSEARCH_PORT 9200
 
-ENV UNOMI_VERSION "1.4.0"
+ENV UNOMI_VERSION "${project.version}"
 
 WORKDIR $UNOMI_HOME
 
-RUN wget http://apache.mirrors.pair.com/unomi/${UNOMI_VERSION}/unomi-${UNOMI_VERSION}-bin.tar.gz
+ADD target/dependency/unomi-${UNOMI_VERSION}.tar.gz ./
 
-RUN tar -xzf unomi-${UNOMI_VERSION}-bin.tar.gz \
-	&& mv unomi-*/* . \
+RUN mv unomi-*/* . \
 	&& rm -rf unomi-*
-
-RUN cp ${UNOMI_HOME}/etc/custom.properties ${UNOMI_HOME}/etc/custom.properties.template
 
 COPY ./entrypoint.sh ./entrypoint.sh
 
