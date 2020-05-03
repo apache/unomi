@@ -4,6 +4,7 @@ target
 .classpath
 .project
 node_modules
+node
 /src/main/webapp/META-INF/MANIFEST.MF
 /**/.idea
 *.iml

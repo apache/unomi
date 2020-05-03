@@ -39,12 +39,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class EventServiceImpl implements EventService {
     private static final Logger logger = LoggerFactory.getLogger(EventServiceImpl.class.getName());
     private static final int MAX_RECURSION_DEPTH = 10;
 
-    private List<EventListenerService> eventListeners = new ArrayList<EventListenerService>();
+    private List<EventListenerService> eventListeners = new CopyOnWriteArrayList<EventListenerService>();
 
     private PersistenceService persistenceService;
 
@@ -149,38 +150,44 @@ public class EventServiceImpl implements EventService {
             return NO_CHANGE;
         }
 
+        boolean saveSucceeded = true;
         if (event.isPersistent()) {
-            persistenceService.save(event);
+            saveSucceeded = persistenceService.save(event);
         }
 
-        int changes = NO_CHANGE;
+        int changes;
 
-        final Session session = event.getSession();
-        if (event.isPersistent() && session != null) {
-            session.setLastEventDate(event.getTimeStamp());
-        }
+        if (saveSucceeded) {
+            changes = NO_CHANGE;
+            final Session session = event.getSession();
+            if (event.isPersistent() && session != null) {
+                session.setLastEventDate(event.getTimeStamp());
+            }
 
-        if (event.getProfile() != null) {
-            for (EventListenerService eventListenerService : eventListeners) {
-                if (eventListenerService.canHandle(event)) {
-                    changes |= eventListenerService.onEvent(event);
+            if (event.getProfile() != null) {
+                for (EventListenerService eventListenerService : eventListeners) {
+                    if (eventListenerService.canHandle(event)) {
+                        changes |= eventListenerService.onEvent(event);
+                    }
+                }
+                // At the end of the processing event execute the post executor actions
+                for (ActionPostExecutor actionPostExecutor : event.getActionPostExecutors()) {
+                    changes |= actionPostExecutor.execute() ? changes : NO_CHANGE;
+                }
+
+                if ((changes & PROFILE_UPDATED) == PROFILE_UPDATED) {
+                    Event profileUpdated = new Event("profileUpdated", session, event.getProfile(), event.getScope(), event.getSource(), event.getProfile(), event.getTimeStamp());
+                    profileUpdated.setPersistent(false);
+                    profileUpdated.getAttributes().putAll(event.getAttributes());
+                    changes |= send(profileUpdated, depth + 1);
+                    if (session != null && session.getProfileId() != null) {
+                        changes |= SESSION_UPDATED;
+                        session.setProfile(event.getProfile());
+                    }
                 }
             }
-            // At the end of the processing event execute the post executor actions
-            for (ActionPostExecutor actionPostExecutor : event.getActionPostExecutors()) {
-                changes |= actionPostExecutor.execute() ? changes : NO_CHANGE;
-            }
-
-            if ((changes & PROFILE_UPDATED) == PROFILE_UPDATED) {
-                Event profileUpdated = new Event("profileUpdated", session, event.getProfile(), event.getScope(), event.getSource(), event.getProfile(), event.getTimeStamp());
-                profileUpdated.setPersistent(false);
-                profileUpdated.getAttributes().putAll(event.getAttributes());
-                changes |= send(profileUpdated, depth + 1);
-                if (session != null && session.getProfileId() != null) {
-                    changes |= SESSION_UPDATED;
-                    session.setProfile(event.getProfile());
-                }
-            }
+        } else {
+            changes = ERROR;
         }
         return changes;
     }
@@ -271,6 +278,11 @@ public class EventServiceImpl implements EventService {
     @Override
     public Event getEvent(String id) {
         return persistenceService.load(id, Event.class);
+    }
+
+    public boolean hasEventAlreadyBeenRaised(Event event) {
+        Event pastEvent = this.persistenceService.load(event.getItemId(), Event.class);
+        return pastEvent != null && pastEvent.getVersion() >= 1 && pastEvent.getSessionId().equals(event.getSessionId());
     }
 
     public boolean hasEventAlreadyBeenRaised(Event event, boolean session) {
