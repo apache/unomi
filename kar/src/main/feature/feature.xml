@@ -27,6 +27,7 @@
         <feature>cxf-jaxrs</feature>
         <feature>cxf-rs-description-swagger2</feature>
         <feature>cxf-features-metrics</feature>
+        <feature>cxf-rs-description-swagger2</feature>
         <feature>cellar</feature>
         <feature>eventadmin</feature>
         <feature>shell-compat</feature>

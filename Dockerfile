@@ -15,7 +15,7 @@
 # limitations under the License.
 ################################################################################
 
-FROM openjdk:8-jre
+FROM openjdk:8-jdk
 
 # Unomi environment variables
 ENV UNOMI_HOME /opt/apache-unomi
@@ -24,16 +24,23 @@ ENV PATH $PATH:$UNOMI_HOME/bin
 ENV KARAF_OPTS "-Dunomi.autoStart=true"
 
 ENV ELASTICSEARCH_HOST localhost
-ENV ELASTICSEARCH_PORT 9200
-
-ENV UNOMI_VERSION "${project.version}"
+ENV ELASTICSEARCH_PORT 9300
+RUN apt-get update -y
+RUN apt-get install maven -y
+#COPY . /apache-unomi
+#RUN cd /apache-unomi && mvn install -Drat.skip=true -DskipTests=true
+COPY ./package/target/assembly/ $UNOMI_HOME
+#ENV UNOMI_VERSION "1.5.0-SNAPSHOT"
 
 WORKDIR $UNOMI_HOME
 
-ADD target/dependency/unomi-${UNOMI_VERSION}.tar.gz ./
-
-RUN mv unomi-*/* . \
-	&& rm -rf unomi-*
+#RUN wget http://apache.mirrors.pair.com/unomi/${UNOMI_VERSION}/unomi-${UNOMI_VERSION}-bin.tar.gz
+#
+#RUN tar -xzf unomi-${UNOMI_VERSION}-bin.tar.gz \
+#	&& mv unomi-*/* . \
+#	&& rm -rf unomi-*
+#
+RUN cp ${UNOMI_HOME}/etc/custom.properties ${UNOMI_HOME}/etc/custom.properties.template
 
 COPY ./entrypoint.sh ./entrypoint.sh
 

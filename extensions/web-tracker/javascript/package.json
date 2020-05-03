@@ -1,6 +1,6 @@
 {
   "name": "unomi-analytics",
-  "version": "1.0.6",
+  "version": "1.0.5",
   "description": "The Apache Unomi analytics.js integration.",
   "main": "dist/unomi-tracker.js",
   "keywords": [
@@ -11,29 +11,29 @@
   "author": "Apache Software Foundation",
   "license": "Apache-2.0",
   "scripts": {
-    "build": "yarn browserify && yarn replace && yarn minify && yarn snippet:minify",
-    "browserify": "browserify src/index.js -p [ browserify-header --file src/license.js ] -s unomiTracker -o dist/unomi-tracker.js",
+    "build": "yarn browserify && yarn replace && yarn minify",
+    "browserify": "browserify src/index.js -p [ browserify-header --file src/license.js ] -s follower -o dist/unomi-tracker.js",
     "replace": "replace-in-file 'analytics.require = require' '//analytics.require = require' dist/unomi-tracker.js",
-    "minify": "uglifyjs -c -m --comments '/@license/' -o dist/unomi-tracker.min.js --source-map -- dist/unomi-tracker.js",
-    "snippet:minify": "uglifyjs -c -m -o snippet.min.js --source-map -- snippet.js",
+    "minify": "uglifyjs -c -m --comments '/@license/' -o dist/unomi-tracker.min.js -- dist/unomi-tracker.js",
+    "snippet:minify": "uglifyjs -c -m -o snippet.min.js --source-map snippet.min.js.map -- snippet.js",
     "clean": "rimraf *.log dist/unomi-tracker.js dist/unomi-tracker.min.js",
     "clean:all": "yarn clean && rimraf node_modules"
   },
   "dependencies": {
-    "@segment/analytics.js-core": "3.10.1",
-    "@segment/analytics.js-integration": "3.2.1",
+    "@segment/analytics.js-core": "3.7.2",
+    "@segment/analytics.js-integration": "2.1.1",
     "extend": "^3.0.2"
   },
   "devDependencies": {
     "@segment/eslint-config": "^3.1.1",
-    "browserify": "^16.5.1",
-    "browserify-header": "^1.0.1",
+    "browserify": "^13.0.1",
+    "browserify-header": "^0.9.4",
     "eslint": "^2.9.0",
     "eslint-plugin-mocha": "^2.2.0",
     "eslint-plugin-require-path-exists": "^1.1.5",
     "replace-in-file": "^3.4.2",
     "rimraf": "^2.6.2",
-    "uglify-js": "^3.8.1",
-    "yarn": "^1.22.4"
+    "uglify-js": "^2.6.4",
+    "yarn": "^1.9.4"
   }
 }
