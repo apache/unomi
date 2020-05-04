@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-version: '2.2'
+version: '2.4'
 services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.4.2
@@ -31,10 +31,9 @@ services:
 
   unomi:
     build: .
+    image: apache/unomi:${project.version}
     container_name: unomi
     environment:
-      - ELASTICSEARCH_HOST=elasticsearch
-      - ELASTICSEARCH_PORT=9200
       - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
     ports:
       - 8181:8181
