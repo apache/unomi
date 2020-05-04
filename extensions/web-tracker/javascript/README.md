@@ -37,7 +37,7 @@ Then
 unomiTracker.initialize({
      'Apache Unomi': {
          scope: 'my-app',
-         url: 'http://unomi:8181'
+         url: 'http://unomi:8181',
      }
  });
  
@@ -48,5 +48,17 @@ unomiTracker.ready(function() {
 
 Then send events :
 ```javascript
-unomiTracker.page()
+unomiTracker.page() // first call will be ignored as the initial page load is done in the initialize method
+
+unomiTracker.identify({
+    nickname: 'Amazing Grace',
+    favoriteCompiler: 'A-0',
+    industry: 'Computer Science'
+});
+
+unomiTracker.track('articleCompleted', {
+    title: 'How to Create a Tracking Plan',
+    course: 'Intro to Analytics'
+});
+
 ```

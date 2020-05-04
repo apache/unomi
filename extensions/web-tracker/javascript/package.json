@@ -14,8 +14,8 @@
     "build": "yarn browserify && yarn replace && yarn minify && yarn snippet:minify",
     "browserify": "browserify src/index.js -p [ browserify-header --file src/license.js ] -s unomiTracker -o dist/unomi-tracker.js",
     "replace": "replace-in-file 'analytics.require = require' '//analytics.require = require' dist/unomi-tracker.js",
-    "minify": "uglifyjs -c -m --comments '/@license/' -o dist/unomi-tracker.min.js --source-map -- dist/unomi-tracker.js",
-    "snippet:minify": "uglifyjs -c -m -o snippet.min.js --source-map -- snippet.js",
+    "minify": "cd dist && uglifyjs -c -m --comments '/@license/' -o unomi-tracker.min.js --source-map url=unomi-tracker.min.js.map -- unomi-tracker.js",
+    "snippet:minify": "uglifyjs -c -m -o snippet.min.js --source-map url=snipper.min.js.map -- snippet.js",
     "clean": "rimraf *.log dist/unomi-tracker.js dist/unomi-tracker.min.js",
     "clean:all": "yarn clean && rimraf node_modules"
   },
@@ -33,7 +33,7 @@
     "eslint-plugin-require-path-exists": "^1.1.5",
     "replace-in-file": "^3.4.2",
     "rimraf": "^2.6.2",
-    "uglify-js": "^3.8.1",
+    "uglify-js": "^3.9.2",
     "yarn": "^1.22.4"
   }
 }
