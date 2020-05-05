@@ -1033,10 +1033,10 @@
         <module>plugins</module>
         <module>extensions</module>
         <module>tools</module>
+        <module>manual</module>
         <module>kar</module>
         <module>samples</module>
         <module>package</module>
-        <module>manual</module>
     </modules>
 
     <dependencies>
