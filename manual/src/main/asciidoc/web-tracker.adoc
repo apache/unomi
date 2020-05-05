@@ -45,8 +45,53 @@ Then you can use the test page to try your changes `http://localhost:8181/tracke
 
 ==== Tracking page views
 
+In the initialize call, the tracker will generate an implicit page view event, which by default will be populated with
+the following information:
+
+[source,javascript]
+----
+    window.digitalData.page = window.digitalData.page || {
+        path: location.pathname + location.hash,
+        pageInfo: {
+            pageName: document.title,
+            pageID : location.pathname + location.hash,
+            pagePath : location.pathname + location.hash,
+            destinationURL: location.href
+        }
+    }
+----
+
+Now if you want to provide your own custom page information for the initial page view, you can simply do it like this:
+
+[source,`javascript]
+----
+    unomiTracker.initialize({
+            scope: 'myScope',
+            url: 'http://unomi:8181', // we use an empty URL to make it relative to this page.
+            initialPageProperties: {
+                path: path,
+                pageInfo: {
+                    destinationURL: location.href,
+                    tags: ["tag1", "tag2", "tag3"],
+                    categories: ["category1", "category2", "category3"]
+                },
+                interests: {
+                    "interest1": 1,
+                    "interest2": 2,
+                    "interest3": 3
+                }
+            }
+        });
+----
+
+`
+
+Also note that the FIRST call to unomiTracker.page() will be IGNORED because of this initial page view.This is the
+way that the Analytics.js library handles it.So make sure you are aware of this when calling it.This is to avoid having
+two page views on a single call and to be compatible with old versions that did use the explicit call.
+
 By default the script will track page views, but maybe you want to take control over this mechanism of add page views
-to a single page application. In order to generate a page view programmatically from Javascript you can use code similar
+to a single page application.In order to generate a page view programmatically from Javascript you can use code similar
 to this :
 
 [source]
@@ -105,8 +150,8 @@ object passed to the unomiTracker call. Default value : page path
 
 |===
 
-The `interests` object is basically list of interests with "weights" attached to them. These interests will be accumulated
-in Apache Unomi on profiles to indicate growing interest over time for specific topics. These are freely defined and
+The `interests` object is basically list of interests with "weights" attached to them.These interests will be accumulated
+in Apache Unomi on profiles to indicate growing interest over time for specific topics.These are freely defined and
 will be accepted by Apache Unomi without needing to declare them previously anywhere (the same is true for tags and
 categories).
 
