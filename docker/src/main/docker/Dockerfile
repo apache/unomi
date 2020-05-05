@@ -25,11 +25,9 @@ ENV KARAF_OPTS "-Dunomi.autoStart=true"
 
 ENV UNOMI_ELASTICSEARCH_ADDRESSES=localhost:9200
 
-ENV UNOMI_VERSION "${project.version}"
-
 WORKDIR $UNOMI_HOME
 
-ADD unomi-${UNOMI_VERSION}.tar.gz ./
+ADD unomi.tar.gz ./
 
 RUN mv unomi-*/* . \
 	&& rm -rf unomi-*

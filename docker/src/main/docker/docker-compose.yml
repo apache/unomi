@@ -38,6 +38,7 @@ services:
     ports:
       - 8181:8181
       - 9443:9443
+      - 8102:8102
     links:
       - elasticsearch
     depends_on:

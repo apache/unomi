@@ -48,11 +48,12 @@
                 <executions>
                     <execution>
                         <id>copy</id>
-                        <phase>package</phase>
+                        <phase>process-resources</phase>
                         <goals>
                             <goal>copy</goal>
                         </goals>
                         <configuration>
+                            <stripVersion>true</stripVersion>
                             <outputDirectory>${project.build.directory}/filtered-docker</outputDirectory>
                             <artifactItems>
                                 <artifactItem>
