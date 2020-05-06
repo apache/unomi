@@ -54,9 +54,9 @@
     <bean class="org.apache.unomi.operation.actions.BufferEventProcessingAction" id="validator">
         <property name="producer" ref="kafkaProducer"/>
     </bean>
-    <service id="validateSchemaActionExecutor" interface="org.apache.unomi.api.actions.ActionExecutor" ref="validator">
+    <service id="bufferEventProcessing" interface="org.apache.unomi.api.actions.ActionExecutor" ref="validator">
         <service-properties>
-            <entry key="actionExecutorId" value="validateSchemaAction"/>
+            <entry key="actionExecutorId" value="bufferEventProcessing"/>
         </service-properties>
     </service>
 </blueprint>
