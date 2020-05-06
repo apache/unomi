@@ -151,14 +151,10 @@ public class EventServiceImpl implements EventService {
         }
 
         boolean saveSucceeded = true;
-        if (event.isPersistent()) {
-            saveSucceeded = persistenceService.save(event);
-        }
 
-        int changes;
+        int changes = NO_CHANGE;
 
         if (saveSucceeded) {
-            changes = NO_CHANGE;
             final Session session = event.getSession();
             if (event.isPersistent() && session != null) {
                 session.setLastEventDate(event.getTimeStamp());
@@ -186,8 +182,12 @@ public class EventServiceImpl implements EventService {
                     }
                 }
             }
-        } else {
-            changes = ERROR;
+        }
+        if (event.isPersistent()) {
+            saveSucceeded = persistenceService.save(event);
+            if (!saveSucceeded) {
+                return ERROR;
+            }
         }
         return changes;
     }

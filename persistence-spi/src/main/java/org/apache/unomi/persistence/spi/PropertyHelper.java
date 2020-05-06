@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Helper method for properties
@@ -75,14 +76,19 @@ public class PropertyHelper {
             if (setPropertyStrategy != null && setPropertyStrategy.equals("addValue")) {
                 Object previousValue = PropertyUtils.getProperty(target, propertyName);
                 List<Object> values = new ArrayList<>();
-                if (previousValue != null && previousValue instanceof List) {
+                if (previousValue instanceof List) {
                     values.addAll((List) previousValue);
                 } else if (previousValue != null) {
                     values.add(previousValue);
                 }
                 if (!values.contains(propertyValue)) {
-                    values.add(propertyValue);
-                    BeanUtils.setProperty(target, propertyName, values);
+                    if (propertyValue instanceof List) {
+                        values.addAll((List) propertyValue);
+                    } else {
+                        values.add(propertyValue);
+                    }
+                    previousValue = ((List) values).stream().distinct().collect(Collectors.toList());
+                    BeanUtils.setProperty(target, propertyName, previousValue);
                     return true;
                 }
             } else if (propertyValue != null && !compareValues(propertyValue, BeanUtils.getProperty(target, propertyName))) {
