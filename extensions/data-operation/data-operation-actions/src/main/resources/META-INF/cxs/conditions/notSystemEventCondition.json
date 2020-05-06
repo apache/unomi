@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "id": "notSystemEventCondition",
+    "name": "notSystemEventCondition",
+    "description": "",
+    "systemTags": [
+      "event",
+      "condition",
+      "eventCondition"
+    ],
+    "readOnly": true
+  },
+  "condition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "subConditions": [
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "scope",
+            "propertyValue": "systemscope",
+            "comparisonOperator": "notEquals"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "eventType",
+            "propertyValue": "ruleFired",
+            "comparisonOperator": "notEquals"
+          }
+        }
+      ],
+      "operator": "and"
+    }
+  },
+  "parameters": [
+  ]
+}
