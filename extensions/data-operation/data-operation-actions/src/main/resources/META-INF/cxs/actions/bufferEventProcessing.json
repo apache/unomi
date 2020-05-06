@@ -1,0 +1,15 @@
+{
+  "metadata": {
+    "id": "bufferEventProcessing",
+    "name": "bufferEventProcessing",
+    "description": "Send event to kafka",
+    "systemTags": [
+      "systemTags",
+      "event"
+    ],
+    "readOnly": false
+  },
+  "actionExecutor": "bufferEventProcessing",
+  "parameters": [
+  ]
+}
