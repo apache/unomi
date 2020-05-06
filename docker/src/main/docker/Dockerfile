@@ -23,19 +23,16 @@ ENV PATH $PATH:$UNOMI_HOME/bin
 
 ENV KARAF_OPTS "-Dunomi.autoStart=true"
 
-ENV ELASTICSEARCH_HOST localhost
-ENV ELASTICSEARCH_PORT 9200
-
-ENV UNOMI_VERSION "${project.version}"
+ENV UNOMI_ELASTICSEARCH_ADDRESSES=localhost:9200
 
 WORKDIR $UNOMI_HOME
 
-ADD target/dependency/unomi-${UNOMI_VERSION}.tar.gz ./
+ADD unomi.tar.gz ./
 
 RUN mv unomi-*/* . \
 	&& rm -rf unomi-*
 
-COPY ./entrypoint.sh ./entrypoint.sh
+COPY entrypoint.sh ./entrypoint.sh
 
 EXPOSE 9443
 EXPOSE 8181
