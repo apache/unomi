@@ -10,10 +10,7 @@ Add this rule to UNOMI POST:/cxs/rules
   },
   "condition": 
         {
-          "type": "sourceEventPropertyCondition",
-          "parameterValues": {
-            "type": "event"
-          }
+          "type": "notSystemEventCondition",
         },
   "actions": [
     {
