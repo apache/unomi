@@ -10,12 +10,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>data-operation</artifactId>
+    <name>Apache Unomi :: Data Extensions</name>
+    <description>Apache Unomi Data extensions</description>
     <packaging>pom</packaging>
 
     <modules>
         <module>data-operation-actions</module>
         <module>data-operation-karaf-kar</module>
     </modules>
-
 
 </project>
