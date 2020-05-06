@@ -50,6 +50,7 @@
                 <value>org.apache.unomi.plugins-mail</value>
                 <value>org.apache.unomi.plugins-optimization-test</value>
                 <value>org.apache.unomi.cxs-lists-extension-actions</value>
+                <value>org.apache.unomi.data-operation-actions</value>
                 <value>org.apache.unomi.router-api</value>
                 <value>org.apache.unomi.router-core</value>
                 <value>org.apache.unomi.router-service</value>
