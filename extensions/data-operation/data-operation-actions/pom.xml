@@ -11,7 +11,7 @@
 
     <artifactId>data-operation-actions</artifactId>
 
-    <name>Apache Unomi :: Extensions :: Kafka Buffer ActionActions</name>
+    <name>Apache Unomi :: Extensions :: Kafka Buffer Action</name>
     <description>A connector between Apache Unomi and Kafka</description>
     <packaging>bundle</packaging>
 

@@ -48,11 +48,13 @@
                 <executions>
                     <execution>
                         <id>copy</id>
-                        <phase>package</phase>
+                        <phase>process-resources</phase>
                         <goals>
                             <goal>copy</goal>
                         </goals>
                         <configuration>
+                            <stripVersion>true</stripVersion>
+                            <outputDirectory>${project.build.directory}/filtered-docker</outputDirectory>
                             <artifactItems>
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
@@ -61,6 +63,42 @@
                                     <type>tar.gz</type>
                                 </artifactItem>
                             </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>filter-dockerfiles</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <resources>
+                                <!-- # Filtered Resources -->
+                                <resource>
+                                    <directory>${project.basedir}/src/main/docker</directory>
+                                    <filtering>true</filtering>
+                                    <includes>
+                                        <include>Dockerfile</include>
+                                        <include>docker-compose.yml</include>
+                                    </includes>
+                                </resource>
+                                <!-- # Unfiltered Resources -->
+                                <resource>
+                                    <directory>${project.basedir}/src/main/docker</directory>
+                                    <filtering>false</filtering>
+                                    <excludes>
+                                        <exclude>Dockerfile</exclude>
+                                        <exclude>docker-compose.yml</exclude>
+                                    </excludes>
+                                </resource>
+                            </resources>
+                            <outputDirectory>${project.build.directory}/filtered-docker</outputDirectory>
                         </configuration>
                     </execution>
                 </executions>
@@ -76,10 +114,9 @@
                             <name>apache/unomi:${project.version}</name>
                             <external>
                                 <type>compose</type>
-                                <basedir>${basedir}</basedir>
-                                <composeFile>docker-compose.yml</composeFile>
+                                <basedir>${project.build.directory}/filtered-docker</basedir>
+                                <composeFile>${project.build.directory}/filtered-docker/docker-compose.yml</composeFile>
                             </external>
-
                         </image>
                     </images>
                 </configuration>

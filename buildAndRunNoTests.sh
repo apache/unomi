@@ -23,7 +23,7 @@ PROGNAME=`basename "$0"`
 if [ -f "$DIRNAME/setenv.sh" ]; then
   . "$DIRNAME/setenv.sh"
 fi
-mvn clean install -P \!integration-tests,\!performance-tests,rat -DskipTests
+mvn clean install -P \!integration-tests,\!performance-tests,rat,\!run-tests -DskipTests
 if [ $? -ne 0 ]
 then
     exit 1;

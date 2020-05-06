@@ -61,16 +61,26 @@ Unomi.prototype.initialize = function() {
         scope: self.options.scope
     };
 
+    window.digitalData.page = window.digitalData.page || {
+        path: location.pathname + location.hash,
+        pageInfo: {
+            pageName: document.title,
+            pageID : location.pathname + location.hash,
+            pagePath : location.pathname + location.hash,
+            destinationURL: location.href
+        }
+    }
+
+    var unomiPage = window.digitalData.page;
+    if (!unomiPage) {
+        unomiPage = window.digitalData.page = { pageInfo:{} }
+    }
     if (self.options.initialPageProperties) {
         var props = self.options.initialPageProperties;
-        var unomiPage = window.digitalData.page;
-        if (!unomiPage) {
-            unomiPage = window.digitalData.page = { pageInfo:{} }
-        }
         this.fillPageData(unomiPage, props);
-        window.digitalData.events = window.digitalData.events || [];
-        window.digitalData.events.push(this.buildEvent('view', this.buildPage(unomiPage), this.buildSource(this.options.scope, 'site')))
     }
+    window.digitalData.events = window.digitalData.events || [];
+    window.digitalData.events.push(this.buildEvent('view', this.buildPage(unomiPage), this.buildSource(this.options.scope, 'site')))
 
     if (!self.options.sessionId) {
         var cookie = require('component-cookie');
