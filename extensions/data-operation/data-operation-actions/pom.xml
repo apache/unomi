@@ -11,8 +11,8 @@
 
     <artifactId>data-operation-actions</artifactId>
 
-    <name>PrimeData :: Extensions :: Actions</name>
-    <description>A connector between Apache Unomi and PrimeDataAI</description>
+    <name>Apache Unomi :: Extensions :: Kafka Buffer ActionActions</name>
+    <description>A connector between Apache Unomi and Kafka</description>
     <packaging>bundle</packaging>
 
     <properties>
