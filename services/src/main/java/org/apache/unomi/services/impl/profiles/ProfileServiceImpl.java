@@ -135,7 +135,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
          */
         public PropertyTypes without(String propertyId) {
             List<PropertyType> newPropertyTypes = allPropertyTypes.stream()
-                .filter(property -> property.getItemId().equals(propertyId))
+                .filter(property -> !property.getItemId().equals(propertyId))
                 .collect(Collectors.toList());
 
             return new PropertyTypes(newPropertyTypes);

@@ -89,9 +89,14 @@ public abstract class BaseCDPPropertyInput {
         if (propertyType == null) {
             return;
         }
+
+        if ("set".equals(propertyType.getValueTypeId()) && !getCDPPropertyType().equals(propertyType.getValueTypeId())) {
+            propertyType.setChildPropertyTypes(Collections.emptySet());
+        }
+
         propertyType.setTarget("profiles");
         propertyType.setItemId(name);
-        propertyType.setValueTypeId(this.getCDPPropertyType());
+        propertyType.setValueTypeId(getCDPPropertyType());
         propertyType.setMetadata(this.updateMetadata(propertyType.getMetadata()));
         //TODO fix after unomi supports min/max occurrences
         propertyType.setMultivalued(maxOccurrences != null && maxOccurrences > 1);
@@ -103,7 +108,7 @@ public abstract class BaseCDPPropertyInput {
         return type;
     }
 
-    protected Metadata updateMetadata(Metadata metadata) {
+    private Metadata updateMetadata(Metadata metadata) {
         if (metadata == null) {
             metadata = new Metadata();
             final Set<String> systemTags = new HashSet<>();
@@ -117,7 +122,7 @@ public abstract class BaseCDPPropertyInput {
 
         metadata.setId(name);
         metadata.setName(name);
-        metadata.setTags(tags != null ? new HashSet<>(tags) : null);
+        metadata.setTags(tags != null ? new HashSet<>(tags) : Collections.emptySet());
 
         return metadata;
     }
