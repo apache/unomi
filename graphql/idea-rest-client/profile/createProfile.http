@@ -32,6 +32,16 @@ Content-Type: application/json
       "interestName1": 1.0,
       "interestName2": 0.5,
       "interestName3": 0.7
+    },
+    "simple_Address": {
+      "streetName": "Street Name",
+      "postalCode": "000000",
+      "user_details": {
+         "nikname": "superman",
+         "workgroup": {
+            "workgroup_name": "Test workgroup"
+         }
+      }
     }
   },
   "systemProperties": {},

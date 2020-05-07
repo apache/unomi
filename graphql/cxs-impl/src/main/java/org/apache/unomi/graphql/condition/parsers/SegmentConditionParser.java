@@ -102,7 +102,7 @@ public class SegmentConditionParser {
                     break;
                 case PROPERTIES:
                     dataHolder.put(filterType.getValue(),
-                            new SegmentProfilePropertiesConditionParser(conditionDecorator.getCondition()).parse());
+                            new SegmentProfilePropertiesConditionParser(conditionDecorator.getCondition(), environment).parse());
                     break;
                 case INTERESTS:
                     dataHolder.put(filterType.getValue(),

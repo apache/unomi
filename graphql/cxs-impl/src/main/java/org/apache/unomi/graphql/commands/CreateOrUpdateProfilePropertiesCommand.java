@@ -18,21 +18,27 @@ package org.apache.unomi.graphql.commands;
 
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.graphql.types.input.property.BaseCDPPropertyInput;
 import org.apache.unomi.graphql.types.input.CDPPropertyInput;
+import org.apache.unomi.graphql.types.input.property.BaseCDPPropertyInput;
+import org.apache.unomi.graphql.types.input.property.CDPSetPropertyInput;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class CreateOrUpdateProfilePropertiesCommand extends BaseCommand<Boolean> {
 
     private final List<CDPPropertyInput> properties;
 
+    private ProfileService profileService;
+
     private CreateOrUpdateProfilePropertiesCommand(final Builder builder) {
         super(builder);
+
         this.properties = builder.properties;
+        this.profileService = serviceManager.getProfileService();
     }
 
     public static Builder create(List<CDPPropertyInput> properties) {
@@ -41,25 +47,41 @@ public class CreateOrUpdateProfilePropertiesCommand extends BaseCommand<Boolean>
 
     @Override
     public Boolean execute() {
-        final ProfileService profileService = serviceManager.getProfileService();
+        properties.forEach(cdpPropertyInput -> {
+            final PropertyType propertyType = processPropertyType(cdpPropertyInput);
 
-        // TODO handle properties for SET
-        properties.forEach(propertyInput -> {
-            final BaseCDPPropertyInput cdpPropertyTypeInput = propertyInput.getProperty();
-
-            PropertyType propertyType = profileService.getPropertyType(cdpPropertyTypeInput.getName());
-            if (propertyType == null) {
-                propertyType = new PropertyType();
-            } else if (!propertyType.getValueTypeId().equals(cdpPropertyTypeInput.getCDPPropertyType())) {
-                profileService.deletePropertyType(cdpPropertyTypeInput.getName());
-            }
-
-            cdpPropertyTypeInput.updateType(propertyType);
             profileService.setPropertyType(propertyType);
         });
+
         serviceManager.getGraphQLSchemaUpdater().updateSchema();
 
         return true;
+    }
+
+    private PropertyType processPropertyType(final CDPPropertyInput propertyInput) {
+        final BaseCDPPropertyInput cdpPropertyTypeInput = propertyInput.getProperty();
+
+        PropertyType propertyType = profileService.getPropertyType(cdpPropertyTypeInput.getName());
+
+        if (propertyType == null) {
+            propertyType = new PropertyType();
+        } else if (!propertyType.getValueTypeId().equals(cdpPropertyTypeInput.getCDPPropertyType())) {
+            profileService.deletePropertyType(cdpPropertyTypeInput.getName());
+        }
+
+        if (cdpPropertyTypeInput instanceof CDPSetPropertyInput) {
+            final CDPSetPropertyInput cdpSetPropertyInput = (CDPSetPropertyInput) cdpPropertyTypeInput;
+
+            final Set<PropertyType> propertyTypes = cdpSetPropertyInput.getProperties().stream()
+                    .map(this::processPropertyType)
+                    .collect(Collectors.toSet());
+
+            propertyType.setChildPropertyTypes(propertyTypes);
+        }
+
+        cdpPropertyTypeInput.updateType(propertyType);
+
+        return propertyType;
     }
 
     public static class Builder extends BaseCommand.Builder<Builder> {

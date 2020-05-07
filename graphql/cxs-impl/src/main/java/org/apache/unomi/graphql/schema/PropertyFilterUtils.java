@@ -17,10 +17,12 @@
 package org.apache.unomi.graphql.schema;
 
 import graphql.Scalars;
-import graphql.schema.GraphQLFieldDefinition;
+import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.schema.GraphQLInputObjectField;
+import graphql.schema.GraphQLInputObjectType;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.graphql.function.DateTimeFunction;
+import org.apache.unomi.graphql.utils.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -29,232 +31,145 @@ import java.util.List;
 
 public class PropertyFilterUtils {
 
-    public static List<GraphQLInputObjectField> buildInputPropertyFilters(final Collection<PropertyType> propertyTypes) {
+    public static List<GraphQLInputObjectField> buildInputPropertyFilters(final Collection<PropertyType> propertyTypes, final GraphQLAnnotations graphQLAnnotations) {
         if (propertyTypes == null || propertyTypes.isEmpty()) {
             return Collections.emptyList();
         }
 
         final List<GraphQLInputObjectField> fieldDefinitions = new ArrayList<>();
 
-        propertyTypes.forEach(propertyType -> {
-            final String propertyName = PropertyNameTranslator.translateFromUnomiToGraphQL(propertyType.getItemId());
-
-            if ("integer".equals(propertyType.getValueTypeId())) {
-
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_equals")
-                        .type(Scalars.GraphQLInt)
-                        .build());
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_lt")
-                        .type(Scalars.GraphQLInt)
-                        .build());
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_lte")
-                        .type(Scalars.GraphQLInt)
-                        .build());
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_gt")
-                        .type(Scalars.GraphQLInt)
-                        .build());
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_gte")
-                        .type(Scalars.GraphQLInt)
-                        .build());
-            } else if ("float".equals(propertyType.getValueTypeId())) {
-
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_equals")
-                        .type(Scalars.GraphQLFloat)
-                        .build());
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_lt")
-                        .type(Scalars.GraphQLFloat)
-                        .build());
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_lte")
-                        .type(Scalars.GraphQLFloat)
-                        .build());
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_gt")
-                        .type(Scalars.GraphQLFloat)
-                        .build());
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_gte")
-                        .type(Scalars.GraphQLFloat)
-                        .build());
-            } else if ("date".equals(propertyType.getValueTypeId())) {
-
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_equals")
-                        .type(DateTimeFunction.DATE_TIME_SCALAR)
-                        .build());
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_lt")
-                        .type(DateTimeFunction.DATE_TIME_SCALAR)
-                        .build());
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_lte")
-                        .type(DateTimeFunction.DATE_TIME_SCALAR)
-                        .build());
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_gt")
-                        .type(DateTimeFunction.DATE_TIME_SCALAR)
-                        .build());
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_gte")
-                        .type(DateTimeFunction.DATE_TIME_SCALAR)
-                        .build());
-            } else if ("boolean".equals(propertyType.getValueTypeId())) {
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_equals")
-                        .type(Scalars.GraphQLBoolean)
-                        .build());
-            } else if ("identifier".equals(propertyType.getValueTypeId())) {
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_equals")
-                        .type(Scalars.GraphQLString)
-                        .build());
-            } else {
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_equals")
-                        .type(Scalars.GraphQLString)
-                        .build());
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_startsWith")
-                        .type(Scalars.GraphQLString)
-                        .build());
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_endsWith")
-                        .type(Scalars.GraphQLString)
-                        .build());
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_contains")
-                        .type(Scalars.GraphQLString)
-                        .build());
-                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .name(propertyName + "_regexp")
-                        .type(Scalars.GraphQLString)
-                        .build());
-            }
-        });
+        propertyTypes.forEach(propertyType -> addFilters(fieldDefinitions, propertyType, graphQLAnnotations));
 
         return fieldDefinitions;
     }
 
-    public static List<GraphQLFieldDefinition> buildOutputPropertyFilters(final Collection<PropertyType> propertyTypes) {
-        if (propertyTypes == null || propertyTypes.isEmpty()) {
-            return Collections.emptyList();
-        }
+    private static void addFilters(final List<GraphQLInputObjectField> fieldDefinitions, final PropertyType propertyType, final GraphQLAnnotations graphQLAnnotations) {
+        final String propertyName = PropertyNameTranslator.translateFromUnomiToGraphQL(propertyType.getItemId());
 
-        final List<GraphQLFieldDefinition> fieldDefinitions = new ArrayList<>();
+        if ("integer".equals(propertyType.getValueTypeId())) {
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_equals")
+                    .type(Scalars.GraphQLInt)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_lt")
+                    .type(Scalars.GraphQLInt)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_lte")
+                    .type(Scalars.GraphQLInt)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_gt")
+                    .type(Scalars.GraphQLInt)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_gte")
+                    .type(Scalars.GraphQLInt)
+                    .build());
+        } else if ("float".equals(propertyType.getValueTypeId())) {
 
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_equals")
+                    .type(Scalars.GraphQLFloat)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_lt")
+                    .type(Scalars.GraphQLFloat)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_lte")
+                    .type(Scalars.GraphQLFloat)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_gt")
+                    .type(Scalars.GraphQLFloat)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_gte")
+                    .type(Scalars.GraphQLFloat)
+                    .build());
+        } else if ("date".equals(propertyType.getValueTypeId())) {
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_equals")
+                    .type(DateTimeFunction.DATE_TIME_SCALAR)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_lt")
+                    .type(DateTimeFunction.DATE_TIME_SCALAR)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_lte")
+                    .type(DateTimeFunction.DATE_TIME_SCALAR)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_gt")
+                    .type(DateTimeFunction.DATE_TIME_SCALAR)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_gte")
+                    .type(DateTimeFunction.DATE_TIME_SCALAR)
+                    .build());
+        } else if ("boolean".equals(propertyType.getValueTypeId())) {
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_equals")
+                    .type(Scalars.GraphQLBoolean)
+                    .build());
+        } else if ("id".equals(propertyType.getValueTypeId())) {
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_equals")
+                    .type(Scalars.GraphQLString)
+                    .build());
+        } else if ("set".equals(propertyType.getValueTypeId())) {
+            if (propertyType.getChildPropertyTypes() != null && !propertyType.getChildPropertyTypes().isEmpty()) {
+                final String typeName = StringUtils.capitalize(propertyName) + "FilterInput";
 
-        propertyTypes.forEach(propertyType -> {
-            final String propertyName = PropertyNameTranslator.translateFromUnomiToGraphQL(propertyType.getItemId());
+                GraphQLInputObjectType inputObjectType;
+                if (!graphQLAnnotations.getContainer().getTypeRegistry().containsKey(typeName)) {
+                    final GraphQLInputObjectType.Builder dynamicTypeBuilder = GraphQLInputObjectType.newInputObject()
+                            .name(typeName);
 
-            if ("integer".equals(propertyType.getValueTypeId())) {
+                    final List<GraphQLInputObjectField> setFieldDefinitions = new ArrayList<>();
 
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_equals")
-                        .type(Scalars.GraphQLInt)
-                        .build());
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_lt")
-                        .type(Scalars.GraphQLInt)
-                        .build());
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_lte")
-                        .type(Scalars.GraphQLInt)
-                        .build());
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_gt")
-                        .type(Scalars.GraphQLInt)
-                        .build());
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_gte")
-                        .type(Scalars.GraphQLInt)
-                        .build());
-            } else if ("float".equals(propertyType.getValueTypeId())) {
+                    propertyType.getChildPropertyTypes().forEach(childPropertyType ->
+                            addFilters(setFieldDefinitions, childPropertyType, graphQLAnnotations));
 
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_equals")
-                        .type(Scalars.GraphQLFloat)
-                        .build());
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_lt")
-                        .type(Scalars.GraphQLFloat)
-                        .build());
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_lte")
-                        .type(Scalars.GraphQLFloat)
-                        .build());
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_gt")
-                        .type(Scalars.GraphQLFloat)
-                        .build());
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_gte")
-                        .type(Scalars.GraphQLFloat)
-                        .build());
-            } else if ("date".equals(propertyType.getValueTypeId())) {
+                    dynamicTypeBuilder.fields(setFieldDefinitions);
 
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_equals")
-                        .type(DateTimeFunction.DATE_TIME_SCALAR)
-                        .build());
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_lt")
-                        .type(DateTimeFunction.DATE_TIME_SCALAR)
-                        .build());
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_lte")
-                        .type(DateTimeFunction.DATE_TIME_SCALAR)
-                        .build());
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_gt")
-                        .type(DateTimeFunction.DATE_TIME_SCALAR)
-                        .build());
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_gte")
-                        .type(DateTimeFunction.DATE_TIME_SCALAR)
-                        .build());
-            } else if ("boolean".equals(propertyType.getValueTypeId())) {
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_equals")
-                        .type(Scalars.GraphQLBoolean)
-                        .build());
-            } else if ("identifier".equals(propertyType.getValueTypeId())) {
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_equals")
-                        .type(Scalars.GraphQLString)
-                        .build());
-            } else {
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_equals")
-                        .type(Scalars.GraphQLString)
-                        .build());
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_startsWith")
-                        .type(Scalars.GraphQLString)
-                        .build());
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_endsWith")
-                        .type(Scalars.GraphQLString)
-                        .build());
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_contains")
-                        .type(Scalars.GraphQLString)
-                        .build());
-                fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .name(propertyName + "_regexp")
-                        .type(Scalars.GraphQLString)
+                    inputObjectType = dynamicTypeBuilder.build();
+
+                    graphQLAnnotations.getContainer().getTypeRegistry().put(typeName, inputObjectType);
+                } else {
+                    inputObjectType = (GraphQLInputObjectType) graphQLAnnotations.getContainer().getTypeRegistry().get(typeName);
+                }
+
+                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                        .name(propertyName)
+                        .type(inputObjectType)
                         .build());
             }
-        });
-
-
-        return fieldDefinitions;
+        } else {
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_equals")
+                    .type(Scalars.GraphQLString)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_startsWith")
+                    .type(Scalars.GraphQLString)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_endsWith")
+                    .type(Scalars.GraphQLString)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_contains")
+                    .type(Scalars.GraphQLString)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_regexp")
+                    .type(Scalars.GraphQLString)
+                    .build());
+        }
     }
 
 }

@@ -18,22 +18,26 @@
 package org.apache.unomi.graphql.condition.factories;
 
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.graphql.schema.ComparisonConditionTranslator;
 import org.apache.unomi.graphql.schema.PropertyNameTranslator;
 import org.apache.unomi.graphql.schema.PropertyValueTypeHelper;
+import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.input.CDPInterestFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileEventsFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfilePropertiesFilterInput;
 import org.apache.unomi.graphql.types.input.CDPSegmentFilterInput;
 import org.apache.unomi.graphql.utils.ConditionBuilder;
+import org.apache.unomi.graphql.utils.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class ProfileConditionFactory extends ConditionFactory {
@@ -257,23 +261,65 @@ public class ProfileConditionFactory extends ConditionFactory {
         return booleanCondition("and", rootSubConditions);
     }
 
-    private void addDynamicProfilePropertiesCondition(Map<String, Object> filterAsMap, final List<Condition> subConditions) {
-        filterAsMap.forEach((propertyName, value) -> {
+    private void addDynamicProfilePropertiesCondition(final Map<String, Object> filterAsMap, final List<Condition> subConditions) {
+        final ServiceManager serviceManager = environment.getContext();
+
+        final Map<String, PropertyType> propertyTypeMap = serviceManager.getProfileService().getTargetPropertyTypes("profiles")
+                .stream().collect(Collectors.toMap(PropertyType::getItemId, Function.identity()));
+
+        filterAsMap.forEach((propertyName, propertyValue) -> {
             if (!"and".equals(propertyName) && !"or".equals(propertyName)) {
-
-                final String[] propertyFilter = propertyName.split("_", -1);
-
-                final String propertyValueType =
-                        PropertyValueTypeHelper.getPropertyValueParameterForInputType(
-                                CDPProfilePropertiesFilterInput.TYPE_NAME, propertyName, environment);
-
-                subConditions.add(propertyCondition(
-                        "properties." + PropertyNameTranslator.translateFromGraphQLToUnomi(propertyFilter[0]),
-                        ComparisonConditionTranslator.translateFromGraphQLToUnomi(propertyFilter[1]),
-                        propertyValueType,
-                        value));
+                doAddDynamicProfilePropertiesCondition(null, propertyName, propertyValue, CDPProfilePropertiesFilterInput.TYPE_NAME, propertyTypeMap, filterAsMap, subConditions);
             }
         });
+    }
+
+    @SuppressWarnings("unchecked")
+    private void doAddDynamicProfilePropertiesCondition(
+            final String path,
+            final String propertyName,
+            final Object propertyValue,
+            final String typeName,
+            final Map<String, PropertyType> propertyTypeMap,
+            final Map<String, Object> filterAsMap,
+            final List<Condition> subConditions) {
+        if (propertyTypeMap.containsKey(propertyName) && "set".equals(propertyTypeMap.get(propertyName).getValueTypeId())) {
+            final Map<String, Object> setFilterAsMap = (Map<String, Object>) filterAsMap.get(propertyName);
+
+            final String setTypeName = StringUtils.capitalize(propertyName) + "FilterInput";
+
+            setFilterAsMap.forEach((setPropertyName, setPropertyValue) -> {
+                if ("set".equals(propertyTypeMap.get(propertyName).getValueTypeId())) {
+                    final Map<String, PropertyType> childPropertyTypeMap = propertyTypeMap.get(propertyName).getChildPropertyTypes()
+                            .stream()
+                            .collect(Collectors.toMap(PropertyType::getItemId, Function.identity()));
+
+                    final String setPropertyPath = path != null ? path + "." + propertyName : propertyName;
+
+                    doAddDynamicProfilePropertiesCondition(setPropertyPath, setPropertyName, setPropertyValue, setTypeName, childPropertyTypeMap, setFilterAsMap, subConditions);
+                } else {
+                    subConditions.add(createDynamicProfilePropertyCondition(setPropertyName, setPropertyValue, setTypeName, path));
+                }
+            });
+        } else {
+            subConditions.add(createDynamicProfilePropertyCondition(propertyName, propertyValue, typeName, path));
+        }
+    }
+
+    private Condition createDynamicProfilePropertyCondition(final String propertyName, final Object value, final String typeName, final String propertyPath) {
+        final int index = propertyName.lastIndexOf("_");
+
+        final String property = propertyName.substring(0, index);
+
+        final String comparisonOperator = propertyName.substring(index + 1);
+
+        final String propertyValueType = PropertyValueTypeHelper.getPropertyValueParameterForInputType(typeName, propertyName, environment);
+
+        return propertyCondition(
+                "properties" + (propertyPath != null ? "." + propertyPath : "") + "." + PropertyNameTranslator.translateFromGraphQLToUnomi(property),
+                ComparisonConditionTranslator.translateFromGraphQLToUnomi(comparisonOperator),
+                propertyValueType,
+                value);
     }
 
     @SuppressWarnings("unchecked")
