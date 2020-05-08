@@ -43,7 +43,7 @@ public class DeleteAllPersonalDataCommand extends BaseCommand<Boolean> {
             return false;
         }
 
-        return serviceManager.getPrivacyService().deleteProfileData(profileId);
+        return serviceManager.getPrivacyService().deleteProfileData(profileId, false);
     }
 
     public static Builder create() {
