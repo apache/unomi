@@ -38,13 +38,17 @@ public interface EventService {
      */
     int NO_CHANGE = 0;
     /**
+     * An error occurred while processing the event.
+     */
+    int ERROR = 1;
+    /**
      * The associated session was updated following an event being handled.
      */
-    int SESSION_UPDATED = 1;
+    int SESSION_UPDATED = 2;
     /**
      * The associated profile was updated following an event being handled.
      */
-    int PROFILE_UPDATED = 2;
+    int PROFILE_UPDATED = 4;
 
     /**
      * Propagates the specified event in the context server, notifying
@@ -142,4 +146,18 @@ public interface EventService {
      * @return {@code true} if the event has already been raised, {@code false} otherwise
      */
     boolean hasEventAlreadyBeenRaised(Event event, boolean session);
+    /**
+     * Checks whether the specified event has already been raised with the same itemId.
+     *
+     * @param event   the event we want to check
+     * @return {@code true} if the event has already been raised, {@code false} otherwise
+     */
+    boolean hasEventAlreadyBeenRaised(Event event);
+
+    /**
+     * Removes all events of the specified profile
+     *
+     * @param profileId identifier of the profile that we want to remove it's events
+     */
+    void removeProfileEvents(String profileId);
 }

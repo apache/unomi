@@ -30,6 +30,7 @@
         <module>tweet-button-plugin</module>
         <module>login-integration</module>
         <module>groovy-actions</module>
+        <module>trainingplugin</module>
     </modules>
 
 </project>

@@ -55,9 +55,12 @@ public class PrivacyServiceEndPoint {
 
     @DELETE
     @Path("/profiles/{profileId}")
-    public Response deleteProfileData(@PathParam("profileId") String profileId, @QueryParam("withData") @DefaultValue("false") boolean withData) {
-        if (withData) {
-            privacyService.deleteProfileData(profileId);
+    public Response deleteProfileData(@PathParam("profileId") String profileId, @QueryParam("withData") @DefaultValue("false") boolean withData,
+                                      @QueryParam("purgeAll") @DefaultValue("false") boolean purgeAll) {
+        if (purgeAll) {
+            privacyService.deleteProfileData(profileId,true);
+        } else if (withData) {
+            privacyService.deleteProfileData(profileId,false);
         } else {
             privacyService.deleteProfile(profileId);
         }

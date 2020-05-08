@@ -30,6 +30,7 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>javascript</module>
         <module>wab</module>
         <module>karaf-kar</module>
     </modules>

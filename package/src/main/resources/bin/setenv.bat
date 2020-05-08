@@ -43,7 +43,7 @@ rem SET JAVA_HOME
 rem Minimum memory for the JVM
 rem SET JAVA_MIN_MEM
 rem Maximum memory for the JVM
-SET JAVA_MAX_MEM=3G
+SET JAVA_MAX_MEM=2G
 rem Minimum perm memory for the JVM
 rem SET JAVA_PERM_MEM
 rem Maximum perm memory for the JVM
