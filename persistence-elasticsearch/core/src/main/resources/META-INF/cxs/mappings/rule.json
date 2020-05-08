@@ -42,6 +42,9 @@
     },
     "raiseEventOnlyOnceForSession": {
       "type": "boolean"
+    },
+    "raiseEventOnlyOnce": {
+      "type": "boolean"
     }
   }
 }

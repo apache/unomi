@@ -19,23 +19,26 @@
 var integration = require('@segment/analytics.js-integration');
 var extend  = require('extend');
 
-var Unomi = module.exports = integration('Apache Unomi')
+var Unomi = (module.exports = integration('Apache Unomi')
+    .global('cxs')
     .assumesPageview()
     .readyOnLoad()
-    .global('cxs')
     .option('scope', 'systemscope')
     .option('url', 'http://localhost:8181')
-    .option('timeoutInMilliseconds', 1500)
+    .option('timeoutInMilliseconds', 3000)
     .option('sessionCookieName', 'unomiSessionId')
-    .option('sessionId');
+    .option('sessionId'));
 
 /**
  * Initialize.
  *
  * @api public
  */
-Unomi.prototype.initialize = function(page) {
+Unomi.prototype.initialize = function() {
     var self = this;
+
+    console.info('[UNOMI] Initializing...', arguments);
+
     this.analytics.on('invoke', function(msg) {
         var action = msg.action();
         var listener = 'on' + msg.action();
@@ -55,34 +58,44 @@ Unomi.prototype.initialize = function(page) {
 
     // digitalData come from a standard so we can keep the logic around it which can allow complex website to load more complex data
     window.digitalData = window.digitalData || {
-        scope: this.options.scope
+        scope: self.options.scope
     };
 
-    if (page) {
-        var props = page.json().properties;
-        var unomiPage = window.digitalData.page;
-        if (!unomiPage) {
-            unomiPage = window.digitalData.page = { pageInfo:{} }
+    window.digitalData.page = window.digitalData.page || {
+        path: location.pathname + location.hash,
+        pageInfo: {
+            pageName: document.title,
+            pageID : location.pathname + location.hash,
+            pagePath : location.pathname + location.hash,
+            destinationURL: location.href
         }
-        this.fillPageData(unomiPage, props);
-        window.digitalData.events = window.digitalData.events || [];
-        window.digitalData.events.push(this.buildEvent('view', this.buildPage(unomiPage), this.buildSource(this.options.scope, 'site')))
     }
 
-    if (!this.options.sessionId) {
+    var unomiPage = window.digitalData.page;
+    if (!unomiPage) {
+        unomiPage = window.digitalData.page = { pageInfo:{} }
+    }
+    if (self.options.initialPageProperties) {
+        var props = self.options.initialPageProperties;
+        this.fillPageData(unomiPage, props);
+    }
+    window.digitalData.events = window.digitalData.events || [];
+    window.digitalData.events.push(this.buildEvent('view', this.buildPage(unomiPage), this.buildSource(this.options.scope, 'site')))
+
+    if (!self.options.sessionId) {
         var cookie = require('component-cookie');
 
-        this.sessionId = cookie(this.options.sessionCookieName);
+        self.sessionId = cookie(self.options.sessionCookieName);
         // so we should not need to implement our own
-        if (!this.sessionId || this.sessionId === '') {
-            this.sessionId = this.generateGuid();
-            cookie(this.options.sessionCookieName, this.sessionId);
+        if (!self.sessionId || self.sessionId === '') {
+            self.sessionId = self.generateGuid();
+            cookie(self.options.sessionCookieName, self.sessionId);
         }
     } else {
-        this.sessionId = this.options.sessionId;
+        this.sessionId = self.options.sessionId;
     }
 
-    setTimeout(this.loadContext.bind(this), 0);
+    setTimeout(self.loadContext.bind(self), 0);
 };
 
 /**
@@ -101,7 +114,7 @@ Unomi.prototype.loaded = function() {
  * @api public
  * @param {Page} page
  */
-Unomi.prototype.onpage = function(page) {
+Unomi.prototype.page = function(page) {
     var unomiPage = { };
     this.fillPageData(unomiPage, page.json().properties);
 
@@ -169,7 +182,7 @@ Unomi.prototype.processReferrer = function() {
  * @api public
  * @param {Identify} identify
  */
-Unomi.prototype.onidentify = function(identify) {
+Unomi.prototype.identify = function(identify) {
     this.collectEvent(this.buildEvent("identify",
         this.buildTarget(identify.userId(), "analyticsUser", identify.traits()),
         this.buildSource(this.options.scope, 'site', identify.context())));
@@ -181,7 +194,7 @@ Unomi.prototype.onidentify = function(identify) {
  * @api private
  * @param {Track} track
  */
-Unomi.prototype.ontrack = function(track) {
+Unomi.prototype.track = function(track) {
     // we use the track event name to know that we are submitted a form because Analytics.js trackForm method doesn't give
     // us another way of knowing that we are processing a form.
     if (track.event() && track.event().indexOf("form") === 0) {
@@ -605,7 +618,7 @@ Unomi.prototype.extractFormData = function (form) {
                     }
                     break;
                 default:
-                    console.log("unomiTracker: " + e.nodeName + " form element type not implemented and will not be tracked.");
+                    console.warn("[UNOMI] " + e.nodeName + " form element type not implemented and will not be tracked.");
             }
         }
     }

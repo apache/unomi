@@ -38,6 +38,7 @@ import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.persistence.elasticsearch.conditions.*;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
+import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
@@ -72,6 +73,7 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
+import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptException;
 import org.elasticsearch.script.ScriptType;
@@ -140,9 +142,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String monthlyIndexNumberOfShards;
     private String monthlyIndexNumberOfReplicas;
     private String monthlyIndexMappingTotalFieldsLimit;
+    private String monthlyIndexMaxDocValueFieldsSearch;
     private String numberOfShards;
     private String numberOfReplicas;
     private String indexMappingTotalFieldsLimit;
+    private String indexMaxDocValueFieldsSearch;
     private BundleContext bundleContext;
     private Map<String, String> mappings = new HashMap<String, String>();
     private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
@@ -211,6 +215,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.monthlyIndexMappingTotalFieldsLimit = monthlyIndexMappingTotalFieldsLimit;
     }
 
+    public void setMonthlyIndexMaxDocValueFieldsSearch(String monthlyIndexMaxDocValueFieldsSearch) {
+        this.monthlyIndexMaxDocValueFieldsSearch = monthlyIndexMaxDocValueFieldsSearch;
+    }
+
     public void setNumberOfShards(String numberOfShards) {
         this.numberOfShards = numberOfShards;
     }
@@ -221,6 +229,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setIndexMappingTotalFieldsLimit(String indexMappingTotalFieldsLimit) {
         this.indexMappingTotalFieldsLimit = indexMappingTotalFieldsLimit;
+    }
+
+    public void setIndexMaxDocValueFieldsSearch(String indexMaxDocValueFieldsSearch) {
+        this.indexMaxDocValueFieldsSearch = indexMaxDocValueFieldsSearch;
     }
 
     public void setDefaultQueryLimit(Integer defaultQueryLimit) {
@@ -678,6 +690,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             return null;
                         }
                     }
+                } catch (ElasticsearchStatusException ese) {
+                    if (ese.status().equals(RestStatus.NOT_FOUND)) {
+                        // this can happen if we are just testing the existence of the item, it is not always an error.
+                        return null;
+                    }
+                    throw new Exception("Error loading itemType=" + clazz.getName() + " itemId=" + itemId, ese);
                 } catch (IndexNotFoundException e) {
                     // this can happen if we are just testing the existence of the item, it is not always an error.
                     return null;
@@ -978,11 +996,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 for (String itemName : itemsMonthlyIndexed) {
                     PutIndexTemplateRequest putIndexTemplateRequest = new PutIndexTemplateRequest("context-"+itemName+"-date-template")
                             .patterns(Collections.singletonList(getMonthlyIndexForQuery(itemName)))
+                            .order(1)
                             .settings("{\n" +
                                     "    \"index\" : {\n" +
                                     "        \"number_of_shards\" : " + monthlyIndexNumberOfShards + ",\n" +
                                     "        \"number_of_replicas\" : " + monthlyIndexNumberOfReplicas + ",\n" +
-                                    "        \"mapping.total_fields.limit\" : " + monthlyIndexMappingTotalFieldsLimit + "\n" +
+                                    "        \"mapping.total_fields.limit\" : " + monthlyIndexMappingTotalFieldsLimit + ",\n" +
+                                    "        \"max_docvalue_fields_search\" : " + monthlyIndexMaxDocValueFieldsSearch + "\n" +
                                     "    },\n" +
                                     "    \"analysis\": {\n" +
                                     "      \"analyzer\": {\n" +
@@ -1057,7 +1077,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         "    \"index\" : {\n" +
                         "        \"number_of_shards\" : " + numberOfShards + ",\n" +
                         "        \"number_of_replicas\" : " + numberOfReplicas + ",\n" +
-                        "        \"mapping.total_fields.limit\" : " + indexMappingTotalFieldsLimit + "\n" +
+                        "        \"mapping.total_fields.limit\" : " + indexMappingTotalFieldsLimit + ",\n" +
+                        "        \"max_docvalue_fields_search\" : " + indexMaxDocValueFieldsSearch + "\n" +
                         "    },\n" +
                         "    \"analysis\": {\n" +
                         "      \"analyzer\": {\n" +
@@ -1462,6 +1483,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         scrollIdentifier = response.getScrollId();
                         totalHits = searchHits.getTotalHits().value;
                         totalHitsRelation = getTotalHitsRelation(searchHits.getTotalHits());
+                        if (scrollIdentifier != null && totalHits == 0) {
+                            // we have no results, we must clear the scroll request immediately.
+                            ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
+                            clearScrollRequest.addScrollId(response.getScrollId());
+                            client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
+                        }
                         for (SearchHit searchHit : searchHits) {
                             String sourceAsString = searchHit.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);

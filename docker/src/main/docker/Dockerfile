@@ -14,37 +14,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-version: '2.2'
-services:
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:5.6.3
-    volumes: # Persist ES data in seperate "esdata" volume
-      - esdata1:/usr/share/elasticsearch/data
-    environment:
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - cluster.name=contextElasticSearch
-    ports: # Expose Elasticsearch ports
-      - "9200:9200"
 
-  unomi:
-    build: .
-    container_name: unomi
-    environment:
-      - ELASTICSEARCH_HOST=elasticsearch
-      - ELASTICSEARCH_PORT=9300
-      - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9300
-    ports:
-      - 8181:8181
-      - 9443:9443
-    links:
-      - elasticsearch
-    depends_on:
-      - elasticsearch
+FROM openjdk:8-jre
 
+# Unomi environment variables
+ENV UNOMI_HOME /opt/apache-unomi
+ENV PATH $PATH:$UNOMI_HOME/bin
 
-volumes: # Define seperate volume for Elasticsearch data
-  esdata1:
-    driver: local
+ENV KARAF_OPTS "-Dunomi.autoStart=true"
+
+ENV UNOMI_ELASTICSEARCH_ADDRESSES=localhost:9200
+
+WORKDIR $UNOMI_HOME
+
+ADD unomi.tar.gz ./
+
+RUN mv unomi-*/* . \
+	&& rm -rf unomi-*
+
+COPY entrypoint.sh ./entrypoint.sh
+
+EXPOSE 9443
+EXPOSE 8181
+EXPOSE 8102
+
+CMD ["/bin/bash", "./entrypoint.sh"]

@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 public class RulesServiceImpl implements RulesService, EventListenerService, SynchronousBundleListener {
@@ -61,7 +62,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     private Integer rulesRefreshInterval = 1000;
     private Integer rulesStatisticsRefreshInterval = 10000;
 
-    private List<RuleListenerService> ruleListeners = new ArrayList<RuleListenerService>();
+    private List<RuleListenerService> ruleListeners = new CopyOnWriteArrayList<RuleListenerService>();
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -157,6 +158,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     public Set<Rule> getMatchingRules(Event event) {
         Set<Rule> matchedRules = new LinkedHashSet<Rule>();
 
+        Boolean hasEventAlreadyBeenRaised = null;
         Boolean hasEventAlreadyBeenRaisedForSession = null;
         Boolean hasEventAlreadyBeenRaisedForProfile = null;
 
@@ -189,8 +191,14 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                     updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
                     continue;
                 }
-
-                if (rule.isRaiseEventOnlyOnceForProfile()) {
+                if (rule.isRaiseEventOnlyOnce()) {
+                    hasEventAlreadyBeenRaised = hasEventAlreadyBeenRaised != null ? hasEventAlreadyBeenRaised : eventService.hasEventAlreadyBeenRaised(event);
+                    if (hasEventAlreadyBeenRaised) {
+                        updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
+                        fireAlreadyRaised(RuleListenerService.AlreadyRaisedFor.EVENT, rule, event);
+                        continue;
+                    }
+                } else if (rule.isRaiseEventOnlyOnceForProfile()) {
                     hasEventAlreadyBeenRaisedForProfile = hasEventAlreadyBeenRaisedForProfile != null ? hasEventAlreadyBeenRaisedForProfile : eventService.hasEventAlreadyBeenRaised(event, false);
                     if (hasEventAlreadyBeenRaisedForProfile) {
                         updateRuleStatistics(ruleStatistics, ruleConditionStartTime);

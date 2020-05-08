@@ -774,6 +774,8 @@ Inherits all the fields from: <<MetadataItem>>
 
 | linkedItems | String array | A list of references to objects that may have generated this rule. Goals and segments dynamically generate rules to react to incoming events. It is not recommend to manipulate rules that have linkedItems as it may break functionality.
 
+| raiseEventOnlyOnce | Boolean | If true, the rule will only be executed once for a given event.
+
 | raiseEventOnlyOnceForProfile | Boolean | If true, the rule will only be executed once for a given profile and a matching event. Warning: this functionality has a performance impact since it looks up past events.
 
 | raiseEventOnlyOnceForSession | Boolean | If true, the rule will only be executed once for a given session and a matching event. Warning: this functionality has a performance impact since it looks up past events.

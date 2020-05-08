@@ -237,9 +237,16 @@ public class Profile extends Item {
     @XmlTransient
     public boolean setConsent(Consent consent) {
         if (ConsentStatus.REVOKED.equals(consent.getStatus())) {
-            if (consents.containsKey(consent.getTypeIdentifier())) {
-                consents.remove(consent.getTypeIdentifier());
-                return true;
+            if (consent.getScope() != null) {
+                if (consents.containsKey(consent.getScope() + "/" + consent.getTypeIdentifier())) {
+                    consents.remove(consent.getScope() + "/" + consent.getTypeIdentifier());
+                    return true;
+                }
+            } else {
+                if (consents.containsKey(consent.getTypeIdentifier())) {
+                    consents.remove(consent.getTypeIdentifier());
+                    return true;
+                }
             }
             return false;
         }

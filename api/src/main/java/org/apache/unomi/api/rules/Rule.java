@@ -52,6 +52,8 @@ public class Rule extends MetadataItem {
 
     private boolean raiseEventOnlyOnceForSession = false;
 
+    private boolean raiseEventOnlyOnce = false;
+
     private int priority;
 
     /**
@@ -133,6 +135,15 @@ public class Rule extends MetadataItem {
     }
 
     /**
+     * Determines whether the event raised when the rule is triggered should only be raised once
+     *
+     * @return {@code true} if the rule-triggered event should only be raised once per profile
+     */
+    public boolean isRaiseEventOnlyOnce() {
+        return raiseEventOnlyOnce;
+    }
+
+    /**
      * Specifies whether the event raised when the rule is triggered should only be raised once per {@link Profile}.
      *
      * @param raiseEventOnlyOnceForProfile {@code true} if the rule-triggered event should only be raised once per profile, {@code false} otherwise
@@ -157,6 +168,15 @@ public class Rule extends MetadataItem {
      */
     public void setRaiseEventOnlyOnceForSession(boolean raiseEventOnlyOnceForSession) {
         this.raiseEventOnlyOnceForSession = raiseEventOnlyOnceForSession;
+    }
+
+    /**
+     * Specifies whether the event raised when the rule is triggered should only be raised once per {@link Event}.
+     *
+     * @param raiseEventOnlyOnce {@code true} if the rule-triggered event should only be raised once per event, {@code false} otherwise
+     */
+    public void setRaiseEventOnlyOnce(boolean raiseEventOnlyOnce) {
+        this.raiseEventOnlyOnce = raiseEventOnlyOnce;
     }
 
     /**

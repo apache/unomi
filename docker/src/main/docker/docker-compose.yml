@@ -14,34 +14,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
+version: '2.4'
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.4.2
+    volumes: # Persist ES data in seperate "esdata" volume
+      - esdata1:/usr/share/elasticsearch/data
+    environment:
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1G -Xmx1G"
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - cluster.name=contextElasticSearch
+    ports: # Expose Elasticsearch ports
+      - "9200:9200"
 
-FROM openjdk:8-jre
+  unomi:
+    build: .
+    image: apache/unomi:${project.version}
+    container_name: unomi
+    environment:
+      - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
+    ports:
+      - 8181:8181
+      - 9443:9443
+      - 8102:8102
+    links:
+      - elasticsearch
+    depends_on:
+      - elasticsearch
 
-# Unomi environment variables
-ENV UNOMI_HOME /opt/apache-unomi
-ENV PATH $PATH:$UNOMI_HOME/bin
 
-ENV KARAF_OPTS "-Dunomi.autoStart=true"
-
-ENV ELASTICSEARCH_HOST localhost
-ENV ELASTICSEARCH_PORT 9300
-
-ENV UNOMI_VERSION "1.4.0"
-
-WORKDIR $UNOMI_HOME
-
-RUN wget http://apache.mirrors.pair.com/unomi/${UNOMI_VERSION}/unomi-${UNOMI_VERSION}-bin.tar.gz
-
-RUN tar -xzf unomi-${UNOMI_VERSION}-bin.tar.gz \
-	&& mv unomi-*/* . \
-	&& rm -rf unomi-*
-
-RUN cp ${UNOMI_HOME}/etc/custom.properties ${UNOMI_HOME}/etc/custom.properties.template
-
-COPY ./entrypoint.sh ./entrypoint.sh
-
-EXPOSE 9443
-EXPOSE 8181
-EXPOSE 8102
-
-CMD ["/bin/bash", "./entrypoint.sh"]
+volumes: # Define seperate volume for Elasticsearch data
+  esdata1:
+    driver: local

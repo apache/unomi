@@ -749,6 +749,16 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return persistenceService.query("profileId", profileId, "timeStamp:desc", Session.class, 0, 50);
     }
 
+    public void removeProfileSessions(String profileId) {
+        Condition profileCondition = new Condition();
+        profileCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+        profileCondition.setParameter("propertyName", "profileId");
+        profileCondition.setParameter("comparisonOperator", "equals");
+        profileCondition.setParameter("propertyValue", profileId);
+
+        persistenceService.removeByQuery(profileCondition,Session.class);
+    }
+
     @Override
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
         ParserHelper.resolveConditionType(definitionsService, condition);
