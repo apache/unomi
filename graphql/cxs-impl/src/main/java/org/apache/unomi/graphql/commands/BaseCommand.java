@@ -36,7 +36,7 @@ public abstract class BaseCommand<T> {
 
     public static abstract class Builder<B extends Builder> {
 
-        DataFetchingEnvironment environment;
+        protected DataFetchingEnvironment environment;
 
         @SuppressWarnings("unchecked")
         public B setEnvironment(DataFetchingEnvironment environment) {

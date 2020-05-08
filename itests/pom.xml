@@ -84,6 +84,13 @@
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpcore-osgi</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty.websocket</groupId>
+            <artifactId>websocket-client</artifactId>
+            <version>9.4.28.v20200408</version>
+            <type>bundle</type>
+        </dependency>
+
 
         <!-- Dependencies for pax exam karaf container -->
         <dependency>

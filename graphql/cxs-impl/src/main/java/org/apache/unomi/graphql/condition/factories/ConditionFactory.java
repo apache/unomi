@@ -52,6 +52,10 @@ public class ConditionFactory {
                 .collect(Collectors.toMap(ConditionType::getItemId, Function.identity()));
     }
 
+    public Condition matchAllCondition() {
+        return ConditionBuilder.create(getConditionType("matchAllCondition")).build();
+    }
+
     public Condition booleanCondition(final String operator, List<Condition> subConditions) {
         return ConditionBuilder.create(getConditionType("booleanCondition"))
                 .parameter("operator", operator)

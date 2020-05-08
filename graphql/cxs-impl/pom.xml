@@ -96,6 +96,18 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>io.reactivex.rxjava2</groupId>
+            <artifactId>rxjava</artifactId>
+            <version>${reactivex.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty.websocket</groupId>
+            <artifactId>websocket-server</artifactId>
+            <version>${jetty.websocket.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>osgi.enterprise</artifactId>
             <version>6.0.0</version>
@@ -128,6 +140,12 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>cxs-lists-extension-services</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-spi</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>

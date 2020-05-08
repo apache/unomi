@@ -74,6 +74,9 @@ public class CDPEventFilterInput {
     @GraphQLField
     private CDPProfileUpdateEventFilterInput cdp_profileUpdateEvent;
 
+    public CDPEventFilterInput() {
+    }
+
     public CDPEventFilterInput(
             final @GraphQLName("and") List<CDPEventFilterInput> and,
             final @GraphQLName("or") List<CDPEventFilterInput> or,

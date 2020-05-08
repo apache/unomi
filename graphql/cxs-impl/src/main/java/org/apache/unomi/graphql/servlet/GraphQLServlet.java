@@ -22,17 +22,21 @@ import graphql.ExecutionResult;
 import graphql.introspection.IntrospectionQuery;
 import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
 import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.servlet.websocket.SubscriptionWebSocketFactory;
 import org.apache.unomi.graphql.utils.GraphQLObjectMapper;
+import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest;
+import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
+import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -40,7 +44,7 @@ import java.util.Map;
         service = {javax.servlet.http.HttpServlet.class, javax.servlet.Servlet.class},
         property = {"alias=/graphql"}
 )
-public class GraphQLServlet extends HttpServlet {
+public class GraphQLServlet extends WebSocketServlet {
 
     private GraphQLSchemaUpdater graphQLSchemaUpdater;
 
@@ -59,6 +63,33 @@ public class GraphQLServlet extends HttpServlet {
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
+    }
+
+    private WebSocketServletFactory factory;
+
+    @Override
+    public void configure(WebSocketServletFactory factory) {
+        this.factory = factory;
+        factory.setCreator(new SubscriptionWebSocketFactory(graphQLSchemaUpdater.getGraphQL(), serviceManager));
+        factory.getPolicy().setMaxTextMessageBufferSize(1024 * 1024);
+    }
+
+    @Override
+    protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        if (factory.isUpgradeRequest(request, response)) {
+            try {
+                final ServletUpgradeRequest upReq = new ServletUpgradeRequest(request);
+                for (String subProtocol : upReq.getSubProtocols()) {
+                    if (subProtocol.startsWith("graphql")) {
+                        response.addHeader("Sec-WebSocket-Protocol", subProtocol);
+                        break;
+                    }
+                }
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        super.service(request, response);
     }
 
     @Override

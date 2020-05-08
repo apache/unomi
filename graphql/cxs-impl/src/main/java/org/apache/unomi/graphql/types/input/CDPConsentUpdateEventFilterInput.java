@@ -65,6 +65,9 @@ public class CDPConsentUpdateEventFilterInput implements EventFilterInputMarker 
     @GraphQLField
     private OffsetDateTime expiration_gte;
 
+    public CDPConsentUpdateEventFilterInput() {
+    }
+
     public CDPConsentUpdateEventFilterInput(
             final @GraphQLName("type_equals") String type_equals,
             final @GraphQLName("status_equals") String status_equals,

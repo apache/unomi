@@ -45,7 +45,7 @@ import java.nio.charset.StandardCharsets;
 @ExamReactorStrategy(PerSuite.class)
 public class GraphQLSegmentIT extends BaseIT {
 
-    private static final String GRAPHQL_ENDPOINT = URL + "/cdpgraphql";
+    private static final String GRAPHQL_ENDPOINT = URL + "/graphql";
 
     @Inject
     protected BundleContext bundleContext;
