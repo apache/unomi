@@ -17,8 +17,10 @@
 package org.apache.unomi.graphql.schema;
 
 import graphql.GraphQL;
+import graphql.execution.SubscriptionExecutionStrategy;
 import graphql.schema.GraphQLSchema;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.graphql.fetchers.event.UnomiEventPublisher;
 import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
 import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
@@ -30,14 +32,6 @@ import org.apache.unomi.graphql.types.output.CDPPersona;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.CDPProfileInterface;
 import org.apache.unomi.graphql.types.output.CDPPropertyInterface;
-import org.apache.unomi.graphql.types.output.property.CDPBooleanPropertyType;
-import org.apache.unomi.graphql.types.output.property.CDPDatePropertyType;
-import org.apache.unomi.graphql.types.output.property.CDPFloatPropertyType;
-import org.apache.unomi.graphql.types.output.property.CDPGeoPointPropertyType;
-import org.apache.unomi.graphql.types.output.property.CDPIdentifierPropertyType;
-import org.apache.unomi.graphql.types.output.property.CDPIntPropertyType;
-import org.apache.unomi.graphql.types.output.property.CDPSetPropertyType;
-import org.apache.unomi.graphql.types.output.property.CDPStringPropertyType;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
@@ -73,6 +67,8 @@ public class GraphQLSchemaUpdater {
     private final List<GraphQLTypeFunctionProvider> typeFunctionProviders = new CopyOnWriteArrayList<>();
 
     private GraphQLCodeRegistryProvider codeRegistryProvider;
+
+    private UnomiEventPublisher eventPublisher;
 
     private GraphQL graphQL;
 
@@ -111,6 +107,11 @@ public class GraphQLSchemaUpdater {
         if (executorService != null) {
             executorService.shutdown();
         }
+    }
+
+    @Reference
+    public void setEventPublisher(UnomiEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
     }
 
     @Reference
@@ -230,7 +231,9 @@ public class GraphQLSchemaUpdater {
     private void doUpdateSchema() {
         final GraphQLSchema graphQLSchema = createGraphQLSchema();
 
-        this.graphQL = GraphQL.newGraphQL(graphQLSchema).build();
+        this.graphQL = GraphQL.newGraphQL(graphQLSchema)
+                .subscriptionExecutionStrategy(new SubscriptionExecutionStrategy())
+                .build();
     }
 
     public GraphQL getGraphQL() {
@@ -245,7 +248,9 @@ public class GraphQLSchemaUpdater {
                 .additionalTypesProviders(additionalTypesProviders)
                 .queryProviders(queryProviders)
                 .mutationProviders(mutationProviders)
-                .codeRegistryProvider(codeRegistryProvider).build();
+                .eventPublisher(eventPublisher)
+                .codeRegistryProvider(codeRegistryProvider)
+                .build();
 
         final GraphQLSchema schema = schemaProvider.createSchema();
 

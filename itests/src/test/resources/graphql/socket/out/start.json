@@ -1,0 +1,10 @@
+{
+  "id": "1",
+  "type": "start",
+  "payload": {
+    "variables": {},
+    "extensions": {},
+    "operationName": "events",
+    "query": "subscription events($filter: CDP_EventFilterInput) {↵  eventListener(filter: $filter) {↵    id↵    cdp_profile {↵      firstName↵    }↵  }↵}↵"
+  }
+}

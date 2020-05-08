@@ -110,6 +110,16 @@
             <version>${graphql.java.extended.scalars.version}</version>
         </dependency>
         <dependency>
+            <groupId>io.reactivex.rxjava2</groupId>
+            <artifactId>rxjava</artifactId>
+            <version>${reactivex.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty.websocket</groupId>
+            <artifactId>websocket-server</artifactId>
+            <version>${jetty.websocket.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>cdp-graphql-api-impl</artifactId>
             <version>${project.version}</version>

@@ -31,6 +31,9 @@ public class CDPListsUpdateEventFilterInput implements EventFilterInputMarker {
     @GraphQLField
     private List<String> leaveLists_contains;
 
+    public CDPListsUpdateEventFilterInput() {
+    }
+
     public CDPListsUpdateEventFilterInput(final @GraphQLName("joinLists_contains") List<String> joinLists_contains,
                                           final @GraphQLName("leaveLists_contains") List<String> leaveLists_contains) {
         this.joinLists_contains = joinLists_contains;

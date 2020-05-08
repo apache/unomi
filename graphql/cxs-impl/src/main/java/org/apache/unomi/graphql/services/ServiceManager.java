@@ -21,11 +21,12 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.services.UserListService;
 import org.apache.unomi.graphql.schema.CDPEventInterfaceRegister;
 import org.apache.unomi.graphql.schema.CDPProfileInterfaceRegister;
 import org.apache.unomi.graphql.schema.CDPPropertyInterfaceRegister;
 import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
-import org.apache.unomi.api.services.UserListService;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -43,6 +44,7 @@ public class ServiceManager {
     private CDPEventInterfaceRegister eventInterfaceRegister;
     private CDPProfileInterfaceRegister profileInterfaceRegister;
     private CDPPropertyInterfaceRegister propertyInterfaceRegister;
+    private PersistenceService persistenceService;
 
     @Reference
     public void setProfileService(ProfileService profileService) {
@@ -99,6 +101,11 @@ public class ServiceManager {
         this.userListServiceExt = userListServiceExt;
     }
 
+    @Reference
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
+
     public ProfileService getProfileService() {
         return profileService;
     }
@@ -141,5 +148,9 @@ public class ServiceManager {
 
     public CDPPropertyInterfaceRegister getPropertyInterfaceRegister() {
         return propertyInterfaceRegister;
+    }
+
+    public PersistenceService getPersistenceService() {
+        return persistenceService;
     }
 }

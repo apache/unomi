@@ -36,6 +36,9 @@ public class CDPSessionEventFilterInput implements EventFilterInputMarker {
     @GraphQLField
     private String unomi_scope_equals;
 
+    public CDPSessionEventFilterInput() {
+    }
+
     public CDPSessionEventFilterInput(
             final @GraphQLName("state_equals") CDPSessionState state_equals,
             final @GraphQLName("unomi_sessionId_equals") String unomi_sessionId_equals,

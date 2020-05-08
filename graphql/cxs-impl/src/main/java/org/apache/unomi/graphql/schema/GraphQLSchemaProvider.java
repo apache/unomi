@@ -28,6 +28,7 @@ import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLInputObjectType;
 import graphql.schema.GraphQLInputType;
+import graphql.schema.GraphQLInterfaceType;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLSchema;
@@ -38,6 +39,8 @@ import org.apache.unomi.graphql.CDPGraphQLConstants;
 import org.apache.unomi.graphql.fetchers.CustomerPropertyDataFetcher;
 import org.apache.unomi.graphql.fetchers.DynamicFieldDataFetcher;
 import org.apache.unomi.graphql.fetchers.ProfileDynamicFieldSetDataFetcher;
+import org.apache.unomi.graphql.fetchers.event.EventListenerSubscriptionFetcher;
+import org.apache.unomi.graphql.fetchers.event.UnomiEventPublisher;
 import org.apache.unomi.graphql.function.DateTimeFunction;
 import org.apache.unomi.graphql.function.JSONFunction;
 import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
@@ -54,6 +57,7 @@ import org.apache.unomi.graphql.types.input.CDPProfilePropertiesFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileUpdateEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileUpdateEventInput;
 import org.apache.unomi.graphql.types.input.EventFilterInputMarker;
+import org.apache.unomi.graphql.types.output.CDPEventInterface;
 import org.apache.unomi.graphql.types.output.CDPPersona;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.RootMutation;
@@ -69,6 +73,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static graphql.schema.FieldCoordinates.coordinates;
+import static graphql.schema.GraphQLArgument.newArgument;
+import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
+import static graphql.schema.GraphQLObjectType.newObject;
 
 public class GraphQLSchemaProvider {
 
@@ -86,13 +95,15 @@ public class GraphQLSchemaProvider {
 
     private final GraphQLCodeRegistryProvider codeRegistryProvider;
 
+    private final UnomiEventPublisher eventPublisher;
+
     private GraphQLAnnotations graphQLAnnotations;
 
     private Set<Class<?>> additionalTypes = new HashSet<>();
 
     private GraphQLSchemaProvider(final Builder builder) {
         this.profileService = builder.profileService;
-
+        this.eventPublisher = builder.eventPublisher;
         this.typeFunctionProviders = builder.typeFunctionProviders;
         this.extensionsProviders = builder.extensionsProviders;
         this.additionalTypesProviders = builder.additionalTypesProviders;
@@ -126,11 +137,43 @@ public class GraphQLSchemaProvider {
             annotationsSchema.additionalTypes(additionalTypes);
         }
 
+        GraphQLSchema.Builder schemaBuilder = createSubscriptionSchemaBuilder();
+
         return annotationsSchema
+                .setGraphQLSchemaBuilder(schemaBuilder)
                 .query(RootQuery.class)
                 .mutation(RootMutation.class)
                 .setAnnotationsProcessor(graphQLAnnotations)
                 .build();
+    }
+
+    private GraphQLSchema.Builder createSubscriptionSchemaBuilder() {
+        final GraphQLInputObjectType eventFilterInputType = (GraphQLInputObjectType) getFromTypeRegistry(CDPEventFilterInput.TYPE_NAME);
+        final GraphQLInterfaceType eventInterfaceType = (GraphQLInterfaceType) getFromTypeRegistry(CDPEventInterface.TYPE_NAME);
+
+        // creating subscriptions dynamically because annotations
+        // doesn't seem to be able to handle data fetchers returning publishers
+        GraphQLObjectType cdpSubscription = newObject()
+                .name("CDP_Subscription")
+                .field(newFieldDefinition()
+                        .argument(newArgument()
+                                .name("filter")
+                                .type(eventFilterInputType)
+                                .build())
+                        .name("eventListener")
+                        .type(eventInterfaceType)
+                        .build())
+                .build();
+
+        // register data fetcher in annotations instead of codeRegistry
+        // because annotations will overwrite it on schema build
+        graphQLAnnotations.getContainer().getCodeRegistryBuilder()
+                .dataFetcher(
+                        coordinates("CDP_Subscription", "eventListener"),
+                        new EventListenerSubscriptionFetcher(eventPublisher));
+
+        return GraphQLSchema.newSchema()
+                .subscription(cdpSubscription);
     }
 
     public Set<Class<?>> getAdditionalTypes() {
@@ -424,6 +467,10 @@ public class GraphQLSchemaProvider {
         graphQLAnnotations.getContainer().getTypeRegistry().put(name, type);
     }
 
+    private GraphQLType getFromTypeRegistry(final String name) {
+        return graphQLAnnotations.getContainer().getTypeRegistry().get(name);
+    }
+
     private void configureElementsContainer() {
         final ProcessingElementsContainer container = graphQLAnnotations.getContainer();
 
@@ -541,6 +588,8 @@ public class GraphQLSchemaProvider {
 
         GraphQLCodeRegistryProvider codeRegistryProvider;
 
+        UnomiEventPublisher eventPublisher;
+
         private Builder(final ProfileService profileService) {
             this.profileService = profileService;
         }
@@ -572,6 +621,11 @@ public class GraphQLSchemaProvider {
 
         public Builder codeRegistryProvider(GraphQLCodeRegistryProvider codeRegistryProvider) {
             this.codeRegistryProvider = codeRegistryProvider;
+            return this;
+        }
+
+        public Builder eventPublisher(UnomiEventPublisher eventPublisher) {
+            this.eventPublisher = eventPublisher;
             return this;
         }
 

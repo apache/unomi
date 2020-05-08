@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.graphql.utils;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 
@@ -25,6 +26,7 @@ public class GraphQLObjectMapper extends ObjectMapper {
 
     private GraphQLObjectMapper() {
         super();
+        super.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         super.registerModule(new JaxbAnnotationModule());
     }
 

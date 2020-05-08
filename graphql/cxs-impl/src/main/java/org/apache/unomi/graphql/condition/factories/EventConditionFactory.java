@@ -206,11 +206,11 @@ public class EventConditionFactory extends ConditionFactory {
         final List<Condition> rootSubConditions = new ArrayList<>();
 
         if (cdp_listsUpdateEvent.getJoinLists_contains() != null && !cdp_listsUpdateEvent.getJoinLists_contains().isEmpty()) {
-            rootSubConditions.add(propertiesCondition("joinLists", "contains", cdp_listsUpdateEvent.getJoinLists_contains()));
+            rootSubConditions.add(propertiesCondition("properties.joinLists", "inContains", cdp_listsUpdateEvent.getJoinLists_contains()));
         }
 
-        if (cdp_listsUpdateEvent.getJoinLists_contains() != null && !cdp_listsUpdateEvent.getJoinLists_contains().isEmpty()) {
-            rootSubConditions.add(propertiesCondition("leaveLists", "contains", cdp_listsUpdateEvent.getLeaveLists_contains()));
+        if (cdp_listsUpdateEvent.getLeaveLists_contains() != null && !cdp_listsUpdateEvent.getLeaveLists_contains().isEmpty()) {
+            rootSubConditions.add(propertiesCondition("properties.leaveLists", "inContains", cdp_listsUpdateEvent.getLeaveLists_contains()));
         }
 
         return booleanCondition("and", rootSubConditions);
