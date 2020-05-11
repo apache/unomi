@@ -69,7 +69,6 @@ public abstract class BaseIT {
         List<Option> options = new ArrayList<>();
 
         Option[] commonOptions = new Option[]{
-                debugConfiguration("5006", false),
                 karafDistributionConfiguration()
                         .frameworkUrl(karafUrl)
                         .unpackDirectory(new File(KARAF_DIR))
@@ -116,6 +115,26 @@ public abstract class BaseIT {
         };
 
         options.addAll(Arrays.asList(commonOptions));
+
+        String karafDebug = System.getProperty("it.karaf.debug");
+        if (karafDebug != null) {
+            System.out.println("Found system Karaf Debug system property, activating configuration: " + karafDebug);
+            String port = "5006";
+            boolean hold = true;
+            if (karafDebug.trim().length() > 0) {
+                String[] debugOptions = karafDebug.split(",");
+                for (String debugOption : debugOptions) {
+                    String[] debugOptionParts = debugOption.split(":");
+                    if ("hold".equals(debugOptionParts[0])) {
+                        hold = Boolean.parseBoolean(debugOptionParts[1].trim());
+                    }
+                    if ("port".equals(debugOptionParts[0])) {
+                        port = debugOptionParts[1].trim();
+                    }
+                }
+            }
+            options.add(0, debugConfiguration(port, hold));
+        }
 
         if (JavaVersionUtil.getMajorVersion() >= 9) {
             Option[] jdk9PlusOptions = new Option[]{
