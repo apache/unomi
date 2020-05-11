@@ -41,7 +41,8 @@ import org.junit.runners.Suite.SuiteClasses;
 	PropertiesUpdateActionIT.class,
 	ModifyConsentIT.class,
 	PatchIT.class,
-	UpdateEventFromContextServletIT.class
+	UpdateEventFromContextServletIT.class,
+	SecurityIT.class
 })
 public class AllITs {
 }
