@@ -193,6 +193,24 @@ You should now have SSL setup on Karaf with your certificate, and you can test i
 Changing the default Karaf password can be done by modifying the `org.apache.unomi.security.root.password` in the
 `$MY_KARAF_HOME/etc/unomi.custom.system.properties` file
 
+==== Scripting security
+
+By default, scripting (using in conditions, segments and rules) is controlled by a custom classloader that is quite
+restrictive and using a white-list/black list system. It is controlled through the following property in the
+`unomi.custom.system.properties` file:
+
+[source]
+----
+org.apache.unomi.scripting.allow=${env:UNOMI_ALLOW_SCRIPTING_CLASSES:-org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,ognl.*,java.lang.Object,java.util.Map,java.lang.Integer,org.mvel2.*}
+org.apache.unomi.scripting.forbid=${env:UNOMI_FORBID_SCRIPTING_CLASSES:-}
+----
+
+If you encounter any errors while trying to access a class in a condition or an action it might be due to this
+restrictive configuration.
+
+If you need, for example when adding a custom item type, to adjust these, please be careful as scripts may be called
+directly from the context.json personalization conditions and therefore should be kept minimal.
+
 ==== Automatic profile merging
 
 Apache Unomi is capable of merging profiles based on a common property value. In order to use this, you must
