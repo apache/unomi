@@ -51,12 +51,12 @@ For ElasticSearch:
     
 For Unomi:
 
-    docker pull apache/unomi:1.5.0-SNAPSHOT
-    docker run --name unomi --net unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 -e UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200 apache/unomi:1.5.0-SNAPSHOT
+    docker pull apache/unomi:1.5.1-SNAPSHOT
+    docker run --name unomi --net unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 -e UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200 apache/unomi:1.5.1-SNAPSHOT
 
 ## Using a host OS ElasticSearch installation (only supported on macOS & Windows)
 
-    docker run --name unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 -e UNOMI_ELASTICSEARCH_ADDRESSES=host.docker.internal:9200 apache/unomi:1.5.0-SNAPSHOT
+    docker run --name unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 -e UNOMI_ELASTICSEARCH_ADDRESSES=host.docker.internal:9200 apache/unomi:1.5.1-SNAPSHOT
 
 Note: Linux doesn't support the host.docker.internal DNS lookup method yet, it should be available in an upcoming version of Docker. See https://github.com/docker/for-linux/issues/264
 
