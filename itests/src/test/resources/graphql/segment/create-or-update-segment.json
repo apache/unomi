@@ -2,13 +2,39 @@
   "operationName": "createOrUpdateSegment",
   "variables": {
     "segment": {
-      "id": "cdpSegment",
-      "view": "http://www.enonic.com",
-      "name": "cdpSegment",
+      "id": "testSegment",
+      "view": "http://www.domain.com",
+      "name": "testSegment",
       "profiles": {
         "events": {
           "maximalCount": 10,
           "minimalCount": 0,
+          "and": [
+            {
+              "maximalCount": 43,
+              "minimalCount": 4,
+              "eventFilter": {
+                "id_equals": "1000",
+                "cdp_profileID_equals": "1000"
+              }
+            },
+            {
+              "maximalCount": 10,
+              "minimalCount": 4,
+              "eventFilter": {
+                "id_equals": "1000",
+                "cdp_profileID_equals": "1000"
+              }
+            }
+          ],
+          "not": {
+            "maximalCount": 3,
+            "minimalCount": 4,
+            "eventFilter": {
+              "id_equals": "1000",
+              "cdp_profileID_equals": "1000"
+            }
+          },
           "eventFilter": {
             "id_equals": "1000",
             "cdp_profileID_equals": "1000",
@@ -24,14 +50,7 @@
                 "cdp_sourceID_equals": "1000",
                 "cdp_timestamp_equals": "2019-02-26T00:57:37Z"
               }
-            ],
-            "my_event": {
-              "name_equals": "Somename"
-            },
-            "cdp_profileUpdateEvent": {
-              "firstName_equals": "Anatol",
-              "lastName_startsWith": "Test"
-            }
+            ]
           }
         },
         "interests": {

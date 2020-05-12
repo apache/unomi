@@ -17,86 +17,62 @@
 package org.apache.unomi.itests.graphql;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.util.EntityUtils;
-import org.apache.unomi.itests.BaseIT;
-import org.apache.unomi.lifecycle.BundleWatcher;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.services.ProfileService;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
-import org.osgi.framework.BundleContext;
 
 import javax.inject.Inject;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
+import java.util.Objects;
+import java.util.UUID;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
-public class GraphQLSegmentIT extends BaseIT {
-
-    private static final String GRAPHQL_ENDPOINT = URL + "/graphql";
-
-    @Inject
-    protected BundleContext bundleContext;
+public class GraphQLSegmentIT extends BaseGraphQLITTest {
 
     @Inject
     @Filter(timeout = 600000)
-    protected BundleWatcher bundleWatcher;
+    protected ProfileService profileService;
 
-    @Before
-    public void setUp() throws InterruptedException {
-        while (!bundleWatcher.isStartupComplete()) {
-            Thread.sleep(1000);
+    @Test
+    public void testCreateSegment() throws IOException {
+        try (CloseableHttpResponse response = post("graphql/segment/create-or-update-segment.json")) {
+            final ResponseContext context = ResponseContext.parse(response.getEntity());
+
+            Assert.assertEquals("testSegment", context.getValue("data.cdp.createOrUpdateSegment.id"));
+            Assert.assertEquals("testSegment", context.getValue("data.cdp.createOrUpdateSegment.name"));
+            Assert.assertEquals("http://www.domain.com", context.getValue("data.cdp.createOrUpdateSegment.view.name"));
         }
     }
 
     @Test
-    public void testCreateSegment() throws IOException, InterruptedException {
-        HttpPost request = new HttpPost(GRAPHQL_ENDPOINT);
+    public void testCreateSegmentAndApplyToProfile() throws Exception {
+        final Profile profile = new Profile(UUID.randomUUID().toString());
+        profile.setProperty("firstName", "TestFirstName");
+        profile.setProperty("lastName", "TestLastName");
+        profileService.save(profile);
 
-        String jsonRequest = parseJson(bundleContext.getBundle().getResource("graphql/create-segment.json"));
+        keepTrying("Failed waiting for the creation of the profile for the \"testCreateSegmentAndApplyToProfile\" test",
+                () -> profileService.load(profile.getItemId()), Objects::nonNull, 1000, 100);
 
-        System.out.println(jsonRequest);
 
-        request.setEntity(new StringEntity(jsonRequest, ContentType.create("application/json")));
+        try (CloseableHttpResponse response = post("graphql/segment/create-segment-with-properties-filter.json")) {
+            final ResponseContext context = ResponseContext.parse(response.getEntity());
 
-        try (CloseableHttpResponse response = HttpClientBuilder.create().build().execute(request)) {
-            String jsonFromResponse = EntityUtils.toString(response.getEntity());
+            Assert.assertEquals("simpleSegment", context.getValue("data.cdp.createOrUpdateSegment.id"));
+            Assert.assertEquals("simpleSegment", context.getValue("data.cdp.createOrUpdateSegment.name"));
+            Assert.assertEquals("http://www.domain.com", context.getValue("data.cdp.createOrUpdateSegment.view.name"));
 
-            Assert.assertNotNull("Response can not be null", jsonFromResponse);
-
-            System.out.println(jsonFromResponse);
+            keepTrying("Failed waiting for the check segment for profile in scope of the \"testCreateSegmentAndApplyToProfile\" test",
+                    () -> profileService.load(profile.getItemId()),
+                    p -> p.getSegments() != null && p.getSegments().contains("simpleSegment"), 1000, 100);
         }
     }
 
-    private String parseJson(final URL url) {
-        try (InputStream stream = url.openStream()) {
-            return convertInputStreamToString(stream);
-        } catch (final Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private String convertInputStreamToString(InputStream inputStream)
-            throws IOException {
-
-        ByteArrayOutputStream result = new ByteArrayOutputStream();
-        byte[] buffer = new byte[1024];
-        int length;
-        while ((length = inputStream.read(buffer)) != -1) {
-            result.write(buffer, 0, length);
-        }
-        return result.toString(StandardCharsets.UTF_8.name());
-    }
 }
