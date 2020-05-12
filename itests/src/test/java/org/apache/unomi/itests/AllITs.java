@@ -23,7 +23,7 @@ import org.junit.runners.Suite.SuiteClasses;
 
 /**
  * Defines suite of test classes to run.
- * 
+ *
  * @author Sergiy Shyrkov
  */
 @RunWith(Suite.class)
@@ -40,7 +40,8 @@ import org.junit.runners.Suite.SuiteClasses;
         ProfileExportIT.class,
         PropertiesUpdateActionIT.class,
         ModifyConsentIT.class,
-        PatchIT.class
+        PatchIT.class,
+		SecurityIT.class
 })
 public class AllITs {
 }

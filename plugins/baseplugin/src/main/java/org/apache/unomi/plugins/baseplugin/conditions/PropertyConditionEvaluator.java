@@ -17,15 +17,13 @@
 
 package org.apache.unomi.plugins.baseplugin.conditions;
 
-import ognl.Node;
-import ognl.Ognl;
-import ognl.OgnlContext;
-import ognl.OgnlException;
+import ognl.*;
 import ognl.enhance.ExpressionAccessor;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.common.SecureFilteringClassLoader;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
@@ -36,6 +34,8 @@ import org.elasticsearch.index.mapper.DateFieldMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Member;
+import java.lang.reflect.Modifier;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.function.LongSupplier;
@@ -327,8 +327,10 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     }
 
     protected Object getOGNLPropertyValue(Item item, String expression) throws Exception {
-        ExpressionAccessor accessor = getPropertyAccessor(item, expression);
-        return accessor != null ? accessor.get((OgnlContext) Ognl.createDefaultContext(null), item) : null;
+        ClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(PropertyConditionEvaluator.class.getClassLoader());
+        OgnlContext ognlContext = getOgnlContext(secureFilteringClassLoader);
+        ExpressionAccessor accessor = getPropertyAccessor(item, expression, ognlContext, secureFilteringClassLoader);
+        return accessor != null ? accessor.get(ognlContext, item) : null;
     }
 
     private Object getNestedPropertyValue(String expressionPart, Map<String, Object> properties) {
@@ -339,14 +341,48 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             if (mapValue == null) {
                 return null;
             }
-            String nextExpression = expressionPart.substring(nextDotPos+1);
-            return getNestedPropertyValue(nextExpression, (Map<String,Object>) mapValue);
+            String nextExpression = expressionPart.substring(nextDotPos + 1);
+            return getNestedPropertyValue(nextExpression, (Map<String, Object>) mapValue);
         } else {
             return properties.get(expressionPart);
         }
     }
 
-    private ExpressionAccessor getPropertyAccessor(Item item, String expression) throws Exception {
+    private class ClassLoaderClassResolver extends DefaultClassResolver {
+        private ClassLoader classLoader;
+
+        public ClassLoaderClassResolver(ClassLoader classLoader) {
+            this.classLoader = classLoader;
+        }
+
+        @Override
+        protected Class toClassForName(String className) throws ClassNotFoundException {
+            return Class.forName(className, true, classLoader);
+        }
+    }
+
+    private OgnlContext getOgnlContext(ClassLoader classLoader) {
+        return (OgnlContext) Ognl.createDefaultContext(null, new MemberAccess() {
+                    @Override
+                    public Object setup(Map context, Object target, Member member, String propertyName) {
+                        return null;
+                    }
+
+                    @Override
+                    public void restore(Map context, Object target, Member member, String propertyName, Object state) {
+                    }
+
+                    @Override
+                    public boolean isAccessible(Map context, Object target, Member member, String propertyName) {
+                        int modifiers = member.getModifiers();
+                        boolean result = Modifier.isPublic(modifiers);
+                        return result;
+                    }
+                }, new ClassLoaderClassResolver(classLoader),
+                null);
+    }
+
+    private ExpressionAccessor getPropertyAccessor(Item item, String expression, OgnlContext ognlContext, ClassLoader classLoader) throws Exception {
         ExpressionAccessor accessor = null;
         String clazz = item.getClass().getName();
         Map<String, ExpressionAccessor> expressions = expressionCache.get(clazz);
@@ -361,8 +397,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             Thread current = Thread.currentThread();
             ClassLoader contextCL = current.getContextClassLoader();
             try {
-                current.setContextClassLoader(PropertyConditionEvaluator.class.getClassLoader());
-                Node node = Ognl.compileExpression((OgnlContext) Ognl.createDefaultContext(null), item, expression);
+                current.setContextClassLoader(classLoader);
+                Node node = Ognl.compileExpression(ognlContext, item, expression);
                 accessor = node.getAccessor();
             } finally {
                 current.setContextClassLoader(contextCL);

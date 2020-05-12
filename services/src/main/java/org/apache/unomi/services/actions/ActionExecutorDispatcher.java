@@ -23,6 +23,7 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.common.SecureFilteringClassLoader;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.mvel2.MVEL;
@@ -89,23 +90,9 @@ public class ActionExecutorDispatcher {
         valueExtractors.put("script", new ValueExtractor() {
             @Override
             public Object extract(String valueAsString, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-                final ClassLoader tccl = Thread.currentThread().getContextClassLoader();
-                try {
-                    Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-                    if (!mvelExpressions.containsKey(valueAsString)) {
-                        ParserConfiguration parserConfiguration = new ParserConfiguration();
-                        parserConfiguration.setClassLoader(getClass().getClassLoader());
-                        mvelExpressions.put(valueAsString, MVEL.compileExpression(valueAsString, new ParserContext(parserConfiguration)));
-                    }
-                    Map<String, Object> ctx = new HashMap<>();
-                    ctx.put("event", event);
-                    ctx.put("session", event.getSession());
-                    ctx.put("profile", event.getProfile());
-                    return MVEL.executeExpression(mvelExpressions.get(valueAsString), ctx);
-                } finally {
-                    Thread.currentThread().setContextClassLoader(tccl);
-                }
+                return executeScript(valueAsString, event);
             }
+
         });
     }
 
@@ -200,6 +187,26 @@ public class ActionExecutorDispatcher {
 
     private interface ValueExtractor {
         Object extract(String valueAsString, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException;
+    }
+
+    protected Object executeScript(String valueAsString, Event event) {
+        final ClassLoader tccl = Thread.currentThread().getContextClassLoader();
+        try {
+            ClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(getClass().getClassLoader());
+            Thread.currentThread().setContextClassLoader(secureFilteringClassLoader);
+            if (!mvelExpressions.containsKey(valueAsString)) {
+                ParserConfiguration parserConfiguration = new ParserConfiguration();
+                parserConfiguration.setClassLoader(secureFilteringClassLoader);
+                mvelExpressions.put(valueAsString, MVEL.compileExpression(valueAsString, new ParserContext(parserConfiguration)));
+            }
+            Map<String, Object> ctx = new HashMap<>();
+            ctx.put("event", event);
+            ctx.put("session", event.getSession());
+            ctx.put("profile", event.getProfile());
+            return MVEL.executeExpression(mvelExpressions.get(valueAsString), ctx);
+        } finally {
+            Thread.currentThread().setContextClassLoader(tccl);
+        }
     }
 
 }
