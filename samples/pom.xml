@@ -19,7 +19,7 @@
     <parent>
         <artifactId>unomi-root</artifactId>
         <groupId>org.apache.unomi</groupId>
-        <version>1.4.0</version>
+        <version>1.4.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -29,6 +29,7 @@
     <modules>
         <module>tweet-button-plugin</module>
         <module>login-integration</module>
+        <module>trainingplugin</module>
     </modules>
 
 </project>
