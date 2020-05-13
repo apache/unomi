@@ -16,12 +16,14 @@
  */
 package org.apache.unomi.plugins.baseplugin.conditions;
 
+import ognl.MethodFailedException;
 import org.apache.unomi.api.CustomItem;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -31,6 +33,7 @@ import java.util.concurrent.Future;
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertNull;
 import static org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator.NOT_OPTIMIZED_MARKER;
+import static org.junit.Assert.assertFalse;
 
 public class PropertyConditionEvaluatorTest {
 
@@ -52,14 +55,14 @@ public class PropertyConditionEvaluatorTest {
         assertEquals("Target itemId value is not correct", MOCK_ITEM_ID, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.itemId"));
         assertEquals("Target scope is not correct", DIGITALL_SCOPE, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.scope"));
         assertEquals("Target page path value is not correct", PAGE_PATH_VALUE, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.properties.pageInfo.pagePath"));
-        assertEquals("Target page url value is not correct", PAGE_URL_VALUE,                 propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.properties.pageInfo.pageURL"));
+        assertEquals("Target page url value is not correct", PAGE_URL_VALUE, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.properties.pageInfo.pageURL"));
         assertEquals("Session size should be 10", 10, propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "size"));
 
         assertNull("Unexisting property should be null", propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "systemProperties.goals._csk6r4cgeStartReached"));
         assertNull("Unexisting property should be null", propertyConditionEvaluator.getHardcodedPropertyValue(mockProfile, "properties.email"));
 
         // here let's make sure our reporting of non optimized expressions works.
-        assertEquals("Should have received the non-optimized marker string", NOT_OPTIMIZED_MARKER, propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "lastEventDate") );
+        assertEquals("Should have received the non-optimized marker string", NOT_OPTIMIZED_MARKER, propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "lastEventDate"));
 
     }
 
@@ -67,11 +70,11 @@ public class PropertyConditionEvaluatorTest {
     public void testOGNLEvaluator() throws Exception {
         Event mockEvent = generateMockEvent();
         assertEquals("Target itemId value is not correct", MOCK_ITEM_ID, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.itemId"));
-        assertEquals("Target scope is not correct", DIGITALL_SCOPE,propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.scope"));
+        assertEquals("Target scope is not correct", DIGITALL_SCOPE, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.scope"));
         assertEquals("Target page path value is not correct", PAGE_PATH_VALUE, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.properties.pageInfo.pagePath"));
         assertEquals("Target page url value is not correct", PAGE_URL_VALUE, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.properties.pageInfo.pageURL"));
         assertEquals("Session size should be 10", 10, propertyConditionEvaluator.getOGNLPropertyValue(mockSession, "size"));
-        assertEquals("Should have received the proper last even date", SESSION_LAST_EVENT_DATE, propertyConditionEvaluator.getOGNLPropertyValue(mockSession, "lastEventDate") );
+        assertEquals("Should have received the proper last even date", SESSION_LAST_EVENT_DATE, propertyConditionEvaluator.getOGNLPropertyValue(mockSession, "lastEventDate"));
 
         assertNull("Unexisting property should be null", propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "systemProperties.goals._csk6r4cgeStartReached"));
         assertNull("Unexisting property should be null", propertyConditionEvaluator.getHardcodedPropertyValue(mockProfile, "properties.email"));
@@ -97,7 +100,7 @@ public class PropertyConditionEvaluatorTest {
     public void testPropertyEvaluator() throws Exception {
         Event mockEvent = generateMockEvent();
         assertEquals("Target itemId value is not correct", MOCK_ITEM_ID, propertyConditionEvaluator.getPropertyValue(mockEvent, "target.itemId"));
-        assertEquals("Target scope is not correct", DIGITALL_SCOPE,propertyConditionEvaluator.getPropertyValue(mockEvent, "target.scope"));
+        assertEquals("Target scope is not correct", DIGITALL_SCOPE, propertyConditionEvaluator.getPropertyValue(mockEvent, "target.scope"));
         assertEquals("Target page path value is not correct", PAGE_PATH_VALUE, propertyConditionEvaluator.getPropertyValue(mockEvent, "target.properties.pageInfo.pagePath"));
 
         assertNull("Unexisting property should be null", propertyConditionEvaluator.getPropertyValue(mockSession, "systemProperties.goals._csk6r4cgeStartReached"));
@@ -105,6 +108,35 @@ public class PropertyConditionEvaluatorTest {
 
         assertEquals("Session size should be 10", 10, propertyConditionEvaluator.getPropertyValue(mockSession, "size"));
         assertEquals("Session last event date is not right", SESSION_LAST_EVENT_DATE, propertyConditionEvaluator.getPropertyValue(mockSession, "lastEventDate"));
+    }
+
+    @Test
+    public void testOGNLSecurity() throws Exception {
+        Event mockEvent = generateMockEvent();
+        File vulnFile = new File("target/vuln-file.txt");
+        if (vulnFile.exists()) {
+            vulnFile.delete();
+        }
+        try {
+            propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "@java.lang.Runtime@getRuntime().exec('touch " + vulnFile.getCanonicalPath() + "')");
+        } catch (RuntimeException | MethodFailedException re) {
+            // we ignore these exceptions as they are expected.
+        }
+        assertFalse("Vulnerability successfully executed ! File created at " + vulnFile.getCanonicalPath(), vulnFile.exists());
+        try {
+            propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "(#cmd='touch " + vulnFile.getCanonicalPath() + "').(#cmds={'bash','-c',#cmd}).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start())");
+        } catch (RuntimeException | MethodFailedException re) {
+            // we ignore these exceptions as they are expected.
+        }
+        vulnFile = new File("target/vuln-file.txt");
+        assertFalse("Vulnerability successfully executed ! File created at " + vulnFile.getCanonicalPath(), vulnFile.exists());
+        try {
+            propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "(#cmd='touch " + vulnFile.getCanonicalPath() + "').(#iswin=(@java.lang.System@getProperty('os.name').toLowerCase().contains('win'))).(#cmds=(#iswin?{'cmd.exe','/c',#cmd}:{'bash','-c',#cmd})).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start())");
+        } catch (RuntimeException | MethodFailedException re) {
+            // we ignore these exceptions as they are expected.
+        }
+        vulnFile = new File("target/vuln-file.txt");
+        assertFalse("Vulnerability successfully executed ! File created at " + vulnFile.getCanonicalPath(), vulnFile.exists());
     }
 
     private void runHardcodedTest(int workerCount, ExecutorService executorService) throws InterruptedException {
@@ -135,7 +167,7 @@ public class PropertyConditionEvaluatorTest {
         targetItem.setItemId(MOCK_ITEM_ID);
         targetItem.setScope(DIGITALL_SCOPE);
         mockEvent.setTarget(targetItem);
-        Map<String,Object> pageInfoMap = new HashMap<>();
+        Map<String, Object> pageInfoMap = new HashMap<>();
         pageInfoMap.put("pagePath", PAGE_PATH_VALUE);
         pageInfoMap.put("pageURL", PAGE_URL_VALUE);
         targetItem.getProperties().put("pageInfo", pageInfoMap);

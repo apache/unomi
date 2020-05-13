@@ -24,6 +24,7 @@ import org.apache.logging.log4j.core.util.IOUtils;
 import org.apache.lucene.analysis.charfilter.MappingCharFilterFactory;
 import org.apache.lucene.analysis.util.ClasspathResourceLoader;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.common.SecureFilteringClassLoader;
 import org.mvel2.MVEL;
 import org.mvel2.ParserConfiguration;
 import org.mvel2.ParserContext;
@@ -34,10 +35,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.Serializable;
 import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ConditionContextHelper {
@@ -80,12 +78,7 @@ public class ConditionContextHelper {
                     return context.get(StringUtils.substringAfter(s, "parameter::"));
                 } else if (s.startsWith("script::")) {
                     String script = StringUtils.substringAfter(s, "script::");
-                    if (!mvelExpressions.containsKey(script)) {
-                        ParserConfiguration parserConfiguration = new ParserConfiguration();
-                        parserConfiguration.setClassLoader(ConditionContextHelper.class.getClassLoader());
-                        mvelExpressions.put(script,MVEL.compileExpression(script, new ParserContext(parserConfiguration)));
-                    }
-                    return MVEL.executeExpression(mvelExpressions.get(script), context);
+                    return executeScript(context, script);
                 }
             }
         } else if (value instanceof Map) {
@@ -109,6 +102,22 @@ public class ConditionContextHelper {
             return values;
         }
         return value;
+    }
+
+    private static Object executeScript(Map<String, Object> context, String script) {
+        final ClassLoader tccl = Thread.currentThread().getContextClassLoader();
+        try {
+            if (!mvelExpressions.containsKey(script)) {
+                ClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(ConditionContextHelper.class.getClassLoader());
+                Thread.currentThread().setContextClassLoader(secureFilteringClassLoader);
+                ParserConfiguration parserConfiguration = new ParserConfiguration();
+                parserConfiguration.setClassLoader(secureFilteringClassLoader);
+                mvelExpressions.put(script, MVEL.compileExpression(script, new ParserContext(parserConfiguration)));
+            }
+            return MVEL.executeExpression(mvelExpressions.get(script), context);
+        } finally {
+            Thread.currentThread().setContextClassLoader(tccl);
+        }
     }
 
     private static boolean hasContextualParameter(Object value) {
