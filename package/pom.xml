@@ -365,7 +365,7 @@
                 <version>1.7</version>
                 <executions>
                     <execution>
-                        <id>source-release-checksum</id>
+                        <id>package-release-checksum</id>
                         <goals>
                             <goal>files</goal>
                         </goals>
