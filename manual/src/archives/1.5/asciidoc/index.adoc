@@ -1,0 +1,109 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+= Apache Unomi 1.x - Documentation
+Apache Software Foundation
+:doctype: article
+:toc: left
+:toclevels: 3
+:toc-position: left
+:toc-title: Table of Contents
+:numbered:
+:homepage: https://unomi.apache.org
+
+image::asf_logo_url.png[pdfwidth=35%,align=center]
+
+== Quick start
+
+include::5-min-quickstart.adoc[]
+
+== First steps with Apache Unomi
+
+include::getting-started.adoc[]
+
+include::recipes.adoc[]
+
+include::request-examples.adoc[]
+
+include::web-tracker.adoc[]
+
+include::configuration.adoc[]
+
+include::useful-unomi-urls.adoc[]
+
+include::how-profile-tracking-works.adoc[]
+
+include::context-request-flow.adoc[]
+
+== Queries and aggregations
+
+include::queries-and-aggregations.adoc[]
+
+== Profile import & export
+
+include::profile-import-export.adoc[]
+
+== Consent management
+
+include::consent-api.adoc[]
+
+== Privacy management
+
+include::privacy.adoc[]
+
+== Cluster setup
+
+include::clustering.adoc[]
+
+== Reference
+
+include::datamodel.adoc[]
+
+include::new-data-model.adoc[]
+
+include::builtin-event-types.adoc[]
+
+include::builtin-condition-types.adoc[]
+
+include::builtin-action-types.adoc[]
+
+include::updating-events.adoc[]
+
+== Integration samples
+
+include::samples/samples.adoc[]
+
+include::samples/login-sample.adoc[]
+
+include::samples/twitter-sample.adoc[]
+
+include::samples/weather-update-sample.adoc[]
+
+== Connectors
+
+include::connectors/connectors.adoc[]
+
+include::connectors/salesforce-connector.adoc[]
+
+include::connectors/mailchimp-connector.adoc[]
+
+== Developers
+
+include::building-and-deploying.adoc[]
+
+include::shell-commands.adoc[]
+
+include::writing-plugins.adoc[]
+
+include::patches.adoc[]

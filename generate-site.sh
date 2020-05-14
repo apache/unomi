@@ -20,11 +20,12 @@
 echo Generating manual...
 mvn clean
 cd manual
-mvn -Ppdf -Ddoc.source=src/archives/1.1/asciidoc -Ddoc.output.pdf=target/generated-docs/1_1_x -Ddoc.output.html=target/generated-docs/1_1_x
-mvn -Ppdf -Ddoc.source=src/archives/1.2/asciidoc -Ddoc.output.pdf=target/generated-docs/1_2_x -Ddoc.output.html=target/generated-docs/1_2_x
-mvn -Ppdf -Ddoc.source=src/archives/1.3/asciidoc -Ddoc.output.pdf=target/generated-docs/1_3_x -Ddoc.output.html=target/generated-docs/1_3_x
-mvn -Ppdf -Ddoc.source=src/archives/1.4/asciidoc -Ddoc.output.pdf=target/generated-docs/1_4_x -Ddoc.output.html=target/generated-docs/1_4_x
-mvn -Ppdf
+mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.1/asciidoc -Ddoc.output.pdf=target/generated-docs/1_1_x/pdf -Ddoc.output.html=target/generated-docs/1_1_x/html -Ddoc.version=1.1.0 verify
+mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.2/asciidoc -Ddoc.output.pdf=target/generated-docs/1_2_x/pdf -Ddoc.output.html=target/generated-docs/1_2_x/html -Ddoc.version=1.2.0 verify
+mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.3/asciidoc -Ddoc.output.pdf=target/generated-docs/1_3_x/pdf -Ddoc.output.html=target/generated-docs/1_3_x/html -Ddoc.version=1.3.0 verify
+mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.4/asciidoc -Ddoc.output.pdf=target/generated-docs/1_4_x/pdf -Ddoc.output.html=target/generated-docs/1_4_x/html -Ddoc.version=1.4.0 verify
+mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.5/asciidoc -Ddoc.output.pdf=target/generated-docs/1_5_x/pdf -Ddoc.output.html=target/generated-docs/1_4_x/html -Ddoc.version=1.5.0 verify
+mvn install
 cd ..
 echo Generating Javadoc...
 mvn javadoc:aggregate -P integration-tests
