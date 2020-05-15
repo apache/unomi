@@ -24,14 +24,14 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>manual</artifactId>
+    <artifactId>unomi-manual</artifactId>
     <name>Apache Unomi :: Manual</name>
     <packaging>bundle</packaging>
 
     <properties>
         <doc.source>src/main/asciidoc</doc.source>
-        <doc.output.html>target/generated-docs/html</doc.output.html>
-        <doc.output.pdf>target/generated-docs/pdf</doc.output.pdf>
+        <doc.output.html>target/generated-docs/html/latest</doc.output.html>
+        <doc.output.pdf>target/generated-docs/pdf/latest</doc.output.pdf>
         <doc.version>${project.version}</doc.version>
     </properties>
 
