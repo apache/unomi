@@ -14,32 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.input;
+package org.apache.unomi.graphql.types.output;
 
-import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
-@GraphQLName("CDP_GeoPointInput")
-public class CDPGeoPointInput {
-
-    @GraphQLField
-    private Double longitude;
-
-    @GraphQLField
-    private Double latitude;
-
-    public CDPGeoPointInput(
-            final @GraphQLName("longitude") Double longitude,
-            final @GraphQLName("latitude") Double latitude) {
-        this.longitude = longitude;
-        this.latitude = latitude;
-    }
-
-    public Double getLongitude() {
-        return longitude;
-    }
-
-    public Double getLatitude() {
-        return latitude;
-    }
+@GraphQLName("CDP_GeoDistanceFilterUnit")
+public enum CDPGeoDistanceFilterUnit {
+    METERS,
+    KILOMETERS,
+    MILES
 }

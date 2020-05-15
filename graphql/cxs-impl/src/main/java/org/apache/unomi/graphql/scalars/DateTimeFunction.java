@@ -14,32 +14,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.function;
+package org.apache.unomi.graphql.scalars;
 
 import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.annotations.processor.typeFunctions.TypeFunction;
-import graphql.scalars.object.JsonScalar;
+import graphql.scalars.datetime.DateTimeScalar;
 import graphql.schema.GraphQLType;
 
 import java.lang.reflect.AnnotatedType;
+import java.time.OffsetDateTime;
 
-public class JSONFunction implements TypeFunction {
+public class DateTimeFunction implements TypeFunction {
 
-    public static final JsonScalar JSON_SCALAR = new JsonScalar();
+    public static final DateTimeScalar DATE_TIME_SCALAR = new DateTimeScalar();
 
     @Override
     public String getTypeName(Class<?> aClass, AnnotatedType annotatedType) {
-        return JSON_SCALAR.getName();
+        return DATE_TIME_SCALAR.getName();
     }
 
     @Override
     public boolean canBuildType(Class<?> aClass, AnnotatedType annotatedType) {
-        return aClass == Object.class;
+        return aClass == OffsetDateTime.class;
     }
 
     @Override
     public GraphQLType buildType(boolean input, Class<?> aClass, AnnotatedType annotatedType, ProcessingElementsContainer container) {
-        return JSON_SCALAR;
+        return DATE_TIME_SCALAR;
     }
 
 }

@@ -19,6 +19,7 @@ package org.apache.unomi.graphql.types.input.property;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLPrettify;
+import org.apache.unomi.api.GeoPoint;
 import org.apache.unomi.api.PropertyType;
 
 import java.util.List;
@@ -26,20 +27,20 @@ import java.util.List;
 @GraphQLName("CDP_GeoPointPropertyInput")
 public class CDPGeoPointPropertyInput extends BaseCDPPropertyInput {
 
-    private String defaultValue;
+    private GeoPoint defaultValue;
 
     public CDPGeoPointPropertyInput(@GraphQLName("name") String name,
                                     @GraphQLName("minOccurrences") Integer minOccurrences,
                                     @GraphQLName("maxOccurrences") Integer maxOccurrences,
                                     @GraphQLName("tags") List<String> tags,
-                                    @GraphQLName("defaultValue") String defaultValue) {
+                                    @GraphQLName("defaultValue") GeoPoint defaultValue) {
         super(name, minOccurrences, maxOccurrences, tags);
         this.defaultValue = defaultValue;
     }
 
     @GraphQLField
     @GraphQLPrettify
-    public String getDefaultValue() {
+    public GeoPoint getDefaultValue() {
         return defaultValue;
     }
 
@@ -54,6 +55,6 @@ public class CDPGeoPointPropertyInput extends BaseCDPPropertyInput {
             return;
         }
         super.updateType(type);
-        type.setDefaultValue(defaultValue);
+        type.setDefaultValue(defaultValue != null ? defaultValue.asString() : null);
     }
 }

@@ -38,17 +38,18 @@ import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.CDPGraphQLConstants;
 import org.apache.unomi.graphql.fetchers.CustomerPropertyDataFetcher;
 import org.apache.unomi.graphql.fetchers.DynamicFieldDataFetcher;
-import org.apache.unomi.graphql.fetchers.ProfileDynamicFieldSetDataFetcher;
 import org.apache.unomi.graphql.fetchers.event.EventListenerSubscriptionFetcher;
 import org.apache.unomi.graphql.fetchers.event.UnomiEventPublisher;
-import org.apache.unomi.graphql.function.DateTimeFunction;
-import org.apache.unomi.graphql.function.JSONFunction;
+import org.apache.unomi.graphql.fetchers.profile.ProfileDynamicFieldSetDataFetcher;
 import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
 import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
 import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
 import org.apache.unomi.graphql.providers.GraphQLTypeFunctionProvider;
+import org.apache.unomi.graphql.scalars.DateTimeFunction;
+import org.apache.unomi.graphql.scalars.GeoPointFunction;
+import org.apache.unomi.graphql.scalars.JSONFunction;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPEventProcessor;
@@ -270,7 +271,7 @@ public class GraphQLSchemaProvider {
             }
 
             try {
-                final DataFetcher dataFetcher = fetcherClass.getConstructor(String.class).newInstance(propertyName);
+                final DataFetcher dataFetcher = fetcherClass.getConstructor(String.class, String.class).newInstance(propertyName, propertyType.getValueTypeId());
                 codeRegisterBuilder.dataFetcher(FieldCoordinates.coordinates(graphQLTypeName, propertyName), dataFetcher);
             } catch (Exception e) {
                 throw new RuntimeException(String.format("Error creating a data fetcher with class %s for field %s", fetcherClass.getName(), propertyName), e);
@@ -552,7 +553,7 @@ public class GraphQLSchemaProvider {
             case "set":
                 return JSONFunction.JSON_SCALAR;
             case "geopoint":
-                return null; // TODO
+                return GeoPointFunction.GEOPOINT_SCALAR;
             case "date":
                 return DateTimeFunction.DATE_TIME_SCALAR;
             case "boolean":

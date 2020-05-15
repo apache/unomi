@@ -28,6 +28,7 @@ public class EventBuilder {
 
     private final Profile profile;
     private final String eventType;
+    private Map<String, Object> propertiesToAdd;
     private Map<String, Object> propertiesToUpdate;
     private List<String> propertiesToDelete;
     private Map<String, Object> properties = new HashMap<>();
@@ -40,6 +41,11 @@ public class EventBuilder {
 
     public static EventBuilder create(final String eventType, Profile profile) {
         return new EventBuilder(eventType, profile);
+    }
+
+    public EventBuilder setPropertiesToAdd(Map<String, Object> propertiesToAdd) {
+        this.propertiesToAdd = propertiesToAdd;
+        return this;
     }
 
     public EventBuilder setPropertiesToUpdate(Map<String, Object> propertiesToUpdate) {
@@ -67,6 +73,9 @@ public class EventBuilder {
         event.setPersistent(persistent);
         event.setProperty("targetId", profile.getItemId());
         event.setProperty("targetType", Profile.ITEM_TYPE);
+        if (propertiesToAdd != null) {
+            event.setProperty("add", propertiesToAdd);
+        }
         if (propertiesToUpdate != null) {
             event.setProperty("update", propertiesToUpdate);
         }

@@ -18,6 +18,7 @@
 package org.apache.unomi.graphql.condition.factories;
 
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.GeoPoint;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.graphql.schema.ComparisonConditionTranslator;
@@ -313,13 +314,39 @@ public class ProfileConditionFactory extends ConditionFactory {
 
         final String comparisonOperator = propertyName.substring(index + 1);
 
-        final String propertyValueType = PropertyValueTypeHelper.getPropertyValueParameterForInputType(typeName, propertyName, environment);
+        if ("distance".equals(comparisonOperator) && value instanceof Map) {
+            Map<String, Object> distanceFilter = (Map<String, Object>) value;
 
-        return propertyCondition(
-                "properties" + (propertyPath != null ? "." + propertyPath : "") + "." + PropertyNameTranslator.translateFromGraphQLToUnomi(property),
-                ComparisonConditionTranslator.translateFromGraphQLToUnomi(comparisonOperator),
-                propertyValueType,
-                value);
+            ConditionBuilder builder = ConditionBuilder.create(getConditionType(conditionTypeId))
+                    .property("properties" + (propertyPath != null ? "." + propertyPath : "") + "." + PropertyNameTranslator.translateFromGraphQLToUnomi(property))
+                    .operator(ComparisonConditionTranslator.translateFromGraphQLToUnomi(comparisonOperator));
+
+            final Object centerObj = distanceFilter.get("center");
+            if (centerObj != null) {
+                builder.parameter("center", ((GeoPoint) centerObj).asString());
+            }
+
+            final Object distanceObj = distanceFilter.get("distance");
+            if (distanceObj != null) {
+                builder.parameter("distance", distanceObj);
+            }
+
+            final Object unitObj = distanceFilter.get("unit");
+            if (unitObj != null) {
+                builder.parameter("unit", unitObj.toString().toLowerCase());
+            }
+
+            return builder.build();
+        } else {
+
+            final String propertyValueType = PropertyValueTypeHelper.getPropertyValueParameterForInputType(typeName, propertyName, environment);
+
+            return propertyCondition(
+                    "properties" + (propertyPath != null ? "." + propertyPath : "") + "." + PropertyNameTranslator.translateFromGraphQLToUnomi(property),
+                    ComparisonConditionTranslator.translateFromGraphQLToUnomi(comparisonOperator),
+                    propertyValueType,
+                    value);
+        }
     }
 
     @SuppressWarnings("unchecked")

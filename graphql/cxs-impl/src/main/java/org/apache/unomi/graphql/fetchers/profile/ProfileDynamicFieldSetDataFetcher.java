@@ -14,16 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.fetchers;
+package org.apache.unomi.graphql.fetchers.profile;
 
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.fetchers.DynamicFieldDataFetcher;
 
 import java.util.Map;
 
 public class ProfileDynamicFieldSetDataFetcher extends DynamicFieldDataFetcher<Object> {
 
     public ProfileDynamicFieldSetDataFetcher(final String fieldName) {
-        super(fieldName);
+        super(fieldName, "set");
     }
 
     @Override

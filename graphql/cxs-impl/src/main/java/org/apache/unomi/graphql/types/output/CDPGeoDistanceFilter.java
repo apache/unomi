@@ -14,39 +14,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.input;
+package org.apache.unomi.graphql.types.output;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
-import org.apache.unomi.graphql.types.output.CDPGeoDistanceUnit;
-import org.apache.unomi.graphql.types.output.CDPGeoPoint;
+import org.apache.unomi.api.GeoPoint;
 
-@GraphQLName("CDP_GeoDistanceInput")
-public class CDPGeoDistanceInput {
-
-    @GraphQLField
-    private CDPGeoPoint center;
+@GraphQLName("CDP_GeoDistanceFilter")
+public class CDPGeoDistanceFilter {
 
     @GraphQLField
-    private CDPGeoDistanceUnit unit;
+    private GeoPoint center;
+
+    @GraphQLField
+    private CDPGeoDistanceFilterUnit unit;
 
     @GraphQLField
     private Double distance;
 
-    public CDPGeoDistanceInput(
-            final @GraphQLName("center") CDPGeoPoint center,
-            final @GraphQLName("unit") CDPGeoDistanceUnit unit,
-            final @GraphQLName("distance") Double distance) {
+    public CDPGeoDistanceFilter(GeoPoint center, CDPGeoDistanceFilterUnit unit, Double distance) {
         this.center = center;
         this.unit = unit;
         this.distance = distance;
     }
 
-    public CDPGeoPoint getCenter() {
+    public GeoPoint getCenter() {
         return center;
     }
 
-    public CDPGeoDistanceUnit getUnit() {
+    public CDPGeoDistanceFilterUnit getUnit() {
         return unit;
     }
 

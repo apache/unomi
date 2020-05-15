@@ -37,7 +37,7 @@ public class ConditionFactory {
 
     protected DefinitionsService definitionsService;
 
-    private String conditionTypeId;
+    protected String conditionTypeId;
 
     private Map<String, ConditionType> conditionTypesMap;
 

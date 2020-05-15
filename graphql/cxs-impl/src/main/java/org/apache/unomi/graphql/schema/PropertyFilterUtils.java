@@ -20,8 +20,12 @@ import graphql.Scalars;
 import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLInputObjectType;
+import graphql.schema.GraphQLInputType;
 import org.apache.unomi.api.PropertyType;
-import org.apache.unomi.graphql.function.DateTimeFunction;
+import org.apache.unomi.graphql.scalars.DateTimeFunction;
+import org.apache.unomi.graphql.scalars.GeoPointFunction;
+import org.apache.unomi.graphql.types.input.CDPGeoDistanceFilterInput;
+import org.apache.unomi.graphql.utils.ReflectionUtil;
 import org.apache.unomi.graphql.utils.StringUtils;
 
 import java.util.ArrayList;
@@ -146,6 +150,21 @@ public class PropertyFilterUtils {
                 fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
                         .name(propertyName)
                         .type(inputObjectType)
+                        .build());
+            }
+        } else if ("geopoint".equals(propertyType.getValueTypeId())) {
+
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_equals")
+                    .type(GeoPointFunction.GEOPOINT_SCALAR)
+                    .build());
+
+            final String geoDistanceFilterTypeName = ReflectionUtil.resolveTypeName(CDPGeoDistanceFilterInput.class);
+            final GraphQLInputType geoDistanceFilterType = (GraphQLInputObjectType) graphQLAnnotations.getContainer().getTypeRegistry().get(geoDistanceFilterTypeName);
+            if (geoDistanceFilterType != null) {
+                fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                        .name(propertyName + "_distance")
+                        .type(geoDistanceFilterType)
                         .build());
             }
         } else {

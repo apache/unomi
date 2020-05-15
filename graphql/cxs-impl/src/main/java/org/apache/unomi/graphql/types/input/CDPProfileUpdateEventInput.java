@@ -21,6 +21,7 @@ import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -52,18 +53,26 @@ public class CDPProfileUpdateEventInput extends BaseProfileEventProcessor {
 
         final Map<String, Object> persistedProperties = profile.getProperties();
 
-        final Map<String, Object> propertyToUpdate = profilePropertiesAsMap.entrySet().stream()
-                .filter(e -> persistedProperties.containsKey(e.getKey())
-                        && !Objects.equals(persistedProperties.get(e.getKey()), profilePropertiesAsMap.get(e.getKey())))
-                .collect(Collectors.toMap(e -> "properties." + e.getKey(), Map.Entry::getValue));
+        final Set<String> propertiesToDelete = new HashSet<>(persistedProperties.keySet());
+        propertiesToDelete.removeAll(profilePropertiesAsMap.keySet());
 
-        final Set<String> propertyToDelete = new HashSet<>(persistedProperties.keySet());
-        propertyToDelete.removeAll(profilePropertiesAsMap.keySet());
+        Map<String, Object> propertiesToAdd = new HashMap<>();
+        Map<String, Object> propertiesToUpdate = new HashMap<>();
+        profilePropertiesAsMap.forEach((key, value) -> {
+            if (persistedProperties.containsKey(key)) {
+                if (!Objects.equals(persistedProperties.get(key), profilePropertiesAsMap.get(key))) {
+                    propertiesToUpdate.put("properties." + key, value);
+                }
+            } else {
+                propertiesToAdd.put("properties." + key, value);
+            }
+        });
 
         return eventBuilder(profile)
                 .setPersistent(true)
-                .setPropertiesToUpdate(propertyToUpdate)
-                .setPropertiesToDelete(propertyToDelete.stream().map(prop -> "properties." + prop).collect(Collectors.toList()))
+                .setPropertiesToAdd(propertiesToAdd)
+                .setPropertiesToUpdate(propertiesToUpdate)
+                .setPropertiesToDelete(propertiesToDelete.stream().map(prop -> "properties." + prop).collect(Collectors.toList()))
                 .build();
     }
 
