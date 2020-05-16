@@ -27,6 +27,8 @@ ENV UNOMI_ELASTICSEARCH_ADDRESSES=localhost:9200
 
 WORKDIR $UNOMI_HOME
 
+RUN apt-get update && apt-get install -y procps
+
 ADD unomi.tar.gz ./
 
 RUN mv unomi-*/* . \
