@@ -25,11 +25,12 @@ fi
 echo Generating manual...
 mvn clean
 cd manual
-mvn -Ppdf -Ddoc.source=src/archives/1.1/asciidoc -Ddoc.output.pdf=target/generated-docs/1_1_x -Ddoc.output.html=target/generated-docs/1_1_x
-mvn -Ppdf -Ddoc.source=src/archives/1.2/asciidoc -Ddoc.output.pdf=target/generated-docs/1_2_x -Ddoc.output.html=target/generated-docs/1_2_x
-mvn -Ppdf -Ddoc.source=src/archives/1.3/asciidoc -Ddoc.output.pdf=target/generated-docs/1_3_x -Ddoc.output.html=target/generated-docs/1_3_x
-mvn -Ppdf -Ddoc.source=src/archives/1.4/asciidoc -Ddoc.output.pdf=target/generated-docs/1_4_x -Ddoc.output.html=target/generated-docs/1_4_x
-mvn -Ppdf
+mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.1/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_1_x -Ddoc.output.html=target/generated-docs/html/1_1_x -Ddoc.version=1_1_x -P sign verify
+mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.2/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_2_x -Ddoc.output.html=target/generated-docs/html/1_2_x -Ddoc.version=1_2_x -P sign verify
+mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.3/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_3_x -Ddoc.output.html=target/generated-docs/html/1_3_x -Ddoc.version=1_3_x -P sign verify
+mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.4/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_4_x -Ddoc.output.html=target/generated-docs/html/1_4_x -Ddoc.version=1_4_x -P sign verify
+mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.5/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_5_x -Ddoc.output.html=target/generated-docs/html/1_5_x -Ddoc.version=1_5_x -P sign verify
+mvn  -P sign install
 cd ..
 echo Generating Javadoc...
 mvn javadoc:aggregate -P integration-tests
@@ -44,5 +45,5 @@ cp -Rf manual/target/generated-docs/html/* target/staging/manual
 echo Committing documentation to Apache SVN...
 mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/unomi/website/manual -Dscmpublish.content=target/staging/manual -Dusername=$1 -Dpassword=$2
 mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/unomi/website/unomi-api -Dscmpublish.content=target/staging/unomi-api -Dusername=$1 -Dpassword=$2
-mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/unomi/website/rest-api-doc -Dscmpublish.content=target/staging/rest-api-doc -Dusername=$1 -Dpassword=$2
+# mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/unomi/website/rest-api-doc -Dscmpublish.content=target/staging/rest-api-doc -Dusername=$1 -Dpassword=$2
 echo Documentation generation and upload completed.

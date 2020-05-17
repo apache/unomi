@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
-        <version>1.5.0-SNAPSHOT</version>
+        <version>2.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>unomi-rest</artifactId>
@@ -131,7 +131,7 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <licence>cHJvamVjdHxvcmcuYXBhY2hlLnVub21pLnVub21pLXJlc3R8MjAyMC0wMi0yOHx0cnVlfC0xI01Dd0NGQ01pMDRxTFZ6LzJ4SG82MjAranZITnRLYWovQWhRcG4vS01jdTU2NXpOWkRpUzcwQXMrdC96bVdRPT0=</licence>
+                            <licence>cHJvamVjdHxvcmcuYXBhY2hlLnVub21pLnVub21pLXJlc3R8MjAyNS0wMS0wMXxmYWxzZXwtMSNNQ3dDRkhNUlNaYVM0c2lFOHpjcnhUM1N5R2RVc3VuREFoUmNTV2lYa0RLNmJOSmtab2cxY21udWc0VDFnQT09</licence>
                             <output>
                                 <title>Documentation for Apache Unomi's RESTful API ${project.version}</title>
                                 <html>

@@ -1,5 +1,3 @@
-#!/bin/bash
-
 ################################################################################
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -16,17 +14,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-# Wait for heathy ElasticSearch
-# next wait for ES status to turn to Green
-health_check="$(curl -fsSL "$ELASTICSEARCH_HOST:$ELASTICSEARCH_PORT/_cat/health?h=status")"
 
-until ([ "$health_check" = 'yellow' ] || [ "$health_check" = 'green' ]); do
-    health_check="$(curl -fsSL "$ELASTICSEARCH_HOST:$ELASTICSEARCH_PORT/_cat/health?h=status")"
-    >&2 echo "Elastic Search is not yet available - waiting (health check=$health_check)..."
-    sleep 1
-done
+FROM openjdk:8-jre
 
-$UNOMI_HOME/bin/start
-$UNOMI_HOME/bin/status # Call to status delays while Karaf creates karaf.log
+# Unomi environment variables
+ENV UNOMI_HOME /opt/apache-unomi
+ENV PATH $PATH:$UNOMI_HOME/bin
 
-tail -f $UNOMI_HOME/data/log/karaf.log
+ENV KARAF_OPTS "-Dunomi.autoStart=true"
+
+ENV UNOMI_ELASTICSEARCH_ADDRESSES=localhost:9200
+
+WORKDIR $UNOMI_HOME
+
+RUN apt-get update && apt-get install -y procps
+
+ADD unomi.tar.gz ./
+
+RUN mv unomi-*/* . \
+	&& rm -rf unomi-*
+
+COPY entrypoint.sh ./entrypoint.sh
+
+EXPOSE 9443
+EXPOSE 8181
+EXPOSE 8102
+
+CMD ["/bin/bash", "./entrypoint.sh"]

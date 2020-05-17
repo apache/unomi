@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ################################################################################
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -14,37 +16,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-version: '2.2'
-services:
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.4.2
-    volumes: # Persist ES data in seperate "esdata" volume
-      - esdata1:/usr/share/elasticsearch/data
-    environment:
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms1G -Xmx1G"
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - cluster.name=contextElasticSearch
-    ports: # Expose Elasticsearch ports
-      - "9200:9200"
+# Wait for heathy ElasticSearch
+# next wait for ES status to turn to Green
+health_check="$(curl -fsSL "$UNOMI_ELASTICSEARCH_ADDRESSES/_cat/health?h=status")"
 
-  unomi:
-    build: .
-    container_name: unomi
-    environment:
-      - ELASTICSEARCH_HOST=elasticsearch
-      - ELASTICSEARCH_PORT=9200
-      - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
-    ports:
-      - 8181:8181
-      - 9443:9443
-    links:
-      - elasticsearch
-    depends_on:
-      - elasticsearch
+until ([ "$health_check" = 'yellow' ] || [ "$health_check" = 'green' ]); do
+    health_check="$(curl -fsSL "$UNOMI_ELASTICSEARCH_ADDRESSES/_cat/health?h=status")"
+    >&2 echo "Elastic Search is not yet available - waiting (health check=$health_check)..."
+    sleep 1
+done
 
+$UNOMI_HOME/bin/start
+$UNOMI_HOME/bin/status # Call to status delays while Karaf creates karaf.log
 
-volumes: # Define seperate volume for Elasticsearch data
-  esdata1:
-    driver: local
+tail -f $UNOMI_HOME/data/log/karaf.log

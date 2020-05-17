@@ -1,0 +1,7 @@
+node
+node_modules
+target
+NPM-RELEASE-GUIDE.md
+pom.xml
+yarn.lock
+*.iml
