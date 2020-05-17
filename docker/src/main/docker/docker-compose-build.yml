@@ -30,6 +30,7 @@ services:
       - "9200:9200"
 
   unomi:
+    build: .
     image: apache/unomi:${project.version}
     container_name: unomi
     environment:
