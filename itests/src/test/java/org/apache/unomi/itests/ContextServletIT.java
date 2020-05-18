@@ -29,8 +29,6 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -40,8 +38,10 @@ import org.ops4j.pax.exam.util.Filter;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.Date;
+
+import static org.junit.Assert.assertEquals;
 
 
 /**
@@ -51,14 +51,8 @@ import java.util.Date;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class ContextServletIT extends BaseIT {
-	private final static String TEST_SESSION_ID = "test-session-id";
-	private final static String TEST_EVENT_ID = "test-event-id";
-	private final static String TEST_SCOPE = "test-scope";
-	private final static String TEST_PROFILE_ID = "test-profile-id";
-	private final static String EVENT_TYPE = "view";
+	private final static String CONTEXT_URL = "/context.json";
 	private final static String THIRD_PARTY_HEADER_NAME = "X-Unomi-Peer";
-	private Profile profile = new Profile(TEST_PROFILE_ID);
-	private Session session = new Session(TEST_SESSION_ID, profile, new Date(), TEST_SCOPE);
 	private ObjectMapper objectMapper = new ObjectMapper();
 	private TestUtils testUtils = new TestUtils();
 
@@ -72,94 +66,110 @@ public class ContextServletIT extends BaseIT {
 	@Filter(timeout = 600000)
 	protected ProfileService profileService;
 
-	@Before
-	public void setUp() throws InterruptedException {
-		Event pageViewEvent = new Event(TEST_EVENT_ID, EVENT_TYPE, session, profile, TEST_SCOPE, null, null, new Date());
-
-		profileService.save(profile);
-		this.eventService.send(pageViewEvent);
-
-		Thread.sleep(2000);
-	}
 
 	@After
 	public void tearDown() {
 		//Using remove index due to document version is still persistent after deletion as referenced here https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete.html#delete-versioning
 		this.persistenceService.removeIndex("event-date-*");
-		this.profileService.delete(TEST_PROFILE_ID, false);
+		TestUtils.removeAllProfiles(this.persistenceService);
 		this.persistenceService.refresh();
 	}
 
 	@Test
 	public void testUpdateEventFromContextAuthorizedThirdParty_Success() throws IOException, InterruptedException {
-		Event event = this.eventService.getEvent(TEST_EVENT_ID);
-		Assert.assertEquals(new Long(1), event.getVersion());
-		Profile profile = profileService.load(TEST_PROFILE_ID);
-		Event pageViewEvent = new Event(TEST_EVENT_ID, EVENT_TYPE, session, profile, TEST_SCOPE, null, null, new Date());
+		//Arrange
+		String eventId = "test-event-id";
+		String profileId = "test-profile-id";
+		String sessionId = "test-session-id";
+		String scope = "test-scope";
+		String eventTypeOriginal = "test-event-type-original";
+		String eventTypeUpdated = "test-event-type-updated";
+		Profile profile = new Profile(profileId);
+		Session session = new Session(sessionId, profile, new Date(), scope);
+		Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
+		profileService.save(profile);
+		this.eventService.send(event);
+		Thread.sleep(2000);
+		event.setEventType(eventTypeUpdated); //change the event so we can see the update effect
 
+		//Act
 		ContextRequest contextRequest = new ContextRequest();
 		contextRequest.setSessionId(session.getItemId());
-		contextRequest.setEvents(Collections.singletonList(pageViewEvent));
-
-		HttpPost request = new HttpPost(URL + "/context.json");
+		contextRequest.setEvents(Arrays.asList(event));
+		HttpPost request = new HttpPost(URL + CONTEXT_URL);
 		request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
-		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest),
-			ContentType.create("application/json")));
+		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+		this.testUtils.executeContextJSONRequest(request, sessionId);
+		Thread.sleep(2000); //Making sure event is updated in DB
 
-		//Making sure Unomi is up and running
-		Thread.sleep(5000);
-		this.testUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
-
-		//Making sure event is updated in DB
-		Thread.sleep(2000);
-		event = this.eventService.getEvent(TEST_EVENT_ID);
-		Assert.assertEquals(new Long(2), event.getVersion());
+		//Assert
+		event = this.eventService.getEvent(eventId);
+		assertEquals(2, event.getVersion().longValue());
+		assertEquals(eventTypeUpdated,event.getEventType());
 	}
 
 	@Test
 	public void testUpdateEventFromContextUnAuthorizedThirdParty_Fail() throws IOException, InterruptedException {
-		Event event = this.eventService.getEvent(TEST_EVENT_ID);
-		Assert.assertEquals(new Long(1), event.getVersion());
-		Profile profile = profileService.load(TEST_PROFILE_ID);
-		Event pageViewEvent = new Event(TEST_EVENT_ID, EVENT_TYPE, session, profile, TEST_SCOPE, null, null, new Date());
+		//Arrange
+		String eventId = "test-event-id";
+		String profileId = "test-profile-id";
+		String sessionId = "test-session-id";
+		String scope = "test-scope";
+		String eventTypeOriginal = "test-event-type-original";
+		String eventTypeUpdated = "test-event-type-updated";
+		Profile profile = new Profile(profileId);
+		Session session = new Session(sessionId, profile, new Date(), scope);
+		Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
+		profileService.save(profile);
+		this.eventService.send(event);
+		Thread.sleep(2000);
+		event.setEventType(eventTypeUpdated); //change the event so we can see the update effect
+
+		//Act
 		ContextRequest contextRequest = new ContextRequest();
 		contextRequest.setSessionId(session.getItemId());
-		contextRequest.setEvents(Collections.singletonList(pageViewEvent));
-		HttpPost request = new HttpPost(URL + "/context.json");
-		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest),
-			ContentType.create("application/json")));
+		contextRequest.setEvents(Arrays.asList(event));
+		HttpPost request = new HttpPost(URL + CONTEXT_URL);
+		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+		this.testUtils.executeContextJSONRequest(request, sessionId);
+		Thread.sleep(2000); //Making sure event is updated in DB
 
-		//Making sure Unomi is up and running
-		Thread.sleep(5000);
-		this.testUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
-
-		//Making sure event is updated in DB
-		Thread.sleep(2000);
-		event = this.eventService.getEvent(TEST_EVENT_ID);
-		Assert.assertEquals(new Long(1), event.getVersion());
+		//Assert
+		event = this.eventService.getEvent(eventId);
+		assertEquals(1, event.getVersion().longValue());
+		assertEquals(eventTypeOriginal,event.getEventType());
 	}
 
 
 	@Test
 	public void testUpdateEventFromContextAuthorizedThirdPartyNoItemID_Fail() throws IOException, InterruptedException {
-		Event event = this.eventService.getEvent(TEST_EVENT_ID);
-		Assert.assertEquals(new Long(1), event.getVersion());
-		Profile profile = profileService.load(TEST_PROFILE_ID);
-		Event pageViewEvent = new Event(EVENT_TYPE, session, profile, TEST_SCOPE, null, null, new Date());
+		//Arrange
+		String eventId = "test-event-id";
+		String profileId = "test-profile-id";
+		String sessionId = "test-session-id";
+		String scope = "test-scope";
+		String eventTypeOriginal = "test-event-type-original";
+		String eventTypeUpdated = "test-event-type-updated";
+		Profile profile = new Profile(profileId);
+		Session session = new Session(sessionId, profile, new Date(), scope);
+		Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
+		profileService.save(profile);
+		this.eventService.send(event);
+		Thread.sleep(2000);
+		event.setEventType(eventTypeUpdated); //change the event so we can see the update effect
+
+		//Act
 		ContextRequest contextRequest = new ContextRequest();
 		contextRequest.setSessionId(session.getItemId());
-		contextRequest.setEvents(Collections.singletonList(pageViewEvent));
-		HttpPost request = new HttpPost(URL + "/context.json");
-		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest),
-			ContentType.create("application/json")));
+		contextRequest.setEvents(Arrays.asList(event));
+		HttpPost request = new HttpPost(URL + CONTEXT_URL);
+		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+		this.testUtils.executeContextJSONRequest(request, sessionId);
+		Thread.sleep(2000); //Making sure event is updated in DB
 
-		//Making sure Unomi is up and running
-		Thread.sleep(5000);
-		this.testUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
-
-		//Making sure event is updated in DB
-		Thread.sleep(2000);
-		event = this.eventService.getEvent(TEST_EVENT_ID);
-		Assert.assertEquals(new Long(1), event.getVersion());
+		//Assert
+		event = this.eventService.getEvent(eventId);
+		assertEquals(1, event.getVersion().longValue());
+		assertEquals(eventTypeOriginal,event.getEventType());
 	}
 }

@@ -25,7 +25,10 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.ContextResponse;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.Assert;
 
 import java.io.IOException;
@@ -71,6 +74,16 @@ public class TestUtils {
 			}
 			return new RequestResponse(context, cookieHeader);
 		}
+	}
+
+	public static boolean removeAllProfiles(PersistenceService persistenceService) {
+		Condition condition = new Condition();
+		condition.setConditionTypeId("profilePropertyCondition");
+		condition.setParameter("propertyName","itemType");
+		condition.setParameter("comparisonOperator","equals");
+		condition.setParameter("propertyValue","profile");
+
+		return persistenceService.removeByQuery(condition, Profile.class);
 	}
 
 	public static class RequestResponse {
