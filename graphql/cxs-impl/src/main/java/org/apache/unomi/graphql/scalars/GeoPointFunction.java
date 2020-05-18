@@ -50,7 +50,7 @@ public class GeoPointFunction implements TypeFunction {
 
     public static GraphQLScalarType GEOPOINT_SCALAR = GraphQLScalarType.newScalar()
             .name("GeoPoint")
-            .description("GeoPoint scalar type: \"lat,long\"")
+            .description("GeoPoint scalar type: \"lat, lon\"")
             .coercing(new Coercing<GeoPoint, String>() {
 
                 @Override
