@@ -1,0 +1,13 @@
+{
+  "operationName": "getProfile",
+  "variables": {
+    "profileID": {
+      "client": {
+        "id": "defaultClientId"
+      },
+      "id": "profile_id"
+    },
+    "createIfMissing": true
+  },
+  "query": "query getProfile($profileID: CDP_ProfileIDInput!, $createIfMissing: Boolean) {\n  cdp {\n    getProfile(profileID: $profileID, createIfMissing: $createIfMissing) {\n      cdp_profileIDs {\n        id\n      }\n    }\n  }\n}\n"
+}

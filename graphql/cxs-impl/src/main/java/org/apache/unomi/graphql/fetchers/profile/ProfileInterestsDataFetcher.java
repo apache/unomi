@@ -38,13 +38,13 @@ public class ProfileInterestsDataFetcher implements DataFetcher<List<CDPInterest
     @Override
     @SuppressWarnings("unchecked")
     public List<CDPInterest> get(DataFetchingEnvironment environment) throws Exception {
-        final Map<String, Integer> interests = (Map<String, Integer>) profile.getProperties().get("interests");
+        final Map<String, Double> interests = (Map<String, Double>) profile.getProperties().get("interests");
         if (interests == null) {
             return Collections.emptyList();
         }
 
         return interests.entrySet().stream()
-                .map(entry -> new CDPInterest(entry.getKey(), entry.getValue().doubleValue()))
+                .map(entry -> new CDPInterest(entry.getKey(), entry.getValue()))
                 .collect(Collectors.toList());
     }
 }

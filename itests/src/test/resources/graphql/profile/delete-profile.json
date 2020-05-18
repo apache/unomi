@@ -1,0 +1,12 @@
+{
+  "operationName": "deleteProfile",
+  "variables": {
+    "profileID": {
+      "id": "profile_id_to_delete",
+      "client": {
+        "id": "defaultClientId"
+      }
+    }
+  },
+  "query": "mutation deleteProfile($profileID: CDP_ProfileIDInput!) {\n  cdp {\n    deleteProfile(profileID: $profileID)\n  }\n}\n"
+}

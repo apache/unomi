@@ -28,18 +28,12 @@ import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.ops4j.pax.exam.junit.PaxExam;
-import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
-import org.ops4j.pax.exam.spi.reactors.PerSuite;
 
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
-@RunWith(PaxExam.class)
-@ExamReactorStrategy(PerSuite.class)
-public class GraphQLWebSocketIT extends BaseGraphQLITTest {
+public class GraphQLWebSocketIT extends BaseGraphQLIT {
 
     private static final String SUBSCRIPTION_ENDPOINT = "ws://localhost:" + HTTP_PORT + "/graphql";
 
