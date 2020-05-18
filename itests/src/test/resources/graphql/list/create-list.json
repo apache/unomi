@@ -1,0 +1,11 @@
+{
+  "operationName": "createOrUpdateList",
+  "variables": {
+    "list": {
+      "id": "testListId",
+      "name": "testListName",
+      "view": "testSite"
+    }
+  },
+  "query": "mutation createOrUpdateList($list: CDP_ListInput) {\n  cdp {\n    createOrUpdateList(list: $list) {\n      id\n      name\n      view {\n        name\n      }\n    }\n  }\n}\n"
+}

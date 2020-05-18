@@ -1,0 +1,12 @@
+{
+  "operationName": "getProfile",
+  "variables": {
+    "profileID": {
+      "client": {
+        "id": "defaultClientId"
+      },
+      "id": "1234"
+    }
+  },
+  "query": "query getProfile($profileID: CDP_ProfileIDInput!) {\n  cdp {\n    getProfile(profileID: $profileID) {\n      firstName\n    }\n  }\n}\n"
+}

@@ -1,7 +1,7 @@
 {
   "operationName": "deleteList",
   "variables": {
-    "listID": "myListId"
+    "listID": "listIdToDelete"
   },
   "query": "mutation deleteList($listID: ID) {\n  cdp {\n    deleteList(listID: $listID)\n  }\n}\n"
 }

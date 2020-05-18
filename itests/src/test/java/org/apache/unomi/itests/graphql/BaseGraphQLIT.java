@@ -27,15 +27,24 @@ import org.apache.unomi.graphql.utils.GraphQLObjectMapper;
 import org.apache.unomi.itests.BaseIT;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.junit.Before;
+import org.junit.runner.RunWith;
+import org.ops4j.pax.exam.junit.PaxExam;
+import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
+import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
 import org.osgi.framework.BundleContext;
 
 import javax.inject.Inject;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-public class BaseGraphQLITTest extends BaseIT {
+@RunWith(PaxExam.class)
+@ExamReactorStrategy(PerSuite.class)
+public abstract class BaseGraphQLIT extends BaseIT {
 
     protected static final String GRAPHQL_ENDPOINT = URL + "/graphql";
 
@@ -75,7 +84,12 @@ public class BaseGraphQLITTest extends BaseIT {
         }
     }
 
+    @SuppressWarnings("unchecked")
     protected static class ResponseContext {
+
+        private static final Pattern DOT_PATTERN = Pattern.compile("\\.");
+
+        private static final Pattern INDEX_PATTERN = Pattern.compile("\\[(\\d+)]");
 
         private final Map<String, Object> responseAsMap;
 
@@ -93,24 +107,34 @@ public class BaseGraphQLITTest extends BaseIT {
         }
 
         public <T> T getValue(final String path) {
-            final String[] nodePaths = path.split("\\.", -1);
+            final String[] nodePaths = path.split(DOT_PATTERN.pattern(), -1);
 
-            Map<String, Object> tempMap = responseAsMap;
+            Map<String, Object> fieldsAsMap = responseAsMap;
 
             T result = null;
 
             for (int i = 0; i < nodePaths.length; i++) {
-                if (!tempMap.containsKey(nodePaths[i])) {
-                    return null;
-                }
-                if (i != nodePaths.length - 1) {
-                    tempMap = (Map<String, Object>) tempMap.get(nodePaths[i]);
+                if (fieldsAsMap == null) {
+                    break;
+                } else if (i != nodePaths.length - 1) {
+                    Matcher matcher = INDEX_PATTERN.matcher(nodePaths[i]);
+                    if (matcher.find()) {
+                        final String key = nodePaths[i].replaceAll(INDEX_PATTERN.pattern(), "");
+                        final int index = Integer.parseInt(matcher.group(1));
+                        fieldsAsMap = (Map<String, Object>) (((List) fieldsAsMap.get(key)).get(index));
+                    } else {
+                        fieldsAsMap = (Map<String, Object>) fieldsAsMap.get(nodePaths[i]);
+                    }
                 } else {
-                    result = (T) tempMap.get(nodePaths[i]);
+                    result = (T) fieldsAsMap.get(nodePaths[i]);
                 }
             }
 
             return result;
+        }
+
+        public Map<String, Object> getResponseAsMap() {
+            return responseAsMap;
         }
 
     }
