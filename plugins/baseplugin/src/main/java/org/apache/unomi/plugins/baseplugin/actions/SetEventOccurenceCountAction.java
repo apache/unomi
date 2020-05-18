@@ -87,7 +87,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             event.getProfile().getSystemProperties().put("pastEvents", pastEvents);
         }
 
-        //increase the counter by 1 if the current event fulfils the time condition
+        //Only increase the counter by 1 if the current event is in the now-numberOfDays range
         LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
         LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(),ZoneId.of("UTC"));
         long daysDiff = Duration.between(eventTime,now).toDays();
