@@ -50,7 +50,7 @@ import java.util.Date;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
-public class UpdateEventFromContextServletIT extends BaseIT {
+public class ContextServletIT extends BaseIT {
 	private final static String TEST_SESSION_ID = "test-session-id";
 	private final static String TEST_EVENT_ID = "test-event-id";
 	private final static String TEST_SCOPE = "test-scope";
