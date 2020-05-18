@@ -24,11 +24,18 @@ public abstract class DynamicFieldDataFetcher<T> implements DataFetcher<T> {
 
     protected String fieldName;
 
-    public DynamicFieldDataFetcher(String fieldName) {
+    protected String valueTypeId;
+
+    public DynamicFieldDataFetcher(String fieldName, String valueTypeId) {
         this.fieldName = PropertyNameTranslator.translateFromGraphQLToUnomi(fieldName);
+        this.valueTypeId = valueTypeId;
     }
 
     public String getFieldName() {
         return fieldName;
+    }
+
+    public String getValueTypeId() {
+        return valueTypeId;
     }
 }

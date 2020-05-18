@@ -23,6 +23,7 @@ import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.annotations.annotationTypes.GraphQLTypeResolver;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.GeoPoint;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.resolvers.CDPEventInterfaceResolver;
@@ -90,7 +91,7 @@ public interface CDPEventInterface {
     }
 
     @GraphQLField
-    default CDPGeoPoint cdp_location(final DataFetchingEnvironment environment) {
+    default GeoPoint cdp_location(final DataFetchingEnvironment environment) {
         return null;
     }
 

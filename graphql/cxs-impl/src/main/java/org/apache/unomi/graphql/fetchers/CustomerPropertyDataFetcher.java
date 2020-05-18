@@ -17,26 +17,40 @@
 package org.apache.unomi.graphql.fetchers;
 
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.GeoPoint;
 import org.apache.unomi.graphql.types.output.CDPEventInterface;
 import org.apache.unomi.graphql.types.output.CDPProfileInterface;
 
+import java.util.Map;
+
 public class CustomerPropertyDataFetcher extends DynamicFieldDataFetcher<Object> {
 
-    public CustomerPropertyDataFetcher(String propertyName) {
-        super(propertyName);
+    public CustomerPropertyDataFetcher(String propertyName, String valueTypeId) {
+        super(propertyName, valueTypeId);
     }
 
     @Override
     public Object get(final DataFetchingEnvironment environment) {
         final Object source = environment.getSource();
 
+        Object propertyValue = null;
         if (source instanceof CDPProfileInterface) {
-            return ((CDPProfileInterface) environment.getSource()).getProperty(fieldName);
+            propertyValue = ((CDPProfileInterface) environment.getSource()).getProperty(fieldName);
         } else if (source instanceof CDPEventInterface) {
-            return ((CDPEventInterface) environment.getSource()).getProperty(fieldName);
-        } else {
-            return null;
+            propertyValue = ((CDPEventInterface) environment.getSource()).getProperty(fieldName);
         }
+
+        if (propertyValue != null && "geopoint".equals(valueTypeId)) {
+            if (propertyValue instanceof GeoPoint) {
+                return propertyValue;
+            } else if (propertyValue instanceof Map) {
+                return GeoPoint.fromMap((Map<String, Double>) propertyValue);
+            } else if (propertyValue instanceof String) {
+                return GeoPoint.fromString((String) propertyValue);
+            }
+        }
+
+        return propertyValue;
     }
 
 }

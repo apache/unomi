@@ -1,0 +1,22 @@
+{
+  "dynamic_templates": [
+    {
+      "location_geopoint": {
+        "match": "*_location",
+        "match_mapping_type": "object",
+        "mapping": {
+          "type": "geo_point"
+        }
+      }
+    },
+    {
+      "geo_geopoint": {
+        "match": "*_geo",
+        "match_mapping_type": "object",
+        "mapping": {
+          "type": "geo_point"
+        }
+      }
+    }
+  ]
+}

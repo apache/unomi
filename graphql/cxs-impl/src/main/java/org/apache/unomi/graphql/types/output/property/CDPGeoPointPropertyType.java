@@ -18,6 +18,7 @@ package org.apache.unomi.graphql.types.output.property;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import org.apache.unomi.api.GeoPoint;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.graphql.types.output.CDPPropertyInterface;
 
@@ -35,8 +36,7 @@ public class CDPGeoPointPropertyType extends CDPPropertyType implements CDPPrope
     }
 
     @GraphQLField
-    public String defaultValue() {
-        //TODO when unomi supports this type
-        return type != null ? type.getDefaultValue() : null;
+    public GeoPoint defaultValue() {
+        return type != null && type.getDefaultValue() != null ? GeoPoint.fromString(type.getDefaultValue()) : null;
     }
 }

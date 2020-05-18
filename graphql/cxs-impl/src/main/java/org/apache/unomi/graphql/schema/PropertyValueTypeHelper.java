@@ -24,8 +24,8 @@ import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLScalarType;
 import graphql.schema.GraphQLType;
-import org.apache.unomi.graphql.function.DateFunction;
-import org.apache.unomi.graphql.function.DateTimeFunction;
+import org.apache.unomi.graphql.scalars.DateFunction;
+import org.apache.unomi.graphql.scalars.DateTimeFunction;
 
 public class PropertyValueTypeHelper {
 

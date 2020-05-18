@@ -29,8 +29,6 @@ public class ComparisonConditionTranslator {
             return "greaterThanOrEqualTo";
         } else if ("regexp".equals(originalCondition)) {
             return "matchesRegex";
-        } else if ("distance".equals(originalCondition)) {
-            return "between";
         } else {
             return originalCondition;
         }
@@ -47,8 +45,6 @@ public class ComparisonConditionTranslator {
             return "gte";
         } else if ("matchesRegex".equals(originalCondition)) {
             return "regexp";
-        } else if ("between".equals(originalCondition)) {
-            return "distance";
         } else {
             return originalCondition;
         }
