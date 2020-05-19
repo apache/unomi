@@ -56,7 +56,6 @@ public class ContextServletIT extends BaseIT {
 	private final static String THIRD_PARTY_HEADER_NAME = "X-Unomi-Peer";
 
 	private ObjectMapper objectMapper = new ObjectMapper();
-	private TestUtils testUtils = new TestUtils();
 
 	@Inject
 	@Filter(timeout = 600000)
@@ -106,7 +105,7 @@ public class ContextServletIT extends BaseIT {
 		HttpPost request = new HttpPost(URL + CONTEXT_URL);
 		request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
-		this.testUtils.executeContextJSONRequest(request, sessionId);
+		TestUtils.executeContextJSONRequest(request, sessionId);
 		Thread.sleep(2000); //Making sure event is updated in DB
 
 		//Assert
@@ -138,7 +137,7 @@ public class ContextServletIT extends BaseIT {
 		contextRequest.setEvents(Arrays.asList(event));
 		HttpPost request = new HttpPost(URL + CONTEXT_URL);
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
-		this.testUtils.executeContextJSONRequest(request, sessionId);
+		TestUtils.executeContextJSONRequest(request, sessionId);
 		Thread.sleep(2000); //Making sure event is updated in DB
 
 		//Assert
@@ -171,7 +170,7 @@ public class ContextServletIT extends BaseIT {
 		contextRequest.setEvents(Arrays.asList(event));
 		HttpPost request = new HttpPost(URL + CONTEXT_URL);
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
-		this.testUtils.executeContextJSONRequest(request, sessionId);
+		TestUtils.executeContextJSONRequest(request, sessionId);
 		Thread.sleep(2000); //Making sure event is updated in DB
 
 		//Assert

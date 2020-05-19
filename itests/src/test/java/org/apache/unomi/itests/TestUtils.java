@@ -58,7 +58,7 @@ public class TestUtils {
 		return null;
 	}
 
-	public RequestResponse executeContextJSONRequest(HttpPost request, String sessionId) throws IOException {
+	public static RequestResponse executeContextJSONRequest(HttpPost request, String sessionId) throws IOException {
 		try (CloseableHttpResponse response = HttpClientBuilder.create().build().execute(request)) {
 			// validate mimeType
 			String mimeType = ContentType.getOrDefault(response.getEntity()).getMimeType();
