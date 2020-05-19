@@ -21,15 +21,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.unomi.api.ContextRequest;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.Session;
+import org.apache.unomi.api.*;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -39,10 +40,16 @@ import org.ops4j.pax.exam.util.Filter;
 
 import javax.inject.Inject;
 import java.io.IOException;
+import java.net.URI;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Date;
 
+import static org.hamcrest.core.IsCollectionContaining.hasItem;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 
 /**
@@ -54,17 +61,20 @@ import static org.junit.Assert.assertEquals;
 public class ContextServletIT extends BaseIT {
 	private final static String CONTEXT_URL = "/context.json";
 	private final static String THIRD_PARTY_HEADER_NAME = "X-Unomi-Peer";
+	private final static String SEGMENT_EVENT_TYPE = "test-event-type";
+	private final static String SEGMENT_ID = "test-segment-id";
+	private final static int SEGMENT_NUMBER_OF_DAYS = 30;
 
 	private ObjectMapper objectMapper = new ObjectMapper();
 
 	@Inject
 	@Filter(timeout = 600000)
 	protected EventService eventService;
-	
+
 	@Inject
 	@Filter(timeout = 600000)
 	protected PersistenceService persistenceService;
-	
+
 	@Inject
 	@Filter(timeout = 600000)
 	protected ProfileService profileService;
@@ -73,11 +83,32 @@ public class ContextServletIT extends BaseIT {
 	@Filter(timeout = 600000)
 	protected DefinitionsService definitionsService;
 
+	@Inject
+	@Filter(timeout = 600000)
+	protected SegmentService segmentService;
+
+	@Before
+	public void setUp() throws InterruptedException {
+		//Create a past-event segment
+		Metadata segmentMetadata = new Metadata(SEGMENT_ID);
+		Segment segment = new Segment(segmentMetadata);
+		Condition segmentCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
+		segmentCondition.setParameter("minimumEventCount",2);
+		segmentCondition.setParameter("numberOfDays",SEGMENT_NUMBER_OF_DAYS);
+		Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
+		pastEventEventCondition.setParameter("eventTypeId",SEGMENT_EVENT_TYPE);
+		segmentCondition.setParameter("eventCondition",pastEventEventCondition);
+		segment.setCondition(segmentCondition);
+		segmentService.setSegmentDefinition(segment);
+		Thread.sleep(2000);
+	}
+
 	@After
 	public void tearDown() {
 		TestUtils.removeAllEvents(definitionsService, persistenceService);
 		TestUtils.removeAllSessions(definitionsService, persistenceService);
 		TestUtils.removeAllProfiles(definitionsService, persistenceService);
+		segmentService.removeSegmentDefinition(SEGMENT_ID,false);
 		persistenceService.refresh();
 	}
 
@@ -177,5 +208,91 @@ public class ContextServletIT extends BaseIT {
 		event = this.eventService.getEvent(eventId);
 		assertEquals(1, event.getVersion().longValue());
 		assertEquals(eventTypeOriginal,event.getEventType());
+	}
+
+	@Test
+	public void testCreateEventsWithNoTimestampParam_profileAddedToSegment() throws IOException {
+		//Arrange
+		String sessionId = "test-session-id";
+		String scope = "test-scope";
+		Event event = new Event();
+		event.setEventType(SEGMENT_EVENT_TYPE);
+		event.setScope(scope);
+
+		//Act
+		ContextRequest contextRequest = new ContextRequest();
+		contextRequest.setSessionId(sessionId);
+		contextRequest.setRequireSegments(true);
+		contextRequest.setEvents(Arrays.asList(event));
+		HttpPost request = new HttpPost(URL + CONTEXT_URL);
+		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+		String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
+		//Add the context-profile-id cookie to the second event
+		request.addHeader("Cookie", cookieHeaderValue);
+		ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
+
+		//Assert
+		assertEquals(1, response.getProfileSegments().size());
+		assertThat(response.getProfileSegments(),hasItem(SEGMENT_ID));
+	}
+
+	@Test
+	public void testCreateEventWithTimestampParam_pastEvent_profileIsNotAddedToSegment() throws IOException {
+		//Arrange
+		String sessionId = "test-session-id";
+		String scope = "test-scope";
+		Event event = new Event();
+		event.setEventType(SEGMENT_EVENT_TYPE);
+		event.setScope(scope);
+		String regularURI = URL + CONTEXT_URL;
+		long oldTimestamp = LocalDateTime.now(ZoneId.of("UTC")).minusDays(SEGMENT_NUMBER_OF_DAYS + 1).toInstant(ZoneOffset.UTC).toEpochMilli();
+		String customTimestampURI = regularURI + "?timestamp=" + oldTimestamp;
+
+		//Act
+		ContextRequest contextRequest = new ContextRequest();
+		contextRequest.setSessionId(sessionId);
+		contextRequest.setRequireSegments(true);
+		contextRequest.setEvents(Arrays.asList(event));
+		HttpPost request = new HttpPost(regularURI);
+		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+		//The first event is with a default timestamp (now)
+		String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
+		//The second event is with a customized timestamp
+		request.setURI(URI.create(customTimestampURI));
+		request.addHeader("Cookie", cookieHeaderValue);
+		ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
+
+		//Assert
+		assertEquals(0,response.getProfileSegments().size());
+	}
+
+	@Test
+	public void testCreateEventWithTimestampParam_futureEvent_profileIsNotAddedToSegment() throws IOException {
+		//Arrange
+		String sessionId = "test-session-id";
+		String scope = "test-scope";
+		Event event = new Event();
+		event.setEventType(SEGMENT_EVENT_TYPE);
+		event.setScope(scope);
+		String regularURI = URL + CONTEXT_URL;
+		long futureTimestamp = LocalDateTime.now(ZoneId.of("UTC")).plusDays(1).toInstant(ZoneOffset.UTC).toEpochMilli();
+		String customTimestampURI = regularURI + "?timestamp=" + futureTimestamp;
+
+		//Act
+		ContextRequest contextRequest = new ContextRequest();
+		contextRequest.setSessionId(sessionId);
+		contextRequest.setRequireSegments(true);
+		contextRequest.setEvents(Arrays.asList(event));
+		HttpPost request = new HttpPost(regularURI);
+		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+		//The first event is with a default timestamp (now)
+		String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
+		//The second event is with a customized timestamp
+		request.setURI(URI.create(customTimestampURI));
+		request.addHeader("Cookie", cookieHeaderValue);
+		ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
+
+		//Assert
+		assertEquals(0,response.getProfileSegments().size());
 	}
 }
