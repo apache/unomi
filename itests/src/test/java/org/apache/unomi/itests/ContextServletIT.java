@@ -77,6 +77,7 @@ public class ContextServletIT extends BaseIT {
 	@After
 	public void tearDown() {
 		TestUtils.removeAllEvents(definitionsService, persistenceService);
+		TestUtils.removeAllSessions(definitionsService, persistenceService);
 		TestUtils.removeAllProfiles(definitionsService, persistenceService);
 		persistenceService.refresh();
 	}

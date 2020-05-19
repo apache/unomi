@@ -27,6 +27,7 @@ import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.ContextResponse;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Session;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
@@ -94,6 +95,15 @@ public class TestUtils {
 		condition.setParameter("propertyValue","event");
 
 		return persistenceService.removeByQuery(condition, Event.class);
+	}
+
+	public static boolean removeAllSessions(DefinitionsService definitionsService, PersistenceService persistenceService) {
+		Condition condition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+		condition.setParameter("propertyName","itemType");
+		condition.setParameter("comparisonOperator","equals");
+		condition.setParameter("propertyValue","session");
+
+		return persistenceService.removeByQuery(condition, Session.class);
 	}
 
 	public static class RequestResponse {
