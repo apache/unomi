@@ -25,6 +25,7 @@ import org.apache.unomi.api.ContextRequest;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
+import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -53,32 +54,37 @@ import static org.junit.Assert.assertEquals;
 public class ContextServletIT extends BaseIT {
 	private final static String CONTEXT_URL = "/context.json";
 	private final static String THIRD_PARTY_HEADER_NAME = "X-Unomi-Peer";
+
 	private ObjectMapper objectMapper = new ObjectMapper();
 	private TestUtils testUtils = new TestUtils();
 
 	@Inject
 	@Filter(timeout = 600000)
 	protected EventService eventService;
+	
 	@Inject
 	@Filter(timeout = 600000)
 	protected PersistenceService persistenceService;
+	
 	@Inject
 	@Filter(timeout = 600000)
 	protected ProfileService profileService;
 
+	@Inject
+	@Filter(timeout = 600000)
+	protected DefinitionsService definitionsService;
 
 	@After
 	public void tearDown() {
-		//Using remove index due to document version is still persistent after deletion as referenced here https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete.html#delete-versioning
-		this.persistenceService.removeIndex("event-date-*");
-		TestUtils.removeAllProfiles(this.persistenceService);
-		this.persistenceService.refresh();
+		TestUtils.removeAllEvents(definitionsService, persistenceService);
+		TestUtils.removeAllProfiles(definitionsService, persistenceService);
+		persistenceService.refresh();
 	}
 
 	@Test
 	public void testUpdateEventFromContextAuthorizedThirdParty_Success() throws IOException, InterruptedException {
 		//Arrange
-		String eventId = "test-event-id";
+		String eventId = "test-event-id1";
 		String profileId = "test-profile-id";
 		String sessionId = "test-session-id";
 		String scope = "test-scope";
@@ -111,7 +117,7 @@ public class ContextServletIT extends BaseIT {
 	@Test
 	public void testUpdateEventFromContextUnAuthorizedThirdParty_Fail() throws IOException, InterruptedException {
 		//Arrange
-		String eventId = "test-event-id";
+		String eventId = "test-event-id2";
 		String profileId = "test-profile-id";
 		String sessionId = "test-session-id";
 		String scope = "test-scope";
@@ -144,7 +150,7 @@ public class ContextServletIT extends BaseIT {
 	@Test
 	public void testUpdateEventFromContextAuthorizedThirdPartyNoItemID_Fail() throws IOException, InterruptedException {
 		//Arrange
-		String eventId = "test-event-id";
+		String eventId = "test-event-id3";
 		String profileId = "test-profile-id";
 		String sessionId = "test-session-id";
 		String scope = "test-scope";
