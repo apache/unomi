@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-plugins</artifactId>
-        <version>1.5.0-SNAPSHOT</version>
+        <version>1.5.2-SNAPSHOT</version>
     </parent>
 
     <artifactId>unomi-plugins-base</artifactId>
@@ -76,6 +76,12 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-common</artifactId>
+            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
 

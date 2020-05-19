@@ -42,7 +42,7 @@ If you are using the packaged version of Unomi (as opposed to deploying it to yo
 
 [source]
 ----
-cp target/tweet-button-plugin-1.5.0-SNAPSHOT.jar ../../package/target/unomi-1.5.0-SNAPSHOT/deploy
+cp target/tweet-button-plugin-1.5.1-SNAPSHOT.jar ../../package/target/unomi-1.5.1-SNAPSHOT/deploy
 ----
 
 ===== Testing the samples
@@ -88,7 +88,7 @@ http://www.w3.org/2013/12/ceddl-201312.pdf[Customer Experience Digital Data Laye
 
 On the other hand, the `cxs` top level object contains interesting contextual information about the current user:
 
-[source,json]
+[source]
 ----
 {
   "profileId":<identifier of the profile associated with the current user>,
@@ -96,7 +96,8 @@ On the other hand, the `cxs` top level object contains interesting contextual in
   "profileProperties":<requested profile properties, if any>,
   "sessionProperties":<requested session properties, if any>,
   "profileSegments":<segments the profile is part of if requested>,
-  "filteringResults":<result of the evaluation of personalization filters>,
+  "filteringResults":<result of the evaluation of content filters>,
+  "personalizations":<result of the evaluation of personalization filters>,
   "trackedConditions":<tracked conditions in the source page, if any>
 }
 ----
@@ -177,17 +178,19 @@ Let's look at the context request structure:
 [source]
 ----
 {
-    source: <Item source of the context request>,
-    events: <optional array of triggered events>,
-    requiredProfileProperties: <optional array of property identifiers>,
-    requiredSessionProperties: <optional array of property identifiers>,
+    "sessionId" : <optional session identifier>,
+    "source": <Item source of the context request>,
+    "events": <optional array of events to trigger>,
+    "requiredProfileProperties": <optional array of property identifiers>,
+    "requiredSessionProperties": <optional array of property identifiers>,
     filters: <optional array of filters to evaluate>,
-    profileOverrides: <optional profile containing segments,scores or profile properties to override>,
-            - segments: <optional array of segment identifiers>,
-            - profileProperties: <optional map of property name / value pairs>,
-            - scores: <optional map of score id / value pairs>
-    sessionPropertiesOverrides: <optional map of property name / value pairs>,
-    requireSegments: <boolean, whether to return the associated segments>
+    "personalitations": <optional array of personalizations to evaluate>,
+    "profileOverrides": <optional profile containing segments,scores or profile properties to override>,
+        - segments: <optional array of segment identifiers>,
+        - profileProperties: <optional map of property name / value pairs>,
+        - scores: <optional map of score id / value pairs>
+    "sessionPropertiesOverrides": <optional map of property name / value pairs>,
+    "requireSegments": <boolean, whether to return the associated segments>
 }
 ----
 
@@ -199,7 +202,171 @@ A context request payload needs to at least specify some information about the s
 
 ====== Filters
 
-A client wishing to perform content personalization might also specify filtering conditions to be evaluated by the context server so that it can tell the client whether the content associated with the filter should be activated for this profile/session. This is accomplished by providing a list of filter definitions to be evaluated by the context server via the `filters` field of the payload. If provided, the evaluation results will be provided in the `filteringResults` field of the resulting `cxs` object the context server will send.
+A client wishing to perform content personalization might also specify filtering conditions to be evaluated by the
+context server so that it can tell the client whether the content associated with the filter should be activated for
+this profile/session. This is accomplished by providing a list of filter definitions to be evaluated by the context
+server via the `filters` field of the payload. If provided, the evaluation results will be provided in the
+`filteringResults` field of the resulting `cxs` object the context server will send.
+
+Here is an example of a filter request:
+
+[source]
+----
+curl --location --request POST 'http://localhost:8181/context.json' \
+--header 'Content-Type: application/json' \
+--header 'Cookie: JSESSIONID=48C8AFB3E18B8E3C93C2F4D5B7BD43B7; context-profile-id=01060c4c-a055-4c8f-9692-8a699d0c434a' \
+--data-raw '{
+    "source": null,
+    "requireSegments": false,
+    "requiredProfileProperties": null,
+    "requiredSessionProperties": null,
+    "events": null,
+    "filters": [
+    	{
+    		"id" : "filter1",
+    		"filters" : [
+    			{
+    				"condition": {
+                    "parameterValues": {
+                        "propertyName": "properties.gender",
+                        "comparisonOperator": "equals",
+                        "propertyValue": "male"
+                    },
+                    "type": "profilePropertyCondition"
+                }
+    			}
+    		]
+    	}
+    ],
+    "personalizations": null,
+    "profileOverrides": null,
+    "sessionPropertiesOverrides": null,
+    "sessionId": "demo-session-id"
+}'
+----
+
+And here's the result:
+
+[source,json]
+----
+{
+    "profileId": "01060c4c-a055-4c8f-9692-8a699d0c434a",
+    "sessionId": "demo-session-id",
+    "profileProperties": null,
+    "sessionProperties": null,
+    "profileSegments": null,
+    "filteringResults": {
+        "filter1": false
+    },
+    "processedEvents": 0,
+    "personalizations": null,
+    "trackedConditions": [],
+    "anonymousBrowsing": false,
+    "consents": {}
+}
+----
+
+As we can see, the `filter1` filter we sent in our request, in this example, evaluated to false for the current profile,
+so we can use that result to perform any customization for the current profile, in this case use the fact that he is
+male.
+
+====== Personalizations
+
+Filters make it possible to evaluate conditions against a profile in real-time, but for true personalization it is needed
+to have a more powerful mechanism: strategies. Sometimes we want to provide multiple variants that each have their own
+conditions and we want to know which is the best variant to use for the current profile. This can be achieved with the
+`personalizations` structure in the ContextRequest.
+
+Here is an example of a `personalizations` request:
+
+[source]
+----
+curl --location --request POST 'http://localhost:8181/context.json' \
+--header 'Content-Type: application/json' \
+--header 'Cookie: JSESSIONID=48C8AFB3E18B8E3C93C2F4D5B7BD43B7; context-profile-id=01060c4c-a055-4c8f-9692-8a699d0c434a' \
+--data-raw '{
+    "source": null,
+    "requireSegments": false,
+    "requiredProfileProperties": null,
+    "requiredSessionProperties": null,
+    "events": null,
+    "filters": null,
+    "personalizations": [
+        {
+            "id": "gender-test",
+            "strategy": "matching-first",
+            "strategyOptions": {
+                "fallback": "var2"
+            },
+            "contents": [
+                {
+                    "id": "var1",
+                    "filters": [
+                        {
+                            "appliesOn": null,
+                            "condition": {
+                                "parameterValues": {
+                                    "propertyName": "properties.gender",
+                                    "comparisonOperator": "equals",
+                                    "propertyValue": "male"
+                                },
+                                "type": "profilePropertyCondition"
+                            },
+                            "properties": null
+                        }
+                    ],
+                    "properties": null
+                },
+                {
+                    "id": "var2",
+                    "filters": null,
+                    "properties": null
+                }
+            ]
+        }
+    ],
+    "profileOverrides": null,
+    "sessionPropertiesOverrides": null,
+    "sessionId": "demo-session-id"
+}'
+----
+
+In the above example, we basically setup two variants : `var1` and `var2` and setup the `var2` to be the fallback variant
+in case no variant is matched. We could of course specify more than a variant. The `strategy` indicates to the
+personalization service how to calculate the "winning" variant. In this case the strategy `matching-first` will return
+the first variant that matches the current profile.
+
+Currently the following strategies are available:
+
+- `matching-first`: will return the first matching variant.
+- `random`: will return a random variant
+- `score-sorted`: allows to sort the variants based on scores associated with the filtering conditions, effectively
+sorting them by the highest scoring condition first.
+
+Here is the result of the above example:
+
+[source,json]
+----
+{
+    "profileId": "01060c4c-a055-4c8f-9692-8a699d0c434a",
+    "sessionId": "demo-session-id",
+    "profileProperties": null,
+    "sessionProperties": null,
+    "profileSegments": null,
+    "filteringResults": null,
+    "processedEvents": 0,
+    "personalizations": {
+        "gender-test": [
+            "var2"
+        ]
+    },
+    "trackedConditions": [
+    ],
+    "anonymousBrowsing": false,
+    "consents": {}
+}
+----
+
 
 ====== Overrides
 

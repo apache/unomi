@@ -1,0 +1,100 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+=== MailChimp Connector
+
+This extension has 3 actions:
+
+ * Add a visitor into a defined Mailchimp list.
+ * Remove a visitor from a defined Mailchimp list.
+ * Unsubscribe a visitor from a defined Mailchimp list.
+
+==== Getting started
+
+. Create a new MailChimp account: https://login.mailchimp.com/signup/
+
+. Generate a new API Key, or get the default: https://usX.admin.mailchimp.com/account/api/
+
+. Configure the MailChimp Connector Basic in the `etc/unomi.custom.system.properties` file and add/change the following settings:
++
+[source]
+----
+org.apache.unomi.mailchimp.apiKey=${env:UNOMI_MAILCHIMP_APIKEY:-yourApiKey}
+org.apache.unomi.mailchimp.url.subDomain=${env:UNOMI_MAILCHIMP_URL_SUBDOMAIN:-us16}
+----
++
+. Before starting configure the mapping between Apache Unomi profile properties and MailChimp member properties. +
+    The mapping can't be use with multitued properties. You need to setup your MailChimp properties first in the MailChimp administration.
++
+[source]
+----
+    Go to: lists/
+    Select the triggered list
+    Settings
+----
++
+
++
+Then in the cfg file `org.apache.unomi.mailchimp.list.merge-fields.activate={Boolean} if you like to activate the mapping feature.`
++
+
++
+This is the property to configure for the mapping, the format is as shown. `org.apache.unomi.mailchimp.list.merge-fields.mapping={Apache Unomi property ID}<=>{MailChimp Tag name}`
++
+
++
+[NOTE]
+===============================
+there is a particular format for the address `{Apache Unomi property ID}<=>{MailChimp Tag name}<=>{MailChimp tag sub entry}`
+===============================
++
+
++
+MailChimp supported type are:
++
+
++
+* Date `The format is (DD/MM/YYYY) or  (MM/DD/YYYY)`
+
+* Birthday `The format is (DD/MM) or  (MM/DD)`
+
+* Website or Text `They are text`
+
+* Number `The number will be parse into a Integer`
+
+* Phone `The North American format is not supported, use international`
+
+* Address
++
+[NOTE]
+===============================
+Street, City, Country and Zip are mandatory properties, otherwise the address property will be skipped.
+===============================
+
++
+
+[source]
+----
+    address<=>ADDRESS<=>addr1,
+    city<=>ADDRESS<=>city,
+    zipCode<=>ADDRESS<=>zip,
+    countryName<=>ADDRESS<=>country
+----
++
+
+. Deploy into Apache Unomi using the following commands from the Apache Karaf shell: +
+[source]
+----
+    feature:repo-add mvn:org.apache.unomi/unomi-mailchimp-connector-karaf-kar/${project.version}/xml/features
+    feature:install unomi-mailchimp-connector-karaf-kar
+----

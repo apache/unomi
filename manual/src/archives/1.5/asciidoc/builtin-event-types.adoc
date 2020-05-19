@@ -1,0 +1,650 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+=== Built-in Event types
+
+Apache Unomi comes with built-in event types, which we describe below.
+
+==== Login event type
+
+The login event type is used to signal an authentication event has been triggered.
+This event should be “secured”, meaning that it should not be accepted from any location, and by default Apache Unomi will only accept this event from configured “third-party” servers (identified by their IP address and a Unomi application key).
+
+Usually, the login event will contain information passed by the authentication server and may include user properties and any additional information.
+Rules may be set up to copy the information from the event into the profile, but this is not done in the default set of rules provided by Apache Unomi for security reasons.
+You can find an example of such a rule here: https://github.com/apache/unomi/blob/master/samples/login-integration/src/main/resources/META-INF/cxs/rules/exampleLogin.json[https://github.com/apache/unomi/blob/master/samples/login-integration/src/main/resources/META-INF/cxs/rules/exampleLogin.json]
+
+===== Structure overview
+
+Based on the structure of the following object: Event
+
+|===
+| *Field name* | *Value/description*
+
+| eventType | login
+
+| source | Not used (null)
+
+| target | an Item representing the user that logged in
+
+| scope | the scope in which the user has authenticated
+
+| properties | Not used (empty)
+
+|===
+
+===== Example
+
+In this case, a user has logged into a site called “digitall”, and his user information the following properties are associated with the active user..and perhaps show his visitor profile or user information.
+
+
+image::login-event-type.png[]
+
+[source,json]
+----
+{
+    "itemId": "0b8825a6-efb8-41a6-bea5-d745b33c94cb",
+    "itemType": "event",
+    "scope": "digitall",
+    "eventType": "login",
+    "sessionId": "7b8a5f17-cdb0-4c14-b676-34c1c0de0825",
+    "profileId": "f7d1f1b9-4415-4ff1-8fee-407b109364f7",
+    "timeStamp": "2020-01-30T21:18:28Z",
+    "properties": {},
+    "source": null,
+    "target": {
+        "itemId": "13054a95-092d-4d7b-81f5-e4656c2ebc88",
+        "itemType": "cmsUser",
+        "scope": null,
+        "properties": {
+            "j:function": "Vice President",
+            "preferredLanguage": "en",
+            "j:title": "mister",
+            "emailNotificationsDisabled": "true",
+            "j:organization": "Acme Space",
+            "j:gender": "male",
+            "j:nodename": "bill",
+            "j:lastName": "Galileo",
+            "j:publicProperties": "j:about,j:firstName,j:function,j:gender,j:lastName,j:organization,j:picture,j:title",
+            "j:firstName": "Bill",
+            "j:about": "<p> Lorem Ipsum dolor sit amet.</p> "
+        }
+    }
+}
+----
+
+==== View event type
+
+This event is triggered when a web page is viewed by a user.
+Some integrators might also want to trigger it when a single-page-application screen is displayed or when a mobile application screen is displayed.
+
+===== Structure description
+
+Based on the structure of the following object: Event
+
+|===
+| *Field name* | *Value/description*
+
+| eventType | view
+
+| source | the source for the view event, could be a web site, an application name, etc…
+
+| target | the page/screen being viewed
+
+| properties | Not used (empty)
+
+|===
+
+===== Example
+
+In this case a use has visited the home page of the digitall site.
+As this is the first page upon login, the destination and referring URL are the same.
+
+[source,json]
+----
+{
+    "itemId": "c75f50c2-ab55-4d95-be69-cbbeee180d6b",
+    "itemType": "event",
+    "scope": "digitall",
+    "eventType": "view",
+    "sessionId": "7b8a5f17-cdb0-4c14-b676-34c1c0de0825",
+    "profileId": "f7d1f1b9-4415-4ff1-8fee-407b109364f7",
+    "timeStamp": "2020-01-30T21:18:32Z",
+    "properties": {},
+    "source": {
+        "itemId": "29f5fe37-28c0-48f3-966b-5353bed87308",
+        "itemType": "site",
+        "scope": "digitall",
+        "properties": {}
+    },
+    "target": {
+        "itemId": "f20836ab-608f-4551-a930-9796ec991340",
+        "itemType": "page",
+        "scope": "digitall",
+        "properties": {
+            "pageInfo": {
+                "templateName": "home",
+                "language": "en",
+                "destinationURL": "http://localhost:8080/sites/digitall/home.html",
+                "categories": [],
+                "pageID": "f20836ab-608f-4551-a930-9796ec991340",
+                "nodeType": "jnt:page",
+                "pagePath": "/sites/digitall/home",
+                "pageName": "Home",
+                "referringURL": "http://localhost:8080/sites/digitall/home.html",
+                "tags": [],
+                "isContentTemplate": false
+            },
+            "attributes": {},
+            "consentTypes": []
+        }
+    }
+}
+----
+
+==== Form event type
+
+This event type is used to track form submissions.
+These could range from login to survey form data captured and processed in Apache Unomi using rules.
+
+===== Structure description
+
+Based on the structure of the following object: Event
+
+|===
+| *Field name* | *Value/description*
+
+| eventType | form
+
+| source | the page/screen on which the form was submitted
+
+| target | the form that was submitted (there could be more than one form on a page/screen)
+
+| properties | contain the data submitted in the form
+
+|===
+
+===== Example
+
+A form exists on the digitall site, and has been submitted by a visitor.
+In this case it was a search form that contains fields to adjust the search parameters.
+
+image::form-event-type.png[]
+
+[source,json]
+----
+{
+    "itemId": "44177ffe-b5c8-4575-a8e5-f8aa0d4ee792",
+    "itemType": "event",
+    "scope": "digitall",
+    "eventType": "form",
+    "sessionId": "be416c08-8b9b-4611-990f-3a8bf3ed4e68",
+    "profileId": "bc1e1238-a9ac-4b3a-8f63-5eec205cfcd5",
+    "timeStamp": "2020-01-30T21:41:22Z",
+    "properties": {
+        "jcrMethodToCall": "get",
+        "src_originSiteKey": "digitall",
+        "src_terms[0].term": "test",
+        "src_terms[0].applyFilter": "true",
+        "src_terms[0].match": "all_words",
+        "src_terms[0].fields.siteContent": "true",
+        "src_terms[0].fields.tags": "true",
+        "src_terms[0].fields.files": "true",
+        "src_sites.values": "digitall",
+        "src_sitesForReferences.values": "systemsite",
+        "src_languages.values": "en"
+    },
+    "source": {
+        "itemId": "97e14221-33dd-4608-82ae-9724d15d4f12",
+        "itemType": "page",
+        "scope": "digitall",
+        "properties": {
+            "pageInfo": {
+                "templateName": "home",
+                "language": "en",
+                "destinationURL": "http://localhost:8080/sites/digitall/home/search-results.html",
+                "categories": [],
+                "pageID": "97e14221-33dd-4608-82ae-9724d15d4f12",
+                "nodeType": "jnt:page",
+                "pagePath": "/sites/digitall/home/search-results",
+                "pageName": "Search Results",
+                "referringURL": "http://localhost:8080/cms/edit/default/en/sites/digitall/home.html",
+                "tags": [],
+                "isContentTemplate": false
+            },
+            "attributes": {},
+            "consentTypes": []
+        }
+    },
+    "target": {
+        "itemId": "searchForm",
+        "itemType": "form",
+        "scope": "digitall",
+        "properties": {}
+    }
+}
+----
+
+==== Update properties event type
+
+This event is usually used by user interfaces that make it possible to modify profile properties, for example a form where a user can edit his profile properties, or a management UI to modify.
+
+Note that this event type is a protected event type that is only accepted from configured third-party servers.
+
+===== Structure definition
+
+Based on the structure of the following object: Event
+
+|===
+| *Field name* | *Value/description*
+
+| eventType | updateProperties
+
+| source | the screen that has triggered the update to the profile properties
+
+| target | Not used (null)
+
+| properties | {  targetId: the identifier of the profile to update  targetType: “profile” if updating a profile or “persona” for personas  add/update/delete: properties to be added/updated or deleted on the target profile}
+
+|===
+
+===== Example
+
+In this example, this “updateProperties” event contains properties that must be added to the targetId profile.
+
+image::update-properties-event-type.png[]
+
+[source,json]
+----
+{
+    "itemId": "d8fec330-33cb-42bc-a4e2-bb48ea7ed29b",
+    "itemType": "event",
+    "scope": null,
+    "eventType": "updateProperties",
+    "sessionId": "66e63ec9-66bc-4fac-8a8a-febcc3d6cbb7",
+    "profileId": "bc1e1238-a9ac-4b3a-8f63-5eec205cfcd5",
+    "timeStamp": "2020-01-31T08:51:15Z",
+    "properties": {
+        "targetId": "f7d1f1b9-4415-4ff1-8fee-407b109364f7",
+        "targetType": "profile",
+        "add": {
+            "properties.phoneNumber": "+1-123-555-12345",
+            "properties.countryName": "US",
+            "properties.city": "Las Vegas",
+            "properties.address": "Hotel Flamingo",
+            "properties.zipCode": "89109",
+            "properties.email": "bill@acme.com"
+        }
+    },
+    "source": {
+        "itemId": "wemProfile",
+        "itemType": "wemProfile",
+        "scope": "digitall",
+        "properties": {}
+    },
+    "target": null
+}
+----
+
+==== Identify event type
+
+This event type is used to add information learned about the current profile.
+This could be through a form that has asked the user to provide some information about himself, or it could be information sent by another system (CRM, SSO, DMP, LiveRamp or equivalent) to augment the data for the current profile.
+
+It should be noted that, as in the case of a login event, it might be a good idea to be careful as to who and what system are allowed to send this event.
+Also, in order for this event to perform any modifications, an associated rule will be needed in the Unomi system to perform modifications to a profile (there is no default rule).
+
+|===
+| *Event type* | *Available publicly* | *Default rule* | *Targeted at back-office* | *Can remove/update properties*
+
+| identify | yes | no | no | no
+
+| updateProperties | no | yes | yes | yes
+
+|===
+
+The rule of thumb is: if you need to send profile data from public system to add information to a profile you should use the identify event type and add a rule to only process the data you want to accept.
+If you want to add/update/delete properties in a secure manner from a known server you could use the updateProperties but you should always check first if you can’t use the identify or event form event types with specific rules as this reduces greatly the potential for misuse.
+
+===== Structure description
+
+Based on the structure of the following object: Event
+
+|===
+| *Field name* | *Value/description*
+
+| eventType | identify
+
+| source | the site/application name that triggered the identify event
+
+| target | the user information contained in the event
+
+| properties | Not used (empty)
+
+|===
+
+===== Example
+
+In this example (coming from the Apache Unomi tracker example), an event containing additional information about the user (his nickname, favorite compiler and industry) was sent to Apache Unomi.
+
+[source,json]
+----
+{
+    "itemId": "18dfd6c7-9055-4ef0-a2eb-14c1482b4544",
+    "itemType": "event",
+    "scope": "myScope",
+    "eventType": "identify",
+    "sessionId": "928d9237-fb3d-4e53-cbee-1aeb1df7f03a",
+    "profileId": "temp_023ded50-bb43-4fe2-acbc-13bfa8de16de",
+    "timeStamp": "2020-01-15T14:13:25Z",
+    "properties": {},
+    "source": {
+        "itemId": "myScope",
+        "itemType": "site",
+        "scope": "myScope",
+        "properties": {
+            "page": {
+                "path": "/tracker/",
+                "referrer": "http://localhost:8181/",
+                "search": "",
+                "title": "Apache Unomi Web Tracker Test Page",
+                "url": "http://localhost:8181/tracker/"
+            }
+        }
+    },
+    "target": {
+        "itemId": "null",
+        "itemType": "analyticsUser",
+        "scope": "myScope",
+        "properties": {
+            "nickname": "Amazing Grace",
+            "favoriteCompiler": "A-0",
+            "industry": "Computer Science"
+        }
+    }
+}
+----
+
+==== Session created event type
+
+The session created event is an internal event created by Apache Unomi when a new session is created.
+This indicates that a new visitor has interacted with a system that is using Apache Unomi to track their behavior.
+
+===== Structure definition
+
+Based on the structure of the following object: Event
+
+|===
+| *Field name* | *Value/description*
+
+| eventType | sessionCreated
+
+| source | Not used (null)
+
+| target | the Session item that was created with all its fields and properties
+
+| properties | Not used (empty)
+
+|===
+
+===== Example
+
+In this example, a new session was created for a visitor coming to the digitall website.
+The session contains the firstVisit property.
+It may be augmented over time with more information including location.
+
+[source,json]
+----
+{
+    "itemId": "b3f5486f-b317-4182-9bf4-f497271e5363",
+    "itemType": "event",
+    "scope": "digitall",
+    "eventType": "sessionCreated",
+    "sessionId": "be416c08-8b9b-4611-990f-3a8bf3ed4e68",
+    "profileId": "bc1e1238-a9ac-4b3a-8f63-5eec205cfcd5",
+    "timeStamp": "2020-01-30T21:13:26Z",
+    "properties": {},
+    "source": null,
+    "target": {
+        "itemId": "be416c08-8b9b-4611-990f-3a8bf3ed4e68",
+        "itemType": "session",
+        "scope": "digitall",
+        "profileId": "bc1e1238-a9ac-4b3a-8f63-5eec205cfcd5",
+        "profile": {
+            "itemId": "bc1e1238-a9ac-4b3a-8f63-5eec205cfcd5",
+            "itemType": "profile",
+            "properties": {
+                "firstVisit": "2020-01-30T21:13:26Z"
+            },
+            "systemProperties": {},
+            "segments": [],
+            "scores": null,
+            "mergedWith": null,
+            "consents": {}
+        },
+        "properties": {},
+        "systemProperties": {},
+        "timeStamp": "2020-01-30T21:13:26Z",
+        "lastEventDate": null,
+        "size": 0,
+        "duration": 0
+    }
+}
+----
+
+==== Goal event type
+
+A goal event is triggered when the current profile (visitor) reaches a goal.
+
+===== Structure definition
+
+Based on the structure of the following object: Event
+
+|===
+| *Field name* | *Value/description*
+
+| eventType | goal
+
+| source | the Event that triggered the goal completion
+
+| target | the Goal item that was reached
+
+| properties | Not used (empty)
+
+|===
+
+===== Example
+
+In this example, a visitor has reached a goal by viewing a page called “sub-home” on the site “digitall” (event source).
+This goal event had the goal object as a target.
+The goal object (see Goal object later in this document) has a start event of creating a new session and a target event of a page view on the page “sub-home”.
+
+[source,json]
+----
+{
+    "itemId": "9fa70519-382d-412b-82ea-99b5989fbd0d",
+    "itemType": "event",
+    "scope": "digitall",
+    "eventType": "goal",
+    "sessionId": "42bd3fde-5fe9-4df6-8ae6-8550b8b06a7f",
+    "profileId": "3ec46b2c-fbaa-42d5-99df-54199c807fc8",
+    "timeStamp": "2017-05-29T23:49:16Z",
+    "properties": {},
+    "source": {
+        "itemId": "aadcd86c-9431-43c2-bdc3-06683ac25927",
+        "itemType": "event",
+        "scope": "digitall",
+        "eventType": "view",
+        "sessionId": "42bd3fde-5fe9-4df6-8ae6-8550b8b06a7f",
+        "profileId": "3ec46b2c-fbaa-42d5-99df-54199c807fc8",
+        "timeStamp": "2017-05-29T23:49:16Z",
+        "properties": {},
+        "source": {
+            "itemId": "6d5f4ae3-30c9-4561-81f3-06f82af7da1e",
+            "itemType": "site",
+            "scope": "digitall",
+            "properties": {}
+        },
+        "target": {
+            "itemId": "67dfc299-9b74-4264-a865-aebdc3482539",
+            "itemType": "page",
+            "scope": "digitall",
+            "properties": {
+                "pageInfo": {
+                    "language": "en",
+                    "destinationURL": "https://acme.com/home/sub-home.html",
+                    "pageID": "67dfc299-9b74-4264-a865-aebdc3482539",
+                    "pagePath": "/sites/digitall/home/sub-home",
+                    "pageName": "sub-home",
+                    "referringURL": "https://acme.com/home/perso-on-profile-past-event-page.html"
+                },
+                "category": {},
+                "attributes": {}
+            }
+        }
+    },
+    "target": {
+        "itemId": "_v4ref2mxg",
+        "itemType": "goal",
+        "startEvent": {
+            "parameterValues": {},
+            "type": "sessionCreatedEventCondition"
+        },
+        "targetEvent": {
+            "parameterValues": {
+                "pagePath": "/sites/digitall/home/sub-home"
+            },
+            "type": "pageViewEventCondition"
+        },
+        "campaignId": null,
+        "metadata": {
+            "id": "_v4ref2mxg",
+            "name": "sub-home-visit",
+            "description": "",
+            "scope": "digitall",
+            "tags": [
+                "pageVisitGoal"
+            ],
+            "enabled": true,
+            "missingPlugins": false,
+            "hidden": false,
+            "readOnly": false
+        }
+    }
+}
+----
+
+==== Modify consent event type
+
+Consent type modification events are used to tell Unomi that consents were modified.
+A built-in rule will update the current profile with the consent modifications contained in the event.
+Consent events may be sent directly by a current profile to update their consents on the profile.
+
+===== Structure definition
+
+Based on the structure of the following object: Event
+
+|===
+| *Field name* | *Value/description*
+
+| eventType | modifyConsent
+
+| source | the page that has triggered the update the consents and that contains the different consent types the current profile could grant or deny
+
+| target | The consent that was modified
+
+| properties | The consent’s new value. See the Consent object type for more information.
+
+|===
+
+===== Example
+
+In this example, a user-generated a consent modification when visiting the home page, possibly by interacting with a consent form that captured his preferences.
+Different consent types were present on the page and he decided to GRANT the “mailchimp” consent.
+
+image::modify-consent-event-type.png[]
+
+[source,json]
+----
+{
+    "scope": "digitall",
+    "eventType": "modifyConsent",
+    "source": {
+        "itemType": "page",
+        "scope": "digitall",
+        "itemId": "f20836ab-608f-4551-a930-9796ec991340",
+        "properties": {
+            "pageInfo": {
+                "pageID": "f20836ab-608f-4551-a930-9796ec991340",
+                "nodeType": "jnt:page",
+                "pageName": "Home",
+                "pagePath": "/sites/digitall/home",
+                "templateName": "home",
+                "destinationURL": "http://localhost:8080/sites/digitall/home.html",
+                "referringURL": "http://localhost:8080/cms/render/default/en/sites/digitall/home.html",
+                "language": "en",
+                "categories": [],
+                "tags": [],
+                "isContentTemplate": false
+            },
+            "attributes": {},
+            "consentTypes": [
+                {
+                    "typeIdentifier": "tracking",
+                    "activated": true,
+                    "title": "Allow tracking",
+                    "description": "If approved we are allowed to track the visitor"
+                },
+                {
+                    "typeIdentifier": "mailchimp",
+                    "activated": true,
+                    "title": "Mailchimp",
+                    "description": "desc"
+                },
+                {
+                    "typeIdentifier": "newsletter1",
+                    "activated": true,
+                    "title": "Newsletter 1",
+                    "description": "desc"
+                },
+                {
+                    "typeIdentifier": "newsletter2",
+                    "activated": true,
+                    "title": "Newsletter 2",
+                    "description": "desc"
+                },
+                {
+                    "typeIdentifier": "newsletter",
+                    "activated": true,
+                    "title": "Receive newsletter",
+                    "description": "If approved we will send newsletter."
+                }
+            ]
+        }
+    },
+    "target": {
+        "itemType": "consent",
+        "scope": "digitall",
+        "itemId": "mailchimp"
+    },
+    "properties": {
+        "consent": {
+            "scope": "digitall",
+            "typeIdentifier": "mailchimp",
+            "status": "GRANTED",
+            "statusDate": "2020-01-31T20:10:00.463Z",
+            "revokeDate": "2022-01-30T20:10:00.463Z"
+        }
+    }
+}
+----

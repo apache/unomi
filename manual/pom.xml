@@ -20,18 +20,19 @@
     <parent>
         <artifactId>unomi-root</artifactId>
         <groupId>org.apache.unomi</groupId>
-        <version>1.5.0-SNAPSHOT</version>
+        <version>1.5.2-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>manual</artifactId>
+    <artifactId>unomi-manual</artifactId>
     <name>Apache Unomi :: Manual</name>
     <packaging>bundle</packaging>
 
     <properties>
         <doc.source>src/main/asciidoc</doc.source>
-        <doc.output.html>target/generated-docs/html</doc.output.html>
-        <doc.output.pdf>target/generated-docs/pdf</doc.output.pdf>
+        <doc.output.html>target/generated-docs/html/latest</doc.output.html>
+        <doc.output.pdf>target/generated-docs/pdf/latest</doc.output.pdf>
+        <doc.version>${project.version}</doc.version>
     </properties>
 
     <build>
@@ -41,6 +42,13 @@
                 <groupId>org.asciidoctor</groupId>
                 <artifactId>asciidoctor-maven-plugin</artifactId>
                 <version>1.6.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.asciidoctor</groupId>
+                        <artifactId>asciidoctorj-pdf</artifactId>
+                        <version>1.5.3</version>
+                    </dependency>
+                </dependencies>
                 <executions>
                     <execution>
                         <id>output-html</id>
@@ -65,72 +73,167 @@
                             </attributes>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>generate-pdf-doc</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>process-asciidoc</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDocumentName>index.adoc</sourceDocumentName>
+                            <sourceDirectory>${doc.source}</sourceDirectory>
+                            <outputDirectory>${doc.output.pdf}</outputDirectory>
+                            <outputFile>${project.build.directory}/${project.artifactId}-${doc.version}.pdf</outputFile>
+                            <preserveDirectories>true</preserveDirectories>
+                            <headerFooter>true</headerFooter>
+                            <backend>pdf</backend>
+                            <attributes>
+                                <project-version>${project.version}</project-version>
+                                <pdf-stylesdir>${project.basedir}/src/theme</pdf-stylesdir>
+                                <pdf-style>apache</pdf-style>
+                                <pdf-fontsdir>${project.basedir}/src/theme/fonts</pdf-fontsdir>
+                                <imagesdir>images</imagesdir>
+                                <icons>font</icons>
+                                <pagenums>true</pagenums>
+                                <toc />
+                                <idprefix />
+                                <idseparator>-</idseparator>
+                                <sectnums>true</sectnums>
+                            </attributes>
+                        </configuration>
+                    </execution>
                 </executions>
                 <configuration>
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <inherited>true</inherited>
-                <extensions>true</extensions>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-artifacts</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>attach-artifact</goal>
+                        </goals>
+                        <configuration>
+                            <artifacts>
+                                <artifact>
+                                    <file>
+                                        ${project.build.directory}/${project.artifactId}-${doc.version}.pdf
+                                    </file>
+                                    <type>pdf</type>
+                                </artifact>
+                            </artifacts>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>package-manual</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <finalName>${project.artifactId}-${doc.version}</finalName>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <descriptors>
+                                <descriptor>src/assembly/manual-html.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>net.nicoulaj.maven.plugins</groupId>
+                <artifactId>checksum-maven-plugin</artifactId>
+                <version>1.7</version>
+                <executions>
+                    <execution>
+                        <id>package-release-checksum</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>files</goal>
+                        </goals>
+                    </execution>
+                </executions>
                 <configuration>
-                    <instructions>
-                        <Web-ContextPath>/documentation</Web-ContextPath>
-                        <Import-Package>
-                            org.slf4j;resolution:=optional
-                        </Import-Package>
-                        <Include-Resource>target/generated-docs/html</Include-Resource>
-                    </instructions>
+                    <attachChecksums>true</attachChecksums>
+                    <algorithms>
+                        <algorithm>SHA-512</algorithm>
+                    </algorithms>
+                    <csvSummary>false</csvSummary>
+                    <fileSets>
+                        <fileSet>
+                            <directory>${project.build.directory}</directory>
+                            <includes>
+                                <include>${project.artifactId}-${doc.version}.zip</include>
+                                <include>${project.artifactId}-${doc.version}.pdf</include>
+                            </includes>
+                        </fileSet>
+                    </fileSets>
+                    <failIfNoFiles>false</failIfNoFiles><!-- usually, no file to do checksum: don't consider error -->
                 </configuration>
             </plugin>
+
         </plugins>
     </build>
 
     <profiles>
         <profile>
-            <id>pdf</id>
+            <id>generate-documentation-bundle</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+                <property>
+                    <name>!doc.archive</name>
+                </property>
+            </activation>
             <build>
-                <defaultGoal>process-resources</defaultGoal>
                 <plugins>
                     <plugin>
-                        <groupId>org.asciidoctor</groupId>
-                        <artifactId>asciidoctor-maven-plugin</artifactId>
-                        <version>1.6.0</version>
-                        <dependencies>
-                            <dependency>
-                                <groupId>org.asciidoctor</groupId>
-                                <artifactId>asciidoctorj-pdf</artifactId>
-                                <version>1.5.0-rc.1</version>
-                            </dependency>
-                        </dependencies>
+                        <groupId>org.apache.felix</groupId>
+                        <artifactId>maven-bundle-plugin</artifactId>
+                        <inherited>true</inherited>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <finalName>${project.artifactId}-${doc.version}</finalName>
+                            <instructions>
+                                <Web-ContextPath>/documentation</Web-ContextPath>
+                                <Import-Package>
+                                    org.slf4j;resolution:=optional
+                                </Import-Package>
+                                <Include-Resource>${doc.output.html}</Include-Resource>
+                            </instructions>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>sign</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
                         <executions>
                             <execution>
-                                <id>generate-pdf-doc</id>
-                                <phase>generate-resources</phase>
+                                <id>sign-release-artifacts</id>
                                 <goals>
-                                    <goal>process-asciidoc</goal>
+                                    <goal>sign</goal>
                                 </goals>
                                 <configuration>
-                                    <sourceDocumentName>index.adoc</sourceDocumentName>
-                                    <sourceDirectory>${doc.source}</sourceDirectory>
-                                    <outputDirectory>${doc.output.pdf}</outputDirectory>
-                                    <preserveDirectories>true</preserveDirectories>
-                                    <headerFooter>true</headerFooter>
-                                    <backend>pdf</backend>
-                                    <attributes>
-                                        <project-version>${project.version}</project-version>
-                                        <pdf-stylesdir>${project.basedir}/src/theme</pdf-stylesdir>
-                                        <pdf-style>apache</pdf-style>
-                                        <pdf-fontsdir>${project.basedir}/src/theme/fonts</pdf-fontsdir>
-                                        <imagesdir>images</imagesdir>
-                                        <icons>font</icons>
-                                        <pagenums>true</pagenums>
-                                        <toc />
-                                        <idprefix />
-                                        <idseparator>-</idseparator>
-                                        <sectnums>true</sectnums>
-                                    </attributes>
+                                    <excludes> <!-- excludes don't work unfortunately, plugin is buggy -->
+                                        <exclude>**/*.sha512</exclude>
+                                        <exclude>**/*.md5</exclude>
+                                        <exclude>**/*.sha1</exclude>
+                                        <exclude>**/*.asc</exclude>
+                                    </excludes>
                                 </configuration>
                             </execution>
                         </executions>
