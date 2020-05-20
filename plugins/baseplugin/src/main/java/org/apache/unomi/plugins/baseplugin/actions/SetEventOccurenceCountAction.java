@@ -25,7 +25,12 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -60,13 +65,14 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         c.setParameter("propertyValue", event.getProfileId());
         conditions.add(c);
 
+        int numberOfDays = 0;
         if (pastEventCondition.getParameter("numberOfDays") != null) {
-            int i = (Integer) pastEventCondition.getParameter("numberOfDays");
+            numberOfDays = (Integer) pastEventCondition.getParameter("numberOfDays");
 
             Condition timeCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
             timeCondition.setParameter("propertyName", "timeStamp");
             timeCondition.setParameter("comparisonOperator", "greaterThan");
-            timeCondition.setParameter("propertyValueDateExpr", "now-" + i + "d");
+            timeCondition.setParameter("propertyValueDateExpr", "now-" + numberOfDays + "d");
 
             conditions.add(timeCondition);
         }
@@ -80,7 +86,16 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             pastEvents = new LinkedHashMap<>();
             event.getProfile().getSystemProperties().put("pastEvents", pastEvents);
         }
-        pastEvents.put((String) pastEventCondition.getParameter("generatedPropertyKey"), count + 1);
+
+        //Only increase the counter by 1 if the current event is in the now-numberOfDays range
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
+        LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(),ZoneId.of("UTC"));
+        long daysDiff = Duration.between(eventTime,now).toDays();
+        if (daysDiff >= 0 && daysDiff <= numberOfDays) {
+            count++;
+        }
+
+        pastEvents.put((String) pastEventCondition.getParameter("generatedPropertyKey"), count);
 
         return EventService.PROFILE_UPDATED;
     }
