@@ -25,7 +25,13 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.ContextResponse;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Session;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.Assert;
 
 import java.io.IOException;
@@ -52,7 +58,7 @@ public class TestUtils {
 		return null;
 	}
 
-	public RequestResponse executeContextJSONRequest(HttpPost request, String sessionId) throws IOException {
+	public static RequestResponse executeContextJSONRequest(HttpPost request, String sessionId) throws IOException {
 		try (CloseableHttpResponse response = HttpClientBuilder.create().build().execute(request)) {
 			// validate mimeType
 			String mimeType = ContentType.getOrDefault(response.getEntity()).getMimeType();
@@ -71,6 +77,33 @@ public class TestUtils {
 			}
 			return new RequestResponse(context, cookieHeader);
 		}
+	}
+
+	public static boolean removeAllProfiles(DefinitionsService definitionsService, PersistenceService persistenceService) {
+		Condition condition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+		condition.setParameter("propertyName","itemType");
+		condition.setParameter("comparisonOperator","equals");
+		condition.setParameter("propertyValue","profile");
+
+		return persistenceService.removeByQuery(condition, Profile.class);
+	}
+
+	public static boolean removeAllEvents(DefinitionsService definitionsService, PersistenceService persistenceService) {
+		Condition condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+		condition.setParameter("propertyName","itemType");
+		condition.setParameter("comparisonOperator","equals");
+		condition.setParameter("propertyValue","event");
+
+		return persistenceService.removeByQuery(condition, Event.class);
+	}
+
+	public static boolean removeAllSessions(DefinitionsService definitionsService, PersistenceService persistenceService) {
+		Condition condition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+		condition.setParameter("propertyName","itemType");
+		condition.setParameter("comparisonOperator","equals");
+		condition.setParameter("propertyValue","session");
+
+		return persistenceService.removeByQuery(condition, Session.class);
 	}
 
 	public static class RequestResponse {
