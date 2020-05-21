@@ -33,7 +33,7 @@ import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.List;
-import io.swagger.annotations.*;
+import io.swagger.annotations.Api;
 
 /**
  * A JAX-RS endpoint to manage {@link Segment}s.

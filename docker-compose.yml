@@ -17,9 +17,9 @@
 version: '2.2'
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.4.2
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.7.0
     volumes: # Persist ES data in seperate "esdata" volume
-      - esdata7:/usr/share/elasticsearch/data
+      - esdata103:/usr/share/elasticsearch/data
     environment:
       - bootstrap.memory_lock=true
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
@@ -34,7 +34,7 @@ services:
     networks:
       - kong-net
   kibana:
-    image: docker.elastic.co/kibana/kibana:7.4.2
+    image: docker.elastic.co/kibana/kibana:7.7.0
     hostname: kibana
     ports:
       - 5601:5601
@@ -51,6 +51,9 @@ services:
       - ELASTICSEARCH_PORT=9200
       - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
       - UNOMI_ROOT_PASSWORD=paulaan.me
+      - KAFKA_BROKERS=kafka:9093
+      - KAFKA_TOPIC=eventify-event
+      - UNOMI_LOGS_ROOT_LEVEL=DEBUG
     links:
       - elasticsearch
     depends_on:
@@ -58,7 +61,7 @@ services:
     networks:
       - kong-net
     ports:
-    - "8181:8181"
+    - "8282:8181"
   kong-migrations:
     image: "${KONG_DOCKER_TAG:-kong:latest}"
     command: kong migrations bootstrap
@@ -147,17 +150,19 @@ services:
   konga:
     image: pantsel/konga
     environment:
-      NODE_ENV: production
+      NODE_ENV: dev
     stdin_open: true
     tty: true
     ports:
-      - 1337:1337/tcp
+      - 1337:1338/tcp
     labels:
       io.rancher.container.pull_image: always
     networks:
       - kong-net
     links:
       - kong
+    volumes:
+      - ./extensions/web-tracker/javascript/dist/unomi-tracker.min.js:/app/assets/js/dependencies/unomi-tracker.min.js
   zookeeper:
     image: wurstmeister/zookeeper:3.4.6
     expose:
@@ -185,7 +190,7 @@ services:
     networks:
       - kong-net
 volumes: # Define seperate volume for Elasticsearch data
-  esdata7:
+  esdata103:
     driver: local
   kong_data: {}
 

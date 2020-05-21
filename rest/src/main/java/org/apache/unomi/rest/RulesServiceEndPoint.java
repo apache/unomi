@@ -17,6 +17,7 @@
 
 package org.apache.unomi.rest;
 
+import io.swagger.annotations.Api;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
@@ -44,6 +45,8 @@ import java.util.Set;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/")
+@Api(value = "/rules")
 public class RulesServiceEndPoint {
 
     private static final Logger logger = LoggerFactory.getLogger(RulesServiceEndPoint.class.getName());

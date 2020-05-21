@@ -86,9 +86,4 @@
 
         <bundle start-level="99">mvn:org.apache.unomi/shell-commands/${project.version}</bundle>
     </feature>
-
-    <feature name="unomi-documentation" description="Documentation of Unomi in HTML" version="${project.version}">
-        <feature>war</feature>
-        <bundle>mvn:org.apache.unomi/manual/${project.version}</bundle>
-    </feature>
 </features>
