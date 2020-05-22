@@ -46,6 +46,8 @@ public class Session extends Item implements TimestampedItem {
 
     private Date timeStamp;
 
+    private Date sendAt;
+
     private String scope;
 
     private Date lastEventDate;
@@ -73,6 +75,24 @@ public class Session extends Item implements TimestampedItem {
         this.profile = profile;
         this.profileId = profile.getItemId();
         this.timeStamp = timeStamp;
+        this.scope = scope;
+    }
+
+    /**
+     * Instantiates a new Session.
+     *
+     * @param itemId    the identifier for this Session
+     * @param profile   the associated {@link Profile}
+     * @param timeStamp the time stamp
+     * @param sendAt the time stamp
+     * @param scope     the scope
+     */
+    public Session(String itemId, Profile profile, Date timeStamp, Date sendAt, String scope) {
+        super(itemId);
+        this.profile = profile;
+        this.profileId = profile.getItemId();
+        this.timeStamp = timeStamp;
+        this.sendAt = sendAt;
         this.scope = scope;
     }
 
@@ -169,6 +189,11 @@ public class Session extends Item implements TimestampedItem {
      */
     public Date getTimeStamp() {
         return timeStamp;
+    }
+
+    @Override
+    public Date getSendAt() {
+        return sendAt;
     }
 
     /**

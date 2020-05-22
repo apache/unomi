@@ -24,6 +24,9 @@
     "timeStamp": {
       "type": "date"
     },
+    "sendAt": {
+      "type": "date"
+    },
     "lastEventDate": {
       "type": "date"
     },

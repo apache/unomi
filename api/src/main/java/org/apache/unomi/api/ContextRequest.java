@@ -17,6 +17,7 @@
 
 package org.apache.unomi.api;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.rules.Rule;
@@ -26,6 +27,7 @@ import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
 
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -66,6 +68,7 @@ public class ContextRequest {
     private Profile profileOverrides;
     private Map<String, Object> sessionPropertiesOverrides;
     private String sessionId;
+    private Date sendAt;
 
     /**
      * Retrieves the source of the context request.
@@ -230,6 +233,7 @@ public class ContextRequest {
     /**
      * Retrieve the sessionId passed along with the request. All events will be processed with this sessionId as a
      * default
+     *
      * @return the identifier for the session
      */
     public String getSessionId() {
@@ -239,9 +243,27 @@ public class ContextRequest {
     /**
      * Sets the sessionId in the request. This is the preferred method of passing along a session identifier with the
      * request, as passing it along in the URL can lead to potential security vulnerabilities.
+     *
      * @param sessionId an unique identifier for the session
      */
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
+    }
+
+    /**
+     * @return sendAt
+     */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm'Z'")
+    public Date getSendAt() {
+        return sendAt;
+    }
+
+    /**
+     * sendAt Client
+     *
+     * @param sendAt refers to timestamp which is sent at client
+     */
+    public void setSendAt(Date sendAt) {
+        this.sendAt = sendAt;
     }
 }

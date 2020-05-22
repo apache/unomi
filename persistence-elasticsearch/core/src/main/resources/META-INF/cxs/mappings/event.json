@@ -21,6 +21,9 @@
     "timeStamp": {
       "type": "date"
     },
+    "sendAt": {
+      "type": "date"
+    },
     "target" : {
       "properties" : {
         "lastEventDate" : {

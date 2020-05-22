@@ -17,6 +17,9 @@
 
 package org.apache.unomi.api;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -25,6 +28,7 @@ import java.util.List;
 public class EventsCollectorRequest {
     private List<Event> events;
     private String sessionId;
+    private Date sendAt;
 
     /**
      * Retrieves the events to be processed.
@@ -42,6 +46,7 @@ public class EventsCollectorRequest {
     /**
      * Retrieve the sessionId passed along with the request. All events will be processed with this sessionId as a
      * default
+     *
      * @return the identifier for the session
      */
     public String getSessionId() {
@@ -51,10 +56,22 @@ public class EventsCollectorRequest {
     /**
      * Sets the sessionId in the request. This is the preferred method of passing along a session identifier with the
      * request, as passing it along in the URL can lead to potential security vulnerabilities.
+     *
      * @param sessionId an unique identifier for the session
      */
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
     }
 
+    /**
+     * @return
+     */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm'Z'")
+    public Date getSendAt() {
+        return sendAt;
+    }
+
+    public void setSendAt(Date sendAt) {
+        this.sendAt = sendAt;
+    }
 }

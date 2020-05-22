@@ -29,4 +29,11 @@ public interface TimestampedItem {
      * @return the associated timestamp
      */
     Date getTimeStamp();
+
+    /**
+     * Retrieves the associated timestamp which event is sent.
+     *
+     * @return the associated timestamp
+     */
+    Date getSendAt();
 }

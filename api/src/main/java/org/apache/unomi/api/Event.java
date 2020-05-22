@@ -52,6 +52,7 @@ public class Event extends Item implements TimestampedItem {
     private String sessionId = null;
     private String profileId = null;
     private Date timeStamp;
+    private Date sendAt;
     private Map<String, Object> properties;
 
     private transient Profile profile;
@@ -173,6 +174,7 @@ public class Event extends Item implements TimestampedItem {
 
     /**
      * Set the session id
+     *
      * @param sessionId the session id
      */
     public void setSessionId(String sessionId) {
@@ -208,6 +210,7 @@ public class Event extends Item implements TimestampedItem {
 
     /**
      * Sets the event type
+     *
      * @param eventType the event type
      */
     public void setEventType(String eventType) {
@@ -299,6 +302,7 @@ public class Event extends Item implements TimestampedItem {
 
     /**
      * Sets the map of attribues
+     *
      * @param attributes the attributes map
      */
     public void setAttributes(Map<String, Object> attributes) {
@@ -407,5 +411,22 @@ public class Event extends Item implements TimestampedItem {
      */
     public void setActionPostExecutors(List<ActionPostExecutor> actionPostExecutors) {
         this.actionPostExecutors = actionPostExecutors;
+    }
+
+    @Override
+    public Date getSendAt() {
+        return sendAt;
+    }
+
+    /**
+     * Sets the sendAt
+     *
+     * @param sendAt the time event was sent
+     */
+    public void setSendAt(Date sendAt) {
+        if (sendAt == null) {
+            sendAt = new Date();
+        }
+        this.sendAt = sendAt;
     }
 }

@@ -55,7 +55,7 @@ public class ServletCommon {
     }
 
     public static Changes handleEvents(List<Event> events, Session session, Profile profile,
-                                    ServletRequest request, ServletResponse response, Date timestamp,
+                                    ServletRequest request, ServletResponse response, Date timestamp, Date sendAt,
                                     PrivacyService privacyService, EventService eventService) {
         List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile);
 
@@ -87,6 +87,7 @@ public class ServletCommon {
                         eventToSend.setProfileId(null);
                     }
 
+                    eventToSend.setSendAt(sendAt);
                     eventToSend.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     eventToSend.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                     logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session="
