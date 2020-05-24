@@ -424,9 +424,15 @@ public class Event extends Item implements TimestampedItem {
      * @param sendAt the time event was sent
      */
     public void setSendAt(Date sendAt) {
+        Date now = new Date();
         if (sendAt == null) {
-            sendAt = new Date();
+            sendAt = now;
         }
         this.sendAt = sendAt;
+        int shift = now.compareTo(sendAt);
+        if (shift < 0) {
+            this.sendAt = now;
+            this.timeStamp.setTime(this.timeStamp.getTime() + shift);
+        }
     }
 }
