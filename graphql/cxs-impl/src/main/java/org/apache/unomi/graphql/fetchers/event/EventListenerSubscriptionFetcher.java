@@ -22,7 +22,6 @@ import org.apache.unomi.graphql.condition.factories.EventConditionFactory;
 import org.apache.unomi.graphql.fetchers.BaseDataFetcher;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.output.CDPEventInterface;
-import org.apache.unomi.graphql.utils.GraphQLObjectMapper;
 import org.reactivestreams.Publisher;
 
 import java.util.Map;
@@ -41,7 +40,7 @@ public class EventListenerSubscriptionFetcher extends BaseDataFetcher<Publisher<
         if (filterAsMap == null) {
             return eventPublisher.createPublisher();
         } else {
-            final CDPEventFilterInput filterInput = GraphQLObjectMapper.getInstance().convertValue(filterAsMap, CDPEventFilterInput.class);
+            final CDPEventFilterInput filterInput = CDPEventFilterInput.fromMap(filterAsMap);
             final Condition filterCondition = EventConditionFactory.get(environment).eventFilterInputCondition(filterInput, filterAsMap);
 
             return eventPublisher.createPublisher(filterCondition);

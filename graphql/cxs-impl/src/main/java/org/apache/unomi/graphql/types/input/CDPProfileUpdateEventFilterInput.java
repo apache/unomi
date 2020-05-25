@@ -18,12 +18,21 @@ package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLName;
 
+import java.util.Map;
+
 import static org.apache.unomi.graphql.types.input.CDPProfileUpdateEventFilterInput.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
 public class CDPProfileUpdateEventFilterInput implements EventFilterInputMarker {
 
     public static final String TYPE_NAME = "CDP_ProfileUpdateEventFilterInput";
+
+    public static CDPProfileUpdateEventFilterInput fromMap(final Map<String, Object> map) {
+        if (map == null || map.isEmpty()) {
+            return null;
+        }
+        return new CDPProfileUpdateEventFilterInput();
+    }
 
     // input fields will be added here according to registered profile properties
 

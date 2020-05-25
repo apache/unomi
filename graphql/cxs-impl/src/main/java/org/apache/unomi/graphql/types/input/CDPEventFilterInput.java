@@ -21,6 +21,8 @@ import graphql.annotations.annotationTypes.GraphQLName;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.apache.unomi.graphql.types.input.CDPEventFilterInput.TYPE_NAME;
 
@@ -73,9 +75,6 @@ public class CDPEventFilterInput {
 
     @GraphQLField
     private CDPProfileUpdateEventFilterInput cdp_profileUpdateEvent;
-
-    public CDPEventFilterInput() {
-    }
 
     public CDPEventFilterInput(
             final @GraphQLName("and") List<CDPEventFilterInput> and,
@@ -168,6 +167,39 @@ public class CDPEventFilterInput {
 
     public CDPProfileUpdateEventFilterInput getCdp_profileUpdateEvent() {
         return cdp_profileUpdateEvent;
+    }
+
+    public static CDPEventFilterInput fromMap(final Map<String, Object> map) {
+        if (map == null || map.isEmpty()) {
+            return null;
+        }
+        final List<CDPEventFilterInput> andFltrs = recursiveList(map.get("and"));
+        final List<CDPEventFilterInput> orFltrs = recursiveList(map.get("or"));
+        final String idEq = (String) map.get("id_equals");
+        final String clientIdEq = (String) map.get("cdp_clientID_equals");
+        final String sourceIdEq = (String) map.get("cdp_sourceID_equals");
+        final String profileIdEq = (String) map.get("cdp_profileID_equals");
+        final OffsetDateTime timeEq = (OffsetDateTime) map.get("cdp_timestamp_equals");
+        final OffsetDateTime timeLt = (OffsetDateTime) map.get("cdp_timestamp_lt");
+        final OffsetDateTime timeLte = (OffsetDateTime) map.get("cdp_timestamp_lte");
+        final OffsetDateTime timeGt = (OffsetDateTime) map.get("cdp_timestamp_gt");
+        final OffsetDateTime timeGte = (OffsetDateTime) map.get("cdp_timestamp_gte");
+        final CDPConsentUpdateEventFilterInput consentFltr = CDPConsentUpdateEventFilterInput.fromMap((Map<String, Object>) map.get("cdp_consentUpdateEvent"));
+        final CDPListsUpdateEventFilterInput listsFltr = CDPListsUpdateEventFilterInput.fromMap((Map<String, Object>) map.get("cdp_listsUpdateEvent"));
+        final CDPSessionEventFilterInput sessionFltr = CDPSessionEventFilterInput.fromMap((Map<String, Object>) map.get("cdp_sessionEvent"));
+        final CDPProfileUpdateEventFilterInput profileFltr = CDPProfileUpdateEventFilterInput.fromMap((Map<String, Object>) map.get("cdp_profileUpdateEvent"));
+
+        return new CDPEventFilterInput(andFltrs, orFltrs, idEq, clientIdEq, sourceIdEq, profileIdEq, timeEq, timeLt,
+                timeLte, timeGt, timeGte, consentFltr, listsFltr, sessionFltr, profileFltr);
+    }
+
+    private static List<CDPEventFilterInput> recursiveList(Object list) {
+        if (list == null) {
+            return null;
+        }
+        return ((List<Map<String, Object>>) list).stream()
+                .map(CDPEventFilterInput::fromMap)
+                .collect(Collectors.toList());
     }
 
 }

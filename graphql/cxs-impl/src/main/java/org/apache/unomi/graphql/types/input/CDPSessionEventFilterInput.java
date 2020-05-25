@@ -20,6 +20,8 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import org.apache.unomi.graphql.types.output.CDPSessionState;
 
+import java.util.Map;
+
 import static org.apache.unomi.graphql.types.input.CDPSessionEventFilterInput.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
@@ -36,9 +38,6 @@ public class CDPSessionEventFilterInput implements EventFilterInputMarker {
     @GraphQLField
     private String unomi_scope_equals;
 
-    public CDPSessionEventFilterInput() {
-    }
-
     public CDPSessionEventFilterInput(
             final @GraphQLName("state_equals") CDPSessionState state_equals,
             final @GraphQLName("unomi_sessionId_equals") String unomi_sessionId_equals,
@@ -46,6 +45,16 @@ public class CDPSessionEventFilterInput implements EventFilterInputMarker {
         this.state_equals = state_equals;
         this.unomi_sessionId_equals = unomi_sessionId_equals;
         this.unomi_scope_equals = unomi_scope_equals;
+    }
+
+    public static CDPSessionEventFilterInput fromMap(final Map<String, Object> map) {
+        if (map == null || map.isEmpty()) {
+            return null;
+        }
+        final CDPSessionState state = map.get("state_equals") != null ? CDPSessionState.valueOf((String) map.get("state_equals")) : null;
+        final String idEq = (String) map.get("unomi_sessionId_equals");
+        final String scopeEq = (String) map.get("unomi_scope_equals");
+        return new CDPSessionEventFilterInput(state, idEq, scopeEq);
     }
 
     public CDPSessionState getState_equals() {
