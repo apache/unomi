@@ -21,6 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
 
 import static org.apache.unomi.graphql.types.input.CDPConsentUpdateEventFilterInput.TYPE_NAME;
 
@@ -65,9 +66,6 @@ public class CDPConsentUpdateEventFilterInput implements EventFilterInputMarker 
     @GraphQLField
     private OffsetDateTime expiration_gte;
 
-    public CDPConsentUpdateEventFilterInput() {
-    }
-
     public CDPConsentUpdateEventFilterInput(
             final @GraphQLName("type_equals") String type_equals,
             final @GraphQLName("status_equals") String status_equals,
@@ -93,6 +91,25 @@ public class CDPConsentUpdateEventFilterInput implements EventFilterInputMarker 
         this.expiration_lte = expiration_lte;
         this.expiration_gt = expiration_gt;
         this.expiration_gte = expiration_gte;
+    }
+
+    public static CDPConsentUpdateEventFilterInput fromMap(final Map<String, Object> map) {
+        if (map == null || map.isEmpty()) {
+            return null;
+        }
+        final String typeEq = (String) map.get("type_equals");
+        final String statusEq = (String) map.get("status_equals");
+        final OffsetDateTime updateEq = (OffsetDateTime) map.get("lastUpdate_equals");
+        final OffsetDateTime updateLt = (OffsetDateTime) map.get("lastUpdate_lt");
+        final OffsetDateTime updateLte = (OffsetDateTime) map.get("lastUpdate_lte");
+        final OffsetDateTime updateGt = (OffsetDateTime) map.get("lastUpdate_gt");
+        final OffsetDateTime updateGte = (OffsetDateTime) map.get("lastUpdate_gte");
+        final OffsetDateTime expiryEq = (OffsetDateTime) map.get("expiration_equals");
+        final OffsetDateTime expiryLt = (OffsetDateTime) map.get("expiration_lt");
+        final OffsetDateTime expiryLte = (OffsetDateTime) map.get("expiration_lte");
+        final OffsetDateTime expiryGt = (OffsetDateTime) map.get("expiration_gt");
+        final OffsetDateTime expiryGte = (OffsetDateTime) map.get("expiration_gte");
+        return new CDPConsentUpdateEventFilterInput(typeEq, statusEq, updateEq, updateLt, updateLte, updateGt, updateGte, expiryEq, expiryLt, expiryLte, expiryGt, expiryGte);
     }
 
     public String getType_equals() {

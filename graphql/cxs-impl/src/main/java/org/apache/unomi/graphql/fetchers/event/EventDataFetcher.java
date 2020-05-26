@@ -38,7 +38,7 @@ public class EventDataFetcher extends BaseDataFetcher<CDPEventInterface> {
         final EventService eventService = serviceManager.getEventService();
         final Event event = eventService.getEvent(id);
 
-        return serviceManager.getEventInterfaceRegister().getEvent(event);
+        return event == null ? null : serviceManager.getEventInterfaceRegister().getEvent(event);
     }
 
 }

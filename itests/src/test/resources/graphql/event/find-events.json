@@ -1,0 +1,10 @@
+{
+  "operationName": "findEvents",
+  "variables": {
+    "filter": {
+      "id_equals": "event-1",
+      "cdp_profileID_equals": "profile-1"
+    }
+  },
+  "query": "query findEvents($filter: CDP_EventFilterInput) {\n  cdp {\n    findEvents(filter: $filter) {\n      edges {\n        node {\n          id\n          cdp_profileID {id}\n        }\n      }\n    }\n  }\n}\n"
+}

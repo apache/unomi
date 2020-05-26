@@ -21,6 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
 import java.util.List;
+import java.util.Map;
 
 @GraphQLName("CDP_ListsUpdateEventFilterInput")
 public class CDPListsUpdateEventFilterInput implements EventFilterInputMarker {
@@ -31,13 +32,19 @@ public class CDPListsUpdateEventFilterInput implements EventFilterInputMarker {
     @GraphQLField
     private List<String> leaveLists_contains;
 
-    public CDPListsUpdateEventFilterInput() {
-    }
-
     public CDPListsUpdateEventFilterInput(final @GraphQLName("joinLists_contains") List<String> joinLists_contains,
                                           final @GraphQLName("leaveLists_contains") List<String> leaveLists_contains) {
         this.joinLists_contains = joinLists_contains;
         this.leaveLists_contains = leaveLists_contains;
+    }
+
+    public static CDPListsUpdateEventFilterInput fromMap(final Map<String, Object> map) {
+        if (map == null || map.isEmpty()) {
+            return null;
+        }
+        final List<String> joinLists = (List<String>) map.get("joinLists_contains");
+        final List<String> leaveLists = (List<String>) map.get("leaveLists_contains");
+        return new CDPListsUpdateEventFilterInput(joinLists, leaveLists);
     }
 
     public List<String> getJoinLists_contains() {
