@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
@@ -27,6 +28,7 @@ import org.apache.unomi.graphql.fetchers.list.ListProfileConnectionDataFetcher;
 import static org.apache.unomi.graphql.types.output.CDPList.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
+@GraphQLDescription("Lists are explicitly created and named in the Customer Data Platform. Profiles may then be added to a list, and later opt out if desired.")
 public class CDPList {
 
     public static final String TYPE_NAME = "CDP_List";

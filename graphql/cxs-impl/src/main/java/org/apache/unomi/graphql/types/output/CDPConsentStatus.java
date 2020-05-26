@@ -17,8 +17,10 @@
 
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import org.apache.unomi.api.ConsentStatus;
 
+@GraphQLDescription("Uniquely specifies the status of any given Consent.")
 public enum CDPConsentStatus {
     GRANTED,
     DENIED,

@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
@@ -25,6 +26,7 @@ import graphql.schema.DataFetchingEnvironment;
 import static org.apache.unomi.graphql.types.output.CDPTopic.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
+@GraphQLDescription("Topics represent the core entities of the business that is using the Customer Data Platform. The Customer Data Platform aims to find correlation between profiles and the topics. When such correlations are identified, it is called Interests.")
 public class CDPTopic {
 
     public static final String TYPE_NAME = "CDP_Topic";

@@ -16,12 +16,14 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLName;
 import org.apache.unomi.api.Event;
 
 import static org.apache.unomi.graphql.types.output.CDPProfileUpdateEvent.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
+@GraphQLDescription("Profiles are crated and updated through this event type. This event is part of the standard and MUST be available for any implementation of the specification.")
 public class CDPProfileUpdateEvent implements CDPEventInterface {
 
     public static final String TYPE_NAME = "CDP_ProfileUpdateEvent";

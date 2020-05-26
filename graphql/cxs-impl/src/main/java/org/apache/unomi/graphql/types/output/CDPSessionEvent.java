@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import org.apache.unomi.api.Event;
@@ -23,6 +24,7 @@ import org.apache.unomi.api.Event;
 import static org.apache.unomi.graphql.types.output.CDPSessionEvent.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
+@GraphQLDescription("The CDP_SessionEvent is used to signify the beginning, pause, resume or end of a session.")
 public class CDPSessionEvent implements CDPEventInterface {
 
     public static final String TYPE_NAME = "CDP_SessionEvent";

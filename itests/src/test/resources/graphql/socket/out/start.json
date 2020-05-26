@@ -5,6 +5,6 @@
     "variables": {},
     "extensions": {},
     "operationName": "events",
-    "query": "subscription events($filter: CDP_EventFilterInput) {↵  eventListener(filter: $filter) {↵    id↵    cdp_profile {↵      firstName↵    }↵  }↵}↵"
+    "query": "subscription events($filter: CDP_EventFilterInput) {\n  eventListener(filter: $filter) {\n    id\n    cdp_profile {\n      firstName\n    }\n  }\n}\n"
   }
 }

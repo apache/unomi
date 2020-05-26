@@ -16,10 +16,12 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 
 @GraphQLName("CDP_FilterMatch")
+@GraphQLDescription("The result of a named filter match request.")
 public class CDPFilterMatch {
 
     @GraphQLField
