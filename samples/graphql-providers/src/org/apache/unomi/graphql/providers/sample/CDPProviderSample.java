@@ -27,19 +27,35 @@ import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
 import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
 import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
+import org.apache.unomi.graphql.providers.GraphQLProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
+import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.RootMutation;
 import org.apache.unomi.graphql.types.output.RootQuery;
-import org.apache.unomi.graphql.types.output.CDPProfile;
+import org.osgi.framework.BundleContext;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
 
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-@Component(enabled = false)
+@Component(immediate = true, service = GraphQLProvider.class)
 public class CDPProviderSample
         implements GraphQLExtensionsProvider, GraphQLMutationProvider, GraphQLQueryProvider, GraphQLCodeRegistryProvider, GraphQLAdditionalTypesProvider {
+
+    private boolean isActivated;
+
+    @Activate
+    public void activate(final BundleContext context) {
+        this.isActivated = true;
+    }
+
+    @Deactivate
+    public void deactivate() {
+        this.isActivated = false;
+    }
 
     @Override
     public Set<Class<?>> getExtensions() {
