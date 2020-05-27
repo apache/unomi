@@ -17,6 +17,7 @@
 
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
@@ -34,6 +35,7 @@ import java.util.stream.Collectors;
 import static org.apache.unomi.graphql.types.output.CDPPersona.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
+@GraphQLDescription("A persona is a concept used to personify your audience. This may for instance be used to test personalization and targeting of content in a 3rd party system.")
 public class CDPPersona implements CDPProfileInterface {
 
     public static final String TYPE_NAME = "CDP_Persona";

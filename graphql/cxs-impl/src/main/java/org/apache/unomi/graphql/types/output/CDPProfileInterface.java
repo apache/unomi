@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLTypeResolver;
@@ -28,6 +29,7 @@ import static org.apache.unomi.graphql.types.output.CDPProfileInterface.TYPE_NAM
 
 @GraphQLName(TYPE_NAME)
 @GraphQLTypeResolver(CDPProfileTypeResolver.class)
+@GraphQLDescription("Common interface for Profiles and Personas.")
 public interface CDPProfileInterface {
 
     String TYPE_NAME = "CDP_ProfileInterface";

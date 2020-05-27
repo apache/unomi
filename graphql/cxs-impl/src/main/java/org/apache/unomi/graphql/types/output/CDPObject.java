@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
@@ -26,6 +27,7 @@ import org.apache.unomi.api.Event;
 import java.util.List;
 
 @GraphQLName("CDP_Object")
+@GraphQLDescription("Objects are representations of anything users interact with. For example: a web page, a product or another person.")
 public class CDPObject {
 
     private Event event;

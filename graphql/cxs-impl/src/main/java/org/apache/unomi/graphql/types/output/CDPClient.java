@@ -17,12 +17,14 @@
 package org.apache.unomi.graphql.types.output;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
 @GraphQLName("CDP_Client")
+@GraphQLDescription("CDP_Client represent any software that interacts directly with the Customer Data Platform.")
 public class CDPClient {
 
     public static String DEFAULT_NAME = "Default Client";

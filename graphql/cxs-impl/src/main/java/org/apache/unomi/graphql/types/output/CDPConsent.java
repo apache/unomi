@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
@@ -28,6 +29,7 @@ import org.apache.unomi.graphql.utils.DateUtils;
 import java.time.OffsetDateTime;
 
 @GraphQLName("CDP_Consent")
+@GraphQLDescription("CDP_Consent represents a persisted Consent, always attached to a specific profile.")
 public class CDPConsent {
 
     private String token;

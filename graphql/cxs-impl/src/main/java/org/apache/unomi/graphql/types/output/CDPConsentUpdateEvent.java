@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
@@ -29,6 +30,7 @@ import java.util.Map;
 import static org.apache.unomi.graphql.types.output.CDPConsentUpdateEvent.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
+@GraphQLDescription("Standard EventType to create or update Consents.")
 public class CDPConsentUpdateEvent implements CDPEventInterface {
 
     public static final String TYPE_NAME = "CDP_ConsentUpdateEvent";

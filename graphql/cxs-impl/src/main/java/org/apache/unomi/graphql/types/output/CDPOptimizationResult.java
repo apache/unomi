@@ -16,11 +16,13 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
 @GraphQLName("CDP_OptimizationResult")
+@GraphQLDescription("The result of an optimization, containing scored objects.")
 public class CDPOptimizationResult {
 
     @GraphQLField

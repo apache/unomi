@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
@@ -25,6 +26,7 @@ import org.apache.unomi.graphql.condition.parsers.SegmentConditionParser;
 import static org.apache.unomi.graphql.types.output.CDPSegment.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
+@GraphQLDescription("Segments are similar to lists in that profiles may be in the segment, or not. However, where profiles are explicitly added to lists, they are dynamically resolved to segments based on the filter defined in the segment.")
 public class CDPSegment {
 
     public static final String TYPE_NAME = "CDP_Segment";

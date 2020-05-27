@@ -16,11 +16,13 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 
 @GraphQLName("CDP_Interest")
+@GraphQLDescription("Interests are calculated automatically based on implementation specific algorithm.")
 public class CDPInterest {
 
     private String topic;

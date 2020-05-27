@@ -17,6 +17,7 @@
 
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
@@ -32,6 +33,7 @@ import static org.apache.unomi.graphql.types.output.CDPPropertyInterface.TYPE_NA
 
 @GraphQLName(TYPE_NAME)
 @GraphQLTypeResolver(CDPPropertyInterfaceResolver.class)
+@GraphQLDescription("The property interface defines the common fields for the different value types.")
 public interface CDPPropertyInterface {
 
     String TYPE_NAME = "CDP_PropertyInterface";

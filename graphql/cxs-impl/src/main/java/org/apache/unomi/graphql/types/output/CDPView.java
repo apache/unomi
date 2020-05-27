@@ -16,12 +16,14 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
 @GraphQLName("CDP_View")
+@GraphQLDescription("Views provide a way of grouping administrative objects in the Customer Data Platform. Profiles, Events and Consents are all collected and stored globally, but other items are typically handled by administrators or marketeers, and benefit from being grouped into different views to simplify handling.")
 public class CDPView {
 
     private String name;

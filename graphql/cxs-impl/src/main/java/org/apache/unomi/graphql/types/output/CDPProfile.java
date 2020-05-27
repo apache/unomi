@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
@@ -41,6 +42,7 @@ import java.util.List;
 import static org.apache.unomi.graphql.types.output.CDPProfile.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
+@GraphQLDescription(" The Customer Data Platform dynamically creates and build profiles from events that occur over time. A Profile can be created from an anonymous visitor on a webpage, populated from an identity system, a CRM, or the combination of all of them.")
 public class CDPProfile implements CDPProfileInterface {
 
     public static final String TYPE_NAME = "CDP_Profile";

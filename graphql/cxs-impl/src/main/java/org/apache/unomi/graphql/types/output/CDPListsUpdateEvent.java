@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
 import static org.apache.unomi.graphql.types.output.CDPListsUpdateEvent.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
+@GraphQLDescription("Standard Event to update profile membership for specified lists.")
 public class CDPListsUpdateEvent implements CDPEventInterface {
 
     public static final String TYPE_NAME = "CDP_ListsUpdateEvent";

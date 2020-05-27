@@ -16,12 +16,14 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 
 @GraphQLName("CDP_ProfileID")
+@GraphQLDescription("Profiles are created from a client. As such, each profile has a composite key based on a unique ID within that client, and the client.")
 public class CDPProfileID {
 
     @GraphQLID

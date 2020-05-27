@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLDescription;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
@@ -36,6 +37,7 @@ import static org.apache.unomi.graphql.types.output.CDPEventInterface.TYPE_NAME;
 
 @GraphQLName(TYPE_NAME)
 @GraphQLTypeResolver(CDPEventInterfaceResolver.class)
+@GraphQLDescription("An event could be anything from someone clicking a link, to performing a transaction or consenting to use of his/hers information. Events are streamed or delivered from authorized Clients to the Customer Data Platform.")
 public interface CDPEventInterface {
 
     String TYPE_NAME = "CDP_EventInterface";
