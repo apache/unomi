@@ -40,10 +40,7 @@ public class ListProfileConnectionDataFetcher extends ProfileConnectionDataFetch
         Condition listIdCondition = ProfileConditionFactory.get(environment)
                 .propertyCondition("systemProperties.lists", "contains", cdpList.id());
 
-        final Query query = new Query();
-        query.setOffset(params.getFirst());
-        query.setLimit(params.getSize());
-        query.setCondition(listIdCondition);
+        final Query query = buildQuery(listIdCondition, null, params);
 
         PartialList<Profile> profiles = serviceManager.getProfileService().search(query, Profile.class);
 

@@ -17,7 +17,6 @@
 
 package org.apache.unomi.graphql.fetchers.event;
 
-import com.google.common.base.Strings;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
@@ -33,7 +32,6 @@ import org.apache.unomi.graphql.types.output.CDPEventConnection;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class FindEventsConnectionDataFetcher extends EventConnectionDataFetcher {
 
@@ -54,20 +52,9 @@ public class FindEventsConnectionDataFetcher extends EventConnectionDataFetcher 
         final Map<String, Object> filterInputAsMap = environment.getArgument("filter");
 
         final Condition condition = EventConditionFactory.get(environment)
-                .eventFilterInputCondition(filterInput, filterInputAsMap, params.getAfter(), params.getBefore());
+                .eventFilterInputCondition(filterInput, filterInputAsMap);
 
-        final Query query = new Query();
-        if (orderByInput != null) {
-            final String sortBy = orderByInput.stream().map(CDPOrderByInput::asString)
-                    .collect(Collectors.joining(","));
-
-            if (!Strings.isNullOrEmpty(sortBy)) {
-                query.setSortby(sortBy);
-            }
-        }
-        query.setOffset(params.getFirst());
-        query.setLimit(params.getSize());
-        query.setCondition(condition);
+        final Query query = buildQuery(condition, orderByInput, params);
 
         PartialList<Event> events = serviceManager.getEventService().search(query);
 

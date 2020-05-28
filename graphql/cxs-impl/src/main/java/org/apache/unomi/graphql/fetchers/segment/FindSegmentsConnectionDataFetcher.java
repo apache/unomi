@@ -50,8 +50,7 @@ public class FindSegmentsConnectionDataFetcher extends SegmentConnectionDataFetc
         final ServiceManager serviceManager = environment.getContext();
         final ConnectionParams params = parseConnectionParams(environment);
 
-        final Condition condition = ProfileConditionFactory.get(environment)
-                .segmentFilterInputCondition(filterInput, params.getAfter(), params.getBefore());
+        final Condition condition = ProfileConditionFactory.get(environment).segmentFilterInputCondition(filterInput);
         final Query query = buildQuery(condition, orderByInput, params);
         final PartialList<Metadata> metas = serviceManager.getSegmentService().getSegmentMetadatas(query);
 

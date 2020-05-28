@@ -44,19 +44,19 @@ public class PropertiesConnectionDataFetcher extends BaseConnectionDataFetcher<C
     }
 
     private CDPPropertyConnection createPropertiesConnection(Collection<PropertyType> properties, ConnectionParams params) {
-        if (properties == null || properties.size() == 0 || properties.size() < params.getFirst() || params.getFirst() > params.getLast()) {
+        final int startIndex = Math.max(0, params.getOffset());
+        final int lastIndex = Math.min(params.getOffset() + params.getSize(), properties.size());
+        if (properties == null || properties.size() == 0 || properties.size() < startIndex || lastIndex <= 0) {
             return new CDPPropertyConnection();
         }
-        final int startIndex = Math.max(params.getFirst(), 0);
-        final int lastIndex = Math.min(params.getLast(), properties.size());
 
-        final CDPPageInfo cdpPageInfo = new CDPPageInfo(startIndex > 0, lastIndex < properties.size());
+        final CDPPageInfo pageInfo = new CDPPageInfo(startIndex > 0, lastIndex < properties.size());
 
         final List<CDPPropertyEdge> edges = new ArrayList<>(properties)
                 .subList(startIndex, lastIndex)
                 .stream()
                 .map(CDPPropertyEdge::new)
                 .collect(Collectors.toList());
-        return new CDPPropertyConnection(edges, cdpPageInfo);
+        return new CDPPropertyConnection(edges, pageInfo);
     }
 }

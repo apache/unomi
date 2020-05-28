@@ -46,6 +46,7 @@ import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
 import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
+import org.apache.unomi.graphql.providers.GraphQLSubscriptionProvider;
 import org.apache.unomi.graphql.providers.GraphQLTypeFunctionProvider;
 import org.apache.unomi.graphql.scalars.DateTimeFunction;
 import org.apache.unomi.graphql.scalars.GeoPointFunction;
@@ -94,6 +95,8 @@ public class GraphQLSchemaProvider {
 
     private final List<GraphQLMutationProvider> mutationProviders;
 
+    private final List<GraphQLSubscriptionProvider> subscriptionProviders;
+
     private final GraphQLCodeRegistryProvider codeRegistryProvider;
 
     private final UnomiEventPublisher eventPublisher;
@@ -110,6 +113,7 @@ public class GraphQLSchemaProvider {
         this.additionalTypesProviders = builder.additionalTypesProviders;
         this.queryProviders = builder.queryProviders;
         this.mutationProviders = builder.mutationProviders;
+        this.subscriptionProviders = builder.subscriptionProviders;
         this.codeRegistryProvider = builder.codeRegistryProvider;
     }
 
@@ -172,6 +176,16 @@ public class GraphQLSchemaProvider {
                 .dataFetcher(
                         coordinates("CDP_Subscription", "eventListener"),
                         new EventListenerSubscriptionFetcher(eventPublisher));
+
+        if (subscriptionProviders != null && !subscriptionProviders.isEmpty()) {
+            for (GraphQLSubscriptionProvider subscriptionProvider : subscriptionProviders) {
+                final Set<GraphQLFieldDefinition> subscriptions = subscriptionProvider.getSubscriptions(graphQLAnnotations);
+
+                if (subscriptions != null) {
+                    cdpSubscription = cdpSubscription.transform(builder -> subscriptions.forEach(builder::field));
+                }
+            }
+        }
 
         return GraphQLSchema.newSchema()
                 .subscription(cdpSubscription);
@@ -587,6 +601,8 @@ public class GraphQLSchemaProvider {
 
         List<GraphQLMutationProvider> mutationProviders;
 
+        List<GraphQLSubscriptionProvider> subscriptionProviders;
+
         GraphQLCodeRegistryProvider codeRegistryProvider;
 
         UnomiEventPublisher eventPublisher;
@@ -617,6 +633,11 @@ public class GraphQLSchemaProvider {
 
         public Builder mutationProviders(List<GraphQLMutationProvider> mutationProviders) {
             this.mutationProviders = mutationProviders;
+            return this;
+        }
+
+        public Builder subscriptionProviders(List<GraphQLSubscriptionProvider> subscriptionProviders) {
+            this.subscriptionProviders = subscriptionProviders;
             return this;
         }
 

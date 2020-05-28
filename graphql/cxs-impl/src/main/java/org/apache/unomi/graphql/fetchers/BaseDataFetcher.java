@@ -31,8 +31,6 @@ import java.util.Optional;
 
 public abstract class BaseDataFetcher<T> implements DataFetcher<T> {
 
-    public static int DEFAULT_PAGE_SIZE = 10;
-
     private static final Logger logger = LoggerFactory.getLogger(BaseDataFetcher.class);
 
     protected <E> E parseObjectParam(String name, Class<E> clazz, DataFetchingEnvironment environment) {

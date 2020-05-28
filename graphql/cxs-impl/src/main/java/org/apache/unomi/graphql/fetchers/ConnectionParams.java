@@ -17,38 +17,68 @@
 
 package org.apache.unomi.graphql.fetchers;
 
-import java.util.Date;
-
 public class ConnectionParams {
-    private int first;
-    private int last;
-    private Date after;
-    private Date before;
+    private Integer first;
+    private Integer last;
+    private String after;
+    private String before;
+
+    public static int DEFAULT_PAGE_SIZE = 10;
 
     private ConnectionParams(final Builder builder) {
         first = builder.first;
         last = builder.last;
         after = builder.after;
         before = builder.before;
+
+        if (first != null && before != null
+                || last != null && after != null) {
+            throw new IllegalArgumentException("Incorrect params: either 'first' and 'after' or 'last' and 'before' should be used simultaneously");
+        }
     }
 
-    public int getFirst() {
+    public Integer getFirst() {
         return first;
     }
 
-    public int getLast() {
+    public Integer getLast() {
         return last;
     }
 
     public int getSize() {
-        return last - first;
+        if (first != null) {
+            return first;
+        } else if (last != null) {
+            return last;
+        }
+        return DEFAULT_PAGE_SIZE;
     }
 
-    public Date getAfter() {
+    public int getOffset() {
+        if (after != null) {
+            return parseInt(after, 0);
+        } else if (before != null) {
+            final int beforeInt = parseInt(before, -1);
+            if (beforeInt > 0) {
+                return beforeInt - (last != null ? last : DEFAULT_PAGE_SIZE);
+            }
+        }
+        return 0;
+    }
+
+    private int parseInt(String after, int defaultValue) {
+        try {
+            return Integer.parseInt(after);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    public String getAfter() {
         return after;
     }
 
-    public Date getBefore() {
+    public String getBefore() {
         return before;
     }
 
@@ -57,30 +87,30 @@ public class ConnectionParams {
     }
 
     public static class Builder {
-        private int first;
-        private int last;
-        private Date after;
-        private Date before;
+        private Integer first;
+        private Integer last;
+        private String after;
+        private String before;
 
         private Builder() {
         }
 
-        public Builder first(int first) {
+        public Builder first(Integer first) {
             this.first = first;
             return this;
         }
 
-        public Builder last(int last) {
+        public Builder last(Integer last) {
             this.last = last;
             return this;
         }
 
-        public Builder after(Date after) {
+        public Builder after(String after) {
             this.after = after;
             return this;
         }
 
-        public Builder before(Date before) {
+        public Builder before(String before) {
             this.before = before;
             return this;
         }

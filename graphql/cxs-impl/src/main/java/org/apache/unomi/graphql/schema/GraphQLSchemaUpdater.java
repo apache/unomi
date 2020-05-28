@@ -18,6 +18,7 @@ package org.apache.unomi.graphql.schema;
 
 import graphql.GraphQL;
 import graphql.execution.SubscriptionExecutionStrategy;
+import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLSchema;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.fetchers.event.UnomiEventPublisher;
@@ -25,7 +26,9 @@ import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
 import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
 import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
+import org.apache.unomi.graphql.providers.GraphQLProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
+import org.apache.unomi.graphql.providers.GraphQLSubscriptionProvider;
 import org.apache.unomi.graphql.providers.GraphQLTypeFunctionProvider;
 import org.apache.unomi.graphql.types.output.CDPEventInterface;
 import org.apache.unomi.graphql.types.output.CDPPersona;
@@ -59,6 +62,8 @@ public class GraphQLSchemaUpdater {
     private final List<GraphQLQueryProvider> queryProviders = new CopyOnWriteArrayList<>();
 
     private final List<GraphQLMutationProvider> mutationProviders = new CopyOnWriteArrayList<>();
+
+    private final List<GraphQLSubscriptionProvider> subscriptionProviders = new CopyOnWriteArrayList<>();
 
     private final List<GraphQLExtensionsProvider> extensionsProviders = new CopyOnWriteArrayList<>();
 
@@ -135,6 +140,48 @@ public class GraphQLSchemaUpdater {
     }
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
+    public void bindProvider(GraphQLProvider provider) {
+        if (provider instanceof GraphQLQueryProvider) {
+            queryProviders.add((GraphQLQueryProvider) provider);
+        }
+        if (provider instanceof GraphQLMutationProvider) {
+            mutationProviders.add((GraphQLMutationProvider) provider);
+        }
+        if (provider instanceof GraphQLSubscriptionProvider) {
+            subscriptionProviders.add((GraphQLSubscriptionProvider) provider);
+        }
+        if (provider instanceof GraphQLAdditionalTypesProvider) {
+            additionalTypesProviders.add((GraphQLAdditionalTypesProvider) provider);
+        }
+        if (provider instanceof GraphQLCodeRegistryProvider) {
+            codeRegistryProvider = (GraphQLCodeRegistryProvider) provider;
+        }
+        updateSchema();
+    }
+
+    public void unbindProvider(GraphQLProvider provider) {
+        if (provider instanceof GraphQLQueryProvider) {
+            queryProviders.remove(provider);
+        }
+        if (provider instanceof GraphQLMutationProvider) {
+            mutationProviders.remove(provider);
+        }
+        if (provider instanceof GraphQLSubscriptionProvider) {
+            subscriptionProviders.remove(provider);
+        }
+        if (provider instanceof GraphQLSubscriptionProvider) {
+            subscriptionProviders.add((GraphQLSubscriptionProvider) provider);
+        }
+        if (provider instanceof GraphQLAdditionalTypesProvider) {
+            additionalTypesProviders.add((GraphQLAdditionalTypesProvider) provider);
+        }
+        if (provider instanceof GraphQLCodeRegistryProvider) {
+            codeRegistryProvider = GraphQLCodeRegistry::newCodeRegistry;
+        }
+        updateSchema();
+    }
+
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     public void bindQueryProvider(GraphQLQueryProvider provider) {
         queryProviders.add(provider);
 
@@ -156,6 +203,19 @@ public class GraphQLSchemaUpdater {
 
     public void unbindMutationProvider(GraphQLMutationProvider provider) {
         mutationProviders.remove(provider);
+
+        updateSchema();
+    }
+
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
+    public void bindSubscriptionProvider(GraphQLSubscriptionProvider provider) {
+        subscriptionProviders.add(provider);
+
+        updateSchema();
+    }
+
+    public void unbindSubscriptionProvider(GraphQLSubscriptionProvider provider) {
+        subscriptionProviders.remove(provider);
 
         updateSchema();
     }
@@ -248,6 +308,7 @@ public class GraphQLSchemaUpdater {
                 .additionalTypesProviders(additionalTypesProviders)
                 .queryProviders(queryProviders)
                 .mutationProviders(mutationProviders)
+                .subscriptionProviders(subscriptionProviders)
                 .eventPublisher(eventPublisher)
                 .codeRegistryProvider(codeRegistryProvider)
                 .build();

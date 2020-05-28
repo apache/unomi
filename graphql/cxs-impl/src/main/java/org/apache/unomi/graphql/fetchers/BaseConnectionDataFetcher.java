@@ -30,10 +30,10 @@ public abstract class BaseConnectionDataFetcher<T> extends BaseDataFetcher<T> {
 
     protected ConnectionParams parseConnectionParams(final DataFetchingEnvironment environment) {
         return ConnectionParams.create()
-                .first(parseParam("first", 0, environment))
-                .last(parseParam("last", DEFAULT_PAGE_SIZE, environment))
-                .after(parseDateParam("after", environment))
-                .before(parseDateParam("before", environment))
+                .first(parseParam("first", null, environment))
+                .last(parseParam("last", null, environment))
+                .after(parseParam("after", null, environment))
+                .before(parseParam("before", null, environment))
                 .build();
     }
 
@@ -42,7 +42,7 @@ public abstract class BaseConnectionDataFetcher<T> extends BaseDataFetcher<T> {
         query.setCondition(condition);
 
         if (params != null) {
-            query.setOffset(params.getFirst());
+            query.setOffset(params.getOffset());
             query.setLimit(params.getSize());
         }
 
