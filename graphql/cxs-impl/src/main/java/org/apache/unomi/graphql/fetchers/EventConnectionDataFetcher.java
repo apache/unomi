@@ -30,8 +30,8 @@ public abstract class EventConnectionDataFetcher extends BaseConnectionDataFetch
 
     protected CDPEventConnection createEventConnection(PartialList<Event> events) {
         final List<CDPEventEdge> eventEdges = events.getList().stream().map(CDPEventEdge::new).collect(Collectors.toList());
-        final CDPPageInfo cdpPageInfo = new CDPPageInfo(events.getOffset() > 0, events.getTotalSize() > events.getList().size());
+        final CDPPageInfo pageInfo = new CDPPageInfo(events.getOffset() > 0, events.getTotalSize() > events.getList().size());
 
-        return new CDPEventConnection(eventEdges, cdpPageInfo);
+        return new CDPEventConnection(eventEdges, pageInfo);
     }
 }

@@ -48,7 +48,7 @@ public class FindProfilesConnectionDataFetcher extends ProfileConnectionDataFetc
         final ConnectionParams params = parseConnectionParams(environment);
 
         final Condition condition = ProfileConditionFactory.get(environment)
-                .profileFilterInputCondition(filterInput, environment.getArgument("filter"), params.getAfter(), params.getBefore());
+                .profileFilterInputCondition(filterInput, environment.getArgument("filter"));
         final Query query = buildQuery(condition, orderByInput, params);
 
         PartialList<Profile> profiles = serviceManager.getProfileService().search(query, Profile.class);

@@ -51,14 +51,14 @@ public class ProfileAllEventsConnectionDataFetcher extends EventConnectionDataFe
         Condition condition;
 
         if (filterInput == null) {
-            condition = eventConditionFactory.eventFilterInputCondition(profile.getItemId(), params.getAfter(), params.getBefore());
+            condition = eventConditionFactory.propertyCondition("profileId", profile.getItemId());
         } else {
             final Map<String, Object> filterInputAsMap = environment.getArgument("filter");
 
-            condition = eventConditionFactory.eventFilterInputCondition(filterInput, filterInputAsMap, params.getAfter(), params.getBefore());
+            condition = eventConditionFactory.eventFilterInputCondition(filterInput, filterInputAsMap);
         }
 
-        final PartialList<Event> events = serviceManager.getEventService().searchEvents(condition, params.getFirst(), params.getSize());
+        final PartialList<Event> events = serviceManager.getEventService().searchEvents(condition, params.getOffset(), params.getSize());
 
         return createEventConnection(events);
     }

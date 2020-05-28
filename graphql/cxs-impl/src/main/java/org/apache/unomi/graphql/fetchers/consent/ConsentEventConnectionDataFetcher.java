@@ -22,6 +22,7 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.graphql.condition.factories.EventConditionFactory;
+import org.apache.unomi.graphql.fetchers.ConnectionParams;
 import org.apache.unomi.graphql.fetchers.EventConnectionDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.output.CDPConsent;
@@ -42,7 +43,7 @@ public class ConsentEventConnectionDataFetcher extends EventConnectionDataFetche
         final Condition consentCondition = factory.propertyCondition("target.token", consent.getToken(), serviceManager.getDefinitionsService());
 
         final Condition andCondition = factory.booleanCondition("and", Arrays.asList(eventCondition, consentCondition));
-        final PartialList<Event> events = serviceManager.getEventService().searchEvents(andCondition, 0, DEFAULT_PAGE_SIZE);
+        final PartialList<Event> events = serviceManager.getEventService().searchEvents(andCondition, 0, ConnectionParams.DEFAULT_PAGE_SIZE);
 
         return createEventConnection(events);
     }

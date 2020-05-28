@@ -35,7 +35,6 @@ import org.apache.unomi.graphql.utils.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -56,97 +55,81 @@ public class ProfileConditionFactory extends ConditionFactory {
         super("profilePropertyCondition", environment);
     }
 
-    public Condition segmentFilterInputCondition(final CDPSegmentFilterInput filterInput, Date after, Date before) {
+    public Condition segmentFilterInputCondition(final CDPSegmentFilterInput filterInput) {
+        if (filterInput == null) {
+            return matchAllCondition();
+        }
+
         final List<Condition> rootSubConditions = new ArrayList<>();
 
-        if (after != null) {
-            rootSubConditions.add(datePropertyCondition("timeStamp", "greaterThan", after));
+        if (filterInput.getNameEquals() != null) {
+            rootSubConditions.add(propertyCondition("metadata.name", filterInput.getNameEquals(), definitionsService));
         }
 
-        if (before != null) {
-            rootSubConditions.add(datePropertyCondition("timeStamp", "lessThanOrEqual", before));
+        if (filterInput.getViewEquals() != null) {
+            rootSubConditions.add(propertyCondition("metadata.scope", filterInput.getViewEquals(), definitionsService));
         }
 
-        if (filterInput != null) {
-            if (filterInput.getNameEquals() != null) {
-                rootSubConditions.add(propertyCondition("metadata.name", filterInput.getNameEquals(), definitionsService));
-            }
+        if (filterInput.getAndFilters() != null && !filterInput.getAndFilters().isEmpty()) {
+            final List<Condition> filterAndSubConditions = filterInput.getAndFilters().stream()
+                    .map(this::segmentFilterInputCondition)
+                    .collect(Collectors.toList());
+            rootSubConditions.add(booleanCondition("and", filterAndSubConditions));
+        }
 
-            if (filterInput.getViewEquals() != null) {
-                rootSubConditions.add(propertyCondition("metadata.scope", filterInput.getViewEquals(), definitionsService));
-            }
-
-            if (filterInput.getAndFilters() != null && !filterInput.getAndFilters().isEmpty()) {
-                final List<Condition> filterAndSubConditions = filterInput.getAndFilters().stream()
-                        .map(andInput -> segmentFilterInputCondition(andInput, null, null))
-                        .collect(Collectors.toList());
-                rootSubConditions.add(booleanCondition("and", filterAndSubConditions));
-            }
-
-            if (filterInput.getOrFilters() != null && !filterInput.getOrFilters().isEmpty()) {
-                final List<Condition> filterOrSubConditions = filterInput.getOrFilters().stream()
-                        .map(orInput -> segmentFilterInputCondition(orInput, null, null))
-                        .collect(Collectors.toList());
-                rootSubConditions.add(booleanCondition("or", filterOrSubConditions));
-            }
+        if (filterInput.getOrFilters() != null && !filterInput.getOrFilters().isEmpty()) {
+            final List<Condition> filterOrSubConditions = filterInput.getOrFilters().stream()
+                    .map(this::segmentFilterInputCondition)
+                    .collect(Collectors.toList());
+            rootSubConditions.add(booleanCondition("or", filterOrSubConditions));
         }
 
         return booleanCondition("and", rootSubConditions);
     }
 
-    public Condition profileFilterInputCondition(final CDPProfileFilterInput filterInput, final Map<String, Object> filterInputAsMap) {
-        return profileFilterInputCondition(filterInput, filterInputAsMap, null, null);
-    }
-
     @SuppressWarnings("unchecked")
-    public Condition profileFilterInputCondition(final CDPProfileFilterInput filterInput, final Map<String, Object> filterInputAsMap, Date after, Date before) {
+    public Condition profileFilterInputCondition(final CDPProfileFilterInput filterInput, final Map<String, Object> filterInputAsMap) {
+        if (filterInput == null) {
+            return matchAllCondition();
+        }
+
         final List<Condition> rootSubConditions = new ArrayList<>();
 
-        if (after != null) {
-            rootSubConditions.add(datePropertyCondition("timeStamp", "greaterThan", after));
+        if (filterInput.getProfileIDs_contains() != null && !filterInput.getProfileIDs_contains().isEmpty()) {
+            rootSubConditions.add(propertiesCondition("itemId", "inContains", filterInput.getProfileIDs_contains()));
         }
 
-        if (before != null) {
-            rootSubConditions.add(datePropertyCondition("timeStamp", "lessThanOrEqual", before));
+        if (filterInput.getSegments_contains() != null && filterInput.getSegments_contains().isEmpty()) {
+            rootSubConditions.add(ConditionBuilder.create(getConditionType("profileSegmentCondition"))
+                    .parameter("segments", filterInput.getSegments_contains())
+                    .parameter("matchType", "in")
+                    .build());
         }
 
-        if (filterInput != null) {
-            if (filterInput.getProfileIDs_contains() != null && !filterInput.getProfileIDs_contains().isEmpty()) {
-                rootSubConditions.add(propertiesCondition("itemId", "inContains", filterInput.getProfileIDs_contains()));
-            }
+        if (filterInput.getConsents_contains() != null && !filterInput.getConsents_contains().isEmpty()) {
+            rootSubConditions.add(consentContainsCondition(filterInput.getConsents_contains()));
 
-            if (filterInput.getSegments_contains() != null && filterInput.getSegments_contains().isEmpty()) {
-                rootSubConditions.add(ConditionBuilder.create(getConditionType("profileSegmentCondition"))
-                        .parameter("segments", filterInput.getSegments_contains())
-                        .parameter("matchType", "in")
-                        .build());
-            }
+        }
 
-            if (filterInput.getConsents_contains() != null && !filterInput.getConsents_contains().isEmpty()) {
-                rootSubConditions.add(consentContainsCondition(filterInput.getConsents_contains()));
+        if (filterInput.getLists_contains() != null && filterInput.getLists_contains().isEmpty()) {
+            rootSubConditions.add(ConditionBuilder.create(getConditionType("profileUserListCondition"))
+                    .parameter("lists", filterInput.getLists_contains())
+                    .parameter("matchType", "in")
+                    .build());
+        }
 
-            }
+        if (filterInput.getProperties() != null) {
+            final Map<String, Object> propertiesFilterAsMap = (Map<String, Object>) filterInputAsMap.get("properties");
+            rootSubConditions.add(profilePropertiesFilterInputCondition(filterInput.getProperties(), propertiesFilterAsMap));
+        }
 
-            if (filterInput.getLists_contains() != null && filterInput.getLists_contains().isEmpty()) {
-                rootSubConditions.add(ConditionBuilder.create(getConditionType("profileUserListCondition"))
-                        .parameter("lists", filterInput.getLists_contains())
-                        .parameter("matchType", "in")
-                        .build());
-            }
+        if (filterInput.getEvents() != null) {
+            final Map<String, Object> eventsFilterAsMap = (Map<String, Object>) filterInputAsMap.get("events");
+            rootSubConditions.add(profileEventsFilterInputCondition(filterInput.getEvents(), eventsFilterAsMap));
+        }
 
-            if (filterInput.getProperties() != null) {
-                final Map<String, Object> propertiesFilterAsMap = (Map<String, Object>) filterInputAsMap.get("properties");
-                rootSubConditions.add(profilePropertiesFilterInputCondition(filterInput.getProperties(), propertiesFilterAsMap));
-            }
-
-            if (filterInput.getEvents() != null) {
-                final Map<String, Object> eventsFilterAsMap = (Map<String, Object>) filterInputAsMap.get("events");
-                rootSubConditions.add(profileEventsFilterInputCondition(filterInput.getEvents(), eventsFilterAsMap));
-            }
-
-            if (filterInput.getInterests() != null) {
-                rootSubConditions.add(interestFilterInputCondition(filterInput.getInterests()));
-            }
+        if (filterInput.getInterests() != null) {
+            rootSubConditions.add(interestFilterInputCondition(filterInput.getInterests()));
         }
 
         return booleanCondition("and", rootSubConditions);

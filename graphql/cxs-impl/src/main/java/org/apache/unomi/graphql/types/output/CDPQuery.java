@@ -74,7 +74,9 @@ public class CDPQuery {
 
     @GraphQLField
     public CDPPropertyConnection getProfileProperties(final @GraphQLName("first") Integer first,
+                                                      final @GraphQLName("after") String after,
                                                       final @GraphQLName("last") Integer last,
+                                                      final @GraphQLName("before") String before,
                                                       final DataFetchingEnvironment environment) throws Exception {
         return new PropertiesConnectionDataFetcher().get(environment);
     }
