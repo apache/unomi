@@ -59,20 +59,6 @@ public abstract class BaseIT {
                 .type("tar.gz")
                 .versionAsInProject();
 
-        MavenUrlReference routerRepo = maven()
-                .groupId("org.apache.unomi")
-                .artifactId("unomi-router-karaf-feature")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-
-        MavenUrlReference cdpGraphQLRepo = maven()
-                .groupId("org.apache.unomi")
-                .artifactId("cdp-graphql-feature")
-                .classifier("features")
-                .type("xml")
-                .versionAsInProject();
-
         List<Option> options = new ArrayList<>();
 
         Option[] commonOptions = new Option[]{
@@ -116,8 +102,6 @@ public abstract class BaseIT {
                 systemProperty("org.apache.unomi.hazelcast.tcp-ip.members").value("127.0.0.1"),
                 systemProperty("org.apache.unomi.hazelcast.tcp-ip.interface").value("127.0.0.1"),
                 systemProperty("unomi.autoStart").value("true"),
-                features(routerRepo, "unomi-router-karaf-feature"),
-                features(cdpGraphQLRepo, "cdp-graphql-feature"),
                 CoreOptions.bundleStartLevel(100),
                 CoreOptions.frameworkStartLevel(100)
         };

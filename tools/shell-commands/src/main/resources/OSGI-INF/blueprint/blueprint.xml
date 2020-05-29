@@ -56,6 +56,7 @@
                 <value>org.apache.unomi.router-rest</value>
                 <value>org.apache.unomi.shell-dev-commands</value>
                 <value>org.apache.unomi.web-tracker-wab</value>
+                <value>org.apache.unomi.cdp-graphql-api-impl</value>
             </list>
         </property>
         <property name="bundleContext" ref="blueprintBundleContext"/>
