@@ -78,9 +78,15 @@ public class SetPropertyAction implements ActionExecutor {
             Date firstVisit = new Date();
 
             try {
-                String propertyFirstVisit = (String) event.getProfile().getProperties().get("firstVisit");
+                Object propertyFirstVisit = event.getProfile().getProperties().get("firstVisit");
                 if (propertyFirstVisit != null) {
-                    firstVisit = format.parse(propertyFirstVisit);
+                    if (propertyFirstVisit instanceof String) {
+                        firstVisit = format.parse((String) propertyFirstVisit);
+                    } else if (propertyFirstVisit instanceof Date) {
+                        firstVisit = (Date) propertyFirstVisit;
+                    } else {
+                        firstVisit = format.parse(propertyFirstVisit.toString());
+                    }
                 }
 
                 if (event.getTimeStamp().after(firstVisit)) {
