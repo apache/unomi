@@ -1,0 +1,31 @@
+{
+  "metadata": {
+    "id": "cdpSessionEventAction",
+    "name": "cdpSessionEventAction",
+    "description": "",
+    "systemTags": [
+      "profileTags",
+      "demographic",
+      "availableToEndUser"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "cdp_sessionEvent",
+  "parameters": [
+    {
+      "id": "state",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "sessionId",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "scope",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
+}

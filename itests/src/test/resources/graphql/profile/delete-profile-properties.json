@@ -1,0 +1,9 @@
+{
+  "operationName": "deleteProfileProperties",
+  "variables": {
+    "propertyNames": [
+      "testProperty"
+    ]
+  },
+  "query": "mutation deleteProfileProperties($propertyNames: [String]!) {\n  cdp {\n    deleteProfileProperties(propertyNames: $propertyNames)\n  }\n}\n"
+}

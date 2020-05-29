@@ -20,7 +20,17 @@ package org.apache.unomi.services.impl.profiles;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.BatchUpdate;
+import org.apache.unomi.api.Item;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.Persona;
+import org.apache.unomi.api.PersonaSession;
+import org.apache.unomi.api.PersonaWithSessions;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.PropertyMergeStrategyExecutor;
+import org.apache.unomi.api.PropertyMergeStrategyType;
+import org.apache.unomi.api.PropertyType;
+import org.apache.unomi.api.Session;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
@@ -33,13 +43,35 @@ import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.apache.unomi.services.impl.ParserHelper;
-import org.osgi.framework.*;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleEvent;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceReference;
+import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.Enumeration;
+import java.util.GregorianCalendar;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimerTask;
+import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -135,7 +167,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
          */
         public PropertyTypes without(String propertyId) {
             List<PropertyType> newPropertyTypes = allPropertyTypes.stream()
-                .filter(property -> property.getItemId().equals(propertyId))
+                .filter(property -> !property.getItemId().equals(propertyId))
                 .collect(Collectors.toList());
 
             return new PropertyTypes(newPropertyTypes);
@@ -400,6 +432,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             result = persistenceService.save(previousProperty);
             propertyTypes = propertyTypes.with(previousProperty);
         }
+        persistenceService.setPropertyMapping(property, Profile.ITEM_TYPE);
         return result;
     }
 

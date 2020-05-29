@@ -31,6 +31,7 @@ import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.joda.Joda;
 import org.elasticsearch.common.joda.JodaDateMathParser;
+import org.elasticsearch.common.unit.DistanceUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -243,8 +244,32 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             return yearMonthDayDateFormat.format(getDate(actualValue)).equals(yearMonthDayDateFormat.format(getDate(expectedValueDate)));
         } else if (op.equals("isNotDay") && expectedValueDate != null) {
             return !yearMonthDayDateFormat.format(getDate(actualValue)).equals(yearMonthDayDateFormat.format(getDate(expectedValueDate)));
-        }
+        } else if (op.equals("distance")) {
+            GeoPoint actualCenter = null;
+            if (actualValue instanceof GeoPoint) {
+                actualCenter = (GeoPoint) actualValue;
+            } else if (actualValue instanceof Map) {
+                actualCenter = GeoPoint.fromMap((Map<String, Double>) actualValue);
+            } else if (actualValue instanceof String) {
+                actualCenter = GeoPoint.fromString((String) actualValue);
+            }
+            if (actualCenter == null) {
+                return false;
+            }
 
+            final String unitString = (String) condition.getParameter("unit");
+            final String centerString = (String) condition.getParameter("center");
+            final Double distance = (Double) condition.getParameter("distance");
+            if (centerString == null || distance == null) {
+                return false;
+            }
+
+            final GeoPoint expectedCenter = GeoPoint.fromString(centerString);
+            final DistanceUnit expectedUnit = unitString != null ? DistanceUnit.fromString(unitString) : DistanceUnit.DEFAULT;
+            final double distanceInMeters = expectedUnit.convert(distance, DistanceUnit.METERS);
+
+            return expectedCenter.distanceTo(actualCenter) <= distanceInMeters;
+        }
         return false;
     }
 

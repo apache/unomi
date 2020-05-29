@@ -1029,6 +1029,7 @@
         <module>persistence-elasticsearch</module>
         <module>services</module>
         <module>rest</module>
+        <module>graphql</module>
         <module>wab</module>
         <module>plugins</module>
         <module>extensions</module>

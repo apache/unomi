@@ -1,0 +1,12 @@
+{
+  "operationName": "getProfile",
+  "variables": {
+    "profileID": {
+      "client": {
+        "id": "defaultClientId"
+      },
+      "id": "profileId_testGetProfile_CDPFields"
+    }
+  },
+  "query": "query getProfile($profileID: CDP_ProfileIDInput!) {\n  cdp {\n    getProfile(profileID: $profileID) {\n      cdp_consents {\n        status\n        type\n        lastUpdate\n        expiration\n      }\n      cdp_interests {\n        topic\n        score\n      }\n    }\n  }\n}\n"
+}
