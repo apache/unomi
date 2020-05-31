@@ -21,6 +21,7 @@ import io.reactivex.Flowable;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.subscribers.DefaultSubscriber;
+import org.apache.unomi.itests.BasicIT;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
@@ -28,12 +29,17 @@ import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 public class GraphQLWebSocketIT extends BaseGraphQLIT {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(GraphQLWebSocketIT.class);
 
     private static final String SUBSCRIPTION_ENDPOINT = "ws://localhost:" + HTTP_PORT + "/graphql";
 
@@ -41,6 +47,7 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
     public void testWebSocketConnectionSegment() throws Exception {
         WebSocketClient client = new WebSocketClient();
         try {
+            LOGGER.info("Starting web socket client...");
             client.start();
 
             URI echoUri = new URI(SUBSCRIPTION_ENDPOINT);
@@ -50,22 +57,30 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
             Future<Session> onConnected = client.connect(socket, echoUri, request);
             RemoteEndpoint remote = onConnected.get().getRemote();
 
+            LOGGER.info("Connected, initializing... ");
+
             String initMsg = resourceAsString("graphql/socket/out/init.json");
             remote.sendString(initMsg);
 
+            LOGGER.info("Initialized, acknowledging...  ");
+
             String ackMsg = resourceAsString("graphql/socket/in/ack.json");
-            String initResp = socket.waitMessage().get();
+            String initResp = socket.waitMessage().get(10, TimeUnit.SECONDS);
             Assert.assertEquals(ackMsg, initResp);
+
+            LOGGER.info("Sending terminate message...");
 
             String termMsg = resourceAsString("graphql/socket/out/term.json");
             remote.sendString(termMsg);
 
+            LOGGER.info("Waiting for socket to close...");
 
-            CloseStatus status = socket.waitClose().get();
+            CloseStatus status = socket.waitClose().get(10, TimeUnit.SECONDS);
             // Assert.assertEquals(1000, (int) status.getStatus()); TODO skip for now
 
         } finally {
             client.stop();
+            LOGGER.info("Web socket client stopped.");
         }
     }
 

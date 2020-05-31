@@ -60,6 +60,7 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
 
     @Override
     public void onWebSocketText(String textMessage) {
+        logger.info("Got web socket messages {}", textMessage);
         final GraphQLMessage message = GraphQLMessage.fromJson(textMessage);
         if (message == null) {
             return;
