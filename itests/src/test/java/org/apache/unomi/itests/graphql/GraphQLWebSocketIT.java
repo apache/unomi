@@ -21,7 +21,6 @@ import io.reactivex.Flowable;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.subscribers.DefaultSubscriber;
-import org.apache.unomi.itests.BasicIT;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
@@ -33,6 +32,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -46,6 +47,7 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
     @Test
     public void testWebSocketConnectionSegment() throws Exception {
         WebSocketClient client = new WebSocketClient();
+        Socket socket = new Socket();
         try {
             LOGGER.info("Starting web socket client...");
             client.start();
@@ -53,7 +55,6 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
             URI echoUri = new URI(SUBSCRIPTION_ENDPOINT);
             ClientUpgradeRequest request = new ClientUpgradeRequest();
 
-            Socket socket = new Socket();
             Future<Session> onConnected = client.connect(socket, echoUri, request);
             RemoteEndpoint remote = onConnected.get().getRemote();
 
@@ -88,13 +89,18 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
 
         private Flowable<String> publisher;
 
-        private ObservableEmitter<String> emitter;
+        private CompletableFuture<ObservableEmitter<String>> emitterFuture;
 
         private CompletableFuture<CloseStatus> closeStatus = new CompletableFuture<>();
 
+        private List<Future<String>> messageListeners = new ArrayList<>();
+
         public Socket() {
+            // web socket message may come faster than observable callback is executed
+            emitterFuture = new CompletableFuture<>();
+
             publisher = Observable
-                    .create((ObservableEmitter<String> emitter) -> this.emitter = emitter)
+                    .create((ObservableEmitter<String> emitter) -> this.emitterFuture.complete(emitter))
                     .toFlowable(BackpressureStrategy.BUFFER);
         }
 
@@ -105,7 +111,11 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
 
         @Override
         public void onWebSocketText(String message) {
-            this.emitter.onNext(message);
+            try {
+                this.emitterFuture.get(10, TimeUnit.SECONDS).onNext(message);
+            } catch (Exception e) {
+                throw new RuntimeException("Could not get emitter", e);
+            }
         }
 
         public Future<String> waitMessage() {
@@ -128,8 +138,10 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
                 public void onComplete() {
                     future.cancel(false);
                     cancel();
+                    messageListeners.remove(future);
                 }
             });
+            messageListeners.add(future);
             return future;
         }
 
@@ -139,8 +151,14 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
 
         @Override
         public void onWebSocketClose(int statusCode, String reason) {
+            LOGGER.info("Web socket close, code: " + statusCode + ", reason: " + reason);
             super.onWebSocketClose(statusCode, reason);
             closeStatus.complete(new CloseStatus(statusCode, reason));
+            cancelListeners();
+        }
+
+        private void cancelListeners() {
+            this.messageListeners.forEach(future -> future.cancel(false));
         }
     }
 

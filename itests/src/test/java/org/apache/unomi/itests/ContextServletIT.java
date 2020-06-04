@@ -21,7 +21,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.ContextRequest;
+import org.apache.unomi.api.ContextResponse;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Session;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.DefinitionsService;
@@ -87,6 +92,8 @@ public class ContextServletIT extends BaseIT {
 	@Filter(timeout = 600000)
 	protected SegmentService segmentService;
 
+	private Profile profile;
+
 	@Before
 	public void setUp() throws InterruptedException {
 		//Create a past-event segment
@@ -100,7 +107,12 @@ public class ContextServletIT extends BaseIT {
 		segmentCondition.setParameter("eventCondition",pastEventEventCondition);
 		segment.setCondition(segmentCondition);
 		segmentService.setSegmentDefinition(segment);
-		Thread.sleep(2000);
+
+		String profileId = "test-profile-id";
+		profile = new Profile(profileId);
+		profileService.save(profile);
+
+		refreshPersistence();
 	}
 
 	@After
@@ -108,8 +120,8 @@ public class ContextServletIT extends BaseIT {
 		TestUtils.removeAllEvents(definitionsService, persistenceService);
 		TestUtils.removeAllSessions(definitionsService, persistenceService);
 		TestUtils.removeAllProfiles(definitionsService, persistenceService);
+		profileService.delete(profile.getItemId(), false);
 		segmentService.removeSegmentDefinition(SEGMENT_ID,false);
-		persistenceService.refresh();
 	}
 
 	@Test
@@ -182,15 +194,12 @@ public class ContextServletIT extends BaseIT {
 	public void testUpdateEventFromContextAuthorizedThirdPartyNoItemID_Fail() throws IOException, InterruptedException {
 		//Arrange
 		String eventId = "test-event-id3";
-		String profileId = "test-profile-id";
 		String sessionId = "test-session-id";
 		String scope = "test-scope";
 		String eventTypeOriginal = "test-event-type-original";
 		String eventTypeUpdated = "test-event-type-updated";
-		Profile profile = new Profile(profileId);
 		Session session = new Session(sessionId, profile, new Date(), scope);
 		Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
-		profileService.save(profile);
 		this.eventService.send(event);
 		Thread.sleep(2000);
 		event.setEventType(eventTypeUpdated); //change the event so we can see the update effect
@@ -211,7 +220,7 @@ public class ContextServletIT extends BaseIT {
 	}
 
 	@Test
-	public void testCreateEventsWithNoTimestampParam_profileAddedToSegment() throws IOException {
+	public void testCreateEventsWithNoTimestampParam_profileAddedToSegment() throws IOException, InterruptedException {
 		//Arrange
 		String sessionId = "test-session-id";
 		String scope = "test-scope";
@@ -227,6 +236,8 @@ public class ContextServletIT extends BaseIT {
 		HttpPost request = new HttpPost(URL + CONTEXT_URL);
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 		String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
+		Thread.sleep(1000); //Making sure DB is updated
+
 		//Add the context-profile-id cookie to the second event
 		request.addHeader("Cookie", cookieHeaderValue);
 		ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
