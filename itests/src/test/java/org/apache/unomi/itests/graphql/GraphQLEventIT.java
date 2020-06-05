@@ -19,7 +19,6 @@ package org.apache.unomi.itests.graphql;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -58,11 +57,7 @@ public class GraphQLEventIT extends BaseGraphQLIT {
         profile = new Profile(profileID);
         persistenceService.save(profile);
 
-        Condition condition = new Condition(definitionsService.getConditionType("matchAllCondition"));
-        persistenceService.removeByQuery(condition, Event.class);
-        persistenceService.refresh();
-        // Wait for refresh to finish
-        Thread.sleep(1000);
+        removeItems(Event.class);
     }
 
 
@@ -78,6 +73,8 @@ public class GraphQLEventIT extends BaseGraphQLIT {
     @Test
     public void testGetEvent() throws IOException, InterruptedException {
         final Event event = createEvent(eventID, profile);
+        refreshPersistence();
+
         try (CloseableHttpResponse response = post("graphql/event/get-event.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 
@@ -93,6 +90,8 @@ public class GraphQLEventIT extends BaseGraphQLIT {
         createEvent("event-2", profile);
         final Profile profile2 = new Profile("profile-2");
         createEvent("event-3", profile2);
+        refreshPersistence();
+
         try (CloseableHttpResponse response = post("graphql/event/find-events.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
             Assert.assertNotNull(context.getValue("data.cdp.findEvents"));
@@ -122,7 +121,6 @@ public class GraphQLEventIT extends BaseGraphQLIT {
     private Event createEvent(final String eventID, final Profile profile) throws InterruptedException {
         Event event = new Event(eventID, "profileUpdated", null, profile, "test", profile, null, new Date());
         persistenceService.save(event);
-        Thread.sleep(1000);
         return event;
     }
 }

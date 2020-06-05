@@ -20,6 +20,7 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.ProfileService;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.ops4j.pax.exam.util.Filter;
 
@@ -32,6 +33,11 @@ public class GraphQLProfileIT extends BaseGraphQLIT {
     @Inject
     @Filter(timeout = 600000)
     protected ProfileService profileService;
+
+    @Before
+    public void setUp() throws InterruptedException {
+        removeItems(Profile.class);
+    }
 
     @Test
     public void testGetProfile_WithoutCreation() throws IOException {
@@ -73,6 +79,7 @@ public class GraphQLProfileIT extends BaseGraphQLIT {
         final Profile profile = new Profile("FindProfiles_ProfileId1");
         profile.setProperty("firstName", "FindProfiles_Username1");
         profileService.save(profile);
+        refreshPersistence();
 
         try (CloseableHttpResponse response = post("graphql/profile/find-profiles.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
@@ -86,6 +93,7 @@ public class GraphQLProfileIT extends BaseGraphQLIT {
         final Profile profile = new Profile("profileId_deleteAllPersonalDataTest");
         profile.setProperty("firstName", "FirstName");
         profileService.save(profile);
+        refreshPersistence();
 
         try (CloseableHttpResponse response = post("graphql/profile/delete-all-personal-data.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
