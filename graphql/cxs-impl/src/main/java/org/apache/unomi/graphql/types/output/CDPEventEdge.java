@@ -21,6 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
+import org.apache.unomi.graphql.schema.CDPEventInterfaceRegister;
 import org.apache.unomi.graphql.services.ServiceManager;
 
 @GraphQLName("CDP_EventEdge")
@@ -46,7 +47,7 @@ public class CDPEventEdge {
     public CDPEventInterface node(final DataFetchingEnvironment environment) {
         final ServiceManager serviceManager = environment.getContext();
 
-        return serviceManager.getEventInterfaceRegister().getEvent(getEvent());
+        return serviceManager.getService(CDPEventInterfaceRegister.class).getEvent(getEvent());
     }
 
 }

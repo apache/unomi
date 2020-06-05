@@ -19,6 +19,7 @@ package org.apache.unomi.graphql.fetchers.segment;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.output.UnomiSegment;
 
@@ -34,7 +35,7 @@ public class UnomiSegmentDataFetcher implements DataFetcher<UnomiSegment> {
     public UnomiSegment get(final DataFetchingEnvironment environment) throws Exception {
         final ServiceManager serviceManager = environment.getContext();
 
-        final Segment segment = serviceManager.getSegmentService().getSegmentDefinition(segmentId);
+        final Segment segment = serviceManager.getService(SegmentService.class).getSegmentDefinition(segmentId);
 
         if (segment != null) {
             return new UnomiSegment(segment);

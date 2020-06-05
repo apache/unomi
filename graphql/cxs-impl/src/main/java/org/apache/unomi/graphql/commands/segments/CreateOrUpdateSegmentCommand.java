@@ -18,6 +18,7 @@ package org.apache.unomi.graphql.commands.segments;
 
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.graphql.condition.factories.ProfileConditionFactory;
 import org.apache.unomi.graphql.types.input.CDPSegmentInput;
 import org.apache.unomi.graphql.types.output.CDPSegment;
@@ -51,7 +52,7 @@ public class CreateOrUpdateSegmentCommand extends BaseCreateOrUpdateSegmentComma
 
         segment.setCondition(condition);
 
-        serviceManager.getSegmentService().setSegmentDefinition(segment);
+        serviceManager.getService(SegmentService.class).setSegmentDefinition(segment);
 
         return new CDPSegment(segment);
     }

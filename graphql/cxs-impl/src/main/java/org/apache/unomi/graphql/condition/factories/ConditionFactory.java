@@ -46,7 +46,7 @@ public class ConditionFactory {
         this.conditionTypeId = conditionTypeId;
 
         final ServiceManager context = environment.getContext();
-        this.definitionsService = context.getDefinitionsService();
+        this.definitionsService = context.getService(DefinitionsService.class);
 
         this.conditionTypesMap = definitionsService.getAllConditionTypes().stream()
                 .collect(Collectors.toMap(ConditionType::getItemId, Function.identity()));

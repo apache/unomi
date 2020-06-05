@@ -27,130 +27,24 @@ import org.apache.unomi.graphql.schema.CDPProfileInterfaceRegister;
 import org.apache.unomi.graphql.schema.CDPPropertyInterfaceRegister;
 import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
 @Component(service = ServiceManager.class)
 public class ServiceManager {
 
-    private ProfileService profileService;
-    private SegmentService segmentService;
-    private EventService eventService;
-    private DefinitionsService definitionsService;
-    private GraphQLSchemaUpdater graphQLSchemaUpdater;
-    private PrivacyService privacyService;
-    private UserListService userListService;
-    private org.apache.unomi.services.UserListService userListServiceExt;
-    private CDPEventInterfaceRegister eventInterfaceRegister;
-    private CDPProfileInterfaceRegister profileInterfaceRegister;
-    private CDPPropertyInterfaceRegister propertyInterfaceRegister;
-    private PersistenceService persistenceService;
+    private BundleContext bundleContext;
 
-    @Reference
-    public void setProfileService(ProfileService profileService) {
-        this.profileService = profileService;
+    @Activate
+    private void activate(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
+    public <T> T getService(Class<T> serviceClass) {
+        ServiceReference<T> serviceReference = bundleContext.getServiceReference(serviceClass);
+        return bundleContext.getService(serviceReference);
     }
 
-    @Reference
-    public void setSegmentService(SegmentService segmentService) {
-        this.segmentService = segmentService;
-    }
-
-    @Reference
-    public void setDefinitionsService(DefinitionsService definitionsService) {
-        this.definitionsService = definitionsService;
-    }
-
-    @Reference
-    public void setEventService(EventService eventService) {
-        this.eventService = eventService;
-    }
-
-    @Reference
-    public void setGraphQLSchemaUpdater(GraphQLSchemaUpdater graphQLSchemaUpdater) {
-        this.graphQLSchemaUpdater = graphQLSchemaUpdater;
-    }
-
-    @Reference
-    public void setUserListService(UserListService userListService) {
-        this.userListService = userListService;
-    }
-
-    @Reference
-    public void setPrivacyService(PrivacyService privacyService) {
-        this.privacyService = privacyService;
-    }
-
-    @Reference
-    public void setEventInterfaceRegister(CDPEventInterfaceRegister eventInterfaceRegister) {
-        this.eventInterfaceRegister = eventInterfaceRegister;
-    }
-
-    @Reference
-    public void setProfileInterfaceRegister(CDPProfileInterfaceRegister profileInterfaceRegister) {
-        this.profileInterfaceRegister = profileInterfaceRegister;
-    }
-
-    @Reference
-    public void setPropertyInterfaceRegister(CDPPropertyInterfaceRegister propertyInterfaceRegister) {
-        this.propertyInterfaceRegister = propertyInterfaceRegister;
-    }
-
-    @Reference
-    public void setUserListServiceExt(org.apache.unomi.services.UserListService userListServiceExt) {
-        this.userListServiceExt = userListServiceExt;
-    }
-
-    @Reference
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
-    }
-
-    public ProfileService getProfileService() {
-        return profileService;
-    }
-
-    public SegmentService getSegmentService() {
-        return segmentService;
-    }
-
-    public DefinitionsService getDefinitionsService() {
-        return definitionsService;
-    }
-
-    public EventService getEventService() {
-        return eventService;
-    }
-
-    public GraphQLSchemaUpdater getGraphQLSchemaUpdater() {
-        return graphQLSchemaUpdater;
-    }
-
-    public PrivacyService getPrivacyService() {
-        return privacyService;
-    }
-
-    public UserListService getUserListService() {
-        return userListService;
-    }
-
-    public CDPEventInterfaceRegister getEventInterfaceRegister() {
-        return eventInterfaceRegister;
-    }
-
-    public CDPProfileInterfaceRegister getProfileInterfaceRegister() {
-        return profileInterfaceRegister;
-    }
-
-    public org.apache.unomi.services.UserListService getUserListServiceExt() {
-        return userListServiceExt;
-    }
-
-    public CDPPropertyInterfaceRegister getPropertyInterfaceRegister() {
-        return propertyInterfaceRegister;
-    }
-
-    public PersistenceService getPersistenceService() {
-        return persistenceService;
-    }
 }

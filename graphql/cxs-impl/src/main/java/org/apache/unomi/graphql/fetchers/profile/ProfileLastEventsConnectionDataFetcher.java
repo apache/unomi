@@ -22,6 +22,7 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.graphql.condition.factories.EventConditionFactory;
 import org.apache.unomi.graphql.fetchers.EventConnectionDataFetcher;
 import org.apache.unomi.graphql.services.ServiceManager;
@@ -45,7 +46,7 @@ public class ProfileLastEventsConnectionDataFetcher extends EventConnectionDataF
 
         final Condition condition = EventConditionFactory.get(environment)
                 .propertyCondition("profileId", profile.getItemId());
-        final PartialList<Event> events = serviceManager.getEventService().searchEvents(condition, 0, count);
+        final PartialList<Event> events = serviceManager.getService(EventService.class).searchEvents(condition, 0, count);
 
         return createEventConnection(events);
     }

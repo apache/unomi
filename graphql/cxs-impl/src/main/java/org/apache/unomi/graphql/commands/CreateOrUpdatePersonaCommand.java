@@ -48,7 +48,7 @@ public class CreateOrUpdatePersonaCommand extends BaseCommand<CDPPersona> {
 
     @Override
     public CDPPersona execute() {
-        final ProfileService profileService = serviceManager.getProfileService();
+        final ProfileService profileService = serviceManager.getService(ProfileService.class);
 
         final Map<String, Object> personaAsMap = environment.getArgument(PERSONA_ARGUMENT_NAME);
 

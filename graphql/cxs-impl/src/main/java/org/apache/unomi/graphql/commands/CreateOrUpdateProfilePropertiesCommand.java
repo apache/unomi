@@ -18,6 +18,7 @@ package org.apache.unomi.graphql.commands;
 
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
 import org.apache.unomi.graphql.types.input.CDPPropertyInput;
 import org.apache.unomi.graphql.types.input.property.BaseCDPPropertyInput;
 import org.apache.unomi.graphql.types.input.property.CDPSetPropertyInput;
@@ -38,7 +39,7 @@ public class CreateOrUpdateProfilePropertiesCommand extends BaseCommand<Boolean>
         super(builder);
 
         this.properties = builder.properties;
-        this.profileService = serviceManager.getProfileService();
+        this.profileService = serviceManager.getService(ProfileService.class);
     }
 
     public static Builder create(List<CDPPropertyInput> properties) {
@@ -53,7 +54,7 @@ public class CreateOrUpdateProfilePropertiesCommand extends BaseCommand<Boolean>
             profileService.setPropertyType(propertyType);
         });
 
-        serviceManager.getGraphQLSchemaUpdater().updateSchema();
+        serviceManager.getService(GraphQLSchemaUpdater.class).updateSchema();
 
         return true;
     }

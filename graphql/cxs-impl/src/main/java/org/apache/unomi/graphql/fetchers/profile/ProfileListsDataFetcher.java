@@ -47,7 +47,7 @@ public class ProfileListsDataFetcher extends BaseDataFetcher<List<CDPList>> {
     @SuppressWarnings("unchecked")
     public List<CDPList> get(DataFetchingEnvironment environment) throws Exception {
         final ServiceManager serviceManager = environment.getContext();
-        final UserListService userListService = serviceManager.getUserListService();
+        final UserListService userListService = serviceManager.getService(UserListService.class);
         final Map<String, Object> systemProperties = profile.getSystemProperties();
         if (systemProperties == null) {
             return null;

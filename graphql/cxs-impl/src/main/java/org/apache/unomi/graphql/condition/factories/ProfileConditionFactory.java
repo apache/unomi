@@ -21,6 +21,7 @@ import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.GeoPoint;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.schema.ComparisonConditionTranslator;
 import org.apache.unomi.graphql.schema.PropertyNameTranslator;
 import org.apache.unomi.graphql.schema.PropertyValueTypeHelper;
@@ -248,7 +249,7 @@ public class ProfileConditionFactory extends ConditionFactory {
     private void addDynamicProfilePropertiesCondition(final Map<String, Object> filterAsMap, final List<Condition> subConditions) {
         final ServiceManager serviceManager = environment.getContext();
 
-        final Map<String, PropertyType> propertyTypeMap = serviceManager.getProfileService().getTargetPropertyTypes("profiles")
+        final Map<String, PropertyType> propertyTypeMap = serviceManager.getService(ProfileService.class).getTargetPropertyTypes("profiles")
                 .stream().collect(Collectors.toMap(PropertyType::getItemId, Function.identity()));
 
         filterAsMap.forEach((propertyName, propertyValue) -> {

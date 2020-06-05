@@ -26,6 +26,7 @@ import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.GeoPoint;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.resolvers.CDPEventInterfaceResolver;
 import org.apache.unomi.graphql.utils.DateUtils;
@@ -79,7 +80,7 @@ public interface CDPEventInterface {
         } else if (getEvent().getProfileId() != null) {
             ServiceManager serviceManager = environment.getContext();
 
-            Profile profile = serviceManager.getProfileService().load(getEvent().getProfileId());
+            Profile profile = serviceManager.getService(ProfileService.class).load(getEvent().getProfileId());
 
             return new CDPProfile(profile);
         } else {

@@ -53,7 +53,7 @@ public class ProfileMatchesDataFetcher implements DataFetcher<List<CDPFilterMatc
         }
 
         final ServiceManager serviceManager = environment.getContext();
-        final ProfileService profileService = serviceManager.getProfileService();
+        final ProfileService profileService = serviceManager.getService(ProfileService.class);
         final Date now = new Date();
         final Session session = new Session("profile-matcher-" + now.getTime(), profile, now, "digitall");
 

@@ -18,6 +18,7 @@ package org.apache.unomi.graphql.commands.segments;
 
 import com.google.common.base.Strings;
 import org.apache.unomi.api.segments.DependentMetadata;
+import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.graphql.commands.BaseCommand;
 
 public class DeleteSegmentCommand extends BaseCommand<Boolean> {
@@ -32,7 +33,7 @@ public class DeleteSegmentCommand extends BaseCommand<Boolean> {
 
     @Override
     public Boolean execute() {
-        final DependentMetadata dependentMetadata = serviceManager.getSegmentService().removeSegmentDefinition(segmentId, true);
+        final DependentMetadata dependentMetadata = serviceManager.getService(SegmentService.class).removeSegmentDefinition(segmentId, true);
 
         return dependentMetadata.getScorings().isEmpty() && dependentMetadata.getSegments().isEmpty();
     }

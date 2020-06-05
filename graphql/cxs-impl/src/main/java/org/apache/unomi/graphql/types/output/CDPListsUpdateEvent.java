@@ -27,6 +27,7 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.graphql.condition.factories.ConditionFactory;
 import org.apache.unomi.graphql.converters.UserListConverter;
 import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.services.UserListService;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -75,7 +76,7 @@ public class CDPListsUpdateEvent implements CDPEventInterface {
         final Query query = new Query();
         query.setCondition(factory.propertiesCondition("itemId", "in", listIds));
 
-        final PartialList<Metadata> partialList = serviceManager.getUserListServiceExt().getListMetadatas(query);
+        final PartialList<Metadata> partialList = serviceManager.getService(UserListService.class).getListMetadatas(query);
 
         if (partialList == null || partialList.getList() == null) {
             return null;

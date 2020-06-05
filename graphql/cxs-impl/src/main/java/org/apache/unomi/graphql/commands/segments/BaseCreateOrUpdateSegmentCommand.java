@@ -34,7 +34,7 @@ public abstract class BaseCreateOrUpdateSegmentCommand<INPUT extends BaseSegment
     }
 
     protected Segment preparedSegmentWithoutCondition(final INPUT segmentInput) {
-        final SegmentService segmentService = serviceManager.getSegmentService();
+        final SegmentService segmentService = serviceManager.getService(SegmentService.class);
 
         final String segmentId = Strings.isNullOrEmpty(segmentInput.getId())
                 ? segmentInput.getName()

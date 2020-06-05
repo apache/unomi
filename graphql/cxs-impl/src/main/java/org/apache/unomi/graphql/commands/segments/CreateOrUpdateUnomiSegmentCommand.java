@@ -18,6 +18,7 @@ package org.apache.unomi.graphql.commands.segments;
 
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.graphql.types.output.UnomiSegment;
 import org.apache.unomi.graphql.types.input.UnomiSegmentInput;
@@ -40,7 +41,7 @@ public class CreateOrUpdateUnomiSegmentCommand extends BaseCreateOrUpdateSegment
 
     @Override
     public UnomiSegment execute() {
-        final SegmentService segmentService = serviceManager.getSegmentService();
+        final SegmentService segmentService = serviceManager.getService(SegmentService.class);
 
         Segment segment = preparedSegmentWithoutCondition(segmentInput);
 
@@ -57,7 +58,7 @@ public class CreateOrUpdateUnomiSegmentCommand extends BaseCreateOrUpdateSegment
 
     @SuppressWarnings("unchecked")
     private Condition decorateCondition(final Condition condition) {
-        condition.setConditionType(serviceManager.getDefinitionsService().getConditionType(condition.getConditionTypeId()));
+        condition.setConditionType(serviceManager.getService(DefinitionsService.class).getConditionType(condition.getConditionTypeId()));
 
         if (condition.containsParameter("subConditions")) {
             final List<LinkedHashMap<String, Object>> subConditions = (List<LinkedHashMap<String, Object>>) condition.getParameter("subConditions");

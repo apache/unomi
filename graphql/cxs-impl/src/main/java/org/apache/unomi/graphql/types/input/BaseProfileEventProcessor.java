@@ -18,6 +18,7 @@ package org.apache.unomi.graphql.types.input;
 
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.utils.EventBuilder;
 
@@ -29,7 +30,7 @@ public abstract class BaseProfileEventProcessor implements CDPEventProcessor {
     protected Profile loadProfile(final Map<String, Object> eventInputAsMap, final DataFetchingEnvironment environment) {
         final Map<String, Object> cdpProfileId = (Map<String, Object>) eventInputAsMap.get("cdp_profileID");
         final ServiceManager serviceManager = environment.getContext();
-        return serviceManager.getProfileService().load((String) cdpProfileId.get("id"));
+        return serviceManager.getService(ProfileService.class).load((String) cdpProfileId.get("id"));
     }
 
     protected final EventBuilder eventBuilder(final Profile profile) {

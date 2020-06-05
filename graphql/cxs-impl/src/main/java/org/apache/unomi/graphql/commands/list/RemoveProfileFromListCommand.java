@@ -19,11 +19,13 @@ package org.apache.unomi.graphql.commands.list;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.CDPGraphQLConstants;
 import org.apache.unomi.graphql.commands.BaseCommand;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.utils.EventBuilder;
 import org.apache.unomi.lists.UserList;
+import org.apache.unomi.services.UserListService;
 
 import java.util.Collections;
 import java.util.Objects;
@@ -42,13 +44,14 @@ public class RemoveProfileFromListCommand extends BaseCommand<Boolean> {
 
     @Override
     public Boolean execute() {
-        final UserList userList = serviceManager.getUserListServiceExt().load(listId);
+        final UserList userList = serviceManager.getService(UserListService.class).load(listId);
 
         if (userList == null) {
             return null;
         }
 
-        final Profile profile = serviceManager.getProfileService().load(profileIDInput.getId());
+        ProfileService profileService = serviceManager.getService(ProfileService.class);
+        final Profile profile = profileService.load(profileIDInput.getId());
 
         if (profile == null) {
             return null;
@@ -59,10 +62,10 @@ public class RemoveProfileFromListCommand extends BaseCommand<Boolean> {
                 .setPersistent(true)
                 .build();
 
-        int eventCode = serviceManager.getEventService().send(event);
+        int eventCode = serviceManager.getService(EventService.class).send(event);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
-            serviceManager.getProfileService().save(event.getProfile());
+            profileService.save(event.getProfile());
 
             return true;
         }
