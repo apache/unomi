@@ -17,6 +17,7 @@
 package org.apache.unomi.graphql.commands;
 
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.services.ServiceManager;
 
 import java.util.Map;
@@ -35,13 +36,14 @@ public class DeleteProfileCommand extends BaseCommand<Boolean> {
 
         final String profileId = (String) cdpProfileIdInput.get("id");
 
-        final Profile profile = serviceManager.getProfileService().load(profileId);
+        ProfileService profileService = serviceManager.getService(ProfileService.class);
+        final Profile profile = profileService.load(profileId);
 
         if (profile == null) {
             throw new IllegalStateException(String.format("The profile with id \"%s\" not found", profileId));
         }
 
-        serviceManager.getProfileService().delete(profileId, false);
+        profileService.delete(profileId, false);
 
         return true;
     }

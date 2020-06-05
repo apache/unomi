@@ -19,6 +19,7 @@ package org.apache.unomi.graphql.condition.parsers;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.schema.ComparisonConditionTranslator;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.utils.DateUtils;
@@ -48,7 +49,7 @@ public class SegmentProfilePropertiesConditionParser {
 
         final ServiceManager serviceManager = environment.getContext();
 
-        profilePropertiesAsMap = serviceManager.getProfileService().getTargetPropertyTypes("profiles").stream()
+        profilePropertiesAsMap = serviceManager.getService(ProfileService.class).getTargetPropertyTypes("profiles").stream()
                 .collect(Collectors.toMap(PropertyType::getItemId, Function.identity()));
     }
 

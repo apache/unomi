@@ -43,7 +43,7 @@ public class ProfileSegmentsDataFetcher extends BaseDataFetcher<List<CDPSegment>
     @Override
     public List<CDPSegment> get(DataFetchingEnvironment environment) throws Exception {
         final ServiceManager serviceManager = environment.getContext();
-        final SegmentService segmentService = serviceManager.getSegmentService();
+        final SegmentService segmentService = serviceManager.getService(SegmentService.class);
 
         final List<Metadata> metadata = segmentService.getSegmentMetadatasForProfile(profile);
 

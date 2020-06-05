@@ -28,6 +28,7 @@ import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.input.CDPListFilterInput;
 import org.apache.unomi.graphql.types.input.CDPOrderByInput;
 import org.apache.unomi.graphql.types.output.CDPListConnection;
+import org.apache.unomi.services.UserListService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,7 +52,7 @@ public class ListConnectionDataFetcher extends BaseConnectionDataFetcher<CDPList
 
         final Query query = buildQuery(createCondition(environment), orderByInput, params);
 
-        final PartialList<Metadata> metadataPartialList = serviceManager.getUserListServiceExt().getListMetadatas(query);
+        final PartialList<Metadata> metadataPartialList = serviceManager.getService(UserListService.class).getListMetadatas(query);
 
         return new CDPListConnection(metadataPartialList);
     }

@@ -21,6 +21,7 @@ import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.graphql.fetchers.BaseDataFetcher;
+import org.apache.unomi.graphql.schema.CDPEventInterfaceRegister;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.output.CDPEventInterface;
 
@@ -35,10 +36,10 @@ public class EventDataFetcher extends BaseDataFetcher<CDPEventInterface> {
     @Override
     public CDPEventInterface get(DataFetchingEnvironment environment) throws Exception {
         final ServiceManager serviceManager = environment.getContext();
-        final EventService eventService = serviceManager.getEventService();
+        final EventService eventService = serviceManager.getService(EventService.class);
         final Event event = eventService.getEvent(id);
 
-        return event == null ? null : serviceManager.getEventInterfaceRegister().getEvent(event);
+        return event == null ? null : serviceManager.getService(CDPEventInterfaceRegister.class).getEvent(event);
     }
 
 }

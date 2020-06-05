@@ -21,6 +21,8 @@ import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.graphql.condition.factories.EventConditionFactory;
 import org.apache.unomi.graphql.fetchers.ConnectionParams;
 import org.apache.unomi.graphql.fetchers.EventConnectionDataFetcher;
@@ -39,11 +41,12 @@ public class ConsentEventConnectionDataFetcher extends EventConnectionDataFetche
 
         final EventConditionFactory factory = EventConditionFactory.get(environment);
 
-        final Condition eventCondition = factory.propertyCondition("eventType", "modifyConsent", serviceManager.getDefinitionsService());
-        final Condition consentCondition = factory.propertyCondition("target.token", consent.getToken(), serviceManager.getDefinitionsService());
+        DefinitionsService definitionsService = serviceManager.getService(DefinitionsService.class);
+        final Condition eventCondition = factory.propertyCondition("eventType", "modifyConsent", definitionsService);
+        final Condition consentCondition = factory.propertyCondition("target.token", consent.getToken(), definitionsService);
 
         final Condition andCondition = factory.booleanCondition("and", Arrays.asList(eventCondition, consentCondition));
-        final PartialList<Event> events = serviceManager.getEventService().searchEvents(andCondition, 0, ConnectionParams.DEFAULT_PAGE_SIZE);
+        final PartialList<Event> events = serviceManager.getService(EventService.class).searchEvents(andCondition, 0, ConnectionParams.DEFAULT_PAGE_SIZE);
 
         return createEventConnection(events);
     }

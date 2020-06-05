@@ -20,6 +20,7 @@ package org.apache.unomi.graphql.fetchers.profile;
 
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.PropertyType;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.fetchers.BaseConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.ConnectionParams;
 import org.apache.unomi.graphql.services.ServiceManager;
@@ -38,7 +39,7 @@ public class PropertiesConnectionDataFetcher extends BaseConnectionDataFetcher<C
     public CDPPropertyConnection get(DataFetchingEnvironment environment) throws Exception {
         final ServiceManager serviceManager = environment.getContext();
         final ConnectionParams params = parseConnectionParams(environment);
-        final Collection<PropertyType> properties = serviceManager.getProfileService().getTargetPropertyTypes("profiles");
+        final Collection<PropertyType> properties = serviceManager.getService(ProfileService.class).getTargetPropertyTypes("profiles");
 
         return createPropertiesConnection(properties, params);
     }

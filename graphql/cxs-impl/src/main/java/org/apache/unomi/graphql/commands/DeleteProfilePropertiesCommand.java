@@ -17,6 +17,8 @@
 package org.apache.unomi.graphql.commands;
 
 import org.apache.unomi.api.PropertyType;
+import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +41,8 @@ public class DeleteProfilePropertiesCommand extends BaseCommand<Boolean> {
 
     @Override
     public Boolean execute() {
-        final Collection<PropertyType> propertyTypes = serviceManager.getProfileService().getTargetPropertyTypes("profiles");
+        ProfileService profileService = serviceManager.getService(ProfileService.class);
+        final Collection<PropertyType> propertyTypes = profileService.getTargetPropertyTypes("profiles");
 
         final List<String> persistedPropertyNames = propertyTypes.stream().map(PropertyType::getItemId).collect(Collectors.toList());
 
@@ -52,7 +55,7 @@ public class DeleteProfilePropertiesCommand extends BaseCommand<Boolean> {
 
         for (String propertyName : propertyNames) {
             try {
-                boolean deleted = serviceManager.getProfileService().deletePropertyType(propertyName);
+                boolean deleted = profileService.deletePropertyType(propertyName);
 
                 if (deleted) {
                     LOG.info("The property \"{}\" of profile was deleted successfully", propertyName);
@@ -64,7 +67,7 @@ public class DeleteProfilePropertiesCommand extends BaseCommand<Boolean> {
             }
         }
 
-        serviceManager.getGraphQLSchemaUpdater().updateSchema();
+        serviceManager.getService(GraphQLSchemaUpdater.class).updateSchema();
 
         return true;
     }

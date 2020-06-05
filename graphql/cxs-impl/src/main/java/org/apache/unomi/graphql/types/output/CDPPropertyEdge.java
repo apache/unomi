@@ -22,6 +22,7 @@ import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.annotations.annotationTypes.GraphQLPrettify;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.PropertyType;
+import org.apache.unomi.graphql.schema.CDPPropertyInterfaceRegister;
 import org.apache.unomi.graphql.services.ServiceManager;
 
 @GraphQLName("CDP_ProfilePropertyEdge")
@@ -38,7 +39,7 @@ public class CDPPropertyEdge {
     public CDPPropertyInterface getNode(final DataFetchingEnvironment environment) {
         final ServiceManager serviceManager = environment.getContext();
 
-        return serviceManager.getPropertyInterfaceRegister().getProperty(type);
+        return serviceManager.getService(CDPPropertyInterfaceRegister.class).getProperty(type);
     }
 
     @GraphQLNonNull

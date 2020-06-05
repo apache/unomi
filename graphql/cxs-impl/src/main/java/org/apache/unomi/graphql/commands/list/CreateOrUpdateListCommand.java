@@ -39,7 +39,7 @@ public class CreateOrUpdateListCommand extends BaseCommand<CDPList> {
 
     @Override
     public CDPList execute() {
-        final UserListService userListService = serviceManager.getUserListServiceExt();
+        final UserListService userListService = serviceManager.getService(UserListService.class);
 
         final String listId = Strings.isNullOrEmpty(listInput.getId())
                 ? listInput.getName()

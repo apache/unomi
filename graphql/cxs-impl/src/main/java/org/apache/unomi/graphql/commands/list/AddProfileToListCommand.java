@@ -19,6 +19,7 @@ package org.apache.unomi.graphql.commands.list;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.CDPGraphQLConstants;
 import org.apache.unomi.graphql.commands.BaseCommand;
 import org.apache.unomi.graphql.converters.UserListConverter;
@@ -26,6 +27,7 @@ import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.output.CDPList;
 import org.apache.unomi.graphql.utils.EventBuilder;
 import org.apache.unomi.lists.UserList;
+import org.apache.unomi.services.UserListService;
 
 import java.util.Collections;
 import java.util.Objects;
@@ -46,13 +48,13 @@ public class AddProfileToListCommand extends BaseCommand<CDPList> {
 
     @Override
     public CDPList execute() {
-        final UserList userList = serviceManager.getUserListServiceExt().load(listId);
+        final UserList userList = serviceManager.getService(UserListService.class).load(listId);
 
         if (userList == null) {
             return null;
         }
 
-        final Profile profile = serviceManager.getProfileService().load(profileIDInput.getId());
+        final Profile profile = serviceManager.getService(ProfileService.class).load(profileIDInput.getId());
 
         if (profile == null) {
             return null;
@@ -63,8 +65,8 @@ public class AddProfileToListCommand extends BaseCommand<CDPList> {
                 .setPersistent(true)
                 .build();
 
-        if (serviceManager.getEventService().send(event) == EventService.PROFILE_UPDATED) {
-            serviceManager.getProfileService().save(event.getProfile());
+        if (serviceManager.getService(EventService.class).send(event) == EventService.PROFILE_UPDATED) {
+            serviceManager.getService(ProfileService.class).save(event.getProfile());
         }
 
         return new CDPList(UserListConverter.convertToUnomiList(userList));

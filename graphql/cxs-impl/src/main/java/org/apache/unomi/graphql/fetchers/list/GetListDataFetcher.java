@@ -22,6 +22,7 @@ import org.apache.unomi.graphql.converters.UserListConverter;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.output.CDPList;
 import org.apache.unomi.lists.UserList;
+import org.apache.unomi.services.UserListService;
 
 public class GetListDataFetcher implements DataFetcher<CDPList> {
 
@@ -35,7 +36,7 @@ public class GetListDataFetcher implements DataFetcher<CDPList> {
     public CDPList get(final DataFetchingEnvironment environment) throws Exception {
         final ServiceManager serviceManager = environment.getContext();
 
-        final UserList userList = serviceManager.getUserListServiceExt().load(listId);
+        final UserList userList = serviceManager.getService(UserListService.class).load(listId);
 
         return userList != null ? new CDPList(UserListConverter.convertToUnomiList(userList)) : null;
     }

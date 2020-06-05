@@ -22,6 +22,7 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
+import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.graphql.condition.factories.EventConditionFactory;
 import org.apache.unomi.graphql.fetchers.ConnectionParams;
 import org.apache.unomi.graphql.fetchers.EventConnectionDataFetcher;
@@ -56,7 +57,7 @@ public class FindEventsConnectionDataFetcher extends EventConnectionDataFetcher 
 
         final Query query = buildQuery(condition, orderByInput, params);
 
-        PartialList<Event> events = serviceManager.getEventService().search(query);
+        PartialList<Event> events = serviceManager.getService(EventService.class).search(query);
 
         return createEventConnection(events);
     }

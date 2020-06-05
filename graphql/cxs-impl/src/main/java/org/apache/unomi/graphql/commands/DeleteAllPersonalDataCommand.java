@@ -18,6 +18,8 @@ package org.apache.unomi.graphql.commands;
 
 import com.google.common.base.Strings;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.services.PrivacyService;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.services.ServiceManager;
 
 import java.util.Map;
@@ -37,13 +39,13 @@ public class DeleteAllPersonalDataCommand extends BaseCommand<Boolean> {
 
         final String profileId = (String) cdpProfileIdInput.get("id");
 
-        final Profile profile = serviceManager.getProfileService().load(profileId);
+        final Profile profile = serviceManager.getService(ProfileService.class).load(profileId);
 
         if (profile == null) {
             return false;
         }
 
-        return serviceManager.getPrivacyService().deleteProfileData(profileId, false);
+        return serviceManager.getService(PrivacyService.class).deleteProfileData(profileId, false);
     }
 
     public static Builder create() {

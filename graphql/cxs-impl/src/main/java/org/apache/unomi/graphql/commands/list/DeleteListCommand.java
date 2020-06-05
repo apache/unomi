@@ -17,6 +17,7 @@
 package org.apache.unomi.graphql.commands.list;
 
 import org.apache.unomi.graphql.commands.BaseCommand;
+import org.apache.unomi.services.UserListService;
 
 import java.util.Objects;
 
@@ -32,13 +33,14 @@ public class DeleteListCommand extends BaseCommand<Boolean> {
 
     @Override
     public Boolean execute() {
-        if (serviceManager.getUserListServiceExt().load(listId) == null) {
+        UserListService userListService = serviceManager.getService(UserListService.class);
+        if (userListService.load(listId) == null) {
             return false;
         }
 
-        serviceManager.getUserListServiceExt().delete(listId);
+        userListService.delete(listId);
 
-        return serviceManager.getUserListServiceExt().load(listId) == null;
+        return userListService.load(listId) == null;
     }
 
     public static Builder create(final String listId) {

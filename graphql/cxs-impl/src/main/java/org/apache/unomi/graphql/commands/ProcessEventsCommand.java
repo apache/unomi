@@ -21,6 +21,7 @@ import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLInputObjectType;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.CDPGraphQLConstants;
 import org.apache.unomi.graphql.types.input.CDPConsentUpdateEventInput;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
@@ -158,10 +159,10 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
     }
 
     private void processEvent(final Event event) {
-        int eventCode = serviceManager.getEventService().send(event);
+        int eventCode = serviceManager.getService(EventService.class).send(event);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
-            serviceManager.getProfileService().save(event.getProfile());
+            serviceManager.getService(ProfileService.class).save(event.getProfile());
         }
         processedEventsQty.incrementAndGet();
     }

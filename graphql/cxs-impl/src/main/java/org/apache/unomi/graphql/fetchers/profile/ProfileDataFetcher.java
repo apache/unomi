@@ -38,7 +38,7 @@ public class ProfileDataFetcher extends BaseDataFetcher<CDPProfile> {
     @Override
     public CDPProfile get(DataFetchingEnvironment environment) throws Exception {
         final ServiceManager serviceManager = environment.getContext();
-        final ProfileService profileService = serviceManager.getProfileService();
+        final ProfileService profileService = serviceManager.getService(ProfileService.class);
 
         Profile profile = profileService.load(profileIDInput.getId());
 
