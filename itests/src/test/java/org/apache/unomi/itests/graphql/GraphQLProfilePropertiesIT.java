@@ -28,10 +28,7 @@ import org.ops4j.pax.exam.util.Filter;
 
 import javax.inject.Inject;
 import java.time.OffsetDateTime;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public class GraphQLProfilePropertiesIT extends BaseGraphQLIT {
 
@@ -77,8 +74,10 @@ public class GraphQLProfilePropertiesIT extends BaseGraphQLIT {
         consent.setTypeIdentifier("newsletter1");
         consent.setScope("digitall");
         consent.setStatus(ConsentStatus.GRANTED);
-        consent.setStatusDate(DateUtils.toDate(OffsetDateTime.parse("2019-05-15T14:47:28Z")));
-        consent.setRevokeDate(DateUtils.toDate(OffsetDateTime.parse("2021-05-14T14:47:28Z")));
+        Date statusDate = DateUtils.toDate(OffsetDateTime.parse("2019-05-15T14:47:28Z"));
+        consent.setStatusDate(statusDate);
+        Date revokationDate = DateUtils.toDate(OffsetDateTime.parse("2021-05-14T14:47:28Z"));
+        consent.setRevokeDate(revokationDate);
 
         final Map<String, Double> interestsAsMap = new HashMap<>();
 
@@ -102,8 +101,8 @@ public class GraphQLProfilePropertiesIT extends BaseGraphQLIT {
             // assert consent
             Assert.assertEquals("GRANTED", context.getValue("data.cdp.getProfile.cdp_consents[0].status"));
             Assert.assertEquals("newsletter1", context.getValue("data.cdp.getProfile.cdp_consents[0].type"));
-            Assert.assertEquals("2019-05-15T17:47:28+03:00", context.getValue("data.cdp.getProfile.cdp_consents[0].lastUpdate"));
-            Assert.assertEquals("2021-05-14T17:47:28+03:00", context.getValue("data.cdp.getProfile.cdp_consents[0].expiration"));
+            Assert.assertEquals(statusDate, DateUtils.toDate(OffsetDateTime.parse(context.getValue("data.cdp.getProfile.cdp_consents[0].lastUpdate"))));
+            Assert.assertEquals(revokationDate, DateUtils.toDate(OffsetDateTime.parse(context.getValue("data.cdp.getProfile.cdp_consents[0].expiration"))));
 
             // assert interests
             Assert.assertEquals("interestName", context.getValue("data.cdp.getProfile.cdp_interests[0].topic"));

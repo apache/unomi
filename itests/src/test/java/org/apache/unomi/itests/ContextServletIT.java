@@ -138,6 +138,7 @@ public class ContextServletIT extends BaseIT {
 		Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
 		profileService.save(profile);
 		this.eventService.send(event);
+		refreshPersistence();
 		Thread.sleep(2000);
 		event.setEventType(eventTypeUpdated); //change the event so we can see the update effect
 
@@ -149,6 +150,7 @@ public class ContextServletIT extends BaseIT {
 		request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 		TestUtils.executeContextJSONRequest(request, sessionId);
+		refreshPersistence();
 		Thread.sleep(2000); //Making sure event is updated in DB
 
 		//Assert
@@ -171,6 +173,7 @@ public class ContextServletIT extends BaseIT {
 		Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
 		profileService.save(profile);
 		this.eventService.send(event);
+		refreshPersistence();
 		Thread.sleep(2000);
 		event.setEventType(eventTypeUpdated); //change the event so we can see the update effect
 
@@ -181,6 +184,7 @@ public class ContextServletIT extends BaseIT {
 		HttpPost request = new HttpPost(URL + CONTEXT_URL);
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 		TestUtils.executeContextJSONRequest(request, sessionId);
+		refreshPersistence();
 		Thread.sleep(2000); //Making sure event is updated in DB
 
 		//Assert
@@ -201,6 +205,7 @@ public class ContextServletIT extends BaseIT {
 		Session session = new Session(sessionId, profile, new Date(), scope);
 		Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
 		this.eventService.send(event);
+		refreshPersistence();
 		Thread.sleep(2000);
 		event.setEventType(eventTypeUpdated); //change the event so we can see the update effect
 
@@ -211,6 +216,7 @@ public class ContextServletIT extends BaseIT {
 		HttpPost request = new HttpPost(URL + CONTEXT_URL);
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 		TestUtils.executeContextJSONRequest(request, sessionId);
+		refreshPersistence();
 		Thread.sleep(2000); //Making sure event is updated in DB
 
 		//Assert
@@ -236,11 +242,14 @@ public class ContextServletIT extends BaseIT {
 		HttpPost request = new HttpPost(URL + CONTEXT_URL);
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 		String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
+		refreshPersistence();
 		Thread.sleep(1000); //Making sure DB is updated
 
 		//Add the context-profile-id cookie to the second event
 		request.addHeader("Cookie", cookieHeaderValue);
 		ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
+
+		refreshPersistence();
 
 		//Assert
 		assertEquals(1, response.getProfileSegments().size());
@@ -248,7 +257,7 @@ public class ContextServletIT extends BaseIT {
 	}
 
 	@Test
-	public void testCreateEventWithTimestampParam_pastEvent_profileIsNotAddedToSegment() throws IOException {
+	public void testCreateEventWithTimestampParam_pastEvent_profileIsNotAddedToSegment() throws IOException, InterruptedException {
 		//Arrange
 		String sessionId = "test-session-id";
 		String scope = "test-scope";
@@ -268,17 +277,19 @@ public class ContextServletIT extends BaseIT {
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 		//The first event is with a default timestamp (now)
 		String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
+		refreshPersistence();
 		//The second event is with a customized timestamp
 		request.setURI(URI.create(customTimestampURI));
 		request.addHeader("Cookie", cookieHeaderValue);
 		ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
+		refreshPersistence();
 
 		//Assert
 		assertEquals(0,response.getProfileSegments().size());
 	}
 
 	@Test
-	public void testCreateEventWithTimestampParam_futureEvent_profileIsNotAddedToSegment() throws IOException {
+	public void testCreateEventWithTimestampParam_futureEvent_profileIsNotAddedToSegment() throws IOException, InterruptedException {
 		//Arrange
 		String sessionId = "test-session-id";
 		String scope = "test-scope";
@@ -298,10 +309,12 @@ public class ContextServletIT extends BaseIT {
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 		//The first event is with a default timestamp (now)
 		String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
+		refreshPersistence();
 		//The second event is with a customized timestamp
 		request.setURI(URI.create(customTimestampURI));
 		request.addHeader("Cookie", cookieHeaderValue);
 		ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
+		refreshPersistence();
 
 		//Assert
 		assertEquals(0,response.getProfileSegments().size());
