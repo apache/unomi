@@ -12,8 +12,6 @@
 // limitations under the License.
 //
 
-=== Data Model changes for Apache Unomi 1.5.0
-
 ==== Data model and ElasticSearch 7
 
 Since Apache Unomi version 1.5.0 we decided to upgrade the supported ElasticSearch version to the latest 7.4.2.
@@ -51,26 +49,30 @@ Because of this changes the geonames DB index name is now respecting the index n
 Previously named: `geonames` is now using the index name `context-geonameentry`
 (see: link:#_installing_geonames_database[Documentation about geonames extension]).
 
-===== Migration
+==== Migration steps
 
 In order to migrate the data from ElasticSearch 5 to 7, Unomi provides a migration tool that is directly integrated.
 
-In these migration steps the following is assumed:
+In this migration the following is assumed:
 
-- the ElasticSearch 5 installation is referred to as the `source`
-- the ElasticSearch 7 installation is referred to as the `target`
-- the Unomi 1.4 installation is completely stopped
-- the Unomi 1.5 installation has never been started (just uncompressed)
-- the Unomi 1.5 installation has been configured to connect to the `target` (ElasticSearch 7) cluster
+- the ElasticSearch 5 cluster installation is referred to as the `source`
+- the ElasticSearch 7 cluster installation is referred to as the `target`
+- the Unomi 1.4 cluster installation is completely stopped
+- the Unomi 1.5 cluster installation has never been started (just uncompressed)
+- the Unomi 1.5 cluster installation has been configured to connect to the `target` (ElasticSearch 7) cluster
 
-It is HIGHLY RECOMMENDED to perform a full cluster backup/snapshot of the `source` cluster, and ideally to perform the
-migration on a restore of the `source` cluster. For more information on ElasticSearch 5 snapshots and restore you can
-find it here: https://www.elastic.co/guide/en/elasticsearch/reference/5.6/modules-snapshots.html
+It is HIGHLY RECOMMENDED to perform a full cluster backup/snapshot of the `source` clusters (including ElasticSearch and
+Unomi clusters), and ideally to perform the migration on a restored snapshot of the `source` cluster. For more information
+on ElasticSearch 5 snapshots and restore you can find it here:
 
-Note that it is possible to do the migration procedure on a single machine, but you will need to change the ports on one
-of the ElasticSearch cluster. In the following example we have changed the ports on the `source` cluster, which requires
-a cluster restart to take effect. It is also possible to change the ports on the `target` cluster but those would have
-to be then changed again to your final setting.
+    https://www.elastic.co/guide/en/elasticsearch/reference/5.6/modules-snapshots.html
+
+The way the migration works is that both ElasticSearch 5 AND an ElasticSearch 7 clusters (or just single nodes) will
+be started at the same time, and data will be migrated from the ES 5 to the ES 7 cluster. Note that it is possible to use
+a single node for both the `source` and the `target` clusters to - for example - perform the migration on a single
+machine. If you choose to do that you will have to adjust port numbers on either the `source` or `target` cluster node.
+Changing ports requires a restart of the ES cluster you are modifying. In this example we will illustrate how to migrate
+by modifying the `source` cluster node ports.
 
 So in the `source` 's ElasticSearch 5 `config/elasticsearch.yml` file we have modified the default ports to:
 
@@ -99,6 +101,10 @@ Once in the console launch the migration using the following command:
 
     migrate 1.4.0
 
+Note: the 1.4.0 version is the starting version. If you are starting from a different version (for example a fork), make
+sure that you know what official version of Apache Unomi it corresponds to and you can use the official version number
+as a start version for the migration.
+
 Follow the instructions and answer the prompts. If you used the above configuration as an example you can simply use the
 default values.
 
@@ -108,5 +114,14 @@ ES 5 one.
 Note that it is also possible to change the index prefix to be different from the default `context` value
 so that you could host multiple Apache Unomi instances on the same ElasticSearch cluster.
 
-Important note: only the data that Apache Unomi manages will be migrate. If you have any other data (for example Kibana
+Important note: only the data that Apache Unomi manages will be migrated. If you have any other data (for example Kibana
 or ElasticSearch monitoring indices) they will not be migrated by this migration tool.
+
+Once the migration has completed, you can start the new Unomi instance using:
+
+    unomi:start
+
+You should then validate that all the data has been properly migrated. For example you could issue a command to list
+the profiles:
+
+    profile-list

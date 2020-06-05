@@ -11,9 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-=== Configuration
+== Configuration
 
-==== Centralized configuration
+=== Centralized configuration
 
 Apache Unomi uses a centralized configuration file that contains both system properties and configuration properties.
 These settings are then fed to the OSGi and other configuration files using placeholder that look something like this:
@@ -32,7 +32,7 @@ this file directly, as an override mechanism is available. Simply create a file 
 and put your own property values in their to override the defaults OR you can use environment variables to also override
 the values in the `$MY_KARAF_HOME/etc/custom.system.properties`. See the next section for more information about that.
 
-==== Changing the default configuration using environment variables (i.e. Docker configuration)
+=== Changing the default configuration using environment variables (i.e. Docker configuration)
 
 You might want to use environment variables to change the default system configuration, especially if you intend to run
 Apache Unomi inside a Docker container. You can find the list of all the environment variable names in the following file:
@@ -45,7 +45,7 @@ Docker Compose you can put the environment variables in the docker-compose.yml f
 If you want to "save" the environment values in a file, you can use the `bin/setenv(.bat)` to setup the environment
 variables you want to use.
 
-==== Changing the default configuration using property files
+=== Changing the default configuration using property files
 
 If you want to change the default configuration using property files instead of environment variables, you can perform
 any modification you want in the `$MY_KARAF_HOME/etc/unomi.custom.system.properties` file.
@@ -84,7 +84,7 @@ org.apache.unomi.elasticsearch.cluster.name=contextElasticSearch
 org.apache.unomi.elasticsearch.addresses=localhost:9200
 ----
 
-==== Secured events configuration
+=== Secured events configuration
 
 Apache Unomi secures some events by default. It comes out of the box with a default configuration that you can adjust
 by using the centralized configuration file override in `$MY_KARAF_HOME/etc/unomi.custom.system.properties`
@@ -146,7 +146,7 @@ thirdparty.provider1.allowedEvents=login,updateProperties
 ----
 
 
-==== Installing the MaxMind GeoIPLite2 IP lookup database
+=== Installing the MaxMind GeoIPLite2 IP lookup database
 
 Apache Unomi requires an IP database in order to resolve IP addresses to user location.
 The GeoLite2 database can be downloaded from MaxMind here :
@@ -154,7 +154,7 @@ http://dev.maxmind.com/geoip/geoip2/geolite2/[http://dev.maxmind.com/geoip/geoip
 
 Simply download the GeoLite2-City.mmdb file into the "etc" directory.
 
-==== Installing Geonames database
+=== Installing Geonames database
 
 Apache Unomi includes a geocoding service based on the geonames database ( http://www.geonames.org/[http://www.geonames.org/] ). It can be
 used to create conditions on countries or cities.
@@ -168,7 +168,7 @@ import should start right away.
 Otherwise, import should start at the next startup. Import runs in background, but can take about 15 minutes.
 At the end, you should have about 4 million entries in the geonames index.
 
-==== REST API Security
+=== REST API Security
 
 The Apache Unomi Context Server REST API is protected using JAAS authentication and using Basic or Digest HTTP auth.
 By default, the login/password for the REST API full administrative access is "karaf/karaf".
@@ -193,7 +193,7 @@ You should now have SSL setup on Karaf with your certificate, and you can test i
 Changing the default Karaf password can be done by modifying the `org.apache.unomi.security.root.password` in the
 `$MY_KARAF_HOME/etc/unomi.custom.system.properties` file
 
-==== Scripting security
+=== Scripting security
 
 By default, scripting (using in conditions, segments and rules) is controlled by a custom classloader that is quite
 restrictive and using a white-list/black list system. It is controlled through the following property in the
@@ -211,7 +211,7 @@ restrictive configuration.
 If you need, for example when adding a custom item type, to adjust these, please be careful as scripts may be called
 directly from the context.json personalization conditions and therefore should be kept minimal.
 
-==== Automatic profile merging
+=== Automatic profile merging
 
 Apache Unomi is capable of merging profiles based on a common property value. In order to use this, you must
 add the MergeProfileOnPropertyAction to a rule (such as a login rule for example), and configure it with the name
@@ -226,7 +226,7 @@ will use the merged profile.
 To test, simply configure the action in the "login" or "facebookLogin" rules and set it up on the "email" property.
 Upon sending one of the events, all matching profiles will be merged.
 
-==== Securing a production environment
+=== Securing a production environment
 
 Before going live with a project, you should _absolutely_ read the following section that will help you setup a proper
 secure environment for running your context server. 
@@ -293,7 +293,7 @@ Step 4 : Setup a proxy in front of the context server
 As an alternative to an application-level firewall, you could also route all traffic to the context server through
 a proxy, and use it to filter any communication.
 
-==== Integrating with an Apache HTTP web server
+=== Integrating with an Apache HTTP web server
 
 If you want to setup an Apache HTTP web server in from of Apache Unomi, here is an example configuration using
 mod_proxy.
@@ -383,7 +383,7 @@ ProxyPass / http://localhost:8181/ connectiontimeout=20 timeout=300 ttl=120
 ProxyPassReverse / http://localhost:8181/
 ----
 
-==== Changing the default tracking location
+=== Changing the default tracking location
 
 When performing localhost requests to Apache Unomi, a default location will be used to insert values into the session
 to make the location-based personalization still work. You can modify the default location settings using the
@@ -407,7 +407,7 @@ org.apache.unomi.ip.default.longitude=${env:UNOMI_IP_DEFAULT_LONGITUDE:-6.128250
 
 You might want to change these for testing or for demonstration purposes.
 
-==== Apache Karaf SSH Console
+=== Apache Karaf SSH Console
 
 The Apache Karaf SSH console is available inside Apache Unomi, but the port has been changed from the default value of
 8101 to 8102 to avoid conflicts with other Karaf-based products. So to connect to the SSH console you should use:
@@ -420,13 +420,13 @@ ssh -p 8102 karaf@localhost
 or the user/password you have setup to protect the system if you have changed it. You can find the list of Apache Unomi
 shell commands in the "Shell commands" section of the documentation.
 
-==== ElasticSearch authentication and security
+=== ElasticSearch authentication and security
 
 With ElasticSearch 7, it's possible to secure the access to your data. (https://www.elastic.co/guide/en/elasticsearch/reference/7.5/secure-cluster.html[https://www.elastic.co/guide/en/elasticsearch/reference/7.5/secure-cluster.html])
 
 Depending on your ElasticSearch license you may need to install Kibana and enable xpack security: https://www.elastic.co/guide/en/elasticsearch/reference/7.5/configuring-security.html[https://www.elastic.co/guide/en/elasticsearch/reference/7.5/configuring-security.html]
 
-===== User authentication !
+==== User authentication !
 
 If your ElasticSearch have been configured to be only accessible by authenticated users (https://www.elastic.co/guide/en/elasticsearch/reference/7.5/setting-up-authentication.html[https://www.elastic.co/guide/en/elasticsearch/reference/7.5/setting-up-authentication.html])
 
@@ -438,7 +438,7 @@ username=USER
 password=PASSWORD
 ----
 
-===== SSL communication
+==== SSL communication
 
 By default Unomi will communicate with ElasticSearch using `http`
 but you can configure your ElasticSearch server(s) to allow encrypted request using `https`.
