@@ -54,7 +54,8 @@ public class AddProfileToListCommand extends BaseCommand<CDPList> {
             return null;
         }
 
-        final Profile profile = serviceManager.getService(ProfileService.class).load(profileIDInput.getId());
+        ProfileService profileService = serviceManager.getService(ProfileService.class);
+        final Profile profile = profileService.load(profileIDInput.getId());
 
         if (profile == null) {
             return null;
@@ -66,7 +67,7 @@ public class AddProfileToListCommand extends BaseCommand<CDPList> {
                 .build();
 
         if (serviceManager.getService(EventService.class).send(event) == EventService.PROFILE_UPDATED) {
-            serviceManager.getService(ProfileService.class).save(event.getProfile());
+            profileService.save(event.getProfile());
         }
 
         return new CDPList(UserListConverter.convertToUnomiList(userList));

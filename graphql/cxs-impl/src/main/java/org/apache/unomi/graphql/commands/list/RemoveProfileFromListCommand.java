@@ -50,7 +50,8 @@ public class RemoveProfileFromListCommand extends BaseCommand<Boolean> {
             return null;
         }
 
-        final Profile profile = serviceManager.getService(ProfileService.class).load(profileIDInput.getId());
+        ProfileService profileService = serviceManager.getService(ProfileService.class);
+        final Profile profile = profileService.load(profileIDInput.getId());
 
         if (profile == null) {
             return null;
@@ -64,7 +65,7 @@ public class RemoveProfileFromListCommand extends BaseCommand<Boolean> {
         int eventCode = serviceManager.getService(EventService.class).send(event);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
-            serviceManager.getService(ProfileService.class).save(event.getProfile());
+            profileService.save(event.getProfile());
 
             return true;
         }
