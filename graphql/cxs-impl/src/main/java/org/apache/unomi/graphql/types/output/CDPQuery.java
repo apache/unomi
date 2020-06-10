@@ -68,6 +68,7 @@ public class CDPQuery {
                                              final @GraphQLName("after") String after,
                                              final @GraphQLName("last") Integer last,
                                              final @GraphQLName("before") String before,
+                                             final @GraphQLName("text") String text,
                                              final DataFetchingEnvironment environment) throws Exception {
         return new FindProfilesConnectionDataFetcher(filter, orderBy).get(environment);
     }
@@ -88,6 +89,7 @@ public class CDPQuery {
                                          final @GraphQLName("after") String after,
                                          final @GraphQLName("last") Integer last,
                                          final @GraphQLName("before") String before,
+                                         final @GraphQLName("text") String text,
                                          final DataFetchingEnvironment environment) {
         return new FindEventsConnectionDataFetcher(filter, orderBy).get(environment);
     }

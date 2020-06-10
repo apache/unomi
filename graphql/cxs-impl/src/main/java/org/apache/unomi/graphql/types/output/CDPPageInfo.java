@@ -28,13 +28,17 @@ public class CDPPageInfo {
     @GraphQLField
     private boolean hasNextPage;
 
+    @GraphQLField
+    private Long totalSize;
+
     public CDPPageInfo() {
-        this(false, false);
+        this(false, false, 0L);
     }
 
-    public CDPPageInfo(boolean hasPreviousPage, boolean hasNextPage) {
+    public CDPPageInfo(boolean hasPreviousPage, boolean hasNextPage, Long totalSize) {
         this.hasPreviousPage = hasPreviousPage;
         this.hasNextPage = hasNextPage;
+        this.totalSize = totalSize;
     }
 
     public boolean isHasPreviousPage() {
@@ -53,5 +57,9 @@ public class CDPPageInfo {
     public CDPPageInfo setHasNextPage(boolean hasNextPage) {
         this.hasNextPage = hasNextPage;
         return this;
+    }
+
+    public Long getTotalSize() {
+        return totalSize;
     }
 }
