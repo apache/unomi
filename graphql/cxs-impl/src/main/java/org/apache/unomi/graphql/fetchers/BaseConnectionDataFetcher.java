@@ -34,7 +34,7 @@ public abstract class BaseConnectionDataFetcher<T> extends BaseDataFetcher<T> {
                 .last(parseParam("last", null, environment))
                 .after(parseParam("after", null, environment))
                 .before(parseParam("before", null, environment))
-                .text(parseParam("text", null, environment))
+                .text(parseParam("unomi_text", null, environment))
                 .build();
     }
 

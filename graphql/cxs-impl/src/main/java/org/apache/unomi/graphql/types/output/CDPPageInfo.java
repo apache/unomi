@@ -28,6 +28,7 @@ public class CDPPageInfo {
     @GraphQLField
     private boolean hasNextPage;
 
+    @GraphQLName("unomi_totalSize")
     @GraphQLField
     private Long totalSize;
 
