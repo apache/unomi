@@ -32,7 +32,11 @@ public abstract class ProfileConnectionDataFetcher extends BaseConnectionDataFet
         final List<CDPProfileEdge> eventEdges = profiles.getList().stream()
                 .map(CDPProfileEdge::new)
                 .collect(Collectors.toList());
-        final CDPPageInfo pageInfo = new CDPPageInfo(profiles.getOffset() > 0, profiles.getTotalSize() > profiles.getList().size());
+        final CDPPageInfo pageInfo = new CDPPageInfo(
+                profiles.getOffset() > 0,
+                profiles.getTotalSize() > profiles.getList().size(),
+                profiles.getTotalSize()
+        );
 
         return new CDPProfileConnection(eventEdges, pageInfo);
     }

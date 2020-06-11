@@ -62,7 +62,11 @@ public class CDPListConnection {
             return null;
         }
 
-        return new CDPPageInfo(userLists.getOffset() > 0, userLists.getTotalSize() > userLists.getList().size());
+        return new CDPPageInfo(
+                userLists.getOffset() > 0,
+                userLists.getTotalSize() > userLists.getList().size(),
+                userLists.getTotalSize()
+        );
     }
 
 }

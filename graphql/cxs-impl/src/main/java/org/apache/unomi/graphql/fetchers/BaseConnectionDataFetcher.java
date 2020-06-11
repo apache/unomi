@@ -34,6 +34,7 @@ public abstract class BaseConnectionDataFetcher<T> extends BaseDataFetcher<T> {
                 .last(parseParam("last", null, environment))
                 .after(parseParam("after", null, environment))
                 .before(parseParam("before", null, environment))
+                .text(parseParam("unomi_text", null, environment))
                 .build();
     }
 
@@ -44,6 +45,7 @@ public abstract class BaseConnectionDataFetcher<T> extends BaseDataFetcher<T> {
         if (params != null) {
             query.setOffset(params.getOffset());
             query.setLimit(params.getSize());
+            query.setText(params.getText());
         }
 
         if (orderByInputs != null) {

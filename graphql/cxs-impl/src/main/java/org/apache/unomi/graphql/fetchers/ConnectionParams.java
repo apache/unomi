@@ -18,18 +18,20 @@
 package org.apache.unomi.graphql.fetchers;
 
 public class ConnectionParams {
+    public static final int DEFAULT_PAGE_SIZE = 10;
+
     private Integer first;
     private Integer last;
     private String after;
     private String before;
-
-    public static int DEFAULT_PAGE_SIZE = 10;
+    private String text;
 
     private ConnectionParams(final Builder builder) {
         first = builder.first;
         last = builder.last;
         after = builder.after;
         before = builder.before;
+        text = builder.text;
 
         if (first != null && before != null
                 || last != null && after != null) {
@@ -82,6 +84,10 @@ public class ConnectionParams {
         return before;
     }
 
+    public String getText() {
+        return text;
+    }
+
     public static Builder create() {
         return new Builder();
     }
@@ -91,6 +97,7 @@ public class ConnectionParams {
         private Integer last;
         private String after;
         private String before;
+        private String text;
 
         private Builder() {
         }
@@ -112,6 +119,11 @@ public class ConnectionParams {
 
         public Builder before(String before) {
             this.before = before;
+            return this;
+        }
+
+        public Builder text(String text) {
+            this.text = text;
             return this;
         }
 

@@ -16,10 +16,7 @@
  */
 package org.apache.unomi.graphql.types.output;
 
-import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
-import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLNonNull;
+import graphql.annotations.annotationTypes.*;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.graphql.fetchers.FindTopicsConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.SourceDataFetcher;
@@ -62,13 +59,18 @@ public class CDPQuery {
     }
 
     @GraphQLField
-    public CDPProfileConnection findProfiles(final @GraphQLName("filter") CDPProfileFilterInput filter,
-                                             final @GraphQLName("orderBy") List<CDPOrderByInput> orderBy,
-                                             final @GraphQLName("first") Integer first,
-                                             final @GraphQLName("after") String after,
-                                             final @GraphQLName("last") Integer last,
-                                             final @GraphQLName("before") String before,
-                                             final DataFetchingEnvironment environment) throws Exception {
+    public CDPProfileConnection findProfiles(
+            final @GraphQLName("filter") CDPProfileFilterInput filter,
+            final @GraphQLName("orderBy") List<CDPOrderByInput> orderBy,
+            final @GraphQLName("first") Integer first,
+            final @GraphQLName("after") String after,
+            final @GraphQLName("last") Integer last,
+            final @GraphQLName("before") String before,
+            final
+            @GraphQLName("unomi_text")
+            @GraphQLDescription("The text that the item must have in one of its fields to be considered a match")
+                    String text,
+            final DataFetchingEnvironment environment) throws Exception {
         return new FindProfilesConnectionDataFetcher(filter, orderBy).get(environment);
     }
 
@@ -82,13 +84,19 @@ public class CDPQuery {
     }
 
     @GraphQLField
-    public CDPEventConnection findEvents(final @GraphQLName("filter") CDPEventFilterInput filter,
-                                         final @GraphQLName("orderBy") List<CDPOrderByInput> orderBy,
-                                         final @GraphQLName("first") Integer first,
-                                         final @GraphQLName("after") String after,
-                                         final @GraphQLName("last") Integer last,
-                                         final @GraphQLName("before") String before,
-                                         final DataFetchingEnvironment environment) {
+    public CDPEventConnection findEvents(
+            final @GraphQLName("filter") CDPEventFilterInput filter,
+            final @GraphQLName("orderBy") List<CDPOrderByInput> orderBy,
+            final @GraphQLName("first") Integer first,
+            final @GraphQLName("after") String after,
+            final @GraphQLName("last") Integer last,
+            final @GraphQLName("before") String before,
+            final
+            @GraphQLName("unomi_text")
+            @GraphQLDescription("The text that the item must have in one of its fields to be considered a match")
+                    String text,
+            final DataFetchingEnvironment environment
+    ) {
         return new FindEventsConnectionDataFetcher(filter, orderBy).get(environment);
     }
 
