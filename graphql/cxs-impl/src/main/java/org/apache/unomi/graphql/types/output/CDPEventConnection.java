@@ -24,6 +24,8 @@ import java.util.List;
 
 @GraphQLName("CDP_EventConnection")
 public class CDPEventConnection {
+    @GraphQLField
+    private Long totalCount;
 
     @GraphQLField
     private List<CDPEventEdge> edges;
@@ -32,12 +34,17 @@ public class CDPEventConnection {
     private CDPPageInfo pageInfo;
 
     public CDPEventConnection() {
-        this(new ArrayList<>(), new CDPPageInfo());
+        this(0L, new ArrayList<>(), new CDPPageInfo());
     }
 
-    public CDPEventConnection(List<CDPEventEdge> edges, CDPPageInfo pageInfo) {
+    public CDPEventConnection(Long totalCount, List<CDPEventEdge> edges, CDPPageInfo pageInfo) {
+        this.totalCount = totalCount;
         this.edges = edges;
         this.pageInfo = pageInfo;
+    }
+
+    public Long getTotalCount() {
+        return totalCount;
     }
 
     public List<CDPEventEdge> getEdges() {

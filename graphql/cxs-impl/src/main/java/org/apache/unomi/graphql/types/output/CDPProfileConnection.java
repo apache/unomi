@@ -24,18 +24,25 @@ import java.util.List;
 
 @GraphQLName("CDP_ProfileConnection")
 public class CDPProfileConnection {
+    @GraphQLField
+    private Long totalCount;
 
     private List<CDPProfileEdge> edges;
 
     private CDPPageInfo pageInfo;
 
     public CDPProfileConnection() {
-        this(new ArrayList<>(), new CDPPageInfo());
+        this(0L, new ArrayList<>(), new CDPPageInfo());
     }
 
-    public CDPProfileConnection(List<CDPProfileEdge> edges, CDPPageInfo pageInfo) {
+    public CDPProfileConnection(Long totalCount, List<CDPProfileEdge> edges, CDPPageInfo pageInfo) {
+        this.totalCount = totalCount;
         this.edges = edges;
         this.pageInfo = pageInfo;
+    }
+
+    public Long getTotalCount() {
+        return totalCount;
     }
 
     @GraphQLField

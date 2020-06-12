@@ -34,10 +34,9 @@ public abstract class ProfileConnectionDataFetcher extends BaseConnectionDataFet
                 .collect(Collectors.toList());
         final CDPPageInfo pageInfo = new CDPPageInfo(
                 profiles.getOffset() > 0,
-                profiles.getTotalSize() > profiles.getList().size(),
-                profiles.getTotalSize()
+                profiles.getTotalSize() > profiles.getList().size()
         );
 
-        return new CDPProfileConnection(eventEdges, pageInfo);
+        return new CDPProfileConnection(profiles.getTotalSize(), eventEdges, pageInfo);
     }
 }

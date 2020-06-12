@@ -53,8 +53,7 @@ public class PropertiesConnectionDataFetcher extends BaseConnectionDataFetcher<C
 
         final CDPPageInfo pageInfo = new CDPPageInfo(
                 startIndex > 0,
-                lastIndex < properties.size(),
-                (long) properties.size()
+                lastIndex < properties.size()
         );
 
         final List<CDPPropertyEdge> edges = new ArrayList<>(properties)
@@ -62,6 +61,6 @@ public class PropertiesConnectionDataFetcher extends BaseConnectionDataFetcher<C
                 .stream()
                 .map(CDPPropertyEdge::new)
                 .collect(Collectors.toList());
-        return new CDPPropertyConnection(edges, pageInfo);
+        return new CDPPropertyConnection((long) properties.size(), edges, pageInfo);
     }
 }

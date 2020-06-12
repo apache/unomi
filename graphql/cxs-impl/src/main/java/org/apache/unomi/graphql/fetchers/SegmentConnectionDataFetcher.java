@@ -33,11 +33,10 @@ public abstract class SegmentConnectionDataFetcher extends BaseConnectionDataFet
         final List<CDPSegmentEdge> segmentEdges = segments.getList().stream().map(segment -> new CDPSegmentEdge(new CDPSegment(segment), segment.getItemId())).collect(Collectors.toList());
         final CDPPageInfo pageInfo = new CDPPageInfo(
                 segments.getOffset() > 0,
-                segments.getTotalSize() > segments.getList().size(),
-                segments.getTotalSize()
+                segments.getTotalSize() > segments.getList().size()
         );
 
-        return new CDPSegmentConnection(segmentEdges, pageInfo);
+        return new CDPSegmentConnection(segments.getTotalSize(), segmentEdges, pageInfo);
     }
 
 }
