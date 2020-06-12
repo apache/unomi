@@ -64,8 +64,7 @@ public class CDPListConnection {
 
         return new CDPPageInfo(
                 userLists.getOffset() > 0,
-                userLists.getTotalSize() > userLists.getList().size(),
-                userLists.getTotalSize()
+                userLists.getTotalSize() > userLists.getList().size()
         );
     }
 
