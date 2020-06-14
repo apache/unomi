@@ -90,8 +90,8 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         //Only increase the counter by 1 if the current event is in the now-numberOfDays range
         LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
         LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(),ZoneId.of("UTC"));
-        long daysDiff = Duration.between(eventTime,now).toDays();
-        if (daysDiff >= 0 && daysDiff <= numberOfDays) {
+        Duration durationDiff = Duration.between(eventTime,now);
+        if (!durationDiff.isNegative() && durationDiff.toDays() <= numberOfDays) {
             count++;
         }
 
