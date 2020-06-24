@@ -16,7 +16,7 @@
  */
 package org.apache.unomi.api;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * An event type definition, used to define the structure of accepted events
@@ -25,14 +25,14 @@ public class EventType implements PluginType {
 
     private String type;
 
-    private List<PropertyType> propertyTypes;
+    private Set<PropertyType> propertyTypes;
 
     private long pluginId;
 
     public EventType() {
     }
 
-    public EventType(String type, List<PropertyType> propertyTypes, long pluginId) {
+    public EventType(String type, Set<PropertyType> propertyTypes, long pluginId) {
         this.type = type;
         this.propertyTypes = propertyTypes;
         this.pluginId = pluginId;
@@ -46,11 +46,11 @@ public class EventType implements PluginType {
         this.type = type;
     }
 
-    public List<PropertyType> getPropertyTypes() {
+    public Set<PropertyType> getPropertyTypes() {
         return propertyTypes;
     }
 
-    public void setPropertyTypes(List<PropertyType> propertyTypes) {
+    public void setPropertyTypes(Set<PropertyType> propertyTypes) {
         this.propertyTypes = propertyTypes;
     }
 
@@ -62,5 +62,12 @@ public class EventType implements PluginType {
     @Override
     public void setPluginId(long pluginId) {
         this.pluginId = pluginId;
+    }
+
+    public void merge(final EventType source) {
+        if (source == null || source.getPropertyTypes() == null || source.getPropertyTypes().isEmpty()) {
+            return;
+        }
+        this.propertyTypes.addAll(source.getPropertyTypes());
     }
 }

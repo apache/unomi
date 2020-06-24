@@ -18,11 +18,9 @@ package org.apache.unomi.graphql.schema;
 
 import org.apache.unomi.api.Event;
 import org.apache.unomi.graphql.types.output.CDPEventInterface;
-import org.apache.unomi.graphql.types.output.UnomiEvent;
 import org.apache.unomi.graphql.utils.ReflectionUtil;
 import org.osgi.service.component.annotations.Component;
 
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component(immediate = true, service = CDPEventInterfaceRegister.class)
@@ -35,14 +33,12 @@ public class CDPEventInterfaceRegister {
     }
 
     public void register(final Class<? extends CDPEventInterface> eventMember) {
-        if (!Objects.equals(eventMember, UnomiEvent.class)) {
-            events.put(getEventType(eventMember), eventMember);
-        }
+        events.put(getEventType(eventMember), eventMember);
     }
 
     public CDPEventInterface getEvent(final Event event) {
         if (!events.containsKey(event.getEventType())) {
-            return new UnomiEvent(event);
+            return null;
         }
 
         try {

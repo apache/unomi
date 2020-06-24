@@ -28,7 +28,6 @@ import org.apache.unomi.graphql.types.output.CDPConsentUpdateEvent;
 import org.apache.unomi.graphql.types.output.CDPListsUpdateEvent;
 import org.apache.unomi.graphql.types.output.CDPProfileUpdateEvent;
 import org.apache.unomi.graphql.types.output.CDPSessionEvent;
-import org.apache.unomi.graphql.types.output.UnomiEvent;
 import org.apache.unomi.graphql.types.output.property.CDPBooleanPropertyType;
 import org.apache.unomi.graphql.types.output.property.CDPDatePropertyType;
 import org.apache.unomi.graphql.types.output.property.CDPFloatPropertyType;
@@ -54,7 +53,6 @@ public class CDPDefaultGraphQLProvider
         additionalTypes.add(CDPProfileUpdateEvent.class);
         additionalTypes.add(CDPConsentUpdateEvent.class);
         additionalTypes.add(CDPListsUpdateEvent.class);
-        additionalTypes.add(UnomiEvent.class);
 
         additionalTypes.add(CDPBooleanPropertyType.class);
         additionalTypes.add(CDPDatePropertyType.class);

@@ -22,15 +22,19 @@ import inet.ipaddr.IPAddressString;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.EventProperty;
+import org.apache.unomi.api.EventType;
+import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.Session;
+import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.apache.unomi.api.services.EventTypeRegistry;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.services.impl.ParserHelper;
@@ -39,11 +43,17 @@ import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class EventServiceImpl implements EventService, SynchronousBundleListener {
+public class EventServiceImpl implements EventService {
     private static final Logger logger = LoggerFactory.getLogger(EventServiceImpl.class.getName());
     private static final int MAX_RECURSION_DEPTH = 10;
 
@@ -55,34 +65,13 @@ public class EventServiceImpl implements EventService, SynchronousBundleListener
 
     private BundleContext bundleContext;
 
+    private EventTypeRegistry eventTypeRegistry;
+
     private Set<String> predefinedEventTypeIds = new LinkedHashSet<String>();
 
     private Set<String> restrictedEventTypeIds = new LinkedHashSet<String>();
 
     private Map<String, ThirdPartyServer> thirdPartyServers = new HashMap<>();
-
-    private Map<Long, List<PluginType>> pluginTypes = new HashMap<>();
-
-    private Map<String, EventType> eventTypes = new LinkedHashMap<>();
-
-    public void init() {
-        processBundleStartup(bundleContext);
-
-        // process already started bundles
-        for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
-                processBundleStartup(bundle.getBundleContext());
-            }
-        }
-
-        bundleContext.addBundleListener(this);
-        logger.info("Event service initialized.");
-    }
-
-    public void destroy() {
-        bundleContext.removeBundleListener(this);
-        logger.info("Event service shutdown.");
-    }
 
     public void setThirdPartyConfiguration(Map<String,String> thirdPartyConfiguration) {
         this.thirdPartyServers = new HashMap<>();
@@ -117,6 +106,10 @@ public class EventServiceImpl implements EventService, SynchronousBundleListener
 
     public void setRestrictedEventTypeIds(Set<String> restrictedEventTypeIds) {
         this.restrictedEventTypeIds = restrictedEventTypeIds;
+    }
+
+    public void setEventTypeRegistry(EventTypeRegistry eventTypeRegistry) {
+        this.eventTypeRegistry = eventTypeRegistry;
     }
 
     public void setPersistenceService(PersistenceService persistenceService) {
@@ -211,7 +204,7 @@ public class EventServiceImpl implements EventService, SynchronousBundleListener
 
     @Override
     public EventType getEventType(String typeName) {
-        return eventTypes.get(typeName);
+        return eventTypeRegistry.get(typeName);
     }
 
     @Override
@@ -397,7 +390,6 @@ public class EventServiceImpl implements EventService, SynchronousBundleListener
         return size > 0;
     }
 
-
     public void bind(ServiceReference<EventListenerService> serviceReference) {
         EventListenerService eventListenerService = bundleContext.getService(serviceReference);
         eventListeners.add(eventListenerService);
@@ -419,62 +411,4 @@ public class EventServiceImpl implements EventService, SynchronousBundleListener
 
         persistenceService.removeByQuery(profileCondition,Event.class);
     }
-
-    private void processBundleStartup(BundleContext bundleContext) {
-        if (bundleContext == null) {
-            return;
-        }
-        pluginTypes.put(bundleContext.getBundle().getBundleId(), new ArrayList<PluginType>());
-        loadPredefinedEventTypes(bundleContext);
-    }
-
-    private void processBundleStop(BundleContext bundleContext) {
-        if (bundleContext == null) {
-            return;
-        }
-        List<PluginType> types = pluginTypes.remove(bundleContext.getBundle().getBundleId());
-        if (types != null) {
-            for (PluginType type : types) {
-                if (type instanceof EventType) {
-                    EventType eventType = (EventType) type;
-                    eventTypes.remove(eventType.getType());
-                }
-            }
-        }
-    }
-
-    public void bundleChanged(BundleEvent event) {
-        switch (event.getType()) {
-            case BundleEvent.STARTED:
-                processBundleStartup(event.getBundle().getBundleContext());
-                break;
-            case BundleEvent.STOPPING:
-                processBundleStop(event.getBundle().getBundleContext());
-                break;
-        }
-    }
-
-    private void loadPredefinedEventTypes(BundleContext bundleContext) {
-        Enumeration<URL> predefinedPropertiesEntries = bundleContext.getBundle().findEntries("META-INF/cxs/events", "*.json", true);
-        if (predefinedPropertiesEntries == null) {
-            return;
-        }
-        ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
-        while (predefinedPropertiesEntries.hasMoreElements()) {
-            URL predefinedPropertyURL = predefinedPropertiesEntries.nextElement();
-            logger.debug("Found predefined event type at " + predefinedPropertyURL + ", loading... ");
-
-            try {
-                EventType eventType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyURL, EventType.class);
-                eventType.setPluginId(bundleContext.getBundle().getBundleId());
-                eventTypes.put(eventType.getType(), eventType);
-                pluginTypeArrayList.add(eventType);
-            } catch (Exception e) {
-                logger.error("Error while loading property type definition " + predefinedPropertyURL, e);
-            }
-        }
-
-    }
-
-
 }

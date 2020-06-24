@@ -20,7 +20,6 @@ import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.EventType;
 import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.EventService;
 
@@ -32,7 +31,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
-import java.util.List;
 import java.util.Set;
 
 /**

@@ -1,0 +1,33 @@
+{
+  "type": "loginEvent",
+  "propertyTypes": [
+    {
+      "itemId": "target",
+      "type": "set",
+      "childPropertyTypes": [
+        {
+          "itemId": "itemId",
+          "type": "string"
+        },
+        {
+          "itemId": "properties",
+          "type": "set",
+          "childPropertyTypes": [
+            {
+              "itemId": "preferredLanguage",
+              "type": "string"
+            },
+            {
+              "itemId": "j:gender",
+              "type": "string"
+            },
+            {
+              "itemId": "j:firstName",
+              "type": "string"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -47,7 +47,7 @@ public class UnomiEventPublisher implements EventListenerService {
 
     private List<EventPublisherListener> listeners = new CopyOnWriteArrayList<>();
 
-    private final CDPEventInterfaceRegister eventRegister;
+    private CDPEventInterfaceRegister eventRegister;
 
     private PersistenceService persistenceService;
 
@@ -69,8 +69,12 @@ public class UnomiEventPublisher implements EventListenerService {
         this.persistenceService = persistenceService;
     }
 
+    @Reference
+    public void setEventInterfaceRegister(CDPEventInterfaceRegister eventRegister) {
+        this.eventRegister = eventRegister;
+    }
+
     public UnomiEventPublisher() {
-        this.eventRegister = new CDPEventInterfaceRegister();
     }
 
     public Publisher<CDPEventInterface> createPublisher() {

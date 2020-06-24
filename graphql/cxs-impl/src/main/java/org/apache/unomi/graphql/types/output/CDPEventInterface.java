@@ -57,7 +57,7 @@ public interface CDPEventInterface {
     }
 
     @GraphQLField
-    default CDPSource сdp_source(final DataFetchingEnvironment environment) {
+    default CDPSource cdp_source(final DataFetchingEnvironment environment) {
         return null;
     }
 

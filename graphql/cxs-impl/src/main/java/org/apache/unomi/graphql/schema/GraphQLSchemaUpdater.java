@@ -20,6 +20,7 @@ import graphql.GraphQL;
 import graphql.execution.SubscriptionExecutionStrategy;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLSchema;
+import org.apache.unomi.api.services.EventTypeRegistry;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.fetchers.event.UnomiEventPublisher;
 import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
@@ -79,6 +80,8 @@ public class GraphQLSchemaUpdater {
 
     private ProfileService profileService;
 
+    private EventTypeRegistry eventTypeRegistry;
+
     private CDPEventInterfaceRegister eventInterfaceRegister;
 
     private CDPProfileInterfaceRegister profilesInterfaceRegister;
@@ -122,6 +125,11 @@ public class GraphQLSchemaUpdater {
     @Reference
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;
+    }
+
+    @Reference
+    public void setEventTypeRegistry(EventTypeRegistry eventTypeRegistry) {
+        this.eventTypeRegistry = eventTypeRegistry;
     }
 
     @Reference
@@ -302,7 +310,7 @@ public class GraphQLSchemaUpdater {
 
     @SuppressWarnings("unchecked")
     private GraphQLSchema createGraphQLSchema() {
-        final GraphQLSchemaProvider schemaProvider = GraphQLSchemaProvider.create(profileService)
+        final GraphQLSchemaProvider schemaProvider = GraphQLSchemaProvider.create(profileService, eventTypeRegistry)
                 .typeFunctionProviders(typeFunctionProviders)
                 .extensionsProviders(extensionsProviders)
                 .additionalTypesProviders(additionalTypesProviders)

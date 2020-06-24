@@ -1,24 +1,34 @@
 {
-  "propertyTypes" : [
+  "propertyTypes": [
     {
-      "id": "timestamp",
-      "type" : "date"
+      "itemId": "id",
+      "type": "id"
     },
     {
-      "id": "sessionId",
-      "type" : "string"
+      "itemId": "cdp_source"
     },
     {
-      "id": "profileId",
-      "type" : "string"
+      "itemId": "cdp_client"
     },
     {
-      "id" : "eventType",
-      "type" : "string"
+      "itemId": "cdp_profileID"
     },
     {
-      "id" : "scope",
-      "type" : "string"
+      "itemId": "cdp_profile"
+    },
+    {
+      "itemId": "cdp_object"
+    },
+    {
+      "itemId": "cdp_location",
+      "type": "geopoint"
+    },
+    {
+      "itemId": "cdp_timestamp",
+      "type": "date"
+    },
+    {
+      "itemId": "cdp_topics"
     }
   ]
 }
