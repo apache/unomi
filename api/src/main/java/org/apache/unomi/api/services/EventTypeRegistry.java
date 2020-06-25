@@ -14,23 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
 
-import org.apache.unomi.api.Event;
+package org.apache.unomi.api.services;
 
-public class UnomiEvent implements CDPEventInterface {
+import org.apache.unomi.api.EventType;
 
-    public static final String TYPE_NAME = "Unomi_Event";
+import java.util.Collection;
 
-    private final Event event;
+/**
+ * An event types registry service.
+ */
+public interface EventTypeRegistry {
 
-    public UnomiEvent(Event event) {
-        this.event = event;
-    }
+    /**
+     * Retrieve event type definition
+     * @param typeName name of the event type
+     * @return {@link EventType} definition
+     */
+    EventType get(String typeName);
 
-    @Override
-    public Event getEvent() {
-        return event;
-    }
+    /**
+     * Adds event type definition to registry
+     * @param eventType {@link EventType} definition
+     */
+    void register(EventType eventType);
 
+    /**
+     * List all known event types
+     * @return Lists all known {@link EventType}s
+     */
+    Collection<EventType> getAll();
 }

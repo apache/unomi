@@ -16,5 +16,29 @@
  */
 package org.apache.unomi.graphql.types.resolvers;
 
+import graphql.TypeResolutionEnvironment;
+import graphql.schema.GraphQLObjectType;
+import org.apache.unomi.api.EventType;
+import org.apache.unomi.api.services.EventTypeRegistry;
+import org.apache.unomi.graphql.schema.PropertyNameTranslator;
+import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.types.output.CDPEventInterface;
+import org.apache.unomi.graphql.utils.StringUtils;
+
 public class CDPEventInterfaceResolver extends BaseTypeResolver {
+
+    @Override
+    public GraphQLObjectType getType(TypeResolutionEnvironment env) {
+        final ServiceManager serviceManager = env.getContext();
+        final EventTypeRegistry eventTypeRegistry = serviceManager.getService(EventTypeRegistry.class);
+
+        final CDPEventInterface eventInterface = env.getObject();
+        final EventType eventType = eventTypeRegistry.get(eventInterface.getEvent().getEventType());
+        if (eventType != null) {
+            final String typeName = StringUtils.capitalize(PropertyNameTranslator.translateFromUnomiToGraphQL(eventType.getType()));
+            return env.getSchema().getObjectType(typeName);
+        } else {
+            return super.getType(env);
+        }
+    }
 }
