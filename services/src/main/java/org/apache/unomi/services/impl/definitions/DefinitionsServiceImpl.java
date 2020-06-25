@@ -37,7 +37,17 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -59,17 +69,6 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     private BundleContext bundleContext;
     public DefinitionsServiceImpl() {
-        // let's add the built-in value types
-        ValueType setValueType = new ValueType();
-        setValueType.setId("set");
-        setValueType.setNameKey("set");
-        setValueType.setTags(new HashSet<>());
-        valueTypeById.put(setValueType.getId(), setValueType);
-        ValueType unknownValueType = new ValueType();
-        setValueType.setId("unknown");
-        setValueType.setNameKey("unknown");
-        setValueType.setTags(new HashSet<>());
-        valueTypeById.put(setValueType.getId(), setValueType);
     }
 
     public void setBundleContext(BundleContext bundleContext) {

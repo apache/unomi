@@ -18,7 +18,6 @@ package org.apache.unomi.graphql.schema;
 
 import graphql.Scalars;
 import graphql.annotations.AnnotationsSchemaCreator;
-import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.language.InputObjectTypeDefinition;
@@ -73,11 +72,6 @@ import org.apache.unomi.graphql.types.output.RootQuery;
 import org.apache.unomi.graphql.utils.ReflectionUtil;
 import org.apache.unomi.graphql.utils.StringUtils;
 
-import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -346,7 +340,7 @@ public class GraphQLSchemaProvider {
                         .name(propertyName).build());
             } else {
                 fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .type((GraphQLOutputType) convert(propertyType, false))
+                        .type((GraphQLOutputType) convert(propertyType.getValueTypeId()))
                         .name(propertyName).build());
             }
 
@@ -388,6 +382,7 @@ public class GraphQLSchemaProvider {
                 final GraphQLInterfaceType graphQLInterface = (GraphQLInterfaceType) getOutputType(anInterface);
                 if (graphQLInterface != null) {
                     dynamicTypeBuilder.withInterface(graphQLInterface);
+                    graphQLInterface.getFieldDefinitions().forEach(dynamicTypeBuilder::field);
                 }
             }
         }
@@ -406,7 +401,7 @@ public class GraphQLSchemaProvider {
                 if (isSet) {
                     fieldBuilder.type(createDynamicSetOutputType(childPropertyType, codeRegisterBuilder, childPropertyName));
                 } else {
-                    fieldBuilder.type((GraphQLOutputType) convert(childPropertyType, false));
+                    fieldBuilder.type((GraphQLOutputType) convert(childPropertyType.getValueTypeId()));
 
                     codeRegisterBuilder.dataFetcher(FieldCoordinates.coordinates(typeName, childPropertyName),
                             new ProfileDynamicFieldSetDataFetcher(childPropertyName));
@@ -441,6 +436,7 @@ public class GraphQLSchemaProvider {
             dynamicTypeBuilder.definition(InputObjectTypeDefinition.newInputObjectDefinition()
                     .additionalData(CDPGraphQLConstants.EVENT_PROCESSOR_CLASS, CDPUnomiEventInput.class.getName()).build()
             );
+            //TODO: register all the fields of cdp event input
         }
 
         if (propertyTypes != null && !propertyTypes.isEmpty()) {
@@ -457,7 +453,7 @@ public class GraphQLSchemaProvider {
                 if (isSet) {
                     fieldBuilder.type(createDynamicSetInputType(childPropertyType, childPropertyName));
                 } else {
-                    fieldBuilder.type((GraphQLInputType) convert(childPropertyType, true));
+                    fieldBuilder.type((GraphQLInputType) convert(childPropertyType.getValueTypeId()));
                 }
 
                 dynamicTypeBuilder.field(fieldBuilder.build());
@@ -502,7 +498,7 @@ public class GraphQLSchemaProvider {
                 }
             } else {
                 fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .type((GraphQLInputType) convert(propertyType, true))
+                        .type((GraphQLInputType) convert(propertyType.getValueTypeId()))
                         .name(propertyName)
                         .build());
             }
@@ -684,18 +680,13 @@ public class GraphQLSchemaProvider {
         }
     }
 
-    private GraphQLType convert(final PropertyType type, final boolean isInput) {
-        String normalizedType;
-        if (type == null) {
-            return null;
-        } else if (type.getValueTypeId() == null) {
-            normalizedType = getTypeNameFromCDPEventInterface(type.getItemId());
-        } else {
-            normalizedType = type.getValueTypeId();
-        }
-        if (normalizedType == null) {
-            return null;
-        }
+    /*
+     *  Convert all unomi value types to graphql types
+     *  Also able to handle array and required notation in the following format
+     *  [<type>]! - required array of values <type>
+     */
+    private GraphQLType convert(final String type) {
+        String normalizedType = type;
         GraphQLType graphQLType;
         boolean isArray = false;
         boolean isMandatory = false;
@@ -731,63 +722,12 @@ public class GraphQLSchemaProvider {
                 graphQLType = Scalars.GraphQLBoolean;
                 break;
             case "string":
+            default:
                 graphQLType = Scalars.GraphQLString;
                 break;
-            default: {
-                if (isInput) {
-                    normalizedType += "Input";
-                }
-                graphQLType = getFromTypeRegistry(normalizedType);
-                if (graphQLType == null) {
-                    graphQLType = Scalars.GraphQLString;
-                }
-                break;
-            }
         }
         graphQLType = isArray ? GraphQLList.list(graphQLType) : graphQLType;
         return isMandatory ? GraphQLNonNull.nonNull(graphQLType) : graphQLType;
-    }
-
-    private String getTypeNameFromCDPEventInterface(String fieldName) {
-        // check fields first
-        for (Field declaredField : CDPEventInterface.class.getDeclaredFields()) {
-            if (declaredField.getName().equals(fieldName)) {
-                return getTypeName(declaredField, declaredField.getType(), declaredField.getGenericType());
-            }
-        }
-        // also check method names
-        for (Method declaredMethod : CDPEventInterface.class.getDeclaredMethods()) {
-            if (declaredMethod.getName().equals(fieldName)) {
-                return getTypeName(declaredMethod, declaredMethod.getReturnType(), declaredMethod.getGenericReturnType());
-            }
-        }
-        return null;
-    }
-
-
-    private String getTypeName(final AccessibleObject fieldOrMethod, final Class<?> type, final Type genericType) {
-        Class<?> typeClass;
-        boolean isMandatory = fieldOrMethod.isAnnotationPresent(graphql.annotations.annotationTypes.GraphQLNonNull.class);
-        boolean isArray;
-        if (Collection.class.isAssignableFrom(type) && genericType instanceof ParameterizedType) {
-            isArray = true;
-            ParameterizedType parameterizedType = (ParameterizedType) genericType;
-            Type argumentType = parameterizedType.getActualTypeArguments()[0];
-            typeClass = (Class) argumentType;
-        } else {
-            isArray = false;
-            typeClass = type;
-        }
-        final GraphQLName nameAnnotation = typeClass.getAnnotation(GraphQLName.class);
-        final StringBuilder stringBuilder = new StringBuilder(nameAnnotation.value());
-        if (isArray) {
-            stringBuilder.insert(0,"[");
-            stringBuilder.append("]");
-        }
-        if (isMandatory) {
-            stringBuilder.append("!");
-        }
-        return stringBuilder.toString();
     }
 
     public GraphQLInputObjectType getInputObjectType(final Class<?> annotatedClass) {

@@ -21,11 +21,27 @@ import org.apache.unomi.api.EventType;
 
 import java.util.Collection;
 
+/**
+ * An event types registry service.
+ */
 public interface EventTypeRegistry {
 
+    /**
+     * Retrieve event type definition
+     * @param typeName name of the event type
+     * @return {@link EventType} definition
+     */
     EventType get(String typeName);
 
+    /**
+     * Adds event type definition to registry
+     * @param eventType {@link EventType} definition
+     */
     void register(EventType eventType);
 
+    /**
+     * List all known event types
+     * @return Lists all known {@link EventType}s
+     */
     Collection<EventType> getAll();
 }

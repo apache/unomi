@@ -28,7 +28,6 @@ import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,8 +44,6 @@ public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBund
     private Map<Long, List<PluginType>> pluginTypes = new HashMap<>();
 
     private Map<String, EventType> eventTypes = new LinkedHashMap<>();
-
-    private static final String COMMON_EVENT_DESCRIPTOR = "common.json";
 
     private BundleContext bundleContext;
 
@@ -103,8 +100,6 @@ public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBund
         }
         ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
 
-        final EventType commonEventType = findCommonEventType(predefinedPropertiesEntries);
-
         while (predefinedPropertiesEntries.hasMoreElements()) {
             URL predefinedPropertyURL = predefinedPropertiesEntries.nextElement();
             logger.debug("Found predefined event type at " + predefinedPropertyURL + ", loading... ");
@@ -112,9 +107,6 @@ public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBund
             try {
                 EventType eventType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyURL, EventType.class);
                 eventType.setPluginId(bundleContext.getBundle().getBundleId());
-                if (commonEventType != null) {
-                    eventType.merge(commonEventType);
-                }
                 register(eventType);
                 pluginTypeArrayList.add(eventType);
             } catch (Exception e) {
@@ -122,20 +114,6 @@ public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBund
             }
         }
 
-    }
-
-    private EventType findCommonEventType(Enumeration<URL> predefinedPropertiesEntries) {
-        while (predefinedPropertiesEntries.hasMoreElements()) {
-            URL predefinedPropertyURL = predefinedPropertiesEntries.nextElement();
-            if (predefinedPropertyURL.getFile().endsWith(COMMON_EVENT_DESCRIPTOR)) {
-                try {
-                    return CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyURL, EventType.class);
-                } catch (IOException e) {
-                    logger.error("Error while loading common event type definition " + predefinedPropertyURL, e);
-                }
-            }
-        }
-        return null;
     }
 
     private void processBundleStartup(BundleContext bundleContext) {
