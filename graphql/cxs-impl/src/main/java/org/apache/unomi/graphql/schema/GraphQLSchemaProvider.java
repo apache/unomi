@@ -706,6 +706,9 @@ public class GraphQLSchemaProvider {
             case "integer":
                 graphQLType = Scalars.GraphQLInt;
                 break;
+            case "long":
+                graphQLType = Scalars.GraphQLLong;
+                break;
             case "float":
                 graphQLType = Scalars.GraphQLFloat;
                 break;

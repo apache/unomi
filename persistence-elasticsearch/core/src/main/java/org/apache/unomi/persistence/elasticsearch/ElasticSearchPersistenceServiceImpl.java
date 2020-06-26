@@ -1190,6 +1190,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private Map<String, Object> createPropertyMapping(final String fieldName, final String fieldType) {
         final HashMap<String, Object> definition = new HashMap<>();
         definition.put("type", fieldType);
+        if ("text".equals(fieldType)) {
+            definition.put("analyzer", "folding");
+            final Map<String, Object> fields = new HashMap<>();
+            final Map<String, Object> keywordField = new HashMap<>();
+            keywordField.put("type", "keyword");
+            keywordField.put("ignore_above", 256);
+            fields.put("keyword", keywordField);
+            definition.put("fields", fields);
+        }
 
         final HashMap<String, Object> map = new HashMap<>();
         map.put(fieldName, definition);
@@ -1206,6 +1215,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return "geo_point";
             case "integer":
                 return "integer";
+            case "long" :
+                return "long";
             case "float":
                 return "float";
             case "date":

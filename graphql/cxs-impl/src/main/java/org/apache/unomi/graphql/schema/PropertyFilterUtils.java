@@ -71,6 +71,27 @@ public class PropertyFilterUtils {
                     .name(propertyName + "_gte")
                     .type(Scalars.GraphQLInt)
                     .build());
+        } else if ("long".equals(propertyType.getValueTypeId())) {
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_equals")
+                    .type(Scalars.GraphQLLong)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_lt")
+                    .type(Scalars.GraphQLLong)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_lte")
+                    .type(Scalars.GraphQLLong)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_gt")
+                    .type(Scalars.GraphQLLong)
+                    .build());
+            fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
+                    .name(propertyName + "_gte")
+                    .type(Scalars.GraphQLLong)
+                    .build());
         } else if ("float".equals(propertyType.getValueTypeId())) {
 
             fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
