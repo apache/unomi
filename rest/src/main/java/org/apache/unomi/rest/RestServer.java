@@ -22,6 +22,7 @@ import org.apache.cxf.BusFactory;
 import org.apache.cxf.endpoint.Server;
 import org.apache.cxf.feature.LoggingFeature;
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
+import org.apache.cxf.jaxrs.openapi.OpenApiCustomizer;
 import org.apache.cxf.jaxrs.openapi.OpenApiFeature;
 import org.apache.cxf.jaxrs.security.JAASAuthenticationFilter;
 import org.osgi.framework.BundleContext;
@@ -144,6 +145,9 @@ public class RestServer {
         openApiFeature.setLicenseUrl("http://www.apache.org/licenses/LICENSE-2.0.html");
         openApiFeature.setScan(false);
         openApiFeature.setUseContextBasedConfig(true);        //Set<String> resourceClasses = serviceBeans.stream().map(service -> service.getClass().getName()).collect(toSet());
+        OpenApiCustomizer customizer = new OpenApiCustomizer();
+        customizer.setDynamicBasePath(true);
+        openApiFeature.setCustomizer(customizer);
 
         JAXRSServerFactoryBean jaxrsServerFactoryBean = new JAXRSServerFactoryBean();
         jaxrsServerFactoryBean.setAddress("/");
