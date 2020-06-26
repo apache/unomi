@@ -26,6 +26,8 @@ import org.apache.unomi.api.campaigns.events.CampaignEvent;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.GoalsService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,10 +47,13 @@ import java.util.Set;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/campaigns")
+@Component(service=CampaignsServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class CampaignsServiceEndPoint {
 
     private static final Logger logger = LoggerFactory.getLogger(CampaignsServiceEndPoint.class.getName());
 
+    @Reference
     private GoalsService goalsService;
 
     public CampaignsServiceEndPoint() {

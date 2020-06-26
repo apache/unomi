@@ -25,6 +25,8 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.segments.DependentMetadata;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.services.SegmentService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,10 +46,13 @@ import java.util.List;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/scoring")
+@Component(service=ScoringServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class ScoringServiceEndPoint {
 
     private static final Logger logger = LoggerFactory.getLogger(ScoringServiceEndPoint.class.getName());
 
+    @Reference
     private SegmentService segmentService;
 
     public ScoringServiceEndPoint() {

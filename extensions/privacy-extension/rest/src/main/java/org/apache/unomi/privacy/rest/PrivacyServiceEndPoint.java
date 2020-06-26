@@ -20,6 +20,8 @@ package org.apache.unomi.privacy.rest;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.ServerInfo;
 import org.apache.unomi.api.services.PrivacyService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -37,9 +39,11 @@ import java.util.List;
         allowAllOrigins = true,
         allowCredentials = true
 )
-@Path("/")
+@Path("/privacy")
+@Component(service=PrivacyServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class PrivacyServiceEndPoint {
 
+    @Reference
     private PrivacyService privacyService;
 
     @WebMethod(exclude = true)

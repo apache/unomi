@@ -22,6 +22,8 @@ import org.apache.unomi.api.EventType;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.EventService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -42,8 +44,11 @@ import java.util.Set;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/events")
+@Component(service=EventServiceEndpoint.class,property = "osgi.jaxrs.resource=true")
 public class EventServiceEndpoint {
 
+    @Reference
     private EventService eventService;
 
     @WebMethod(exclude = true)

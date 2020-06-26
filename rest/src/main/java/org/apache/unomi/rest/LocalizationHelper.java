@@ -22,6 +22,10 @@ import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.osgi.framework.BundleContext;
+import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,12 +37,20 @@ import java.util.ResourceBundle;
 /**
  * A helper class to provide localized versions of context server entities.
  */
+@Component(service=LocalizationHelper.class)
 public class LocalizationHelper {
 
     private static final Logger logger = LoggerFactory.getLogger(LocalizationHelper.class.getName());
 
     private BundleContext bundleContext;
+
+    @Reference
     private ResourceBundleHelper resourceBundleHelper;
+
+    @Activate
+    public void activate(ComponentContext componentContext) {
+        this.bundleContext = componentContext.getBundleContext();
+    }
 
     /**
      * Creates {@link RESTConditionType}s, localized using the specified language, based on the specified {@link ConditionType}s.

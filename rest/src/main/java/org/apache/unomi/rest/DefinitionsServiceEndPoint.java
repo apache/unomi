@@ -24,6 +24,8 @@ import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,10 +44,15 @@ import java.util.*;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/definitions")
+@Component(service=DefinitionsServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class DefinitionsServiceEndPoint {
     private static final Logger logger = LoggerFactory.getLogger(DefinitionsServiceEndPoint.class.getName());
 
+    @Reference
     private DefinitionsService definitionsService;
+
+    @Reference
     private LocalizationHelper localizationHelper;
 
     @WebMethod(exclude = true)
