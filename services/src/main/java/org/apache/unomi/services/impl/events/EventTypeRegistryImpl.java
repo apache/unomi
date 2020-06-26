@@ -94,23 +94,23 @@ public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBund
     }
 
     private void loadPredefinedEventTypes(BundleContext bundleContext) {
-        Enumeration<URL> predefinedPropertiesEntries = bundleContext.getBundle().findEntries("META-INF/cxs/events", "*.json", true);
-        if (predefinedPropertiesEntries == null) {
+        Enumeration<URL> predefinedEventTypes = bundleContext.getBundle().findEntries("META-INF/cxs/events", "*.json", true);
+        if (predefinedEventTypes == null) {
             return;
         }
         ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
 
-        while (predefinedPropertiesEntries.hasMoreElements()) {
-            URL predefinedPropertyURL = predefinedPropertiesEntries.nextElement();
-            logger.debug("Found predefined event type at " + predefinedPropertyURL + ", loading... ");
+        while (predefinedEventTypes.hasMoreElements()) {
+            URL predefinedEventTypeURL = predefinedEventTypes.nextElement();
+            logger.debug("Found predefined event type at " + predefinedEventTypeURL + ", loading... ");
 
             try {
-                EventType eventType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyURL, EventType.class);
+                EventType eventType = CustomObjectMapper.getObjectMapper().readValue(predefinedEventTypeURL, EventType.class);
                 eventType.setPluginId(bundleContext.getBundle().getBundleId());
                 register(eventType);
                 pluginTypeArrayList.add(eventType);
             } catch (Exception e) {
-                logger.error("Error while loading event type definition " + predefinedPropertyURL, e);
+                logger.error("Error while loading event type definition " + predefinedEventTypeURL, e);
             }
         }
 

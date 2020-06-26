@@ -1,5 +1,5 @@
 {
-  "type": "loginEvent",
+  "type": "login",
   "propertyTypes": [
     {
       "itemId": "target",
