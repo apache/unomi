@@ -45,35 +45,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <configuration>
-                    <tags>
-                        <tag>
-                            <name>summary</name>
-                            <placement>a</placement>
-                            <head>MireDot summary (resource title)</head>
-                        </tag>
-                        <tag>
-                            <name>title</name>
-                            <placement>a</placement>
-                            <head>MireDot title (resource title)</head>
-                        </tag>
-                        <tag>
-                            <name>servicetag</name>
-                            <placement>a</placement>
-                            <head>MireDot resource tag (label)</head>
-                        </tag>
-                        <tag>
-                            <name>statuscode</name>
-                            <placement>a</placement>
-                            <head>MireDot resource status code(s)</head>
-                        </tag>
-                        <tag>
-                            <name>responseheader</name>
-                            <placement>a</placement>
-                            <head>MireDot response header</head>
-                        </tag>
-                    </tags>
-                </configuration>
             </plugin>
         </plugins>
     </reporting>

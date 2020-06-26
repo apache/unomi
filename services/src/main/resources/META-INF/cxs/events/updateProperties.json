@@ -1,5 +1,5 @@
 {
-  "type": "updatePropertiesEvent",
+  "type": "updateProperties",
   "propertyTypes" : [
     {
       "itemId": "properties",

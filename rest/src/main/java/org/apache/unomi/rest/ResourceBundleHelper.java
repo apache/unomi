@@ -21,12 +21,16 @@ import org.apache.unomi.api.PluginType;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.wiring.BundleWiring;
+import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
 
 import java.util.Locale;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 import java.util.regex.Pattern;
 
+@Component(service=ResourceBundleHelper.class)
 public class ResourceBundleHelper {
 
     private static final Pattern COMMA = Pattern.compile(",", Pattern.LITERAL);
@@ -34,6 +38,11 @@ public class ResourceBundleHelper {
     private static final String RESOURCE_BUNDLE = "messages";
 
     private BundleContext bundleContext;
+
+    @Activate
+    public void activate(ComponentContext componentContext) {
+        this.bundleContext = componentContext.getBundleContext();
+    }
 
     private ResourceBundle getBundle(String lang, Bundle bundle, ClassLoader loader) {
         Locale locale = getLocale(lang);

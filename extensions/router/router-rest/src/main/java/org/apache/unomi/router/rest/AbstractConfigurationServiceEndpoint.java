@@ -16,18 +16,10 @@
  */
 package org.apache.unomi.router.rest;
 
-import org.apache.cxf.jaxrs.ext.MessageContext;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 
-import javax.jws.WebMethod;
 import javax.ws.rs.*;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
 /**
@@ -36,12 +28,6 @@ import java.util.List;
 public abstract class AbstractConfigurationServiceEndpoint<T> {
 
     protected ImportExportConfigurationService<T> configurationService;
-    protected ConfigSharingService configSharingService;
-
-    @WebMethod(exclude = true)
-    public void setConfigSharingService(ConfigSharingService configSharingService) {
-        this.configSharingService = configSharingService;
-    }
 
     /**
      * Retrieves all the configurations.

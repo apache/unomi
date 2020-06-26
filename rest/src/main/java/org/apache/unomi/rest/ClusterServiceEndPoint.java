@@ -21,6 +21,8 @@ import org.apache.cxf.jaxrs.ext.MessageContext;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.ClusterNode;
 import org.apache.unomi.api.services.ClusterService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,12 +44,15 @@ import java.util.List;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/cluster")
+@Component(service=ClusterServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class ClusterServiceEndPoint {
     private static final Logger logger = LoggerFactory.getLogger(ClusterServiceEndPoint.class.getName());
 
     @Context
     private MessageContext messageContext;
 
+    @Reference
     private ClusterService clusterService;
 
     public ClusterServiceEndPoint() {
