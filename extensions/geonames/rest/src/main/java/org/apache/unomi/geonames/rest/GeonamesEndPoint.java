@@ -22,6 +22,8 @@ import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.geonames.services.GeonameEntry;
 import org.apache.unomi.geonames.services.GeonamesService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,10 +42,13 @@ import java.util.Locale;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/geonames")
+@Component(service=GeonamesEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class GeonamesEndPoint {
 
     private static final Logger logger = LoggerFactory.getLogger(GeonamesEndPoint.class.getName());
 
+    @Reference
     private GeonamesService geonamesService;
 
     public GeonamesEndPoint() {

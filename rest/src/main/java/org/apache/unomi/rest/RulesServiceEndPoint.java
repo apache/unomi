@@ -24,6 +24,8 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
 import org.apache.unomi.api.services.RulesService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,10 +46,13 @@ import java.util.Set;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/rules")
+@Component(service=RulesServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class RulesServiceEndPoint {
 
     private static final Logger logger = LoggerFactory.getLogger(RulesServiceEndPoint.class.getName());
 
+    @Reference
     private RulesService rulesService;
 
     public RulesServiceEndPoint() {

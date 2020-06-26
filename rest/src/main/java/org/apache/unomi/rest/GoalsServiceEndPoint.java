@@ -25,6 +25,8 @@ import org.apache.unomi.api.query.AggregateQuery;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.GoalsService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -42,8 +44,11 @@ import java.util.Set;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/goals")
+@Component(service=GoalsServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class GoalsServiceEndPoint {
 
+    @Reference
     private GoalsService goalsService;
 
     @WebMethod(exclude = true)
