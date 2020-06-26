@@ -49,7 +49,7 @@ public class RestServer {
 
     private Server server;
     private BundleContext bundleContext;
-    ServiceTracker jaxRSServiceTracker;
+    private ServiceTracker jaxRSServiceTracker;
     private List<ExceptionMapper> exceptionMappers = new ArrayList<>();
     private long timeOfLastUpdate = System.currentTimeMillis();
     private Timer refreshTimer = null;
