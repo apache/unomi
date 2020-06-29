@@ -524,11 +524,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         profile.setSystemProperty("lastUpdated", new Date());
         if (persistenceService.save(profile)) {
             if (forceRefresh) {
-                // triggering a load will force an in-place refresh, that may be expensive in performance but will make data immediately available.
-                return persistenceService.load(profile.getItemId(), Profile.class);
-            } else {
-                return profile;
+                persistenceService.refreshIndex(Profile.class, null);
             }
+            return profile;
         }
         return null;
     }
