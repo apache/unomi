@@ -1732,7 +1732,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return routing;
     }
 
-
     @Override
     public void refresh() {
         new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".refresh") {
@@ -1748,8 +1747,24 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return true;
             }
         }.catchingExecuteInClassLoader(true);
-
     }
+
+    @Override
+    public <T extends Item> void refreshIndex(Class<T> clazz, Date dateHint){
+        new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".refreshIndex") {
+            protected Boolean execute(Object... args) {
+                try {
+                    String itemType = Item.getItemType(clazz);
+                    String index = getIndex(itemType, dateHint);
+                    client.indices().refresh(Requests.refreshRequest(index), RequestOptions.DEFAULT);
+                } catch (IOException e) {
+                    e.printStackTrace();//TODO manage ES7
+                }
+                return true;
+            }
+        }.catchingExecuteInClassLoader(true);
+    }
+
 
 
     @Override
