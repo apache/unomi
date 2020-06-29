@@ -22,6 +22,8 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.AggregateQuery;
 import org.apache.unomi.api.services.QueryService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,11 +46,15 @@ import java.util.Map;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/query")
+@Component(service=QueryServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class QueryServiceEndPoint {
     private static final Logger logger = LoggerFactory.getLogger(QueryServiceEndPoint.class.getName());
 
+    @Reference
     private QueryService queryService;
 
+    @Reference
     private LocalizationHelper localizationHelper;
 
     @WebMethod(exclude = true)

@@ -17,6 +17,10 @@
 
 package org.apache.unomi.itests;
 
+import org.apache.unomi.api.Item;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.Assert;
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.CoreOptions;
@@ -24,9 +28,10 @@ import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.karaf.container.internal.JavaVersionUtil;
 import org.ops4j.pax.exam.karaf.options.LogLevelOption.LogLevel;
 import org.ops4j.pax.exam.options.MavenArtifactUrlReference;
-import org.ops4j.pax.exam.options.MavenUrlReference;
 import org.ops4j.pax.exam.options.extra.VMOption;
+import org.ops4j.pax.exam.util.Filter;
 
+import javax.inject.Inject;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,7 +41,12 @@ import java.util.function.Supplier;
 
 import static org.ops4j.pax.exam.CoreOptions.maven;
 import static org.ops4j.pax.exam.CoreOptions.systemProperty;
-import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.*;
+import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.debugConfiguration;
+import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.editConfigurationFilePut;
+import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.karafDistributionConfiguration;
+import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.keepRuntimeFolder;
+import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.logLevel;
+import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.replaceConfigurationFile;
 
 /**
  * Base class for integration tests.
@@ -50,6 +60,27 @@ public abstract class BaseIT {
     protected static final String KARAF_DIR = "target/exam";
     protected static final String UNOMI_KEY = "670c26d1cc413346c3b2fd9ce65dab41";
 
+    @Inject
+    @Filter(timeout = 600000)
+    protected PersistenceService persistenceService;
+
+    @Inject
+    @Filter(timeout = 600000)
+    protected DefinitionsService definitionsService;
+
+    protected void removeItems(final Class<? extends Item> ...classes) throws InterruptedException {
+        Condition condition = new Condition(definitionsService.getConditionType("matchAllCondition"));
+        for (Class<? extends Item> aClass : classes) {
+            persistenceService.removeByQuery(condition, aClass);
+        }
+        refreshPersistence();
+    }
+
+    protected void refreshPersistence() throws InterruptedException {
+        persistenceService.refresh();
+        Thread.sleep(1000);
+    }
+
     @Configuration
     public Option[] config() throws InterruptedException {
 
@@ -57,13 +88,6 @@ public abstract class BaseIT {
                 .groupId("org.apache.unomi")
                 .artifactId("unomi")
                 .type("tar.gz")
-                .versionAsInProject();
-
-        MavenUrlReference routerRepo = maven()
-                .groupId("org.apache.unomi")
-                .artifactId("unomi-router-karaf-feature")
-                .classifier("features")
-                .type("xml")
                 .versionAsInProject();
 
         List<Option> options = new ArrayList<>();
@@ -109,7 +133,6 @@ public abstract class BaseIT {
                 systemProperty("org.apache.unomi.hazelcast.tcp-ip.members").value("127.0.0.1"),
                 systemProperty("org.apache.unomi.hazelcast.tcp-ip.interface").value("127.0.0.1"),
                 systemProperty("unomi.autoStart").value("true"),
-                features(routerRepo, "unomi-router-karaf-feature"),
                 CoreOptions.bundleStartLevel(100),
                 CoreOptions.frameworkStartLevel(100)
         };

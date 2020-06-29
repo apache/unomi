@@ -26,6 +26,8 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,16 +53,22 @@ import java.util.*;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/profiles")
+@Component(service=ProfileServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class ProfileServiceEndPoint {
 
     private static final Logger logger = LoggerFactory.getLogger(ProfileServiceEndPoint.class.getName());
 
+    @Reference
     private ProfileService profileService;
 
+    @Reference
     private EventService eventService;
 
+    @Reference
     private SegmentService segmentService;
 
+    @Reference
     private LocalizationHelper localizationHelper;
 
     public ProfileServiceEndPoint() {

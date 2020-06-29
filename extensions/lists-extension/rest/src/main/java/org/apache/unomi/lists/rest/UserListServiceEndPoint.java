@@ -23,6 +23,8 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.lists.UserList;
 import org.apache.unomi.services.UserListService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,10 +43,13 @@ import javax.ws.rs.core.MediaType;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/lists")
+@Component(service=UserListServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class UserListServiceEndPoint {
 
     private static final Logger logger = LoggerFactory.getLogger(UserListServiceEndPoint.class.getName());
 
+    @Reference
     private UserListService userListService;
 
     public UserListServiceEndPoint() {

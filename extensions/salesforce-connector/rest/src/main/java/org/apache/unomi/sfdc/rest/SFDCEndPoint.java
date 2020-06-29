@@ -20,6 +20,10 @@ package org.apache.unomi.sfdc.rest;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.sfdc.services.SFDCService;
 import org.osgi.framework.BundleContext;
+import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -38,14 +42,21 @@ import java.util.Map;
         allowAllOrigins = true,
         allowCredentials = true
 )
-@Path("/")
+@Path("/sfdc")
+@Component(service=SFDCEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class SFDCEndPoint {
 
+    @Reference
     private SFDCService sfdcService;
     private BundleContext bundleContext;
 
     public SFDCEndPoint() {
         System.out.println("Initializing SFDC service endpoint...");
+    }
+
+    @Activate
+    public void activate(ComponentContext componentContext) {
+        this.bundleContext = componentContext.getBundleContext();
     }
 
     @WebMethod(exclude = true)

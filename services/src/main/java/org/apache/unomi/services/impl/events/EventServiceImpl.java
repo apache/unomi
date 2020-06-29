@@ -22,14 +22,19 @@ import inet.ipaddr.IPAddressString;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.EventProperty;
+import org.apache.unomi.api.EventType;
+import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.Session;
+import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.EventTypeRegistry;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.services.impl.ParserHelper;
@@ -38,7 +43,14 @@ import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class EventServiceImpl implements EventService {
@@ -53,19 +65,13 @@ public class EventServiceImpl implements EventService {
 
     private BundleContext bundleContext;
 
+    private EventTypeRegistry eventTypeRegistry;
+
     private Set<String> predefinedEventTypeIds = new LinkedHashSet<String>();
 
     private Set<String> restrictedEventTypeIds = new LinkedHashSet<String>();
 
     private Map<String, ThirdPartyServer> thirdPartyServers = new HashMap<>();
-
-    public void init() {
-        logger.info("Event service initialized.");
-    }
-
-    public void destroy() {
-        logger.info("Event service shutdown.");
-    }
 
     public void setThirdPartyConfiguration(Map<String,String> thirdPartyConfiguration) {
         this.thirdPartyServers = new HashMap<>();
@@ -100,6 +106,10 @@ public class EventServiceImpl implements EventService {
 
     public void setRestrictedEventTypeIds(Set<String> restrictedEventTypeIds) {
         this.restrictedEventTypeIds = restrictedEventTypeIds;
+    }
+
+    public void setEventTypeRegistry(EventTypeRegistry eventTypeRegistry) {
+        this.eventTypeRegistry = eventTypeRegistry;
     }
 
     public void setPersistenceService(PersistenceService persistenceService) {
@@ -193,6 +203,11 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    public EventType getEventType(String typeName) {
+        return eventTypeRegistry.get(typeName);
+    }
+
+    @Override
     public List<EventProperty> getEventProperties() {
         Map<String, Map<String, Object>> mappings = persistenceService.getPropertiesMapping(Event.ITEM_TYPE);
         List<EventProperty> props = new ArrayList<>(mappings.size());
@@ -211,10 +226,61 @@ public class EventServiceImpl implements EventService {
         }
     }
 
+    private List<PropertyType> getEventPropertyTypes() {
+        Map<String, Map<String, Object>> mappings = persistenceService.getPropertiesMapping(Event.ITEM_TYPE);
+        return new ArrayList<>(getEventPropertyTypes(mappings));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Set<PropertyType> getEventPropertyTypes(Map<String, Map<String, Object>> mappings) {
+        Set<PropertyType> properties = new LinkedHashSet<>();
+        for (Map.Entry<String, Map<String, Object>> e : mappings.entrySet()) {
+            Set<PropertyType> childProperties = null;
+            Metadata propertyMetadata = new Metadata(null, e.getKey(), e.getKey(), null);
+            Set<String> systemTags = new HashSet<>();
+            propertyMetadata.setSystemTags(systemTags);
+            PropertyType propertyType = new PropertyType(propertyMetadata);
+            propertyType.setTarget("event");
+            ValueType valueType = null;
+            if (e.getValue().get("properties") != null) {
+                childProperties = getEventPropertyTypes((Map<String, Map<String, Object>>) e.getValue().get("properties"));
+                valueType = definitionsService.getValueType("set");
+                if (childProperties != null && childProperties.size() > 0) {
+                    propertyType.setChildPropertyTypes(childProperties);
+                }
+            } else {
+                valueType = mappingTypeToValueType( (String) e.getValue().get("type"));
+            }
+            propertyType.setValueTypeId(valueType.getId());
+            propertyType.setValueType(valueType);
+            properties.add(propertyType);
+        }
+        return properties;
+    }
+
+    private ValueType mappingTypeToValueType(String mappingType) {
+        if ("text".equals(mappingType)) {
+            return definitionsService.getValueType("string");
+        } else if ("date".equals(mappingType)) {
+            return definitionsService.getValueType("date");
+        } else if ("long".equals(mappingType)) {
+            return definitionsService.getValueType("integer");
+        } else if ("boolean".equals(mappingType)) {
+            return definitionsService.getValueType("boolean");
+        } else if ("set".equals(mappingType)) {
+            return definitionsService.getValueType("set");
+        } else if ("object".equals(mappingType)) {
+            return definitionsService.getValueType("set");
+        } else {
+            return definitionsService.getValueType("unknown");
+        }
+    }
+
     public Set<String> getEventTypeIds() {
         Map<String, Long> dynamicEventTypeIds = persistenceService.aggregateWithOptimizedQuery(null, new TermsAggregate("eventType"), Event.ITEM_TYPE);
         Set<String> eventTypeIds = new LinkedHashSet<String>(predefinedEventTypeIds);
         eventTypeIds.addAll(dynamicEventTypeIds.keySet());
+        eventTypeIds.remove("_filtered");
         return eventTypeIds;
     }
 
@@ -323,7 +389,6 @@ public class EventServiceImpl implements EventService {
         long size = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
         return size > 0;
     }
-
 
     public void bind(ServiceReference<EventListenerService> serviceReference) {
         EventListenerService eventListenerService = bundleContext.getService(serviceReference);

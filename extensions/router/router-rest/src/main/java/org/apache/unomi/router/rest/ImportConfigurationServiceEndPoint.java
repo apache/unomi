@@ -19,9 +19,12 @@ package org.apache.unomi.router.rest;
 import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.cxf.jaxrs.ext.multipart.Multipart;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
+import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,15 +52,26 @@ import java.security.NoSuchAlgorithmException;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/importConfiguration")
+@Component(service=ImportConfigurationServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class ImportConfigurationServiceEndPoint extends AbstractConfigurationServiceEndpoint<ImportConfiguration> {
 
     private static final Logger logger = LoggerFactory.getLogger(ImportConfigurationServiceEndPoint.class.getName());
+
+    @Reference
+    protected ConfigSharingService configSharingService;
+
+    @WebMethod(exclude = true)
+    public void setConfigSharingService(ConfigSharingService configSharingService) {
+        this.configSharingService = configSharingService;
+    }
 
     public ImportConfigurationServiceEndPoint() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
         logger.info("Initializing import configuration service endpoint...");
     }
 
     @WebMethod(exclude = true)
+    @Reference(target="(configDiscriminator=IMPORT)")
     public void setImportConfigurationService(ImportExportConfigurationService<ImportConfiguration> importConfigurationService) {
         configurationService = importConfigurationService;
     }

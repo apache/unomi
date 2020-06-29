@@ -20,6 +20,8 @@ package org.apache.unomi.rest;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.Patch;
 import org.apache.unomi.api.services.PatchService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 import javax.jws.WebService;
 import javax.ws.rs.*;
@@ -35,8 +37,11 @@ import javax.ws.rs.core.MediaType;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/patches")
+@Component(service=PatchServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class PatchServiceEndPoint {
 
+    @Reference
     private PatchService patchService;
 
     public void setPatchService(PatchService patchService) {

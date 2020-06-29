@@ -26,6 +26,7 @@
         <feature>war</feature>
         <feature>cxf-jaxrs</feature>
         <feature>cxf-features-metrics</feature>
+        <feature>cxf-rs-description-openapi-v3</feature>
         <feature>cellar</feature>
         <feature>eventadmin</feature>
         <feature>shell-compat</feature>
@@ -81,6 +82,7 @@
         <bundle start-level="85" start="false">mvn:org.apache.unomi/unomi-web-tracker-wab/${project.version}</bundle>
 
         <bundle start-level="99">mvn:org.apache.unomi/shell-commands/${project.version}</bundle>
+        <bundle start-level="85">mvn:org.webjars/swagger-ui/3.23.8</bundle>
     </feature>
 
     <feature name="unomi-documentation" description="Documentation of Unomi in HTML" version="${project.version}">

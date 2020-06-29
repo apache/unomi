@@ -1,0 +1,17 @@
+{
+  "operationName": "findProfiles",
+  "variables": {
+    "filter": {
+      "properties": {
+        "firstName_startsWith": "FindProfiles_Username"
+      }
+    },
+    "orderBy": [
+      {
+        "fieldName": "firstName",
+        "sortOrder": "DESC"
+      }
+    ]
+  },
+  "query": "query findProfiles($filter: CDP_ProfileFilterInput, $orderBy: [CDP_OrderByInput]) {\n  cdp {\n    findProfiles(filter: $filter, orderBy: $orderBy) {\n      edges {\n        node {\n          cdp_profileIDs {\n            id\n          }\n          cdp_lists {\n            id\n            name\n            view {\n              name\n            }\n          }\n          cdp_consents {\n            type\n          }\n          ... on CDP_Profile {\n            firstName\n          }\n        }\n      }\n      pageInfo {\n        hasNextPage\n        hasPreviousPage\n      }\n    }\n  }\n}\n"
+}

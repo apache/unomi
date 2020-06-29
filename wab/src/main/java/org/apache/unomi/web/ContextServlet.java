@@ -179,7 +179,11 @@ public class ContextServlet extends HttpServlet {
                         // We must reload the profile with the session ID as some properties could be missing from the session profile
                         // #personalIdentifier
                         profile = profileService.load(sessionProfile.getItemId());
-                        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
+                        if (profile != null) {
+                            HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
+                        } else {
+                            logger.warn("Couldn't load profile {} referenced in session {}", sessionProfile.getItemId(), session.getItemId());
+                        }
                     }
 
                     // Handle anonymous situation

@@ -18,9 +18,12 @@ package org.apache.unomi.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.EventType;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.EventService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -30,6 +33,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import java.util.Set;
 
 /**
  * A JAX-RS endpoint to access information about the context server's events.
@@ -40,8 +44,11 @@ import javax.ws.rs.core.MediaType;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/events")
+@Component(service=EventServiceEndpoint.class,property = "osgi.jaxrs.resource=true")
 public class EventServiceEndpoint {
 
+    @Reference
     private EventService eventService;
 
     @WebMethod(exclude = true)
@@ -72,6 +79,26 @@ public class EventServiceEndpoint {
     @Path("/{id}")
     public Event getEvents(@PathParam("id") final String id) {
         return eventService.getEvent(id);
+    }
+
+    /**
+     * Retrieves the list of event types identifiers that the server has processed.
+     * @return a Set of strings that contain event type identifiers.
+     */
+    @GET
+    @Path("types")
+    public Set<String> getEventTypeNames() {
+        return eventService.getEventTypeIds();
+    }
+
+    /**
+     * Returns the list of event properties
+     * @return a List of EventProperty objects that make up the properties that the server has seen.
+     */
+    @GET
+    @Path("types/{typeName}")
+    public EventType getEventType(@PathParam("typeName") String typeName) {
+        return eventService.getEventType(typeName);
     }
 
 }

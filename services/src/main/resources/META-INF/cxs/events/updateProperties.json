@@ -1,0 +1,9 @@
+{
+  "type": "updateProperties",
+  "propertyTypes" : [
+    {
+      "itemId": "properties",
+      "type": "set"
+    }
+  ]
+}

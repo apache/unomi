@@ -1,0 +1,17 @@
+{
+  "operationName": "createOrUpdateSegment",
+  "variables": {
+    "segment": {
+      "id": "simpleSegment",
+      "view": "http://www.domain.com",
+      "name": "simpleSegment",
+      "profiles": {
+        "properties": {
+          "firstName_equals": "TestFirstName",
+          "lastName_equals": "TestLastName"
+        }
+      }
+    }
+  },
+  "query": "mutation createOrUpdateSegment($segment: CDP_SegmentInput) {\n  cdp {\n    createOrUpdateSegment(segment: $segment) {\n      id\n      name\n      view {\n        name\n      }\n    }\n  }\n}\n"
+}

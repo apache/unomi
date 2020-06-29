@@ -25,6 +25,8 @@ import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.lists.UserList;
 import org.apache.unomi.api.services.UserListService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,10 +46,13 @@ import java.util.List;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/userList")
+@Component(service=UserListServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class UserListServiceEndPoint {
 
     private static final Logger logger = LoggerFactory.getLogger(UserListServiceEndPoint.class.getName());
 
+    @Reference
     private UserListService userListService;
 
     public UserListServiceEndPoint() {

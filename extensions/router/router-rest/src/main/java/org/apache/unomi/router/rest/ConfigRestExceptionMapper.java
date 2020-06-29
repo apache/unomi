@@ -16,13 +16,18 @@
  */
 package org.apache.unomi.router.rest;
 
+import org.osgi.service.component.annotations.Component;
+
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
+import javax.ws.rs.ext.Provider;
 
 /**
  * Created by amidani on 06/07/2017.
  */
+@Provider
+@Component(service=ExceptionMapper.class)
 public class ConfigRestExceptionMapper implements ExceptionMapper<PartialContentException> {
 
     @Override

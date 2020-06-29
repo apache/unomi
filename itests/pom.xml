@@ -45,6 +45,14 @@
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
+            <artifactId>cdp-graphql-feature</artifactId>
+            <classifier>features</classifier>
+            <version>${project.version}</version>
+            <type>xml</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-spi</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
@@ -76,6 +84,13 @@
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpcore-osgi</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty.websocket</groupId>
+            <artifactId>websocket-client</artifactId>
+            <version>9.4.28.v20200408</version>
+            <type>bundle</type>
+        </dependency>
+
 
         <!-- Dependencies for pax exam karaf container -->
         <dependency>
@@ -105,7 +120,7 @@
         </dependency>
         <dependency>
             <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.core</artifactId>
+            <artifactId>osgi.core</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>

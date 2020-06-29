@@ -40,11 +40,7 @@ include::web-tracker.adoc[]
 
 include::configuration.adoc[]
 
-include::useful-unomi-urls.adoc[]
-
-include::how-profile-tracking-works.adoc[]
-
-include::context-request-flow.adoc[]
+include::migrations/migrations.adoc[]
 
 == Queries and aggregations
 
@@ -68,9 +64,13 @@ include::clustering.adoc[]
 
 == Reference
 
-include::datamodel.adoc[]
+include::useful-unomi-urls.adoc[]
 
-include::new-data-model.adoc[]
+include::how-profile-tracking-works.adoc[]
+
+include::context-request-flow.adoc[]
+
+include::datamodel.adoc[]
 
 include::builtin-event-types.adoc[]
 

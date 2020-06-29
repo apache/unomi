@@ -48,3 +48,38 @@ This will ensure the service is available before starting the test and if you ne
 @Inject @Filter(value="(configDiscriminator=IMPORT)", timeout = 60000)
 protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
 ```
+## Running integration tests
+
+You can run the integration tests along with the build by doing:
+
+    mvn clean install -P integration-tests
+    
+from the project's root directory
+
+If you want to run the tests with a debugger, you can use the `it.karaf.debug` system property.
+Here's an example:
+
+    cd itests
+    mvn clean install -Dit.karaf.debug=hold:true
+    
+The `hold:true` will tell the JVM to pause for you to connect a debugger. You can simply connect a remote debugger on $
+port 5006 to debug the integration tests.
+
+Here are the parameters supported by the `it.karaf.debug` property:
+
+    hold:true - forces a wait for a remote debugger to connect 
+    hold:false - continues even with no remote debugger connected
+    port:XXXX allows to configure the binding port to XXXX
+    
+You can combine both parameters using a comma as a separator, as in the following example:
+
+    mvn clean install -Dit.karaf.debug=hold:true,port=5006
+    
+## Running a single test
+
+If you want to run a single test or single methods, following the instructions given here:
+https://maven.apache.org/surefire/maven-failsafe-plugin/examples/single-test.html
+
+Here's an example:
+
+    mvn clean install -Dit.karaf.debug=hold:true -Dit.test=org.apache.unomi.itests.graphql.GraphQLEventIT

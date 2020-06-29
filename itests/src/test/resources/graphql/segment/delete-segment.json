@@ -1,0 +1,7 @@
+{
+  "operationName": "deleteSegment",
+  "variables": {
+    "segmentID": "testSegment"
+  },
+  "query": "mutation deleteSegment($segmentID: ID) {\n  cdp {\n    deleteSegment(segmentID: $segmentID)\n  }\n}\n"
+}
