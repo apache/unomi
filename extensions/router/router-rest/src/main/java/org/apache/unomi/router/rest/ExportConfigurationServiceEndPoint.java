@@ -21,6 +21,8 @@ import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.api.services.ProfileExportService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,11 +48,16 @@ import java.util.Date;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/exportConfiguration")
+@Component(service=ExportConfigurationServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class ExportConfigurationServiceEndPoint extends AbstractConfigurationServiceEndpoint<ExportConfiguration> {
 
     private static final Logger logger = LoggerFactory.getLogger(ExportConfigurationServiceEndPoint.class.getName());
 
+    @Reference
     private ProfileExportService profileExportService;
+
+    @Reference
     private ProfileService profileService;
 
     public ExportConfigurationServiceEndPoint() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
@@ -58,6 +65,7 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
     }
 
     @WebMethod(exclude = true)
+    @Reference(target="(configDiscriminator=EXPORT)")
     public void setExportConfigurationService(ImportExportConfigurationService<ExportConfiguration> exportConfigurationService) {
         configurationService = exportConfigurationService;
     }

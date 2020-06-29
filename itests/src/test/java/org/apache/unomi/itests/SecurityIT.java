@@ -54,7 +54,6 @@ public class SecurityIT extends BaseIT {
     private static final String SESSION_ID = "vuln-session-id";
 
     private ObjectMapper objectMapper;
-    private  TestUtils testUtils = new TestUtils();
 
     @Inject
     @Filter(timeout = 600000)
@@ -114,7 +113,7 @@ public class SecurityIT extends BaseIT {
     }
 
     private TestUtils.RequestResponse executeContextJSONRequest(HttpPost request, String sessionId) throws IOException {
-        return testUtils.executeContextJSONRequest(request, sessionId);
+        return TestUtils.executeContextJSONRequest(request, sessionId);
     }
 
 

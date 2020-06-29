@@ -1,0 +1,7 @@
+{
+  "operationName": "getEvent",
+  "variables": {
+    "id": "event-1-not-exists"
+  },
+  "query": "query getEvent($id: String!) {\n  cdp {\n    getEvent(id: $id) {\n      id\n      cdp_profileID {\n        id\n      }\n    }\n  }\n}\n"
+}

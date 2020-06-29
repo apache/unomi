@@ -40,8 +40,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Created by amidani on 09/08/2017.
@@ -67,11 +67,13 @@ public class ProfileImportSurfersIT extends BaseIT {
 
         profileService.setPropertyType(propertyType);
 
-        PropertyType propAlive = profileService.getPropertyType("alive");
+        keepTrying("Failed waiting for property type 'alive'",
+                () -> profileService.getPropertyType("alive"),
+                Objects::nonNull,
+                1000,
+                100);
 
-        Assert.assertNotNull("Alive property should not be null", propAlive);
-
-        propAlive = RouterUtils.getPropertyTypeById(profileService.getTargetPropertyTypes("profiles"), "alive");
+        PropertyType propAlive = RouterUtils.getPropertyTypeById(profileService.getTargetPropertyTypes("profiles"), "alive");
 
         Assert.assertNotNull("Lookup of alive property through profiles target has failed !", propAlive);
 
@@ -107,8 +109,11 @@ public class ProfileImportSurfersIT extends BaseIT {
         //Wait for data to be processed
         keepTrying("Failed waiting for surfers initial import to complete", ()->profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null), (p)->p.getTotalSize() == 34, 1000, 100);
 
-        List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(1, importConfigurations.size());
+        keepTrying("Failed waiting for import configurations list with 1 item",
+                () -> importConfigurationService.getAll(),
+                (list) -> Objects.nonNull(list) && list.size() == 1,
+                1000,
+                100);
 
         //Profile not to delete
         PartialList<Profile> jordyProfile = profileService.findProfilesByPropertyValue("properties.email", "jordy@smith.com", 0, 10, null);
@@ -152,8 +157,11 @@ public class ProfileImportSurfersIT extends BaseIT {
         //Wait for data to be processed
         keepTrying("Failed waiting for surfers overwrite import to complete", ()->profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null), (p)->p.getTotalSize() == 36, 1000, 100);
 
-        importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(1, importConfigurations.size());
+        keepTrying("Failed waiting for import configurations list with 1 item",
+                () -> importConfigurationService.getAll(),
+                (list) -> Objects.nonNull(list) && list.size() == 1,
+                1000,
+                100);
 
         //Profile not to delete
         PartialList<Profile> aliveProfiles = profileService.findProfilesByPropertyValue("properties.alive", "true", 0, 50, null);
@@ -191,8 +199,11 @@ public class ProfileImportSurfersIT extends BaseIT {
         //Wait for data to be processed
         keepTrying("Failed waiting for surfers delete import to complete", ()->profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null), (p)->p.getTotalSize() == 0, 1000, 100);
 
-        importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(1, importConfigurations.size());
+        keepTrying("Failed waiting for import configurations list with 1 item",
+                () -> importConfigurationService.getAll(),
+                (list) -> Objects.nonNull(list) && list.size() == 1,
+                1000,
+                100);
 
         PartialList<Profile> jordyProfileDelete = profileService.findProfilesByPropertyValue("properties.email", "jordy@smith.com", 0, 10, null);
         Assert.assertEquals(0, jordyProfileDelete.getList().size());

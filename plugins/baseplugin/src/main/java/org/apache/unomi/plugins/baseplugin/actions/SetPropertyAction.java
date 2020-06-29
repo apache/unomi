@@ -22,7 +22,10 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -30,6 +33,7 @@ import java.util.Map;
 import java.util.TimeZone;
 
 public class SetPropertyAction implements ActionExecutor {
+    private static final Logger logger = LoggerFactory.getLogger(SetPropertyAction.class.getName());
 
     private EventService eventService;
 
@@ -69,7 +73,30 @@ public class SetPropertyAction implements ActionExecutor {
         if (propertyValue != null && propertyValue.equals("now")) {
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
             format.setTimeZone(TimeZone.getTimeZone("UTC"));
-            propertyValue = format.format(event.getTimeStamp());
+
+            Date date = new Date();
+            Date firstVisit = new Date();
+
+            try {
+                Object propertyFirstVisit = event.getProfile().getProperties().get("firstVisit");
+                if (propertyFirstVisit != null) {
+                    if (propertyFirstVisit instanceof String) {
+                        firstVisit = format.parse((String) propertyFirstVisit);
+                    } else if (propertyFirstVisit instanceof Date) {
+                        firstVisit = (Date) propertyFirstVisit;
+                    } else {
+                        firstVisit = format.parse(propertyFirstVisit.toString());
+                    }
+                }
+
+                if (event.getTimeStamp().after(firstVisit)) {
+                    date = event.getTimeStamp();
+                }
+            } catch (ParseException e) {
+                logger.error("Error to parse date", e);
+            }
+
+            propertyValue = format.format(date);
         }
 
         if (storeInSession) {

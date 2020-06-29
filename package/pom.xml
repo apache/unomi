@@ -114,6 +114,15 @@
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>cdp-graphql-feature</artifactId>
+            <version>${project.version}</version>
+            <classifier>features</classifier>
+            <type>xml</type>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -334,6 +343,7 @@
                         <feature>unomi-kar</feature>
                         <feature>unomi-router-karaf-feature</feature>
                         <feature>unomi-web-tracker-karaf-kar</feature>
+                        <feature>cdp-graphql-feature</feature>
                     </bootFeatures>
                     <!--
                     <libraries>

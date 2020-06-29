@@ -1,0 +1,127 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+==== Data model and ElasticSearch 7
+
+Since Apache Unomi version 1.5.0 we decided to upgrade the supported ElasticSearch version to the latest 7.4.2.
+
+To be able to do so, we had to rework the way the data was stored inside ElasticSearch.
+
+Previously every items was stored inside the same ElasticSearch index but this is not allowed anymore in recent ElasticSearch versions.
+
+Since Apache Unomi version 1.5.0 every type of items (see section: link:#_items[Items]) is now stored in a dedicated separated index.
+
+
+==== API changes
+
+To be able to handle the multiple indices the Persistence API implementation
+(https://github.com/apache/unomi/blob/9f1bab437fd93826dc54d318ed00d3b2e3161437/persistence-elasticsearch/core/src/main/java/org/apache/unomi/persistence/elasticsearch/ElasticSearchPersistenceServiceImpl.java[ElasticSearchPersistenceServiceImpl])
+have been adapted and simplified.
+
+The good news is that there is no API changes, the persistence API interface didn't changed.
+
+Any custom Apache Unomi plugins or extensions should continue to work on Apache Unomi 1.5.0.
+
+The only notable changes are located at the
+https://github.com/apache/unomi/blob/9f1bab437fd93826dc54d318ed00d3b2e3161437/persistence-elasticsearch/core/src/main/java/org/apache/unomi/persistence/elasticsearch/ElasticSearchPersistenceServiceImpl.java[ElasticSearchPersistenceServiceImpl Java class].
+This class should not be use directly, instead you should use OSGI service dependency injection using the interface https://github.com/apache/unomi/blob/9f1bab437fd93826dc54d318ed00d3b2e3161437/persistence-spi/src/main/java/org/apache/unomi/persistence/spi/PersistenceService.java[PersistenceService].
+
+But if you are interested in the implementation changes:
+
+. The property `index.name` have been renamed to `index.prefix`.
+Previously used for the single one index name, now every index is prefixed using this property. (`context-` by default)
+. We removed the property `index.names` originally used to create additional indices (used by the geonames DB for exemple).
+This property is not needed anymore because the index is automatically created by the peristence service when the mapping configuration is loaded.
+Example of mapping configuration file: (https://github.com/apache/unomi/blob/9f1bab437fd93826dc54d318ed00d3b2e3161437/extensions/geonames/services/src/main/resources/META-INF/cxs/mappings/geonameEntry.json[geoname index mapping])
+
+Because of this changes the geonames DB index name is now respecting the index naming with prefix like any other item type.
+Previously named: `geonames` is now using the index name `context-geonameentry`
+(see: link:#_installing_geonames_database[Documentation about geonames extension]).
+
+==== Migration steps
+
+In order to migrate the data from ElasticSearch 5 to 7, Unomi provides a migration tool that is directly integrated.
+
+In this migration the following is assumed:
+
+- the ElasticSearch 5 cluster installation is referred to as the `source`
+- the ElasticSearch 7 cluster installation is referred to as the `target`
+- the Unomi 1.4 cluster installation is completely stopped
+- the Unomi 1.5 cluster installation has never been started (just uncompressed)
+- the Unomi 1.5 cluster installation has been configured to connect to the `target` (ElasticSearch 7) cluster
+
+It is HIGHLY RECOMMENDED to perform a full cluster backup/snapshot of the `source` clusters (including ElasticSearch and
+Unomi clusters), and ideally to perform the migration on a restored snapshot of the `source` cluster. For more information
+on ElasticSearch 5 snapshots and restore you can find it here:
+
+    https://www.elastic.co/guide/en/elasticsearch/reference/5.6/modules-snapshots.html
+
+The way the migration works is that both ElasticSearch 5 AND an ElasticSearch 7 clusters (or just single nodes) will
+be started at the same time, and data will be migrated from the ES 5 to the ES 7 cluster. Note that it is possible to use
+a single node for both the `source` and the `target` clusters to - for example - perform the migration on a single
+machine. If you choose to do that you will have to adjust port numbers on either the `source` or `target` cluster node.
+Changing ports requires a restart of the ES cluster you are modifying. In this example we will illustrate how to migrate
+by modifying the `source` cluster node ports.
+
+So in the `source` 's ElasticSearch 5 `config/elasticsearch.yml` file we have modified the default ports to:
+
+    transport.tcp.port: 9310
+    http.port: 9210
+
+Make SURE you change the ports out of the default 9200-9205 and 9300-9305 range (or whatever your cluster uses) otherwise
+both clusters will attempt to merge!
+
+On the `target` ElasticSearch 7 cluster configuration you will need to add the following setting in the `config/elasticsearch.yml`:
+
+    reindex.remote.whitelist: "localhost:9210"
+
+Replace "localhost:9210" which whatever location your `source` cluster is available at. Restart or start your
+`target` ElasticSearch 7 cluster.
+
+Important: Make sure you haven't started Apache Unomi before (using the `unomi:start` command or the autostart command
+line parameter) otherwise you will need to restart your Apache Unomi installation from scratch. The best way to be sure
+of that is to start a new Unomi install by uncompressing the archive and not launching it.
+
+You can then start both instances of ElasticSearch 5 and ElasticSearch 7 and finally start Apache Unomi using:
+
+    ./karaf
+
+Once in the console launch the migration using the following command:
+
+    migrate 1.4.0
+
+Note: the 1.4.0 version is the starting version. If you are starting from a different version (for example a fork), make
+sure that you know what official version of Apache Unomi it corresponds to and you can use the official version number
+as a start version for the migration.
+
+Follow the instructions and answer the prompts. If you used the above configuration as an example you can simply use the
+default values.
+
+Be careful because the first address that the tool will ask for is the `target` (ElasticSearch 7) cluster, not the
+ES 5 one.
+
+Note that it is also possible to change the index prefix to be different from the default `context` value
+so that you could host multiple Apache Unomi instances on the same ElasticSearch cluster.
+
+Important note: only the data that Apache Unomi manages will be migrated. If you have any other data (for example Kibana
+or ElasticSearch monitoring indices) they will not be migrated by this migration tool.
+
+Once the migration has completed, you can start the new Unomi instance using:
+
+    unomi:start
+
+You should then validate that all the data has been properly migrated. For example you could issue a command to list
+the profiles:
+
+    profile-list

@@ -43,7 +43,7 @@
     <cm:property-placeholder persistent-id="org.apache.unomi.cluster"
                              update-strategy="reload" placeholder-prefix="${cluster.">
         <cm:default-properties>
-            <cm:property name="group" value="default" />
+            <cm:property name="group" value="default"/>
             <cm:property name="contextserver.publicAddress" value="https://localhost:9443"/>
             <cm:property name="contextserver.internalAddress" value="http://127.0.0.1:8181"/>
             <cm:property name="nodeStatisticsUpdateFrequency" value="10000"/>
@@ -60,11 +60,11 @@
     <reference id="persistenceService"
                interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="httpService" interface="org.osgi.service.http.HttpService"/>
-    <reference id="karafCellarClusterManager" interface="org.apache.karaf.cellar.core.ClusterManager" />
-    <reference id="karafCellarEventProducer" interface="org.apache.karaf.cellar.core.event.EventProducer" />
-    <reference id="karafCellarGroupManager" interface="org.apache.karaf.cellar.core.GroupManager" />
+    <reference id="karafCellarClusterManager" interface="org.apache.karaf.cellar.core.ClusterManager"/>
+    <reference id="karafCellarEventProducer" interface="org.apache.karaf.cellar.core.event.EventProducer"/>
+    <reference id="karafCellarGroupManager" interface="org.apache.karaf.cellar.core.GroupManager"/>
     <reference id="osgiConfigurationAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
-    <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService" />
+    <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService"/>
 
     <!-- Service definitions -->
 
@@ -90,11 +90,17 @@
         </interfaces>
     </service>
 
-    <bean id="eventServiceImpl" class="org.apache.unomi.services.impl.events.EventServiceImpl"
-        init-method="init" destroy-method="destroy">
+    <bean id="eventTypeRegistryImpl" class="org.apache.unomi.services.impl.events.EventTypeRegistryImpl" init-method="init"
+          destroy-method="destroy">
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+    </bean>
+    <service id="eventTypeRegistry" ref="eventTypeRegistryImpl" interface="org.apache.unomi.api.services.EventTypeRegistry"/>
+
+    <bean id="eventServiceImpl" class="org.apache.unomi.services.impl.events.EventServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="eventTypeRegistry" ref="eventTypeRegistryImpl"/>
         <property name="predefinedEventTypeIds">
             <set>
                 <value>view</value>
@@ -114,7 +120,7 @@
             </set>
         </property>
         <property name="thirdPartyConfiguration">
-            <cm:cm-properties persistent-id="org.apache.unomi.thirdparty" update="true" />
+            <cm:cm-properties persistent-id="org.apache.unomi.thirdparty" update="true"/>
         </property>
     </bean>
     <service id="eventService" ref="eventServiceImpl" interface="org.apache.unomi.api.services.EventService"/>
@@ -135,7 +141,7 @@
 
     <bean id="actionExecutorDispatcherImpl"
           class="org.apache.unomi.services.actions.ActionExecutorDispatcher">
-        <property name="metricsService" ref="metricsService" />
+        <property name="metricsService" ref="metricsService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
 
@@ -166,10 +172,10 @@
         <property name="rulesService" ref="rulesServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="taskExecutionPeriod" value="${services.segment.recalculate.period}"/>
-        <property name="segmentUpdateBatchSize" value="${services.segment.update.batchSize}" />
+        <property name="segmentUpdateBatchSize" value="${services.segment.update.batchSize}"/>
         <property name="schedulerService" ref="schedulerServiceImpl"/>
         <property name="segmentRefreshInterval" value="${services.segment.refresh.interval}"/>
-        <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}" />
+        <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}"/>
     </bean>
     <service id="segmentService" ref="segmentServiceImpl">
         <interfaces>
@@ -201,7 +207,7 @@
         <property name="purgeProfileInactiveTime" value="${services.profile.purge.inactiveTime}"/>
         <property name="purgeProfileExistTime" value="${services.profile.purge.existTime}"/>
         <property name="purgeSessionsAndEventsTime" value="${services.event.purge.existTime}"/>
-        <property name="forceRefreshOnSave" value="${services.profile.forceRefreshOnSave}" />
+        <property name="forceRefreshOnSave" value="${services.profile.forceRefreshOnSave}"/>
         <property name="propertiesRefreshInterval" value="${services.properties.refresh.interval}"/>
         <property name="schedulerService" ref="schedulerServiceImpl"/>
     </bean>
@@ -224,22 +230,24 @@
         <property name="publicAddress" value="${cluster.contextserver.publicAddress}"/>
         <property name="internalAddress" value="${cluster.contextserver.internalAddress}"/>
         <property name="persistenceService" ref="persistenceService"/>
-        <property name="karafCellarClusterManager" ref="karafCellarClusterManager" />
-        <property name="karafCellarEventProducer" ref="karafCellarEventProducer" />
-        <property name="karafCellarGroupManager" ref="karafCellarGroupManager" />
-        <property name="karafCellarGroupName" value="${cluster.group}" />
-        <property name="osgiConfigurationAdmin" ref="osgiConfigurationAdmin" />
-        <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}" />
+        <property name="karafCellarClusterManager" ref="karafCellarClusterManager"/>
+        <property name="karafCellarEventProducer" ref="karafCellarEventProducer"/>
+        <property name="karafCellarGroupManager" ref="karafCellarGroupManager"/>
+        <property name="karafCellarGroupName" value="${cluster.group}"/>
+        <property name="osgiConfigurationAdmin" ref="osgiConfigurationAdmin"/>
+        <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}"/>
         <property name="schedulerService" ref="schedulerServiceImpl"/>
     </bean>
     <service id="clusterService" ref="clusterServiceImpl" interface="org.apache.unomi.api.services.ClusterService"/>
 
 
-    <bean id="personalizationServiceImpl" class="org.apache.unomi.services.impl.personalization.PersonalizationServiceImpl">
+    <bean id="personalizationServiceImpl"
+          class="org.apache.unomi.services.impl.personalization.PersonalizationServiceImpl">
         <property name="profileService" ref="profileServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
-    <service id="personalizationService" ref="personalizationServiceImpl" interface="org.apache.unomi.api.services.PersonalizationService" />
+    <service id="personalizationService" ref="personalizationServiceImpl"
+             interface="org.apache.unomi.api.services.PersonalizationService"/>
 
     <bean id="patchServiceImpl" class="org.apache.unomi.services.impl.patches.PatchServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
@@ -287,7 +295,8 @@
                     interface="org.apache.unomi.api.PersonalizationStrategy"
                     availability="optional">
         <reference-listener
-                bind-method="addPersonalizationStrategy" unbind-method="removePersonalizationStrategy" ref="personalizationServiceImpl"/>
+                bind-method="addPersonalizationStrategy" unbind-method="removePersonalizationStrategy"
+                ref="personalizationServiceImpl"/>
     </reference-list>
 
     <!-- Property merge strategy executors -->
@@ -360,10 +369,11 @@
     </service>
 
 
-    <bean id="configSharingServiceImpl" class="org.apache.unomi.services.impl.configsharing.ConfigSharingServiceImpl" destroy-method="preDestroy">
+    <bean id="configSharingServiceImpl" class="org.apache.unomi.services.impl.configsharing.ConfigSharingServiceImpl"
+          destroy-method="preDestroy">
         <property name="configProperties">
             <map>
-                <entry key="internalServerAddress" value="${cluster.contextserver.internalAddress}" />
+                <entry key="internalServerAddress" value="${cluster.contextserver.internalAddress}"/>
             </map>
         </property>
         <property name="bundleContext" ref="blueprintBundleContext"/>
@@ -377,12 +387,13 @@
     </service>
 
     <!-- Cluster System Statistics Event Handler -->
-    <bean id="clusterSystemStatisticsEventHandler" class="org.apache.unomi.services.impl.cluster.ClusterSystemStatisticsEventHandler"
+    <bean id="clusterSystemStatisticsEventHandler"
+          class="org.apache.unomi.services.impl.cluster.ClusterSystemStatisticsEventHandler"
           init-method="init" destroy-method="destroy">
         <property name="configurationAdmin" ref="osgiConfigurationAdmin"/>
         <property name="clusterManager" ref="karafCellarClusterManager"/>
         <property name="groupManager" ref="karafCellarGroupManager"/>
-        <property name="clusterServiceImpl" ref="clusterServiceImpl" />
+        <property name="clusterServiceImpl" ref="clusterServiceImpl"/>
     </bean>
     <service ref="clusterSystemStatisticsEventHandler" interface="org.apache.karaf.cellar.core.event.EventHandler">
         <service-properties>

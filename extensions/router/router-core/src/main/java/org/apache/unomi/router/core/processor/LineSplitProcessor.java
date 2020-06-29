@@ -142,6 +142,8 @@ public class LineSplitProcessor implements Processor {
                             properties.put(fieldMappingKey, new Boolean(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
                         } else if (propertyType.getValueTypeId().equals("integer")) {
                             properties.put(fieldMappingKey, new Integer(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
+                        } else if (propertyType.getValueTypeId().equals("long")) {
+                            properties.put(fieldMappingKey, new Long(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
                         }
                     } catch (Throwable t) {
                         logger.error("Error converting profileData", t);

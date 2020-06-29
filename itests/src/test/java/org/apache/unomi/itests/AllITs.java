@@ -17,6 +17,7 @@
 
 package org.apache.unomi.itests;
 
+import org.apache.unomi.itests.graphql.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
@@ -28,21 +29,27 @@ import org.junit.runners.Suite.SuiteClasses;
  */
 @RunWith(Suite.class)
 @SuiteClasses({
-	BasicIT.class,
-	ConditionEvaluatorIT.class,
-	ConditionESQueryBuilderIT.class,
-	SegmentIT.class,
-	ProfileServiceIT.class,
-	ProfileImportBasicIT.class,
-	ProfileImportSurfersIT.class,
-	ProfileImportRankingIT.class,
-	ProfileImportActorsIT.class,
-	ProfileExportIT.class,
-	PropertiesUpdateActionIT.class,
-	ModifyConsentIT.class,
-	PatchIT.class,
-	UpdateEventFromContextServletIT.class,
-	SecurityIT.class
+        BasicIT.class,
+        ConditionEvaluatorIT.class,
+        ConditionESQueryBuilderIT.class,
+        SegmentIT.class,
+        ProfileServiceIT.class,
+        ProfileImportBasicIT.class,
+        ProfileImportSurfersIT.class,
+        ProfileImportRankingIT.class,
+        ProfileImportActorsIT.class,
+        ProfileExportIT.class,
+        PropertiesUpdateActionIT.class,
+        ModifyConsentIT.class,
+        PatchIT.class,
+        ContextServletIT.class,
+        SecurityIT.class,
+        GraphQLEventIT.class,
+        GraphQLListIT.class,
+        GraphQLProfileIT.class,
+        GraphQLProfilePropertiesIT.class,
+        GraphQLSegmentIT.class,
+        GraphQLWebSocketIT.class
 })
 public class AllITs {
 }

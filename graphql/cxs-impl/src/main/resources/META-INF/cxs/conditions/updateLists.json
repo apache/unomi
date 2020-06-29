@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "id": "updateListsEventCondition",
+    "name": "updateListsEventCondition",
+    "description": "",
+    "systemTags": [
+      "profileTags",
+      "event",
+      "condition",
+      "eventCondition"
+    ],
+    "readOnly": true
+  },
+  "parentCondition": {
+    "type": "eventTypeCondition",
+    "parameterValues": {
+      "eventTypeId": "cdp_listsUpdateEvent"
+    }
+  },
+
+  "parameters": [
+  ]
+}

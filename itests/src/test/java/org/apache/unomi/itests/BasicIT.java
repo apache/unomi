@@ -58,7 +58,6 @@ public class BasicIT extends BaseIT {
     private final static Logger LOGGER = LoggerFactory.getLogger(BasicIT.class);
 
     private ObjectMapper objectMapper = new ObjectMapper();
-    private  TestUtils testUtils = new TestUtils();
 
     private static final String SESSION_ID_0 = "aa3b04bd-8f4d-4a07-8e96-d33ffa04d3d0";
     private static final String SESSION_ID_1 = "aa3b04bd-8f4d-4a07-8e96-d33ffa04d3d1";
@@ -305,7 +304,7 @@ public class BasicIT extends BaseIT {
     }
 
     private TestUtils.RequestResponse executeContextJSONRequest(HttpPost request, String sessionId) throws IOException {
-        return testUtils.executeContextJSONRequest(request, sessionId);
+        return TestUtils.executeContextJSONRequest(request, sessionId);
     }
 
     private void checkVisitor1ResponseProperties(Map<String, Object> profileProperties) {

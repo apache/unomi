@@ -22,6 +22,8 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
+import org.elasticsearch.common.geo.GeoPoint;
+import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -146,6 +148,27 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
             case "isNotDay":
                 checkRequiredValue(value, name, comparisonOperator, false);
                 return QueryBuilders.boolQuery().mustNot(getIsSameDayRange(value, name));
+            case "distance":
+                final String unitString = (String) condition.getParameter("unit");
+                final Object centerObj = condition.getParameter("center");
+                final Double distance = (Double) condition.getParameter("distance");
+
+                if (centerObj != null && distance != null) {
+                    String centerString;
+                    if (centerObj instanceof org.apache.unomi.api.GeoPoint) {
+                        centerString = ((org.apache.unomi.api.GeoPoint) centerObj).asString();
+                    } else if (centerObj instanceof String) {
+                        centerString = (String) centerObj;
+                    } else {
+                        centerString = centerObj.toString();
+                    }
+                    DistanceUnit unit = unitString != null ? DistanceUnit.fromString(unitString) : DistanceUnit.DEFAULT;
+
+                    return QueryBuilders.geoDistanceQuery(name)
+                            .ignoreUnmapped(true)
+                            .distance(distance, unit)
+                            .point(new GeoPoint(centerString));
+                }
         }
         return null;
     }

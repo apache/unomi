@@ -28,6 +28,7 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.lucene.search.TotalHits;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.TimestampedItem;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.DateRange;
@@ -35,15 +36,28 @@ import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
-import org.apache.unomi.persistence.elasticsearch.conditions.*;
+import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
+import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
+import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
+import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
+import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.persistence.spi.aggregate.*;
+import org.apache.unomi.persistence.spi.aggregate.BaseAggregate;
+import org.apache.unomi.persistence.spi.aggregate.DateAggregate;
+import org.apache.unomi.persistence.spi.aggregate.DateRangeAggregate;
+import org.apache.unomi.persistence.spi.aggregate.IpRangeAggregate;
+import org.apache.unomi.persistence.spi.aggregate.NumericRangeAggregate;
+import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequest;
-import org.elasticsearch.action.bulk.*;
+import org.elasticsearch.action.bulk.BackoffPolicy;
+import org.elasticsearch.action.bulk.BulkItemResponse;
+import org.elasticsearch.action.bulk.BulkProcessor;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
@@ -55,11 +69,24 @@ import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.action.update.UpdateRequest;
-import org.elasticsearch.client.*;
+import org.elasticsearch.client.Node;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.Requests;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestClientBuilder;
+import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.core.CountRequest;
 import org.elasticsearch.client.core.CountResponse;
 import org.elasticsearch.client.core.MainResponse;
-import org.elasticsearch.client.indices.*;
+import org.elasticsearch.client.indices.CreateIndexRequest;
+import org.elasticsearch.client.indices.CreateIndexResponse;
+import org.elasticsearch.client.indices.GetIndexRequest;
+import org.elasticsearch.client.indices.GetIndexResponse;
+import org.elasticsearch.client.indices.GetMappingsRequest;
+import org.elasticsearch.client.indices.GetMappingsResponse;
+import org.elasticsearch.client.indices.IndexTemplatesExistRequest;
+import org.elasticsearch.client.indices.PutIndexTemplateRequest;
+import org.elasticsearch.client.indices.PutMappingRequest;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.ByteSizeValue;
@@ -79,7 +106,11 @@ import org.elasticsearch.script.ScriptException;
 import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
-import org.elasticsearch.search.aggregations.*;
+import org.elasticsearch.search.aggregations.Aggregation;
+import org.elasticsearch.search.aggregations.AggregationBuilder;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.HasAggregations;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregation;
 import org.elasticsearch.search.aggregations.bucket.filter.Filter;
@@ -97,7 +128,11 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.GeoDistanceSortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
-import org.osgi.framework.*;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleEvent;
+import org.osgi.framework.ServiceReference;
+import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,7 +149,18 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
@@ -1112,6 +1158,74 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             }
         } catch (IOException ioe) {
             logger.error("Error while creating mapping for type " + type + " and source " + source, ioe);
+        }
+    }
+
+    public void setPropertyMapping(final PropertyType property, final String itemType) {
+        final String esType = convertValueTypeToESType(property.getValueTypeId());
+        if (esType == null) {
+            logger.warn("No predefined type found for property[" + property.getValueTypeId() + "], letting ES decide");
+            // we don't have a fixed type for that property so let ES decide it
+            return;
+        }
+        try {
+            Map<String, Map<String, Object>> mappings = getPropertiesMapping(itemType);
+            if (mappings == null) {
+                mappings = new HashMap<>();
+            }
+            Map<String, Object> subMappings = mappings.computeIfAbsent("properties", k -> new HashMap<>());
+            Map<String, Object> subSubMappings = (Map<String, Object>) subMappings.computeIfAbsent("properties", k -> new HashMap<>());
+            mergePropertiesMapping(subSubMappings, createPropertyMapping(property.getItemId(), esType));
+
+            Map<String, Object> mappingsWrapper = new HashMap<>();
+            mappingsWrapper.put("properties", mappings);
+            final String mappingsSource = ESCustomObjectMapper.getObjectMapper().writeValueAsString(mappingsWrapper);
+
+            putMapping(mappingsSource, getIndex(itemType));
+        } catch (IOException ioe) {
+            logger.error("Error while creating mapping for type " + itemType + " and property " + property.getValueTypeId(), ioe);
+        }
+    }
+
+    private Map<String, Object> createPropertyMapping(final String fieldName, final String fieldType) {
+        final HashMap<String, Object> definition = new HashMap<>();
+        definition.put("type", fieldType);
+        if ("text".equals(fieldType)) {
+            definition.put("analyzer", "folding");
+            final Map<String, Object> fields = new HashMap<>();
+            final Map<String, Object> keywordField = new HashMap<>();
+            keywordField.put("type", "keyword");
+            keywordField.put("ignore_above", 256);
+            fields.put("keyword", keywordField);
+            definition.put("fields", fields);
+        }
+
+        final HashMap<String, Object> map = new HashMap<>();
+        map.put(fieldName, definition);
+        return map;
+    }
+
+    private String convertValueTypeToESType(String valueTypeId) {
+        switch (valueTypeId) {
+            case "set":
+                return "object";
+            case "boolean":
+                return "boolean";
+            case "geopoint":
+                return "geo_point";
+            case "integer":
+                return "integer";
+            case "long" :
+                return "long";
+            case "float":
+                return "float";
+            case "date":
+                return "date";
+            case "string":
+            case "id":
+                return "text";
+            default:
+                return null;
         }
     }
 

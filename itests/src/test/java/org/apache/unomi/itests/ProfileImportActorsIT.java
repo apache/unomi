@@ -34,7 +34,12 @@ import org.ops4j.pax.exam.util.Filter;
 
 import javax.inject.Inject;
 import java.io.File;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * Created by amidani on 14/08/2017.
@@ -43,9 +48,11 @@ import java.util.*;
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileImportActorsIT extends BaseIT {
 
-    @Inject @Filter(value="(configDiscriminator=IMPORT)", timeout = 600000)
+    @Inject
+    @Filter(value = "(configDiscriminator=IMPORT)", timeout = 600000)
     protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
-    @Inject @Filter(timeout = 600000)
+    @Inject
+    @Filter(timeout = 600000)
     protected ProfileService profileService;
 
     @Test
@@ -66,11 +73,17 @@ public class ProfileImportActorsIT extends BaseIT {
         profileService.setPropertyType(propertyTypeTwitterId);
         profileService.setPropertyType(propertyTypeActorsGenres);
 
-        PropertyType propTwitterId = profileService.getPropertyType("twitterId");
-        Assert.assertNotNull(propTwitterId);
+        PropertyType propTwitterId = keepTrying("Failed waiting for property type 'twitterId'",
+                () -> profileService.getPropertyType("twitterId"),
+                Objects::nonNull,
+                1000,
+                100);
 
-        PropertyType propActorsGenre = profileService.getPropertyType("movieGenres");
-        Assert.assertNotNull(propActorsGenre);
+        PropertyType propActorsGenre = keepTrying("Failed waiting for property type 'movieGenres'",
+                () -> profileService.getPropertyType("movieGenres"),
+                Objects::nonNull,
+                1000,
+                100);
 
 
         /*** Actors Test ***/
@@ -101,7 +114,11 @@ public class ProfileImportActorsIT extends BaseIT {
         importConfigurationService.save(importConfigActors, true);
 
         //Wait for data to be processed
-        keepTrying("Failed waiting for actors initial import to complete", ()-> profileService.findProfilesByPropertyValue("properties.city", "hollywood", 0, 10, null), (p)->p.getTotalSize() == 6, 1000, 200);
+        keepTrying("Failed waiting for actors initial import to complete",
+                () -> profileService.findProfilesByPropertyValue("properties.city", "hollywood", 0, 10, null),
+                (p) -> p.getTotalSize() == 6,
+                1000,
+                200);
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(1, importConfigurations.size());
