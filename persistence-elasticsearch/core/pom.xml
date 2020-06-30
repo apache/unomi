@@ -214,7 +214,7 @@
         <dependency>
             <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast-all</artifactId>
-            <version>3.4.2</version>
+            <version>3.12.8</version>
             <scope>provided</scope>
         </dependency>
 
@@ -238,7 +238,7 @@
                             com.google.apphosting.api;resolution:=optional,
                             com.google.common.geometry;resolution:=optional,
                             com.google.errorprone.annotations.concurrent;resolution:=optional,
-                            com.hazelcast.core;version="[3.4,4)";resolution:=optional,
+                            com.hazelcast.core;version="[3.12,4)";resolution:=optional,
                             com.lmax.disruptor;resolution:=optional,
                             com.lmax.disruptor.dsl;resolution:=optional,
                             com.sun.management;resolution:=optional,
