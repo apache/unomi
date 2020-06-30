@@ -20,7 +20,7 @@
     <parent>
         <artifactId>cxs-privacy-extension</artifactId>
         <groupId>org.apache.unomi</groupId>
-        <version>1.5.1</version>
+        <version>1.5.2-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -83,22 +83,22 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>com.sebastian-daschner</groupId>
-                <artifactId>jaxrs-analyzer-maven-plugin</artifactId>
-                <version>0.17</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>analyze-jaxrs</goal>
-                        </goals>
-                        <configuration>
-                            <backend>swagger</backend>
-                            <deployedDomain>unomi.apache.org</deployedDomain>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+<!--            <plugin>-->
+<!--                <groupId>com.sebastian-daschner</groupId>-->
+<!--                <artifactId>jaxrs-analyzer-maven-plugin</artifactId>-->
+<!--                <version>0.17</version>-->
+<!--                <executions>-->
+<!--                    <execution>-->
+<!--                        <goals>-->
+<!--                            <goal>analyze-jaxrs</goal>-->
+<!--                        </goals>-->
+<!--                        <configuration>-->
+<!--                            <backend>swagger</backend>-->
+<!--                            <deployedDomain>unomi.apache.org</deployedDomain>-->
+<!--                        </configuration>-->
+<!--                    </execution>-->
+<!--                </executions>-->
+<!--            </plugin>-->
         </plugins>
     </build>
 
