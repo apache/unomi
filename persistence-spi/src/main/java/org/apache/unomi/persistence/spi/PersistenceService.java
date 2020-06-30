@@ -451,6 +451,15 @@ public interface PersistenceService {
     void refresh();
 
     /**
+     * Updates the persistence's engine specific index.
+     *
+     * @param clazz will use an index by class type
+     * @param dateHint for index with time, can be null
+     * @param <T> a class that extends Item
+     */
+    <T extends Item> void refreshIndex(Class<T> clazz, Date dateHint);
+
+    /**
      * Purges all data in the context server up to the specified date, not included.
      *
      * @param date the date (not included) before which we want to erase all data
