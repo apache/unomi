@@ -82,11 +82,20 @@
         <bundle start-level="85" start="false">mvn:org.apache.unomi/unomi-web-tracker-wab/${project.version}</bundle>
 
         <bundle start-level="99">mvn:org.apache.unomi/shell-commands/${project.version}</bundle>
-        <bundle start-level="85">mvn:org.webjars/swagger-ui/3.23.8</bundle>
     </feature>
 
     <feature name="unomi-documentation" description="Documentation of Unomi in HTML" version="${project.version}">
         <feature>war</feature>
         <bundle>mvn:org.apache.unomi/manual/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-rest-ui" description="Enables Swagger UI to browse the REST API" version="${project.version">
+        <feature>unomi-kar</feature>
+        <bundle start-level="85">mvn:org.webjars/swagger-ui/3.23.8</bundle>
+    </feature>
+
+    <feature name="unomi-graphql-ui" description="Enables GraphQL UI to browse the GraphQL API" version="${project.version}">
+        <feature>unomi-kar</feature>
+        <bundle start-level="85">mvn:org.apache.unomi/unomi-graphql-playground/${project.version}</bundle>
     </feature>
 </features>
