@@ -17,11 +17,8 @@
 package org.apache.unomi.graphql.fetchers;
 
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.api.GeoPoint;
 import org.apache.unomi.graphql.types.output.CDPEventInterface;
 import org.apache.unomi.graphql.types.output.CDPProfileInterface;
-
-import java.util.Map;
 
 public class CustomerPropertyDataFetcher extends DynamicFieldDataFetcher<Object> {
 
@@ -35,22 +32,12 @@ public class CustomerPropertyDataFetcher extends DynamicFieldDataFetcher<Object>
 
         Object propertyValue = null;
         if (source instanceof CDPProfileInterface) {
-            propertyValue = ((CDPProfileInterface) environment.getSource()).getProperty(fieldName);
+            propertyValue = ((CDPProfileInterface) source).getProperty(fieldName);
         } else if (source instanceof CDPEventInterface) {
-            propertyValue = ((CDPEventInterface) environment.getSource()).getProperty(fieldName);
+            propertyValue = ((CDPEventInterface) source).getProperty(fieldName);
         }
 
-        if (propertyValue != null && "geopoint".equals(valueTypeId)) {
-            if (propertyValue instanceof GeoPoint) {
-                return propertyValue;
-            } else if (propertyValue instanceof Map) {
-                return GeoPoint.fromMap((Map<String, Double>) propertyValue);
-            } else if (propertyValue instanceof String) {
-                return GeoPoint.fromString((String) propertyValue);
-            }
-        }
-
-        return propertyValue;
+        return inflateType(propertyValue);
     }
 
 }

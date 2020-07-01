@@ -16,8 +16,12 @@
  */
 package org.apache.unomi.graphql.types.output;
 
+import graphql.annotations.annotationTypes.GraphQLName;
 import org.apache.unomi.api.Event;
 
+import static org.apache.unomi.graphql.types.output.UnomiEvent.TYPE_NAME;
+
+@GraphQLName(TYPE_NAME)
 public class UnomiEvent implements CDPEventInterface {
 
     public static final String TYPE_NAME = "Unomi_Event";

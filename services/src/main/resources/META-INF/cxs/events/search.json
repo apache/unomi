@@ -1,0 +1,49 @@
+{
+  "type": "search",
+  "propertyTypes": [
+    {
+      "itemId": "properties",
+      "type": "set",
+      "childPropertyTypes": [
+        {
+          "itemId": "originForm",
+          "type": "string"
+        },
+        {
+          "itemId": "language",
+          "type": "string"
+        },
+        {
+          "itemId": "keyword",
+          "type": "string"
+        },
+        {
+          "itemId": "origin",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "itemId": "target",
+      "type": "set",
+      "childPropertyTypes": [
+        {
+          "itemId": "itemId",
+          "type": "string"
+        },
+        {
+          "itemId": "itemType",
+          "type": "string"
+        },
+        {
+          "itemId": "scope",
+          "type": "string"
+        },
+        {
+          "itemId": "properties",
+          "type": "set"
+        }
+      ]
+    }
+  ]
+}

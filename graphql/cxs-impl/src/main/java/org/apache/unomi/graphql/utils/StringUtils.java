@@ -16,6 +16,9 @@
  */
 package org.apache.unomi.graphql.utils;
 
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 public class StringUtils {
     public StringUtils() {
     }
@@ -35,12 +38,16 @@ public class StringUtils {
     }
 
     public static String capitalize(String name) {
-        if (name != null && name.length() != 0) {
+        if (name == null || name.isEmpty()) {
+            return name;
+        }
+        String[] names = name.split("_");
+        if (names.length > 1) {
+            return Stream.of(names).map(StringUtils::capitalize).collect(Collectors.joining("_"));
+        } else {
             char[] chars = name.toCharArray();
             chars[0] = Character.toUpperCase(chars[0]);
             return new String(chars);
-        } else {
-            return name;
         }
     }
 }
