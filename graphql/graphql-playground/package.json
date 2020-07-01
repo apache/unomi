@@ -1,0 +1,32 @@
+{
+  "name": "unomi-graphql-playground",
+  "version": "1.0.0",
+  "description": "The Apache Unomi GraphQL Playground integration.",
+  "main": "target/javascript/unomi-graphql-playground.js",
+  "keywords": [
+    "unomi",
+    "graphql-playground",
+    "apache"
+  ],
+  "author": "Apache Software Foundation",
+  "license": "Apache-2.0",
+  "scripts": {
+    "build": "webpack"
+  },
+  "dependencies": {
+    "graphql": "^15.2.0",
+    "graphql-playground-react": "^1.7.23",
+    "react": "^16.13.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.10.4",
+    "@babel/preset-env": "^7.10.4",
+    "@babel/preset-react": "^7.10.4",
+    "babel-loader": "^8.1.0",
+    "css-loader": "^3.6.0",
+    "file-loader": "^6.0.0",
+    "style-loader": "^1.2.1",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.12"
+  }
+}

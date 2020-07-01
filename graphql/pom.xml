@@ -41,6 +41,7 @@
 
     <modules>
         <module>cxs-impl</module>
+        <module>graphql-playground</module>
         <module>karaf-feature</module>
     </modules>
 

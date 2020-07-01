@@ -344,6 +344,8 @@
                         <feature>unomi-router-karaf-feature</feature>
                         <feature>unomi-web-tracker-karaf-kar</feature>
                         <feature>cdp-graphql-feature</feature>
+                        <feature>unomi-rest-ui</feature>
+                        <feature>unomi-graphql-ui</feature>
                     </bootFeatures>
                     <!--
                     <libraries>
