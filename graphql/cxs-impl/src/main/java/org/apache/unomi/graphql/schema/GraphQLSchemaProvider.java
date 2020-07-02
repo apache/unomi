@@ -537,11 +537,10 @@ public class GraphQLSchemaProvider {
         final Collection<EventType> unomiEventTypes = eventTypeRegistry.getAll();
         unomiEventTypes.forEach(eventType -> {
             final String typeName = UnomiToGraphQLConverter.convertEventType(eventType.getType());
-            final String inputTypeName = typeName + "Input";
 
             builder.field(GraphQLInputObjectField.newInputObjectField()
-                    .name(typeName)
-                    .type((GraphQLInputType) getFromTypeRegistry(inputTypeName))
+                    .name(StringUtils.decapitalize(typeName))
+                    .type((GraphQLInputType) getFromTypeRegistry(typeName + "Input"))
                     .build());
         });
 
