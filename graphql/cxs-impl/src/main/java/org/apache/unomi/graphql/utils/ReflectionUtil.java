@@ -20,6 +20,7 @@ import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.processor.util.NamingKit;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -63,6 +64,28 @@ public class ReflectionUtil {
         }
 
         return result;
+    }
+
+    public static Method findMethod(final String methodName, Class clazz) {
+        String getterName = null;
+        if (!methodName.startsWith("get")) {
+            getterName = "get" + StringUtils.capitalize(methodName);
+        }
+        for (Method method : clazz.getMethods()) {
+            if (method.getName().equals(methodName) || method.getName().equals(getterName)) {
+                return method;
+            }
+        }
+        return null;
+    }
+
+    public static Field findField(final String fieldName, Class clazz) {
+        for (Field field : clazz.getFields()) {
+            if (field.getName().equals(fieldName)) {
+                return field;
+            }
+        }
+        return null;
     }
 
 }

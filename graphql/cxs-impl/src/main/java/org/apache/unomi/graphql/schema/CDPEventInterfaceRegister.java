@@ -18,17 +18,14 @@ package org.apache.unomi.graphql.schema;
 
 import org.apache.unomi.api.Event;
 import org.apache.unomi.graphql.types.output.CDPEventInterface;
+import org.apache.unomi.graphql.types.output.UnomiEvent;
 import org.apache.unomi.graphql.utils.ReflectionUtil;
 import org.osgi.service.component.annotations.Component;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component(immediate = true, service = CDPEventInterfaceRegister.class)
 public class CDPEventInterfaceRegister {
-
-    private static final Logger logger = LoggerFactory.getLogger(CDPEventInterfaceRegister.class.getName());
 
     private ConcurrentHashMap<String, Class<? extends CDPEventInterface>> events;
 
@@ -42,8 +39,7 @@ public class CDPEventInterfaceRegister {
 
     public CDPEventInterface getEvent(final Event event) {
         if (!events.containsKey(event.getEventType())) {
-            logger.warn("Missing event type definition for type {}", event.getEventType());
-            return null;
+            return new UnomiEvent(event);
         }
 
         try {

@@ -16,7 +16,6 @@
  */
 package org.apache.unomi.graphql.schema;
 
-import graphql.Scalars;
 import graphql.annotations.AnnotationsSchemaCreator;
 import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.annotations.processor.ProcessingElementsContainer;
@@ -29,8 +28,6 @@ import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLInputObjectType;
 import graphql.schema.GraphQLInputType;
 import graphql.schema.GraphQLInterfaceType;
-import graphql.schema.GraphQLList;
-import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLSchema;
@@ -40,11 +37,12 @@ import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.EventTypeRegistry;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.CDPGraphQLConstants;
+import org.apache.unomi.graphql.converters.UnomiToGraphQLConverter;
+import org.apache.unomi.graphql.fetchers.CustomEventOrSetPropertyDataFetcher;
 import org.apache.unomi.graphql.fetchers.CustomerPropertyDataFetcher;
 import org.apache.unomi.graphql.fetchers.DynamicFieldDataFetcher;
 import org.apache.unomi.graphql.fetchers.event.EventListenerSubscriptionFetcher;
 import org.apache.unomi.graphql.fetchers.event.UnomiEventPublisher;
-import org.apache.unomi.graphql.fetchers.profile.ProfileDynamicFieldSetDataFetcher;
 import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
 import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
@@ -52,9 +50,6 @@ import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
 import org.apache.unomi.graphql.providers.GraphQLSubscriptionProvider;
 import org.apache.unomi.graphql.providers.GraphQLTypeFunctionProvider;
-import org.apache.unomi.graphql.scalars.DateTimeFunction;
-import org.apache.unomi.graphql.scalars.GeoPointFunction;
-import org.apache.unomi.graphql.scalars.JSONFunction;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPEventProcessor;
@@ -257,7 +252,7 @@ public class GraphQLSchemaProvider {
 
         if (!unomiEventTypes.isEmpty()) {
             for (EventType unomiEventType : unomiEventTypes) {
-                final String typeName = StringUtils.capitalize(PropertyNameTranslator.translateFromUnomiToGraphQL(unomiEventType.getType() + "Input"));
+                final String typeName = UnomiToGraphQLConverter.convertEventType(unomiEventType.getType()) + "Input";
 
                 final GraphQLInputObjectType objectType;
                 if (!graphQLAnnotations.getContainer().getTypeRegistry().containsKey(typeName)) {
@@ -278,7 +273,7 @@ public class GraphQLSchemaProvider {
             final GraphQLCodeRegistry.Builder codeRegisterBuilder = graphQLAnnotations.getContainer().getCodeRegistryBuilder();
 
             for (EventType unomiEventType : unomiEventTypes) {
-                final String typeName = StringUtils.capitalize(PropertyNameTranslator.translateFromUnomiToGraphQL(unomiEventType.getType()));
+                final String typeName = UnomiToGraphQLConverter.convertEventType(unomiEventType.getType());
 
                 final GraphQLObjectType objectType;
                 if (!graphQLAnnotations.getContainer().getTypeRegistry().containsKey(typeName)) {
@@ -340,7 +335,7 @@ public class GraphQLSchemaProvider {
                         .name(propertyName).build());
             } else {
                 fieldDefinitions.add(GraphQLFieldDefinition.newFieldDefinition()
-                        .type((GraphQLOutputType) convert(propertyType.getValueTypeId()))
+                        .type((GraphQLOutputType) UnomiToGraphQLConverter.convertPropertyType(propertyType.getValueTypeId()))
                         .name(propertyName).build());
             }
 
@@ -368,7 +363,7 @@ public class GraphQLSchemaProvider {
 
         final Set<Class> interfaces = new HashSet<>();
         interfaces.add(CDPEventInterface.class);
-        return createDynamicOutputType(eventType.getType(), eventType.getPropertyTypes(), interfaces, codeRegisterBuilder);
+        return createDynamicOutputType(UnomiToGraphQLConverter.convertEventType(eventType.getType()), eventType.getPropertyTypes(), interfaces, codeRegisterBuilder);
     }
 
     private GraphQLObjectType createDynamicOutputType(final String name, final Set<PropertyType> propertyTypes, final Set<Class> interfaces, final GraphQLCodeRegistry.Builder codeRegisterBuilder) {
@@ -382,7 +377,13 @@ public class GraphQLSchemaProvider {
                 final GraphQLInterfaceType graphQLInterface = (GraphQLInterfaceType) getOutputType(anInterface);
                 if (graphQLInterface != null) {
                     dynamicTypeBuilder.withInterface(graphQLInterface);
-                    graphQLInterface.getFieldDefinitions().forEach(dynamicTypeBuilder::field);
+                    graphQLInterface.getFieldDefinitions().forEach(fieldDefinition -> {
+                        dynamicTypeBuilder.field(fieldDefinition);
+
+                        final String propertyName = fieldDefinition.getName();
+                        final DataFetcher dataFetcher = new CustomEventOrSetPropertyDataFetcher(propertyName);
+                        codeRegisterBuilder.dataFetcher(FieldCoordinates.coordinates(typeName, propertyName), dataFetcher);
+                    });
                 }
             }
         }
@@ -391,21 +392,17 @@ public class GraphQLSchemaProvider {
             propertyTypes.forEach(childPropertyType -> {
                 final boolean isSet = "set".equals(childPropertyType.getValueTypeId());
                 String childPropertyName = PropertyNameTranslator.translateFromUnomiToGraphQL(childPropertyType.getItemId());
-                if (isSet) {
-                    childPropertyName = typeName + "_" + childPropertyName;
-                }
 
                 final GraphQLFieldDefinition.Builder fieldBuilder = GraphQLFieldDefinition.newFieldDefinition()
                         .name(childPropertyName);
 
                 if (isSet) {
-                    fieldBuilder.type(createDynamicSetOutputType(childPropertyType, codeRegisterBuilder, childPropertyName));
+                    fieldBuilder.type(createDynamicSetOutputType(childPropertyType, codeRegisterBuilder, typeName + "_" + childPropertyName));
                 } else {
-                    fieldBuilder.type((GraphQLOutputType) convert(childPropertyType.getValueTypeId()));
-
-                    codeRegisterBuilder.dataFetcher(FieldCoordinates.coordinates(typeName, childPropertyName),
-                            new ProfileDynamicFieldSetDataFetcher(childPropertyName));
+                    fieldBuilder.type((GraphQLOutputType) UnomiToGraphQLConverter.convertPropertyType(childPropertyType.getValueTypeId()));
                 }
+                codeRegisterBuilder.dataFetcher(FieldCoordinates.coordinates(typeName, childPropertyName),
+                        new CustomEventOrSetPropertyDataFetcher(childPropertyName));
 
                 dynamicTypeBuilder.field(fieldBuilder.build());
             });
@@ -419,7 +416,7 @@ public class GraphQLSchemaProvider {
     }
 
     private GraphQLInputObjectType createDynamicEventInputType(final EventType eventType) {
-        return createDynamicInputType(eventType.getType(), eventType.getPropertyTypes(), true);
+        return createDynamicInputType(UnomiToGraphQLConverter.convertEventType(eventType.getType()), eventType.getPropertyTypes(), true);
     }
 
     private GraphQLInputObjectType createDynamicSetInputType(final PropertyType propertyType, final String parentName) {
@@ -436,24 +433,20 @@ public class GraphQLSchemaProvider {
             dynamicTypeBuilder.definition(InputObjectTypeDefinition.newInputObjectDefinition()
                     .additionalData(CDPGraphQLConstants.EVENT_PROCESSOR_CLASS, CDPUnomiEventInput.class.getName()).build()
             );
-            //TODO: register all the fields of cdp event input
         }
 
         if (propertyTypes != null && !propertyTypes.isEmpty()) {
             propertyTypes.forEach(childPropertyType -> {
                 final boolean isSet = "set".equals(childPropertyType.getValueTypeId());
                 String childPropertyName = PropertyNameTranslator.translateFromUnomiToGraphQL(childPropertyType.getItemId());
-                if (isSet) {
-                    childPropertyName = typeName + "_" + childPropertyName;
-                }
 
                 final GraphQLInputObjectField.Builder fieldBuilder = GraphQLInputObjectField.newInputObjectField()
                         .name(childPropertyName);
 
                 if (isSet) {
-                    fieldBuilder.type(createDynamicSetInputType(childPropertyType, childPropertyName));
+                    fieldBuilder.type(createDynamicSetInputType(childPropertyType, typeName + "_" + childPropertyName));
                 } else {
-                    fieldBuilder.type((GraphQLInputType) convert(childPropertyType.getValueTypeId()));
+                    fieldBuilder.type((GraphQLInputType) UnomiToGraphQLConverter.convertPropertyType(childPropertyType.getValueTypeId()));
                 }
 
                 dynamicTypeBuilder.field(fieldBuilder.build());
@@ -498,7 +491,7 @@ public class GraphQLSchemaProvider {
                 }
             } else {
                 fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
-                        .type((GraphQLInputType) convert(propertyType.getValueTypeId()))
+                        .type((GraphQLInputType) UnomiToGraphQLConverter.convertPropertyType(propertyType.getValueTypeId()))
                         .name(propertyName)
                         .build());
             }
@@ -543,12 +536,11 @@ public class GraphQLSchemaProvider {
         // now add all unomi defined event types
         final Collection<EventType> unomiEventTypes = eventTypeRegistry.getAll();
         unomiEventTypes.forEach(eventType -> {
-            final String typeName = StringUtils.capitalize(PropertyNameTranslator.translateFromUnomiToGraphQL(eventType.getType()));
-            final String inputTypeName = typeName + "Input";
+            final String typeName = UnomiToGraphQLConverter.convertEventType(eventType.getType());
 
             builder.field(GraphQLInputObjectField.newInputObjectField()
-                    .name(typeName)
-                    .type((GraphQLInputType) getFromTypeRegistry(inputTypeName))
+                    .name(StringUtils.decapitalize(typeName))
+                    .type((GraphQLInputType) getFromTypeRegistry(typeName + "Input"))
                     .build());
         });
 
@@ -678,59 +670,6 @@ public class GraphQLSchemaProvider {
                             graphQLAnnotations.getContainer().getCodeRegistryBuilder().build()
                     ));
         }
-    }
-
-    /*
-     *  Convert all unomi value types to graphql types
-     *  Also able to handle array and required notation in the following format
-     *  [<type>]! - required array of values <type>
-     */
-    private GraphQLType convert(final String type) {
-        String normalizedType = type;
-        GraphQLType graphQLType;
-        boolean isArray = false;
-        boolean isMandatory = false;
-        if (normalizedType.endsWith("!")) {
-            isMandatory = true;
-            normalizedType = normalizedType.substring(0, normalizedType.length() - 1);
-        }
-        if (normalizedType.startsWith("[") && normalizedType.endsWith("]")) {
-            isArray = true;
-            normalizedType = normalizedType.substring(1, normalizedType.length() - 1);
-        }
-        switch (normalizedType) {
-            case "id":
-                isMandatory = true; // force mandatory for id
-                graphQLType = Scalars.GraphQLID;
-                break;
-            case "integer":
-                graphQLType = Scalars.GraphQLInt;
-                break;
-            case "long":
-                graphQLType = Scalars.GraphQLLong;
-                break;
-            case "float":
-                graphQLType = Scalars.GraphQLFloat;
-                break;
-            case "set":
-                graphQLType = JSONFunction.JSON_SCALAR;
-                break;
-            case "geopoint":
-                graphQLType = GeoPointFunction.GEOPOINT_SCALAR;
-                break;
-            case "date":
-                graphQLType = DateTimeFunction.DATE_TIME_SCALAR;
-                break;
-            case "boolean":
-                graphQLType = Scalars.GraphQLBoolean;
-                break;
-            case "string":
-            default:
-                graphQLType = Scalars.GraphQLString;
-                break;
-        }
-        graphQLType = isArray ? GraphQLList.list(graphQLType) : graphQLType;
-        return isMandatory ? GraphQLNonNull.nonNull(graphQLType) : graphQLType;
     }
 
     public GraphQLInputObjectType getInputObjectType(final Class<?> annotatedClass) {

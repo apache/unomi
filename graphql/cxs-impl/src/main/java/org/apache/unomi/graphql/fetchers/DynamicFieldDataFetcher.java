@@ -18,7 +18,10 @@
 package org.apache.unomi.graphql.fetchers;
 
 import graphql.schema.DataFetcher;
+import org.apache.unomi.api.GeoPoint;
 import org.apache.unomi.graphql.schema.PropertyNameTranslator;
+
+import java.util.Map;
 
 public abstract class DynamicFieldDataFetcher<T> implements DataFetcher<T> {
 
@@ -37,5 +40,18 @@ public abstract class DynamicFieldDataFetcher<T> implements DataFetcher<T> {
 
     public String getValueTypeId() {
         return valueTypeId;
+    }
+
+    protected Object inflateType(final Object propertyValue) {
+        if (propertyValue != null && "geopoint".equals(valueTypeId)) {
+            if (propertyValue instanceof GeoPoint) {
+                return propertyValue;
+            } else if (propertyValue instanceof Map) {
+                return GeoPoint.fromMap((Map<String, Double>) propertyValue);
+            } else if (propertyValue instanceof String) {
+                return GeoPoint.fromString((String) propertyValue);
+            }
+        }
+        return propertyValue;
     }
 }
