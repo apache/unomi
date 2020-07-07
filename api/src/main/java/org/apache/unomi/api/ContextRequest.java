@@ -64,6 +64,7 @@ public class ContextRequest {
     private Profile profileOverrides;
     private Map<String, Object> sessionPropertiesOverrides;
     private String sessionId;
+    private String profileId;
 
     /**
      * Retrieves the source of the context request.
@@ -241,5 +242,22 @@ public class ContextRequest {
      */
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
+    }
+
+    /**
+     * Retrieve the profileId passed along with the request. All events will be processed with this profileId as a
+     * default
+     * @return the identifier for the profile
+     */
+    public String getProfileId() {
+        return profileId;
+    }
+
+    /**
+     * Sets the profileId in the request.
+     * @param profileId an unique identifier for the profile
+     */
+    public void setProfileId(String profileId) {
+        this.profileId = profileId;
     }
 }
