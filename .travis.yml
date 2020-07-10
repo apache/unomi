@@ -1,0 +1,23 @@
+group: edge
+
+services:
+  - docker
+
+cache:
+  directories:
+    - $HOME/.m2/
+
+language: java
+
+stages:
+  - build and deploy
+
+jobs:
+  include:
+  - stage: build and deploy
+    name: "Build Unomi from Tag and deploy"
+    jdk: openjdk8
+    install:
+      - pip install --user awscli
+    script:
+      - ./buildAndDeployUnomiFromTag.sh

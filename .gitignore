@@ -15,4 +15,6 @@ GeoLite2-City.mmdb
 allCountries.zip
 rest/.miredot-offline.json
 /extensions/salesforce-connector/test.properties
+extensions/web-tracker/javascript/dist/*
+extensions/web-tracker/javascript/snippet.min.*
 **/*.versionsBackup
