@@ -44,10 +44,10 @@ public class PropertyConditionEvaluatorTest {
     public static final Date SESSION_LAST_EVENT_DATE = new Date();
     public static final int THREAD_POOL_SIZE = 300;
     public static final int WORKER_COUNT = 500000;
-    private static PropertyConditionEvaluator propertyConditionEvaluator = new PropertyConditionEvaluator();
-    private static Event mockEvent = generateMockEvent();
-    private static Profile mockProfile = generateMockProfile();
-    private static Session mockSession = generateMockSession();
+    private static final PropertyConditionEvaluator propertyConditionEvaluator = new PropertyConditionEvaluator();
+    private static final Event mockEvent = generateMockEvent();
+    private static final Profile mockProfile = generateMockProfile();
+    private static final Session mockSession = generateMockSession();
 
     @Test
     public void testHardcodedEvaluator() {
@@ -117,30 +117,32 @@ public class PropertyConditionEvaluatorTest {
         if (vulnFile.exists()) {
             vulnFile.delete();
         }
+        String vulnFileCanonicalPath = vulnFile.getCanonicalPath();
+        vulnFileCanonicalPath = vulnFileCanonicalPath.replace("\\", "\\\\"); // this is required for Windows support
         try {
-            propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "@java.lang.Runtime@getRuntime().exec('touch " + vulnFile.getCanonicalPath() + "')");
+            propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "@java.lang.Runtime@getRuntime().exec('touch " + vulnFileCanonicalPath + "')");
         } catch (RuntimeException | MethodFailedException re) {
             // we ignore these exceptions as they are expected.
         }
-        assertFalse("Vulnerability successfully executed ! File created at " + vulnFile.getCanonicalPath(), vulnFile.exists());
+        assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
         try {
-            propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "(#cmd='touch " + vulnFile.getCanonicalPath() + "').(#cmds={'bash','-c',#cmd}).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start())");
-        } catch (RuntimeException | MethodFailedException re) {
-            // we ignore these exceptions as they are expected.
-        }
-        vulnFile = new File("target/vuln-file.txt");
-        assertFalse("Vulnerability successfully executed ! File created at " + vulnFile.getCanonicalPath(), vulnFile.exists());
-        try {
-            propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "(#cmd='touch " + vulnFile.getCanonicalPath() + "').(#iswin=(@java.lang.System@getProperty('os.name').toLowerCase().contains('win'))).(#cmds=(#iswin?{'cmd.exe','/c',#cmd}:{'bash','-c',#cmd})).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start())");
+            propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "(#cmd='touch " + vulnFileCanonicalPath + "').(#cmds={'bash','-c',#cmd}).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start())");
         } catch (RuntimeException | MethodFailedException re) {
             // we ignore these exceptions as they are expected.
         }
         vulnFile = new File("target/vuln-file.txt");
-        assertFalse("Vulnerability successfully executed ! File created at " + vulnFile.getCanonicalPath(), vulnFile.exists());
+        assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
+        try {
+            propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "(#cmd='touch " + vulnFileCanonicalPath + "').(#iswin=(@java.lang.System@getProperty('os.name').toLowerCase().contains('win'))).(#cmds=(#iswin?{'cmd.exe','/c',#cmd}:{'bash','-c',#cmd})).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start())");
+        } catch (RuntimeException | MethodFailedException re) {
+            // we ignore these exceptions as they are expected.
+        }
+        vulnFile = new File("target/vuln-file.txt");
+        assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
     }
 
     private void runHardcodedTest(int workerCount, ExecutorService executorService) throws InterruptedException {
-        List<Callable<Object>> todo = new ArrayList<Callable<Object>>(workerCount);
+        List<Callable<Object>> todo = new ArrayList<>(workerCount);
         long startTime = System.currentTimeMillis();
         for (int i = 0; i < workerCount; i++) {
             todo.add(new HardcodedWorker());
@@ -151,7 +153,7 @@ public class PropertyConditionEvaluatorTest {
     }
 
     private void runOGNLTest(int workerCount, ExecutorService executorService) throws InterruptedException {
-        List<Callable<Object>> todo = new ArrayList<Callable<Object>>(workerCount);
+        List<Callable<Object>> todo = new ArrayList<>(workerCount);
         long startTime = System.currentTimeMillis();
         for (int i = 0; i < workerCount; i++) {
             todo.add(new OGNLWorker());
