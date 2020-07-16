@@ -25,10 +25,15 @@ import org.apache.unomi.graphql.utils.DateUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.ops4j.pax.exam.util.Filter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 public class GraphQLProfilePropertiesIT extends BaseGraphQLIT {
 
@@ -36,6 +41,7 @@ public class GraphQLProfilePropertiesIT extends BaseGraphQLIT {
     @Filter(timeout = 600000)
     protected ProfileService profileService;
 
+    private final static Logger LOGGER = LoggerFactory.getLogger(GraphQLProfilePropertiesIT.class);
 
     @Test
     public void testCreateAndDeleteProfileProperty() throws Exception {
@@ -48,16 +54,24 @@ public class GraphQLProfilePropertiesIT extends BaseGraphQLIT {
         keepTrying("Failed waiting for the creation of the property for profiles", () -> profileService.getPropertyType("testProperty"), Objects::nonNull, 1000, 100);
 
         final Profile profile = new Profile("profileId_createOrUpdateProfilePropertiesTest");
-        profile.setProperty("testProperty", Collections.singletonMap("testChildProperty", "testChildPropertyValue"));
+        Map<String, String> testPropertyMap = new HashMap<>();
+        testPropertyMap.put("testStringProperty", "testStringPropertyValue");
+        testPropertyMap.put("testLongProperty", String.valueOf(9007199254740991L));
+        profile.setProperty("testProperty", testPropertyMap);
         profileService.save(profile);
 
-        keepTrying("Failed waiting for the creation of the profile", () -> profileService.load(profile.getItemId()), Objects::nonNull, 1000, 100);
+        Profile newProfile = keepTrying("Failed waiting for the creation of the profile", () -> profileService.load(profile.getItemId()), Objects::nonNull, 1000, 100);
+        HashMap testProperty = (HashMap) newProfile.getProperty("testProperty");
+        Assert.assertNotNull(testProperty);
+        Assert.assertEquals("testStringPropertyValue", testProperty.get("testStringProperty"));
+        Assert.assertEquals(String.valueOf(9007199254740991L), testProperty.get("testLongProperty"));
 
         try (CloseableHttpResponse response = post("graphql/profile/get-profile-with-new-property.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 
             Assert.assertNotNull(context.getValue("data.cdp.getProfile.testProperty"));
-            Assert.assertEquals("testChildPropertyValue", context.getValue("data.cdp.getProfile.testProperty.testChildProperty"));
+            Assert.assertEquals("testStringPropertyValue", context.getValue("data.cdp.getProfile.testProperty.testStringProperty"));
+            Assert.assertEquals(9007199254740991L, (long) context.getValue("data.cdp.getProfile.testProperty.testLongProperty"));
         }
 
         try (CloseableHttpResponse response = post("graphql/profile/delete-profile-properties.json")) {

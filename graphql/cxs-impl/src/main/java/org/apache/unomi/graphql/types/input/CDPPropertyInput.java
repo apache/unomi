@@ -18,13 +18,14 @@ package org.apache.unomi.graphql.types.input;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import org.apache.unomi.graphql.types.input.property.BaseCDPPropertyInput;
 import org.apache.unomi.graphql.types.input.property.CDPBooleanPropertyInput;
 import org.apache.unomi.graphql.types.input.property.CDPDatePropertyInput;
 import org.apache.unomi.graphql.types.input.property.CDPFloatPropertyInput;
 import org.apache.unomi.graphql.types.input.property.CDPGeoPointPropertyInput;
 import org.apache.unomi.graphql.types.input.property.CDPIdentifierPropertyInput;
 import org.apache.unomi.graphql.types.input.property.CDPIntPropertyInput;
-import org.apache.unomi.graphql.types.input.property.BaseCDPPropertyInput;
+import org.apache.unomi.graphql.types.input.property.CDPLongPropertyInput;
 import org.apache.unomi.graphql.types.input.property.CDPSetPropertyInput;
 import org.apache.unomi.graphql.types.input.property.CDPStringPropertyInput;
 
@@ -46,6 +47,10 @@ public class CDPPropertyInput {
     @GraphQLField
     @GraphQLName("int")
     private CDPIntPropertyInput integerPropertyTypeInput;
+
+    @GraphQLField
+    @GraphQLName("long")
+    private CDPLongPropertyInput longPropertyTypeInput;
 
     @GraphQLField
     @GraphQLName("float")
@@ -71,6 +76,7 @@ public class CDPPropertyInput {
             final @GraphQLName("identifier") CDPIdentifierPropertyInput identifierPropertyTypeInput,
             final @GraphQLName("string") CDPStringPropertyInput stringPropertyTypeInput,
             final @GraphQLName("int") CDPIntPropertyInput integerPropertyTypeInput,
+            final @GraphQLName("long") CDPLongPropertyInput longPropertyTypeInput,
             final @GraphQLName("float") CDPFloatPropertyInput floatPropertyTypeInput,
             final @GraphQLName("date") CDPDatePropertyInput datePropertyTypeInput,
             final @GraphQLName("boolean") CDPBooleanPropertyInput booleanPropertyTypeInput,
@@ -79,6 +85,7 @@ public class CDPPropertyInput {
         this.identifierPropertyTypeInput = identifierPropertyTypeInput;
         this.stringPropertyTypeInput = stringPropertyTypeInput;
         this.integerPropertyTypeInput = integerPropertyTypeInput;
+        this.longPropertyTypeInput = longPropertyTypeInput;
         this.floatPropertyTypeInput = floatPropertyTypeInput;
         this.datePropertyTypeInput = datePropertyTypeInput;
         this.booleanPropertyTypeInput = booleanPropertyTypeInput;
@@ -96,6 +103,10 @@ public class CDPPropertyInput {
 
     public CDPIntPropertyInput getIntegerPropertyTypeInput() {
         return integerPropertyTypeInput;
+    }
+
+    public CDPLongPropertyInput getLongPropertyTypeInput() {
+        return longPropertyTypeInput;
     }
 
     public CDPFloatPropertyInput getFloatPropertyTypeInput() {
@@ -123,6 +134,7 @@ public class CDPPropertyInput {
                 identifierPropertyTypeInput,
                 stringPropertyTypeInput,
                 integerPropertyTypeInput,
+                longPropertyTypeInput,
                 floatPropertyTypeInput,
                 datePropertyTypeInput,
                 booleanPropertyTypeInput,

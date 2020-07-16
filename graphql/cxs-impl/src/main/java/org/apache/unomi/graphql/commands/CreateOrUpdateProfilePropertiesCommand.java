@@ -106,6 +106,7 @@ public class CreateOrUpdateProfilePropertiesCommand extends BaseCommand<Boolean>
                         prop.getIdentifierPropertyTypeInput(),
                         prop.getStringPropertyTypeInput(),
                         prop.getIntegerPropertyTypeInput(),
+                        prop.getLongPropertyTypeInput(),
                         prop.getFloatPropertyTypeInput(),
                         prop.getDatePropertyTypeInput(),
                         prop.getBooleanPropertyTypeInput(),
