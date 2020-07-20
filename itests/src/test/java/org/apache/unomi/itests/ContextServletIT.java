@@ -295,4 +295,31 @@ public class ContextServletIT extends BaseIT {
 		//Assert
 		assertEquals(0,response.getProfileSegments().size());
 	}
+
+	@Test
+	public void testCreateEventWithProfileId_Success() throws IOException, InterruptedException {
+		//Arrange
+		String eventId = "test-event-id1";
+		String profileId = "test-profile-id";
+		String eventType = "test-event-type";
+		Event event = new Event();
+		event.setEventType(eventType);
+		event.setItemId(eventId);
+
+		ContextRequest contextRequest = new ContextRequest();
+		contextRequest.setProfileId(profileId);
+		contextRequest.setEvents(Arrays.asList(event));
+
+		//Act
+		HttpPost request = new HttpPost(URL + CONTEXT_URL);
+		request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
+		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+		TestUtils.executeContextJSONRequest(request);
+		refreshPersistence();
+		Thread.sleep(2000); //Making sure event is updated in DB
+
+		//Assert
+		Profile profile =  this.profileService.load(profileId);
+		assertEquals(profileId, profile.getItemId());
+	}
 }
