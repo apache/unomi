@@ -35,6 +35,7 @@ import org.apache.unomi.graphql.types.output.property.CDPFloatPropertyType;
 import org.apache.unomi.graphql.types.output.property.CDPGeoPointPropertyType;
 import org.apache.unomi.graphql.types.output.property.CDPIdentifierPropertyType;
 import org.apache.unomi.graphql.types.output.property.CDPIntPropertyType;
+import org.apache.unomi.graphql.types.output.property.CDPLongPropertyType;
 import org.apache.unomi.graphql.types.output.property.CDPSetPropertyType;
 import org.apache.unomi.graphql.types.output.property.CDPStringPropertyType;
 import org.osgi.service.component.annotations.Component;
@@ -62,6 +63,7 @@ public class CDPDefaultGraphQLProvider
         additionalTypes.add(CDPGeoPointPropertyType.class);
         additionalTypes.add(CDPIdentifierPropertyType.class);
         additionalTypes.add(CDPIntPropertyType.class);
+        additionalTypes.add(CDPLongPropertyType.class);
         additionalTypes.add(CDPSetPropertyType.class);
         additionalTypes.add(CDPStringPropertyType.class);
 

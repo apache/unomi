@@ -18,10 +18,15 @@ package org.apache.unomi.graphql.types.output.property;
 
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.PropertyType;
+import org.apache.unomi.graphql.schema.CDPPropertyInterfaceRegister;
+import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.output.CDPPropertyInterface;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.apache.unomi.graphql.types.output.property.CDPSetPropertyType.TYPE_NAME;
 
@@ -37,9 +42,16 @@ public class CDPSetPropertyType extends CDPPropertyType implements CDPPropertyIn
     }
 
     @GraphQLField
-    public List<CDPPropertyInterface> properties() {
-        //TODO when unomi supports this type
-        return null;
+    public List<CDPPropertyInterface> properties(final DataFetchingEnvironment environment) {
+        final Set<PropertyType> childPropertyTypes = this.type.getChildPropertyTypes();
+        if (childPropertyTypes == null || childPropertyTypes.isEmpty()) {
+            return null;
+        }
+
+        final ServiceManager serviceManager = environment.getContext();
+        return childPropertyTypes.stream()
+                .map(prop -> serviceManager.getService(CDPPropertyInterfaceRegister.class).getProperty(prop))
+                .collect(Collectors.toList());
     }
 
 }

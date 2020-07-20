@@ -18,8 +18,11 @@ package org.apache.unomi.itests.graphql;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.ProfileService;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.ops4j.pax.exam.util.Filter;
 
@@ -33,6 +36,16 @@ public class GraphQLSegmentIT extends BaseGraphQLIT {
     @Inject
     @Filter(timeout = 600000)
     protected ProfileService profileService;
+
+    @Before
+    public void setUp() throws InterruptedException {
+        removeItems(Segment.class);
+    }
+
+    @After
+    public void tearDown() throws InterruptedException {
+        removeItems(Segment.class);
+    }
 
     @Test
     public void testCreateThenGetAndDeleteSegment() throws IOException {

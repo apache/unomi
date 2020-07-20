@@ -18,8 +18,10 @@
 package org.apache.unomi.itests;
 
 import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.SegmentService;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -39,6 +41,11 @@ public class SegmentIT extends BaseIT {
 
     @Inject @Filter(timeout = 600000)
     protected SegmentService segmentService;
+
+    @Before
+    public void setUp() throws InterruptedException {
+        removeItems(Segment.class);
+    }
 
     @Test
     public void testSegments() {
