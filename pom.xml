@@ -69,7 +69,7 @@
         <version.jackson.databind>2.9.10.1</version.jackson.databind>
         <version.jackson.jaxb>2.9.10</version.jackson.jaxb>
         <version.karaf>4.2.8</version.karaf>
-        <version.karaf.cellar>4.2.0-SNAPSHOT</version.karaf.cellar>
+        <version.karaf.cellar>4.2.0</version.karaf.cellar>
         <version.pax.exam>4.13.1</version.pax.exam>
         <elasticsearch.version>7.4.2</elasticsearch.version>
         <groovy.version>3.0.3</groovy.version>
