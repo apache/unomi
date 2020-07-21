@@ -39,15 +39,6 @@
     },
     "consents": {
       "properties": {
-        "scope": {
-          "type": "string"
-        },
-        "typeIdentifier": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string"
-        },
         "statusDate": {
           "type": "date"
         },
