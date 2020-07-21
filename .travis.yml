@@ -20,4 +20,4 @@ jobs:
     install:
       - pip install --user awscli
     script:
-      - ./scripts/buildAndDeployUnomiFromTag.sh
+      - ./buildAndDeployUnomiFromTag.sh
