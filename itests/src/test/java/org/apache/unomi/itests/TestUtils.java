@@ -78,15 +78,20 @@ public class TestUtils {
 			ContextResponse context = TestUtils.retrieveResourceFromResponse(response, ContextResponse.class);
 			Assert.assertNotNull("Context should not be null", context);
 			Assert.assertNotNull("Context profileId should not be null", context.getProfileId());
-			Assert.assertEquals("Context sessionId should be the same as the sessionId used to request the context", sessionId,
-				context.getSessionId());
-
+			if (sessionId != null) {
+				Assert.assertEquals("Context sessionId should be the same as the sessionId used to request the context", sessionId,
+						context.getSessionId());
+			}
 			String cookieHeader = null;
 			if (response.containsHeader("Set-Cookie")) {
 				cookieHeader = response.getHeaders("Set-Cookie")[0].toString().substring(12);
 			}
 			return new RequestResponse(context, cookieHeader);
 		}
+	}
+
+	public static RequestResponse executeContextJSONRequest(HttpPost request) throws IOException {
+		return executeContextJSONRequest(request, null);
 	}
 
 	public static boolean removeAllProfiles(DefinitionsService definitionsService, PersistenceService persistenceService) {
