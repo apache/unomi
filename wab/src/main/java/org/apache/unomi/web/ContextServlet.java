@@ -107,6 +107,7 @@ public class ContextServlet extends HttpServlet {
         ContextRequest contextRequest = null;
         String scope = null;
         String sessionId = null;
+        String profileId = null;
         String stringPayload = HttpUtils.getPayload(request);
         if (stringPayload != null) {
             ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
@@ -122,18 +123,21 @@ public class ContextServlet extends HttpServlet {
                 scope = contextRequest.getSource().getScope();
             }
             sessionId = contextRequest.getSessionId();
+            profileId = contextRequest.getProfileId();
         }
 
         if (sessionId == null) {
             sessionId = request.getParameter("sessionId");
         }
 
-        // Get profile id from the cookie
-        String cookieProfileId = ServletCommon.getProfileIdCookieValue(request, profileIdCookieName);
+        if (profileId == null) {
+            // Get profile id from the cookie
+            profileId = ServletCommon.getProfileIdCookieValue(request, profileIdCookieName);
+        }
 
-        if (cookieProfileId == null && sessionId == null && personaId == null) {
+        if (profileId == null && sessionId == null && personaId == null) {
             ((HttpServletResponse)response).sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
-            logger.error("Couldn't find cookieProfileId, sessionId or personaId in incoming request! Stopped processing request. See debug level for more information");
+            logger.error("Couldn't find profileId, sessionId or personaId in incoming request! Stopped processing request. See debug level for more information");
             if (logger.isDebugEnabled()) {
                 logger.debug("Request dump: {}", HttpUtils.dumpRequestInfo(request));
             }
@@ -147,16 +151,16 @@ public class ContextServlet extends HttpServlet {
 
             boolean invalidateProfile = request.getParameter("invalidateProfile") != null ?
                     new Boolean(request.getParameter("invalidateProfile")) : false;
-            if (cookieProfileId == null || invalidateProfile) {
+            if (profileId == null || invalidateProfile) {
                 // no profileId cookie was found or the profile has to be invalidated, we generate a new one and create the profile in the profile service
                 profile = createNewProfile(null, response, timestamp);
                 profileCreated = true;
             } else {
-                profile = profileService.load(cookieProfileId);
+                profile = profileService.load(profileId);
                 if (profile == null) {
                     // this can happen if we have an old cookie but have reset the server,
                     // or if we merged the profiles and somehow this cookie didn't get updated.
-                    profile = createNewProfile(null, response, timestamp);
+                    profile = createNewProfile(profileId, response, timestamp);
                     profileCreated = true;
                 } else {
                     Changes changesObject = checkMergedProfile(response, profile, session);
@@ -324,7 +328,7 @@ public class ContextServlet extends HttpServlet {
     }
 
     private Changes handleRequest(ContextRequest contextRequest, Session session, Profile profile, ContextResponse data,
-                                ServletRequest request, ServletResponse response, Date timestamp) {
+                                  ServletRequest request, ServletResponse response, Date timestamp) {
         Changes changes = ServletCommon.handleEvents(contextRequest.getEvents(), session, profile, request, response, timestamp,
                 privacyService, eventService);
         data.setProcessedEvents(changes.getProcessedItems());
