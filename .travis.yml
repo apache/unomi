@@ -10,14 +10,22 @@ cache:
 language: java
 
 stages:
-  - build and deploy
+  - name: build
+    if: branch != relsease
+  - name: build and deploy
+    if: branch = relsease
+
+install: skip
 
 jobs:
   include:
-  - stage: build and deploy
-    name: "Build Unomi from Tag and deploy"
+  - stage: build
+    name: "Build Unomi"
     jdk: openjdk8
-    install:
-      - pip install --user awscli
     script:
-      - ./buildAndDeployUnomiFromTag.sh
+    - ./build.sh
+  - stage: build and deploy
+    name: "Build and deploy Unomi"
+    jdk: openjdk8
+    script:
+      - ./buildAndDeploy.sh
