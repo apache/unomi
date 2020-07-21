@@ -323,7 +323,7 @@ public class ContextServletIT extends BaseIT {
 	@Test
 	public void testCreateEventWithProfileId_Success() throws IOException, InterruptedException {
 		//Arrange
-		String eventId = "test-event-id1";
+		String eventId = "test-event-id4";
 		String profileId = "test-profile-id";
 		String eventType = "test-event-type";
 		Event event = new Event();
