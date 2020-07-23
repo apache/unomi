@@ -315,7 +315,6 @@ public class ContextServletIT extends BaseIT {
 		request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 		TestUtils.executeContextJSONRequest(request);
-		refreshPersistence();
 		Thread.sleep(2000); //Making sure event is updated in DB
 
 		//Assert
