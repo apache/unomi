@@ -17,11 +17,7 @@
 package org.apache.unomi.itests;
 
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.api.PartialList;
-
-import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -42,8 +38,6 @@ public class ProfileServiceIT extends BaseIT {
     private final static Logger LOGGER = LoggerFactory.getLogger(ProfileServiceIT.class);
 
     private final static String TEST_PROFILE_ID = "test-profile-id";
-    private final static String TEST_PROFILE_ID_TWO = "test-profile-id-two";
-    private final static String TEST_PROFILE_ID_THREE = "test-profile-id-three";
 
     @Inject @Filter(timeout = 600000)
     protected ProfileService profileService;
@@ -56,38 +50,6 @@ public class ProfileServiceIT extends BaseIT {
         LOGGER.info("Profile saved, now testing profile delete...");
         profileService.delete(TEST_PROFILE_ID, false);
         LOGGER.info("Profile deleted successfully.");
-    }
-
-    @Test
-    public void testGetProfileWithScrolling() throws InterruptedException {
-        Profile profileOne = new Profile();
-        Profile profileTwo = new Profile();
-        Profile profileThree = new Profile();
-
-        profileOne.setItemId(TEST_PROFILE_ID);
-        profileTwo.setItemId(TEST_PROFILE_ID_TWO);
-        profileThree.setItemId(TEST_PROFILE_ID_THREE);
-
-        profileService.save(profileOne);
-        profileService.save(profileTwo);
-        profileService.save(profileThree);
-
-        Thread.sleep(4000); // Make sure Elastic is updated
-
-        Query query = new Query();
-
-        query.setLimit(2);
-        query.setScrollTimeValidity("10m");
-        PartialList<Profile> profiles = profileService.search(query, Profile.class);
-        assertEquals(2, profiles.getList().size());
-
-        query.setScrollIdentifier(profiles.getScrollIdentifier());
-        profiles = profileService.search(query, Profile.class);
-        assertEquals(1, profiles.getList().size());
-
-        query.setScrollIdentifier(profiles.getScrollIdentifier());
-        profiles = profileService.search(query, Profile.class);
-        assertEquals(0, profiles.getList().size());
     }
 
 }
