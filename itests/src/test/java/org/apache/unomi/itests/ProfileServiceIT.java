@@ -19,6 +19,9 @@ package org.apache.unomi.itests;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.PartialList;
+
+import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -56,14 +59,14 @@ public class ProfileServiceIT extends BaseIT {
     }
 
     @Test
-    public void testGetProfileWithScrolling() {
+    public void testGetProfileWithScrolling() throws InterruptedException {
         Profile profileOne = new Profile();
         Profile profileTwo = new Profile();
         Profile profileThree = new Profile();
 
         profileOne.setItemId(TEST_PROFILE_ID);
-        profileOne.setItemId(TEST_PROFILE_ID_TWO);
-        profileOne.setItemId(TEST_PROFILE_ID_THREE);
+        profileTwo.setItemId(TEST_PROFILE_ID_TWO);
+        profileThree.setItemId(TEST_PROFILE_ID_THREE);
 
         profileService.save(profileOne);
         profileService.save(profileTwo);
@@ -73,19 +76,18 @@ public class ProfileServiceIT extends BaseIT {
 
         Query query = new Query();
 
-        Query searchQuery = new Query();
-        searchQuery.setLimit(2);
-        searchQuery.setScrollTimeValidity("10m");
-
-        PartialList<Profile> profiles = search(query, Profile.class);
-
+        query.setLimit(2);
+        query.setScrollTimeValidity("10m");
+        PartialList<Profile> profiles = profileService.search(query, Profile.class);
         assertEquals(2, profiles.getList().size());
 
-        String scrollIdentifier = profiles.getScrollIdentifier();
-        searchQuery.setScrollIdentifier(scrollIdentifier);
-
-        profiles = search(query, Profile.class);
+        query.setScrollIdentifier(profiles.getScrollIdentifier());
+        profiles = profileService.search(query, Profile.class);
         assertEquals(1, profiles.getList().size());
+
+        query.setScrollIdentifier(profiles.getScrollIdentifier());
+        profiles = profileService.search(query, Profile.class);
+        assertEquals(0, profiles.getList().size());
     }
 
 }
