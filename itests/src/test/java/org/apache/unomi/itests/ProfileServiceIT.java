@@ -17,7 +17,11 @@
 package org.apache.unomi.itests;
 
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.PartialList;
+
+import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -50,6 +54,45 @@ public class ProfileServiceIT extends BaseIT {
         LOGGER.info("Profile saved, now testing profile delete...");
         profileService.delete(TEST_PROFILE_ID, false);
         LOGGER.info("Profile deleted successfully.");
+    }
+
+    @Test
+    public void testGetProfileWithScrolling() throws InterruptedException {
+        final String profileIdOne = "test-profile-id";
+        final String profileIdTwo = "test-profile-id";
+        final String profileIdThree = "test-profile-id";
+
+        Profile profileOne = new Profile();
+        Profile profileTwo = new Profile();
+        Profile profileThree = new Profile();
+
+        profileOne.setItemId(profileIdOne);
+        profileTwo.setItemId(profileIdTwo);
+        profileThree.setItemId(profileIdThree);
+
+        profileService.save(profileOne);
+        profileService.save(profileTwo);
+        profileService.save(profileThree);
+
+        Thread.sleep(4000); // Make sure Elastic is updated
+
+        Query query = new Query();
+        query.setLimit(2);
+        query.setScrollTimeValidity("10m");
+
+        PartialList<Profile> profiles = profileService.search(query, Profile.class);
+        assertEquals(2, profiles.getList().size());
+
+        Query queryCont = new Query();
+        queryCont.setScrollTimeValidity("10m");
+        queryCont.setScrollIdentifier(profiles.getScrollIdentifier());
+
+        profiles = profileService.search(queryCont, Profile.class);
+        assertEquals(1, profiles.getList().size());
+
+        queryCont.setScrollIdentifier(profiles.getScrollIdentifier());
+        profiles = profileService.search(queryCont, Profile.class);
+        assertEquals(0, profiles.getList().size());
     }
 
 }
