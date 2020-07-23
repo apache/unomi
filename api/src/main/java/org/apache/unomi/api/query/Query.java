@@ -33,6 +33,8 @@ public class Query implements Serializable {
     private String sortby;
     private Condition condition;
     private boolean forceRefresh;
+    private String scrollTimeValidity;
+    private String scrollIdentifier;
 
     /**
      * Instantiates a new Query.
@@ -150,4 +152,21 @@ public class Query implements Serializable {
     public void setForceRefresh(boolean forceRefresh) {
         this.forceRefresh = forceRefresh;
     }
+
+    public String getScrollIdentifier() {
+        return scrollIdentifier;
+    }
+
+    public void setScrollIdentifier(String scrollIdentifier) {
+        this.scrollIdentifier = scrollIdentifier;
+    }
+
+    public String getScrollTimeValidity() {
+        return scrollTimeValidity;
+    }
+
+    public void setScrollTimeValidity(String scrollTimeValidity) {
+        this.scrollTimeValidity = scrollTimeValidity;
+    }
+
 }
