@@ -62,7 +62,7 @@ public class PropertyConditionEvaluatorTest {
         assertNull("Unexisting property should be null", propertyConditionEvaluator.getHardcodedPropertyValue(mockProfile, "properties.email"));
 
         // here let's make sure our reporting of non optimized expressions works.
-        assertEquals("Should have received the non-optimized marker string", NOT_OPTIMIZED_MARKER, propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "lastEventDate"));
+        assertEquals("Should have received the non-optimized marker string", NOT_OPTIMIZED_MARKER, propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "profile.itemId"));
 
     }
 
@@ -134,6 +134,13 @@ public class PropertyConditionEvaluatorTest {
         assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
         try {
             propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "(#cmd='touch " + vulnFileCanonicalPath + "').(#iswin=(@java.lang.System@getProperty('os.name').toLowerCase().contains('win'))).(#cmds=(#iswin?{'cmd.exe','/c',#cmd}:{'bash','-c',#cmd})).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start())");
+        } catch (RuntimeException | MethodFailedException re) {
+            // we ignore these exceptions as they are expected.
+        }
+        vulnFile = new File("target/vuln-file.txt");
+        assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
+        try {
+            propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "(#runtimeclass = #this.getClass().forName(\"java.lang.Runtime\")).(#getruntimemethod = #runtimeclass.getDeclaredMethods().{^ #this.name.equals(\"getRuntime\")}[0]).(#rtobj = #getruntimemethod.invoke(null,null)).(#execmethod = #runtimeclass.getDeclaredMethods().{? #this.name.equals(\"exec\")}.{? #this.getParameters()[0].getType().getName().equals(\"java.lang.String\")}.{? #this.getParameters().length < 2}[0]).(#execmethod.invoke(#rtobj,\" touch "+vulnFileCanonicalPath+"\"))");
         } catch (RuntimeException | MethodFailedException re) {
             // we ignore these exceptions as they are expected.
         }

@@ -21,12 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.unomi.api.ContextRequest;
-import org.apache.unomi.api.ContextResponse;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.Session;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.DefinitionsService;
@@ -44,6 +39,7 @@ import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
 
 import javax.inject.Inject;
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -51,10 +47,11 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 
 
 /**
@@ -345,5 +342,49 @@ public class ContextServletIT extends BaseIT {
 		//Assert
 		Profile profile =  this.profileService.load(profileId);
 		assertEquals(profileId, profile.getItemId());
+	}
+
+	@Test
+	public void testOGNLVulnerability() throws IOException, InterruptedException {
+
+		File vulnFile = new File("target/vuln-file.txt");
+		if (vulnFile.exists()) {
+			vulnFile.delete();
+		}
+		String vulnFileCanonicalPath = vulnFile.getCanonicalPath();
+		vulnFileCanonicalPath = vulnFileCanonicalPath.replace("\\", "\\\\"); // this is required for Windows support
+
+		Map<String,String> parameters = new HashMap<>();
+		parameters.put("VULN_FILE_PATH", vulnFileCanonicalPath);
+		HttpPost request = new HttpPost(URL + CONTEXT_URL);
+		request.setEntity(new StringEntity(getValidatedBundleJSON("security/ognl-payload-1.json", parameters), ContentType.create("application/json")));
+		TestUtils.executeContextJSONRequest(request);
+		refreshPersistence();
+		Thread.sleep(2000); //Making sure event is updated in DB
+
+		assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
+
+	}
+
+	@Test
+	public void testMVELVulnerability() throws IOException, InterruptedException {
+
+		File vulnFile = new File("target/vuln-file.txt");
+		if (vulnFile.exists()) {
+			vulnFile.delete();
+		}
+		String vulnFileCanonicalPath = vulnFile.getCanonicalPath();
+		vulnFileCanonicalPath = vulnFileCanonicalPath.replace("\\", "\\\\"); // this is required for Windows support
+
+		Map<String,String> parameters = new HashMap<>();
+		parameters.put("VULN_FILE_PATH", vulnFileCanonicalPath);
+		HttpPost request = new HttpPost(URL + CONTEXT_URL);
+		request.setEntity(new StringEntity(getValidatedBundleJSON("security/mvel-payload-1.json", parameters), ContentType.create("application/json")));
+		TestUtils.executeContextJSONRequest(request);
+		refreshPersistence();
+		Thread.sleep(2000); //Making sure event is updated in DB
+
+		assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
+
 	}
 }

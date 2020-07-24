@@ -21,7 +21,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * A class loader that uses a whitelist and a black list of classes that it will allow to resolve. This is useful for providing proper
+ * A class loader that uses a allow list and a deny list of classes that it will allow to resolve. This is useful for providing proper
  * sandboxing to scripting engine such as MVEL, OGNL or Groovy.
  */
 public class SecureFilteringClassLoader extends ClassLoader {
@@ -34,7 +34,7 @@ public class SecureFilteringClassLoader extends ClassLoader {
 
     static {
         String systemAllowedClasses = System.getProperty("org.apache.unomi.scripting.allow",
-                "org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,ognl.*,java.lang.Object,java.util.Map,java.lang.Integer,org.mvel2.*");
+                "org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,ognl.*,java.lang.Object,java.util.Map,java.util.HashMap,java.lang.Integer,org.mvel2.*");
         if (systemAllowedClasses != null) {
             if ("all".equals(systemAllowedClasses.trim())) {
                 defaultAllowedClasses = null;
@@ -96,6 +96,22 @@ public class SecureFilteringClassLoader extends ClassLoader {
             throw new ClassNotFoundException("Access to class " + name + " not allowed");
         }
         return delegate.loadClass(name);
+    }
+
+    @Override
+    protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+        if (forbiddenClasses != null && classNameMatches(forbiddenClasses, name)) {
+            throw new ClassNotFoundException("Access to class " + name + " not allowed");
+        }
+        if (allowedClasses != null && !classNameMatches(allowedClasses, name)) {
+            throw new ClassNotFoundException("Access to class " + name + " not allowed");
+        }
+        return super.loadClass(name, resolve);
+    }
+
+    @Override
+    protected Class<?> findClass(String name) throws ClassNotFoundException {
+        return super.findClass(name);
     }
 
     private boolean classNameMatches(Set<String> classesToTest, String className) {

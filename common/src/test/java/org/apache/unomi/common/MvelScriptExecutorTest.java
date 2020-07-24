@@ -14,23 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.services.actions;
+package org.apache.unomi.common;
 
 import org.apache.unomi.api.CustomItem;
 import org.apache.unomi.api.Event;
-import org.apache.unomi.common.SecureFilteringClassLoader;
 import org.junit.Test;
-import org.mvel2.CompileException;
-import org.mvel2.MVEL;
-import org.mvel2.ParserConfiguration;
-import org.mvel2.ParserContext;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.Assert.assertFalse;
 
-public class ActionExecutorDispatcherTest {
+public class MvelScriptExecutorTest {
+
+    ScriptExecutor scriptExecutor = new MvelScriptExecutor();
 
     public static final String MOCK_ITEM_ID = "mockItemId";
     public static final String DIGITALL_SCOPE = "digitall";
@@ -50,44 +49,41 @@ public class ActionExecutorDispatcherTest {
         }
         Object result = null;
         try {
-            result = executeMVEL("java.io.PrintWriter writer = new java.io.PrintWriter(new java.io.BufferedWriter(new java.io.FileWriter(\"" + vulnFile.getCanonicalPath() + "\", true)));\nwriter.println(\"test\");\nwriter.close();", ctx);
-        } catch (CompileException ce) {
+            result = scriptExecutor.execute("java.io.PrintWriter writer = new java.io.PrintWriter(new java.io.BufferedWriter(new java.io.FileWriter(\"" + vulnFile.getCanonicalPath() + "\", true)));\nwriter.println(\"test\");\nwriter.close();", ctx);
+        } catch (Throwable t) {
             // this is expected since access to these classes should not be allowed
+            System.out.println("Expected error : " + t.getMessage());
         }
         System.out.println("result=" + result);
         try {
-            result = executeMVEL("import java.util.*;\nimport java.io.*;\nPrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(\"" + vulnFile.getCanonicalPath() + "\", true)));\nwriter.println(\"test\");\nwriter.close();", ctx);
-        } catch (CompileException ce) {
+            result = scriptExecutor.execute("import java.util.*;\nimport java.io.*;\nPrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(\"" + vulnFile.getCanonicalPath() + "\", true)));\nwriter.println(\"test\");\nwriter.close();", ctx);
+        } catch (Throwable t) {
             // this is expected since access to these classes should not be allowed
+            System.out.println("Expected error : " + t.getMessage());
         }
         System.out.println("result=" + result);
         try {
-            result = executeMVEL("import java.util.*;\nimport java.io.*;\nnew Scanner(new File(\"" + vulnFile.getCanonicalPath() + "\")).useDelimiter(\"\\\\Z\").next();", ctx);
-        } catch (CompileException ce) {
+            result = scriptExecutor.execute("import java.util.*;\nimport java.io.*;\nnew Scanner(new File(\"" + vulnFile.getCanonicalPath() + "\")).useDelimiter(\"\\\\Z\").next();", ctx);
+        } catch (Throwable t) {
             // this is expected since access to these classes should not be allowed
+            System.out.println("Expected error : " + t.getMessage());
+        }
+        System.out.println("result=" + result);
+        try {
+            result = scriptExecutor.execute("Runtime r = Runtime.getRuntime(); r.exec(\"touch "+vulnFile.getCanonicalPath()+"\");", ctx);
+        } catch (Throwable t) {
+            // this is expected since access to these classes should not be allowed
+            System.out.println("Expected error : " + t.getMessage());
+        }
+        System.out.println("result=" + result);
+        try {
+            result = scriptExecutor.execute("Runtime r = Runtime.getClass().forName(\"java.lang.Runtime\").getDeclaredMethod(\"getRuntime\", null ).invoke(null, null); r.exec(\"touch "+vulnFile.getCanonicalPath()+"\");", ctx);
+        } catch (Throwable t) {
+            // this is expected since access to these classes should not be allowed
+            System.out.println("Expected error : " + t.getMessage());
         }
         System.out.println("result=" + result);
         assertFalse("Vulnerability successfully executed ! File created at " + vulnFile.getCanonicalPath(), vulnFile.exists());
-    }
-
-    private Object executeMVEL(String expression, Object ctx) {
-        final ClassLoader tccl = Thread.currentThread().getContextClassLoader();
-        try {
-            ParserConfiguration parserConfiguration = new ParserConfiguration();
-            ClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(getClass().getClassLoader());
-            Thread.currentThread().setContextClassLoader(secureFilteringClassLoader);
-            parserConfiguration.setClassLoader(secureFilteringClassLoader);
-            ParserContext parserContext = new ParserContext(parserConfiguration);
-            Serializable compiledExpression = MVEL.compileExpression(expression, parserContext);
-            try {
-                return MVEL.executeExpression(compiledExpression, ctx, new HashMap());
-            } catch (CompileException ce) {
-                // this is expected
-            }
-            return null;
-        } finally {
-            Thread.currentThread().setContextClassLoader(tccl);
-        }
     }
 
     private static Event generateMockEvent() {
@@ -102,5 +98,4 @@ public class ActionExecutorDispatcherTest {
         targetItem.getProperties().put("pageInfo", pageInfoMap);
         return mockEvent;
     }
-
 }
