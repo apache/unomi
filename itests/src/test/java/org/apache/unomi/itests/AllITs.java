@@ -39,6 +39,7 @@ import org.junit.runners.Suite.SuiteClasses;
         ProfileImportRankingIT.class,
         ProfileImportActorsIT.class,
         ProfileExportIT.class,
+        EventServiceIT.class,
         PropertiesUpdateActionIT.class,
         ModifyConsentIT.class,
         PatchIT.class,
