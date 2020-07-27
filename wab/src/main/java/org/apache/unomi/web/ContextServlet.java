@@ -517,20 +517,15 @@ public class ContextServlet extends HttpServlet {
             if (sanitizedValue != null) {
                 newParameterValues.put(parameterEntry.getKey(), parameterEntry.getValue());
             } else {
-                newParameterValues.put(parameterEntry.getKey(), "");
+                return null;
             }
         }
-        Condition newCondition = new Condition();
-        if (condition.getConditionType() != null) {
-            newCondition.setConditionType(condition.getConditionType());
-        }
-        newCondition.setConditionTypeId(condition.getConditionTypeId());
-        newCondition.setParameterValues(newParameterValues);
-        return newCondition;
+        return condition;
     }
 
     private Object sanitizeValue(Object value) {
         if (value instanceof String && value.toString().startsWith("script::")) {
+            logger.warn("Scripting detected in context request with value {}, filtering out...", value);
             return null;
         } else if (value instanceof List) {
             List values = (List) value;
