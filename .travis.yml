@@ -11,9 +11,9 @@ language: java
 
 stages:
   - name: build
-    if: branch != relsease
+    if: branch != releases
   - name: build and deploy
-    if: branch = relsease
+    if: branch = releases
 
 install: skip
 
