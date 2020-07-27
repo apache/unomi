@@ -38,6 +38,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Created by amidani on 09/08/2017.
@@ -71,11 +72,17 @@ public class ProfileImportRankingIT extends BaseIT {
 
         profileService.setPropertyType(propertyTypeRank);
 
-        PropertyType propUciId = profileService.getPropertyType("uciId");
-        Assert.assertNotNull(propUciId);
+        PropertyType propUciId = keepTrying("Failed waiting for property type 'uciId'",
+                () -> profileService.getPropertyType("uciId"),
+                Objects::nonNull,
+                1000,
+                100);
 
-        PropertyType propRankId = profileService.getPropertyType("rank");
-        Assert.assertNotNull(propRankId);
+        PropertyType propRankId = keepTrying("Failed waiting for property type 'rank'",
+                () -> profileService.getPropertyType("rank"),
+                Objects::nonNull,
+                1000,
+                100);
 
 
         /*** Surfers Test ***/
@@ -108,8 +115,11 @@ public class ProfileImportRankingIT extends BaseIT {
         //Wait for data to be processed
         keepTrying("Failed waiting for ranking import to complete", ()->profileService.findProfilesByPropertyValue("properties.city", "rankingCity", 0, 50, null), (p)->p.getTotalSize() == 25, 1000, 200);
 
-        List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
-        Assert.assertEquals(1, importConfigurations.size());
+        List<ImportConfiguration> importConfigurations = keepTrying("Failed waiting for import configurations list with 1 item",
+                () -> importConfigurationService.getAll(),
+                (list) -> Objects.nonNull(list) && list.size() == 1,
+                1000,
+                100);
 
         PartialList<Profile> gregProfileList = profileService.findProfilesByPropertyValue("properties.uciId", "10004451371", 0, 10, null);
         Assert.assertEquals(1, gregProfileList.getList().size());

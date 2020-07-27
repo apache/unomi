@@ -18,6 +18,7 @@
 package org.apache.unomi.itests;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -33,11 +34,14 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 public class TestUtils {
 	private static final String JSON_MYME_TYPE = "application/json";
+	private final static Logger LOGGER = LoggerFactory.getLogger(TestUtils.class);
 
 	public static <T> T retrieveResourceFromResponse(HttpResponse response, Class<T> clazz) throws IOException {
 		if (response == null) {
@@ -53,6 +57,7 @@ public class TestUtils {
 			T value = mapper.readValue(jsonFromResponse, clazz);
 			return value;
 		} catch (Throwable t) {
+			LOGGER.error("Error parsing response JSON", t);
 			t.printStackTrace();
 		}
 		return null;
@@ -61,7 +66,12 @@ public class TestUtils {
 	public static RequestResponse executeContextJSONRequest(HttpPost request, String sessionId) throws IOException {
 		try (CloseableHttpResponse response = HttpClientBuilder.create().build().execute(request)) {
 			// validate mimeType
-			String mimeType = ContentType.getOrDefault(response.getEntity()).getMimeType();
+			HttpEntity entity = response.getEntity();
+			String mimeType = ContentType.getOrDefault(entity).getMimeType();
+			if (!JSON_MYME_TYPE.equals(mimeType)) {
+				String entityContent = EntityUtils.toString(entity);
+				LOGGER.warn("Invalid response: " + entityContent);
+			}
 			Assert.assertEquals("Response content type should be " + JSON_MYME_TYPE, JSON_MYME_TYPE, mimeType);
 
 			// validate context
