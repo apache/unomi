@@ -16,6 +16,15 @@
                 "name": "testLongProperty",
                 "defaultValue": 9007199254740991
               }
+            },
+            {
+              "json": {
+                "name": "testJsonProperty",
+                "defaultValue": {
+                  "default": true,
+                  "value": 0
+                }
+              }
             }
           ]
         }

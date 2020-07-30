@@ -9,5 +9,5 @@
     },
     "createIfMissing": true
   },
-  "query": "query getProfile($profileID: CDP_ProfileIDInput!, $createIfMissing: Boolean) {\n  cdp {\n    getProfile(profileID: $profileID, createIfMissing: $createIfMissing) {\n      testProperty {\n        testStringProperty\n        testLongProperty\n      }\n    }\n  }\n}\n"
+  "query": "query getProfile($profileID: CDP_ProfileIDInput!) {\n  cdp {\n    getProfile(profileID: $profileID, createIfMissing: false) {\n      cdp_profileIDs {\n        id\n      }\n      firstName\n      lastName\n      testProperty {\n        testStringProperty\n        testLongProperty\n        testJsonProperty\n      }\n    }\n  }\n}\n"
 }

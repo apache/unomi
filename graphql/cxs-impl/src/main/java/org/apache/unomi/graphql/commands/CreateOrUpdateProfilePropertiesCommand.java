@@ -111,7 +111,8 @@ public class CreateOrUpdateProfilePropertiesCommand extends BaseCommand<Boolean>
                         prop.getDatePropertyTypeInput(),
                         prop.getBooleanPropertyTypeInput(),
                         prop.getGeoPointPropertyTypeInput(),
-                        prop.getSetPropertyTypeInput());
+                        prop.getSetPropertyTypeInput(),
+                        prop.getJsonPropertyTypeInput());
 
                 final List<BaseCDPPropertyInput> filteredProperties = properties.stream().filter(Objects::nonNull).collect(Collectors.toList());
 
