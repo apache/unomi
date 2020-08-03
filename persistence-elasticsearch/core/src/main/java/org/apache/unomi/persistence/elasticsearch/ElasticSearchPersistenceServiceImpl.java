@@ -180,6 +180,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String itemClassesToCache;
     private boolean useBatchingForSave = false;
 
+    private static boolean throwExceptions = false;
+
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -327,6 +329,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public void setSslTrustAllCertificates(boolean sslTrustAllCertificates) {
         this.sslTrustAllCertificates = sslTrustAllCertificates;
     }
+
+    public void setThrowExceptions(boolean throwExceptions) {
+        this.throwExceptions = throwExceptions;
+    }
+
 
     public void start() throws Exception {
 
@@ -1962,8 +1969,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 if (logError) {
                     logger.error("Error while executing in class loader", t);
                 }
+                if (throwExceptions) {
+                    throw new RuntimeException(t);
+                }
+                return null;
             }
-            return null;
         }
     }
 
