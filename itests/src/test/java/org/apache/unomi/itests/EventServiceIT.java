@@ -59,7 +59,6 @@ public class EventServiceIT extends BaseIT {
         Event event = new Event(eventId, eventType, null, profile, null, null, null, new Date());
         profileService.save(profile);
         eventService.send(event);
-        refreshPersistence();
         Thread.sleep(2000);
         boolean exist = eventService.hasEventAlreadyBeenRaised(event);
         Assert.assertTrue(exist);
