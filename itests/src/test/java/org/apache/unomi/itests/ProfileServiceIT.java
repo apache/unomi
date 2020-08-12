@@ -23,6 +23,7 @@ import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.PartialList;
 
+import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,6 +33,7 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,6 +112,25 @@ public class ProfileServiceIT extends BaseIT {
         queryCont.setScrollIdentifier(profiles.getScrollIdentifier());
         profiles = profileService.search(queryCont, Profile.class);
         assertEquals(0, profiles.getList().size());
+    }
+
+    @Test
+    public void testGetProfileWithWrongScrollerIdThrowException() throws InterruptedException {
+        String throwExceptionProperty = System.getProperty("org.apache.unomi.elasticsearch.throwExceptions");
+        if (throwExceptionProperty.equals("false")) {
+            return; // Test is not relevant
+        }
+
+        Query query = new Query();
+        query.setLimit(2);
+        query.setScrollTimeValidity("10m");
+        query.setScrollIdentifier("dummyScrollId");
+
+        try {
+            profileService.search(query, Profile.class);
+            fail("search method didn't throw when expected");
+        } catch (RuntimeException ex) {
+        }
     }
 
 }
