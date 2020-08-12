@@ -17,12 +17,21 @@
 package org.apache.unomi.graphql.fetchers;
 
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.Topic;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.query.Query;
+import org.apache.unomi.api.services.TopicService;
+import org.apache.unomi.graphql.condition.factories.TopicConditionFactory;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.input.CDPOrderByInput;
 import org.apache.unomi.graphql.types.input.CDPTopicFilterInput;
+import org.apache.unomi.graphql.types.output.CDPPageInfo;
 import org.apache.unomi.graphql.types.output.CDPTopicConnection;
+import org.apache.unomi.graphql.types.output.CDPTopicEdge;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class FindTopicsConnectionDataFetcher extends BaseConnectionDataFetcher<CDPTopicConnection> {
 
@@ -39,10 +48,22 @@ public class FindTopicsConnectionDataFetcher extends BaseConnectionDataFetcher<C
     @Override
     public CDPTopicConnection get(DataFetchingEnvironment environment) throws Exception {
         final ServiceManager serviceManager = environment.getContext();
+
+        final TopicService topicService = serviceManager.getService(TopicService.class);
+
         final ConnectionParams params = parseConnectionParams(environment);
 
-        // Unomi doesn't have an API for that yet, so return a stub
-        return null;
+        final Query query = buildQuery(createCondition(environment), orderByInput, params);
+
+        final PartialList<Topic> topicPartialList = topicService.search(query);
+
+        final List<CDPTopicEdge> edges = topicPartialList.getList().stream().map(CDPTopicEdge::new).collect(Collectors.toList());
+
+        return new CDPTopicConnection(topicPartialList.getTotalSize(), edges, new CDPPageInfo());
+    }
+
+    private Condition createCondition(final DataFetchingEnvironment environment) {
+        return TopicConditionFactory.get(environment).filterInputCondition(filterInput, environment.getArgument("filter"));
     }
 
 }

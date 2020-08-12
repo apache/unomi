@@ -14,34 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
+package org.apache.unomi.api.services;
 
-import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Topic;
+import org.apache.unomi.api.query.Query;
 
-import static org.apache.unomi.graphql.types.output.CDPTopicEdge.TYPE_NAME;
+public interface TopicService {
 
-@GraphQLName(TYPE_NAME)
-public class CDPTopicEdge {
+    Topic load(final String topicId);
 
-    public static final String TYPE_NAME = "CDP_TopicEdge";
+    Topic save(final Topic topic);
 
-    private final Topic topic;
-
-    public CDPTopicEdge(final Topic topic) {
-        this.topic = topic;
-    }
-
-    @GraphQLField
-    public CDPTopic node(final DataFetchingEnvironment environment) {
-        return new CDPTopic(topic);
-    }
-
-    @GraphQLField
-    public String cursor(final DataFetchingEnvironment environment) {
-        return topic.getTopicId();
-    }
+    PartialList<Topic> search(final Query query);
 
 }

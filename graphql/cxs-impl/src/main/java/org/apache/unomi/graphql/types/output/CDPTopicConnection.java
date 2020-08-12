@@ -20,6 +20,7 @@ import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.unomi.graphql.types.output.CDPTopicConnection.TYPE_NAME;
@@ -29,19 +30,35 @@ public class CDPTopicConnection {
 
     public static final String TYPE_NAME = "CDP_TopicConnection";
 
+    private Long totalCount;
+
+    private List<CDPTopicEdge> edges;
+
+    private CDPPageInfo pageInfo;
+
+    public CDPTopicConnection() {
+        this(0L, new ArrayList<>(), new CDPPageInfo());
+    }
+
+    public CDPTopicConnection(final Long totalCount, final List<CDPTopicEdge> edges, final CDPPageInfo pageInfo) {
+        this.totalCount = totalCount;
+        this.edges = edges;
+        this.pageInfo = pageInfo;
+    }
+
     @GraphQLField
-    public Integer totalCount(final DataFetchingEnvironment environment) {
-        return 0;
+    public Long totalCount(final DataFetchingEnvironment environment) {
+        return totalCount;
     }
 
     @GraphQLField
     public List<CDPTopicEdge> edges(final DataFetchingEnvironment environment) {
-        return null;
+        return edges;
     }
 
     @GraphQLField
     public CDPPageInfo pageInfo(final DataFetchingEnvironment environment) {
-        return null;
+        return pageInfo;
     }
 
 }
