@@ -16,6 +16,9 @@
  */
 package org.apache.unomi.graphql.commands;
 
+import com.google.common.base.Strings;
+import org.apache.unomi.api.Topic;
+import org.apache.unomi.api.services.TopicService;
 import org.apache.unomi.graphql.types.input.CDPTopicInput;
 import org.apache.unomi.graphql.types.output.CDPTopic;
 
@@ -33,8 +36,26 @@ public class CreateOrUpdateTopicCommand extends BaseCommand<CDPTopic> {
 
     @Override
     public CDPTopic execute() {
-        // Unomi doesn't have an API for that yet, so return a stub
-        return new CDPTopic();
+        final TopicService topicService = serviceManager.getService(TopicService.class);
+
+        Topic topic = topicService.load(topicInput.getId());
+
+        if (topic == null) {
+            topic = new Topic();
+        }
+
+        final String topicId = Strings.isNullOrEmpty(topicInput.getId())
+                ? topicInput.getName()
+                : topicInput.getId();
+
+        topic.setTopicId(topicId);
+        topic.setItemId(topicId);
+        topic.setName(topicInput.getName());
+        topic.setScope(topicInput.getView());
+
+        Topic storedTopic = topicService.save(topic);
+
+        return new CDPTopic(storedTopic);
     }
 
     public static Builder create(final CDPTopicInput topicInput) {

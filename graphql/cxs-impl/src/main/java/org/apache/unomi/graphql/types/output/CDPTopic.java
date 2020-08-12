@@ -16,12 +16,9 @@
  */
 package org.apache.unomi.graphql.types.output;
 
-import graphql.annotations.annotationTypes.GraphQLDescription;
-import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLID;
-import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.annotations.annotationTypes.GraphQLNonNull;
+import graphql.annotations.annotationTypes.*;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.Topic;
 
 import static org.apache.unomi.graphql.types.output.CDPTopic.TYPE_NAME;
 
@@ -31,23 +28,33 @@ public class CDPTopic {
 
     public static final String TYPE_NAME = "CDP_Topic";
 
+    private final Topic topic;
+
+    public CDPTopic() {
+        this(null);
+    }
+
+    public CDPTopic(Topic topic) {
+        this.topic = topic;
+    }
+
     @GraphQLID
     @GraphQLField
     @GraphQLNonNull
     public String id(final DataFetchingEnvironment environment) {
-        return null;
+        return topic != null ? topic.getTopicId() : null;
     }
 
     @GraphQLField
     @GraphQLNonNull
     public String name(final DataFetchingEnvironment environment) {
-        return null;
+        return topic != null ? topic.getName() : null;
     }
 
     @GraphQLField
     @GraphQLNonNull
     public CDPView view(final DataFetchingEnvironment environment) {
-        return null;
+        return topic != null ? new CDPView(topic.getScope()) : null;
     }
 
 }
