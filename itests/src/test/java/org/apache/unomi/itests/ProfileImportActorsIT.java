@@ -25,6 +25,7 @@ import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -48,6 +49,7 @@ public class ProfileImportActorsIT extends BaseIT {
     @Inject @Filter(timeout = 600000)
     protected ProfileService profileService;
 
+    @Ignore // Yotpo ignore -> unstable test
     @Test
     public void testImportActors() throws InterruptedException {
 
