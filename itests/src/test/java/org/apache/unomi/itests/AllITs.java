@@ -42,7 +42,8 @@ import org.junit.runners.Suite.SuiteClasses;
 	ModifyConsentIT.class,
 	PatchIT.class,
 	ContextServletIT.class,
-	SecurityIT.class
+	SecurityIT.class,
+	EventServiceIT.class
 })
 public class AllITs {
 }
