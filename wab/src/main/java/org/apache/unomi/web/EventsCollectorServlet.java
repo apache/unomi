@@ -62,12 +62,22 @@ public class EventsCollectorServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        doEvent(req, resp);
+        try {
+            doEvent(req, resp);
+        } catch (Throwable t) { // Here in order to return generic message instead of the whole stack trace in case of not caught exception
+            logger.error("EventsCollectorServlet failed to execute get", t);
+            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal server error");
+        }
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        doEvent(req, resp);
+        try {
+            doEvent(req, resp);
+        } catch (Throwable t) { // Here in order to return generic message instead of the whole stack trace in case of not caught exception
+            logger.error("EventsCollectorServlet failed to execute post", t);
+            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal server error");
+        }
     }
 
     @Override

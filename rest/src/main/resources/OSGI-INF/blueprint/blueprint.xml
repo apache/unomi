@@ -59,12 +59,14 @@
              is usually preferred -->
         <!--property name="redirectURI" value="/login.jsp"/-->
     </bean>
+    <bean id="runtimeExceptionMapper" class="org.apache.unomi.rest.RuntimeExceptionMapper"/>
 
     <jaxrs:server address="/segments" id="restSegmentService">
         <jaxrs:providers>
             <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
+            <ref component-id="runtimeExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -77,6 +79,7 @@
             <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
+            <ref component-id="runtimeExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -89,6 +92,7 @@
             <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
+            <ref component-id="runtimeExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -101,6 +105,7 @@
             <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
+            <ref component-id="runtimeExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -113,6 +118,7 @@
             <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
+            <ref component-id="runtimeExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -125,6 +131,7 @@
             <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
+            <ref component-id="runtimeExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -137,6 +144,7 @@
             <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
+            <ref component-id="runtimeExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -149,6 +157,7 @@
             <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
+            <ref component-id="runtimeExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -161,6 +170,7 @@
             <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
+            <ref component-id="runtimeExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -173,6 +183,7 @@
             <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
+            <ref component-id="runtimeExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -185,6 +196,7 @@
             <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
+            <ref component-id="runtimeExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -197,6 +209,7 @@
             <ref component-id="jaxb-provider"/>
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
+            <ref component-id="runtimeExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
