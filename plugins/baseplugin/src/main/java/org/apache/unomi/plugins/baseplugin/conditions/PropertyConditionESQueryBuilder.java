@@ -55,17 +55,19 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
 
         String expectedValue = ConditionContextHelper.foldToASCII((String) condition.getParameter("propertyValue"));
         Object expectedValueInteger = condition.getParameter("propertyValueInteger");
+        Object expectedValueDouble = condition.getParameter("propertyValueDouble");
         Object expectedValueDate = convertDateToISO(condition.getParameter("propertyValueDate"));
         Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
 
         List<?> expectedValues = ConditionContextHelper.foldToASCII((List<?>) condition.getParameter("propertyValues"));
         List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
+        List<?> expectedValuesDouble = (List<?>) condition.getParameter("propertyValuesDouble");
         List<?> expectedValuesDate = convertDatesToISO((List<?>) condition.getParameter("propertyValuesDate"));
         List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");
 
-        Object value = ObjectUtils.firstNonNull(expectedValue, expectedValueInteger, expectedValueDate, expectedValueDateExpr);
+        Object value = ObjectUtils.firstNonNull(expectedValue, expectedValueInteger, expectedValueDouble, expectedValueDate, expectedValueDateExpr);
         @SuppressWarnings("unchecked")
-        List<?> values = ObjectUtils.firstNonNull(expectedValues, expectedValuesInteger, expectedValuesDate, expectedValuesDateExpr);
+        List<?> values = ObjectUtils.firstNonNull(expectedValues, expectedValuesInteger, expectedValuesDouble, expectedValuesDate, expectedValuesDateExpr);
 
         switch (comparisonOperator) {
             case "equals":
