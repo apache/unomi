@@ -21,6 +21,7 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
+import org.apache.unomi.scripting.ScriptExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,9 +38,14 @@ public class ConditionEvaluatorDispatcher {
     private Map<String, ConditionEvaluator> evaluators = new ConcurrentHashMap<>();
 
     private MetricsService metricsService;
+    private ScriptExecutor scriptExecutor;
 
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
+    }
+
+    public void setScriptExecutor(ScriptExecutor scriptExecutor) {
+        this.scriptExecutor = scriptExecutor;
     }
 
     public void addEvaluator(String name, ConditionEvaluator evaluator) {
@@ -72,7 +78,7 @@ public class ConditionEvaluatorDispatcher {
                 return new MetricAdapter<Boolean>(metricsService, this.getClass().getName() + ".conditions." + conditionEvaluatorKey) {
                     @Override
                     public Boolean execute(Object... args) throws Exception {
-                        Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context);
+                        Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
                         if (contextualCondition != null) {
                             return evaluator.eval(contextualCondition, item, context, dispatcher);
                         } else {

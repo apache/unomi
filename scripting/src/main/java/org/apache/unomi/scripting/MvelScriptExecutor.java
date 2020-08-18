@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.common;
+package org.apache.unomi.scripting;
 
 import org.mvel2.MVEL;
 import org.mvel2.ParserConfiguration;
@@ -24,11 +24,20 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * MVEL script executor implementation
+ */
 public class MvelScriptExecutor implements ScriptExecutor {
+
+    private final static String INVALID_SCRIPT_MARKER = "Invalid String Marker";
 
     private Map<String, Serializable> mvelExpressions = new ConcurrentHashMap<>();
     private SecureFilteringClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(getClass().getClassLoader());
-    private ExpressionFilter expressionFilter = new ExpressionFilter();
+    private ExpressionFilterFactory expressionFilterFactory;
+
+    public void setExpressionFilterFactory(ExpressionFilterFactory expressionFilterFactory) {
+        this.expressionFilterFactory = expressionFilterFactory;
+    }
 
     @Override
     public Object execute(String script, Map<String, Object> context) {
@@ -37,8 +46,8 @@ public class MvelScriptExecutor implements ScriptExecutor {
         try {
             if (!mvelExpressions.containsKey(script)) {
 
-                if (expressionFilter.filter(script) == null) {
-                    mvelExpressions.put(script, null);
+                if (expressionFilterFactory.getExpressionFilter("mvel").filter(script) == null) {
+                    mvelExpressions.put(script, INVALID_SCRIPT_MARKER);
                 } else {
                     Thread.currentThread().setContextClassLoader(secureFilteringClassLoader);
                     ParserConfiguration parserConfiguration = new ParserConfiguration();
@@ -59,7 +68,7 @@ public class MvelScriptExecutor implements ScriptExecutor {
                     mvelExpressions.put(script, MVEL.compileExpression(script, parserContext));
                 }
             }
-            if (mvelExpressions.containsKey(script) && mvelExpressions.get(script) != null) {
+            if (mvelExpressions.containsKey(script) && mvelExpressions.get(script) != INVALID_SCRIPT_MARKER) {
                 return MVEL.executeExpression(mvelExpressions.get(script), context);
             } else {
                 return script;

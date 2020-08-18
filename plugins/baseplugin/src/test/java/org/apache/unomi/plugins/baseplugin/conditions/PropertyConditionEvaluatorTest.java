@@ -21,6 +21,9 @@ import org.apache.unomi.api.CustomItem;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
+import org.apache.unomi.scripting.ExpressionFilter;
+import org.apache.unomi.scripting.ExpressionFilterFactory;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -29,6 +32,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.regex.Pattern;
 
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertNull;
@@ -48,6 +52,27 @@ public class PropertyConditionEvaluatorTest {
     private static final Event mockEvent = generateMockEvent();
     private static final Profile mockProfile = generateMockProfile();
     private static final Session mockSession = generateMockSession();
+
+    @Before
+    public void setup() {
+        propertyConditionEvaluator.setExpressionFilterFactory(new ExpressionFilterFactory() {
+            @Override
+            public ExpressionFilter getExpressionFilter(String filterCollection) {
+                Set<Pattern> allowedExpressions = new HashSet<>();
+                allowedExpressions.add(Pattern.compile("target\\.itemId"));
+                allowedExpressions.add(Pattern.compile("target\\.scope"));
+                allowedExpressions.add(Pattern.compile("target\\.properties\\.pageInfo\\.pagePath"));
+                allowedExpressions.add(Pattern.compile("target\\.properties\\.pageInfo\\.pageURL"));
+                allowedExpressions.add(Pattern.compile("size"));
+                allowedExpressions.add(Pattern.compile("lastEventDate"));
+                allowedExpressions.add(Pattern.compile("systemProperties\\.goals\\._csk6r4cgeStartReached"));
+                allowedExpressions.add(Pattern.compile("properties\\.email"));
+                allowedExpressions.add(Pattern.compile("systemProperties\\.goals\\._csk6r4cgeStartReached"));
+                Set<Pattern> forbiddenExpressions = new HashSet<>();
+                return new ExpressionFilter(allowedExpressions, forbiddenExpressions);
+            }
+        });
+    }
 
     @Test
     public void testHardcodedEvaluator() {

@@ -65,6 +65,7 @@
     <reference id="karafCellarGroupManager" interface="org.apache.karaf.cellar.core.GroupManager"/>
     <reference id="osgiConfigurationAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService"/>
+    <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor" />
 
     <!-- Service definitions -->
 
@@ -142,6 +143,7 @@
     <bean id="actionExecutorDispatcherImpl"
           class="org.apache.unomi.services.actions.ActionExecutorDispatcher">
         <property name="metricsService" ref="metricsService"/>
+        <property name="scriptExecutor" ref="scriptExecutor"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
 

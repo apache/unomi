@@ -24,8 +24,7 @@ import org.apache.logging.log4j.core.util.IOUtils;
 import org.apache.lucene.analysis.charfilter.MappingCharFilterFactory;
 import org.apache.lucene.analysis.util.ClasspathResourceLoader;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.common.MvelScriptExecutor;
-import org.apache.unomi.common.ScriptExecutor;
+import org.apache.unomi.scripting.ScriptExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,8 +39,6 @@ import java.util.Map;
 public class ConditionContextHelper {
     private static final Logger logger = LoggerFactory.getLogger(ConditionContextHelper.class);
 
-    private static final ScriptExecutor scriptExecutor = new MvelScriptExecutor();
-
     private static MappingCharFilterFactory mappingCharFilterFactory;
     static {
         Map<String,String> args = new HashMap<>();
@@ -54,12 +51,12 @@ public class ConditionContextHelper {
         }
     }
 
-    public static Condition getContextualCondition(Condition condition, Map<String, Object> context) {
+    public static Condition getContextualCondition(Condition condition, Map<String, Object> context, ScriptExecutor scriptExecutor) {
         if (!hasContextualParameter(condition.getParameterValues())) {
             return condition;
         }
         @SuppressWarnings("unchecked")
-        Map<String, Object> values = (Map<String, Object>) parseParameter(context, condition.getParameterValues());
+        Map<String, Object> values = (Map<String, Object>) parseParameter(context, condition.getParameterValues(), scriptExecutor);
         if (values == null) {
             return null;
         }
@@ -69,7 +66,7 @@ public class ConditionContextHelper {
     }
 
     @SuppressWarnings("unchecked")
-    private static Object parseParameter(Map<String, Object> context, Object value) {
+    private static Object parseParameter(Map<String, Object> context, Object value, ScriptExecutor scriptExecutor) {
         if (value instanceof String) {
             if (((String) value).startsWith("parameter::") || ((String) value).startsWith("script::")) {
                 String s = (String) value;
@@ -77,13 +74,13 @@ public class ConditionContextHelper {
                     return context.get(StringUtils.substringAfter(s, "parameter::"));
                 } else if (s.startsWith("script::")) {
                     String script = StringUtils.substringAfter(s, "script::");
-                    return executeScript(context, script);
+                    return scriptExecutor.execute(script, context);
                 }
             }
         } else if (value instanceof Map) {
             Map<String, Object> values = new HashMap<String, Object>();
             for (Map.Entry<String, Object> entry : ((Map<String, Object>) value).entrySet()) {
-                Object parameter = parseParameter(context, entry.getValue());
+                Object parameter = parseParameter(context, entry.getValue(), scriptExecutor);
                 if (parameter == null) {
                     return null;
                 }
@@ -93,7 +90,7 @@ public class ConditionContextHelper {
         } else if (value instanceof List) {
             List<Object> values = new ArrayList<Object>();
             for (Object o : ((List<?>) value)) {
-                Object parameter = parseParameter(context, o);
+                Object parameter = parseParameter(context, o, scriptExecutor);
                 if (parameter != null) {
                     values.add(parameter);
                 }
@@ -101,10 +98,6 @@ public class ConditionContextHelper {
             return values;
         }
         return value;
-    }
-
-    private static Object executeScript(Map<String, Object> context, String script) {
-        return scriptExecutor.execute(script, context);
     }
 
     private static boolean hasContextualParameter(Object value) {

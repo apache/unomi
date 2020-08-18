@@ -14,27 +14,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.common;
+package org.apache.unomi.scripting;
 
 import org.apache.unomi.api.CustomItem;
 import org.apache.unomi.api.Event;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertFalse;
 
 public class MvelScriptExecutorTest {
 
-    ScriptExecutor scriptExecutor = new MvelScriptExecutor();
+    MvelScriptExecutor scriptExecutor = new MvelScriptExecutor();
 
     public static final String MOCK_ITEM_ID = "mockItemId";
     public static final String DIGITALL_SCOPE = "digitall";
     public static final String PAGE_PATH_VALUE = "/site/en/home/aboutus.html";
     public static final String PAGE_URL_VALUE = "http://localhost:8080/site/en/home/aboutus.html";
+
+    @Before
+    public void setup() {
+        scriptExecutor.setExpressionFilterFactory(new ExpressionFilterFactory() {
+            @Override
+            public ExpressionFilter getExpressionFilter(String filterCollection) {
+                Set<Pattern> allowedExpressions = new HashSet<>();
+                Set<Pattern> forbiddenExpressions = new HashSet<>();
+                return new ExpressionFilter(allowedExpressions, forbiddenExpressions);
+            }
+        });
+    }
 
     @Test
     public void testMVELSecurity() throws IOException {
@@ -78,6 +94,19 @@ public class MvelScriptExecutorTest {
         System.out.println("result=" + result);
         try {
             result = scriptExecutor.execute("Runtime r = Runtime.getClass().forName(\"java.lang.Runtime\").getDeclaredMethod(\"getRuntime\", null ).invoke(null, null); r.exec(\"touch "+vulnFile.getCanonicalPath()+"\");", ctx);
+        } catch (Throwable t) {
+            // this is expected since access to these classes should not be allowed
+            System.out.println("Expected error : " + t.getMessage());
+        }
+        System.out.println("result=" + result);
+
+        try {
+            ctx.put("goalId", "d; " +
+                    "Runtime r = Runtime.getClass().forName(\"java.lang.Runtime\").getDeclaredMethod(\"getRuntime\", null ).invoke(null, null); r.exec(\"touch " +
+                    vulnFile.getCanonicalPath() +
+                    "\")" +
+                    " ; ");
+            result = scriptExecutor.execute("'systemProperties\\.goals\\.'+goalId+'TargetReached'", ctx);
         } catch (Throwable t) {
             // this is expected since access to these classes should not be allowed
             System.out.println("Expected error : " + t.getMessage());

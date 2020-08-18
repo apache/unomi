@@ -23,8 +23,10 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.common.ExpressionFilter;
-import org.apache.unomi.common.SecureFilteringClassLoader;
+import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.scripting.ExpressionFilter;
+import org.apache.unomi.scripting.ExpressionFilterFactory;
+import org.apache.unomi.scripting.SecureFilteringClassLoader;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
@@ -55,12 +57,16 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     private Map<String, Map<String, ExpressionAccessor>> expressionCache = new HashMap<>(64);
     private boolean usePropertyConditionOptimizations = true;
     private static ClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(PropertyConditionEvaluator.class.getClassLoader());
-    private static ExpressionFilter expressionFilter = new ExpressionFilter();
+    private ExpressionFilterFactory expressionFilterFactory;
 
     private boolean useOGNLScripting = Boolean.parseBoolean(System.getProperty("org.apache.unomi.security.properties.useOGNLScripting", "false"));
 
     public void setUsePropertyConditionOptimizations(boolean usePropertyConditionOptimizations) {
         this.usePropertyConditionOptimizations = usePropertyConditionOptimizations;
+    }
+
+    public void setExpressionFilterFactory(ExpressionFilterFactory expressionFilterFactory) {
+        this.expressionFilterFactory = expressionFilterFactory;
     }
 
     private int compare(Object actualValue, String expectedValue, Object expectedValueDate, Object expectedValueInteger, Object expectedValueDateExpr) {
@@ -288,7 +294,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         if (useOGNLScripting) {
             return getOGNLPropertyValue(item, expression);
         } else {
-            logger.warn("Expression {} will not be evaluated because OGNL scripting is deactivated", expression);
+            logger.warn("OGNL Off. Expression not evaluated : {}", expression);
             return null;
         }
     }
@@ -305,10 +311,16 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 return event.getTarget().getItemId();
             }
             if (expression.startsWith("target.properties.")) {
-                if (event.getTarget() instanceof CustomItem) {
-                    CustomItem customItem = (CustomItem) event.getTarget();
-                    String expressionPart = expression.substring("target.properties.".length());
-                    return getNestedPropertyValue(expressionPart, customItem.getProperties());
+                String expressionPart = expression.substring("target.properties.".length());
+                Item targetItem = event.getTarget();
+                if (targetItem instanceof CustomItem) {
+                    return getNestedPropertyValue(expressionPart, ((CustomItem) targetItem).getProperties());
+                } else if (targetItem instanceof Session) {
+                    return getNestedPropertyValue(expressionPart, ((Session) targetItem).getProperties());
+                } else if (targetItem instanceof Rule) {
+                    return null;
+                } else if (targetItem instanceof Profile) {
+                    return getNestedPropertyValue(expressionPart, ((Profile) targetItem).getProperties());
                 }
             }
             if ("target.scope".equals(expression)) {
@@ -427,7 +439,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     }
 
     protected Object getOGNLPropertyValue(Item item, String expression) throws Exception {
-        if (expressionFilter.filter(expression) == null) {
+        if (expressionFilterFactory.getExpressionFilter("ognl").filter(expression) == null) {
             logger.warn("Expression {} is not allowed !", expression);
             return null;
         }
@@ -479,6 +491,10 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                     public boolean isAccessible(Map context, Object target, Member member, String propertyName) {
                         int modifiers = member.getModifiers();
                         if (target instanceof Item) {
+                            if ("getClass".equals(member.getName())) {
+                                logger.warn("Target {} and member {} for property {} are not allowed by OGNL security filter", target, member, propertyName);
+                                return false;
+                            }
                             return Modifier.isPublic(modifiers);
                         }
                         logger.warn("Target {} and member {} for property {} are not allowed by OGNL security filter", target, member, propertyName);

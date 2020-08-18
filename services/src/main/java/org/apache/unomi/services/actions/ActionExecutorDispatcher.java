@@ -24,8 +24,7 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionDispatcher;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.common.MvelScriptExecutor;
-import org.apache.unomi.common.ScriptExecutor;
+import org.apache.unomi.scripting.ScriptExecutor;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.osgi.framework.BundleContext;
@@ -46,7 +45,7 @@ public class ActionExecutorDispatcher {
     private MetricsService metricsService;
     private Map<String, ActionDispatcher> actionDispatchers = new ConcurrentHashMap<>();
     private BundleContext bundleContext;
-    private ScriptExecutor scriptExecutor = new MvelScriptExecutor();
+    private ScriptExecutor scriptExecutor;
 
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
@@ -54,6 +53,10 @@ public class ActionExecutorDispatcher {
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
+    }
+
+    public void setScriptExecutor(ScriptExecutor scriptExecutor) {
+        this.scriptExecutor = scriptExecutor;
     }
 
     public ActionExecutorDispatcher() {

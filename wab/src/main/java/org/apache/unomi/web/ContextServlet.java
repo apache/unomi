@@ -524,9 +524,14 @@ public class ContextServlet extends HttpServlet {
     }
 
     private Object sanitizeValue(Object value) {
-        if (value instanceof String && value.toString().startsWith("script::")) {
-            logger.warn("Scripting detected in context request with value {}, filtering out...", value);
-            return null;
+        if (value instanceof String) {
+            String stringValue = (String) value;
+            if (stringValue.startsWith("script::") || stringValue.startsWith("parameter::")) {
+                logger.warn("Scripting detected in context request with value {}, filtering out...", value);
+                return null;
+            } else {
+                return stringValue;
+            }
         } else if (value instanceof List) {
             List values = (List) value;
             List newValues = new ArrayList();
@@ -536,11 +541,20 @@ public class ContextServlet extends HttpServlet {
                     newValues.add(newObject);
                 }
             }
+            return values;
+        } else if (value instanceof Map) {
+            Map<Object,Object> newMap = new LinkedHashMap<>();
+            ((Map<?, ?>) value).forEach((key, value1) -> {
+                Object newObject = sanitizeValue(value1);
+                if (newObject != null) {
+                    newMap.put(key, newObject);
+                }
+            });
+            return newMap;
         } else if (value instanceof Condition) {
             return sanitizeCondition((Condition) value);
         } else {
             return value;
         }
-        return value;
     }
 }
