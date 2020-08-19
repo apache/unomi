@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class MvelScriptExecutor implements ScriptExecutor {
 
-    private final static String INVALID_SCRIPT_MARKER = "Invalid String Marker";
+    private final static String INVALID_SCRIPT_MARKER = "--- Invalid Script Marker ---";
 
     private Map<String, Serializable> mvelExpressions = new ConcurrentHashMap<>();
     private SecureFilteringClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(getClass().getClassLoader());
